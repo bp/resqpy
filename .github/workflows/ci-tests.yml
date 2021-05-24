@@ -32,6 +32,10 @@ jobs:
 
     - name: Test with pytest
       run: |
+        pwd
+        ls
+        python -c 'print("Hi")'
+        python -c 'import resqpy; print(resqpy.__file__)'
         pytest tests/ --junitxml=junit/test-results.xml
 
     - name: Upload pytest test results
