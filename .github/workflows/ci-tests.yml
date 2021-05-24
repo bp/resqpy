@@ -1,11 +1,18 @@
 name: Python CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
 
 jobs:
-  build:
-
+  build-and-test:
+    name: Build and Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         # TODO: expand to [2.7, 3.5, 3.6, 3.7, 3.8]
@@ -25,19 +32,25 @@ jobs:
         pip install ".[tests]"
 
     - name: Lint with flake8
-        run: |
-          flake8 .
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          # flake8 . --exit-zero --max-complexity=10 --max-line-length=127
+      run: |
+        flake8 .
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        # flake8 . --exit-zero --max-complexity=10 --max-line-length=127
 
     - name: Test with pytest
       run: |
-        pytest tests/ --junitxml=junit/test-results.xml
+        pytest --junitxml=pytest.xml
 
-    - name: Upload pytest test results
+    - name: Upload pytest artifacts
+      if: ${{ always() }}
       uses: actions/upload-artifact@v2
       with:
-        name: pytest-results-${{ matrix.python-version }}
-        path: junit/test-results-${{ matrix.python-version }}.xml
+        name: Unit Test Results (Python ${{ matrix.python-version }})
+        path: pytest.xml
       # Use always() to always run this step to publish test results when there are test failures
-      if: ${{ always() }}
+
+    - name: Publish Unit Test Results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      # with:
+      #   files: *.xml
