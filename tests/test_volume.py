@@ -72,6 +72,6 @@ def test_array_volume():
    cp[:, :, :, :, :, :, 0] *= -1.0
    v1 = vol.tetra_volumes_slow(cp, off_hand = True)
    v2 = vol.tetra_volumes(cp, off_hand = True)
-   assert_array_almost_equal(v1 == v2)
+   assert_array_almost_equal(v1, v2)
    assert np.all(v1 >= 0.0), 'negative volume(s) returned by array function'
    assert np.all(v1 <= 27.0), 'exaggerated volume(s) returned by array function'
