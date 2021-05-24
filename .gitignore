@@ -1,0 +1,24 @@
+# IDE settings
+.idea
+.vscode
+
+# Checkpoints
+.ipynb_checkpoints
+__pycache__/
+.pyc
+
+# Unit tests
+pytest.xml
+.pytest_cache
+
+# Built Documentation
+docs/_build
+docs/_autosummary
+docs/html
+
+# XSD files
+resqml/olio/data/Properties.xsd
+
+# Build artifacts
+/resqml.egg-info/
+**/*.pyc
