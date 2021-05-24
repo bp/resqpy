@@ -38,10 +38,10 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pwd
-        ls
-        python -c 'print("Hi")'
+        echo "resqpy file path"
         python -c 'import resqpy; print(resqpy.__file__)'
+        echo "resqpy.olio file path"
+        python -c 'import resqpy.olio; print(resqpy.olio.__file__)'
         pytest tests/ --junitxml=junit/test-results.xml
 
     - name: Upload pytest test results
