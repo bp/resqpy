@@ -1,6 +1,7 @@
 # resqpy: Python API for working with RESQML models
 
 [![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bp/resqpy/blob/master/LICENSE)
+[![Python CI](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml)
 
 ## Introduction
 
