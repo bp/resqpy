@@ -1,31 +1,70 @@
 # resqpy: Python API for working with RESQML models
 
-This repository contains pure python modules which provide a programming interface (API) for reading, writing, and modifying reservoir models in the RESQML format.
+[![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bp/resqpy/blob/master/LICENSE)
 
-### Repository structure
- - resqpy: high level modules providing classes for main RESQML object types and high level modification functions
- - resqpy/olio: low level modules, not often imported directly by calling code
+## Introduction
+
+This repository contains pure python modules which provide a programming
+interface (API) for reading, writing, and modifying reservoir models in the
+RESQML format.
 
 ### Current capabilities
 
-Specialized classes are only available for a subset of the RESQML high level object classes:
- - Grids: IjkGridRepresentation
- - Wells: WellboreTrajectoryRepresentation, DeviationSurveyRepresentation, MdDatum, BlockedWellboreRepresentation, WellboreFrameRepresentation, WellboreMarkerFrameRepresentation, WellboreInterpretation, WellboreFeature
- - Properties for Grids, Wells etc: ContinuousProperty, DiscreteProperty, CatagoricalProperty, PropertyKind, PropertySet, StringTableLookup 
- - Surfaces: TriangulatedSetRepresentation, Grid2dRepresentation, PointSetRepresentation, HorizonInterpretation, GeneticBoundaryFeature
- - Faults: GridConnectionSetRepresentation, FaultInterpretation, TectonicBoundaryFeature
- - Lines: PolylineRepresentation, PolylineSetRepresentation
- - Other: TimeSeries, EpcExternalPartReference, various other Interpretation and Feature classes
+Specialized classes are only available for a subset of the RESQML high level
+object classes:
 
-Furthermore, not all variations of these object types are supported; for example, radial IJK grids are not yet catered for, although the RESQML standard does allow for such grids.
+- Grids: IjkGridRepresentation
+- Wells: WellboreTrajectoryRepresentation, DeviationSurveyRepresentation,
+  MdDatum, BlockedWellboreRepresentation, WellboreFrameRepresentation,
+  WellboreMarkerFrameRepresentation, WellboreInterpretation, WellboreFeature
+- Properties for Grids, Wells etc: ContinuousProperty, DiscreteProperty,
+  CatagoricalProperty, PropertyKind, PropertySet, StringTableLookup
+- Surfaces: TriangulatedSetRepresentation, Grid2dRepresentation,
+  PointSetRepresentation, HorizonInterpretation, GeneticBoundaryFeature
+- Faults: GridConnectionSetRepresentation, FaultInterpretation,
+  TectonicBoundaryFeature
+- Lines: PolylineRepresentation, PolylineSetRepresentation
+- Other: TimeSeries, EpcExternalPartReference, various other Interpretation and
+  Feature classes
 
-It is envisaged that the code base will be expanded to include other classes of object and more fully cover the options permitted by the RESQML standard.
+Furthermore, not all variations of these object types are supported; for
+example, radial IJK grids are not yet catered for, although the RESQML standard
+does allow for such grids.
+
+It is envisaged that the code base will be expanded to include other classes of
+object and more fully cover the options permitted by the RESQML standard.
 
 Modification functionality at the moment focuses on changes to grid geometry.
-
 
 ### Documentation
 
 Build locally with:
 
-`sphinx-build docs docs/html`
+```bash
+sphinx-build docs docs/html
+```
+
+### Installation
+
+Install from source in "editable" mode with:
+
+```bash
+pip install -e /path/to/repo/
+```
+
+## Contributing
+
+### Repository structure
+
+- `resqpy`: high level modules providing classes for main RESQML object types
+  and high level modification functions
+- `resqpy/olio`: low level modules, not often imported directly by calling code
+- `tests`: unit tests
+
+### Unit tests
+
+Run locally with:
+
+```bash
+pytest tests/
+```
