@@ -4,6 +4,8 @@ import pytest
 import math as maths
 import numpy as np
 from numpy.random import random
+from numpy.testing import assert_array_almost_equal, assert_array_equal
+
 import resqpy.olio.volume as vol
 
 def unit_cube():
@@ -56,6 +58,7 @@ def test_array_volume():
    v1 = vol.tetra_volumes_slow(cp, off_hand = False)
    v2 = vol.tetra_volumes(cp, off_hand = False)
    # following is a stringent test requiring that exactly the same mathematical operations have been performed
+   assert_array_equal(v1, v2)
    assert np.all(v1 == v2), 'some differences in volumes arrays computed by different array functions'
    # the random changes to corner points should have left the volumes within a certain range
    assert np.all(v1 >= 0.0), 'negative volume(s) returned by array function'
