@@ -15,6 +15,7 @@ pytest.xml
 docs/_build
 docs/_autosummary
 docs/html
+*.egg-info
 
 # XSD files
 resqml/olio/data/Properties.xsd
