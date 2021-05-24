@@ -26,6 +26,6 @@ Modification functionality at the moment focuses on changes to grid geometry.
 
 ### Documentation
 
-Build locally (with e.g. Bifrost 2.4 kernel) with:
+Build locally with:
 
 `sphinx-build docs docs/html`
