@@ -1,0 +1,31 @@
+# Reference: https://www.exclamationlabs.com/blog/continuous-deployment-to-npm-using-gitlab-ci/
+
+variables:
+    GIT_STRATEGY: fetch
+
+before_script:
+  - module use /hpc/apps/modules/modulefiles/PCE/resim
+  - module load bifrost/prod
+  - conda activate bifrost
+  - export PYTHONPATH="./:$PYTHONPATH:"
+
+Static analysis:
+  only:
+    - merge_requests
+    - master
+  script:
+    - echo Running static analysis
+    - flake8 resqml
+
+Unit tests:
+  only:
+    - merge_requests
+    - master
+  script:
+    - echo Running unit tests
+    - python -m pytest tests/ --junitxml=pytest.xml
+  artifacts:
+    paths:
+      - pytest.xml
+    reports:
+      junit: pytest.xml
