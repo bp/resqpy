@@ -10,7 +10,7 @@ import resqpy.olio.transmission as rqtr
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.uuid as bu
 
-def test_regular_grid_half_cell_transmission():
+def test_regular_grid_half_cell_transmission(tmp_path):
 
    def try_one_half_t_regular(model, extent_kji = (2, 2, 2), dxyz = (1.0, 1.0, 1.0),
                               perm_kji = (1.0, 1.0, 1.0), ntg = 1.0, darcy_constant = 1.0,
@@ -36,8 +36,7 @@ def test_regular_grid_half_cell_transmission():
                                                    ntg * perm_kji[2] * dxyz[1] * dxyz[2] / dxyz[0]))
        assert np.all(np.isclose(half_t, expected.reshape(1, 1, 1, 3)))
 
-
-   temp_epc = '/tmp/test_' + str(bu.new_uuid()) + '.epc'
+   temp_epc = str(os.path.join(tmp_path, f"{bu.new_uuid()}.epc"))
    model = rq.Model(temp_epc, new_epc = True, create_basics = True)
 
    try_one_half_t_regular(model)
