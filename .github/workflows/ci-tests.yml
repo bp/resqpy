@@ -9,9 +9,10 @@ on:
     - master
 
 jobs:
-  build:
-
+  build-and-test:
+    name: Build and Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         # TODO: expand to [2.7, 3.5, 3.6, 3.7, 3.8]
@@ -38,12 +39,32 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+        pytest --junitxml=pytest.xml
 
-    - name: Upload pytest test results
+    - name: Upload pytest artifacts
+      if: ${{ always() }}
       uses: actions/upload-artifact@v2
       with:
-        name: pytest-results-${{ matrix.python-version }}
-        path: junit/test-results-${{ matrix.python-version }}.xml
+        name: Unit Test Results (Python ${{ matrix.python-version }})
+        path: pytest.xml
       # Use always() to always run this step to publish test results when there are test failures
-      if: ${{ always() }}
+      
+
+  publish-test-results:
+    # From https://github.com/marketplace/actions/publish-unit-test-results  
+    name: "Publish Unit Tests Results"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    # the build-and-test job might be skipped, we don't need to run this job then
+    if: success() || failure()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        with:
+          files: artifacts/**/*.xml
