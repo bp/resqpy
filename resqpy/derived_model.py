@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '23rd May 2021'
+version = '25th May 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -2336,7 +2336,8 @@ def unsplit_grid(epc_file, source_grid = None,
 
 
 
-def add_faults(epc_file, source_grid, lines_file_list = None, full_pillar_list_dict = None, left_right_throw_dict = None,
+def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = None,
+               full_pillar_list_dict = None, left_right_throw_dict = None,
                create_gcs = True, inherit_properties = False, inherit_realization = None, inherit_all_realizations = False,
                new_grid_title = None, new_epc_file = None):
    """Extends epc file with a new grid which is a version of the source grid with new curtain fault(s) added.
@@ -2347,6 +2348,8 @@ def add_faults(epc_file, source_grid, lines_file_list = None, full_pillar_list_d
          (or one 'ROOT' grid) which is used as the source grid
       lines_file_list (list of str, optional): a list of file paths, each containing one or more poly lines in simple
          ascii format§; see notes; either this or full_pillar_list_dicr must be present
+      lines_crs_uuid (uuid, optional): if present, the uuid of a coordinate reference system with which to interpret
+         the contents of the lines files; if None, the crs used by the grid will be assumed
       full_pillar_list_dict (dict mapping str to list of pairs of ints, optional): dictionary mapping from a fault name
          to a list of pairs of ints being the ordered neigbouring primary pillar (j0, i0) defining the curtain fault;
          either this or lines_file_list must be present
@@ -2506,12 +2509,22 @@ def add_faults(epc_file, source_grid, lines_file_list = None, full_pillar_list_d
 
    # take a copy of the resqpy grid object, without writing to hdf5 or creating xml
    grid = copy_grid(source_grid, model)
+   grid_crs = rqc.Crs(model, crs_root = model.root_for_uuid(grid.crs_uuid))
+   assert grid_crs is not None
+
+   if lines_crs_uuid is None:
+      lines_crs = None
+   else:
+      lines_crs = rqc.Crs(model, crs_root = model.root_for_uuid(lines_crs_uuid))
 
    if full_pillar_list_dict is None:
       full_pillar_list_dict = {}
       composite_face_set_dict = {}
       for filename in lines_file_list:
          new_lines = sl.read_lines(filename)
+         if lines_crs is not None:
+            for a in new_lines:
+               lines_crs.convert_array_to(grid_crs, a)
          _, f_name = os.path.split(filename)
          if f_name.lower().endswith('.dat'): face_set_id = f_name[:-4]
          else: face_set_id = f_name
