@@ -1,5 +1,8 @@
 # PEP 517-compliant build configuration
-# To build resqpy package, run: python -m build
+
+# To build resqpy package, run:
+# >>> pip install build
+# >>> python -m build
 
 [build-system]
 requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.0"]
