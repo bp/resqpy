@@ -21,6 +21,9 @@ build
 dist
 *.egg-info
 
+# Dynamically-generated version
+resqpy/version.py
+
 # XSD files
 resqml/olio/data/Properties.xsd
 

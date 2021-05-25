@@ -1,6 +1,11 @@
+# PEP 517-compliant build configuration
+# To build resqpy package, run: python -m build
+
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.0"]
 build-backend = "setuptools.build_meta"
+
+# Get version number from git tag
+# See https://github.com/pypa/setuptools_scm/
+[tool.setuptools_scm]
+write_to = "resqpy/version.py"
