@@ -1,6 +1,6 @@
 """rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
-version = '15th May 2021'
+version = '25th May 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -511,7 +511,11 @@ def import_vdb_all_grids(resqml_file_root,        # output path and file name wi
       assert vdb_case in case_list, 'case ' + vdb_case + ' not found in vdb: ' + vdb_file
       vdbase.set_use_case(vdb_case)
    grid_list = vdbase.list_of_grids()
-   for index, grid_name in enumerate(grid_list):
+   index = 0
+   for grid_name in grid_list:
+      if grid_name.upper().startswith('SMALLGRIDS'):
+         log.warning('vdb import skipping small grids')
+         continue
       log.debug('importing vdb data for grid ' + str(grid_name))
       import_nexus(resqml_file_root,
                    extent_ijk = extent_ijk if grid_name == 'ROOT' else None,  # 3 element numpy vector applicable to ROOT
@@ -538,6 +542,7 @@ def import_vdb_all_grids(resqml_file_root,        # output path and file name wi
                    create_property_set = create_property_set,
                    grid_title = grid_name,
                    mode = 'w' if index == 0 else 'a')
+      index += 1
 
 
 
