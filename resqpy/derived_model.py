@@ -2509,13 +2509,13 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
 
    # take a copy of the resqpy grid object, without writing to hdf5 or creating xml
    grid = copy_grid(source_grid, model)
-   grid_crs = rqc.Crs(model, crs_root = model.root_for_uuid(grid.crs_uuid))
+   grid_crs = rqcrs.Crs(model, crs_root = model.root_for_uuid(grid.crs_uuid))
    assert grid_crs is not None
 
    if lines_crs_uuid is None:
       lines_crs = None
    else:
-      lines_crs = rqc.Crs(model, crs_root = model.root_for_uuid(lines_crs_uuid))
+      lines_crs = rqcrs.Crs(model, crs_root = model.root_for_uuid(lines_crs_uuid))
 
    if full_pillar_list_dict is None:
       full_pillar_list_dict = {}
