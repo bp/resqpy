@@ -68,3 +68,20 @@ Run locally with:
 ```bash
 pytest tests/
 ```
+
+### Making a release
+
+To make a release at a given commit, simply make a git tag:
+
+```bash
+git tag v0.0.0
+git push origin v0.0.0
+```
+
+The tag must have the prefix `v` and have the form `MAJOR.MINOR.PATCH`.
+
+Following [semantic versioning](https://semver.org/), increment the:
+
+- MAJOR version when you make incompatible API changes,
+- MINOR version when you add functionality in a backwards compatible manner, and
+- PATCH version when you make backwards compatible bug fixes.
