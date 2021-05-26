@@ -2,6 +2,7 @@
 
 [![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bp/resqpy/blob/master/LICENSE)
 [![Python CI](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml)
+[![PyPI](https://badge.fury.io/py/resqpy.svg)](https://badge.fury.io/py/resqpy)
 [![Documentation Status](https://readthedocs.org/projects/resqpy/badge/?version=latest)](https://resqpy.readthedocs.io/en/latest/?badge=latest)
 
 ## Introduction
