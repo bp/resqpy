@@ -73,24 +73,22 @@ jobs:
           name: dist-artifact
           path: dist/
 
-      - name: print directory structure
-        run: ls -R ./dist
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          name: Release ${{ github.ref }}
+          tag: ${{ github.ref }}
+          artifacts: "dist/"
+          body: |
+            Changes in this Release
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Publish to PyPI
-      #   env:
-      #     TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-      #     TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     pip install twine
-      #     twine upload dist/*
-
-      # - name: Create GitHub Release
-      #   uses: ncipollo/release-action@v1
-      #   with:
-      #     name: Release ${{ github.ref }}
-      #     tag: ${{ github.ref }}
-      #     artifacts: "dist/"
-      #     body: |
-      #       Changes in this Release
-      #     token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to Test PyPI
+        # TODO: Move to prod PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install twine
+          twine upload --repository testpypi dist/*
