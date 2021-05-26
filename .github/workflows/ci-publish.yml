@@ -6,8 +6,8 @@ on:
       - 'v*' # On push events with tags matching v*, i.e. v1.0, v20.15.10
 
 jobs:
-  publish:
-    name: Publish release
+  build:
+    name: Build and test package
     runs-on: ubuntu-latest
     steps:
 
@@ -19,19 +19,42 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Install build dependencies
+    - name: Build
       run: |
         python -m pip install --upgrade pip
-        pip install build setuptools wheel twine
+        pip install build setuptools wheel
+        python -m build
 
-    - name: Build
-      run: python -m build
+    - name: Run tests on built package
+      run: |
+        pip install --no-index --find-links=build/ resqpy[tests]
+        pytest
 
-    - name: Upload build artifacts
+    - name: Save build artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Build package
+        name: dist-artifact
         path: dist/
+
+  publish:
+    name: Make release and publish
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Get build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: dist-artifact
+          path: dist/
+
+      - name: print directory structure
+        run: ls -R ./dist
 
     # - name: Publish to PyPI
     #   env:
