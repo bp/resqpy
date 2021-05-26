@@ -74,8 +74,11 @@ pytest tests/
 To make a release at a given commit, simply make a git tag:
 
 ```bash
-git tag v0.0.0
-git push origin v0.0.0
+# Make a tag
+git tag -a v0.0.1 -m "Incremental release with some bugfixes"
+
+# Push tag to github
+git push origin v0.0.1
 ```
 
 The tag must have the prefix `v` and have the form `MAJOR.MINOR.PATCH`.
