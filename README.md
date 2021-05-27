@@ -65,3 +65,23 @@ Run the test suite locally with:
 ```bash
 pytest tests/
 ```
+
+### Making a release
+
+To make a release at a given commit, simply make a git tag:
+
+```bash
+# Make a tag
+git tag -a v0.0.1 -m "Incremental release with some bugfixes"
+
+# Push tag to github
+git push origin v0.0.1
+```
+
+The tag must have the prefix `v` and have the form `MAJOR.MINOR.PATCH`.
+
+Following [semantic versioning](https://semver.org/), increment the:
+
+- MAJOR version when you make incompatible API changes,
+- MINOR version when you add functionality in a backwards compatible manner, and
+- PATCH version when you make backwards compatible bug fixes.
