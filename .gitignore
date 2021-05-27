@@ -15,11 +15,15 @@ pytest.xml
 docs/_build
 docs/_autosummary
 docs/html
+
+# Build artifacts
+build
+dist
 *.egg-info
+
+# Dynamically-generated version
+resqpy/version.py
 
 # XSD files
 resqml/olio/data/Properties.xsd
 
-# Build artifacts
-/resqml.egg-info/
-**/*.pyc

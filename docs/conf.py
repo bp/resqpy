@@ -27,8 +27,16 @@ project = 'resqpy'
 copyright = '2021, BP'
 author = 'BP'
 
-release = 'PreRelease'
-version = 'PreRelease'
+# Version from git tag
+# See https://github.com/pypa/setuptools_scm/#usage-from-sphinx
+try:
+    from importlib import metadata
+    release = metadata.version('myproject')
+except Exception:
+    release = '0.0.0-version-not-available'
+
+# Take major/minor
+version = '.'.join(release.split('.')[:2])
 
 
 # -- General configuration ---------------------------------------------------
