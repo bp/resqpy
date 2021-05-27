@@ -43,7 +43,13 @@ Modification functionality at the moment focuses on changes to grid geometry.
 
 ### Installation
 
-Install from source in "editable" mode with:
+Resqpy can be installed with pip:
+
+```bash
+pip install resqpy
+```
+
+Alternatively, to install your working copy of the code in "editable" mode:
 
 ```bash
 pip install -e /path/to/repo/
