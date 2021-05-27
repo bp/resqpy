@@ -1,12 +1,17 @@
 # resqpy: Python API for working with RESQML models
 
 [![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bp/resqpy/blob/master/LICENSE)
+[![Python CI](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml)
+[![PyPI](https://badge.fury.io/py/resqpy.svg)](https://badge.fury.io/py/resqpy)
+[![Documentation Status](https://readthedocs.org/projects/resqpy/badge/?version=latest)](https://resqpy.readthedocs.io/en/latest/?badge=latest)
 
 ## Introduction
 
 This repository contains pure python modules which provide a programming
 interface (API) for reading, writing, and modifying reservoir models in the
 RESQML format.
+
+See the full documentation [here](https://resqpy.readthedocs.io).
 
 ### Current capabilities
 
@@ -36,14 +41,6 @@ object and more fully cover the options permitted by the RESQML standard.
 
 Modification functionality at the moment focuses on changes to grid geometry.
 
-### Documentation
-
-Build locally with:
-
-```bash
-sphinx-build docs docs/html
-```
-
 ### Installation
 
 Install from source in "editable" mode with:
@@ -63,7 +60,7 @@ pip install -e /path/to/repo/
 
 ### Unit tests
 
-Run locally with:
+Run the test suite locally with:
 
 ```bash
 pytest tests/
