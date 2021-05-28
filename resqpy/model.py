@@ -2821,8 +2821,19 @@ class Model():
          traj = resqpy.well.Trajectory(self, trajectory_root=traj_root)
          yield traj
 
+   def md_datums(self):
+      """ Iterable of all MdDatum objects associated with the model
 
+      Yields:
+         md_datum: instance of :class:`resqpy.well.MdDatum`
+      """
+      import resqpy.well  # Imported here to avoid circular imports
 
+      parts = self.parts_list_of_type('MdDatum')
+      for part in parts:
+         datum_root = self.root_for_part(part)
+         datum = resqpy.well.MdDatum(self, md_datum_root=datum_root)
+         yield datum
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
