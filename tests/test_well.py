@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 
 from resqpy.model import Model
 import resqpy.well
@@ -69,8 +70,10 @@ def test_logs():
 
 def test_DeviationSurvey(example_model_with_well):
 
-   # Load existing objects
+   # Load existing objects, using type hints
+   model: Model
    model, well_interp, datum, traj = example_model_with_well
+   epc_path = model.epc_file
 
    # Create new survey
    survey = resqpy.well.DeviationSurvey(
@@ -83,3 +86,21 @@ def test_DeviationSurvey(example_model_with_well):
       first_station=[4,5,6],
    )
 
+   # Save to disk
+   survey.write_hdf5()
+   survey.create_xml()
+   model.store_epc()
+   model.h5_release()
+
+   # Clear memory
+   del model, well_interp, datum, traj, survey
+
+   # Reload from disk, check survey can be found
+   model2 = Model(epc_file=epc_path)
+   parts = model2.parts_list_of_type("DeviationSurveyRepresentation")
+   assert len(parts) == 1
+
+   # Load array data into memory
+   node = model2.root_for_part(parts[0])
+   survey2 = resqpy.well.DeviationSurvey.from_xml(model2, node=node)
+   assert_array_almost_equal(survey2.measured_depths, np.array([1,2,3]))

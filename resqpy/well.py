@@ -354,7 +354,7 @@ class DeviationSurvey():
          self.uuid = parent_model.uuid_for_root(self.root_node)
 
       self.is_final = is_final
-      self.station_count = station_count
+      
       self.md_uom = bwam.rq_length_unit(md_uom)
 
       # boolean: True for degrees, False for radians (nothing else supported)
@@ -364,6 +364,10 @@ class DeviationSurvey():
       self.measured_depths = np.array(measured_depths)
       self.azimuths = np.array(azimuths)
       self.inclinations = np.array(inclinations)
+
+      if station_count is None:
+         station_count = len(measured_depths)
+      self.station_count = station_count
       self.first_station = first_station
 
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
