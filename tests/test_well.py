@@ -1,8 +1,10 @@
-import pytest
-import numpy as np
-from resqpy.model import Model
 from pathlib import Path
 
+import pytest
+import numpy as np
+
+from resqpy.model import Model
+import resqpy.well
 
 @pytest.mark.skip(reason="Example data not yet available")
 def test_trajectory_iterators():
@@ -61,3 +63,24 @@ def test_logs():
             discovered_logs += 1
 
    assert discovered_logs > 0
+
+
+# Deviation Survey tests
+
+def test_DeviationSurvey(example_model_with_well):
+
+   # Load existing objects
+   wellbore_interp = next(example_model_with_well.wells())
+   md_datum = next(example_model_with_well.md_datums())
+
+   # Create new survey
+   survey = resqpy.well.DeviationSurvey(
+      parent_model=example_model_with_well,
+      represented_interp=wellbore_interp,
+      md_datum=md_datum,
+      measured_depths=[1,2,3],
+      azimuths=[1,2,3],
+      inclinations=[1,2,3],
+      first_station=[4,5,6],
+   )
+

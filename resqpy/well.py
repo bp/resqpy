@@ -361,9 +361,9 @@ class DeviationSurvey():
       # should be 'dega' or 'rad'
       self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
 
-      self.measured_depths = measured_depths
-      self.azimuths = azimuths
-      self.inclinations = inclinations
+      self.measured_depths = np.array(measured_depths)
+      self.azimuths = np.array(azimuths)
+      self.inclinations = np.array(inclinations)
       self.first_station = first_station
 
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
