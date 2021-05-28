@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '25th May 2021'
+version = '27th May 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -2445,6 +2445,7 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
       if len(grid.cols_for_split_pillars_cl) == 0: cl = 0
       else: cl = grid.cols_for_split_pillars_cl[-1]
       original_p = np.zeros((grid.nk_plus_k_gaps + 1, 3), dtype = float)
+      n_primaries = (grid.nj + 1) * (grid.ni + 1)
       for p_index in range(1, len(full_pillar_list) - 1):
          primary_ji0 = full_pillar_list[p_index]
          primary = primary_ji0[0] * (grid.ni + 1) + primary_ji0[1]
@@ -2473,6 +2474,27 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
                      continue
                   if lr_foursome[jp, ip] == exist_lr: continue
                   natural_col = (p_j + jp - 1) * grid.ni  +  p_i + ip - 1
+                  if exist_p != primary:  # remove one of the columns currently assigned to exist_p
+                     extra_p = exist_p - n_primaries
+#                     log.debug(f're-split: primary: {primary}; exist: {exist_p}; col: {natural_col}; extra: {extra_p}')
+#                     log.debug(f'pre re-split: cols: {grid.cols_for_split_pillars}')
+#                     log.debug(f'pre re-split: ccl:  {grid.cols_for_split_pillars_cl}')
+                     assert grid.split_pillar_indices_cached[extra_p] == primary
+                     if extra_p == 0: start = 0
+                     else: start = grid.cols_for_split_pillars_cl[extra_p - 1]
+                     found = False
+                     for cols_index in range(start, start + grid.cols_for_split_pillars_cl[extra_p]):
+                        if grid.cols_for_split_pillars[cols_index] == natural_col:
+                           grid.cols_for_split_pillars = np.concatenate((grid.cols_for_split_pillars[:cols_index],
+                                                                         grid.cols_for_split_pillars[cols_index + 1:]))
+                           found = True
+                           break
+                     assert found
+                     grid.cols_for_split_pillars_cl[extra_p:] -= 1
+                     cl -= 1
+                     assert grid.cols_for_split_pillars_cl[extra_p] > 0
+#                     log.debug(f'post re-split: cols: {grid.cols_for_split_pillars}')
+#                     log.debug(f'post re-split: ccl:  {grid.cols_for_split_pillars_cl}')
                   if not new_p_made:  # create a new split of pillar
                      extend_points_cached(grid, exist_p)
 #                     log.debug(f'B: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; lr: {lr_foursome[jp, ip]}; c ji0: {natural_col}')
