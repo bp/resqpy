@@ -46,6 +46,8 @@ import resqpy.crs as crs
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.lines as rql
+from resqpy.base import BaseResqml
+from resqpy.model import Model
 
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.vector_utilities as vec
@@ -151,7 +153,7 @@ def pl(i, e = False):
    return '' if i == 1 else 'es' if e else 's'
 
 
-class MdDatum():
+class MdDatum(BaseResqml):
    """Class for RESQML measured depth datum."""
 
    def __init__(self, parent_model, md_datum_root = None,
@@ -178,9 +180,7 @@ class MdDatum():
             this function does not create an xml node for the md datum
       """
 
-      self.model = parent_model
-      self.root_node = None
-      self.uuid = None
+      super().__init__(parent_model=parent_model)
       self.location = None
       self.md_reference = None
       self.crs_uuid = None
@@ -205,7 +205,6 @@ class MdDatum():
          if crs_root is not None:
             self.crs_root = crs_root
             self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
-      if self.uuid is None: self.uuid = bu.new_uuid()
 
 
    # todo: these two functions are almost identical to ones in the grid module: they should be made common and put in model.py
@@ -296,7 +295,7 @@ class MdDatum():
 
 
 
-class DeviationSurvey():
+class DeviationSurvey(BaseResqml):
    """Class for RESQML wellbore deviation survey.
 
    RESQML documentation:
@@ -317,100 +316,103 @@ class DeviationSurvey():
 
    """
 
-   def __init__(self, parent_model, deviation_survey_root = None, md_datum = None,
-                data_frame = None, deviation_survey_file = None, survey_file_space_separated = False,
-                length_uom = 'm', represented_interp = None):
-      """Create a DeviationSurvey object and optionally load it from xml or data frame or ascii file.
+   def __init__(self, parent_model, md_datum = None, represented_interp = None,
+                md_uom='m', angle_uom = 'degrees',
+                measured_depths=None, azimuths=None, inclinations=None,
+                station_count=None, first_station=None, is_final=False, root_node=None
+                ):
+      """Create a DeviationSurvey object.
 
       arguments:
          parent_model (model.Model object): the model which the new survey belongs to
-         deviation_survey_root (optional): the root node of an xml tree representing the survey;
-            if not None, the new survey object is initialised based on the data in the tree;
-            if None, one of the other arguments is used
          md_datum (MdDatum object): the datum that the depths for this survey are measured from;
             not used if deviation_survey_root is not None
-         data_frame (optional): a pandas dataframe with columns 'MD', 'AZIM_GN' and 'INCL' holding
-            the measured depths, azimuth and inclination values (degrees) respectively; also 'X',
-            'Y' and 'Z' columns which are only used to provide the location of the first station;
-            ignored if deviation_survey_root is not None
-         deviation_survey_file (string): filename of an ascii file holding the deviation survey
-            in a tabular form; ignored if deviation_survey_root is not None
-         survey_file_space_separated (boolean, default False): if True, deviation survey file is
-            space separated; if False, comma separated (csv); ignored unless loading from survey file
-         length_uom (string, default 'm'): a resqml length unit of measure applicable to the
+         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
             measured depths; should be 'm' or 'ft'
+         angle_uom (string)
          represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
             interpretation object which this deviation survey relates to; ignored if deviation_survey_root is not None
+         measured_depths (np.array): 1d array
+         azimuths (np.array): 1d array
+         inclindations (np.array): 1d array
 
       returns:
          the newly created deviation survey object
 
       notes:
-         data from the first of: the deviation survey root, data frame, and deviation survey file
-         arguments, that is not None, is used to instantiate the object;
-         to load from a data frame or survey file with more control over column names etc.,
-         instantiate the object with all 3 of these arguments set to None, then call one of the
-         load... methods which offer more control arguments;
          this method does not create an xml node, nor write hdf5 arrays
       """
 
-      assert deviation_survey_root is None or data_frame is None
-      self.model = parent_model
-      self.root_node = None
-      self.uuid = None
-      self.is_final = False         # could default to True here
-      self.station_count = 0        # length of measured_depths, azimuths & inclinations
-      self.md_uom = None
-      self.angles_in_degrees = None # boolean: True for degrees, False for radians (nothing else supported)
-      self.measured_depths = None   # 1d numpy array
-      self.azimuths = None          # 1d numpy array
-      self.inclinations = None      # 1d numpy array
-      self.first_station = None     # (x, y, z) of first point in survey, in crs for md datum
+      super().__init__(parent_model=parent_model, root_node=root_node)
+
+      self.is_final = is_final                # could default to True here
+      self.station_count = station_count   # length of measured_depths, azimuths & inclinations
+      self.md_uom = bwam.rq_length_unit(md_uom)
+
+      # boolean: True for degrees, False for radians (nothing else supported)
+      # should be 'dega' or 'rad'
+      self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
+
+      self.measured_depths = measured_depths
+      self.azimuths = azimuths          # 1d numpy array
+      self.inclinations = inclinations           # 1d numpy array
+      self.first_station = first_station  # (x, y, z) of first point in survey, in crs for md datum
+
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
       self.wellbore_interpretation = represented_interp
-      if deviation_survey_root is not None:
-         self.load_from_xml(deviation_survey_root)
-      elif data_frame is not None:
-         self.load_from_data_frame(data_frame, md_uom = length_uom, md_datum = md_datum)
-      elif deviation_survey_file:
-         self.load_from_ascii_file(deviation_survey_file,
-                                   space_separated_instead_of_csv = survey_file_space_separated,
-                                   md_uom = length_uom, md_datum = md_datum)
-      if self.uuid is None: self.uuid = bu.new_uuid()
 
+   @classmethod
+   def load_from_xml(cls, node, parent_model: Model):
+      """Create a deviation survey object from xml (and associated hdf5 data)
+      
+      Args:
+         node: the root node of an xml tree representing the survey;
+            if not None, the new survey object is initialised based on the data in the tree;
+            if None, one of the other arguments is used
+      """
 
-   def load_from_xml(self, node):
-      """Loads the deviation survey object from xml (and associated hdf5 data)."""
-
-      if node is None: return
-      self.root_node = node
-      self.uuid = bu.uuid_from_string(node.attrib['uuid'].strip())
-      self.is_final = rqet.bool_from_text(rqet.node_text(rqet.find_tag(node, 'IsFinal')))
-      self.station_count = int(rqet.node_text(rqet.find_tag(node, 'StationCount')).strip())
-      self.md_uom = rqet.length_units_from_node(rqet.find_tag(node, 'MdUom'))
-      angle_uom = rqet.node_text(rqet.find_tag(node, 'AngleUom'))
-      self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')  # should be 'dega' or 'rad'
-      mds_node = rqet.find_tag(node, 'Mds')
-      load_hdf5_array(self, mds_node, 'measured_depths')
-      azimuths_node = rqet.find_tag(node, 'Azimuths')
-      load_hdf5_array(self, azimuths_node, 'azimuths')
-      inclinations_node = rqet.find_tag(node, 'Inclinations')
-      load_hdf5_array(self, inclinations_node, 'inclinations')
-      self.first_station = extract_xyz(rqet.find_tag(node, 'FirstStationLocation'))
+      
       # md_datum - separate part, referred to in this tree
       md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(node, 'MdDatum'), 'UUID'))
       if md_datum_uuid is not None:
          md_datum_part = 'obj_MdDatum_' + str(md_datum_uuid) + '.xml'
-         self.md_datum = MdDatum(self.model, md_datum_root = self.model.root_for_part(md_datum_part, is_rels = False))
+         md_datum = MdDatum(parent_model, md_datum_root=parent_model.root_for_part(md_datum_part, is_rels = False))
+      else:
+         md_datum = None
+
+      # Get wellbore interpretation
       interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
       if interp_uuid is None:
-         self.wellbore_interpretation = None
+         represented_interp = None
       else:
-         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, root_node = self.model.root_for_part(wellbore_interp_part))
+         wellbore_interp_part = parent_model.part_for_uuid(interp_uuid)
+         represented_interp = rqo.WellboreInterpretation(parent_model, root_node=parent_model.root_for_part(wellbore_interp_part))
+
+      obj = cls(
+         parent_model=parent_model,
+         root_node=node,
+         station_count=int(rqet.node_text(rqet.find_tag(node, 'StationCount')).strip()),
+         md_datum=md_datum,
+         md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom')),
+         angle_uom=rqet.node_text(rqet.find_tag(node, 'AngleUom')),
+         first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation')),
+         represented_interp=represented_interp,
+         is_final=rqet.bool_from_text(rqet.node_text(rqet.find_tag(node, 'IsFinal')))
+      )
+      obj.uuid = bu.uuid_from_string(node.attrib['uuid'].strip())
+
+      mds_node = rqet.find_tag(node, 'Mds')
+      load_hdf5_array(obj, mds_node, 'measured_depths')
+      azimuths_node = rqet.find_tag(node, 'Azimuths')
+      load_hdf5_array(obj, azimuths_node, 'azimuths')
+      inclinations_node = rqet.find_tag(node, 'Inclinations')
+      load_hdf5_array(obj, inclinations_node, 'inclinations')
+
+      return obj
 
 
-   def load_from_data_frame(self, data_frame,
+   @classmethod
+   def load_from_data_frame(cls, parent_model, data_frame,
                             md_col = 'MD', azimuth_col = 'AZIM_GN', inclination_col = 'INCL',
                             x_col = 'X', y_col = 'Y', z_col = 'Z',     # used for first station
                             md_uom = 'm', angle_uom = 'degrees',
@@ -440,31 +442,31 @@ class DeviationSurvey():
             the X, Y & Z columns are only used to set the first station location (from the first row)
       """
 
-      try:
-         for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
-            assert col in data_frame.columns
-         self.root_node = None
-         self.uuid = bu.new_uuid()
-         self.station_count = len(data_frame)
-         assert self.station_count >= 2        # vertical well could be hamdled by allowing a single station in survey?
+
+      for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
+         assert col in data_frame.columns
+      station_count = len(data_frame)
+      assert station_count >= 2        # vertical well could be hamdled by allowing a single station in survey?
 #         self.md_uom = bwam.p_length_unit(md_uom)
-         self.md_uom = bwam.rq_length_unit(md_uom)
-         self.angles_in_degrees = (angle_uom.lower() == 'degrees')
-         start = data_frame.iloc[0]
-         self.first_station = (start[x_col], start[y_col], start[z_col])
-         self.measured_depths = np.empty(self.station_count)
-         self.azimuths = np.empty(self.station_count)
-         self.inclinations = np.empty(self.station_count)
-         self.measured_depths[:] = data_frame[md_col]
-         self.azimuths[:] = data_frame[azimuth_col]
-         self.inclinations[:] = data_frame[inclination_col]
-         self.md_datum = md_datum
-         self.is_final = True                  # assume this is a finalised deviation survey
-      except:
-         log.exception('failed to load deviation survey object from data frame')
+
+      start = data_frame.iloc[0]
+   
+      return cls(
+         parent_model=parent_model,
+         station_count=station_count,
+         md_datum=md_datum,
+         md_uom=md_uom,
+         angle_uom=angle_uom,
+         first_station=(start[x_col], start[y_col], start[z_col]),
+         measured_depths=data_frame[md_col].values,
+         azimuths=data_frame[azimuth_col].values,
+         inclinations=data_frame[inclination_col].values,
+         is_final=True  # assume this is a finalised deviation survey
+      )
 
 
-   def load_from_ascii_file(self, deviation_survey_file, comment_character = '#',
+   @classmethod
+   def load_from_ascii_file(cls, parent_model, deviation_survey_file, comment_character = '#',
                             space_separated_instead_of_csv = False,
                             md_col = 'MD', azimuth_col = 'AZIM_GN', inclination_col = 'INCL',
                             x_col = 'X', y_col = 'Y', z_col = 'Z',     # used for first station
@@ -501,10 +503,10 @@ class DeviationSurvey():
       try:
          df = pd.read_csv(deviation_survey_file, comment = comment_character, delim_whitespace = space_separated_instead_of_csv)
          if df is None: raise Exception
-      except:
+      except Exception:
          log.error('failed to read ascii deviation survey file ' + deviation_survey_file)
          raise
-      self.load_from_data_frame(df, md_col = md_col, azimuth_col = azimuth_col, inclination_col = inclination_col,
+      return cls.load_from_data_frame(parent_model, df, md_col = md_col, azimuth_col = azimuth_col, inclination_col = inclination_col,
                                 x_col = x_col, y_col = y_col, z_col = z_col, md_uom = md_uom, angle_uom = angle_uom,
                                 md_datum = md_datum)
 
@@ -651,7 +653,7 @@ class DeviationSurvey():
 
 
 
-class Trajectory():
+class Trajectory(BaseResqml):
    """Class for RESQML Wellbore Trajectory Representation (Geometry).
 
    note:
@@ -710,10 +712,8 @@ class Trajectory():
          or, create a trajectory directly using X, Y, Z data from the deviation survey file (ie. minimum
          curvature or other algorithm already applied externally)
       """
+      super().__init__(parent_model=parent_model)
 
-      self.model = parent_model
-      self.root_node = None
-      self.uuid = None
       self.crs_root = None
       self.title = well_name
       self.start_md = None
@@ -762,7 +762,6 @@ class Trajectory():
          if self.md_datum is not None: self.crs_root = self.md_datum.crs_root
          else: self.crs_root = self.model.crs_root
       if not self.title: self.title = 'well trajectory'
-      if self.uuid is None: self.uuid = bu.new_uuid()
       if self.md_datum is None and self.control_points is not None:
          self.md_datum = MdDatum(self.model, crs_root = self.crs_root, location = self.control_points[0])
 
