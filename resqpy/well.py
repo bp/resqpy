@@ -46,8 +46,6 @@ import resqpy.crs as crs
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.lines as rql
-from resqpy.base import BaseResqml
-from resqpy.model import Model
 
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.vector_utilities as vec
@@ -153,7 +151,7 @@ def pl(i, e = False):
    return '' if i == 1 else 'es' if e else 's'
 
 
-class MdDatum(BaseResqml):
+class MdDatum():
    """Class for RESQML measured depth datum."""
 
    def __init__(self, parent_model, md_datum_root = None,
@@ -294,8 +292,7 @@ class MdDatum(BaseResqml):
       return datum
 
 
-
-class DeviationSurvey(BaseResqml):
+class DeviationSurvey():
    """Class for RESQML wellbore deviation survey.
 
    RESQML documentation:
@@ -319,7 +316,8 @@ class DeviationSurvey(BaseResqml):
    def __init__(self, parent_model, md_datum = None, represented_interp = None,
                 md_uom='m', angle_uom = 'degrees',
                 measured_depths=None, azimuths=None, inclinations=None,
-                station_count=None, first_station=None, is_final=False, root_node=None
+                station_count=None, first_station=None, is_final=False,
+                root_node=None
                 ):
       """Create a DeviationSurvey object.
 
@@ -343,7 +341,12 @@ class DeviationSurvey(BaseResqml):
          this method does not create an xml node, nor write hdf5 arrays
       """
 
-      super().__init__(parent_model=parent_model, root_node=root_node)
+      self.model = parent_model
+      self.root_node = root_node
+      if self.root_node is None:
+         self.uuid = bu.new_uuid()
+      else:
+         self.uuid = parent_model.uuid_for_root(self.root_node)
 
       self.is_final = is_final                # could default to True here
       self.station_count = station_count   # length of measured_depths, azimuths & inclinations
@@ -360,6 +363,7 @@ class DeviationSurvey(BaseResqml):
 
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
       self.wellbore_interpretation = represented_interp
+
 
    @classmethod
    def load_from_xml(cls, node, parent_model: Model):
