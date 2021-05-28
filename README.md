@@ -1,9 +1,11 @@
 # resqpy: Python API for working with RESQML models
 
-[![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bp/resqpy/blob/master/LICENSE)
-[![Python CI](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml)
-[![PyPI](https://badge.fury.io/py/resqpy.svg)](https://badge.fury.io/py/resqpy)
+[![License](https://img.shields.io/pypi/l/resqpy)](https://github.com/bp/resqpy/blob/master/LICENSE)
 [![Documentation Status](https://readthedocs.org/projects/resqpy/badge/?version=latest)](https://resqpy.readthedocs.io/en/latest/?badge=latest)
+[![Python CI](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml)
+![Python version](https://img.shields.io/pypi/pyversions/resqpy)
+[![PyPI](https://img.shields.io/pypi/v/resqpy)](https://badge.fury.io/py/resqpy)
+![Status](https://img.shields.io/pypi/status/resqpy)
 
 ## Introduction
 
