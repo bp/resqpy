@@ -178,7 +178,9 @@ class MdDatum():
             this function does not create an xml node for the md datum
       """
 
-      super().__init__(parent_model=parent_model)
+      self.model = parent_model
+      self.root_node = None
+      self.uuid = None
       self.location = None
       self.md_reference = None
       self.crs_uuid = None
@@ -203,6 +205,7 @@ class MdDatum():
          if crs_root is not None:
             self.crs_root = crs_root
             self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
+      if self.uuid is None: self.uuid = bu.new_uuid()
 
 
    # todo: these two functions are almost identical to ones in the grid module: they should be made common and put in model.py
@@ -313,31 +316,31 @@ class DeviationSurvey():
 
    """
 
-   def __init__(self, parent_model, md_datum = None, represented_interp = None,
-                md_uom='m', angle_uom = 'degrees',
-                measured_depths=None, azimuths=None, inclinations=None,
-                station_count=None, first_station=None, is_final=False,
-                root_node=None
-                ):
+   def __init__(self, parent_model, root_node=None, represented_interp=None, md_datum=None,
+                md_uom='m', angle_uom='degrees', measured_depths=None, azimuths=None,
+                inclinations=None, station_count=None, first_station=None, is_final=False):
       """Create a DeviationSurvey object.
 
-      arguments:
-         parent_model (model.Model object): the model which the new survey belongs to
-         md_datum (MdDatum object): the datum that the depths for this survey are measured from;
-            not used if deviation_survey_root is not None
+      Args:
+         parent_model (model.Model): the model which the new survey belongs to
+         root_node (node): xml node containing survey, if it already exists.
+         represented_interp (wellbore interpretation): if present, is noted as the wellbore
+            interpretation object which this deviation survey relates to
+         md_datum (MdDatum): the datum that the depths for this survey are measured from
          md_uom (string, default 'm'): a resqml length unit of measure applicable to the
             measured depths; should be 'm' or 'ft'
-         angle_uom (string)
-         represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-            interpretation object which this deviation survey relates to; ignored if deviation_survey_root is not None
+         angle_uom (string): a resqml angle unit; should be 'dega' or 'rad'  # TODO: check this
          measured_depths (np.array): 1d array
          azimuths (np.array): 1d array
          inclindations (np.array): 1d array
+         station_count (int): length of measured_depths, azimuths & inclinations
+         first_station (tuple): (x, y, z) of first point in survey, in crs for md datum
+         is_final (bool): whether survey is a finalised deviation survey
 
-      returns:
-         the newly created deviation survey object
+      Returns:
+         Deviation survey object
 
-      notes:
+      Notes:
          this method does not create an xml node, nor write hdf5 arrays
       """
 
@@ -348,8 +351,8 @@ class DeviationSurvey():
       else:
          self.uuid = parent_model.uuid_for_root(self.root_node)
 
-      self.is_final = is_final                # could default to True here
-      self.station_count = station_count   # length of measured_depths, azimuths & inclinations
+      self.is_final = is_final
+      self.station_count = station_count
       self.md_uom = bwam.rq_length_unit(md_uom)
 
       # boolean: True for degrees, False for radians (nothing else supported)
@@ -357,16 +360,16 @@ class DeviationSurvey():
       self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
 
       self.measured_depths = measured_depths
-      self.azimuths = azimuths          # 1d numpy array
-      self.inclinations = inclinations           # 1d numpy array
-      self.first_station = first_station  # (x, y, z) of first point in survey, in crs for md datum
+      self.azimuths = azimuths
+      self.inclinations = inclinations
+      self.first_station = first_station
 
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
       self.wellbore_interpretation = represented_interp
 
 
    @classmethod
-   def load_from_xml(cls, node, parent_model: Model):
+   def from_xml(cls, node, parent_model):
       """Create a deviation survey object from xml (and associated hdf5 data)
       
       Args:
@@ -375,7 +378,6 @@ class DeviationSurvey():
             if None, one of the other arguments is used
       """
 
-      
       # md_datum - separate part, referred to in this tree
       md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(node, 'MdDatum'), 'UUID'))
       if md_datum_uuid is not None:
@@ -416,7 +418,7 @@ class DeviationSurvey():
 
 
    @classmethod
-   def load_from_data_frame(cls, parent_model, data_frame,
+   def from_data_frame(cls, parent_model, data_frame,
                             md_col = 'MD', azimuth_col = 'AZIM_GN', inclination_col = 'INCL',
                             x_col = 'X', y_col = 'Y', z_col = 'Z',     # used for first station
                             md_uom = 'm', angle_uom = 'degrees',
@@ -470,12 +472,9 @@ class DeviationSurvey():
 
 
    @classmethod
-   def load_from_ascii_file(cls, parent_model, deviation_survey_file, comment_character = '#',
-                            space_separated_instead_of_csv = False,
-                            md_col = 'MD', azimuth_col = 'AZIM_GN', inclination_col = 'INCL',
-                            x_col = 'X', y_col = 'Y', z_col = 'Z',     # used for first station
-                            md_uom = 'm', angle_uom = 'degrees',
-                            md_datum = None):
+   def from_ascii_file(cls, parent_model, deviation_survey_file, comment_character='#',
+      space_separated_instead_of_csv=False, md_col= 'MD', azimuth_col='AZIM_GN', inclination_col='INCL',
+      x_col='X', y_col='Y', z_col='Z', md_uom='m', angle_uom='degrees', md_datum=None):
       """Load MD, aximuth & inclination data from an ascii deviation survey file.
 
          arguments:
@@ -657,7 +656,7 @@ class DeviationSurvey():
 
 
 
-class Trajectory(BaseResqml):
+class Trajectory():
    """Class for RESQML Wellbore Trajectory Representation (Geometry).
 
    note:
@@ -716,8 +715,10 @@ class Trajectory(BaseResqml):
          or, create a trajectory directly using X, Y, Z data from the deviation survey file (ie. minimum
          curvature or other algorithm already applied externally)
       """
-      super().__init__(parent_model=parent_model)
 
+      self.model = parent_model
+      self.root_node = None
+      self.uuid = None
       self.crs_root = None
       self.title = well_name
       self.start_md = None
@@ -766,6 +767,7 @@ class Trajectory(BaseResqml):
          if self.md_datum is not None: self.crs_root = self.md_datum.crs_root
          else: self.crs_root = self.model.crs_root
       if not self.title: self.title = 'well trajectory'
+      if self.uuid is None: self.uuid = bu.new_uuid()
       if self.md_datum is None and self.control_points is not None:
          self.md_datum = MdDatum(self.model, crs_root = self.crs_root, location = self.control_points[0])
 
