@@ -70,14 +70,13 @@ def test_logs():
 def test_DeviationSurvey(example_model_with_well):
 
    # Load existing objects
-   wellbore_interp = next(example_model_with_well.wells())
-   md_datum = next(example_model_with_well.md_datums())
+   model, well_interp, datum, traj = example_model_with_well
 
    # Create new survey
    survey = resqpy.well.DeviationSurvey(
-      parent_model=example_model_with_well,
-      represented_interp=wellbore_interp,
-      md_datum=md_datum,
+      parent_model=model,
+      represented_interp=well_interp,
+      md_datum=datum,
       measured_depths=[1,2,3],
       azimuths=[1,2,3],
       inclinations=[1,2,3],
