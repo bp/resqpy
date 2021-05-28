@@ -6,6 +6,7 @@
 .ipynb_checkpoints
 __pycache__/
 .pyc
+.DS_Store
 
 # Unit tests
 pytest.xml
