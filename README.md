@@ -5,6 +5,7 @@
 [![Python CI](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/bp/resqpy/actions/workflows/ci-tests.yml)
 ![Python version](https://img.shields.io/pypi/pyversions/resqpy)
 [![PyPI](https://img.shields.io/pypi/v/resqpy)](https://badge.fury.io/py/resqpy)
+![Status](https://img.shields.io/pypi/status/resqpy)
 
 ## Introduction
 
