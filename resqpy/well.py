@@ -321,6 +321,8 @@ class DeviationSurvey():
                 inclinations=None, station_count=None, first_station=None, is_final=False):
       """Create a DeviationSurvey object.
 
+      Can be most easily instantiated with the "DeviationSurvey.from_" class constructor methods.
+
       Args:
          parent_model (model.Model): the model which the new survey belongs to
          root_node (node): xml node containing survey, if it already exists.
@@ -338,7 +340,7 @@ class DeviationSurvey():
          is_final (bool): whether survey is a finalised deviation survey
 
       Returns:
-         Deviation survey object
+         DeviationSurvey
 
       Notes:
          this method does not create an xml node, nor write hdf5 arrays
@@ -369,15 +371,18 @@ class DeviationSurvey():
 
 
    @classmethod
-   def from_xml(cls, node, parent_model):
+   def from_xml(cls, parent_model, node):
       """Create a deviation survey object from xml (and associated hdf5 data)
       
       Args:
+         parent_model (model.Model): the parent resqml model
          node: the root node of an xml tree representing the survey;
             if not None, the new survey object is initialised based on the data in the tree;
             if None, one of the other arguments is used
-      """
 
+      Returns:
+         DeviationSurvey
+      """
       # md_datum - separate part, referred to in this tree
       md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(node, 'MdDatum'), 'UUID'))
       if md_datum_uuid is not None:
@@ -418,36 +423,33 @@ class DeviationSurvey():
 
 
    @classmethod
-   def from_data_frame(cls, parent_model, data_frame,
-                            md_col = 'MD', azimuth_col = 'AZIM_GN', inclination_col = 'INCL',
-                            x_col = 'X', y_col = 'Y', z_col = 'Z',     # used for first station
-                            md_uom = 'm', angle_uom = 'degrees',
-                            md_datum = None):                          # MdDatum object
+   def from_data_frame(cls, parent_model, data_frame, md_datum=None, md_col='MD',
+                       azimuth_col='AZIM_GN', inclination_col='INCL', x_col='X', y_col='Y',
+                       z_col='Z', md_uom='m', angle_uom='degrees'):
       """Load MD, aximuth & inclination data from a pandas data frame.
 
-         arguments:
-            data_frame: a pandas dataframe holding the deviation survey data
-            md_col (string, default 'MD'): the name of the column holding measured depth values
-            azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
-               to the north direction (+ve y axis) of the coordinate reference system
-            inclination_col (string, default 'INCL'): the name of the column holding inclination values
-            x_col (string, default 'X'): the name of the column holding an x value in the first row
-            y_col (string, default 'Y'): the name of the column holding an Y value in the first row
-            z_col (string, default 'Z'): the name of the column holding an z value in the first row
-            md_uom (string, default 'm'): a resqml length unit of measure applicable to the
-               measured depths; should be 'm' or 'ft'
-            angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
-               the azimuth and inclination data
-            md_datum (MdDatum object): the datum that the depths for this survey are measured from
+      Args:
+         parent_model (model.Model): the parent resqml model
+         data_frame: a pandas dataframe holding the deviation survey data
+         md_datum (MdDatum object): the datum that the depths for this survey are measured from
+         md_col (string, default 'MD'): the name of the column holding measured depth values
+         azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
+            to the north direction (+ve y axis) of the coordinate reference system
+         inclination_col (string, default 'INCL'): the name of the column holding inclination values
+         x_col (string, default 'X'): the name of the column holding an x value in the first row
+         y_col (string, default 'Y'): the name of the column holding an Y value in the first row
+         z_col (string, default 'Z'): the name of the column holding an z value in the first row
+         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
+            measured depths; should be 'm' or 'ft'
+         angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
+            the azimuth and inclination data
 
-         returns:
-            None
+      Returns:
+         DeviationSurvey
 
-         notes:
-            this method should only be called if an empty deviation survey object has been instantiated;
-            the X, Y & Z columns are only used to set the first station location (from the first row)
+      Note:
+         The X, Y & Z columns are only used to set the first station location (from the first row)
       """
-
 
       for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
          assert col in data_frame.columns
@@ -477,30 +479,30 @@ class DeviationSurvey():
       x_col='X', y_col='Y', z_col='Z', md_uom='m', angle_uom='degrees', md_datum=None):
       """Load MD, aximuth & inclination data from an ascii deviation survey file.
 
-         arguments:
-            deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
-            comment_character (string): the character to be treated as introducing comments
-            space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
-               if True, columns are expected to be seperated by white space
-            md_col (string, default 'MD'): the name of the column holding measured depth values
-            azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
-               to the north direction (+ve y axis) of the coordinate reference system
-            inclination_col (string, default 'INCL'): the name of the column holding inclination values
-            x_col (string, default 'X'): the name of the column holding an x value in the first row
-            y_col (string, default 'Y'): the name of the column holding an Y value in the first row
-            z_col (string, default 'Z'): the name of the column holding an z value in the first row
-            md_uom (string, default 'm'): a resqml length unit of measure applicable to the
-               measured depths; should be 'm' or 'ft'
-            angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
-               the azimuth and inclination data
-            md_datum (MdDatum object): the datum that the depths for this survey are measured from
+      Arguments:
+         parent_model (model.Model): the parent resqml model
+         deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
+         comment_character (string): the character to be treated as introducing comments
+         space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
+            if True, columns are expected to be seperated by white space
+         md_col (string, default 'MD'): the name of the column holding measured depth values
+         azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
+            to the north direction (+ve y axis) of the coordinate reference system
+         inclination_col (string, default 'INCL'): the name of the column holding inclination values
+         x_col (string, default 'X'): the name of the column holding an x value in the first row
+         y_col (string, default 'Y'): the name of the column holding an Y value in the first row
+         z_col (string, default 'Z'): the name of the column holding an z value in the first row
+         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
+            measured depths; should be 'm' or 'ft'
+         angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
+            the azimuth and inclination data
+         md_datum (MdDatum object): the datum that the depths for this survey are measured from
 
-         returns:
-            None
+      Returns:
+         DeviationSurvey
 
-         note:
-            this method should only be called if an empty deviation survey object has been instantiated;
-            the X, Y & Z columns are only used to set the first station location (from the first row)
+      Note:
+         The X, Y & Z columns are only used to set the first station location (from the first row)
       """
 
       try:
@@ -509,9 +511,20 @@ class DeviationSurvey():
       except Exception:
          log.error('failed to read ascii deviation survey file ' + deviation_survey_file)
          raise
-      return cls.load_from_data_frame(parent_model, df, md_col = md_col, azimuth_col = azimuth_col, inclination_col = inclination_col,
-                                x_col = x_col, y_col = y_col, z_col = z_col, md_uom = md_uom, angle_uom = angle_uom,
-                                md_datum = md_datum)
+
+      return cls.from_data_frame(
+         parent_model,
+         df,
+         md_col=md_col,
+         azimuth_col=azimuth_col,
+         inclination_col=inclination_col,
+         x_col=x_col,
+         y_col=y_col,
+         z_col=z_col,
+         md_uom=md_uom,
+         angle_uom=angle_uom,
+         md_datum=md_datum
+      )
 
 
    def create_xml(self, ext_uuid = None, md_datum_root = None, md_datum_xyz = None, ds_uuid = None,
