@@ -72,27 +72,26 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 
 # See https://autoclasstoc.readthedocs.io/en/latest/advanced_usage.html
 
-from autoclasstoc import Section, is_method, PublicMethods
+from autoclasstoc import PublicMethods
 
 class HighLevelSection(PublicMethods):
-    key = 'high-level-methods'
+    key = "high-level-methods"
     title = "High-Level Methods:"
 
     def predicate(self, name, attr, meta):
-        always_include = ['__init__']
-        return super().predicate(name, attr, meta) and ('high-level' in meta or name in always_include)
+        return super().predicate(name, attr, meta) and 'high-level' in meta
 
 class OtherMethods(PublicMethods):
-    key = 'other-methods'
+    key = "other-methods"
     title = "Methods:"
 
     def predicate(self, name, attr, meta):
-        return super().predicate(name, attr, meta) and not name.startswith('on_')
+        return super().predicate(name, attr, meta) and 'high-level' not in meta
 
 autoclasstoc_sections = [
-        'public-attrs',
-        'high-level-methods',
-        'other-methods',
+        "public-attrs",
+        "high-level-methods",
+        "other-methods",
 ]
 
 # -- Options for HTML output -------------------------------------------------
