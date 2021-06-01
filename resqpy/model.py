@@ -94,6 +94,7 @@ class Model():
       Returns:
          The newly created Model object
 
+      :meta high-level:
       """
 
       if epc_file and not epc_file.endswith('.epc'): epc_file += '.epc'
@@ -136,8 +137,6 @@ class Model():
 
       note:
          not usually called directly (semi-private)
-
-      :meta private:
       """
 
       self.epc_file = None
@@ -1800,8 +1799,6 @@ class Model():
 
       note:
          not usually called directly
-
-      :meta private:
       """
 
       assert(self.main_tree is None)
