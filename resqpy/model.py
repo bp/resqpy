@@ -40,7 +40,27 @@ class Model():
                 new_epc = False, create_basics = None, create_hdf5_ext = None, copy_from = None):
       """Create an empty model; load it from epc_file if given.
 
-      arguments:
+      Examples:
+
+         To open an existing dataset::
+
+            Model(epc_file = 'filename.epc')
+
+         To create a new, empty model ready to populate::
+
+            Model(epc_file = 'new_file.epc', new_epc = True, create_basics = True, create_hdf5_ext = True)
+
+         To copy an existing dataset then open the new copy::
+
+            Model(epc_file = 'new_file.epc', copy_from = 'existing.epc')
+
+      Note:
+
+         if epc_file is given and the other arguments indicate that it will be a new dataset (new_epc is True
+         or copy_from is given) then any existing .epc and .h5 file(s) with this name will be deleted
+         immediately
+
+      Arguments:
          epc_file (string, optional): if present, and new_epc is False and copy_from is None, the name
             of an existing epc file which is opened, unzipped and parsed to determine the list of parts
             and relationships comprising the model; if present, and new_epc is True or copy_from is
@@ -68,21 +88,9 @@ class Model():
             any previous instances) before epc_file is opened; this argument is primarily to facilitate
             repeated testing of code that modifies the resqml dataset, eg. by appending new parts
 
-      returns:
-         the newly created Model object
+      Returns:
+         The newly created Model object
 
-      example calls:
-         to open an existing dataset:
-            Model(epc_file = 'filename.epc')
-         to create a new, empty model ready to populate:
-            Model(epc_file = 'new_file.epc', new_epc = True, create_basics = True, create_hdf5_ext = True)
-         to copy an existing dataset then open the new copy:
-            Model(epc_file = 'new_file.epc', copy_from = 'existing.epc')
-
-      notes:
-         if epc_file is given and the other arguments indicate that it will be a new dataset (new_epc is True
-         or copy_from is given) then any existing .epc and .h5 file(s) with this name will be deleted
-         immediately
       """
 
       if epc_file and not epc_file.endswith('.epc'): epc_file += '.epc'
@@ -125,6 +133,8 @@ class Model():
 
       note:
          not usually called directly (semi-private)
+
+      :meta private:
       """
 
       self.epc_file = None
