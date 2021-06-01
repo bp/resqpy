@@ -35,13 +35,9 @@ def _pl(i, e = False):
 
 
 class Model():
-   """Class for RESQML (v2) based models."""
-
-   def __init__(self, epc_file = None, full_load = True, epc_subdir = None,
-                new_epc = False, create_basics = None, create_hdf5_ext = None, copy_from = None):
-      """Create an empty model; load it from epc_file if given.
-
-      Examples:
+   """Class for RESQML (v2) based models.
+   
+   Examples:
 
          To open an existing dataset::
 
@@ -54,6 +50,12 @@ class Model():
          To copy an existing dataset then open the new copy::
 
             Model(epc_file = 'new_file.epc', copy_from = 'existing.epc')
+   
+   """
+
+   def __init__(self, epc_file = None, full_load = True, epc_subdir = None,
+                new_epc = False, create_basics = None, create_hdf5_ext = None, copy_from = None):
+      """Create an empty model; load it from epc_file if given.
 
       Note:
 
