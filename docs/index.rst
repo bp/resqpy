@@ -9,6 +9,7 @@ Welcome to resqpy's documentation
 
    installation
    getting-started
+   CONTRIBUTING
    trademarks
 
 API Reference
