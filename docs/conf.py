@@ -41,7 +41,7 @@ version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 
-autoclass_content = "both"  # include both class docstring and __init__
+autoclass_content = "class"  # Alternatively, "both" to include init method
 # autodoc_default_options = {
 #     'members': None,
 #     'inherited-members': None,
