@@ -59,7 +59,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',     # Add a link to the Python source code for classes, functions etc.
+    'sphinx.ext.viewcode',
+    'autoclasstoc',
 ]
 
 templates_path = ['_templates']
