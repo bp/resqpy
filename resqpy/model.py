@@ -187,6 +187,8 @@ class Model():
          a list containing the part name for a uuid: model.parts(uuid = 'a869e7cc-5d30-4b31-8502-c74b1d87c777')
          a list of IjkGrid parts with titles beginning LGR, sorted by title:
             model.parts(obj_type = 'IjkGridRepresentation', title = 'LGR', title_mode = 'starts', sort_by = 'title')
+      
+      :meta high-level:
       """
 
       if not parts_list: parts_list = self.list_of_parts()
@@ -638,6 +640,8 @@ class Model():
          note:
             when copy_from is specified, the entire contents of the source dataset are copied,
             regardless of the epc_subdir setting which only affects the subsequent load into memory
+
+      :meta high-level:
       """
 
       def exclude(name, epc_subdir):
@@ -742,6 +746,8 @@ class Model():
 
          note:
             the main tree, parts forest and rels forest must all be up to date before calling this method
+
+      :meta high-level:
       """
 
 #      for prefix, uri in ns.items():
@@ -1358,6 +1364,8 @@ class Model():
          a Model by using this method which will return a shared object from this list, instantiating a new
          object and adding it to the list when necessary; an assertion exception will be raised if a
          suitable grid part is not present in the model
+
+      :meta high-level:
       """
 
       if uuid is None and (title is None or title.upper() == 'ROOT'):
@@ -1608,6 +1616,8 @@ class Model():
 
       returns:
          None
+
+      :meta high-level:
       """
 
       if self.h5_currently_open_root is not None:
@@ -2797,6 +2807,8 @@ class Model():
 
       Yields:
          wellbore: instance of :class:`resqpy.organize.WellboreInterpretation`
+
+      :meta high-level:
       """
       import resqpy.organize  # Imported here to avoid circular imports
 
@@ -2812,6 +2824,8 @@ class Model():
 
       Yields:
          trajectory: instance of :class:`resqpy.well.Trajectory`
+
+      :meta high-level:
       """
       import resqpy.well  # Imported here to avoid circular imports
 
