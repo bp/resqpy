@@ -74,23 +74,23 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 
 from autoclasstoc import PublicMethods
 
-class HighLevelSection(PublicMethods):
-    key = "high-level-methods"
-    title = "High-Level Methods:"
+class CommomMethods(PublicMethods):
+    key = "common-methods"
+    title = "Commonly Used Methods:"
 
     def predicate(self, name, attr, meta):
-        return super().predicate(name, attr, meta) and 'high-level' in meta
+        return super().predicate(name, attr, meta) and 'common' in meta
 
 class OtherMethods(PublicMethods):
     key = "other-methods"
     title = "Methods:"
 
     def predicate(self, name, attr, meta):
-        return super().predicate(name, attr, meta) and 'high-level' not in meta
+        return super().predicate(name, attr, meta) and 'common' not in meta
 
 autoclasstoc_sections = [
         "public-attrs",
-        "high-level-methods",
+        "common-methods",
         "other-methods",
 ]
 

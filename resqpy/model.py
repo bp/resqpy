@@ -94,7 +94,7 @@ class Model():
       Returns:
          The newly created Model object
 
-      :meta high-level:
+      :meta common:
       """
 
       if epc_file and not epc_file.endswith('.epc'): epc_file += '.epc'
@@ -210,7 +210,7 @@ class Model():
             
             model.parts(obj_type='IjkGridRepresentation', title='LGR', title_mode='starts', sort_by='title')
       
-      :meta high-level:
+      :meta common:
       """
 
       if not parts_list: parts_list = self.list_of_parts()
@@ -663,7 +663,7 @@ class Model():
          when copy_from is specified, the entire contents of the source dataset are copied,
          regardless of the epc_subdir setting which only affects the subsequent load into memory
 
-      :meta high-level:
+      :meta common:
       """
 
       def exclude(name, epc_subdir):
@@ -769,7 +769,7 @@ class Model():
       Note:
          the main tree, parts forest and rels forest must all be up to date before calling this method
 
-      :meta high-level:
+      :meta common:
       """
 
 #      for prefix, uri in ns.items():
@@ -1388,7 +1388,7 @@ class Model():
          object and adding it to the list when necessary; an assertion exception will be raised if a
          suitable grid part is not present in the model
 
-      :meta high-level:
+      :meta common:
       """
 
       if uuid is None and (title is None or title.upper() == 'ROOT'):
@@ -1640,7 +1640,7 @@ class Model():
       returns:
          None
 
-      :meta high-level:
+      :meta common:
       """
 
       if self.h5_currently_open_root is not None:
@@ -2832,7 +2832,7 @@ class Model():
       Yields:
          wellbore: instance of :class:`resqpy.organize.WellboreInterpretation`
 
-      :meta high-level:
+      :meta common:
       """
       import resqpy.organize  # Imported here to avoid circular imports
 
@@ -2849,7 +2849,7 @@ class Model():
       Yields:
          trajectory: instance of :class:`resqpy.well.Trajectory`
 
-      :meta high-level:
+      :meta common:
       """
       import resqpy.well  # Imported here to avoid circular imports
 
