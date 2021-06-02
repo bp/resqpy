@@ -72,6 +72,7 @@ def test_DeviationSurvey(example_model_with_well):
 
    # Load existing objects, using type hints
    model: Model
+   datum: resqpy.well.MdDatum
    model, well_interp, datum, traj = example_model_with_well
    epc_path = model.epc_file
 
@@ -92,15 +93,17 @@ def test_DeviationSurvey(example_model_with_well):
    model.store_epc()
    model.h5_release()
 
+   # import shutil
+   # shutil.copy(epc_path, r'C:\Temp')
+   # shutil.copy(epc_path.replace('.epc', '.h5'), r'C:\Temp')
+
    # Clear memory
    del model, well_interp, datum, traj, survey
 
    # Reload from disk, check survey can be found
    model2 = Model(epc_file=epc_path)
-   parts = model2.parts_list_of_type("DeviationSurveyRepresentation")
-   assert len(parts) == 1
 
    # Load array data into memory
-   node = model2.root_for_part(parts[0])
+   node = model2.root(obj_type="DeviationSurveyRepresentation")
    survey2 = resqpy.well.DeviationSurvey.from_xml(model2, node=node)
    assert_array_almost_equal(survey2.measured_depths, np.array([1,2,3]))
