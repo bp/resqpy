@@ -59,48 +59,58 @@ def colon_prefixed(curly_prefixed):
    return pre_colon + ':' + curly_prefixed[pre_end + 1:], pre_colon
 
 
-def find_tag(root, tag_name):
+def find_tag(root, tag_name, must_exist=False):
    """Finds the first child in xml node with a (prefix-stripped) tag matching given tag name."""
 
    if root is None: return None
    for child in root:
       if stripped_of_prefix(child.tag) == tag_name: return child
+   if must_exist:
+      raise ValueError(f"Expected tag {tag_name} not found in root {root}")
    return None
 
 
-def find_tag_text(root, tag_name):
+def find_tag_text(root, tag_name, must_exist=False):
    """Finds the first child in xml node with a tag matching given tag name; returns stripped text field."""
 
    if root is None: return None
    for child in root:
       if stripped_of_prefix(child.tag) == tag_name: return node_text(child)
+   if must_exist:
+      raise ValueError(f"Expected tag {tag_name} not found in root {root}")
    return None
 
 
-def find_tag_bool(root, tag_name):
+def find_tag_bool(root, tag_name, must_exist=False):
    """Finds the first child in xml node with a tag matching given tag name; returns stripped text field as bool."""
 
    if root is None: return None
    for child in root:
       if stripped_of_prefix(child.tag) == tag_name: return node_bool(child)
+   if must_exist:
+      raise ValueError(f"Expected tag {tag_name} not found in root {root}")
    return None
 
 
-def find_tag_int(root, tag_name):
+def find_tag_int(root, tag_name, must_exist=False):
    """Finds the first child in xml node with a tag matching given tag name; returns stripped text field as int."""
 
    if root is None: return None
    for child in root:
       if stripped_of_prefix(child.tag) == tag_name: return node_int(child)
+   if must_exist:
+      raise ValueError(f"Expected tag {tag_name} not found in root {root}")
    return None
 
 
-def find_tag_float(root, tag_name):
+def find_tag_float(root, tag_name, must_exist=False):
    """Finds the first child in xml node with a tag matching given tag name; returns stripped text field as float."""
 
    if root is None: return None
    for child in root:
       if stripped_of_prefix(child.tag) == tag_name: return node_float(child)
+   if must_exist:
+      raise ValueError(f"Expected tag {tag_name} not found in root {root}")
    return None
 
 

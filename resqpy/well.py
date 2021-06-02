@@ -80,7 +80,7 @@ def extract_xyz(xyz_node):
    if xyz_node is None: return None
    xyz = np.zeros(3)
    for axis in range(3):
-      xyz[axis] = float(rqet.node_text(rqet.find_tag(xyz_node, 'Coordinate' + str(axis))))
+      xyz[axis] = rqet.find_tag_float(xyz_node, 'Coordinate' + str(axis+1), must_exist=True)
    return tuple(xyz)
 
 
@@ -351,7 +351,7 @@ class DeviationSurvey():
       if self.root_node is None:
          self.uuid = bu.new_uuid()
       else:
-         self.uuid = parent_model.uuid_for_root(self.root_node)
+         self.uuid = rqet.uuid_for_part_root(self.root_node)
 
       self.is_final = is_final
       
@@ -406,21 +406,21 @@ class DeviationSurvey():
       obj = cls(
          parent_model=parent_model,
          root_node=node,
-         station_count=int(rqet.node_text(rqet.find_tag(node, 'StationCount')).strip()),
+         station_count=rqet.find_tag_int(node, 'StationCount', must_exist=True),
          md_datum=md_datum,
-         md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom')),
-         angle_uom=rqet.node_text(rqet.find_tag(node, 'AngleUom')),
-         first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation')),
+         md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist=True)),
+         angle_uom=rqet.find_tag_text(node, 'AngleUom', must_exist=True),
+         first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist=True)),
          represented_interp=represented_interp,
-         is_final=rqet.bool_from_text(rqet.node_text(rqet.find_tag(node, 'IsFinal')))
+         is_final=rqet.find_tag_bool(node, 'IsFinal'),
       )
       obj.uuid = bu.uuid_from_string(node.attrib['uuid'].strip())
 
-      mds_node = rqet.find_tag(node, 'Mds')
+      mds_node = rqet.find_tag(node, 'Mds', must_exist=True)
       load_hdf5_array(obj, mds_node, 'measured_depths')
-      azimuths_node = rqet.find_tag(node, 'Azimuths')
+      azimuths_node = rqet.find_tag(node, 'Azimuths', must_exist=True)
       load_hdf5_array(obj, azimuths_node, 'azimuths')
-      inclinations_node = rqet.find_tag(node, 'Inclinations')
+      inclinations_node = rqet.find_tag(node, 'Inclinations', must_exist=True)
       load_hdf5_array(obj, inclinations_node, 'inclinations')
 
       return obj
@@ -614,7 +614,7 @@ class DeviationSurvey():
       mds_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
       mds_values_node.text = rqet.null_xml_text
 
-      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Mds', root = mds)
+      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Mds', root = mds_values_node)
 
       azimuths = rqet.SubElement(ds_node, ns['resqml2'] + 'Azimuths')
       azimuths.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
