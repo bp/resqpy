@@ -377,7 +377,7 @@ def time_series_from_list(timestamp_list, parent_model = None):
    return time_series
 
 def merge_timeseries_from_uuid(model, timeseries_uuid_iter, reverse=False):
-   """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). reverse=True returns a timeseries object in ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
+   """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). reverse=True returns a timeseries object in ascending order. Reverse=None returns a timeseries without timestamps being sorted. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
     #assert(False)
    alltimestamps=set({})
    timeserieslist=[]
@@ -390,7 +390,11 @@ def merge_timeseries_from_uuid(model, timeseries_uuid_iter, reverse=False):
        timeserieslist.append(singlets)
        alltimestamps.update( set(singlets.timestamps) )
    
-   sortedtimestamps=sorted(list(alltimestamps), reverse=reverse)
+   if reverse is None:
+      sortedtimestamps=sorted(list(alltimestamps), reverse=reverse)
+   else:
+      sortedtimestamps=list(alltimestamps) #do not sort the timestamps
+    
    new_time_series=time_series_from_list(sortedtimestamps, parent_model=model)
    new_time_series_uuid=new_time_series.uuid
    return (new_time_series, new_time_series_uuid, timeserieslist)
