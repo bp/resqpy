@@ -31,11 +31,18 @@ jobs:
           pip install flake8
       
       # Post in-line comments for any issues found
+      # Do not run if coming from a forked repo
       # See https://github.com/marketplace/actions/lint-action
-      - name: Lint with flake8
+      - name: Run flake8 (with annotations)
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: wearerequired/lint-action@v1
         with:
           flake8: true
+      
+      # Alternative step that works with forked repo
+      - name: Run flake8 (pure)
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: flake8 .
 
   unit-tests:
     name: Unit tests (Python ${{ matrix.python-version }})
