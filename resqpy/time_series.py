@@ -376,19 +376,21 @@ def time_series_from_list(timestamp_list, parent_model = None):
       time_series.add_timestamp(timestamp)
    return time_series
 
-def merge_timeseries_from_uuid(model, timeseries_uuid_iter, reverse=False):
-   """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). reverse=True returns a timeseries object in ascending order. Reverse=None returns a timeseries without timestamps being sorted. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
-    #assert(False)
+def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
+   """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). The new timeseries is sorted in ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
+   
+   reverse=False 
+
    alltimestamps=set({})
    timeserieslist=[]
    for timeseries_uuid in timeseries_uuid_iter:
        timeseriesroot=model.root(uuid=timeseries_uuid)
        assert(rqet.node_type(timeseriesroot) == 'obj_TimeSeries')
        
-       #singlets=model.part_for_uuid(timeseries_uuid)
        singlets=TimeSeries(model, time_series_root=timeseriesroot)
        timeserieslist.append(singlets)
-       alltimestamps.update( set(singlets.timestamps) )
+       #alltimestamps.update( set(singlets.timestamps) )
+       alltimestamps.update( set(singlets.datetimes()) )
    
    if reverse is None:
       sortedtimestamps=sorted(list(alltimestamps), reverse=reverse)
