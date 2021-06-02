@@ -59,6 +59,10 @@ pip install -e /path/to/repo/
 
 ## Contributing
 
+Contributions from the open source community are greatly appreciated! See the
+[Contributing Guide](docs/CONTRIBUTING.rst) for guidance on how you can
+contribute.
+
 ### Repository structure
 
 - `resqpy`: high level modules providing classes for main RESQML object types
