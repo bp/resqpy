@@ -316,16 +316,18 @@ class DeviationSurvey():
 
    """
 
-   def __init__(self, parent_model, root_node=None, represented_interp=None, md_datum=None,
+   def __init__(self, parent_model, uuid=None, root_node=None, represented_interp=None, md_datum=None,
                 md_uom='m', angle_uom='degrees', measured_depths=None, azimuths=None,
                 inclinations=None, station_count=None, first_station=None, is_final=False):
-      """Create a DeviationSurvey object.
+      """Load or create a DeviationSurvey object.
 
-      Can be most easily instantiated with the "DeviationSurvey.from_" class constructor methods.
+      If uuid is given, loads from XML. Else, create new. If loading from disk, other
+      parameters will be overwritten.
 
       Args:
          parent_model (model.Model): the model which the new survey belongs to
-         root_node (node): xml node containing survey, if it already exists.
+         uuid (uuid.UUID): If given, loads from disk. Else, creates new.
+         root_node: DEPCRECATED. If given, load from disk.
          represented_interp (wellbore interpretation): if present, is noted as the wellbore
             interpretation object which this deviation survey relates to
          md_datum (MdDatum): the datum that the depths for this survey are measured from
@@ -347,23 +349,15 @@ class DeviationSurvey():
       """
 
       self.model = parent_model
-      self.root_node = root_node
-      if self.root_node is None:
-         self.uuid = bu.new_uuid()
-      else:
-         self.uuid = rqet.uuid_for_part_root(self.root_node)
-
       self.is_final = is_final
-      
       self.md_uom = bwam.rq_length_unit(md_uom)
 
-      # boolean: True for degrees, False for radians (nothing else supported)
-      # should be 'dega' or 'rad'
       self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
+      """boolean: True for degrees, False for radians (nothing else supported). Should be 'dega' or 'rad'"""
 
-      self.measured_depths = np.array(measured_depths)
-      self.azimuths = np.array(azimuths)
-      self.inclinations = np.array(inclinations)
+      self.measured_depths = measured_depths
+      self.azimuths = azimuths
+      self.inclinations = inclinations
 
       if station_count is None:
          station_count = len(measured_depths)
@@ -373,25 +367,45 @@ class DeviationSurvey():
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
       self.wellbore_interpretation = represented_interp
 
+      # TODO: remove init from root_node, use just uuid
+      if root_node is not None:
+         warnings.warn("Argument root_node is deprecated, please use uuid")
+         uuid = rqet.uuid_for_part_root(root_node)
 
-   @classmethod
-   def from_xml(cls, parent_model, node):
-      """Create a deviation survey object from xml (and associated hdf5 data)
+      if uuid is None:
+         self.uuid = bu.new_uuid()
+      else:
+         self.load_from_xml()
+
+   @property
+   def root_node(self):
+      """Note corresponding to self.uuid"""
+      if self.uuid is None:
+         raise ValueError('Cannot get root if uuid is None')
+      return self.model.root_for_uuid(self.uuid)
+
+   @property
+   def part(self):
+      """Part corresponding to self.uuid"""
+      if self.uuid is None:
+         raise ValueError('Cannot get part if uuid is None')
+      return self.model.part_for_uuid(self.uuid)
+
+   def load_from_xml(self):
+      """Load attributes from xml and associated hdf5 data.
       
-      Args:
-         parent_model (model.Model): the parent resqml model
-         node: the root node of an xml tree representing the survey;
-            if not None, the new survey object is initialised based on the data in the tree;
-            if None, one of the other arguments is used
-
       Returns:
-         DeviationSurvey
+         [bool]: True if sucessful
       """
+
+      # Uses self.uuid 
+      node = self.root_node
+
       # md_datum - separate part, referred to in this tree
       md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(node, 'MdDatum'), 'UUID'))
       if md_datum_uuid is not None:
          md_datum_part = 'obj_MdDatum_' + str(md_datum_uuid) + '.xml'
-         md_datum = MdDatum(parent_model, md_datum_root=parent_model.root_for_part(md_datum_part, is_rels = False))
+         md_datum = MdDatum(self.model, md_datum_root=self.model.root_for_part(md_datum_part, is_rels = False))
       else:
          md_datum = None
 
@@ -400,33 +414,32 @@ class DeviationSurvey():
       if interp_uuid is None:
          represented_interp = None
       else:
-         wellbore_interp_part = parent_model.part_for_uuid(interp_uuid)
-         represented_interp = rqo.WellboreInterpretation(parent_model, root_node=parent_model.root_for_part(wellbore_interp_part))
+         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
+         represented_interp = rqo.WellboreInterpretation(self.model, root_node=self.model.root_for_part(wellbore_interp_part))
 
-      obj = cls(
-         parent_model=parent_model,
-         root_node=node,
-         station_count=rqet.find_tag_int(node, 'StationCount', must_exist=True),
-         md_datum=md_datum,
-         md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist=True)),
-         angle_uom=rqet.find_tag_text(node, 'AngleUom', must_exist=True),
-         first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist=True)),
-         represented_interp=represented_interp,
-         is_final=rqet.find_tag_bool(node, 'IsFinal'),
-      )
-      obj.uuid = bu.uuid_from_string(node.attrib['uuid'].strip())
+      # Set related objects
+      self.md_datum=md_datum
+      self.represented_interp=represented_interp
 
+      # Load XML data
+      self.md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist=True))
+      self.angle_uom=rqet.find_tag_text(node, 'AngleUom', must_exist=True)
+      self.station_count = rqet.find_tag_int(node, 'StationCount', must_exist=True)
+      self.first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist=True))
+      self.is_final=rqet.find_tag_bool(node, 'IsFinal')
+
+      # Load HDF5 data
       mds_node = rqet.find_tag(node, 'Mds', must_exist=True)
-      load_hdf5_array(obj, mds_node, 'measured_depths')
+      load_hdf5_array(self, mds_node, 'measured_depths')
       azimuths_node = rqet.find_tag(node, 'Azimuths', must_exist=True)
-      load_hdf5_array(obj, azimuths_node, 'azimuths')
+      load_hdf5_array(self, azimuths_node, 'azimuths')
       inclinations_node = rqet.find_tag(node, 'Inclinations', must_exist=True)
-      load_hdf5_array(obj, inclinations_node, 'inclinations')
+      load_hdf5_array(self, inclinations_node, 'inclinations')
 
-      assert obj.measured_depths is not None
-      assert len(obj.measured_depths) > 0
+      assert self.measured_depths is not None
+      assert len(self.measured_depths) > 0
 
-      return obj
+      return True
 
 
    @classmethod
