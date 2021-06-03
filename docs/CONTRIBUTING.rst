@@ -7,10 +7,10 @@ of all forms are most welcome!
 How Can I Contribute?
 ---------------------
 
-* Submitting bug reports and feature requests (using the `GitHub issue tracker
-<https://github.com/bp/resqpy/issues>`_ ) * Contributing code (in the form of
-`Pull requests <https://github.com/bp/resqpy/pulls>`_) * Documentation or test
-improvements * Publicity and support
+* Submitting bug reports and feature requests (using the `GitHub issue tracker<https://github.com/bp/resqpy/issues>`_ )
+* Contributing code (in the form of `Pull requests <https://github.com/bp/resqpy/pulls>`_)
+* Documentation or test improvements
+* Publicity and support
 
 Contributors
 ------------
@@ -19,7 +19,10 @@ Resqpy was created by Andy Beer.
 
 All contributors (alphabetical order):
 
-* Andy Beer * Connor Tann * Emma Nesbit * Nathan Lane
+* Andy Beer
+* Connor Tann
+* Emma Nesbit
+* Nathan Lane
 
 Email
 -----
@@ -28,45 +31,71 @@ Please feel free to get in touch at Nathan.Lane@bp.com with any questions about
 resqpy.
 
 Making changes to the code
---------------------------
+==========================
 
 1.	Clone the repo
 
-Create a fork of the repository using the GitHub website. Note: this step can be
-skipped if you already have write access to the main repo. Then, clone your fork
-locally to your computer to your working area:
+    Create a fork of the repository using the GitHub website. Note: this step can be
+    skipped if you already have write access to the main repo. Then, clone your fork
+    locally to your computer to your working area:
 
-	$ git clone <url from GitHub>
+    .. code:: bash
 
-2.	Setting up a python environment It is recommended to set up an isolated
-python environment, using conda or virtualenv. 
+        git clone <url from GitHub>
 
-$ conda create -n resqpy python=3.7 $ conda activate resqpy You should then make
-an “editable” installation of the package into your local environment. This will
-also install required dependencies, including extra packages required to running
-unit tests. $ pip install --editable .[tests] 3.	Making a Pull Request Create a
-new branch from master: $ git checkout master $ git pull $ git checkout -b
-<your-branch-name>
+2.	Set up a python environment
 
-You can then commit and push your changes as usual. Open a Pull Request on
-GitHub to submit your code to be merged into master.
+    It is recommended to set up an isolated python environment, using conda or virtualenv. 
 
-A checklist for merge requests: 1.	All CI jobs should pass 2.	Changes or
-additions could have appropriate unit tests (see below) 3.	Follow the PEP8 style
-guide as far as possible (with caveats below). 4.	All public functions and
-classes should have Google-style docstrings:
-https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html 
+    .. code:: bash
+
+        conda create -n resqpy python=3.7
+        conda activate resqpy
+        
+    You should then make an “editable” installation of the package into your local environment. This will
+    also install required dependencies, including extra packages required to running
+    unit tests.
+
+    .. code:: bash
+
+        pip install --editable .[tests]
+    
+3. Make a Pull Request
+
+    Create a new branch from master:
+
+    .. code:: bash
+
+        git checkout master
+        git pull
+        git checkout -b <your-branch-name>
+
+    You can then commit and push your changes as usual. Open a Pull Request on
+    GitHub to submit your code to be merged into master.
+
+Checklist for merge requests:
+
+1. All CI jobs should pass
+2. Changes or additions could have appropriate unit tests (see below)
+3. Follow the PEP8 style guide as far as possible (with caveats below).
+4. All public functions and classes should have
+   `Google-style docstrings<https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
 
 Static analysis
 ---------------
 
 We use flake8 to scan for obvious code errors. This is part of the CI tests, and
 can also be ran locally with:
-	$ flake8 .
+
+.. code:: bash
+
+    flake8 .
 
 The configuration of which errors are enforced is stored in `setup.cfg`.
-Currently: -	Logical errors (i.e. bugs) are enabled -	Style checks (i.e. PEP8
-compliance) are disabled
+Currently:
+
+* Logical errors (i.e. bugs) are enabled
+* Style checks (i.e. PEP8 compliance) are disabled
 
 Code Style
 ----------
@@ -82,7 +111,10 @@ code has indentation that is consistent with the rest of the module.
 
 You can test for PEP8 compliance with flake8 on the command line, against given
 error codes:
-	$ flake8 . –select=F,E2,E3,E4,E7
+
+.. code:: bash
+
+    flake8 . –select=F,E2,E3,E4,E7
 
 Links:
 
@@ -91,9 +123,10 @@ Links:
 -	PEP9: https://www.python.org/dev/peps/pep-0008/ 
 
 Tests
------
+=====
 
 Why write tests?
+----------------
 
 Automated tests are used to check that code does what it is supposed to do. This
 is absolutely key to maintaining quality: for example, automated tests enable
@@ -113,13 +146,20 @@ Tests are written in the form of functions with the prefix `test_`. Look in the
 tests directory for examples of existing tests.  A typical pattern is
 “Arrange-Act-Assert”:
 
-def test_a_thing():
-    
-    # Arrange my_obj = resqml.MyClass()
+.. code:: python
 
-    # Act result = my_obj.do_calculation()
+    def test_a_thing():
+        """ Test to check that MyClass behaves as expected """
 
-    # Assert expected = [1,2,3] assert result == expected
+        # Arrange
+        my_obj = resqml.MyClass()
+
+        # Act
+        result = my_obj.do_calculation()
+
+        # Assert
+        expected = [1,2,3]
+        assert result == expected
 
 Running tests
 -------------
@@ -132,17 +172,22 @@ a maintainer may need to manually approve the CI suite to run.
 Alternatively, you can run the tests against your local clone of the code base
 from the command line:
 
-$ pytest
+.. code:: bash
+
+    pytest
 
 There are several command line options that can be appended:
 
-$ pytest -k foobar : selects just tests with "foobar" in the name (e.g.
-test_foobar_app()) $ pytest -rA: prints summary of all executed tests at end
+.. code:: bash
+
+    pytest -k foobar # selects just tests with "foobar" in the name
+    pytest -rA       # prints summary of all executed tests at end
 
 Code of Conduct
----------------
+===============
 
 Suggest using Contributor-covenant standard:
+
 https://www.contributor-covenant.org/version/1/4/code-of-conduct/code_of_conduct.md
 
 
