@@ -249,16 +249,7 @@ class TimeSeries():
 
    def datetimes(self):
       """Returns a list of python-datetime objects """
-      datetimes=[]
-        
-      for timestamp in self.timestamps:
-         datetime_timestamp=timestamp
-         if timestamp.endswith('Z'): datetime_timestamp = timestamp[:-1]
-         datetimes.append(dt.datetime.fromisoformat(datetime_timestamp))
-        
-        
-
-      return datetimes
+      return [dt.datetime.fromisoformat(t.rstrip('z')) for t in self.timestamps]
 
    def create_xml(self, add_as_part = True, root = None,
                   title = 'time series', originator = None):
