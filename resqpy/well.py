@@ -857,9 +857,9 @@ class Trajectory():
       ds_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(node, 'DeviationSurvey'), 'UUID'))
       if ds_uuid is not None:  # this will probably not work when relatives model is different from self.model
          ds_part = 'obj_DeviationSurveyRepresentation_' + str(ds_uuid) + '.xml'
-         self.deviation_survey = DeviationSurvey(self.model,
-                                                 deviation_survey_root = relatives_model.root_for_part(ds_part, is_rels = False),
-                                                 md_datum = self.md_datum)
+         self.deviation_survey = DeviationSurvey(
+            self.model, uuid=relatives_model.uuid_for_part(ds_part, is_rels=False), md_datum = self.md_datum
+         )
       interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
       if interp_uuid is None:
          self.wellbore_interpretation = None
