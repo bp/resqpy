@@ -355,11 +355,12 @@ class DeviationSurvey():
       self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
       """boolean: True for degrees, False for radians (nothing else supported). Should be 'dega' or 'rad'"""
 
-      self.measured_depths = measured_depths
-      self.azimuths = azimuths
-      self.inclinations = inclinations
+      # Array data
+      self.measured_depths = _as_optional_array(measured_depths)
+      self.azimuths        = _as_optional_array(azimuths)
+      self.inclinations    = _as_optional_array(inclinations)
 
-      if station_count is None:
+      if station_count is None and measured_depths is not None:
          station_count = len(measured_depths)
       self.station_count = station_count
       self.first_station = first_station
@@ -375,6 +376,7 @@ class DeviationSurvey():
       if uuid is None:
          self.uuid = bu.new_uuid()
       else:
+         self.uuid = uuid
          self.load_from_xml()
 
    @property
@@ -547,30 +549,28 @@ class DeviationSurvey():
       )
 
 
-   def create_xml(self, ext_uuid = None, md_datum_root = None, md_datum_xyz = None, ds_uuid = None,
-                               add_as_part = True, add_relationships = True, root = None,
-                               title = 'deviation survey', originator = None):
+   def create_xml(self, ext_uuid=None, md_datum_root=None, md_datum_xyz=None, add_as_part=True,
+                  add_relationships=True, root=None, title='deviation survey', originator=None):
       """Creates a deviation survey representation xml element from this DeviationSurvey object.
 
-         arguments:
-            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the deviation survey arrays
-            md_datum_root: the root xml node for the measured depth datum that the deviation survey depths
-               are based on
-            ds_uuid (uuid.UUID, optional): DEPRECATED: if not None, the uuid for the deviation survey;
-               if None, the uuid in the object is used, or if that is None, then a new uuid is assigned
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-               in the model
-            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-               new deviation survey part to the measured depth datum part
-            root (optional, usually None): if not None, the newly created deviation survey node is appended
-               as a child to this node
-            title (string): used as the citation Title text; should usually refer to the well name in a
-               human readable way
-            originator (string, optional): the name of the human being who created the deviation survey part;
-               default is to use the login name
+      arguments:
+         ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the deviation survey arrays
+         md_datum_root: the root xml node for the measured depth datum that the deviation survey depths
+            are based on
+         md_datum_xyz: TODO: document this
+         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+            in the model
+         add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+            new deviation survey part to the measured depth datum part
+         root (optional, usually None): if not None, the newly created deviation survey node is appended
+            as a child to this node
+         title (string): used as the citation Title text; should usually refer to the well name in a
+            human readable way
+         originator (string, optional): the name of the human being who created the deviation survey part;
+            default is to use the login name
 
-         returns:
-            the newly created deviation survey xml node
+      returns:
+         the newly created deviation survey xml node
       """
 
       assert self.station_count > 0
@@ -589,16 +589,8 @@ class DeviationSurvey():
 
       assert self.uuid is not None
 
-      if ds_uuid is not None:
-         warnings.warn("Argument ds_uuid is Deprecated", DeprecationWarning)
-         self.uuid = ds_uuid
-
       ds_node = self.model.new_obj_node('DeviationSurveyRepresentation')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(ds_node.attrib['uuid'])
-      else:
-         ds_node.attrib['uuid'] = str(self.uuid)
+      ds_node.attrib['uuid'] = str(self.uuid)
 
       self.model.create_citation(root = ds_node, title = title, originator = originator)
 
@@ -625,7 +617,6 @@ class DeviationSurvey():
       else:
          angle_uom.text = 'rad'
 
-      # todo: check that the following array xml structures are correct
       mds = rqet.SubElement(ds_node, ns['resqml2'] + 'Mds')
       mds.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
       mds.text = rqet.null_xml_text
@@ -675,8 +666,6 @@ class DeviationSurvey():
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(ds_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
-
-      self.root_node = ds_node
 
       return ds_node
 
@@ -3996,3 +3985,15 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
       count += 1
 
    log.info(f'{count} blocked wells created based on wellspec file: {wellspec_file}')
+
+
+def _as_optional_array(arr):
+   """If not None, cast as numpy array.
+   
+   Casting directly to an array can be problematic:
+   np.array(None) creates an unsized array, which is potentially confusing.
+   """
+   if arr is None:
+      return None
+   else:
+      return np.array(arr)

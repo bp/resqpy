@@ -86,6 +86,7 @@ def test_DeviationSurvey(example_model_with_well):
       inclinations=[1,2,3],
       first_station=[4,5,6],
    )
+   survey_uuid = survey.uuid
 
    # Save to disk
    survey.write_hdf5()
@@ -102,8 +103,6 @@ def test_DeviationSurvey(example_model_with_well):
 
    # Reload from disk, check survey can be found
    model2 = Model(epc_file=epc_path)
-
-   # Load array data into memory
-   node = model2.root(obj_type="DeviationSurveyRepresentation")
-   survey2 = resqpy.well.DeviationSurvey.from_xml(model2, node=node)
+   survey2 = resqpy.well.DeviationSurvey(model2, uuid=survey_uuid)
    assert_array_almost_equal(survey2.measured_depths, np.array([1,2,3]))
+   assert_array_almost_equal(survey2.first_station, np.array([4,5,6]))
