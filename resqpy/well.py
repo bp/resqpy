@@ -316,9 +316,10 @@ class DeviationSurvey():
 
    """
 
-   def __init__(self, parent_model, uuid=None, deviation_survey_root=None, represented_interp=None, md_datum=None,
-                md_uom='m', angle_uom='degrees', measured_depths=None, azimuths=None,
-                inclinations=None, station_count=None, first_station=None, is_final=False):
+   def __init__(self, parent_model, uuid=None, title=None, deviation_survey_root=None,
+                represented_interp=None, md_datum=None, md_uom='m', angle_uom='degrees',
+                measured_depths=None, azimuths=None, inclinations=None, station_count=None,
+                first_station=None, is_final=False):
       """Load or create a DeviationSurvey object.
 
       If uuid is given, loads from XML. Else, create new. If loading from disk, other
@@ -327,6 +328,7 @@ class DeviationSurvey():
       Args:
          parent_model (model.Model): the model which the new survey belongs to
          uuid (uuid.UUID): If given, loads from disk. Else, creates new.
+         title (str): Citation title
          deviation_survey_root: DEPCRECATED. If given, load from disk.
          represented_interp (wellbore interpretation): if present, is noted as the wellbore
             interpretation object which this deviation survey relates to
@@ -364,13 +366,14 @@ class DeviationSurvey():
          station_count = len(measured_depths)
       self.station_count = station_count
       self.first_station = first_station
+      self.title = title
 
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
       self.wellbore_interpretation = represented_interp
 
       # TODO: remove init from root_node, use just uuid
       if deviation_survey_root is not None:
-         warnings.warn("Argument root_node is deprecated, please use uuid")
+         warnings.warn("Argument deviation_survey_root is deprecated, please use uuid")
          uuid = rqet.uuid_for_part_root(deviation_survey_root)
 
       if uuid is None:
@@ -380,7 +383,7 @@ class DeviationSurvey():
          self.load_from_xml()
 
    @property
-   def root_node(self):
+   def root(self):
       """Node corresponding to self.uuid"""
       if self.uuid is None:
          raise ValueError('Cannot get root if uuid is None')
@@ -508,7 +511,7 @@ class DeviationSurvey():
       """
 
       # Get node from self.uuid 
-      node = self.root_node
+      node = self.node
 
       # Load XML data
       self.md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist=True))
@@ -670,7 +673,7 @@ class DeviationSurvey():
    def _load_related_datum(self):
       """Return related MdDatum object from XML if present"""
 
-      md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(self.root_node, 'MdDatum'), 'UUID'))
+      md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(self.root, 'MdDatum'), 'UUID'))
       if md_datum_uuid is not None:
          md_datum_part = 'obj_MdDatum_' + str(md_datum_uuid) + '.xml'
          md_datum = MdDatum(self.model, md_datum_root=self.model.root_for_part(md_datum_part, is_rels = False))
@@ -681,7 +684,7 @@ class DeviationSurvey():
    def _load_related_wellbore_interp(self):
       """Return related wellbore interp object from XML if present"""
       
-      interp_uuid = rqet.find_nested_tags_text(self.root_node, ['RepresentedInterpretation', 'UUID'])
+      interp_uuid = rqet.find_nested_tags_text(self.root, ['RepresentedInterpretation', 'UUID'])
       if interp_uuid is None:
          represented_interp = None
       else:
