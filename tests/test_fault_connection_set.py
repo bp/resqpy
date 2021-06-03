@@ -4,7 +4,10 @@ import numpy as np
 
 import resqpy.model as rq
 import resqpy.grid as grr
+import resqpy.fault as rqf
+import resqpy.derived_model as rqdm
 import resqpy.olio.transmission as rqtr
+
 
 def test_fault_connection_set(tmp_path):
 
@@ -1252,3 +1255,114 @@ def test_fault_connection_set(tmp_path):
                                       [0.75, 0.75],
                                       [0.5, 0.25],
                                       [0.5, 1.0/3]]), atol = 0.01))
+
+
+
+def test_add_faults(tmp_path):
+
+   def write_poly(filename, a, mode = 'w'):
+       nines = 999.0
+       with open(filename, mode = mode) as fp:
+           for row in range(len(a)):
+               fp.write(f'{a[row, 0]:8.3f} {a[row, 1]:8.3f} {a[row, 2]:8.3f}\n')
+           fp.write(f'{nines:8.3f} {nines:8.3f} {nines:8.3f}\n')
+
+   epc = os.path.join(tmp_path, 'tic_tac_toe.epc')
+   model = rq.new_model(epc)
+   grid = grr.RegularGrid(model, extent_kji = (1, 3, 3), set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True)
+   model.store_epc()
+   del model
+
+   # single straight fault
+   a = np.array([[-0.2, 2.0, -0.1],
+                 [ 3.2, 2.0, -0.1]])
+   f = os.path.join(tmp_path, 'ttt_f1.dat')
+   write_poly(f, a)
+   g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = False,
+                       new_grid_title = 'ttt_f1 straight')
+
+   # single zig-zag fault
+   a = np.array([[-0.2, 1.0, -0.1],
+                 [ 1.0, 1.0, -0.1],
+                 [ 1.0, 2.0, -0.1],
+                 [ 3.2, 2.0, -0.1]])
+   f = os.path.join(tmp_path, 'ttt_f2.dat')
+   write_poly(f, a)
+   g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = True,
+                       new_grid_title = 'ttt_f2 zig_zag')
+
+   # single zig-zag-zig fault
+   a = np.array([[-0.2, 1.0, -0.1],
+                 [ 1.0, 1.0, -0.1],
+                 [ 1.0, 2.0, -0.1],
+                 [ 2.0, 2.0, -0.1],
+                 [ 2.0, 1.0, -0.1],
+                 [ 3.2, 1.0, -0.1]])
+   f = os.path.join(tmp_path, 'ttt_f3.dat')
+   write_poly(f, a)
+   g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = False,
+                       new_grid_title = 'ttt_f3 zig_zag_zig')
+
+   # horst block
+   a = np.array([[-0.2, 1.0, -0.1],
+                 [ 3.2, 1.0, -0.1]])
+   b = np.array([[ 3.2, 2.0, -0.1],
+                 [-0.2, 2.0, -0.1]])
+   fa = os.path.join(tmp_path, 'ttt_f4a.dat')
+   fb = os.path.join(tmp_path, 'ttt_f4b.dat')
+   write_poly(fa, a)
+   write_poly(fb, b)
+   g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [fa, fb], inherit_properties = True,
+                       new_grid_title = 'ttt_f4 horst')
+
+   # asymmetrical horst block
+   lr_throw_dict = {
+       'ttt_f4a': (0.0, -0.3),
+       'ttt_f4b': (0.0, -0.6)}
+   g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [fa, fb], left_right_throw_dict = lr_throw_dict,
+                       inherit_properties = True, new_grid_title = 'ttt_f5 horst')
+   assert g is not None
+
+   # scaled version of asymmetrical horst block
+   model = rq.Model(epc)
+   grid = model.grid(title = 'ttt_f5 horst')
+   assert grid is not None
+   gcs_roots = model.roots(obj_type = 'GridConnectionSetRepresentation', related_uuid = grid.uuid)
+   assert gcs_roots is not None
+   scaling_dict = {'ttt_f4a': 3.0, 'ttt_f4b': 1.7}
+   for i, gcs_root in enumerate(gcs_roots):
+       gcs = rqf.GridConnectionSet(model, connection_set_root = gcs_root)
+       rqdm.fault_throw_scaling(epc, source_grid = grid, scaling_factor = None,
+                                connection_set = gcs, scaling_dict = scaling_dict,
+                                ref_k0 = 0, ref_k_faces = 'top',
+                                cell_range = 0, offset_decay = 0.5,
+                                store_displacement = False,
+                                inherit_properties = True, inherit_realization = None, inherit_all_realizations = False,
+                                new_grid_title = f'ttt_f6 scaled {i+1}', new_epc_file = None)
+       model = rq.Model(epc)
+       grid = model.grid(title = f'ttt_f6 scaled {i+1}')
+       assert grid is not None
+
+   # two intersecting straight faults
+   a = np.array([[-0.2, 2.0, -0.1],
+                 [ 3.2, 2.0, -0.1]])
+   b = np.array([[1.0, -0.2, -0.1],
+                 [1.0,  3.2, -0.1]])
+   f = os.path.join(tmp_path, 'ttt_f7.dat')
+   write_poly(f, a)
+   write_poly(f, b, mode = 'a')
+   g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = True,
+                       new_grid_title = 'ttt_f7')
+
+   # re-open and check a few things
+   model = rq.Model(epc)
+   assert len(model.titles(obj_type = 'IjkGridRepresentation')) == 8
+   g1 = model.grid(title = 'ttt_f7')
+   assert g1.split_pillars_count == 5
+   cpm = g1.create_column_pillar_mapping()
+   assert cpm.shape == (3, 3, 2, 2)
+   extras = (cpm >= 16)
+   assert np.count_nonzero(extras) == 7
+   assert np.all(np.sort(np.unique(cpm)) == np.arange(21))
