@@ -1260,9 +1260,9 @@ def test_fault_connection_set(tmp_path):
 
 def test_add_faults(tmp_path):
 
-   def write_poly(tmp_path, filename, a, mode = 'w'):
+   def write_poly(filename, a, mode = 'w'):
        nines = 999.0
-       with open(os.path.join(tmp_path, filename), mode = mode) as fp:
+       with open(filename, mode = mode) as fp:
            for row in range(len(a)):
                fp.write(f'{a[row, 0]:8.3f} {a[row, 1]:8.3f} {a[row, 2]:8.3f}\n')
            fp.write(f'{nines:8.3f} {nines:8.3f} {nines:8.3f}\n')
@@ -1278,8 +1278,8 @@ def test_add_faults(tmp_path):
    # single straight fault
    a = np.array([[-0.2, 2.0, -0.1],
                  [ 3.2, 2.0, -0.1]])
-   f = 'ttt_f1.dat'
-   write_poly(tmp_path, f, a)
+   f = os.path.join(tmp_path, 'ttt_f1.dat')
+   write_poly(f, a)
    g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = False,
                        new_grid_title = 'ttt_f1 straight')
 
@@ -1288,8 +1288,8 @@ def test_add_faults(tmp_path):
                  [ 1.0, 1.0, -0.1],
                  [ 1.0, 2.0, -0.1],
                  [ 3.2, 2.0, -0.1]])
-   f = 'ttt_f2.dat'
-   write_poly(tmp_path. f, a)
+   f = os.path.join(tmp_path, 'ttt_f2.dat')
+   write_poly(f, a)
    g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = True,
                        new_grid_title = 'ttt_f2 zig_zag')
 
@@ -1300,8 +1300,8 @@ def test_add_faults(tmp_path):
                  [ 2.0, 2.0, -0.1],
                  [ 2.0, 1.0, -0.1],
                  [ 3.2, 1.0, -0.1]])
-   f = 'ttt_f3.dat'
-   write_poly(tmp_path, f, a)
+   f = os.path.join(tmp_path, 'ttt_f3.dat')
+   write_poly(f, a)
    g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = False,
                        new_grid_title = 'ttt_f3 zig_zag_zig')
 
@@ -1310,10 +1310,10 @@ def test_add_faults(tmp_path):
                  [ 3.2, 1.0, -0.1]])
    b = np.array([[ 3.2, 2.0, -0.1],
                  [-0.2, 2.0, -0.1]])
-   fa = 'ttt_f4a.dat'
-   fb = 'ttt_f4b.dat'
-   write_poly(tmp_path, fa, a)
-   write_poly(tmp_path, fb, b)
+   fa = os.path.join(tmp_path, 'ttt_f4a.dat')
+   fb = os.path.join(tmp_path, 'ttt_f4b.dat')
+   write_poly(fa, a)
+   write_poly(fb, b)
    g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [fa, fb], inherit_properties = True,
                        new_grid_title = 'ttt_f4 horst')
 
@@ -1350,9 +1350,9 @@ def test_add_faults(tmp_path):
                  [ 3.2, 2.0, -0.1]])
    b = np.array([[1.0, -0.2, -0.1],
                  [1.0,  3.2, -0.1]])
-   f = 'ttt_f7.dat'
-   write_poly(tmp_path, f, a)
-   write_poly(tmp_path, f, b, mode = 'a')
+   f = os.path.join(tmp_path, 'ttt_f7.dat')
+   write_poly(f, a)
+   write_poly(f, b, mode = 'a')
    g = rqdm.add_faults(epc, source_grid = None, lines_file_list = [f], inherit_properties = True,
                        new_grid_title = 'ttt_f7')
 
