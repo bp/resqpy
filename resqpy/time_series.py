@@ -383,10 +383,7 @@ def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
        #alltimestamps.update( set(singlets.timestamps) )
        alltimestamps.update( set(singlets.datetimes()) )
    
-   if reverse is None:
-      sortedtimestamps=sorted(list(alltimestamps), reverse=reverse)
-   else:
-      sortedtimestamps=list(alltimestamps) #do not sort the timestamps
+   sortedtimestamps=sorted(list(alltimestamps), reverse=reverse)
     
    new_time_series=time_series_from_list(sortedtimestamps, parent_model=model)
    new_time_series_uuid=new_time_series.uuid
