@@ -1365,4 +1365,4 @@ def test_add_faults(tmp_path):
    assert cpm.shape == (3, 3, 2, 2)
    extras = (cpm >= 16)
    assert np.count_nonzero(extras) == 7
-   assert np.sort(np.unique(cpm)) == np.arange(21)
+   assert np.all(np.sort(np.unique(cpm)) == np.arange(21))
