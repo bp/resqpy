@@ -316,7 +316,7 @@ class DeviationSurvey():
 
    """
 
-   def __init__(self, parent_model, uuid=None, root_node=None, represented_interp=None, md_datum=None,
+   def __init__(self, parent_model, uuid=None, deviation_survey_root=None, represented_interp=None, md_datum=None,
                 md_uom='m', angle_uom='degrees', measured_depths=None, azimuths=None,
                 inclinations=None, station_count=None, first_station=None, is_final=False):
       """Load or create a DeviationSurvey object.
@@ -327,7 +327,7 @@ class DeviationSurvey():
       Args:
          parent_model (model.Model): the model which the new survey belongs to
          uuid (uuid.UUID): If given, loads from disk. Else, creates new.
-         root_node: DEPCRECATED. If given, load from disk.
+         deviation_survey_root: DEPCRECATED. If given, load from disk.
          represented_interp (wellbore interpretation): if present, is noted as the wellbore
             interpretation object which this deviation survey relates to
          md_datum (MdDatum): the datum that the depths for this survey are measured from
@@ -369,9 +369,9 @@ class DeviationSurvey():
       self.wellbore_interpretation = represented_interp
 
       # TODO: remove init from root_node, use just uuid
-      if root_node is not None:
+      if deviation_survey_root is not None:
          warnings.warn("Argument root_node is deprecated, please use uuid")
-         uuid = rqet.uuid_for_part_root(root_node)
+         uuid = rqet.uuid_for_part_root(deviation_survey_root)
 
       if uuid is None:
          self.uuid = bu.new_uuid()
