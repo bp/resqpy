@@ -2616,7 +2616,7 @@ class Model():
       self.consolidation.force_uuid_equivalence(immigrant_uuid, resident_uuid)
 
 
-   def copy_part_from_other_model(self, other_model, part, realization = None, consolidate = True):
+   def copy_part_from_other_model(self, other_model, part, realization = None, consolidate = True, force = False):
       """Fully copies part in from another model, with referenced parts, hdf5 data and relationships.
 
       arguments:
@@ -2626,6 +2626,8 @@ class Model():
             will be set to this value, instead of the value in use in the other model if any
          consolidate (boolean, default True): if True and an equivalent part already exists in
             this model, do not duplicate but instead note uuids as equivalent
+         force (boolean, default False): if True, the part itself is copied without much checking
+            and all references are required to be handled by an entry in the consolidation object
 
       notes:
          if the part name already exists in this model, no action is taken;
@@ -2657,7 +2659,7 @@ class Model():
          log.error('failed to copy part (missing in source model?): ' + str(part))
          return
 
-      if consolidate:
+      if consolidate and not force:
          if self.consolidation is None: self.consolidation = cons.Consolidation(self)
          resident_uuid = self.consolidation.equivalent_uuid_for_part(part, immigrant_model = other_model)
       else:
@@ -2693,6 +2695,7 @@ class Model():
             self.create_reciprocal_relationship(root_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
 
          # recursively copy in referenced parts where they don't already exist in this model
+         # TODO: optimise in some way when force is True
          for ref_node in rqet.list_obj_references(root_node):
             resident_referred_node = None
             if consolidate:

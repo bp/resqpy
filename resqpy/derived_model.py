@@ -3344,15 +3344,17 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
       new_epc_file (string): path of new composite epc to be created (with paired hdf5 file)
       consolidate (boolean, default True): if True, simple parts are tested for equivalence and where similar enough
          a single shared object is established in the composite dataset
-      shared_grids (boolean, default True): if True and consolidate is True, then grids are also considered for
-         consolidation with equivalence based on extent of grids (and citation titles if grid extents within the
-         first case are not distinct); ignored if consolidate is False
+      shared_grids (boolean, default True): if True and consolidate is True, then grids are also consolidated
+         with equivalence based on extent of grids (and citation titles if grid extents within the first case
+         are not distinct); ignored if consolidate is False
       create_epc_lookup (boolean, default True): if True, a StringLookupTable is created to map from realization
          number to case epc path
 
    notes:
       property objects will have an integer realization number assigned, which matches the corresponding index into
-      the case_epc_list
+      the case_epc_list;
+      if consolidating with shared grids, then only properties will be gathered from realisations after the first and
+      an exception will be raised if the grids are not matched between realisations
    """
 
    if not consolidate: shared_grids = False
@@ -3384,8 +3386,8 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
             for grid_uuid in case_model.uuids(obj_type = 'IjkGridRepresentation'):
                grid_root = case_model.root(uuid = grid_uuid)
                grid_extent = grr.extent_kji_from_root(grid_root)
+               host_index = None
                if grid_extent in host_grid_shapes:
-                  host_index = None
                   if title_match_required:
                      case_grid_title = rqet.citation_title_for_node(grid_root)
                      for host_grid_index in len(host_grid_uuids):
@@ -3394,9 +3396,14 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
                            break
                   else:
                      host_index = host_grid_shapes.index(grid_extent)
-                  if host_index is not None:
-                     composite_model.force_consolidation_uuid_equivalence(grid_uuid, host_grid_uuids[host_index])
-         composite_model.copy_all_parts_from_other_model(case_model, realization = r, consolidate = consolidate)
+               assert host_index is not None, 'failed to match grids when gathering ensemble'
+               composite_model.force_consolidation_uuid_equivalence(grid_uuid, host_grid_uuids[host_index])
+            grid_relatives = case_model.parts(related_uuid = grid_uuid)
+            for part in grid_relatives:
+               if 'Property' in part:
+                  composite_model.copy_part_from_other_model(case_model, part, realization = r, consolidate = True)
+         else:
+            composite_model.copy_all_parts_from_other_model(case_model, realization = r, consolidate = consolidate)
 
    if create_epc_lookup and len(epc_lookup_dict):
       epc_lookup = rqp.StringLookup(composite_model, int_to_str_dict = epc_lookup_dict, title = 'ensemble epc table')
