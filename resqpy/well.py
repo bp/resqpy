@@ -423,6 +423,9 @@ class DeviationSurvey():
       inclinations_node = rqet.find_tag(node, 'Inclinations', must_exist=True)
       load_hdf5_array(obj, inclinations_node, 'inclinations')
 
+      assert obj.measured_depths is not None
+      assert len(obj.measured_depths) > 0
+
       return obj
 
 
@@ -571,7 +574,11 @@ class DeviationSurvey():
             md_datum_root = self.md_datum.root_node
       assert md_datum_root is not None
 
-      if ds_uuid is not None: self.uuid = ds_uuid
+      assert self.uuid is not None
+
+      if ds_uuid is not None:
+         warnings.warn("Argument ds_uuid is Deprecated", DeprecationWarning)
+         self.uuid = ds_uuid
 
       ds_node = self.model.new_obj_node('DeviationSurveyRepresentation')
 
@@ -614,7 +621,7 @@ class DeviationSurvey():
       mds_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
       mds_values_node.text = rqet.null_xml_text
 
-      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Mds', root = mds_values_node)
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Mds', root = mds_values_node)
 
       azimuths = rqet.SubElement(ds_node, ns['resqml2'] + 'Azimuths')
       azimuths.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
@@ -624,7 +631,7 @@ class DeviationSurvey():
       azimuths_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
       azimuths_values_node.text = rqet.null_xml_text
 
-      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Azimuths', root = azimuths_values_node)
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Azimuths', root = azimuths_values_node)
 
       inclinations = rqet.SubElement(ds_node, ns['resqml2'] + 'Inclinations')
       inclinations.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
@@ -634,7 +641,7 @@ class DeviationSurvey():
       inclinations_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
       inclinations_values_node.text = rqet.null_xml_text
 
-      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Inclinations', root = inclinations_values_node)
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Inclinations', root = inclinations_values_node)
 
       interp_root = None
       if self.wellbore_interpretation is not None:
