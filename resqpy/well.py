@@ -673,9 +673,9 @@ class DeviationSurvey():
 
       # NB: array data must all have been set up prior to calling this function
       h5_reg = rwh5.H5Register(self.model)
-      h5_reg.register_dataset(self.uuid, 'Mds', self.measured_depths)
-      h5_reg.register_dataset(self.uuid, 'Azimuths', self.azimuths)
-      h5_reg.register_dataset(self.uuid, 'Inclinations', self.inclinations)
+      h5_reg.register_dataset(self.uuid, 'Mds', self.measured_depths, dtype=float)
+      h5_reg.register_dataset(self.uuid, 'Azimuths', self.azimuths, dtype=float)
+      h5_reg.register_dataset(self.uuid, 'Inclinations', self.inclinations, dtype=float)
       h5_reg.write(file = file_name, mode = mode)
 
 
