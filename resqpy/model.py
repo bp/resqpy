@@ -1663,7 +1663,7 @@ class Model():
          a (k0, pillar_index) is needed when the grid has split pillars, whereas a (k0, j0, i0) is needed when the grid does
          not have any split pillars
       """
-
+      
       def reshaped_index(index, shape_tuple, required_shape):
          tail = len(shape_tuple) - len(index)
          if tail > 0:
@@ -1684,9 +1684,16 @@ class Model():
          return r_index
 
       if object is None: object = self
-      if array_attribute is not None and hasattr(object, array_attribute) and object.__dict__[array_attribute] is not None:
-         if index is None: return None  # this option allows caching of array without actually referring to any element
-         return object.__dict__[array_attribute][tuple(index)]
+
+      # Check if attribute has already be cached
+      if array_attribute is not None:
+         existing_value = getattr(object, array_attribute, None)
+
+         # Watch out for np.array(None): check existing_value has a valid "shape" 
+         if existing_value is not None and getattr(existing_value, "shape", False):
+            if index is None: return None  # this option allows caching of array without actually referring to any element
+            return existing_value[tuple(index)]
+
       h5_root = self.h5_access(h5_key_pair[0])
       if h5_root is None: return None
       if cache_array:
