@@ -124,7 +124,9 @@ def test_DeviationSurvey(example_model_with_well):
    # Check all attributes were loaded from disk correctly
 
    for key, expected_value in data.items():
-      assert getattr(survey2, key) == expected_value
+      assert getattr(survey2, key) == expected_value, f"Error for {key}"
    
    for key, expected_value in array_data.items():
-      assert_array_almost_equal(getattr(survey2, key), expected_value)
+      assert_array_almost_equal(
+         getattr(survey2, key), expected_value, err_msg=f"Error for {key}"
+      )
