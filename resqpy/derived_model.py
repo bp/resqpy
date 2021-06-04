@@ -2678,28 +2678,26 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
    all_good = grid.geometry_defined_for_all_cells()
    if not all_good: log.warning('not all cells have defined geometry')
 
-   # fetch unsplit equivalent of grid points for reference layer interface
-   log.debug('fetching unsplit equivalent grid points')
-   unsplit_points = grid.unsplit_points_ref().reshape(grid.nk + 1, -1, 3)
-
-   # determine existing throws on split pillars
    primaries = (grid.nj + 1) * (grid.ni + 1)
-   semi_throws = np.zeros(grid.points_cached.shape[1:])   # same throw applied to all layers
-   semi_throws[grid.split_pillar_indices_cached, :] = (grid.points_cached[ref_k0, grid.split_pillar_indices_cached, :]  -
-                                                       unsplit_points[ref_k0, grid.split_pillar_indices_cached, :])
-   semi_throws[primaries:, :] = (grid.points_cached[ref_k0, primaries:, :]  -
-                                 unsplit_points[ref_k0, grid.split_pillar_indices_cached, :])  # unsplit points are mid points
+   offsets = np.zeros(grid.points_cached.shape[1:])
 
-   # ensure no adjustment in pillar where geometry is not defined in reference layer
-   if not all_good:
-      semi_throws[:, :] = np.where(np.isnan(semi_throws), 0.0, semi_throws)
+   if scaling_factor is not None:  # apply global scaling to throws
+      # fetch unsplit equivalent of grid points for reference layer interface
+      log.debug('fetching unsplit equivalent grid points')
+      unsplit_points = grid.unsplit_points_ref().reshape(grid.nk + 1, -1, 3)
+      # determine existing throws on split pillars
+      semi_throws = np.zeros(grid.points_cached.shape[1:])   # same throw applied to all layers
+      unique_spi = np.unique(grid.split_pillar_indices_cached)
+      semi_throws[unique_spi, :] = (grid.points_cached[ref_k0, unique_spi, :]  -
+                                    unsplit_points[ref_k0, unique_spi, :])
+      semi_throws[primaries:, :] = (grid.points_cached[ref_k0, primaries:, :]  -
+                                    unsplit_points[ref_k0, grid.split_pillar_indices_cached, :])  # unsplit points are mid points
+      # ensure no adjustment in pillar where geometry is not defined in reference layer
+      if not all_good: semi_throws[:, :] = np.where(np.isnan(semi_throws), 0.0, semi_throws)
+      # apply global scaling to throws
+      offsets[:] = semi_throws * (scaling_factor - 1.0)
 
-   # apply scaling to throws
-   if scaling_factor is not None:
-      offsets = semi_throws * (scaling_factor - 1.0)
-   else:
-      offsets = np.zeros(grid.points_cached.shape[1:])
-   if connection_set is not None and scaling_dict is not None:
+   if connection_set is not None and scaling_dict is not None:  # overwrite any global offsets with named fault throw adjustments
       connection_set.cache_arrays()
       for fault_index in range(len(connection_set.feature_list)):
          fault_name = connection_set.fault_name_for_feature_index(fault_index)
@@ -2708,28 +2706,36 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
          if fault_scaling == 1.0: continue
          log.info('scaling throw on fault ' + fault_name + ' by factor of: {0:.4f}'.format(fault_scaling))
          kelp_j, kelp_i = connection_set.simplified_sets_of_kelp_for_feature_index(fault_index)
-         p_set = set()   # set of contributing pillar indices
+         p_list = []  # list of adjusted pillars
          for kelp in kelp_j:
-            p_set.add(grid.pillars_for_column[kelp[0], kelp[1], 1, 0])
-            p_set.add(grid.pillars_for_column[kelp[0], kelp[1], 1, 1])
-            p_set.add(grid.pillars_for_column[kelp[0] + 1, kelp[1], 0, 0])
-            p_set.add(grid.pillars_for_column[kelp[0] + 1, kelp[1], 0, 1])
+            for ip in [0, 1]:
+               p_a = grid.pillars_for_column[kelp[0], kelp[1], 1, ip]
+               p_b = grid.pillars_for_column[kelp[0] + 1, kelp[1], 0, ip]  # other side of fault
+               mid_point = 0.5 * (grid.points_cached[ref_k0, p_a] + grid.points_cached[ref_k0, p_b])
+               if np.any(np.isnan(mid_point)): continue
+               if p_a not in p_list:
+                  offsets[p_a] = (grid.points_cached[ref_k0, p_a] - mid_point) * (fault_scaling - 1.0)
+                  p_list.append(p_a)
+               if p_b not in p_list:
+                  offsets[p_b] = (grid.points_cached[ref_k0, p_b] - mid_point) * (fault_scaling - 1.0)
+                  p_list.append(p_b)
          for kelp in kelp_i:
-            p_set.add(grid.pillars_for_column[kelp[0], kelp[1], 0, 1])
-            p_set.add(grid.pillars_for_column[kelp[0], kelp[1], 1, 1])
-            p_set.add(grid.pillars_for_column[kelp[0], kelp[1] + 1, 0, 0])
-            p_set.add(grid.pillars_for_column[kelp[0], kelp[1] + 1, 1, 0])
-         p_list = list(p_set)
-         offsets[p_list, :] = semi_throws[p_list, :] * (fault_scaling - 1.0)   # overwrites any offsets from previous faults
+            for jp in [0, 1]:
+               p_a = grid.pillars_for_column[kelp[0], kelp[1], jp, 1]
+               p_b = grid.pillars_for_column[kelp[0], kelp[1] + 1, jp, 0]  # other side of fault
+               mid_point = 0.5 * (grid.points_cached[ref_k0, p_a] + grid.points_cached[ref_k0, p_b])
+               if np.any(np.isnan(mid_point)): continue
+               if p_a not in p_list:
+                  offsets[p_a] = (grid.points_cached[ref_k0, p_a] - mid_point) * (fault_scaling - 1.0)
+                  p_list.append(p_a)
+               if p_b not in p_list:
+                  offsets[p_b] = (grid.points_cached[ref_k0, p_b] - mid_point) * (fault_scaling - 1.0)
+                  p_list.append(p_b)
 
    # initialise flag array for adjustments
    adjusted = np.zeros((primaries,), dtype = bool)
 
    # insert adjusted throws to all layers of split pillars
-#   grid.points_cached[:, grid.split_pillar_indices_cached, :] = unsplit_points[:, grid.split_pillar_indices_cached, :] +
-#                                                                semi_throws[grid.split_pillar_indices_cached, :].reshape(1, -1, 3)
-#   grid.points_cached[ref_k0, primaries:, :] = unsplit_points[:, grid.split_pillar_indices_cached, :] +
-#                                               semi_throws[primaries:, :].reshape(1, -1, 3)
    grid.points_cached[:, grid.split_pillar_indices_cached, :] += offsets[grid.split_pillar_indices_cached, :].reshape(1, -1, 3)
    adjusted[grid.split_pillar_indices_cached] = True
    grid.points_cached[:, primaries:, :] += offsets[primaries:, :].reshape(1, -1, 3)
@@ -2742,6 +2748,8 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       for j in range(grid.nj + 1):
          for i in range(grid.ni + 1):
             if adjusted[j, i]: continue
+            p = j * (grid.ni + 1)  +  i
+            if p in grid.split_pillar_indices_cached: continue
             contributions = 0
             accum = 0.0
             if (i > 0) and adjusted[j, i - 1]:
@@ -2773,7 +2781,6 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
                   accum += offsets[grid.pillars_for_column[j, i, 1, 0], 2]
                   contributions += 1
             if contributions == 0: continue
-            p = j * (grid.ni + 1)  +  i
             dxy_dz = ((grid.points_cached[grid.nk, p, :2] - grid.points_cached[0, p, :2])  /
                       (grid.points_cached[grid.nk, p, 2] - grid.points_cached[0, p, 2]))
             offsets[p, 2] = offset_decay * accum / float(contributions)
