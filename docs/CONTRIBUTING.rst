@@ -74,7 +74,7 @@ Checklist for pull requests
 2. Changes or additions could have appropriate unit tests (see below)
 3. Follow the PEP8 style guide as far as possible (with caveats below).
 4. All public functions and classes should have
-   `Google-style docstrings<https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
+   `Google-style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
 
 Code Style
 ^^^^^^^^^^
@@ -159,11 +159,13 @@ can also be ran locally with:
 
     flake8 .
 
-The configuration of which errors are checked by default is stored in `setup.cfg`.
-Currently:
+The configuration of which `error codes <https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3>`_
+are checked by default is stored in `setup.cfg <https://github.com/bp/resqpy/blob/master/setup.cfg>`_.
 
-* Logical errors are enabled (Error codes with the "F" prefix)
-* Style checks i.e. PEP8 compliance are disabled (Error codes with the "E" prefix)
+By default in resqpy:
+
+* `F` Logical errors (i.e. bugs) are enabled
+* `E` Style checks (i.e. PEP8 compliance) are disabled
 
 You can test for PEP8 compliance by running flake8 with further error codes:
 
@@ -173,9 +175,9 @@ You can test for PEP8 compliance by running flake8 with further error codes:
 
 Links:
 
--	Error codes: https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3
--	Flake8 reference: See https://flake8.pycqa.org/en/latest/user/invocation.html
--	PEP9: https://www.python.org/dev/peps/pep-0008/ 
+-	`PEP8 Style Guide <https://www.python.org/dev/peps/pep-0008/>`_
+-	`Flake8 reference <https://flake8.pycqa.org/en/latest/user/invocation.html>`_
+-	`Flake8 error codes <https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3>`_
 
 Get in touch
 ------------
