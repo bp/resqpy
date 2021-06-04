@@ -9,9 +9,12 @@ log.debug('model.py version ' + version)
 import os
 import copy
 import shutil
+import zipfile as zf
+import getpass
+
 import numpy as np
 import h5py
-import zipfile as zf
+
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
@@ -2042,8 +2045,8 @@ class Model():
       originator_node = rqet.SubElement(citation, ns['eml'] + 'Originator')
       if originator is None:
          try:
-            originator = str(os.getlogin())
-         except:
+            originator = str(getpass.getuser())
+         except Exception:
             originator = 'unknown'
       originator_node.set(ns['xsi'] + 'type', ns['eml'] + 'NameString')
       originator_node.text = originator

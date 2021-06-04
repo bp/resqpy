@@ -319,7 +319,7 @@ class DeviationSurvey():
    def __init__(self, parent_model, uuid=None, title=None, deviation_survey_root=None,
                 represented_interp=None, md_datum=None, md_uom='m', angle_uom='degrees',
                 measured_depths=None, azimuths=None, inclinations=None, station_count=None,
-                first_station=None, is_final=False):
+                first_station=None, is_final=False, originator=None):
       """Load or create a DeviationSurvey object.
 
       If uuid is given, loads from XML. Else, create new. If loading from disk, other
@@ -342,6 +342,7 @@ class DeviationSurvey():
          station_count (int): length of measured_depths, azimuths & inclinations
          first_station (tuple): (x, y, z) of first point in survey, in crs for md datum
          is_final (bool): whether survey is a finalised deviation survey
+         originator (str): name of author
 
       Returns:
          DeviationSurvey
@@ -353,6 +354,8 @@ class DeviationSurvey():
       self.model = parent_model
       self.is_final = is_final
       self.md_uom = bwam.rq_length_unit(md_uom)
+      self.title = title
+      self.originator = originator
 
       self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
       """boolean: True for degrees, False for radians (nothing else supported). Should be 'dega' or 'rad'"""
@@ -366,12 +369,12 @@ class DeviationSurvey():
          station_count = len(measured_depths)
       self.station_count = station_count
       self.first_station = first_station
-      self.title = title
 
+      # Referenced objects
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
       self.wellbore_interpretation = represented_interp
 
-      # TODO: remove init from root_node, use just uuid
+      # TODO: remove deviation_survey_root, use just uuid
       if deviation_survey_root is not None:
          warnings.warn("Argument deviation_survey_root is deprecated, please use uuid")
          uuid = rqet.uuid_for_part_root(deviation_survey_root)
@@ -511,7 +514,7 @@ class DeviationSurvey():
       """
 
       # Get node from self.uuid 
-      node = self.node
+      node = self.root
 
       # Load XML data
       self.md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist=True))
@@ -519,6 +522,8 @@ class DeviationSurvey():
       self.station_count = rqet.find_tag_int(node, 'StationCount', must_exist=True)
       self.first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist=True))
       self.is_final=rqet.find_tag_bool(node, 'IsFinal')
+      self.title = rqet.find_nested_tags_text(node, ['Citation', 'Title'])
+      self.originator = rqet.find_nested_tags_text(node, ['Citation', 'Originator'])
 
       # Load HDF5 data
       mds_node = rqet.find_tag(node, 'Mds', must_exist=True)
@@ -540,7 +545,7 @@ class DeviationSurvey():
 
 
    def create_xml(self, ext_uuid=None, md_datum_root=None, md_datum_xyz=None, add_as_part=True,
-                  add_relationships=True, root=None, title='deviation survey', originator=None):
+                  add_relationships=True, root=None, title=None, originator=None):
       """Creates a deviation survey representation xml element from this DeviationSurvey object.
 
       arguments:
@@ -569,7 +574,8 @@ class DeviationSurvey():
 
       if md_datum_root is None:
          if self.md_datum is None:
-            assert md_datum_xyz is not None
+            if md_datum_xyz is None:
+               raise ValueError("Must provide a MD Datum for the DeviationSurvey")
             self.md_datum = MdDatum(self.model, location = md_datum_xyz)
          if self.md_datum.root_node is None:
             md_datum_root = self.md_datum.create_xml()
@@ -582,7 +588,12 @@ class DeviationSurvey():
       ds_node = self.model.new_obj_node('DeviationSurveyRepresentation')
       ds_node.attrib['uuid'] = str(self.uuid)
 
-      self.model.create_citation(root = ds_node, title = title, originator = originator)
+      if title:
+         self.title = title
+      if originator:
+         self.originator = originator
+
+      self.model.create_citation(root=ds_node, title=self.title, originator=self.originator)
 
       if_node = rqet.SubElement(ds_node, ns['resqml2'] + 'IsFinal')
       if_node.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
