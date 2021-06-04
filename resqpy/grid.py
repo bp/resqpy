@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '22nd May 2021'
+version = '2nd June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -1304,23 +1304,6 @@ class Grid():
       return pillar_shape
 
 
-   def make_split_pillar_map(self):
-      """Creates an integer array attribute holding extra pillar indices for split pillars, -1 for unsplit pillars.
-
-      note:
-         cache pillar indices array before calling this method
-      """
-
-      if hasattr(self, 'split_pillar_map') and self.split_pillar_map is not None: return self.split_pillar_map
-      self.split_pillar_map = np.full((self.nj + 1) * (self.ni + 1), -1, dtype = int)
-      if self.has_split_coordinate_lines:
-         assert hasattr(self, 'split_pillar_indices_cached')
-         for extra_index, pillar_index in enumerate(self.split_pillar_indices_cached):
-            if self.split_pillar_map[pillar_index] < 0: self.split_pillar_map[pillar_index] = extra_index
-      self.split_pillar_map = self.split_pillar_map.reshape((self.nj + 1, self.ni + 1))
-      return self.split_pillar_map
-
-
    def cache_all_geometry_arrays(self):
       """Loads from hdf5 into memory all the arrays defining the grid geometry.
 
@@ -1357,8 +1340,6 @@ class Grid():
             h5_key_pair = self.model.h5_uuid_and_path_for_node(pillar_indices_root)
             self.model.h5_array_element(h5_key_pair, index = None, cache_array = True, object = self,
                                         array_attribute = 'split_pillar_indices_cached', dtype = 'int')
-         if not hasattr(self, 'split_pillar_map') or self.split_pillar_map is None:
-            self.make_split_pillar_map()
          if not hasattr(self, 'cols_for_split_pillars'):
             if split_root is None: split_root = self.resolve_geometry_child('SplitCoordinateLines')
             cpscl_root = rqet.find_tag(split_root, 'ColumnsPerSplitCoordinateLine')
@@ -1412,36 +1393,29 @@ class Grid():
 
       self.pillars_for_column = np.empty((self.nj, self.ni, 2, 2), dtype = int)
       ni_plus_1 = self.ni + 1
-      unsplit_pillar_count = (self.nj + 1) * ni_plus_1
-      if self.has_split_coordinate_lines:
-         extras_count = len(self.split_pillar_indices_cached)
-      else:
-         extras_count = 0
+
       for j in range(self.nj):
-         for i in range(self.ni):
-            column_index = j * self.ni  +  i
-            for jp in range(2):
-               for ip in range(2):
-                  pillar_index = (j + jp) * ni_plus_1  +  i + ip
-                  self.pillars_for_column[j, i, jp, ip] = pillar_index             # usual pillar index, when pillar not split
-                  if not self.has_split_coordinate_lines: continue
-# following line retired as the data is not necessarily ordered
-#                 extra_index = rqet.find_in_ordered_data(pillar_index, self.split_pillar_indices_cached)
-                  extra_index = self.split_pillar_map[j + jp, i + ip]
-                  if extra_index < 0: continue                                     # this pillar is not split
-                  while True:
-                     extra_pillar_index = unsplit_pillar_count + extra_index
-                     if extra_index == 0: start = 0
-                     else: start = self.cols_for_split_pillars_cl[extra_index - 1]
-                     for cpscl_index in range(start, self.cols_for_split_pillars_cl[extra_index]):
-                        if self.cols_for_split_pillars[cpscl_index] == column_index:  # a secondary pillar is in use for this corner of this column
-                           self.pillars_for_column[j, i, jp, ip] = extra_pillar_index       # override pillar index
-                           extra_index = None
-                           break
-                     if extra_index is None or extra_index == extras_count - 1: break
-                     extra_index += 1
-                     if self.split_pillar_indices_cached[extra_index] != pillar_index: break
-      # todo: re-write with split pillar handling as a separate loop over the extra pillars and cpscl
+         self.pillars_for_column[j, :, 0, 0] = np.arange(j * ni_plus_1, (j + 1) * ni_plus_1 - 1, dtype = int)
+         self.pillars_for_column[j, :, 0, 1] = np.arange(j * ni_plus_1 + 1, (j + 1) * ni_plus_1, dtype = int)
+         self.pillars_for_column[j, :, 1, 0] = np.arange((j + 1) * ni_plus_1, (j + 2) * ni_plus_1 - 1, dtype = int)
+         self.pillars_for_column[j, :, 1, 1] = np.arange((j + 1) * ni_plus_1 + 1, (j + 2) * ni_plus_1, dtype = int)
+
+      if self.has_split_coordinate_lines:
+         unsplit_pillar_count = (self.nj + 1) * ni_plus_1
+         extras_count = len(self.split_pillar_indices_cached)
+         for extra_index in range(extras_count):
+            primary = self.split_pillar_indices_cached[extra_index]
+            primary_ji0 = divmod(primary, self.ni + 1)
+            extra_pillar_index = unsplit_pillar_count + extra_index
+            if extra_index == 0: start = 0
+            else: start = self.cols_for_split_pillars_cl[extra_index - 1]
+            for cpscl_index in range(start, self.cols_for_split_pillars_cl[extra_index]):
+               col = self.cols_for_split_pillars[cpscl_index]
+               j, i = divmod(col, self.ni)
+               jp = primary_ji0[0] - j
+               ip = primary_ji0[1] - i
+               assert (jp == 0 or jp == 1) and (ip == 0 or ip == 1)
+               self.pillars_for_column[j, i, jp, ip] = extra_pillar_index
 
       return self.pillars_for_column
 

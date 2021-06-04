@@ -9,41 +9,40 @@
 
 ## Introduction
 
-This repository contains pure python modules which provide a programming
-interface (API) for reading, writing, and modifying reservoir models in the
-RESQML format.
+resqpy is a pure python package which provide a programming interface (API) for
+reading, writing, and modifying reservoir models in the RESQML format. It gives
+you the ability to work with reservoir models programmatically, without having
+to know the details of the RESQML standard.
 
-See the full documentation [here](https://resqpy.readthedocs.io).
+resqpy is written and maintained by bp, and is made available under the MIT
+license as a contribution to the open-source community.
 
-### Current capabilities
+Resqpy was created by Andy Beer. For enquires about resqpy, please contact
+Nathan Lane (Nathan.Lane@bp.com)
 
-Specialized classes are only available for a subset of the RESQML high level
-object classes:
+### Documentation
 
-- Grids: IjkGridRepresentation
-- Wells: WellboreTrajectoryRepresentation, DeviationSurveyRepresentation,
-  MdDatum, BlockedWellboreRepresentation, WellboreFrameRepresentation,
-  WellboreMarkerFrameRepresentation, WellboreInterpretation, WellboreFeature
-- Properties for Grids, Wells etc: ContinuousProperty, DiscreteProperty,
-  CatagoricalProperty, PropertyKind, PropertySet, StringTableLookup
-- Surfaces: TriangulatedSetRepresentation, Grid2dRepresentation,
-  PointSetRepresentation, HorizonInterpretation, GeneticBoundaryFeature
-- Faults: GridConnectionSetRepresentation, FaultInterpretation,
-  TectonicBoundaryFeature
-- Lines: PolylineRepresentation, PolylineSetRepresentation
-- Other: TimeSeries, EpcExternalPartReference, various other Interpretation and
-  Feature classes
+See the complete package documentation on
+[readthedocs](https://resqpy.readthedocs.io/).
 
-Furthermore, not all variations of these object types are supported; for
-example, radial IJK grids are not yet catered for, although the RESQML standard
-does allow for such grids.
+### About RESQML
+
+RESQML™ is an industry initiative to provide open, non-proprietary data exchange
+standards for reservoir characterization, earth and reservoir models. It is
+governed by the [Energistics
+consortium](https://www.energistics.org/portfolio/resqml-data-standards/).
+
+Resqpy provides specialized classes for a subset of the RESQML high level object
+classes, as described in the docs. Furthermore, not all variations of these
+object types are supported; for example, radial IJK grids are not yet catered
+for, although the RESQML standard does allow for such grids.
 
 It is envisaged that the code base will be expanded to include other classes of
 object and more fully cover the options permitted by the RESQML standard.
 
 Modification functionality at the moment focuses on changes to grid geometry.
 
-### Installation
+## Installation
 
 Resqpy can be installed with pip:
 
@@ -58,6 +57,10 @@ pip install -e /path/to/repo/
 ```
 
 ## Contributing
+
+Contributions of all forms are greatly appreciated! See the [Contributing
+Guide](docs/CONTRIBUTING.rst) for guidance on how you can contribute, including
+bug reports, features requests and pull requests.
 
 ### Repository structure
 

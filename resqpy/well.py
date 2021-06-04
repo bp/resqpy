@@ -3845,9 +3845,9 @@ def well_name(well_object, model = None):
    """Returns the 'best' citation title from the object or related well objects.
 
    arguments:
-      well_object (Trajectory, WellboreInterpretation, WellboreFeature, BlockedWell, WellboreMarkerFrame,
-         WellboreFrame, DeviationSurvey or MdDatum object; or uuid or root for one of those): object for which
-         a well name is required
+      well_object (object, uuid or root): Object for which a well name is required. Can be a
+         Trajectory, WellboreInterpretation, WellboreFeature, BlockedWell, WellboreMarkerFrame,
+         WellboreFrame, DeviationSurvey or MdDatum object
       model (model.Model, optional): required if passing a uuid or root; not recommended otherwise
 
    returns:
