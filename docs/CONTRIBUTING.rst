@@ -4,14 +4,6 @@ Contributing to resqpy
 Resqpy is an open source project released under the MIT license. Contributions
 of all forms are most welcome!
 
-How Can I Contribute?
----------------------
-
-* Submitting bug reports and feature requests (using the `GitHub issue tracker<https://github.com/bp/resqpy/issues>`_ )
-* Contributing code (in the form of `Pull requests <https://github.com/bp/resqpy/pulls>`_)
-* Documentation or test improvements
-* Publicity and support
-
 Resqpy was created by Andy Beer.
 
 All contributors (alphabetical order):
@@ -20,6 +12,14 @@ All contributors (alphabetical order):
 * Connor Tann
 * Emma Nesbit
 * Nathan Lane
+
+Ways of contributing
+--------------------
+
+* Submitting bug reports and feature requests (using the `GitHub issue tracker <https://github.com/bp/resqpy/issues>`_)
+* Contributing code (in the form of `Pull requests <https://github.com/bp/resqpy/pulls>`_)
+* Documentation or test improvements
+* Publicity and support
 
 Making a Pull Request
 ---------------------
@@ -177,16 +177,17 @@ Links:
 -	Flake8 reference: See https://flake8.pycqa.org/en/latest/user/invocation.html
 -	PEP9: https://www.python.org/dev/peps/pep-0008/ 
 
-Get in touch by email
----------------------
+Get in touch
+------------
 
-Please feel free to get in touch at Nathan.Lane@bp.com with any questions about
-resqpy.
+For bug reports and feature requests, please use the GitHub issue page.
+
+For other queries about resqpy please feel free to get in touch at Nathan.Lane@bp.com
 
 Code of Conduct
 ---------------
 
-Suggest using Contributor-covenant standard:
+We abide by the Contributor-covenant standard:
 
 https://www.contributor-covenant.org/version/1/4/code-of-conduct/code_of_conduct.md
 
