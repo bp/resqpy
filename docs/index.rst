@@ -9,6 +9,8 @@ to know the details of the RESQML standard.
 resqpy is written and maintained by bp, and is made available under the MIT
 license as a contribution to the open-source community.
 
+The repository is hosted on `GitHub <https://github.com/bp/resqpy>`_.
+
 .. toctree::
    :maxdepth: 2
    :caption: About
