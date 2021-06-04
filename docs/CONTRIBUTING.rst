@@ -12,9 +12,6 @@ How Can I Contribute?
 * Documentation or test improvements
 * Publicity and support
 
-Contributors
-^^^^^^^^^^^^
-
 Resqpy was created by Andy Beer.
 
 All contributors (alphabetical order):
@@ -24,14 +21,11 @@ All contributors (alphabetical order):
 * Emma Nesbit
 * Nathan Lane
 
-Email
-^^^^^
+Making a Pull Request
+---------------------
 
-Please feel free to get in touch at Nathan.Lane@bp.com with any questions about
-resqpy.
-
-Making changes to the code
---------------------------
+Set up your developer environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1.	Clone the repo
 
@@ -73,8 +67,8 @@ Making changes to the code
     You can then commit and push your changes as usual. Open a Pull Request on
     GitHub to submit your code to be merged into master.
 
-Checklist for merge requests
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Checklist for pull requests
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. All CI jobs should pass
 2. Changes or additions could have appropriate unit tests (see below)
@@ -93,34 +87,6 @@ code.
 Note the existing code base differs from PEP8 in using 3 spaces for indenation
 rather than the usual 4. When editing these modules, it is preferable that new
 code has indentation that is consistent with the rest of the module. 
-
-Static analysis
-^^^^^^^^^^^^^^^
-
-We use flake8 to scan for obvious code errors. This is part of the CI tests, and
-can also be ran locally with:
-
-.. code:: bash
-
-    flake8 .
-
-The configuration of which errors are checked by default is stored in `setup.cfg`.
-Currently:
-
-* Logical errors are enabled (Error codes with the "F" prefix)
-* Style checks i.e. PEP8 compliance are disabled (Error codes with the "E" prefix)
-
-You can test for PEP8 compliance by running flake8 with further error codes:
-
-.. code:: bash
-
-    flake8 . –select=F,E2,E3,E4,E7
-
-Links:
-
--	Error codes: https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3
--	Flake8 reference: See https://flake8.pycqa.org/en/latest/user/invocation.html
--	PEP9: https://www.python.org/dev/peps/pep-0008/ 
 
 Tests
 -----
@@ -182,6 +148,40 @@ There are several command line options that can be appended:
 
     pytest -k foobar # selects just tests with "foobar" in the name
     pytest -rA       # prints summary of all executed tests at end
+
+Static analysis
+^^^^^^^^^^^^^^^
+
+We use flake8 to scan for obvious code errors. This is part of the CI tests, and
+can also be ran locally with:
+
+.. code:: bash
+
+    flake8 .
+
+The configuration of which errors are checked by default is stored in `setup.cfg`.
+Currently:
+
+* Logical errors are enabled (Error codes with the "F" prefix)
+* Style checks i.e. PEP8 compliance are disabled (Error codes with the "E" prefix)
+
+You can test for PEP8 compliance by running flake8 with further error codes:
+
+.. code:: bash
+
+    flake8 . –select=F,E2,E3,E4,E7
+
+Links:
+
+-	Error codes: https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3
+-	Flake8 reference: See https://flake8.pycqa.org/en/latest/user/invocation.html
+-	PEP9: https://www.python.org/dev/peps/pep-0008/ 
+
+Get in touch by email
+---------------------
+
+Please feel free to get in touch at Nathan.Lane@bp.com with any questions about
+resqpy.
 
 Code of Conduct
 ---------------

@@ -4,7 +4,7 @@ Welcome to resqpy's documentation
 **resqpy** is a library for manipulating RESQML files.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Documentation
 
    installation
