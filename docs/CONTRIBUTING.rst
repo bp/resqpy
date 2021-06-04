@@ -13,7 +13,7 @@ How Can I Contribute?
 * Publicity and support
 
 Contributors
-------------
+^^^^^^^^^^^^
 
 Resqpy was created by Andy Beer.
 
@@ -25,13 +25,13 @@ All contributors (alphabetical order):
 * Nathan Lane
 
 Email
------
+^^^^^
 
 Please feel free to get in touch at Nathan.Lane@bp.com with any questions about
 resqpy.
 
 Making changes to the code
-==========================
+--------------------------
 
 1.	Clone the repo
 
@@ -73,7 +73,8 @@ Making changes to the code
     You can then commit and push your changes as usual. Open a Pull Request on
     GitHub to submit your code to be merged into master.
 
-Checklist for merge requests:
+Checklist for merge requests
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. All CI jobs should pass
 2. Changes or additions could have appropriate unit tests (see below)
@@ -81,24 +82,8 @@ Checklist for merge requests:
 4. All public functions and classes should have
    `Google-style docstrings<https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
 
-Static analysis
----------------
-
-We use flake8 to scan for obvious code errors. This is part of the CI tests, and
-can also be ran locally with:
-
-.. code:: bash
-
-    flake8 .
-
-The configuration of which errors are enforced is stored in `setup.cfg`.
-Currently:
-
-* Logical errors (i.e. bugs) are enabled
-* Style checks (i.e. PEP8 compliance) are disabled
-
 Code Style
-----------
+^^^^^^^^^^
 
 Please try to write code according to the python style guide (PEP8), which
 defines conventions such as variable naming and capitalisation. A consistent
@@ -109,8 +94,23 @@ Note the existing code base differs from PEP8 in using 3 spaces for indenation
 rather than the usual 4. When editing these modules, it is preferable that new
 code has indentation that is consistent with the rest of the module. 
 
-You can test for PEP8 compliance with flake8 on the command line, against given
-error codes:
+Static analysis
+^^^^^^^^^^^^^^^
+
+We use flake8 to scan for obvious code errors. This is part of the CI tests, and
+can also be ran locally with:
+
+.. code:: bash
+
+    flake8 .
+
+The configuration of which errors are checked by default is stored in `setup.cfg`.
+Currently:
+
+* Logical errors are enabled (Error codes with the "F" prefix)
+* Style checks i.e. PEP8 compliance are disabled (Error codes with the "E" prefix)
+
+You can test for PEP8 compliance by running flake8 with further error codes:
 
 .. code:: bash
 
@@ -123,10 +123,10 @@ Links:
 -	PEP9: https://www.python.org/dev/peps/pep-0008/ 
 
 Tests
-=====
+-----
 
 Why write tests?
-----------------
+^^^^^^^^^^^^^^^^
 
 Automated tests are used to check that code does what it is supposed to do. This
 is absolutely key to maintaining quality: for example, automated tests enable
@@ -137,7 +137,7 @@ As a rule of thumb: If you want your code to still work in 6 month's time,
 ensure it has some unit tests!
 
 Writing tests
--------------
+^^^^^^^^^^^^^
 
 pytest is a framework for running automated tests in python. It is a high-level
 framework, so very little code is required to write a test.
@@ -162,7 +162,7 @@ tests directory for examples of existing tests.  A typical pattern is
         assert result == expected
 
 Running tests
--------------
+^^^^^^^^^^^^^
 
 The easiest way to run the tests is simply to open a Pull Request on GitHub.
 This automatically triggers the unit tests, run in several different python
@@ -184,7 +184,7 @@ There are several command line options that can be appended:
     pytest -rA       # prints summary of all executed tests at end
 
 Code of Conduct
-===============
+---------------
 
 Suggest using Contributor-covenant standard:
 
