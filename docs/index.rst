@@ -5,12 +5,17 @@ Welcome to resqpy's documentation
 
 .. toctree::
    :maxdepth: 2
-   :caption: Documentation
+   :caption: About
 
    installation
-   getting-started
    CONTRIBUTING
    trademarks
+
+.. toctree::
+   :maxdepth: 2
+   :caption: User guide
+
+   getting-started
 
 API Reference
 -------------
