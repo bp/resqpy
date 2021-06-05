@@ -2674,6 +2674,7 @@ class Model():
       if other_model is self: return
       assert part is not None
       if realization is not None: assert isinstance(realization, int) and realization >= 0
+      if force: assert consolidate
 
       # check whether already existing in this model
       if part in self.parts_forest.keys(): return
@@ -2730,11 +2731,11 @@ class Model():
             self.create_reciprocal_relationship(root_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
 
          # recursively copy in referenced parts where they don't already exist in this model
-         # TODO: optimise in some way when force is True
          for ref_node in rqet.list_obj_references(root_node):
             resident_referred_node = None
             if consolidate:
                resident_referred_node = self.referenced_node(ref_node, consolidate = True)
+            if force: continue
             if resident_referred_node is None:
                referred_node = other_model.referenced_node(ref_node)
                if referred_node is None:
@@ -2751,51 +2752,32 @@ class Model():
 
          root_node = self.root_for_uuid(resident_uuid)
 
-      # copy relationships where target part is present in this model – this part is source
-      other_related_parts = other_model.parts_list_filtered_by_related_uuid(other_model.list_of_parts(),
-                                                                            resident_uuid, uuid_is_source = True)
-      for related_part in other_related_parts:
-#         log.debug('considering source relationship with: ' + str(related_part))
-         if related_part in self.parts_forest:
-            resident_related_part = related_part
-         else:
-#           log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
-            if consolidate:
-               resident_related_uuid = self.consolidation.equivalent_uuid_for_part(related_part, immigrant_model = other_model)
-               if resident_related_uuid is None: continue
-               resident_related_part = self.part(uuid = resident_related_uuid)
-               if resident_related_part is None: continue
+      # copy relationships where target part is present in this model – this part is source, then destination
+      for source_flag in [True, False]:
+         other_related_parts = other_model.parts_list_filtered_by_related_uuid(other_model.list_of_parts(),
+                                                                               resident_uuid, uuid_is_source = source_flag)
+         for related_part in other_related_parts:
+   #         log.debug('considering relationship with: ' + str(related_part))
+            if not force and (related_part in self.parts_forest):
+               resident_related_part = related_part
             else:
+   #           log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
+               if consolidate:
+                  resident_related_uuid = self.consolidation.equivalent_uuid_for_part(related_part, immigrant_model = other_model)
+                  if resident_related_uuid is None: continue
+                  resident_related_part = rqet.part_name_for_object(other_model.type_of_part(related_part), resident_related_uuid)
+                  if resident_related_part is None: continue
+               else:
+                  continue
+            if resident_related_part in self.parts_list_filtered_by_related_uuid(self.list_of_parts(), resident_uuid):
                continue
-         if resident_related_part in self.parts_list_filtered_by_related_uuid(self.list_of_parts(), resident_uuid):
-            continue
-         related_node = self.root_for_part(resident_related_part)
-         assert related_node is not None
-#         log.debug('creating source relationship with: ' + str(related_part))
-         self.create_reciprocal_relationship(root_node, 'sourceObject', related_node, 'destinationObject')
+            related_node = self.root_for_part(resident_related_part)
+            assert related_node is not None
+   #         log.debug('creating relationship with: ' + str(related_part))
 
-      # copy relationships where target part is present in this model – this part is destination
-      other_related_parts = other_model.parts_list_filtered_by_related_uuid(other_model.list_of_parts(),
-                                                                            resident_uuid, uuid_is_source = False)
-      for related_part in other_related_parts:
-#         log.debug('considering destination relationship with: ' + str(related_part))
-         if related_part in self.parts_forest:
-            resident_related_part = related_part
-         else:
-#           log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
-            if consolidate:
-               resident_related_uuid = self.consolidation.equivalent_uuid_for_part(related_part, immigrant_model = other_model)
-               if resident_related_uuid is None: continue
-               resident_related_part = self.part(uuid = resident_related_uuid)
-               if resident_related_part is None: continue
-            else:
-               continue
-         if resident_related_part in self.parts_list_filtered_by_related_uuid(self.list_of_parts(), resident_uuid):
-            continue
-         related_node = self.root_for_part(resident_related_part)
-         assert related_node is not None
-#         log.debug('creating destination relationship with: ' + str(related_part))
-         self.create_reciprocal_relationship(root_node, 'destinationObject', related_node, 'sourceObject')
+            if source_flag: sd_a, sd_b = 'sourceObject', 'destinationObject'
+            else: sd_b, sd_a = 'sourceObject', 'destinationObject'
+            self.create_reciprocal_relationship(root_node, sd_a, related_node, sd_b)
 
 
    def copy_all_parts_from_other_model(self, other_model, realization = None, consolidate = True):

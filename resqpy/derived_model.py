@@ -3402,7 +3402,7 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
             for ts_uuid in case_model.uuids(obj_type = 'TimeSeries'):
                ts_title = case_model.title(uuid = ts_uuid)
                ts_index = host_ts_titles.index(ts_title)
-               host_ts_uuid = host_ts_uuids(ts_index)
+               host_ts_uuid = host_ts_uuids[ts_index]
                composite_model.force_consolidation_uuid_equivalence(ts_uuid, host_ts_uuid)
          if shared_grids:
             for grid_uuid in case_model.uuids(obj_type = 'IjkGridRepresentation'):
@@ -3420,11 +3420,11 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
                      host_index = host_grid_shapes.index(grid_extent)
                assert host_index is not None, 'failed to match grids when gathering ensemble'
                composite_model.force_consolidation_uuid_equivalence(grid_uuid, host_grid_uuids[host_index])
-            grid_relatives = case_model.parts(related_uuid = grid_uuid)
-            for part in grid_relatives:
-               if 'Property' in part:
-                  composite_model.copy_part_from_other_model(case_model, part, realization = r,
-                                                             consolidate = True, force = shared_time_series)
+               grid_relatives = case_model.parts(related_uuid = grid_uuid)
+               for part in grid_relatives:
+                  if 'Property' in part:
+                     composite_model.copy_part_from_other_model(case_model, part, realization = r,
+                                                                consolidate = True, force = shared_time_series)
          else:
             composite_model.copy_all_parts_from_other_model(case_model, realization = r, consolidate = consolidate)
 
