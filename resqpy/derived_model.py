@@ -3343,7 +3343,8 @@ def add_edges_per_column_property_array(epc_file,
 
 
 
-def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grids = True, create_epc_lookup = True):
+def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grids = True, shared_time_series = True,
+                    create_epc_lookup = True):
    """Creates a composite resqml dataset by merging all parts from all models in list, assigning realization numbers.
 
    arguments:
@@ -3354,6 +3355,8 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
       shared_grids (boolean, default True): if True and consolidate is True, then grids are also consolidated
          with equivalence based on extent of grids (and citation titles if grid extents within the first case
          are not distinct); ignored if consolidate is False
+      shared_time_series (boolean, default False): if True and consolidate is True, then time series are consolidated
+         with equivalence based on title, without checking that timestamp lists are the same
       create_epc_lookup (boolean, default True): if True, a StringLookupTable is created to map from realization
          number to case epc path
 
@@ -3376,6 +3379,11 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
       case_model = rq.Model(case_epc)
       if r == 0:  # first case
          composite_model.copy_all_parts_from_other_model(case_model, realization = 0, consolidate = consolidate)
+         if shared_time_series:
+            host_ts_uuids = case_model.uuids(obj_type = 'TimeSeries')
+            host_ts_titles = []
+            for ts_uuid in host_ts_uuids:
+               host_ts_titles.append(case_model.title(uuid = ts_uuid))
          if shared_grids:
             host_grid_uuids = case_model.uuids(obj_type = 'IjkGridRepresentation')
             host_grid_shapes = []
@@ -3389,6 +3397,13 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
                log.warning('shapes of representative grids are not distinct, grid titles must match during ensemble gathering')
                title_match_required = True
       else:  # subsequent cases
+         composite_model.consolidation = None  # discard any previous mappings to limit dictionary growth
+         if shared_time_series:
+            for ts_uuid in case_model.uuids(obj_type = 'TimeSeries'):
+               ts_title = case_model.title(uuid = ts_uuid)
+               ts_index = host_ts_titles.index(ts_title)
+               host_ts_uuid = host_ts_uuids(ts_index)
+               composite_model.force_consolidation_uuid_equivalence(ts_uuid, host_ts_uuid)
          if shared_grids:
             for grid_uuid in case_model.uuids(obj_type = 'IjkGridRepresentation'):
                grid_root = case_model.root(uuid = grid_uuid)
@@ -3408,7 +3423,8 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
             grid_relatives = case_model.parts(related_uuid = grid_uuid)
             for part in grid_relatives:
                if 'Property' in part:
-                  composite_model.copy_part_from_other_model(case_model, part, realization = r, consolidate = True)
+                  composite_model.copy_part_from_other_model(case_model, part, realization = r,
+                                                             consolidate = True, force = shared_time_series)
          else:
             composite_model.copy_all_parts_from_other_model(case_model, realization = r, consolidate = consolidate)
 

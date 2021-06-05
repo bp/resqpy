@@ -2685,7 +2685,8 @@ class Model():
       log.debug('copying part: ' + str(part))
 
       uuid = rqet.uuid_in_part_name(part)
-      assert self.part_for_uuid(uuid) is None, 'part copying failure: uuid exists for different part!'
+      if not force:
+         assert self.part_for_uuid(uuid) is None, 'part copying failure: uuid exists for different part!'
 
       # duplicate xml tree and add as a part
       other_root = other_model.root_for_part(part, is_rels = False)
@@ -2741,6 +2742,7 @@ class Model():
                else:
                   referred_part = rqet.part_name_for_part_root(referred_node)
                   if other_model.type_of_part(referred_part) == 'obj_EpcExternalPartReference': continue
+                  if referred_part in self.list_of_parts(): continue
                   self.copy_part_from_other_model(other_model, referred_part, consolidate = consolidate)
 
          resident_uuid = uuid
