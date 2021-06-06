@@ -2819,8 +2819,13 @@ class Model():
       if consolidate:
          other_parts_list = cons.sort_parts_list(other_model, other_parts_list)
 
+      self_h5_file_name = self.h5_file_name(file_must_exist = False)
+      self_h5_uuid = self.h5_uuid()
+      other_h5_file_name = other_model.h5_file_name()
       for part in other_parts_list:
-         self.copy_part_from_other_model(other_model, part, realization = realization, consolidate = consolidate)
+         self.copy_part_from_other_model(other_model, part, realization = realization, consolidate = consolidate,
+                                         self_h5_file_name = self_h5_file_name, h5_uuid = self_h5_uuid,
+                                         other_h5_file_name = other_h5_file_name)
 
       if consolidate and self.consolidation is not None:
          self.consolidation.check_map_integrity()

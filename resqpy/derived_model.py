@@ -3427,11 +3427,17 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
                composite_model.force_consolidation_uuid_equivalence(grid_uuid, host_grid_uuids[host_index])
                grid_relatives = case_model.parts(related_uuid = grid_uuid)
                t_props = 0.0
+               composite_h5_file_name = composite_model.h5_file_name()
+               composite_h5_uuid = composite_model.h5_uuid()
+               case_h5_file_name = case_model.h5_file_name()
                for part in grid_relatives:
                   if 'Property' in part:
                      t_p_start = time()
                      composite_model.copy_part_from_other_model(case_model, part, realization = r,
-                                                                consolidate = True, force = shared_time_series)
+                                                                consolidate = True, force = shared_time_series,
+                                                                self_h5_file_name = composite_h5_file_name,
+                                                                h5_uuid = composite_h5_uuid,
+                                                                other_h5_file_name = case_h5_file_name)
                      t_props += time() - t_p_start
                log.info(f'time props: {t_props:.3f} sec')  # debug
          else:
