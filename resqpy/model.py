@@ -13,6 +13,7 @@ import numpy as np
 import h5py
 import warnings
 import zipfile as zf
+from time import time as tim  # debug
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
@@ -2650,7 +2651,8 @@ class Model():
       self.consolidation.force_uuid_equivalence(immigrant_uuid, resident_uuid)
 
 
-   def copy_part_from_other_model(self, other_model, part, realization = None, consolidate = True, force = False):
+   def copy_part_from_other_model(self, other_model, part, realization = None, consolidate = True, force = False,
+                                  self_h5_file_name = None, h5_uuid = None, other_h5_file_name = None):
       """Fully copies part in from another model, with referenced parts, hdf5 data and relationships.
 
       arguments:
@@ -2662,6 +2664,12 @@ class Model():
             this model, do not duplicate but instead note uuids as equivalent
          force (boolean, default False): if True, the part itself is copied without much checking
             and all references are required to be handled by an entry in the consolidation object
+         self_h5_file_name (string, optional): h5 file name for this model; can be passed as
+            an optimisation when calling method repeatedly
+         h5_uuid (uuid, optional): UUID for this model's hdf5 external part; can be passed as
+            an optimisation when calling method repeatedly
+         other_h5_file_name (string, optional): h5 file name for other model; can be passed as
+            an optimisation when calling method repeatedly
 
       notes:
          if the part name already exists in this model, no action is taken;
@@ -2670,11 +2678,15 @@ class Model():
 
       # todo: double check behaviour around equivalent CRSes, especially any default crs in model
 
+      t_start = tim()
+
       assert other_model is not None
       if other_model is self: return
       assert part is not None
       if realization is not None: assert isinstance(realization, int) and realization >= 0
       if force: assert consolidate
+      if not other_h5_file_name: other_h5_file_name = other_model.h5_file_name()
+      if not self_h5_file_name: self_h5_file_name = self.h5_file_name(file_must_exist = False)
 
       # check whether already existing in this model
       if part in self.parts_forest.keys(): return
@@ -2716,19 +2728,20 @@ class Model():
             ri_node.text = str(realization)
 
          # copy hdf5 data
-         hdf5_count = whdf5.copy_h5(other_model.h5_file_name(), self.h5_file_name(file_must_exist = False),
+         hdf5_count = whdf5.copy_h5(other_h5_file_name, self_h5_file_name,
                                     uuid_inclusion_list = [uuid], mode = 'a')
 
          # create relationship with hdf5 if needed and modify h5 file uuid in xml references
          if hdf5_count:
-            h5_uuid = self.h5_uuid()
+            if h5_uuid is None: h5_uuid = self.h5_uuid()
             if h5_uuid is None:
                self.create_hdf5_ext()
                h5_uuid = self.h5_uuid()
             self.change_hdf5_uuid_in_hdf5_references(root_node, None, h5_uuid)
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', h5_uuid, prefixed = False)
             ext_node = self.root_for_part(ext_part)
-            self.create_reciprocal_relationship(root_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
+            self.create_reciprocal_relationship(root_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl',
+                                                avoid_duplicates = False)
 
          # recursively copy in referenced parts where they don't already exist in this model
          for ref_node in rqet.list_obj_references(root_node):
@@ -2769,15 +2782,15 @@ class Model():
                   if resident_related_part is None: continue
                else:
                   continue
-            if resident_related_part in self.parts_list_filtered_by_related_uuid(self.list_of_parts(), resident_uuid):
+            if not force and resident_related_part in self.parts_list_filtered_by_related_uuid(self.list_of_parts(), resident_uuid):
                continue
             related_node = self.root_for_part(resident_related_part)
             assert related_node is not None
-   #         log.debug('creating relationship with: ' + str(related_part))
 
             if source_flag: sd_a, sd_b = 'sourceObject', 'destinationObject'
             else: sd_b, sd_a = 'sourceObject', 'destinationObject'
             self.create_reciprocal_relationship(root_node, sd_a, related_node, sd_b)
+      log.debug(f'cpfom: done; {tim() - t_start:.3f}s')
 
 
    def copy_all_parts_from_other_model(self, other_model, realization = None, consolidate = True):

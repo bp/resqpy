@@ -1,17 +1,18 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '27th May 2021'
+version = '6th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 log = logging.getLogger(__name__)
-log.debug('derived_grid.py version ' + version)
+log.debug('derived_model.py version ' + version)
 
 import os
 import copy
 import math as maths
 import numpy as np
+from time import time  # debug
 
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.vector_utilities as vec
@@ -3374,10 +3375,12 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
    epc_lookup_dict = {}
 
    for r, case_epc in enumerate(case_epc_list):
+      t_r_start = time()  # debug
       log.info(f'gathering realszation {r}: {case_epc}')
       epc_lookup_dict[r] = case_epc
       case_model = rq.Model(case_epc)
       if r == 0:  # first case
+         log.info('first case')  # debug
          composite_model.copy_all_parts_from_other_model(case_model, realization = 0, consolidate = consolidate)
          if shared_time_series:
             host_ts_uuids = case_model.uuids(obj_type = 'TimeSeries')
@@ -3397,6 +3400,7 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
                log.warning('shapes of representative grids are not distinct, grid titles must match during ensemble gathering')
                title_match_required = True
       else:  # subsequent cases
+         log.info('subsequent case')  # debug
          composite_model.consolidation = None  # discard any previous mappings to limit dictionary growth
          if shared_time_series:
             for ts_uuid in case_model.uuids(obj_type = 'TimeSeries'):
@@ -3405,6 +3409,7 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
                host_ts_uuid = host_ts_uuids[ts_index]
                composite_model.force_consolidation_uuid_equivalence(ts_uuid, host_ts_uuid)
          if shared_grids:
+            log.info('shared grids')  # debug
             for grid_uuid in case_model.uuids(obj_type = 'IjkGridRepresentation'):
                grid_root = case_model.root(uuid = grid_uuid)
                grid_extent = grr.extent_kji_from_root(grid_root)
@@ -3421,12 +3426,18 @@ def gather_ensemble(case_epc_list, new_epc_file, consolidate = True, shared_grid
                assert host_index is not None, 'failed to match grids when gathering ensemble'
                composite_model.force_consolidation_uuid_equivalence(grid_uuid, host_grid_uuids[host_index])
                grid_relatives = case_model.parts(related_uuid = grid_uuid)
+               t_props = 0.0
                for part in grid_relatives:
                   if 'Property' in part:
+                     t_p_start = time()
                      composite_model.copy_part_from_other_model(case_model, part, realization = r,
                                                                 consolidate = True, force = shared_time_series)
+                     t_props += time() - t_p_start
+               log.info(f'time props: {t_props:.3f} sec')  # debug
          else:
+            log.info('non shared grids')  # debug
             composite_model.copy_all_parts_from_other_model(case_model, realization = r, consolidate = consolidate)
+      log.info(f'case time: {time() - t_r_start:.2f} secs')  # debug
 
    if create_epc_lookup and len(epc_lookup_dict):
       epc_lookup = rqp.StringLookup(composite_model, int_to_str_dict = epc_lookup_dict, title = 'ensemble epc table')
