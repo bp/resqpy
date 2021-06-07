@@ -94,7 +94,3 @@ which should produce something like:
     'obj_BlockedWellboreRepresentation_6343a2a6-614e-11eb-940b-248a07af10b2.xml']
 
 (The hexadecimal uuids will differ from those shown here, and it's possible that the order of the list will be different.)
-
-Previous tutorial: Getting started with the Model class
-
-Next tutorial: Working with coordinate reference systems – the Crs class

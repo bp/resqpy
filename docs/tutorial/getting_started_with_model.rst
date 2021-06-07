@@ -154,5 +154,3 @@ The last of the three methods, ``h5_release()``, ensures that the hdf5 file is c
 Summary
 -------
 In this tutorial, we have seen how to open an existing RESQML dataset and discover what high level objects it contains.
-
-Next tutorial: Creating a Test Dataset

@@ -129,7 +129,3 @@ The RESQML standard includes a comprehensive set of data for handling physical u
 There is also a list of standard *property kinds* of relevance to reservoir modelling, such as *porosity*.
 
 The resqpy library does not yet make full use of the RESQML units data. So, for example, the Crs conversion methods currently only recognize the following length units: m, ft, ft[US]
-
-Previous tutorial: Creating a test dataset
-
-Next tutorial: High level objects in resqpy

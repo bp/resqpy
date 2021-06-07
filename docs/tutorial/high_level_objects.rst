@@ -286,7 +286,3 @@ The table below shows which high level resqpy class is used to represent each RE
 +--------------------------------------------------------+------------+---------------+-------------------------------+
 | obj_WellboreTrajectoryRepresentation                   | small      | well          | Trajectory                    |
 +--------------------------------------------------------+------------+---------------+-------------------------------+
-
-Previous tutorial: Working with coordinate reference systems – the Crs class
-
-Next_tutorial: Introduction to cellular grids – the Grid class

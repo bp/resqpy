@@ -173,9 +173,3 @@ Creating a new Grid object
 
 Copying a Grid object
 ^^^^^^^^^^^^^^^^^^^^^
-
- 
-
-Previous tutorial: High level objects in resqpy
-
-Next tutorial: Grid Properties

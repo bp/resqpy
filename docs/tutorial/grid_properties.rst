@@ -549,10 +549,3 @@ RESQML allows more than one value to be stored together, for each indexable elem
 **new_epc_file**
 
 If this argument is set to a file path, the epc_file is not modified. A new epc (and paired h5) file will be created. The grid object and the coordinate reference system it refers to are copied to the new dataset and the newly created property added.
-
- 
-
- 
-
-Previous tutorial: Introduction to cellular grids – the Grid class
-
