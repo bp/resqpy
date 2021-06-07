@@ -1,4 +1,4 @@
-Reservoir Modelling: Bifröst Developers: RESQML Resqpy
+Reservoir Modelling: RESQML Resqpy Tutorial
 ======================================================
 
 
