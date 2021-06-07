@@ -25,6 +25,39 @@ from resqpy.olio.zmap_reader import read_mesh
 import resqpy.organize as rqo
 
 
+class _BaseSurface:
+   """Base class to implement shared methods for other classes in this module"""
+
+   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
+      """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
+
+      assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
+      assert name or self.title, 'title missing'
+      if not name: name = self.title
+
+      if self.represented_interpretation_root is not None:
+         log.debug(f'represented interpretation already exisrs for surface {self.title}')
+         return
+      if kind in ['horizon', 'geobody boundary']:
+         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         if kind == 'horizon':
+            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
+                                               genetic_boundary_feature = feature, domain = 'depth')
+         else:
+            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
+                                                       genetic_boundary_feature = feature, domain = 'depth')
+      elif kind in ['fault', 'fracture']:
+         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
+                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
+      else:
+         log.critical('code failure')
+      interp_root = interp.create_xml(title_suffix = interp_title_suffix)
+      self.set_represented_interpretation_root(interp_root)
+
+
 class TriangulatedPatch():
    """Class for RESQML TrianglePatch objects (used by Surface objects inter alia)."""
 
@@ -453,7 +486,7 @@ class TriangulatedPatch():
 
 
 
-class Surface():
+class Surface(_BaseSurface):
    """Class for RESQML triangulated set surfaces."""
 
    def __init__(self, parent_model, extract_from_xml = True, surface_root = None, point_set = None,
@@ -843,36 +876,6 @@ class Surface():
          patch.vertical_rescale_points(ref_depth, scaling_factor)
 
 
-   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
-      """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
-
-      assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
-      assert name or self.title, 'title missing'
-      if not name: name = self.title
-
-      if self.represented_interpretation_root is not None:
-         log.debug(f'represented interpretation already exisrs for surface {self.title}')
-         return
-      if kind in ['horizon', 'geobody boundary']:
-         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
-         feature.create_xml()
-         if kind == 'horizon':
-            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
-                                               genetic_boundary_feature = feature, domain = 'depth')
-         else:
-            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
-                                                       genetic_boundary_feature = feature, domain = 'depth')
-      elif kind in ['fault', 'fracture']:
-         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
-         feature.create_xml()
-         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
-                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
-      else:
-         log.critical('code failure')
-      interp_root = interp.create_xml(title_suffix = interp_title_suffix)
-      self.set_represented_interpretation_root(interp_root)
-
-
    def write_hdf5(self, file_name = None, mode = 'a'):
       """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays."""
 
@@ -1088,7 +1091,7 @@ class CombinedSurface:
 
 
 
-class PointSet():
+class PointSet(_BaseSurface):
    """Class for RESQML Point Set Representation within RESQML model object."""   # TODO: Work in Progress
 
    def __init__(self, parent_model, point_set_root = None, load_hdf5 = False,
@@ -1293,37 +1296,6 @@ class PointSet():
       if self.patch_count is None: self.patch_count = 0
       self.patch_count += 1
 
-
-   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
-      """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
-
-      assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
-      assert name or self.title, 'title missing'
-      if not name: name = self.title
-
-      if self.represented_interpretation_root is not None:
-         log.debug(f'represented interpretation already exisrs for surface {self.title}')
-         return
-      if kind in ['horizon', 'geobody boundary']:
-         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
-         feature.create_xml()
-         if kind == 'horizon':
-            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
-                                               genetic_boundary_feature = feature, domain = 'depth')
-         else:
-            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
-                                                       genetic_boundary_feature = feature, domain = 'depth')
-      elif kind in ['fault', 'fracture']:
-         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
-         feature.create_xml()
-         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
-                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
-      else:
-         log.critical('code failure')
-      interp_root = interp.create_xml(title_suffix = interp_title_suffix)
-      self.set_represented_interpretation_root(interp_root)
-
-
    def write_hdf5(self, file_name, mode = 'a'):
       """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays."""
 
@@ -1470,7 +1442,7 @@ class PointSet():
 
 
 
-class Mesh():
+class Mesh(_BaseSurface):
    """Class covering meshes (lattices: surfaces where points form a 2D grid; RESQML obj_Grid2dRepresentation)."""
 
    def __init__(self, parent_model, root_node = None,
@@ -1824,36 +1796,6 @@ class Mesh():
       """Returns a surface object generated from this mesh."""
 
       return Surface(self.model, extract_from_xml = False, mesh = self, quad_triangles = quad_triangles)
-
-
-   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
-      """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
-
-      assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
-      assert name or self.title, 'title missing'
-      if not name: name = self.title
-
-      if self.represented_interpretation_root is not None:
-         log.debug(f'represented interpretation already exisrs for surface {self.title}')
-         return
-      if kind in ['horizon', 'geobody boundary']:
-         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
-         feature.create_xml()
-         if kind == 'horizon':
-            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
-                                               genetic_boundary_feature = feature, domain = 'depth')
-         else:
-            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
-                                                       genetic_boundary_feature = feature, domain = 'depth')
-      elif kind in ['fault', 'fracture']:
-         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
-         feature.create_xml()
-         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
-                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
-      else:
-         log.critical('code failure')
-      interp_root = interp.create_xml(title_suffix = interp_title_suffix)
-      self.set_represented_interpretation_root(interp_root)
 
 
    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
