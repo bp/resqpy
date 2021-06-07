@@ -13,8 +13,6 @@ import resqpy.well
 def test_MdDatum(example_model):
 
    # Set up a new datum
-   model: Model
-   crs: Crs
    model, crs = example_model
    epc = model.epc_file
    data = dict(
