@@ -1294,6 +1294,36 @@ class PointSet():
       self.patch_count += 1
 
 
+   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
+      """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
+
+      assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
+      assert name or self.title, 'title missing'
+      if not name: name = self.title
+
+      if self.represented_interpretation_root is not None:
+         log.debug(f'represented interpretation already exisrs for surface {self.title}')
+         return
+      if kind in ['horizon', 'geobody boundary']:
+         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         if kind == 'horizon':
+            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
+                                               genetic_boundary_feature = feature, domain = 'depth')
+         else:
+            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
+                                                       genetic_boundary_feature = feature, domain = 'depth')
+      elif kind in ['fault', 'fracture']:
+         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
+                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
+      else:
+         log.critical('code failure')
+      interp_root = interp.create_xml(title_suffix = interp_title_suffix)
+      self.set_represented_interpretation_root(interp_root)
+
+
    def write_hdf5(self, file_name, mode = 'a'):
       """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays."""
 
@@ -1794,6 +1824,36 @@ class Mesh():
       """Returns a surface object generated from this mesh."""
 
       return Surface(self.model, extract_from_xml = False, mesh = self, quad_triangles = quad_triangles)
+
+
+   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
+      """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
+
+      assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
+      assert name or self.title, 'title missing'
+      if not name: name = self.title
+
+      if self.represented_interpretation_root is not None:
+         log.debug(f'represented interpretation already exisrs for surface {self.title}')
+         return
+      if kind in ['horizon', 'geobody boundary']:
+         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         if kind == 'horizon':
+            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
+                                               genetic_boundary_feature = feature, domain = 'depth')
+         else:
+            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
+                                                       genetic_boundary_feature = feature, domain = 'depth')
+      elif kind in ['fault', 'fracture']:
+         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
+                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
+      else:
+         log.critical('code failure')
+      interp_root = interp.create_xml(title_suffix = interp_title_suffix)
+      self.set_represented_interpretation_root(interp_root)
 
 
    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
