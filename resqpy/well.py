@@ -790,6 +790,8 @@ class Trajectory():
       self.tangent_vectors = None  # optional xyz tangent vector array, if present has same shape as control points)
       self.deviation_survey = deviation_survey  # optional related deviation survey
       self.wellbore_interpretation = represented_interp
+      self.wellbore_feature = None
+      self.feature_and_interpretation_to_be_written = False
       # todo: parent intersection for multi-lateral wells
       # todo: witsml trajectory reference (optional)
       if trajectory_root is not None:
@@ -1239,6 +1241,18 @@ class Trajectory():
       return self.measured_depths
 
 
+   def create_feature_and_interpretation(self):
+      """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does not already exist.
+      
+      Uses the trajectory citation title as the well name
+      """
+      if self.wellbore_interpretation is not None:
+         log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
+         self.feature_and_interpretation_to_be_written = True
+      else: log.info("WellboreInterpretation already exists")
+
    def create_xml(self, ext_uuid = None, wbt_uuid = None,
                   md_datum_root = None, md_datum_xyz = None,
                   add_as_part = True, add_relationships = True,
@@ -1256,6 +1270,11 @@ class Trajectory():
       if not title: title = 'wellbore trajectory'
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
+        
+      if self.feature_and_interpretation_to_be_written:
+         if self.wellbore_interpretation is None: self.create_feature_and_interpretation()
+         if self.wellbore_feature is not None: self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
+         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, add_relationships = add_relationships, originator = originator)
 
       if md_datum_root is None:
          if self.md_datum is None:
@@ -1445,6 +1464,8 @@ class WellboreFrame:
 
       #: Instance of :class:`resqpy.organize.WellboreInterpretation`
       self.wellbore_interpretation = represented_interp
+      self.wellbore_feature = None
+      self.feature_and_interpretation_to_be_written = False
 
       #: number of measured depth nodes, each being an entry or exit point of trajectory with a cell
       self.node_count = None
@@ -1520,6 +1541,19 @@ class WellboreFrame:
       return self.trajectory.crs_root
 
 
+   def create_feature_and_interpretation(self):
+      """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does not already exist.
+      
+      Uses the wellboreframe citation title as the well name
+      """
+      if self.wellbore_interpretation is not None:
+         log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
+         self.feature_and_interpretation_to_be_written = True
+      else: log.info("WellboreInterpretation already exists")
+
+
    def write_hdf5(self, file_name = None, mode = 'a'):
       """Create or append to an hdf5 file, writing datasets for the measured depths."""
 
@@ -1543,6 +1577,11 @@ class WellboreFrame:
 
       assert self.trajectory is not None, 'trajectory object missing'
       assert self.trajectory.root_node is not None, 'trajectory xml not established'
+
+      if self.feature_and_interpretation_to_be_written:
+         if self.wellbore_interpretation is None: self.create_feature_and_interpretation()
+         if self.wellbore_feature is not None: self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
+         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, add_relationships = add_relationships, originator = originator)
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
 
