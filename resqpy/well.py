@@ -400,6 +400,7 @@ class DeviationSurvey():
       return self.model.part_for_uuid(self.uuid)
 
 
+
    @classmethod
    def from_data_frame(cls, parent_model, data_frame, md_datum=None, md_col='MD',
                        azimuth_col='AZIM_GN', inclination_col='INCL', x_col='X', y_col='Y',
@@ -865,7 +866,7 @@ class Trajectory():
       md_datum_part = relatives_model.part_for_uuid(md_datum_uuid)
       assert md_datum_part, 'md datum part not found in model'
       self.md_datum = MdDatum(self.model, md_datum_root = relatives_model.root_for_part(md_datum_part))
-      ds_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(node, 'DeviationSurvey'), 'UUID'))
+      ds_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['DeviationSurvey', 'UUID']))
       if ds_uuid is not None:  # this will probably not work when relatives model is different from self.model
          ds_part = 'obj_DeviationSurveyRepresentation_' + str(ds_uuid) + '.xml'
          self.deviation_survey = DeviationSurvey(
@@ -1674,6 +1675,7 @@ class BlockedWell:
       self.face_pair_indices = None   # entry, exit face per cell indices, -1 for Target Depth termination within a cell
       self.grid_list = []        # list of grid objects indexed by grid_indices; for now only 1 grid supported unless loading from xml
       self.wellbore_interpretation = None
+      self.wellbore_feature = None
 
       #: All logs associated with the blockedwellbore; an instance of :class:`resqpy.property.WellIntervalPropertyCollection`
       self.logs = None
@@ -1708,9 +1710,9 @@ class BlockedWell:
             if not okay: self.node_count = 0
          elif column_ji0 is not None:
             okay = self.set_for_column(well_name, grid, column_ji0)
-         self.cellind_null = -1
          self.gridind_null = -1
          self.facepair_null = -1
+         self.cellind_null = -1
       # else an empty object is returned
       if self.uuid is None: self.uuid = bu.new_uuid()
 
@@ -1762,6 +1764,7 @@ class BlockedWell:
       assert (self.cell_indices is not None and self.cell_indices.ndim == 1 and
               self.cell_indices.size == self.cell_count), 'mismatch in number of cell indices for blocked well'
       self.cellind_null = rqet.find_tag_int(ci_node, 'NullValue')
+      if self.cellind_null is None: self.cellind_null = -1 # if no Null found assume -1 default
 
       fi_node = rqet.find_tag(node, 'LocalFacePairPerCellIndices')
       assert fi_node is not None, 'blocked well face indices hdf5 reference not found in xml'
@@ -1776,6 +1779,7 @@ class BlockedWell:
       self.face_pair_indices = self.face_pair_indices.reshape((-1, 2, 2))
       del self.raw_face_indices
       self.facepair_null = rqet.find_tag_int(fi_node, 'NullValue')
+      if self.facepair_null is None: self.facepair_null = -1
 
       gi_node = rqet.find_tag(node, 'GridIndices')
       assert gi_node is not None, 'blocked well grid indices hdf5 reference not found in xml'
@@ -1783,6 +1787,7 @@ class BlockedWell:
       assert self.grid_indices is not None and self.grid_indices.ndim == 1 and self.grid_indices.size == self.node_count - 1
       unique_grid_indices = np.unique(self.grid_indices)  # sorted list of unique values
       self.gridind_null = rqet.find_tag_int(gi_node, 'NullValue')
+      if self.gridind_null is None: self.gridind_null = -1 # if no Null found assume -1 default
 
       grid_node_list = rqet.list_of_tag(node, 'Grid')
       assert len(grid_node_list) > 0, 'blocked well grid reference(s) not found in xml'
@@ -3007,6 +3012,16 @@ class BlockedWell:
       xyz = self.trajectory.xyz_for_md(md)
       return xyz, rqet.uuid_for_part_root(self.trajectory.crs_root)
 
+   def create_feature_and_interpretation(self):
+      """Instantiate new empty WellboreFeature and WellboreInterpretation objects
+      
+      Uses the Blocked well citation title as the well name
+      """
+      self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.trajectory.title,extract_from_xml=False)
+      self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
+      self.trajectory.wellbore_interpretation = self.wellbore_interpretation
+      self.feature_and_interpretation_to_be_written = True
+
 
    def create_md_datum_and_trajectory(self, grid, trajectory_mds, trajectory_points, length_uom, well_name, set_depth_zero = False, set_tangent_vectors=False, create_feature_and_interp=True):
       """Creates an Md Datum object and a (simulation) Trajectory object for this blocked well.
@@ -3032,10 +3047,7 @@ class BlockedWell:
       self.trajectory_to_be_written = True
 
       if create_feature_and_interp:
-         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.trajectory.title,extract_from_xml=False)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
-         self.trajectory.wellbore_interpretation = self.wellbore_interpretation
-         self.feature_and_interpretation_to_be_written = True
+         self.create_feature_and_interpretation()
 
 
    def create_xml(self, ext_uuid = None, create_for_trajectory_if_needed = True,
@@ -3054,6 +3066,7 @@ class BlockedWell:
       if not title: title = self.well_name
 
       if self.feature_and_interpretation_to_be_written:
+         if self.wellbore_feature is None: self.create_feature_and_interpretation()
          self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
          self.wellbore_interpretation.create_xml(add_as_part = add_as_part, add_relationships = add_relationships, originator = originator)
 
@@ -3106,7 +3119,7 @@ class BlockedWell:
       cis_node = rqet.SubElement(bw_node, ns['resqml2'] + 'CellIndices')
       cis_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
       cis_node.text = rqet.null_xml_text
-
+    
       cnull_node = rqet.SubElement(cis_node, ns['resqml2'] + 'NullValue')
       cnull_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
       cnull_node.text = str(self.cellind_null)
