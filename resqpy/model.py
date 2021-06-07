@@ -8,10 +8,14 @@ log.debug('model.py version ' + version)
 
 import os
 import copy
+import getpass
 import shutil
+import warnings
+import zipfile as zf
+
 import numpy as np
 import h5py
-import zipfile as zf
+
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
@@ -34,13 +38,35 @@ def _pl(i, e = False):
 
 
 class Model():
-   """Class for RESQML (v2) based models."""
+   """Class for RESQML (v2) based models.
+   
+   Examples:
+
+         To open an existing dataset::
+
+            Model(epc_file = 'filename.epc')
+
+         To create a new, empty model ready to populate::
+
+            Model(epc_file = 'new_file.epc', new_epc = True, create_basics = True, create_hdf5_ext = True)
+
+         To copy an existing dataset then open the new copy::
+
+            Model(epc_file = 'new_file.epc', copy_from = 'existing.epc')
+   
+   """
 
    def __init__(self, epc_file = None, full_load = True, epc_subdir = None,
                 new_epc = False, create_basics = None, create_hdf5_ext = None, copy_from = None):
       """Create an empty model; load it from epc_file if given.
 
-      arguments:
+      Note:
+
+         if epc_file is given and the other arguments indicate that it will be a new dataset (new_epc is True
+         or copy_from is given) then any existing .epc and .h5 file(s) with this name will be deleted
+         immediately
+
+      Arguments:
          epc_file (string, optional): if present, and new_epc is False and copy_from is None, the name
             of an existing epc file which is opened, unzipped and parsed to determine the list of parts
             and relationships comprising the model; if present, and new_epc is True or copy_from is
@@ -68,21 +94,10 @@ class Model():
             any previous instances) before epc_file is opened; this argument is primarily to facilitate
             repeated testing of code that modifies the resqml dataset, eg. by appending new parts
 
-      returns:
-         the newly created Model object
+      Returns:
+         The newly created Model object
 
-      example calls:
-         to open an existing dataset:
-            Model(epc_file = 'filename.epc')
-         to create a new, empty model ready to populate:
-            Model(epc_file = 'new_file.epc', new_epc = True, create_basics = True, create_hdf5_ext = True)
-         to copy an existing dataset then open the new copy:
-            Model(epc_file = 'new_file.epc', copy_from = 'existing.epc')
-
-      notes:
-         if epc_file is given and the other arguments indicate that it will be a new dataset (new_epc is True
-         or copy_from is given) then any existing .epc and .h5 file(s) with this name will be deleted
-         immediately
+      :meta common:
       """
 
       if epc_file and not epc_file.endswith('.epc'): epc_file += '.epc'
@@ -158,7 +173,7 @@ class Model():
              extra = {}, related_uuid = None, epc_subdir = None, sort_by = None):
       """Returns a list of parts matching all of the arguments passed.
 
-      arguments:
+      Arguments:
          parts_list (list of strings, optional): if present, an 'input' list of parts to be filtered;
             if None then all the parts in the model are considered
          obj_type (string, optional): if present, only parts of this resqml type will be included
@@ -178,15 +193,27 @@ class Model():
             subdirectory path of the epc are included in the filtered list
          sort_by (string, optional): one of 'newest', 'oldest', 'title', 'uuid', 'type'
 
-      returns:
+      Returns:
          a list of strings being the names of parts which match all filter arguments
 
-      example calls:
-         a full list of parts in the model: model.parts()
-         a list of IjkGrid parts: model.parts(obj_type = 'IjkGridRepresentation')
-         a list containing the part name for a uuid: model.parts(uuid = 'a869e7cc-5d30-4b31-8502-c74b1d87c777')
-         a list of IjkGrid parts with titles beginning LGR, sorted by title:
-            model.parts(obj_type = 'IjkGridRepresentation', title = 'LGR', title_mode = 'starts', sort_by = 'title')
+      Examples:
+         a full list of parts in the model::
+         
+            model.parts()
+
+         a list of IjkGrid parts::
+            
+            model.parts(obj_type = 'IjkGridRepresentation')
+
+         a list containing the part name for a uuid::
+         
+            model.parts(uuid = 'a869e7cc-5d30-4b31-8502-c74b1d87c777')
+
+         a list of IjkGrid parts with titles beginning LGR, sorted by title::
+            
+            model.parts(obj_type='IjkGridRepresentation', title='LGR', title_mode='starts', sort_by='title')
+      
+      :meta common:
       """
 
       if not parts_list: parts_list = self.list_of_parts()
@@ -621,23 +648,25 @@ class Model():
    def load_epc(self, epc_file, full_load = True, epc_subdir = None, copy_from = None):
       """Load xml parts of model from epc file (HDF5 arrays are not loaded).
 
-         arguments:
-            epc_file (string): the path of the epc file
-            full_load (boolean): if True (recommended), the xml for each part is parsed and stored
-               in a tree structure in memory; if False, only the list of parts is loaded
-            epc_subdir (string or list of strings, optional): if present, only parts in the top
-               level directory within the epc structure, or in the specified subdirectory(ies) are
-               included in the load
-            copy_from (string, optional): if present, the .epc and .h5 are copied from this source
-               to epc_file (and paired .h5) prior to opening epc_file; any previous files named
-               as epc_file will be overwritten
+      Arguments:
+         epc_file (string): the path of the epc file
+         full_load (boolean): if True (recommended), the xml for each part is parsed and stored
+            in a tree structure in memory; if False, only the list of parts is loaded
+         epc_subdir (string or list of strings, optional): if present, only parts in the top
+            level directory within the epc structure, or in the specified subdirectory(ies) are
+            included in the load
+         copy_from (string, optional): if present, the .epc and .h5 are copied from this source
+            to epc_file (and paired .h5) prior to opening epc_file; any previous files named
+            as epc_file will be overwritten
 
-         returns:
-            None
+      Returns:
+         None
 
-         note:
-            when copy_from is specified, the entire contents of the source dataset are copied,
-            regardless of the epc_subdir setting which only affects the subsequent load into memory
+      Note:
+         when copy_from is specified, the entire contents of the source dataset are copied,
+         regardless of the epc_subdir setting which only affects the subsequent load into memory
+
+      :meta common:
       """
 
       def exclude(name, epc_subdir):
@@ -727,21 +756,23 @@ class Model():
    def store_epc(self, epc_file = None, main_xml_name = '[Content_Types].xml', only_if_modified = False):
       """Write xml parts of model to epc file (HDF5 arrays are not written here).
 
-         arguments:
-            epc_file (string): the name of the output epc file to be written (any existing file will be
-               overwritten)
-            main_xml_name (string, do not pass): this argument should not be passed as the resqml standard
-               requires the default value; (the argument exists in code because the resqml standard value
-               is based on a slight misunderstanding of the opc standard, so could perhaps change in
-               future versions of resqml)
-            only_if_modified (boolean, default False): if True, the epc file is only written if the model
-               is flagged as having been modified (at least one part added or removed)
+      Arguments:
+         epc_file (string): the name of the output epc file to be written (any existing file will be
+            overwritten)
+         main_xml_name (string, do not pass): this argument should not be passed as the resqml standard
+            requires the default value; (the argument exists in code because the resqml standard value
+            is based on a slight misunderstanding of the opc standard, so could perhaps change in
+            future versions of resqml)
+         only_if_modified (boolean, default False): if True, the epc file is only written if the model
+            is flagged as having been modified (at least one part added or removed)
 
-         returns:
-            None
+      Returns:
+         None
 
-         note:
-            the main tree, parts forest and rels forest must all be up to date before calling this method
+      Note:
+         the main tree, parts forest and rels forest must all be up to date before calling this method
+
+      :meta common:
       """
 
 #      for prefix, uri in ns.items():
@@ -1004,10 +1035,11 @@ class Model():
    def external_parts_list(self):
       """Returns a list of part names for external part references.
 
-      returns:
+      Returns:
          list of strings being the part names for external part references
 
-      notes:
+      Note:
+
          in practice, external part references are only used for hdf5 files;
          furthermore, all current datasets have adopted the practice of using
          a single hdf5 file for a given epc file
@@ -1250,21 +1282,21 @@ class Model():
    def root_for_ijk_grid(self, uuid = None, title = None):
       """Return root for IJK Grid part.
 
-         arguments:
-            uuid (uuid.UUID, optional): if present, the uuid of the ijk grid part for which the root is required;
-               if None, a single ijk grid part is expected and the root for that part is returned
-            title (string, optional): if present, the citation title for the grid; defaults to 'ROOT' if more
-               than one ijk grid present and no uuid supplied
+      arguments:
+         uuid (uuid.UUID, optional): if present, the uuid of the ijk grid part for which the root is required;
+            if None, a single ijk grid part is expected and the root for that part is returned
+         title (string, optional): if present, the citation title for the grid; defaults to 'ROOT' if more
+            than one ijk grid present and no uuid supplied
 
-         returns:
-            root node in xml tree for the ijk grid part in this model
+      returns:
+         root node in xml tree for the ijk grid part in this model
 
-         notes:
-            if uuid and title are both supplied, they must match in the corresponding grid part;
-            if a title but no uuid is given, the first ijk grid encountered that has a matching title will be returned;
-            if neither title nor uuid are given, the first ijk grid with title 'ROOT' will be returned, unless there is
-            only one grid part in which case the root npde for that part is returned regardless;
-            failure to find a matching grid part results in an assertion exception
+      notes:
+         if uuid and title are both supplied, they must match in the corresponding grid part;
+         if a title but no uuid is given, the first ijk grid encountered that has a matching title will be returned;
+         if neither title nor uuid are given, the first ijk grid with title 'ROOT' will be returned, unless there is
+         only one grid part in which case the root npde for that part is returned regardless;
+         failure to find a matching grid part results in an assertion exception
       """
 
       if title is not None: title = title.strip().upper()
@@ -1358,6 +1390,8 @@ class Model():
          a Model by using this method which will return a shared object from this list, instantiating a new
          object and adding it to the list when necessary; an assertion exception will be raised if a
          suitable grid part is not present in the model
+
+      :meta common:
       """
 
       if uuid is None and (title is None or title.upper() == 'ROOT'):
@@ -1608,6 +1642,8 @@ class Model():
 
       returns:
          None
+
+      :meta common:
       """
 
       if self.h5_currently_open_root is not None:
@@ -1663,7 +1699,7 @@ class Model():
          a (k0, pillar_index) is needed when the grid has split pillars, whereas a (k0, j0, i0) is needed when the grid does
          not have any split pillars
       """
-
+      
       def reshaped_index(index, shape_tuple, required_shape):
          tail = len(shape_tuple) - len(index)
          if tail > 0:
@@ -1684,9 +1720,16 @@ class Model():
          return r_index
 
       if object is None: object = self
-      if array_attribute is not None and hasattr(object, array_attribute) and object.__dict__[array_attribute] is not None:
-         if index is None: return None  # this option allows caching of array without actually referring to any element
-         return object.__dict__[array_attribute][tuple(index)]
+
+      # Check if attribute has already be cached
+      if array_attribute is not None:
+         existing_value = getattr(object, array_attribute, None)
+
+         # Watch out for np.array(None): check existing_value has a valid "shape" 
+         if existing_value is not None and getattr(existing_value, "shape", False):
+            if index is None: return None  # this option allows caching of array without actually referring to any element
+            return existing_value[tuple(index)]
+
       h5_root = self.h5_access(h5_key_pair[0])
       if h5_root is None: return None
       if cache_array:
@@ -2018,7 +2061,7 @@ class Model():
          originator (string, optional): the name of the human being who created the object
             which this citation is for; default is to use the login name
 
-      returns;
+      returns:
          newly created citation xml node
       """
 
@@ -2035,8 +2078,8 @@ class Model():
       originator_node = rqet.SubElement(citation, ns['eml'] + 'Originator')
       if originator is None:
          try:
-            originator = str(os.getlogin())
-         except:
+            originator = str(getpass.getuser())
+         except Exception:
             originator = 'unknown'
       originator_node.set(ns['xsi'] + 'type', ns['eml'] + 'NameString')
       originator_node.text = originator
@@ -2062,7 +2105,7 @@ class Model():
    def title_for_root(self, root = None):
       """Returns the Title text from the Citation within the given root node.
 
-      argument:
+      arguments:
          root: the xml node for the object for which the citation title is required
 
       returns:
@@ -2079,7 +2122,7 @@ class Model():
    def title_for_part(self, part_name):   # duplicate functionality to citation_title_for_part()
       """Returns the Title text from the Citation for the given main part name (not for rels).
 
-      argument:
+      arguments:
          part_name (string): the name of the part for which the citation title is required
 
       returns:
@@ -2093,7 +2136,7 @@ class Model():
    def create_unknown(self, root = None):
       """Creates an Unknown node and optionally adds as child of root.
 
-      argument:
+      arguments:
          root (optional): if present, the newly created Unknown node is appended as a child
             of this xml node
 
@@ -2184,7 +2227,8 @@ class Model():
       returns:
          newly created coordinate reference system xml node
       """
-
+      
+      warnings.warn("model.create_crs is Deprecated, will be removed", DeprecationWarning)
       crs = rqc.Crs(self, x_offset = x_offset, y_offset = y_offset, z_offset = z_offset,
                     rotation = areal_rotation_radians, xy_units = xy_units, z_units = z_units,
                     z_inc_down = z_inc_down, epsg_code = epsg_code)
@@ -2797,6 +2841,8 @@ class Model():
 
       Yields:
          wellbore: instance of :class:`resqpy.organize.WellboreInterpretation`
+
+      :meta common:
       """
       import resqpy.organize  # Imported here to avoid circular imports
 
@@ -2812,6 +2858,8 @@ class Model():
 
       Yields:
          trajectory: instance of :class:`resqpy.well.Trajectory`
+
+      :meta common:
       """
       import resqpy.well  # Imported here to avoid circular imports
 
@@ -2821,8 +2869,19 @@ class Model():
          traj = resqpy.well.Trajectory(self, trajectory_root=traj_root)
          yield traj
 
+   def md_datums(self):
+      """ Iterable of all MdDatum objects associated with the model
 
+      Yields:
+         md_datum: instance of :class:`resqpy.well.MdDatum`
+      """
+      import resqpy.well  # Imported here to avoid circular imports
 
+      parts = self.parts_list_of_type('MdDatum')
+      for part in parts:
+         datum_root = self.root_for_part(part)
+         datum = resqpy.well.MdDatum(self, md_datum_root=datum_root)
+         yield datum
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""

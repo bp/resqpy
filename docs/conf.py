@@ -27,13 +27,21 @@ project = 'resqpy'
 copyright = '2021, BP'
 author = 'BP'
 
-release = 'PreRelease'
-version = 'PreRelease'
+# Version from git tag
+# See https://github.com/pypa/setuptools_scm/#usage-from-sphinx
+try:
+    from importlib import metadata
+    release = metadata.version('myproject')
+except Exception:
+    release = '0.0.0-version-not-available'
+
+# Take major/minor
+version = '.'.join(release.split('.')[:2])
 
 
 # -- General configuration ---------------------------------------------------
 
-autoclass_content = "both"  # include both class docstring and __init__
+autoclass_content = "class"  # Alternatively, "both" to include init method
 # autodoc_default_options = {
 #     'members': None,
 #     'inherited-members': None,
@@ -51,13 +59,40 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',     # Add a link to the Python source code for classes, functions etc.
+    'sphinx.ext.viewcode',
+    'autoclasstoc',
 ]
 
 templates_path = ['_templates']
 
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 
+
+# -- Options custom autoclasstoc sections ------------------------------------
+
+# See https://autoclasstoc.readthedocs.io/en/latest/advanced_usage.html
+
+from autoclasstoc import PublicMethods
+
+class CommomMethods(PublicMethods):
+    key = "common-methods"
+    title = "Commonly Used Methods:"
+
+    def predicate(self, name, attr, meta):
+        return super().predicate(name, attr, meta) and 'common' in meta
+
+class OtherMethods(PublicMethods):
+    key = "other-methods"
+    title = "Methods:"
+
+    def predicate(self, name, attr, meta):
+        return super().predicate(name, attr, meta) and 'common' not in meta
+
+autoclasstoc_sections = [
+        "public-attrs",
+        "common-methods",
+        "other-methods",
+]
 
 # -- Options for HTML output -------------------------------------------------
 

@@ -80,7 +80,7 @@ def extract_xyz(xyz_node):
    if xyz_node is None: return None
    xyz = np.zeros(3)
    for axis in range(3):
-      xyz[axis] = float(rqet.node_text(rqet.find_tag(xyz_node, 'Coordinate' + str(axis))))
+      xyz[axis] = rqet.find_tag_float(xyz_node, 'Coordinate' + str(axis+1), must_exist=True)
    return tuple(xyz)
 
 
@@ -295,7 +295,6 @@ class MdDatum():
       return datum
 
 
-
 class DeviationSurvey():
    """Class for RESQML wellbore deviation survey.
 
@@ -317,223 +316,257 @@ class DeviationSurvey():
 
    """
 
-   def __init__(self, parent_model, deviation_survey_root = None, md_datum = None,
-                data_frame = None, deviation_survey_file = None, survey_file_space_separated = False,
-                length_uom = 'm', represented_interp = None):
-      """Create a DeviationSurvey object and optionally load it from xml or data frame or ascii file.
+   def __init__(self, parent_model, uuid=None, title=None, deviation_survey_root=None,
+                represented_interp=None, md_datum=None, md_uom='m', angle_uom='degrees',
+                measured_depths=None, azimuths=None, inclinations=None, station_count=None,
+                first_station=None, is_final=False, originator=None):
+      """Load or create a DeviationSurvey object.
 
-      arguments:
-         parent_model (model.Model object): the model which the new survey belongs to
-         deviation_survey_root (optional): the root node of an xml tree representing the survey;
-            if not None, the new survey object is initialised based on the data in the tree;
-            if None, one of the other arguments is used
-         md_datum (MdDatum object): the datum that the depths for this survey are measured from;
-            not used if deviation_survey_root is not None
-         data_frame (optional): a pandas dataframe with columns 'MD', 'AZIM_GN' and 'INCL' holding
-            the measured depths, azimuth and inclination values (degrees) respectively; also 'X',
-            'Y' and 'Z' columns which are only used to provide the location of the first station;
-            ignored if deviation_survey_root is not None
-         deviation_survey_file (string): filename of an ascii file holding the deviation survey
-            in a tabular form; ignored if deviation_survey_root is not None
-         survey_file_space_separated (boolean, default False): if True, deviation survey file is
-            space separated; if False, comma separated (csv); ignored unless loading from survey file
-         length_uom (string, default 'm'): a resqml length unit of measure applicable to the
+      If uuid is given, loads from XML. Else, create new. If loading from disk, other
+      parameters will be overwritten.
+
+      Args:
+         parent_model (model.Model): the model which the new survey belongs to
+         uuid (uuid.UUID): If given, loads from disk. Else, creates new.
+         title (str): Citation title
+         deviation_survey_root: DEPCRECATED. If given, load from disk.
+         represented_interp (wellbore interpretation): if present, is noted as the wellbore
+            interpretation object which this deviation survey relates to
+         md_datum (MdDatum): the datum that the depths for this survey are measured from
+         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
             measured depths; should be 'm' or 'ft'
-         represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-            interpretation object which this deviation survey relates to; ignored if deviation_survey_root is not None
+         angle_uom (string): a resqml angle unit; should be 'dega' or 'rad'  # TODO: check this
+         measured_depths (np.array): 1d array
+         azimuths (np.array): 1d array
+         inclindations (np.array): 1d array
+         station_count (int): length of measured_depths, azimuths & inclinations
+         first_station (tuple): (x, y, z) of first point in survey, in crs for md datum
+         is_final (bool): whether survey is a finalised deviation survey
+         originator (str): name of author
 
-      returns:
-         the newly created deviation survey object
+      Returns:
+         DeviationSurvey
 
-      notes:
-         data from the first of: the deviation survey root, data frame, and deviation survey file
-         arguments, that is not None, is used to instantiate the object;
-         to load from a data frame or survey file with more control over column names etc.,
-         instantiate the object with all 3 of these arguments set to None, then call one of the
-         load... methods which offer more control arguments;
+      Notes:
          this method does not create an xml node, nor write hdf5 arrays
       """
 
-      assert deviation_survey_root is None or data_frame is None
       self.model = parent_model
-      self.root_node = None
-      self.uuid = None
-      self.is_final = False         # could default to True here
-      self.station_count = 0        # length of measured_depths, azimuths & inclinations
-      self.md_uom = None
-      self.angles_in_degrees = None # boolean: True for degrees, False for radians (nothing else supported)
-      self.measured_depths = None   # 1d numpy array
-      self.azimuths = None          # 1d numpy array
-      self.inclinations = None      # 1d numpy array
-      self.first_station = None     # (x, y, z) of first point in survey, in crs for md datum
+      self.is_final = is_final
+      self.md_uom = bwam.rq_length_unit(md_uom)
+      self.title = title
+      self.originator = originator
+
+      self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
+      """boolean: True for degrees, False for radians (nothing else supported). Should be 'dega' or 'rad'"""
+
+      # Array data
+      self.measured_depths = _as_optional_array(measured_depths)
+      self.azimuths        = _as_optional_array(azimuths)
+      self.inclinations    = _as_optional_array(inclinations)
+
+      if station_count is None and measured_depths is not None:
+         station_count = len(measured_depths)
+      self.station_count = station_count
+      self.first_station = first_station
+
+      # Referenced objects
       self.md_datum = md_datum      # md datum is an object in its own right, with a related crs!
       self.wellbore_interpretation = represented_interp
+
+      # TODO: remove deviation_survey_root, use just uuid
       if deviation_survey_root is not None:
-         self.load_from_xml(deviation_survey_root)
-      elif data_frame is not None:
-         self.load_from_data_frame(data_frame, md_uom = length_uom, md_datum = md_datum)
-      elif deviation_survey_file:
-         self.load_from_ascii_file(deviation_survey_file,
-                                   space_separated_instead_of_csv = survey_file_space_separated,
-                                   md_uom = length_uom, md_datum = md_datum)
-      if self.uuid is None: self.uuid = bu.new_uuid()
+         warnings.warn("Argument deviation_survey_root is deprecated, please use uuid")
+         uuid = rqet.uuid_for_part_root(deviation_survey_root)
 
-
-   def load_from_xml(self, node):
-      """Loads the deviation survey object from xml (and associated hdf5 data)."""
-
-      if node is None: return
-      self.root_node = node
-      self.uuid = bu.uuid_from_string(node.attrib['uuid'].strip())
-      self.is_final = rqet.bool_from_text(rqet.node_text(rqet.find_tag(node, 'IsFinal')))
-      self.station_count = int(rqet.node_text(rqet.find_tag(node, 'StationCount')).strip())
-      self.md_uom = rqet.length_units_from_node(rqet.find_tag(node, 'MdUom'))
-      angle_uom = rqet.node_text(rqet.find_tag(node, 'AngleUom'))
-      self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')  # should be 'dega' or 'rad'
-      mds_node = rqet.find_tag(node, 'Mds')
-      load_hdf5_array(self, mds_node, 'measured_depths') 
-    
-      azimuths_node = rqet.find_tag(node, 'Azimuths')
-      load_hdf5_array(self, azimuths_node, 'azimuths')
-      inclinations_node = rqet.find_tag(node, 'Inclinations')
-      load_hdf5_array(self, inclinations_node, 'inclinations')
-      self.first_station = extract_xyz(rqet.find_tag(node, 'FirstStationLocation'))
-      # md_datum - separate part, referred to in this tree
-      md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(node, 'MdDatum'), 'UUID'))
-      if md_datum_uuid is not None:
-         md_datum_part = 'obj_MdDatum_' + str(md_datum_uuid) + '.xml'
-         self.md_datum = MdDatum(self.model, md_datum_root = self.model.root_for_part(md_datum_part, is_rels = False))
-      interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
-      if interp_uuid is None:
-         self.wellbore_interpretation = None
+      if uuid is None:
+         self.uuid = bu.new_uuid()
       else:
-         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, root_node = self.model.root_for_part(wellbore_interp_part))
+         self.uuid = uuid
+         self.load_from_xml()
+
+   @property
+   def root(self):
+      """Node corresponding to self.uuid"""
+      if self.uuid is None:
+         raise ValueError('Cannot get root if uuid is None')
+      return self.model.root_for_uuid(self.uuid)
+
+   @property
+   def part(self):
+      """Part corresponding to self.uuid"""
+      if self.uuid is None:
+         raise ValueError('Cannot get part if uuid is None')
+      return self.model.part_for_uuid(self.uuid)
 
 
-   def load_from_data_frame(self, data_frame,
-                            md_col = 'MD', azimuth_col = 'AZIM_GN', inclination_col = 'INCL',
-                            x_col = 'X', y_col = 'Y', z_col = 'Z',     # used for first station
-                            md_uom = 'm', angle_uom = 'degrees',
-                            md_datum = None):                          # MdDatum object
+
+   @classmethod
+   def from_data_frame(cls, parent_model, data_frame, md_datum=None, md_col='MD',
+                       azimuth_col='AZIM_GN', inclination_col='INCL', x_col='X', y_col='Y',
+                       z_col='Z', md_uom='m', angle_uom='degrees'):
       """Load MD, aximuth & inclination data from a pandas data frame.
 
-         arguments:
-            data_frame: a pandas dataframe holding the deviation survey data
-            md_col (string, default 'MD'): the name of the column holding measured depth values
-            azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
-               to the north direction (+ve y axis) of the coordinate reference system
-            inclination_col (string, default 'INCL'): the name of the column holding inclination values
-            x_col (string, default 'X'): the name of the column holding an x value in the first row
-            y_col (string, default 'Y'): the name of the column holding an Y value in the first row
-            z_col (string, default 'Z'): the name of the column holding an z value in the first row
-            md_uom (string, default 'm'): a resqml length unit of measure applicable to the
-               measured depths; should be 'm' or 'ft'
-            angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
-               the azimuth and inclination data
-            md_datum (MdDatum object): the datum that the depths for this survey are measured from
+      Args:
+         parent_model (model.Model): the parent resqml model
+         data_frame: a pandas dataframe holding the deviation survey data
+         md_datum (MdDatum object): the datum that the depths for this survey are measured from
+         md_col (string, default 'MD'): the name of the column holding measured depth values
+         azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
+            to the north direction (+ve y axis) of the coordinate reference system
+         inclination_col (string, default 'INCL'): the name of the column holding inclination values
+         x_col (string, default 'X'): the name of the column holding an x value in the first row
+         y_col (string, default 'Y'): the name of the column holding an Y value in the first row
+         z_col (string, default 'Z'): the name of the column holding an z value in the first row
+         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
+            measured depths; should be 'm' or 'ft'
+         angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
+            the azimuth and inclination data
 
-         returns:
-            None
+      Returns:
+         DeviationSurvey
 
-         notes:
-            this method should only be called if an empty deviation survey object has been instantiated;
-            the X, Y & Z columns are only used to set the first station location (from the first row)
+      Note:
+         The X, Y & Z columns are only used to set the first station location (from the first row)
       """
 
-      try:
-         for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
-            assert col in data_frame.columns
-         self.root_node = None
-         self.uuid = bu.new_uuid()
-         self.station_count = len(data_frame)
-         assert self.station_count >= 2        # vertical well could be hamdled by allowing a single station in survey?
+      for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
+         assert col in data_frame.columns
+      station_count = len(data_frame)
+      assert station_count >= 2        # vertical well could be hamdled by allowing a single station in survey?
 #         self.md_uom = bwam.p_length_unit(md_uom)
-         self.md_uom = bwam.rq_length_unit(md_uom)
-         self.angles_in_degrees = (angle_uom.lower() == 'degrees')
-         start = data_frame.iloc[0]
-         self.first_station = (start[x_col], start[y_col], start[z_col])
-         self.measured_depths = np.empty(self.station_count)
-         self.azimuths = np.empty(self.station_count)
-         self.inclinations = np.empty(self.station_count)
-         self.measured_depths[:] = data_frame[md_col]
-         self.azimuths[:] = data_frame[azimuth_col]
-         self.inclinations[:] = data_frame[inclination_col]
-         self.md_datum = md_datum
-         self.is_final = True                  # assume this is a finalised deviation survey
-      except:
-         log.exception('failed to load deviation survey object from data frame')
+
+      start = data_frame.iloc[0]
+   
+      return cls(
+         parent_model=parent_model,
+         station_count=station_count,
+         md_datum=md_datum,
+         md_uom=md_uom,
+         angle_uom=angle_uom,
+         first_station=(start[x_col], start[y_col], start[z_col]),
+         measured_depths=data_frame[md_col].values,
+         azimuths=data_frame[azimuth_col].values,
+         inclinations=data_frame[inclination_col].values,
+         is_final=True  # assume this is a finalised deviation survey
+      )
 
 
-   def load_from_ascii_file(self, deviation_survey_file, comment_character = '#',
-                            space_separated_instead_of_csv = False,
-                            md_col = 'MD', azimuth_col = 'AZIM_GN', inclination_col = 'INCL',
-                            x_col = 'X', y_col = 'Y', z_col = 'Z',     # used for first station
-                            md_uom = 'm', angle_uom = 'degrees',
-                            md_datum = None):
+   @classmethod
+   def from_ascii_file(cls, parent_model, deviation_survey_file, comment_character='#',
+      space_separated_instead_of_csv=False, md_col= 'MD', azimuth_col='AZIM_GN', inclination_col='INCL',
+      x_col='X', y_col='Y', z_col='Z', md_uom='m', angle_uom='degrees', md_datum=None):
       """Load MD, aximuth & inclination data from an ascii deviation survey file.
 
-         arguments:
-            deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
-            comment_character (string): the character to be treated as introducing comments
-            space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
-               if True, columns are expected to be seperated by white space
-            md_col (string, default 'MD'): the name of the column holding measured depth values
-            azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
-               to the north direction (+ve y axis) of the coordinate reference system
-            inclination_col (string, default 'INCL'): the name of the column holding inclination values
-            x_col (string, default 'X'): the name of the column holding an x value in the first row
-            y_col (string, default 'Y'): the name of the column holding an Y value in the first row
-            z_col (string, default 'Z'): the name of the column holding an z value in the first row
-            md_uom (string, default 'm'): a resqml length unit of measure applicable to the
-               measured depths; should be 'm' or 'ft'
-            angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
-               the azimuth and inclination data
-            md_datum (MdDatum object): the datum that the depths for this survey are measured from
+      Arguments:
+         parent_model (model.Model): the parent resqml model
+         deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
+         comment_character (string): the character to be treated as introducing comments
+         space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
+            if True, columns are expected to be seperated by white space
+         md_col (string, default 'MD'): the name of the column holding measured depth values
+         azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
+            to the north direction (+ve y axis) of the coordinate reference system
+         inclination_col (string, default 'INCL'): the name of the column holding inclination values
+         x_col (string, default 'X'): the name of the column holding an x value in the first row
+         y_col (string, default 'Y'): the name of the column holding an Y value in the first row
+         z_col (string, default 'Z'): the name of the column holding an z value in the first row
+         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
+            measured depths; should be 'm' or 'ft'
+         angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
+            the azimuth and inclination data
+         md_datum (MdDatum object): the datum that the depths for this survey are measured from
 
-         returns:
-            None
+      Returns:
+         DeviationSurvey
 
-         note:
-            this method should only be called if an empty deviation survey object has been instantiated;
-            the X, Y & Z columns are only used to set the first station location (from the first row)
+      Note:
+         The X, Y & Z columns are only used to set the first station location (from the first row)
       """
 
       try:
          df = pd.read_csv(deviation_survey_file, comment = comment_character, delim_whitespace = space_separated_instead_of_csv)
          if df is None: raise Exception
-      except:
+      except Exception:
          log.error('failed to read ascii deviation survey file ' + deviation_survey_file)
          raise
-      self.load_from_data_frame(df, md_col = md_col, azimuth_col = azimuth_col, inclination_col = inclination_col,
-                                x_col = x_col, y_col = y_col, z_col = z_col, md_uom = md_uom, angle_uom = angle_uom,
-                                md_datum = md_datum)
+
+      return cls.from_data_frame(
+         parent_model,
+         df,
+         md_col=md_col,
+         azimuth_col=azimuth_col,
+         inclination_col=inclination_col,
+         x_col=x_col,
+         y_col=y_col,
+         z_col=z_col,
+         md_uom=md_uom,
+         angle_uom=angle_uom,
+         md_datum=md_datum
+      )
+
+   def load_from_xml(self):
+      """Load attributes from xml and associated hdf5 data.
+
+      This is invoked as part of the init method when an existing uuid is given.
+      
+      Returns:
+         [bool]: True if sucessful
+      """
+
+      # Get node from self.uuid 
+      node = self.root
+
+      # Load XML data
+      self.md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist=True))
+      self.angle_uom=rqet.find_tag_text(node, 'AngleUom', must_exist=True)
+      self.station_count = rqet.find_tag_int(node, 'StationCount', must_exist=True)
+      self.first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist=True))
+      self.is_final=rqet.find_tag_bool(node, 'IsFinal')
+      self.title = rqet.find_nested_tags_text(node, ['Citation', 'Title'])
+      self.originator = rqet.find_nested_tags_text(node, ['Citation', 'Originator'])
+
+      # Load HDF5 data
+      mds_node = rqet.find_tag(node, 'Mds', must_exist=True)
+      load_hdf5_array(self, mds_node, 'measured_depths')
+      azimuths_node = rqet.find_tag(node, 'Azimuths', must_exist=True)
+      load_hdf5_array(self, azimuths_node, 'azimuths')
+      inclinations_node = rqet.find_tag(node, 'Inclinations', must_exist=True)
+      load_hdf5_array(self, inclinations_node, 'inclinations')
+
+      # Set related objects
+      self.md_datum = self._load_related_datum()
+      self.represented_interp = self._load_related_wellbore_interp()
+
+      # Validate
+      assert self.measured_depths is not None
+      assert len(self.measured_depths) > 0
+
+      return True
 
 
-   def create_xml(self, ext_uuid = None, md_datum_root = None, md_datum_xyz = None, ds_uuid = None,
-                               add_as_part = True, add_relationships = True, root = None,
-                               title = 'deviation survey', originator = None):
+   def create_xml(self, ext_uuid=None, md_datum_root=None, md_datum_xyz=None, add_as_part=True,
+                  add_relationships=True, root=None, title=None, originator=None):
       """Creates a deviation survey representation xml element from this DeviationSurvey object.
 
-         arguments:
-            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the deviation survey arrays
-            md_datum_root: the root xml node for the measured depth datum that the deviation survey depths
-               are based on
-            ds_uuid (uuid.UUID, optional): DEPRECATED: if not None, the uuid for the deviation survey;
-               if None, the uuid in the object is used, or if that is None, then a new uuid is assigned
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-               in the model
-            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-               new deviation survey part to the measured depth datum part
-            root (optional, usually None): if not None, the newly created deviation survey node is appended
-               as a child to this node
-            title (string): used as the citation Title text; should usually refer to the well name in a
-               human readable way
-            originator (string, optional): the name of the human being who created the deviation survey part;
-               default is to use the login name
+      arguments:
+         ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the deviation survey arrays
+         md_datum_root: the root xml node for the measured depth datum that the deviation survey depths
+            are based on
+         md_datum_xyz: TODO: document this
+         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+            in the model
+         add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+            new deviation survey part to the measured depth datum part
+         root (optional, usually None): if not None, the newly created deviation survey node is appended
+            as a child to this node
+         title (string): used as the citation Title text; should usually refer to the well name in a
+            human readable way
+         originator (string, optional): the name of the human being who created the deviation survey part;
+            default is to use the login name
 
-         returns:
-            the newly created deviation survey xml node
+      returns:
+         the newly created deviation survey xml node
       """
 
       assert self.station_count > 0
@@ -542,7 +575,8 @@ class DeviationSurvey():
 
       if md_datum_root is None:
          if self.md_datum is None:
-            assert md_datum_xyz is not None
+            if md_datum_xyz is None:
+               raise ValueError("Must provide a MD Datum for the DeviationSurvey")
             self.md_datum = MdDatum(self.model, location = md_datum_xyz)
          if self.md_datum.root_node is None:
             md_datum_root = self.md_datum.create_xml()
@@ -550,16 +584,17 @@ class DeviationSurvey():
             md_datum_root = self.md_datum.root_node
       assert md_datum_root is not None
 
-      if ds_uuid is not None: self.uuid = ds_uuid
+      assert self.uuid is not None
 
       ds_node = self.model.new_obj_node('DeviationSurveyRepresentation')
+      ds_node.attrib['uuid'] = str(self.uuid)
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(ds_node.attrib['uuid'])
-      else:
-         ds_node.attrib['uuid'] = str(self.uuid)
+      if title:
+         self.title = title
+      if originator:
+         self.originator = originator
 
-      self.model.create_citation(root = ds_node, title = title, originator = originator)
+      self.model.create_citation(root=ds_node, title=self.title, originator=self.originator)
 
       if_node = rqet.SubElement(ds_node, ns['resqml2'] + 'IsFinal')
       if_node.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
@@ -584,7 +619,6 @@ class DeviationSurvey():
       else:
          angle_uom.text = 'rad'
 
-      # todo: check that the following array xml structures are correct
       mds = rqet.SubElement(ds_node, ns['resqml2'] + 'Mds')
       mds.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
       mds.text = rqet.null_xml_text
@@ -593,7 +627,7 @@ class DeviationSurvey():
       mds_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
       mds_values_node.text = rqet.null_xml_text
 
-      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Mds', root = mds_values_node)
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Mds', root = mds_values_node)
 
       azimuths = rqet.SubElement(ds_node, ns['resqml2'] + 'Azimuths')
       azimuths.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
@@ -603,7 +637,7 @@ class DeviationSurvey():
       azimuths_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
       azimuths_values_node.text = rqet.null_xml_text
 
-      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Azimuths', root = azimuths_values_node)
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Azimuths', root = azimuths_values_node)
 
       inclinations = rqet.SubElement(ds_node, ns['resqml2'] + 'Inclinations')
       inclinations.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
@@ -613,7 +647,7 @@ class DeviationSurvey():
       inclinations_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
       inclinations_values_node.text = rqet.null_xml_text
 
-      self.model.create_hdf5_dataset_ref(ext_uuid, ds_uuid, 'Inclinations', root = inclinations_values_node)
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Inclinations', root = inclinations_values_node)
 
       interp_root = None
       if self.wellbore_interpretation is not None:
@@ -635,8 +669,6 @@ class DeviationSurvey():
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(ds_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
 
-      self.root_node = ds_node
-
       return ds_node
 
 
@@ -645,11 +677,32 @@ class DeviationSurvey():
 
       # NB: array data must all have been set up prior to calling this function
       h5_reg = rwh5.H5Register(self.model)
-      h5_reg.register_dataset(self.uuid, 'Mds', self.measured_depths)
-      h5_reg.register_dataset(self.uuid, 'Azimuths', self.azimuths)
-      h5_reg.register_dataset(self.uuid, 'Inclinations', self.inclinations)
+      h5_reg.register_dataset(self.uuid, 'Mds', self.measured_depths, dtype=float)
+      h5_reg.register_dataset(self.uuid, 'Azimuths', self.azimuths, dtype=float)
+      h5_reg.register_dataset(self.uuid, 'Inclinations', self.inclinations, dtype=float)
       h5_reg.write(file = file_name, mode = mode)
 
+   def _load_related_datum(self):
+      """Return related MdDatum object from XML if present"""
+
+      md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(self.root, 'MdDatum'), 'UUID'))
+      if md_datum_uuid is not None:
+         md_datum_part = 'obj_MdDatum_' + str(md_datum_uuid) + '.xml'
+         md_datum = MdDatum(self.model, md_datum_root=self.model.root_for_part(md_datum_part, is_rels = False))
+      else:
+         md_datum = None
+      return md_datum
+
+   def _load_related_wellbore_interp(self):
+      """Return related wellbore interp object from XML if present"""
+      
+      interp_uuid = rqet.find_nested_tags_text(self.root, ['RepresentedInterpretation', 'UUID'])
+      if interp_uuid is None:
+         represented_interp = None
+      else:
+         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
+         represented_interp = rqo.WellboreInterpretation(self.model, root_node=self.model.root_for_part(wellbore_interp_part))
+      return represented_interp
 
 
 class Trajectory():
@@ -816,9 +869,9 @@ class Trajectory():
       ds_uuid = bu.uuid_from_string(rqet.find_tag_text(rqet.find_tag(node, 'DeviationSurvey'), 'UUID'))
       if ds_uuid is not None:  # this will probably not work when relatives model is different from self.model
          ds_part = 'obj_DeviationSurveyRepresentation_' + str(ds_uuid) + '.xml'
-         self.deviation_survey = DeviationSurvey(self.model,
-                                                 deviation_survey_root = relatives_model.root_for_part(ds_part, is_rels = False),
-                                                 md_datum = self.md_datum)
+         self.deviation_survey = DeviationSurvey(
+            self.model, uuid=relatives_model.uuid_for_part(ds_part, is_rels=False), md_datum = self.md_datum
+         )
       interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
       if interp_uuid is None:
          self.wellbore_interpretation = None
@@ -3801,9 +3854,9 @@ def well_name(well_object, model = None):
    """Returns the 'best' citation title from the object or related well objects.
 
    arguments:
-      well_object (Trajectory, WellboreInterpretation, WellboreFeature, BlockedWell, WellboreMarkerFrame,
-         WellboreFrame, DeviationSurvey or MdDatum object; or uuid or root for one of those): object for which
-         a well name is required
+      well_object (object, uuid or root): Object for which a well name is required. Can be a
+         Trajectory, WellboreInterpretation, WellboreFeature, BlockedWell, WellboreMarkerFrame,
+         WellboreFrame, DeviationSurvey or MdDatum object
       model (model.Model, optional): required if passing a uuid or root; not recommended otherwise
 
    returns:
@@ -3963,3 +4016,15 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
       count += 1
 
    log.info(f'{count} blocked wells created based on wellspec file: {wellspec_file}')
+
+
+def _as_optional_array(arr):
+   """If not None, cast as numpy array.
+   
+   Casting directly to an array can be problematic:
+   np.array(None) creates an unsized array, which is potentially confusing.
+   """
+   if arr is None:
+      return None
+   else:
+      return np.array(arr)

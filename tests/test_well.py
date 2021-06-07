@@ -1,8 +1,11 @@
-import pytest
-import numpy as np
-from resqpy.model import Model
 from pathlib import Path
 
+import pytest
+import numpy as np
+from numpy.testing import assert_array_almost_equal
+
+from resqpy.model import Model
+import resqpy.well
 
 @pytest.mark.skip(reason="Example data not yet available")
 def test_trajectory_iterators():
@@ -61,3 +64,69 @@ def test_logs():
             discovered_logs += 1
 
    assert discovered_logs > 0
+
+
+# Deviation Survey tests
+
+def test_DeviationSurvey(example_model_with_well):
+   # Test that all attrbutes are correctly saved and loaded from disk
+
+   # --------- Arrange ----------
+   # Create a Deviation Survey object in memory
+
+   # Load example model from a fixture
+   model, well_interp, datum, traj = example_model_with_well
+   epc_path = model.epc_file
+
+   # Create the survey
+   data = dict(
+      title='Majestic Umlaut ö',
+      originator='Thor, god of sparkles',
+      md_uom='ft',
+      angle_uom='rad',
+      is_final=True,
+   )
+   array_data = dict(
+      measured_depths=np.array([1, 2, 3], dtype=float),
+      azimuths=np.array([4, 5, 6], dtype=float),
+      inclinations=np.array([7, 8, 9], dtype=float),
+      first_station=np.array([0, -1, 999], dtype=float),
+   )
+   survey = resqpy.well.DeviationSurvey(
+      parent_model=model,
+      represented_interp=well_interp,
+      md_datum=datum,
+      **data,
+      **array_data,
+   )
+   survey_uuid = survey.uuid
+
+   # ----------- Act ---------
+
+   # Save to disk
+   survey.write_hdf5()
+   survey.create_xml()
+   model.store_epc()
+   model.h5_release()
+
+   # import shutil
+   # shutil.copy(epc_path, r'C:\Temp')
+   # shutil.copy(epc_path.replace('.epc', '.h5'), r'C:\Temp')
+
+   # Clear memory
+   del model, well_interp, datum, traj, survey
+
+   # Reload from disk
+   model2 = Model(epc_file=epc_path)
+   survey2 = resqpy.well.DeviationSurvey(model2, uuid=survey_uuid)
+
+   # --------- Assert --------------
+   # Check all attributes were loaded from disk correctly
+
+   for key, expected_value in data.items():
+      assert getattr(survey2, key) == expected_value, f"Error for {key}"
+   
+   for key, expected_value in array_data.items():
+      assert_array_almost_equal(
+         getattr(survey2, key), expected_value, err_msg=f"Error for {key}"
+      )
