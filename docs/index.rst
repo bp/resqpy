@@ -1,7 +1,7 @@
 Welcome to resqpy's documentation
 =================================
 
-resqpy is a pure python package which provide a programming interface (API) for
+resqpy is a pure python package which provides a programming interface (API) for
 reading, writing, and modifying reservoir models in the RESQML format. It gives
 you the ability to work with reservoir models programmatically, without having
 to know the details of the RESQML standard.

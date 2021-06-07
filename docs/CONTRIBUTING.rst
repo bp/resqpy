@@ -9,6 +9,7 @@ Resqpy was created by Andy Beer.
 All contributors (alphabetical order):
 
 * Andy Beer
+* Casey Warshauer
 * Connor Tann
 * Emma Nesbit
 * Nathan Lane
