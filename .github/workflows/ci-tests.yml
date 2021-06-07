@@ -63,7 +63,7 @@ jobs:
       - name: Install resqpy
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install ".[tests]"
+          pip install -e ".[tests]"
 
       - name: Run pytest
         run: |

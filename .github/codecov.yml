@@ -1,0 +1,14 @@
+# Configuration for CodeCov
+# See https://docs.codecov.io/docs/codecov-yaml
+
+codecov:
+  require_ci_to_pass: yes
+
+coverage:
+  # Colour chart range
+  # In future, aim to update range to stricter standard
+  range: "20...80"
+
+comment:
+  # Only post a comment if coverage changes
+  require_changes: yes
