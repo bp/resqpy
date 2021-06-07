@@ -18,13 +18,13 @@ The repository is hosted on `GitHub <https://github.com/bp/resqpy>`_.
    installation
    CONTRIBUTING
    trademarks
-   ../tutorial/tutorial_index
 
 .. toctree::
    :maxdepth: 2
    :caption: User guide
 
    getting-started
+   tutorial/tutorial_index
 
 API Reference
 -------------

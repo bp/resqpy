@@ -18,14 +18,14 @@ that you have a python interpreter (or Jupyter notebook) open
 in another window, so that code snippets can be cut, pasted and
 executed whilst progressing through the material.
 
-::toctree::
-        :maxdepth: 1
-        :caption: Tutorials
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
 
-        intro_to_resqml
-        getting_started_with_model
-        creating_test
-        working_with_coord
-        high_level_objects
-        cellular_grids
-        grid_properties
+   intro_to_resqml
+   getting_started_with_model
+   creating_test
+   working_with_coord
+   high_level_objects
+   cellular_grids
+   grid_properties
