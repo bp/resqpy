@@ -11,6 +11,7 @@ All contributors (alphabetical order):
 * Andy Beer
 * Casey Warshauer
 * Connor Tann
+* Duncan Hunter
 * Emma Nesbit
 * Nathan Lane
 
