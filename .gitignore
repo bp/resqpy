@@ -11,6 +11,7 @@ __pycache__/
 # Unit tests
 pytest.xml
 .pytest_cache
+.coverage
 
 # Built Documentation
 docs/_build
