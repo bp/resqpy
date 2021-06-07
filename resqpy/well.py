@@ -3013,6 +3013,10 @@ class BlockedWell:
       return xyz, rqet.uuid_for_part_root(self.trajectory.crs_root)
 
    def create_feature_and_interpretation(self):
+      """Instantiate new empty WellboreFeature and WellboreInterpretation objects
+      
+      Uses the Blocked well citation title as the well name
+      """
       self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.trajectory.title,extract_from_xml=False)
       self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
       self.trajectory.wellbore_interpretation = self.wellbore_interpretation
