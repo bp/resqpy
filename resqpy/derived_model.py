@@ -2604,6 +2604,7 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
                         cell_range = 0, offset_decay = 0.5,
                         store_displacement = False,
                         inherit_properties = False, inherit_realization = None, inherit_all_realizations = False,
+                        inherit_gcs = True,
                         new_grid_title = None, new_epc_file = None):
    """Extends epc with a new grid with fault throws multiplied by scaling factors.
 
@@ -2631,6 +2632,8 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
          inherit_properties is False or inherit_realization is not None
+      inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
+         inherited by the modified grid
       new_grid_title (string): used as the citation title text for the new grid object
       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
          a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
@@ -2646,7 +2649,6 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       the offset decay argument might be changed in a future version to give improved smoothing;
       if a large fault is represented by a series of parallel minor faults 'stepping' down, each minor fault will have the
       scaling factor applied independently, leading to some unrealistic results
-
    """
 
    assert epc_file or new_epc_file, 'epc file name not specified'
@@ -2814,6 +2816,7 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+      epc_file = new_epc_file
    else:
       ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
