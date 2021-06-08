@@ -112,10 +112,10 @@ Finding a single high level object
 ----------------------------------
 Each of the above four methods has a corresponding method which can be used if it is expected that at most one high level object will meet the criteria:
 
-* ``model.part()``
-* ``model.uuid()``
-* ``model.root()``
-* ``model.title()``
+* :meth:`resqpy.model.Model.part`
+* :meth:`resqpy.model.Model.uuid`
+* :meth:`resqpy.model.Model.root`
+* :meth:`resqpy.model.Model.title`
 
 For example:
 
@@ -131,9 +131,9 @@ Although the Model class contains many other methods, the eight listed above are
 
 There are three other methods worth mentioning in passing here, which are involved with accessing the hdf5 file:
 
-* ``model.h5_file_name()``
-* ``model.h5_uuid()``
-* ``model.h5_release()``
+* :meth:`resqpy.model.Model.h5_file_name`
+* :meth:`resqpy.model.Model.h5_uuid`
+* :meth:`resqpy.model.Model.h5_release`
 
 The first of these, ``h5_file_name()``, returns the full path of the hdf5 file for the model. By default, any hdf5 filename(s) stored within the xml in the epc file are ignored and a path for a single hdf5 file is returned, based on the epc filename supplied when initialising the model. This protocol makes it much easier to move RESQML datasets around and rename them but it assumes a simple one-to-one pairing of epc and h5 files. Optional arguments allow for other ways of working.
 
