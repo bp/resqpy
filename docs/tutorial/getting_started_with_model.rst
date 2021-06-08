@@ -3,16 +3,6 @@ Getting started with the Model class
 
 This tutorial covers opening an existing RESQML dataset and identifying the high level objects contained within it.
 
-Contents
-1 Prerequisites
-2 Importing the model module
-3 Opening an existing RESQML dataset
-4 Keys to the RESQML high level objects
-5 Selectively listing high level objects
-6 Finding a single high level object
-7 Other methods in the Model class
-8 Summary
-
 Prerequisites
 -------------
 You will need to have resqpy installed in your python environment, along with its dependencies, before proceeding
@@ -25,7 +15,7 @@ Note: Example file names shown here and in other resqpy tutorials are for a unix
 
 Importing the **model** module
 ------------------------------
-In this tutorial, we will be using the :class:`resqpy.model.Model` class which is contained in the model.py module. This can be imported with:
+In this tutorial, we will be using the :class:`resqpy.model.Model` class which is contained in :mod:`resqpy.model`. This can be imported with:
 
 .. code-block:: python
 
