@@ -12,4 +12,4 @@ coverage:
 
 comment:
   # Only post a comment if coverage changes
-  require_changes: yes
+  require_changes: true
