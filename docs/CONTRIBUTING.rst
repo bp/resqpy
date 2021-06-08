@@ -35,6 +35,7 @@ Making a Pull Request
    .. code-block:: bash
 
       git clone <url from GitHub>
+      cd resqpy
 
 2. Set up a python environment
 
@@ -52,6 +53,10 @@ Making a Pull Request
    .. code-block:: bash
 
       pip install --editable .[tests,docs]
+
+   Be sure to execute the above command from the top level of the repository.
+   The full stop ``.`` instructs pip to find the python package in the current
+   working directory.
     
 3. Make a Pull Request
 
