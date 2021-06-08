@@ -13,7 +13,7 @@ import numpy as np
 import h5py
 import warnings
 import zipfile as zf
-from time import time as tim  # debug
+
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
@@ -2678,8 +2678,6 @@ class Model():
 
       # todo: double check behaviour around equivalent CRSes, especially any default crs in model
 
-      t_start = tim()
-
       assert other_model is not None
       if other_model is self: return
       assert part is not None
@@ -2790,7 +2788,6 @@ class Model():
             if source_flag: sd_a, sd_b = 'sourceObject', 'destinationObject'
             else: sd_b, sd_a = 'sourceObject', 'destinationObject'
             self.create_reciprocal_relationship(root_node, sd_a, related_node, sd_b)
-      log.debug(f'cpfom: done; {tim() - t_start:.3f}s')
 
 
    def copy_all_parts_from_other_model(self, other_model, realization = None, consolidate = True):
