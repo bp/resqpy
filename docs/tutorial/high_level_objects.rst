@@ -1,5 +1,5 @@
-RESQML Resqpy Tutorial: Objects
-===============================
+High Level Objects
+==================
 
 This tutorial discusses some concepts that are important when working with high level objects in resqpy.
 

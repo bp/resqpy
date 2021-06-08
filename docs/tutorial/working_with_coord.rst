@@ -1,5 +1,5 @@
-RESQML Resqpy Tutorial: Coordinate Reference System
-===================================================
+Coordinate Reference Systems
+============================
 
 In this resqpy tutorial, we will take a look at a RESQML coordinate reference system object.
 

@@ -1,5 +1,5 @@
-RESQML Resqpy Tutorial: Grid Basics
-===================================
+Cellular Grid Basics
+====================
 
 This page is under construction
 

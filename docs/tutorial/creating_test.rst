@@ -1,5 +1,5 @@
-RESQML Resqpy Tutorial: Creating a Test Dataset
-===============================================
+Creating a Test Dataset
+=======================
 
 This short tutorial makes use of a resqpy test function to generate a small dataset which can be used in other tutorials. Creating a RESQML dataset from scratch is significantly more complicated than reading an existing dataset and will be covered in later tutorials.
 

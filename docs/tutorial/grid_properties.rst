@@ -1,5 +1,5 @@
-RESQML Resqpy Tutorial: Properties
-==================================
+Grid Properties
+===============
 
 This tutorial is about working with RESQML grid property arrays. However, much of what is presented here is also applicable to property data attached to other classes of objects, for example well logs. Some of the notes refer to the Nexus simulator as resqpy includes import and export functions for working with Nexus. Similar considerations would apply to other simulators, though the import and export functions would need to be developed separately.
 
