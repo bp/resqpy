@@ -1,5 +1,5 @@
-Introduction to Reservoir Modelling with RESQML
-===============================================
+Reservoir Modelling with RESQML
+===============================
 
 What is RESQML?
 ---------------

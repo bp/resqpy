@@ -1,6 +1,5 @@
-Reservoir Modelling: RESQML Resqpy Tutorial
-===========================================
-
+Tutorials
+=========
 
 **These pages are currently under development.** However, the
 material so far in place should be usable.
