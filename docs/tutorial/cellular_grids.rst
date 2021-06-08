@@ -165,11 +165,3 @@ Alternatively, the initialiser for the Grid class can be called directly with so
 
     grid_root = model.root(obj_type = 'IjkGridRepresentation', multiple_handling = 'newest')
     grid = grr.Grid(model, grid_root = grid_root)
-
- 
-
-Creating a new Grid object
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Copying a Grid object
-^^^^^^^^^^^^^^^^^^^^^
