@@ -70,7 +70,7 @@ Checklist for pull requests
 ---------------------------
 
 1. All CI jobs should pass
-2. Changes or additions sould have appropriate unit tests (see below)
+2. Changes or additions should have appropriate unit tests (see below)
 3. Follow the PEP8 style guide as far as possible (with caveats below).
 4. All public functions and classes should have
    `Google-style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
