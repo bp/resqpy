@@ -1,5 +1,6 @@
 import resqpy.lines
 import resqpy.organize
+import numpy as np
 
 
 def test_lines(example_model):
@@ -10,7 +11,7 @@ def test_lines(example_model):
     line = resqpy.lines.Polyline(
         parent_model=model, set_title=title, 
         set_crs=crs.uuid, set_crsroot=crs,
-        set_bool=True, set_coord=[[0,0,0],[1,1,1]]
+        set_bool=True, set_coord=np.array([[0,0,0],[1,1,1]])
     )
     line.create_xml()
 
