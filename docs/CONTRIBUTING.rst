@@ -45,13 +45,13 @@ Making a Pull Request
       conda create -n resqpy python=3.7
       conda activate resqpy
         
-   You should then make an “editable” installation of the package into your local environment. This will
-   also install required dependencies, including extra packages required to running
-   unit tests.
+   You should then make an “editable” installation of the package into your
+   local environment. This will also install required dependencies, including
+   extra packages required for running unit tests and building documentation.
 
    .. code-block:: bash
 
-      pip install --editable .[tests]
+      pip install --editable .[tests,docs]
     
 3. Make a Pull Request
 
@@ -179,6 +179,18 @@ Links:
 -	`PEP8 Style Guide <https://www.python.org/dev/peps/pep-0008/>`_
 -	`Flake8 reference <https://flake8.pycqa.org/en/latest/user/invocation.html>`_
 -	`Flake8 error codes <https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3>`_
+
+Documentation
+-------------
+
+The docs are built automatically when code is merged into master, and are hosted
+at `readthedocs <https://resqpy.readthedocs.io/>`_. You can also build the docs
+locally, providing you have installed all required dependencies as described
+above:
+
+.. code:: bash
+
+   sphinx-build docs docs/html
 
 Get in touch
 ------------
