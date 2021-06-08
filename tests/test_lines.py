@@ -10,7 +10,7 @@ def test_lines(example_model):
     line = resqpy.lines.Polyline(
         parent_model=model, set_title=title, 
         set_crs=crs.uuid, set_crs_root=crs,
-        set_bool=True, set_coord([[0,0,0],[1,1,1]])
+        set_bool=True, set_coord=[[0,0,0],[1,1,1]]
     )
     line.create_xml()
 
