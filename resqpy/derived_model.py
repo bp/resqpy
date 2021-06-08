@@ -29,7 +29,7 @@ import resqpy.grid as grr
 import resqpy.grid_surface as rgs
 import resqpy.property as rqp
 import resqpy.well as rqw
-import rssqpy.fault as rqf
+import resqpy.fault as rqf
 import resqpy.rq_import as rqi
 
 
@@ -2820,7 +2820,8 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       for gcs_root in gcs_roots:
          gcs = rqf.GridConnectionSet(model, connection_set_root = gcs_root)
          gcs.cache_arrays()
-         gcs_list.append(gcs)
+         gcs_list.append((gcs, rqet.citation_title_for_node(gcs_root)))
+      log.debug(f'{len(gcs_list)} grid connection sets to be inherited')
 
    # write model
    model.h5_release()
@@ -2832,8 +2833,9 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    if len(gcs_list):
+      log.debug('inheriting grid connection sets')
       gcs_inheritance_model = rq.Model(epc_file)
-      for gcs in gcs_list:
+      for gcs, gcs_title in gcs_list:
          gcs.uuid = bu.new_uuid()
          gcs.root = None
          grid_list_modifications = []
@@ -2844,7 +2846,7 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
             gcs.grid_list[gi] = grid
          gcs.write_hdf5()
          gcs.model = gcs_inheritance_model
-         gcs.create_xml()
+         gcs.create_xml(title = gcs_title)
       gcs_inheritance_model.store_epc()
       gcs_inheritance_model.h5_release()
 
