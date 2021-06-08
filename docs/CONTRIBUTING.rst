@@ -26,60 +26,57 @@ Ways of contributing
 Making a Pull Request
 ---------------------
 
-Set up your developer environment
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1. Clone the repo
 
-1.	Clone the repo
+   Create a fork of the repository using the GitHub website. Note: this step can be
+   skipped if you already have write access to the main repo. Then, clone your fork
+   locally to your computer to your working area:
 
-    Create a fork of the repository using the GitHub website. Note: this step can be
-    skipped if you already have write access to the main repo. Then, clone your fork
-    locally to your computer to your working area:
+   .. code-block:: bash
 
-    .. code:: bash
+      git clone <url from GitHub>
 
-        git clone <url from GitHub>
+2. Set up a python environment
 
-2.	Set up a python environment
+   It is recommended that you set up an isolated python environment, using conda or virtualenv. 
 
-    It is recommended to set up an isolated python environment, using conda or virtualenv. 
+   .. code-block:: bash
 
-    .. code:: bash
-
-        conda create -n resqpy python=3.7
-        conda activate resqpy
+      conda create -n resqpy python=3.7
+      conda activate resqpy
         
-    You should then make an “editable” installation of the package into your local environment. This will
-    also install required dependencies, including extra packages required to running
-    unit tests.
+   You should then make an “editable” installation of the package into your local environment. This will
+   also install required dependencies, including extra packages required to running
+   unit tests.
 
-    .. code:: bash
+   .. code-block:: bash
 
-        pip install --editable .[tests]
+      pip install --editable .[tests]
     
 3. Make a Pull Request
 
-    Create a new branch from master:
+   Create a new branch from master:
 
-    .. code:: bash
+   .. code-block:: bash
 
-        git checkout master
-        git pull
-        git checkout -b <your-branch-name>
+      git checkout master
+      git pull
+      git checkout -b <your-branch-name>
 
-    You can then commit and push your changes as usual. Open a Pull Request on
-    GitHub to submit your code to be merged into master.
+   You can then commit and push your changes as usual. Open a Pull Request on
+   GitHub to submit your code to be merged into master.
 
 Checklist for pull requests
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------
 
 1. All CI jobs should pass
-2. Changes or additions could have appropriate unit tests (see below)
+2. Changes or additions sould have appropriate unit tests (see below)
 3. Follow the PEP8 style guide as far as possible (with caveats below).
 4. All public functions and classes should have
    `Google-style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
 
 Code Style
-^^^^^^^^^^
+----------
 
 Please try to write code according to the python style guide (PEP8), which
 defines conventions such as variable naming and capitalisation. A consistent
@@ -88,7 +85,9 @@ code.
 
 Note the existing code base differs from PEP8 in using 3 spaces for indenation
 rather than the usual 4. When editing these modules, it is preferable that new
-code has indentation that is consistent with the rest of the module. 
+code has indentation that is consistent with the rest of the module.
+
+See `Static analysis`_ for how to check your code for conformance to PEP8 style.
 
 Tests
 -----
@@ -166,8 +165,8 @@ are checked by default is stored in `setup.cfg <https://github.com/bp/resqpy/blo
 
 By default in resqpy:
 
-* `F` Logical errors (i.e. bugs) are enabled
-* `E` Style checks (i.e. PEP8 compliance) are disabled
+* ``F-`` Logical errors (i.e. bugs) are enabled
+* ``E-`` Style checks (i.e. PEP8 compliance) are disabled
 
 You can test for PEP8 compliance by running flake8 with further error codes:
 

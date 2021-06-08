@@ -14,10 +14,10 @@ reading, writing, and modifying reservoir models in the RESQML format. It gives
 you the ability to work with reservoir models programmatically, without having
 to know the details of the RESQML standard.
 
-resqpy is written and maintained by bp, and is made available under the MIT
+The package is written and maintained by bp, and is made available under the MIT
 license as a contribution to the open-source community.
 
-Resqpy was created by Andy Beer. For enquires about resqpy, please contact
+resqpy was created by Andy Beer. For enquires about resqpy, please contact
 Nathan Lane (Nathan.Lane@bp.com)
 
 ### Documentation
@@ -58,7 +58,7 @@ pip install -e /path/to/repo/
 
 ## Contributing
 
-Contributions of all forms are greatly appreciated! See the [Contributing
+Contributions of all forms are welcome and encouraged! See the [Contributing
 Guide](docs/CONTRIBUTING.rst) for guidance on how you can contribute, including
 bug reports, features requests and pull requests.
 

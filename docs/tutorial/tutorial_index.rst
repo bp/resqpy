@@ -12,8 +12,7 @@ resqpy API is a python library providing classes and functions
 allowing application code to work with RESQML datasets at a
 high level.
 
-The tutorials are in the form of wiki pages which include code
-snippets.  Whilst reading through a tutorial, it is recommended
+Whilst reading through a tutorial, it is recommended
 that you have a python interpreter (or Jupyter notebook) open
 in another window, so that code snippets can be cut, pasted and
 executed whilst progressing through the material.
