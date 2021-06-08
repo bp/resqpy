@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '6th June 2021'
+version = '8th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -29,6 +29,7 @@ import resqpy.grid as grr
 import resqpy.grid_surface as rgs
 import resqpy.property as rqp
 import resqpy.well as rqw
+import rssqpy.fault as rqf
 import resqpy.rq_import as rqi
 
 
@@ -2813,6 +2814,14 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       new_grid_title = 'grid with fault throws scaled by ' + str(scaling_factor) + ' from ' +  \
                        str(rqet.citation_title_for_node(source_grid.grid_root))
 
+   gcs_list = []
+   if inherit_gcs:
+      gcs_roots = model.roots(obj_type = 'GridConnectionSetRepresentation', related_uuid = source_grid.uuid)
+      for gcs_root in gcs_roots:
+         gcs = rqf.GridConnectionSet(model, connection_set_root = gcs_root)
+         gcs.cache_arrays()
+         gcs_list.append(gcs)
+
    # write model
    model.h5_release()
    if new_epc_file:
@@ -2821,6 +2830,23 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
    else:
       ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
+
+   if len(gcs_list):
+      gcs_inheritance_model = rq.Model(epc_file)
+      for gcs in gcs_list:
+         gcs.uuid = bu.new_uuid()
+         gcs.root = None
+         grid_list_modifications = []
+         for gi, g in enumerate(gcs.grid_list):
+            if bu.matching_uuids(g.uuid, source_grid.uuid): grid_list_modifications.append(gi)
+         assert len(grid_list_modifications)
+         for gi in grid_list_modifications:
+            gcs.grid_list[gi] = grid
+         gcs.write_hdf5()
+         gcs.model = gcs_inheritance_model
+         gcs.create_xml()
+      gcs_inheritance_model.store_epc()
+      gcs_inheritance_model.h5_release()
 
    return grid
 
