@@ -1,4 +1,5 @@
 from pathlib import Path
+from resqpy.organize import WellboreFeature
 
 import pytest
 import numpy as np
@@ -64,6 +65,30 @@ def test_logs():
             discovered_logs += 1
 
    assert discovered_logs > 0
+
+
+# Trajectory
+
+def test_Trajectory_add_well_feature_and_interp(example_model):
+
+   # Prepare an example Trajectory without a well feature
+   wellname = "Hullabaloo"
+   model, crs = example_model
+   datum = resqpy.well.MdDatum(
+      parent_model=model, crs_root=crs.crs_root, location=(0, 0, -100), md_reference='kelly bushing'
+   )
+   datum.create_xml()
+   traj = resqpy.well.Trajectory(parent_model=model, md_datum=datum, well_name=wellname)
+
+
+   # Add the well interp
+   assert traj.wellbore_feature is None
+   assert traj.wellbore_interpretation is None
+   traj.create_feature_and_interpretation()
+
+   # Check well is present
+   assert traj.wellbore_feature is not None
+   assert traj.wellbore_feature.feature_name == wellname
 
 
 # Deviation Survey tests
