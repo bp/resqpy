@@ -6,6 +6,7 @@
 ![Python version](https://img.shields.io/pypi/pyversions/resqpy)
 [![PyPI](https://img.shields.io/pypi/v/resqpy)](https://badge.fury.io/py/resqpy)
 ![Status](https://img.shields.io/pypi/status/resqpy)
+[![codecov](https://codecov.io/gh/bp/resqpy/branch/master/graph/badge.svg)](https://codecov.io/gh/bp/resqpy)
 
 ## Introduction
 
