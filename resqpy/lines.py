@@ -21,6 +21,38 @@ import numpy as np
 import os
 
 
+class _BasePolyline:
+   """Base class to implement shared methods for other classes in this module"""
+
+   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
+      """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
+
+      assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
+      assert name or self.title, 'title missing'
+      if not name: name = self.title
+
+      if self.rep_int_root is not None:
+         log.debug(f'represented interpretation already exisrs for surface {self.title}')
+         return
+      if kind in ['horizon', 'geobody boundary']:
+         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         if kind == 'horizon':
+            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
+                                               genetic_boundary_feature = feature, domain = 'depth')
+         else:
+            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
+                                                       genetic_boundary_feature = feature, domain = 'depth')
+      elif kind in ['fault', 'fracture']:
+         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature.create_xml()
+         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
+                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
+      else:
+         log.critical('code failure')
+      interp_root = interp.create_xml(title_suffix = interp_title_suffix)
+      self.rep_int_root = interp_root
+
 def load_hdf5_array(object, node, array_attribute, tag = 'Values'):
    """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
 
@@ -35,7 +67,7 @@ def load_hdf5_array(object, node, array_attribute, tag = 'Values'):
                                         object = object, array_attribute = array_attribute)
 
 
-class Polyline():
+class Polyline(_BasePolyline):
     """Class for RESQML polyline representation."""
 
     def __init__(self, parent_model, poly_root = None, set_bool = None, set_coord = None, set_crs = None,
@@ -530,7 +562,7 @@ def flatten_polyline(parent_model, poly_root, axis="z", value="0" , title=''):
 
 
 
-class PolylineSet():
+class PolylineSet(_BasePolyline):
     """Class for RESQML polyline set representation."""
 
     def __init__(self, parent_model, set_root = None, polylines = None, irap_file = None, charisma_file = None):
