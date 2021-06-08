@@ -24,6 +24,7 @@ The repository is hosted on `GitHub <https://github.com/bp/resqpy>`_.
    :caption: User guide
 
    getting-started
+   tutorial/tutorial_index
 
 API Reference
 -------------
