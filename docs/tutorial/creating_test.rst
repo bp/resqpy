@@ -5,12 +5,14 @@ This short tutorial makes use of a resqpy test function to generate a small data
 
 Importing from a test module
 ----------------------------
+Test modules can be acquired by cloning/downloading from the repository.
+
 For the following import to work, the resqpy code will need to have high priority in the environmental PATH. This can be achieved with something like:
 
 .. code-block:: python
 
     import sys
-    sys.path.insert(0, '/hpcdata/beaiwd/git/resqml')
+    sys.path.insert(0, '/path/to/your/resqml')
 
 The test modules included in the resqpy repository are primarily for automated testing to help ensure that code changes don't break existing functionality. However, some of the modules can also be used to generate small test datasets for use in these tutorials, for example:
 
