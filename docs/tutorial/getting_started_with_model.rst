@@ -25,7 +25,7 @@ Note: Example file names shown here and in other resqpy tutorials are for a unix
 
 Importing the **model** module
 ------------------------------
-In this tutorial, we will be using the ``Model`` class which is contained in the model.py module. This can be imported with:
+In this tutorial, we will be using the :class:`resqpy.model.Model` class which is contained in the model.py module. This can be imported with:
 
 .. code-block:: python
 
