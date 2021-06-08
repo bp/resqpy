@@ -15,6 +15,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.crs as rcrs
 import resqpy.olio.simple_lines as rsl
+import resqpy.organize as rqo
 
 import math as maths
 import numpy as np
