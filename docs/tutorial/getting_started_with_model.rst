@@ -38,7 +38,7 @@ The dataset is access via the epc file. It is opened with:
 
 Tip: the ``Model`` initialiser method has some optional arguments which are needed when creating a new dataset or copying an existing dataset before opening the duplicate.
 
-A Model object is almost always the starting point for code using resqpy. The other resqpy object classes require a Model object which is treated as a 'parent'.
+A ``Model`` object is almost always the starting point for code using resqpy. The other resqpy object classes require a Model object which is treated as a 'parent'.
 
 The ``Model`` class includes many methods. In this tutorial we will focus on some of the more essential ones when reading a model.
 
@@ -51,16 +51,16 @@ A RESQML dataset is a collection of high level objects, also called parts. There
 * An *xml root node*. The metadata for each part is held within the epc in xml format. The lowest level of resqpy code reads this xml into an internal tree structure using the lxml standard python module, which is compatible with elementTree. Where a resqpy argument name contains root or root_node, it is referring to the root node in the internal tree representation of the xml for the part. Such a root is an object of type lxml._Element and does not have a meaningful human readable form.
 * A *citation title*, which is a human readable string held within the citation block of the xml for the part. This is what a human would consider to be the name of the high level object. However, there is no requirement for the citation titles to be unique within a RESQML dataset, so they should generally not be used as a primary key. Where a resqpy argument is named citation_title, or simply title, it is referring to this item of data.
 
-Within a Model object, there is a one-to-one correspondence between a part name and a uuid, and between a part name and a root node. There are methods for moving from one of these to another and also for finding the (possibly non-unique) citation title.
+Within a ``Model`` object, there is a one-to-one correspondence between a part name and a uuid, and between a part name and a root node. There are methods for moving from one of these to another and also for finding the (possibly non-unique) citation title.
 
-The Model class contains four similar methods each of which returns a list of items, corresponding to the four points above. The methods have the names:
+The ``Model`` class contains four similar methods each of which returns a list of items, corresponding to the four points above. The methods have the names:
 
-* ``model.parts()``
-* ``model.uuids()``
-* ``model.roots()``
-* ``model.titles()``
+* :meth:`resqpy.model.Model.parts`
+* :meth:`resqpy.model.Model.uuids`
+* :meth:`resqpy.model.Model.roots`
+* :meth:`resqpy.model.Model.titles`
 
-If applied to a Model object without any arguments, a full list is returned, ie. with one item per high level object.
+If applied to a ``Model`` object without any arguments, a full list is returned, ie. with one item per high level object.
 
 Selectively listing high level objects
 --------------------------------------
