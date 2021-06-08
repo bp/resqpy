@@ -1251,7 +1251,8 @@ class Trajectory():
          self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
          self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
          self.feature_and_interpretation_to_be_written = True
-      else: log.info("WellboreInterpretation already exists")
+      else:
+         raise ValueError("Cannot add WellboreFeature, trajectory already has an associated WellboreInterpretation")
 
    def create_xml(self, ext_uuid = None, wbt_uuid = None,
                   md_datum_root = None, md_datum_xyz = None,
