@@ -1246,7 +1246,12 @@ class Trajectory():
       
       Uses the trajectory citation title as the well name
       """
-      if self.wellbore_interpretation is not None:
+      
+      log.debug("Creating a new WellboreInterpretation..")
+      log.debug(f"WellboreFeature exists: {self.wellbore_feature is not None}")
+      log.debug(f"WellboreInterpretation exists: {self.wellbore_interpretation is not None}")
+
+      if self.wellbore_interpretation is None:
          log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
          self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
          self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
