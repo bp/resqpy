@@ -2857,6 +2857,7 @@ def global_fault_throw_scaling(epc_file, source_grid = None, scaling_factor = No
                                cell_range = 0, offset_decay = 0.5,
                                store_displacement = False,
                                inherit_properties = False, inherit_realization = None, inherit_all_realizations = False,
+                               inherit_gcs = True,
                                new_grid_title = None, new_epc_file = None):
    """Rewrites epc with a new grid with all the fault throws multiplied by the same scaling factor.
 
@@ -2879,6 +2880,8 @@ def global_fault_throw_scaling(epc_file, source_grid = None, scaling_factor = No
       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
          inherit_properties is False or inherit_realization is not None
+      inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
+         inherited by the modified grid
       new_grid_title (string): used as the citation title text for the new grid object
       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
          a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
@@ -2898,6 +2901,7 @@ def global_fault_throw_scaling(epc_file, source_grid = None, scaling_factor = No
                         store_displacement = store_displacement,
                         inherit_properties = inherit_properties,
                         inherit_realization = inherit_realization, inherit_all_realizations = inherit_all_realizations,
+                        inherit_gcs = inherit_gcs,
                         new_grid_title = new_grid_title, new_epc_file = new_epc_file)
 
 
