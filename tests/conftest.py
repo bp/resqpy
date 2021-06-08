@@ -1,5 +1,7 @@
 """ Shared fixtures for tests """
 
+import logging
+
 import pytest
 import numpy as np
 import pandas as pd
@@ -8,6 +10,13 @@ from resqpy.model import Model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
 from resqpy.well import Trajectory, MdDatum
 from resqpy.crs import Crs
+
+
+@pytest.fixture(autouse=True)
+def capture_logs(caplog):
+   """Always capture log messages from respy"""
+
+   caplog.set_level(logging.DEBUG, logger="resqpy")
 
 
 @pytest.fixture
