@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '6th June 2021'
+version = '8th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -29,6 +29,7 @@ import resqpy.grid as grr
 import resqpy.grid_surface as rgs
 import resqpy.property as rqp
 import resqpy.well as rqw
+import resqpy.fault as rqf
 import resqpy.rq_import as rqi
 
 
@@ -2605,6 +2606,7 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
                         cell_range = 0, offset_decay = 0.5,
                         store_displacement = False,
                         inherit_properties = False, inherit_realization = None, inherit_all_realizations = False,
+                        inherit_gcs = True,
                         new_grid_title = None, new_epc_file = None):
    """Extends epc with a new grid with fault throws multiplied by scaling factors.
 
@@ -2632,6 +2634,8 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
          inherit_properties is False or inherit_realization is not None
+      inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
+         inherited by the modified grid
       new_grid_title (string): used as the citation title text for the new grid object
       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
          a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
@@ -2647,7 +2651,6 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       the offset decay argument might be changed in a future version to give improved smoothing;
       if a large fault is represented by a series of parallel minor faults 'stepping' down, each minor fault will have the
       scaling factor applied independently, leading to some unrealistic results
-
    """
 
    assert epc_file or new_epc_file, 'epc file name not specified'
@@ -2811,13 +2814,41 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       new_grid_title = 'grid with fault throws scaled by ' + str(scaling_factor) + ' from ' +  \
                        str(rqet.citation_title_for_node(source_grid.grid_root))
 
+   gcs_list = []
+   if inherit_gcs:
+      gcs_roots = model.roots(obj_type = 'GridConnectionSetRepresentation', related_uuid = source_grid.uuid)
+      for gcs_root in gcs_roots:
+         gcs = rqf.GridConnectionSet(model, connection_set_root = gcs_root)
+         gcs.cache_arrays()
+         gcs_list.append((gcs, rqet.citation_title_for_node(gcs_root)))
+      log.debug(f'{len(gcs_list)} grid connection sets to be inherited')
+
    # write model
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+      epc_file = new_epc_file
    else:
       ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
+
+   if len(gcs_list):
+      log.debug('inheriting grid connection sets')
+      gcs_inheritance_model = rq.Model(epc_file)
+      for gcs, gcs_title in gcs_list:
+         gcs.uuid = bu.new_uuid()
+         gcs.root = None
+         grid_list_modifications = []
+         for gi, g in enumerate(gcs.grid_list):
+            if bu.matching_uuids(g.uuid, source_grid.uuid): grid_list_modifications.append(gi)
+         assert len(grid_list_modifications)
+         for gi in grid_list_modifications:
+            gcs.grid_list[gi] = grid
+         gcs.write_hdf5()
+         gcs.model = gcs_inheritance_model
+         gcs.create_xml(title = gcs_title)
+      gcs_inheritance_model.store_epc()
+      gcs_inheritance_model.h5_release()
 
    return grid
 
@@ -2828,6 +2859,7 @@ def global_fault_throw_scaling(epc_file, source_grid = None, scaling_factor = No
                                cell_range = 0, offset_decay = 0.5,
                                store_displacement = False,
                                inherit_properties = False, inherit_realization = None, inherit_all_realizations = False,
+                               inherit_gcs = True,
                                new_grid_title = None, new_epc_file = None):
    """Rewrites epc with a new grid with all the fault throws multiplied by the same scaling factor.
 
@@ -2850,6 +2882,8 @@ def global_fault_throw_scaling(epc_file, source_grid = None, scaling_factor = No
       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
          inherit_properties is False or inherit_realization is not None
+      inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
+         inherited by the modified grid
       new_grid_title (string): used as the citation title text for the new grid object
       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
          a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
@@ -2869,6 +2903,7 @@ def global_fault_throw_scaling(epc_file, source_grid = None, scaling_factor = No
                         store_displacement = store_displacement,
                         inherit_properties = inherit_properties,
                         inherit_realization = inherit_realization, inherit_all_realizations = inherit_all_realizations,
+                        inherit_gcs = inherit_gcs,
                         new_grid_title = new_grid_title, new_epc_file = new_epc_file)
 
 
