@@ -8,7 +8,7 @@ The material in this tutorial is closely based on a Bifröst Labs developers' no
 You should edit the file paths in the examples to point to your own resqml dataset.
 
 Quick start for getting at property arrays in a RESQML dataset
-==============================================================
+--------------------------------------------------------------
 There are different routes to tracking down a property array, in these examples we go via the host grid object.
 
 The first step is always to open the dataset as a resqpy Model object:
