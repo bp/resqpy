@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '22nd May 2021'
+version = '8th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -8,14 +8,13 @@ log.debug('model.py version ' + version)
 
 import os
 import copy
+import getpass
 import shutil
-import numpy as np
-import h5py
 import warnings
 import zipfile as zf
 
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
+import numpy as np
+import h5py
 
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.time as time
@@ -1697,7 +1696,7 @@ class Model():
          a (k0, pillar_index) is needed when the grid has split pillars, whereas a (k0, j0, i0) is needed when the grid does
          not have any split pillars
       """
-
+      
       def reshaped_index(index, shape_tuple, required_shape):
          tail = len(shape_tuple) - len(index)
          if tail > 0:
@@ -1718,9 +1717,16 @@ class Model():
          return r_index
 
       if object is None: object = self
-      if array_attribute is not None and hasattr(object, array_attribute) and object.__dict__[array_attribute] is not None:
-         if index is None: return None  # this option allows caching of array without actually referring to any element
-         return object.__dict__[array_attribute][tuple(index)]
+
+      # Check if attribute has already be cached
+      if array_attribute is not None:
+         existing_value = getattr(object, array_attribute, None)
+
+         # Watch out for np.array(None): check existing_value has a valid "shape" 
+         if existing_value is not None and getattr(existing_value, "shape", False):
+            if index is None: return None  # this option allows caching of array without actually referring to any element
+            return existing_value[tuple(index)]
+
       h5_root = self.h5_access(h5_key_pair[0])
       if h5_root is None: return None
       if cache_array:
@@ -2069,8 +2075,8 @@ class Model():
       originator_node = rqet.SubElement(citation, ns['eml'] + 'Originator')
       if originator is None:
          try:
-            originator = str(os.getlogin())
-         except:
+            originator = str(getpass.getuser())
+         except Exception:
             originator = 'unknown'
       originator_node.set(ns['xsi'] + 'type', ns['eml'] + 'NameString')
       originator_node.text = originator
@@ -2861,8 +2867,19 @@ class Model():
          traj = resqpy.well.Trajectory(self, trajectory_root=traj_root)
          yield traj
 
+   def md_datums(self):
+      """ Iterable of all MdDatum objects associated with the model
 
+      Yields:
+         md_datum: instance of :class:`resqpy.well.MdDatum`
+      """
+      import resqpy.well  # Imported here to avoid circular imports
 
+      parts = self.parts_list_of_type('MdDatum')
+      for part in parts:
+         datum_root = self.root_for_part(part)
+         datum = resqpy.well.MdDatum(self, md_datum_root=datum_root)
+         yield datum
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
