@@ -1633,7 +1633,7 @@ class WellboreInterpretation():
 
    def create_xml(self, wellbore_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,
-                  title_suffix = 'wellbore interpretation'):
+                  title_suffix = None):
       """Creates a wellbore interpretation organisational xml node from a wellbore interpretation object."""
 
       # note: related wellbore feature node should be created first and referenced here
