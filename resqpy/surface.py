@@ -1309,7 +1309,7 @@ class PointSet(_BaseSurface):
       h5_reg.write(file_name, mode = mode)
 
 
-   def create_xml(self, ext_uuid, crs_root = None,
+   def create_xml(self, ext_uuid = None, crs_root = None,
                   add_as_part = True, add_relationships = True,
                   root = None, title = None, originator = None):
       """Creates a point set representation xml node from this point set object and optionally adds as part of model.
@@ -1329,6 +1329,8 @@ class PointSet(_BaseSurface):
          returns:
             the newly created point set representation xml node
       """
+
+      if ext_uuid is None: ext_uuid = self.model.h5_uuid()
 
       ps_node = self.model.new_obj_node('PointSetRepresentation')
 
