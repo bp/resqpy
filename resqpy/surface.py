@@ -1296,9 +1296,11 @@ class PointSet(_BaseSurface):
       if self.patch_count is None: self.patch_count = 0
       self.patch_count += 1
 
-   def write_hdf5(self, file_name, mode = 'a'):
+
+   def write_hdf5(self, file_name = None, mode = 'a'):
       """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays."""
 
+      if not file_name: file_name = self.model.h5_file_name()
       if self.uuid is None: self.uuid = bu.new_uuid()
       # NB: patch arrays must all have been set up prior to calling this function
       h5_reg = rwh5.H5Register(self.model)
