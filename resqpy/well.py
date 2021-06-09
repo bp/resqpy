@@ -1711,7 +1711,8 @@ class BlockedWell:
       self.well_name = well_name
       self.trajectory = trajectory
       self.trajectory_to_be_written = False
-      self.feature_and_interpretation_to_be_written = False
+      self.feature_to_be_written = False
+      self.interpretation_to_be_written = False
       self.node_count = None     # number of measured depth nodes, each being an entry or exit point of trajectory with a cell
       self.node_mds = None       # node_count measured depths (in same units and datum as trajectory) of cell entry and/or exit points
       self.cell_count = None     # number of blocked intervals (<= node_count - 1)
@@ -3057,15 +3058,24 @@ class BlockedWell:
       xyz = self.trajectory.xyz_for_md(md)
       return xyz, rqet.uuid_for_part_root(self.trajectory.crs_root)
 
+
    def create_feature_and_interpretation(self):
       """Instantiate new empty WellboreFeature and WellboreInterpretation objects
       
       Uses the Blocked well citation title as the well name
       """
-      self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.trajectory.title,extract_from_xml=False)
+      if self.trajectory is not None:
+         traj_interp_uuid = self.model.uuid(obj_type = 'WellboreInterpretation', related_uuid = self.trajectory.uuid)
+         if traj_interp_uuid is not None:
+            traj_feature_root = self.model.root(obj_type = 'WellboreFeature', related_uuid = traj_interp_uuid)
+            if traj_feature_root is not None:
+               self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, root_node = traj_feature_root)
+      if self.wellbore_feature is None:
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.trajectory.title,extract_from_xml=False)
+         self.feature_to_be_written = True
       self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
       self.trajectory.wellbore_interpretation = self.wellbore_interpretation
-      self.feature_and_interpretation_to_be_written = True
+      self.interpretation_to_be_written = True
 
 
    def create_md_datum_and_trajectory(self, grid, trajectory_mds, trajectory_points, length_uom, well_name, set_depth_zero = False, set_tangent_vectors=False, create_feature_and_interp=True):
@@ -3110,10 +3120,13 @@ class BlockedWell:
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
       if not title: title = self.well_name
 
-      if self.feature_and_interpretation_to_be_written:
+      if self.feature_to_be_written:
          if self.wellbore_feature is None: self.create_feature_and_interpretation()
          self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
-         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, add_relationships = add_relationships, originator = originator)
+      if self.interpretation_to_be_written:
+         if self.wellbore_interpretation is None: self.create_feature_and_interpretation()
+         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, title_suffix = 'blocked well',
+                                                 add_relationships = add_relationships, originator = originator)
 
       if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root_node is None:
          md_datum_root = self.trajectory.md_datum.create_xml(add_as_part = add_as_part,
