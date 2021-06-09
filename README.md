@@ -69,6 +69,7 @@ bug reports, features requests and pull requests.
   and high level modification functions
 - `resqpy/olio`: low level modules, not often imported directly by calling code
 - `tests`: unit tests
+- `example_data`: small example datasets
 
 ### Unit tests
 
