@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '15th May 2021'
+version = '10th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -83,476 +83,6 @@ expected_facet_type_dict = {'depth': ('what', ['cell centre', 'cell top']),     
                             'index': ('what', ['uid', 'pixel map'])}
 
 
-def same_property_kind(pk_a, pk_b):
-   """Returns True if the two property kinds are the same, or pseudonyms."""
-
-   if pk_a is None or pk_b is None: return False
-   if pk_a == pk_b: return True
-   if pk_a in ['permeability rock', 'rock permeability'] and pk_b in ['permeability rock', 'rock permeability']: return True
-   return False
-
-
-def create_transmisibility_multiplier_property_kind(model):
-   """Create a local property kind 'transmisibility multiplier' for a given model
-
-   argument:
-      model: resqml model object
-
-   returns:
-      property kind uuid
-   """
-   log.debug("Making a new property kind 'Transmissibility multiplier'")
-   tmult_kind = PropertyKind(parent_model=model,title='transmissibility multiplier',parent_property_kind='continuous')
-   tmult_kind.create_xml()
-   tmult_kind_uuid = tmult_kind.uuid
-   model.store_epc()
-   return tmult_kind_uuid
-
-
-def property_kind_and_facet_from_keyword(keyword):
-   """If keyword is recognised, returns equivalent resqml PropertyKind and Facet info.
-
-   argument:
-      keyword (string): Nexus grid property keyword
-
-   returns:
-      (property_kind, facet_type, facet) as defined in resqml standard; some or all may be None
-
-   note:
-      this function may now return the local property kind 'transmissibility multiplier'; calling code must ensure that
-      the local property kind object is created if not already present
-   """
-
-   # note: this code doesn't cater for a property having more than one facet, eg. direction and phase
-
-   def facet_info_for_dir_ch(dir_ch):
-      facet_type = None
-      facet = None
-      if dir_ch in ['i', 'j', 'k', 'x', 'y', 'z']:
-         facet_type = 'direction'
-         if dir_ch in ['i', 'x']: facet = 'I'
-         elif dir_ch in ['j', 'y']: facet = 'J'
-         else: facet = 'K'
-         # NB: resqml also allows for combinations, eg. IJ, IJK
-      return (facet_type, facet)
-
-   # note: 'what' facet_type for made-up uses might be better changed to the generic 'qualifier' facet type
-
-   property_kind = None
-   facet_type = None
-   facet = None
-   lk = keyword.lower()
-   if lk in ['bv', 'brv']:                                     # bulk rock volume
-      property_kind = 'rock volume'
-      facet_type = 'netgross'
-      facet = 'gross'   # todo: check this is the facet in xsd
-   elif lk in ['pv', 'pvr', 'porv']: property_kind = 'pore volume'     # pore volume
-   elif lk in ['mdep', 'depth', 'tops', 'mids']:
-      property_kind = 'depth'                                  # depth (nexus) and tops mean top depth
-      facet_type = 'what'                                      # this might need to be something different
-      if lk in ['mdep', 'mids']: facet = 'cell centre'
-      else: facet = 'cell top'
-   elif lk in ['ntg', 'netgrs']: property_kind = 'net to gross ratio'  # net-to-gross
-   elif lk in ['netv', 'nrv']:                                         # net volume
-      property_kind = 'rock volume'
-      facet_type = 'netgross'
-      facet = 'net'
-   elif lk in ['dzc', 'dzn', 'dz', 'dznet']:
-      property_kind = 'thickness'                              # or should these keywords use cell length in K direction?
-      facet_type = 'netgross'
-      if lk.startswith('dzn'): facet = 'net'
-      else: facet = 'gross'
-   elif lk in ['dxc', 'dyc', 'dx', 'dy']:
-      property_kind = 'cell length'
-      (facet_type, facet) = facet_info_for_dir_ch(lk[1])
-   elif len(lk) > 2 and lk[0] == 'd' and lk[1] in 'xyz':
-      property_kind = 'length'
-      facet_type = 'direction'
-      facet = lk[1].upper()                                    # keep as 'X', 'Y' or 'Z'
-   elif lk in ['por', 'poro', 'porosity']: property_kind = 'porosity'   # porosity
-   elif lk == 'kh': property_kind = 'permeability thickness'   # K.H (not horizontal permeability)
-   elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):   # permeability
-      property_kind = 'permeability rock'
-      (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
-   elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
-      property_kind = 'transmissibility'
-      (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
-   elif lk in ['p', 'pressure']: property_kind = 'pressure'    # pressure; todo: phase pressures
-   elif lk in ['sw', 'so', 'sg', 'satw', 'sato', 'satg', 'soil']:       # saturations
-      property_kind = 'saturation'
-      facet_type = 'what'                                      # todo: check use of 'what' for phase
-      if lk in ['sw', 'satw', 'swat']: facet = 'water'
-      elif lk in ['so', 'sato', 'soil']: facet = 'oil'
-      elif lk in ['sg', 'satg', 'sgas']: facet = 'gas'
-   elif lk in ['swl', 'swr', 'sgl', 'sgr', 'swro', 'sgro', 'sor', 'swu', 'sgu']:  # nexus saturation end points
-      property_kind = 'saturation'
-      facet_type = 'what'                                      # note: use of 'what' for phase is a guess
-      if lk[1] == 'w': facet = 'water'
-      elif lk[1] == 'g': facet = 'gas'
-      elif lk[1] == 'o': facet = 'oil'
-      if lk[-1] == 'l': facet += ' minimum'
-      elif lk[-1] == 'u': facet += ' maximum'
-      elif lk[2:] == 'ro': facet += ' residual to oil'
-      elif lk[-1] == 'r': facet += ' residual'
-      else: assert False, 'problem deciphering saturation end point keyword: ' + lk
-#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
-   elif lk in ['wip', 'oip', 'gip', 'mobw', 'mobo', 'mobg', 'ocip']:  # todo: check these, especially ocip
-      property_kind = 'fluid volume'
-      facet_type = 'what'                                      # todo: check use of 'what' for phase
-      if lk in ['wip', 'mobw']: facet = 'water'                # todo: add another facet indicating mobile volume
-      elif lk in ['oip', 'mobo']: facet = 'oil'
-      elif lk in ['gip', 'mobg']: facet = 'gas'
-      elif lk == 'ocip': facet = 'oil condensate'              # todo: this seems unlikely: check
-      if lk[:3] == 'mob': facet += ' (mobile)'
-   elif lk in ['tmx', 'tmy', 'tmz', 'tmflx', 'tmfly', 'tmflz', 'multx', 'multy', 'multz']:
-      property_kind = 'transmissibility multiplier'            # NB: resqpy local property kind
-      facet_type = 'direction'
-      _, facet =  facet_info_for_dir_ch(lk[-1])
-   elif lk in ['multbv', 'multpv']:
-      property_kind = 'property multiplier'
-      facet_type = 'what'                                      # here 'what' facet indicates property affected
-      if lk == 'multbv': facet = 'rock volume'                 # NB: making this up as I go along
-      elif lk == 'multpv': facet = 'pore volume'
-   elif lk == 'rs': property_kind = 'solution gas-oil ratio'
-   elif lk == 'rv': property_kind = 'vapor oil-gas ratio'
-   elif lk in ['temp', 'temperature']: property_kind = 'thermodynamic temperature'
-   elif lk in ['dad', 'kid', 'unpack', 'deadcell', 'inactive']:
-      property_kind = 'code'
-      facet_type = 'what'
-      # todo: kid can only be used as an inactive cell indication for the root grid
-      if lk in ['kid', 'deadcell', 'inactive']: facet = 'inactive'  # standize on 'inactive' to indicate use as mask
-      else: facet = lk                                         # note: use deadcell or unpack for inactive, if nothing better?
-   elif lk == 'livecell' or lk.startswith('act'):
-      property_kind = 'active'                       # local property kind, see RESQML (2.0.1) usage guide, section 11.17
-#      property_kind = 'code'
-#      facet_type = 'what'
-#      facet = 'active'
-   elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
-      property_kind = 'region initialization'        # local property kind, see RESQML (2.0.1) usage guide, section 11.18
-   elif lk == 'uid':
-      property_kind = 'index'
-      facet_type = 'what'
-      facet = 'uid'
-   return (property_kind, facet_type, facet)
-
-
-@lru_cache(maxsize=32)
-def validate_uom_from_string(input_unit, case_sensitive=True):
-   """Returns a valid RESQML unit from a string
-
-   If no matching valid uom is found, return 'Euc'.
-   """
-   default = 'Euc'
-   if not input_unit:
-      return default
-
-   # Get set of all valid uoms
-   valid_uoms = set(bwam.properties_data()['uoms'])
-
-   if case_sensitive:
-      if input_unit in valid_uoms:
-         return input_unit
-      else:
-         return default
-
-   else:
-      # Dict mapping from lowercase unit to real unit
-      unit_dict = {u.casefold(): u for u in valid_uoms}
-      input_unit_lowercase = input_unit.casefold()
-
-      if input_unit_lowercase in unit_dict.keys():
-         return unit_dict[input_unit_lowercase]
-      else:
-         return default
-
-
-def infer_property_kind(name, unit):
-   """ Guess a valid property kind """
-
-   # Currently unit is ignored
-
-   valid_kinds = bwam.properties_data()['property_kinds']
-
-   if name in valid_kinds:
-      kind = name
-   else:
-      # TODO: use an appropriate default
-      kind = 'Unknown'
-
-   # TODO: determine facet_type and facet somehow
-   facet_type = None
-   facet = None
-
-   return kind, facet_type, facet
-
-
-def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet = None):
-   """Returns a guess at the units of measure for the given kind of property.
-
-   arguments:
-      property_kind (string): a valid resqml property kind, lowercase
-      minimum: the minimum value in the data for which the units are being guessed
-      maximum: the maximum value in the data for which the units are being guessed
-      support: the grid.Grid or well.WellboreFrame object which the property data relates to
-      facet_type (string, optional): a valid resqml facet type, lowercase, one of:
-              'direction', 'what', 'netgross', 'qualifier', 'conditions', 'statistics'
-      facet: (string, present if facet_type is present): the value relating to the facet_type,
-               eg. 'I' for direction, or 'oil' for 'what'
-
-   returns:
-      a valid resqml unit of measure (uom) for the property_kind, or None
-
-   note:
-      the resqml standard allows a property to have any number of facets; however,
-      this module currently only supports zero or one facet per property
-   """
-
-   def crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and feet for z
-      if crs_node is None: return None
-      xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-      z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-      if xy_units == 'm' and z_units == 'm': return 'm'
-      if xy_units == 'ft' and z_units == 'ft': return 'ft'
-      return None
-
-   if support is None or not hasattr(support, 'extract_crs_root'): crs_node = None
-   else: crs_node = support.extract_crs_root()
-   from_crs = crs_m_or_ft(crs_node)
-
-   if property_kind in ['rock volume', 'pore volume', 'volume']:
-      if from_crs is None: return None
-      return from_crs + '3'  # ie. m3 or ft3
-   if property_kind == 'depth':
-      if crs_node is None: return None
-      return rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-   if property_kind == 'cell length':               # todo: pass in direction facet to pick up xy_units or z_units
-      return from_crs
-   if property_kind in ['net to gross ratio', 'porosity', 'saturation']:
-      if maximum is not None and str(maximum) != 'unknown':
-         max_real = float(maximum)
-         if max_real > 1.0 and max_real <= 100.0: return '%'
-         if max_real < 0.0 or max_real > 1.0: return None
-      if from_crs == 'm': return 'm3/m3'
-      if from_crs == 'ft': return 'ft3/ft3'
-      return 'Euc'
-   if property_kind == 'permeability rock' or property_kind == 'rock permeability': return 'mD'
-   if property_kind == 'permeability thickness':
-      z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-      if z_units == 'm': return 'mD.m'
-      if z_units == 'ft': return 'mD.ft'
-      return None
-   if property_kind == 'permeability length':
-      xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-      if xy_units == 'm': return 'mD.m'
-      if xy_units == 'ft': return 'mD.ft'
-      return None
-   if property_kind == 'fluid volume':
-      if from_crs == 'm': return 'm3'
-      if from_crs == 'ft':
-         if facet_type == 'what' and facet == 'gas': return '1000 ft3'  # todo: check units output by nexus for GIP
-         else: return 'bbl'                         # todo: check whether nexus uses 10^3 or 10^6 units
-      return None
-   if property_kind.endswith('transmissibility'):   # note: RESQML QuantityClass only includes a unit-viscosity VolumePerTimePerPressureUom
-      if from_crs == 'm': return 'm3.cP/(kPa.d)'    # NB: might actually be m3/(psi.d) or m3/(bar.d)
-      if from_crs == 'ft': return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
-      return None
-   if property_kind == 'pressure':
-      if from_crs == 'm': return 'kPa'              # NB: might actually be psi or bar
-      if from_crs == 'ft': return 'psi'
-      if maximum is not None:
-         max_real = float(maximum)
-         if max_real == 0.0: return None
-         if max_real > 10000.0: return 'kPa'
-         if max_real < 500.0: return 'bar'
-         if max_real < 5000.0: return 'psi'
-      return None
-   if property_kind == 'solution gas-oil ratio':
-      if from_crs == 'm': return 'm3/m3'            # NB: might actually be psi or bar
-      if from_crs == 'ft': return '1000 ft3/bbl'
-      return None
-   if property_kind == 'vapor oil-gas ratio':
-      if from_crs == 'm': return 'm3/m3'            # NB: might actually be psi or bar
-      if from_crs == 'ft': return '0.001 bbl/ft3'
-      return None
-   if property_kind.endswith('multiplier'): return 'Euc'
-   # todo: 'degC' or 'degF' for thermodynamic temperature
-   return None
-
-
-def selective_version_of_collection(collection,
-                                    realization = None,
-                                    support_uuid = None,
-                                    grid = None,       # for backward compatibility
-                                    uuid = None,
-                                    continuous = None,
-                                    count = None,
-                                    indexable = None,
-                                    property_kind = None,
-                                    facet_type = None, facet = None,
-                                    citation_title = None,
-                                    time_series_uuid = None, time_index = None,
-                                    uom = None,
-                                    string_lookup_uuid = None,
-                                    categorical = None):
-   """Returns a new PropertyCollection with those parts which match all arguments that are not None.
-
-   arguments:
-      collection: an existing PropertyCollection from which a subset will be returned as a new object;
-                  the existing collection might often be the 'main' collection holding all the properties
-                  for a supporting representation (grid or wellbore frame)
-
-   Other optional arguments:
-   realization, support_uuid, grid, uuid, continuous, count, indexable, property_kind, facet_type, facet, citation_title,
-   time_series_uuid, time_index, uom, string_lookup_uuid, categorical:
-
-   for each of these arguments: if None, then all members of collection pass this filter;
-   if not None then only those members with the given value pass this filter;
-   finally, the filters for all the attributes must be passed for a given member
-   to be included in the returned collection.
-
-   returns:
-      a new PropertyCollection containing those properties which match the filter parameters that are not None
-
-   note:
-      the grid keyword argument is maintained for backward compatibility: support_uuid argument takes precedence;
-      the categorical boolean argument can be used to select only
-      categorical (or non-categorical) properties, even though this is not explicitly held as a field in the
-      internal dictionary
-   """
-
-   assert collection is not None
-   view = PropertyCollection()
-   if support_uuid is None and grid is not None: support_uuid = grid.uuid
-   if support_uuid is not None: view.set_support(support_uuid = support_uuid)
-   if realization is not None: view.set_realization(realization)
-   view.inherit_parts_selectively_from_other_collection(collection,
-                                                        realization = realization,
-                                                        support_uuid = support_uuid,
-                                                        uuid = uuid,
-                                                        continuous = continuous,
-                                                        count = count,
-                                                        indexable = indexable,
-                                                        property_kind = property_kind,
-                                                        facet_type = facet_type, facet = facet,
-                                                        citation_title = citation_title,
-                                                        time_series_uuid = time_series_uuid, time_index = time_index,
-                                                        uom = uom,
-                                                        string_lookup_uuid = string_lookup_uuid,
-                                                        categorical = categorical)
-   return view
-
-
-def property_over_time_series_from_collection(collection, example_part):
-   """Returns a new PropertyCollection with parts like the example part, over all indices in its time series.
-
-   arguments:
-      collection: an existing PropertyCollection from which a subset will be returned as a new object;
-                  the existing collection might often be the 'main' collection holding all the properties
-                  for a grid
-      example_part (string): the part name of an example member of collection (which has an associated time_series)
-
-   returns:
-      a new PropertyCollection containing those memners of collection which have the same property kind
-      (and facet, if any) as the example part and which have the same associated time series
-   """
-
-   assert collection is not None and example_part is not None
-   assert collection.part_in_collection(example_part)
-   view = PropertyCollection()
-   if collection.support_uuid is not None: view.set_support(support_uuid = collection.support_uuid)
-   if collection.realization is not None: view.set_realization(collection.realization)
-   view.inherit_similar_parts_for_time_series_from_other_collection(collection, example_part)
-   return view
-
-
-def property_collection_for_keyword(collection, keyword):
-   """Returns a new PropertyCollection with parts that match the property kind and facet deduced for the keyword.
-
-   arguments:
-      collection: an existing PropertyCollection from which a subset will be returned as a new object;
-                  the existing collection might often be the 'main' collection holding all the properties
-                  for a supporting representation (grid or wellbore frame)
-      keyword (string): a simulator keyword for which the property kind (and facet, if any) can be deduced
-
-   returns:
-      a new PropertyCollection containing those memners of collection which have the property kind
-      (and facet, if any) as that deduced for the keyword
-
-   note:
-      this function is particularly relevant to grid property collections for simulation models;
-      the handling of simulator keywords in this module is based on the main grid property keywords
-      for Nexus; if the resqml dataset was generated from simulator data using this module then
-      the result of this function should be reliable; resqml data sets from other sources might use facets
-      if a different way, leading to an omission in the results of this function
-   """
-
-   assert collection is not None and keyword
-   (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(keyword)
-   if property_kind is None:
-      log.warning('failed to deduce property kind for keyword: ' + keyword)
-      return None
-   return selective_version_of_collection(collection, property_kind = property_kind, facet_type = facet_type, facet = facet)
-
-
-def reformat_column_edges_to_resqml_format(array):
-   """Converts an array of shape (nj,ni,2,2) to shape (nj,ni,4) in RESQML edge ordering"""
-   newarray = np.empty((array.shape[0],array.shape[1],4))
-   newarray[:,:,0] = array[:,:,1,0]
-   newarray[:,:,1] = array[:,:,0,1]
-   newarray[:,:,2] = array[:,:,1,1]
-   newarray[:,:,3] = array[:,:,0,0]
-   return newarray
-
-
-def reformat_column_edges_from_resqml_format(array):
-   """Converts an array of shape (nj,ni,4) in RESQML edge ordering to shape (nj,ni,2,2)"""
-   newarray = np.empty((array.shape[0],array.shape[1],2,2))
-   newarray[:,:,0,0] = array[:,:,3]
-   newarray[:,:,0,1] = array[:,:,1]
-   newarray[:,:,1,0] = array[:,:,0]
-   newarray[:,:,1,1] = array[:,:,2]
-   return newarray
-
-
-# 'private' functions returning attribute name for cached version of property array
-# I find the leading underscore so ugly, I can't bring myself to use it for 'private' functions, even though many people do
-
-def _cache_name_for_uuid(uuid):
-   """
-      Returns the attribute name used for the cached copy of the property array for the given uuid.
-
-      :meta private:
-   """
-
-   return 'c_' + bu.string_from_uuid(uuid)
-
-def _cache_name(part):
-   """
-      Returns the attribute name used for the cached copy of the property array for the given part.
-
-      :meta private:
-   """
-
-   if part is None: return None
-   uuid = rqet.uuid_in_part_name(part)
-   if uuid is None: return None
-   return _cache_name_for_uuid(uuid)
-
-def dtype_flavour(continuous, use_32_bit):
-   """
-      Returns the numpy elemental data type depending on the two boolean flags.
-
-      :meta private:
-   """
-
-   if continuous:
-      if use_32_bit: dtype = np.float32
-      else: dtype = np.float64
-   else:
-      if use_32_bit: dtype = np.int32
-      else: dtype = np.int64
-   return dtype
-
 
 class PropertyCollection():
    """Class for RESQML Property collection for any supporting representation (or mix of supporting representations).
@@ -584,6 +114,8 @@ class PropertyCollection():
          also for now, if not initialising from a property set, all properties related to the support are included, whether
          the relationship is supporting representation or some other relationship;
          the full handling of resqml property sets and property series is still under development
+
+      :meta common:
       """
 
       assert property_set_root is None or support is not None,  \
@@ -1253,6 +785,8 @@ class PropertyCollection():
 
       returns:
          list of part names (strings) being the members of this collection; there is one part per property array
+
+      :meta common:
       """
 
       return list(self.dict.keys())
@@ -1288,6 +822,8 @@ class PropertyCollection():
       note:
          the support and grid keyword arguments are maintained for backward compatibility;
          support_uuid takes precedence over support and both take precedence over grid
+
+      :meta common:
       """
 
       if support is None: support = grid
@@ -1336,6 +872,8 @@ class PropertyCollection():
       returns:
          part name (string) of the part which matches all selection arguments which are not None;
          returns None if no parts match; raises an assertion error if more than one part matches
+
+      :meta common:
       """
 
       if support is None: support = grid
@@ -1407,6 +945,8 @@ class PropertyCollection():
          multiple calls will return the same cached array so calling code should copy if duplication is needed;
          support and grid arguments are for backward compatibilty: support_uuid takes precedence over support and
          both take precendence over grid
+
+      :meta common:
       """
 
       if support is None: support = grid
@@ -1434,6 +974,8 @@ class PropertyCollection():
 
       returns:
          count of the number of parts (members) in this collection; there is one part per property array (non-negative integer)
+
+      :meta common:
       """
 
       return len(self.dict)
@@ -1487,6 +1029,8 @@ class PropertyCollection():
          the time index is labelled 'timestep' in the returned string; however, resqml differentiates
          between the simulator timestep number and a time index into a time series; at present this
          module conflates the two
+
+      :meta common:
       """
 
       text = self.property_kind_for_part(part)
@@ -1526,6 +1070,8 @@ class PropertyCollection():
 
       returns:
          integer or None
+
+      :meta common:
       """
 
       return self.element_for_part(part, 0)
@@ -1583,6 +1129,8 @@ class PropertyCollection():
 
       returns:
          uuid.UUID object reference; use str(uuid_for_part()) to convert to string
+
+      :meta common:
       """
 
       return self.element_for_part(part, 2)
@@ -1649,6 +1197,8 @@ class PropertyCollection():
          whilst categorical properties have an associated dictionary mapping from a finite set of integer
          key values onto strings (eg. {1: 'background', 2: 'channel sand', 3: 'mud drape'}); however, this
          module treats categorical properties as a special case of discrete properties
+
+      :meta common:
       """
 
       return self.element_for_part(part, 4)
@@ -1707,6 +1257,8 @@ class PropertyCollection():
 
       note:
          see tail of Representations.xsd for overview of indexable elements usable for other object classes
+
+      :meta common:
       """
 
       return self.element_for_part(part, 6)
@@ -1732,6 +1284,8 @@ class PropertyCollection():
          for the property kinds which this module can relate to simulator keywords (Nexus); however, other property
          kinds should be handled okay in a generic way;
          for bespoke (local) property kinds, this is the property kind title as stored in the xml reference node
+
+      :meta common:
       """
 
       return self.element_for_part(part, 7)
@@ -1762,6 +1316,8 @@ class PropertyCollection():
          resqml refers to Facet Facet and Facet Value; the equivalents in this module are facet_type and facet;
          the resqml standard allows a property to have any number of facets; this module currently limits a
          property to having at most one facet; the facet_type and facet should be either both None or both not None
+
+      :meta common:
       """
 
       return self.element_for_part(part, 8)
@@ -1784,6 +1340,8 @@ class PropertyCollection():
          or None
 
       see notes for facet_type_for_part()
+
+      :meta common:
       """
 
       return self.element_for_part(part, 9)
@@ -1806,6 +1364,8 @@ class PropertyCollection():
 
       note:
          for simulation grid properties, the citation title is often a property keyword specific to a simulator
+
+      :meta common:
       """
 
       return self.element_for_part(part, 10)
@@ -1838,6 +1398,8 @@ class PropertyCollection():
 
       returns:
          time index (integer) for this part
+
+      :meta common:
       """
 
       return self.element_for_part(part, 12)
@@ -1861,6 +1423,8 @@ class PropertyCollection():
       note:
          this method merely returns the minimum value recorded in the xml for the property, it does not check
          the array data
+
+      :meta common:
       """
 
       return self.element_for_part(part, 13)
@@ -1878,6 +1442,8 @@ class PropertyCollection():
       note:
          this method merely returns the maximum value recorded in the xml for the property, it does not check
          the array data
+
+      :meta common:
       """
 
       return self.element_for_part(part, 14)
@@ -1891,6 +1457,8 @@ class PropertyCollection():
 
       returns:
          resqml units of measure (string) for this part
+
+      :meta common:
       """
 
       # NB: this field is not set correctly in data sets generated by DGI
@@ -1933,13 +1501,19 @@ class PropertyCollection():
 
 
    def part_is_categorical(self, part):
-      """Returns True if the property is categorical (not conintuous and has an associated string lookup)."""
+      """Returns True if the property is categorical (not conintuous and has an associated string lookup).
+
+      :meta common:
+      """
 
       return not self.continuous_for_part(part) and self.string_lookup_uuid_for_part(part) is not None
 
 
    def constant_value_for_part(self, part):
-      """Returns the value (float or int) of a constant array part, or None for an hdf5 array."""
+      """Returns the value (float or int) of a constant array part, or None for an hdf5 array.
+
+      :meta common:
+      """
 
       return self.element_for_part(part, 20)
 
@@ -2070,7 +1644,10 @@ class PropertyCollection():
 
 
    def has_multiple_realizations(self):
-      """Returns the has multiple realizations flag based on whether properties belong to more than one realization."""
+      """Returns the has multiple realizations flag based on whether properties belong to more than one realization.
+
+      :meta common:
+      """
 
       if self.has_multiple_realizations_flag is None:
          self.establish_has_multiple_realizations()
@@ -2194,6 +1771,8 @@ class PropertyCollection():
          'cells' for grid objects); if exclude_null is set True then null value elements will also be masked out
          (as long as masked is True); however, it is recommended simply to use np.NaN values in floating point
          property arrays if the commonality is not needed
+
+      :meta common:
       """
 
       model = self.model
@@ -2389,6 +1968,8 @@ class PropertyCollection():
          if fill_missing is False, the realization axis indices range from zero to the number of realizations present;
          if True, the realization axis indices range from zero to the maximum realization number and slices for missing
          realizations will be filled with the fill_value
+
+      :meta common:
       """
 
       assert self.support is not None, 'attempt to build realizations array for property collection without supporting representation'
@@ -2458,6 +2039,8 @@ class PropertyCollection():
          with the list of tine index values available by calling the method time_index_list(sort_list = True);
          if fill_missing is True, the time axis indices range from zero to the maximum time index and slices for
          missing time indices will be filled with the fill_value
+
+      :meta common:
       """
 
       assert self.support is not None, 'attempt to build time series array for property collection without supporting representation'
@@ -2728,6 +2311,8 @@ class PropertyCollection():
          3. write imported list arrays to hdf5 file
          4. create resqml xml nodes for imported list arrays and add as parts to model
          5. include newly added parts in collection
+
+      :meta common:
       """
 
       assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
@@ -2780,7 +2365,10 @@ class PropertyCollection():
 
 
    def write_hdf5_for_imported_list(self, file_name = None, mode = 'a'):
-      """Create or append to an hdf5 file, writing datasets for the imported arrays."""
+      """Create or append to an hdf5 file, writing datasets for the imported arrays.
+
+      :meta common:
+      """
 
       # NB: imported array data must all have been cached prior to calling this function
       assert self.imported_list is not None
@@ -2838,6 +2426,8 @@ class PropertyCollection():
          when importing categorical properties, establish the xml for the string table lookup before calling this method;
          if importing properties of a bespoke (local) property kind, ensure the property kind objects exist as parts in
          the model before calling this method
+
+      :meta common:
       """
 
       if self.imported_list is None: return []
@@ -3249,6 +2839,8 @@ class PropertyCollection():
       note:
          if generating a K permeability array, the data is appended to the hdf5 file and the xml is created, however
          the epc re-write must be carried out by the calling code
+
+      :meta common:
       """
 
       ntg_part = poro_part = perm_i_part = perm_j_part = perm_k_part = None
@@ -3382,6 +2974,8 @@ class PropertyCollection():
 
       note:
          see basic_static_property_parts() method for argument documentation
+
+      :meta common:
       """
 
       five_parts = self.basic_static_property_parts(realization = realization, share_perm_parts = share_perm_parts,
@@ -3431,6 +3025,8 @@ class GridPropertyCollection(PropertyCollection):
          usually a grid should be passed, however a completely blank collection may be created prior to using
          collection inheritance methods to populate from another collection, in which case the grid can be lazily left
          as None here
+
+      :meta common:
       """
 
       if grid is not None:
@@ -4371,6 +3967,8 @@ class StringLookup():
 
       returns:
          the new StringLookup object
+
+      :meta common:
       """
 
       self.model = parent_model
@@ -4455,7 +4053,10 @@ class StringLookup():
 
 
    def get_string(self, key):
-      """Returns the string associated with the integer key, or None if not found."""
+      """Returns the string associated with the integer key, or None if not found.
+
+      :meta common:
+      """
 
       if key < self.min_index or key > self.max_index: return None
       if self.stored_as_list: return self.str_list[key]
@@ -4464,21 +4065,30 @@ class StringLookup():
 
 
    def get_list(self):
-      """Returns a list of values, sorted by key."""
+      """Returns a list of values, sorted by key.
+
+      :meta common:
+      """
 
       if self.stored_as_list: return self.str_list
       return list(dict(sorted(list(self.str_dict.items()))).values())
 
 
    def length(self):
-      """Returns the nominal length of the lookup table."""
+      """Returns the nominal length of the lookup table.
+
+      :meta common:
+      """
 
       if self.stored_as_list: return len(self.str_list)
       return len(self.str_dict)
 
 
    def get_index_for_string(self, string):
-      """Returns the integer key for the given string (exact match required), or None if not found."""
+      """Returns the integer key for the given string (exact match required), or None if not found.
+
+      :meta common:
+      """
 
       if self.stored_as_list:
          try:
@@ -4493,7 +4103,8 @@ class StringLookup():
 
 
    def append_extra_metadata(self, meta_dict):
-      """Append a given dictionary of metadata to the existing metadata"""
+      """Append a given dictionary of metadata to the existing metadata."""
+
       if self.extra_metadata is None: self.extra_metadata = {}
       for key in meta_dict:
          self.extra_metadata[key] = meta_dict[key]
@@ -4506,6 +4117,8 @@ class StringLookup():
          title (string, optional): if present, overrides the object's title attribute to be used as citation title
          originator (string, optional): if present, used as the citation creator (otherwise login name is used)
          add_as_part (boolean, default True): if True, the property set is added to the model as a part
+
+      :meta common:
       """
 
       sl_node = self.model.new_obj_node('StringTableLookup')
@@ -4690,6 +4303,479 @@ class WellIntervalPropertyCollection(PropertyCollection):
          data[col_name] = values
       df = pd.DataFrame(data=data, index=cell_indices)
       return df
+
+
+
+def same_property_kind(pk_a, pk_b):
+   """Returns True if the two property kinds are the same, or pseudonyms."""
+
+   if pk_a is None or pk_b is None: return False
+   if pk_a == pk_b: return True
+   if pk_a in ['permeability rock', 'rock permeability'] and pk_b in ['permeability rock', 'rock permeability']: return True
+   return False
+
+
+def create_transmisibility_multiplier_property_kind(model):
+   """Create a local property kind 'transmisibility multiplier' for a given model
+
+   argument:
+      model: resqml model object
+
+   returns:
+      property kind uuid
+   """
+   log.debug("Making a new property kind 'Transmissibility multiplier'")
+   tmult_kind = PropertyKind(parent_model=model,title='transmissibility multiplier',parent_property_kind='continuous')
+   tmult_kind.create_xml()
+   tmult_kind_uuid = tmult_kind.uuid
+   model.store_epc()
+   return tmult_kind_uuid
+
+
+def property_kind_and_facet_from_keyword(keyword):
+   """If keyword is recognised, returns equivalent resqml PropertyKind and Facet info.
+
+   argument:
+      keyword (string): Nexus grid property keyword
+
+   returns:
+      (property_kind, facet_type, facet) as defined in resqml standard; some or all may be None
+
+   note:
+      this function may now return the local property kind 'transmissibility multiplier'; calling code must ensure that
+      the local property kind object is created if not already present
+   """
+
+   # note: this code doesn't cater for a property having more than one facet, eg. direction and phase
+
+   def facet_info_for_dir_ch(dir_ch):
+      facet_type = None
+      facet = None
+      if dir_ch in ['i', 'j', 'k', 'x', 'y', 'z']:
+         facet_type = 'direction'
+         if dir_ch in ['i', 'x']: facet = 'I'
+         elif dir_ch in ['j', 'y']: facet = 'J'
+         else: facet = 'K'
+         # NB: resqml also allows for combinations, eg. IJ, IJK
+      return (facet_type, facet)
+
+   # note: 'what' facet_type for made-up uses might be better changed to the generic 'qualifier' facet type
+
+   property_kind = None
+   facet_type = None
+   facet = None
+   lk = keyword.lower()
+   if lk in ['bv', 'brv']:                                     # bulk rock volume
+      property_kind = 'rock volume'
+      facet_type = 'netgross'
+      facet = 'gross'   # todo: check this is the facet in xsd
+   elif lk in ['pv', 'pvr', 'porv']: property_kind = 'pore volume'     # pore volume
+   elif lk in ['mdep', 'depth', 'tops', 'mids']:
+      property_kind = 'depth'                                  # depth (nexus) and tops mean top depth
+      facet_type = 'what'                                      # this might need to be something different
+      if lk in ['mdep', 'mids']: facet = 'cell centre'
+      else: facet = 'cell top'
+   elif lk in ['ntg', 'netgrs']: property_kind = 'net to gross ratio'  # net-to-gross
+   elif lk in ['netv', 'nrv']:                                         # net volume
+      property_kind = 'rock volume'
+      facet_type = 'netgross'
+      facet = 'net'
+   elif lk in ['dzc', 'dzn', 'dz', 'dznet']:
+      property_kind = 'thickness'                              # or should these keywords use cell length in K direction?
+      facet_type = 'netgross'
+      if lk.startswith('dzn'): facet = 'net'
+      else: facet = 'gross'
+   elif lk in ['dxc', 'dyc', 'dx', 'dy']:
+      property_kind = 'cell length'
+      (facet_type, facet) = facet_info_for_dir_ch(lk[1])
+   elif len(lk) > 2 and lk[0] == 'd' and lk[1] in 'xyz':
+      property_kind = 'length'
+      facet_type = 'direction'
+      facet = lk[1].upper()                                    # keep as 'X', 'Y' or 'Z'
+   elif lk in ['por', 'poro', 'porosity']: property_kind = 'porosity'   # porosity
+   elif lk == 'kh': property_kind = 'permeability thickness'   # K.H (not horizontal permeability)
+   elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):   # permeability
+      property_kind = 'permeability rock'
+      (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
+   elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
+      property_kind = 'transmissibility'
+      (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
+   elif lk in ['p', 'pressure']: property_kind = 'pressure'    # pressure; todo: phase pressures
+   elif lk in ['sw', 'so', 'sg', 'satw', 'sato', 'satg', 'soil']:       # saturations
+      property_kind = 'saturation'
+      facet_type = 'what'                                      # todo: check use of 'what' for phase
+      if lk in ['sw', 'satw', 'swat']: facet = 'water'
+      elif lk in ['so', 'sato', 'soil']: facet = 'oil'
+      elif lk in ['sg', 'satg', 'sgas']: facet = 'gas'
+   elif lk in ['swl', 'swr', 'sgl', 'sgr', 'swro', 'sgro', 'sor', 'swu', 'sgu']:  # nexus saturation end points
+      property_kind = 'saturation'
+      facet_type = 'what'                                      # note: use of 'what' for phase is a guess
+      if lk[1] == 'w': facet = 'water'
+      elif lk[1] == 'g': facet = 'gas'
+      elif lk[1] == 'o': facet = 'oil'
+      if lk[-1] == 'l': facet += ' minimum'
+      elif lk[-1] == 'u': facet += ' maximum'
+      elif lk[2:] == 'ro': facet += ' residual to oil'
+      elif lk[-1] == 'r': facet += ' residual'
+      else: assert False, 'problem deciphering saturation end point keyword: ' + lk
+#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
+   elif lk in ['wip', 'oip', 'gip', 'mobw', 'mobo', 'mobg', 'ocip']:  # todo: check these, especially ocip
+      property_kind = 'fluid volume'
+      facet_type = 'what'                                      # todo: check use of 'what' for phase
+      if lk in ['wip', 'mobw']: facet = 'water'                # todo: add another facet indicating mobile volume
+      elif lk in ['oip', 'mobo']: facet = 'oil'
+      elif lk in ['gip', 'mobg']: facet = 'gas'
+      elif lk == 'ocip': facet = 'oil condensate'              # todo: this seems unlikely: check
+      if lk[:3] == 'mob': facet += ' (mobile)'
+   elif lk in ['tmx', 'tmy', 'tmz', 'tmflx', 'tmfly', 'tmflz', 'multx', 'multy', 'multz']:
+      property_kind = 'transmissibility multiplier'            # NB: resqpy local property kind
+      facet_type = 'direction'
+      _, facet =  facet_info_for_dir_ch(lk[-1])
+   elif lk in ['multbv', 'multpv']:
+      property_kind = 'property multiplier'
+      facet_type = 'what'                                      # here 'what' facet indicates property affected
+      if lk == 'multbv': facet = 'rock volume'                 # NB: making this up as I go along
+      elif lk == 'multpv': facet = 'pore volume'
+   elif lk == 'rs': property_kind = 'solution gas-oil ratio'
+   elif lk == 'rv': property_kind = 'vapor oil-gas ratio'
+   elif lk in ['temp', 'temperature']: property_kind = 'thermodynamic temperature'
+   elif lk in ['dad', 'kid', 'unpack', 'deadcell', 'inactive']:
+      property_kind = 'code'
+      facet_type = 'what'
+      # todo: kid can only be used as an inactive cell indication for the root grid
+      if lk in ['kid', 'deadcell', 'inactive']: facet = 'inactive'  # standize on 'inactive' to indicate use as mask
+      else: facet = lk                                         # note: use deadcell or unpack for inactive, if nothing better?
+   elif lk == 'livecell' or lk.startswith('act'):
+      property_kind = 'active'                       # local property kind, see RESQML (2.0.1) usage guide, section 11.17
+#      property_kind = 'code'
+#      facet_type = 'what'
+#      facet = 'active'
+   elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
+      property_kind = 'region initialization'        # local property kind, see RESQML (2.0.1) usage guide, section 11.18
+   elif lk == 'uid':
+      property_kind = 'index'
+      facet_type = 'what'
+      facet = 'uid'
+   return (property_kind, facet_type, facet)
+
+
+@lru_cache(maxsize=32)
+def validate_uom_from_string(input_unit, case_sensitive=True):
+   """Returns a valid RESQML unit from a string
+
+   If no matching valid uom is found, return 'Euc'.
+   """
+   default = 'Euc'
+   if not input_unit:
+      return default
+
+   # Get set of all valid uoms
+   valid_uoms = set(bwam.properties_data()['uoms'])
+
+   if case_sensitive:
+      if input_unit in valid_uoms:
+         return input_unit
+      else:
+         return default
+
+   else:
+      # Dict mapping from lowercase unit to real unit
+      unit_dict = {u.casefold(): u for u in valid_uoms}
+      input_unit_lowercase = input_unit.casefold()
+
+      if input_unit_lowercase in unit_dict.keys():
+         return unit_dict[input_unit_lowercase]
+      else:
+         return default
+
+
+def infer_property_kind(name, unit):
+   """ Guess a valid property kind """
+
+   # Currently unit is ignored
+
+   valid_kinds = bwam.properties_data()['property_kinds']
+
+   if name in valid_kinds:
+      kind = name
+   else:
+      # TODO: use an appropriate default
+      kind = 'Unknown'
+
+   # TODO: determine facet_type and facet somehow
+   facet_type = None
+   facet = None
+
+   return kind, facet_type, facet
+
+
+def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet = None):
+   """Returns a guess at the units of measure for the given kind of property.
+
+   arguments:
+      property_kind (string): a valid resqml property kind, lowercase
+      minimum: the minimum value in the data for which the units are being guessed
+      maximum: the maximum value in the data for which the units are being guessed
+      support: the grid.Grid or well.WellboreFrame object which the property data relates to
+      facet_type (string, optional): a valid resqml facet type, lowercase, one of:
+              'direction', 'what', 'netgross', 'qualifier', 'conditions', 'statistics'
+      facet: (string, present if facet_type is present): the value relating to the facet_type,
+               eg. 'I' for direction, or 'oil' for 'what'
+
+   returns:
+      a valid resqml unit of measure (uom) for the property_kind, or None
+
+   note:
+      the resqml standard allows a property to have any number of facets; however,
+      this module currently only supports zero or one facet per property
+   """
+
+   def crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and feet for z
+      if crs_node is None: return None
+      xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
+      z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+      if xy_units == 'm' and z_units == 'm': return 'm'
+      if xy_units == 'ft' and z_units == 'ft': return 'ft'
+      return None
+
+   if support is None or not hasattr(support, 'extract_crs_root'): crs_node = None
+   else: crs_node = support.extract_crs_root()
+   from_crs = crs_m_or_ft(crs_node)
+
+   if property_kind in ['rock volume', 'pore volume', 'volume']:
+      if from_crs is None: return None
+      return from_crs + '3'  # ie. m3 or ft3
+   if property_kind == 'depth':
+      if crs_node is None: return None
+      return rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+   if property_kind == 'cell length':               # todo: pass in direction facet to pick up xy_units or z_units
+      return from_crs
+   if property_kind in ['net to gross ratio', 'porosity', 'saturation']:
+      if maximum is not None and str(maximum) != 'unknown':
+         max_real = float(maximum)
+         if max_real > 1.0 and max_real <= 100.0: return '%'
+         if max_real < 0.0 or max_real > 1.0: return None
+      if from_crs == 'm': return 'm3/m3'
+      if from_crs == 'ft': return 'ft3/ft3'
+      return 'Euc'
+   if property_kind == 'permeability rock' or property_kind == 'rock permeability': return 'mD'
+   if property_kind == 'permeability thickness':
+      z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+      if z_units == 'm': return 'mD.m'
+      if z_units == 'ft': return 'mD.ft'
+      return None
+   if property_kind == 'permeability length':
+      xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
+      if xy_units == 'm': return 'mD.m'
+      if xy_units == 'ft': return 'mD.ft'
+      return None
+   if property_kind == 'fluid volume':
+      if from_crs == 'm': return 'm3'
+      if from_crs == 'ft':
+         if facet_type == 'what' and facet == 'gas': return '1000 ft3'  # todo: check units output by nexus for GIP
+         else: return 'bbl'                         # todo: check whether nexus uses 10^3 or 10^6 units
+      return None
+   if property_kind.endswith('transmissibility'):   # note: RESQML QuantityClass only includes a unit-viscosity VolumePerTimePerPressureUom
+      if from_crs == 'm': return 'm3.cP/(kPa.d)'    # NB: might actually be m3/(psi.d) or m3/(bar.d)
+      if from_crs == 'ft': return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
+      return None
+   if property_kind == 'pressure':
+      if from_crs == 'm': return 'kPa'              # NB: might actually be psi or bar
+      if from_crs == 'ft': return 'psi'
+      if maximum is not None:
+         max_real = float(maximum)
+         if max_real == 0.0: return None
+         if max_real > 10000.0: return 'kPa'
+         if max_real < 500.0: return 'bar'
+         if max_real < 5000.0: return 'psi'
+      return None
+   if property_kind == 'solution gas-oil ratio':
+      if from_crs == 'm': return 'm3/m3'            # NB: might actually be psi or bar
+      if from_crs == 'ft': return '1000 ft3/bbl'
+      return None
+   if property_kind == 'vapor oil-gas ratio':
+      if from_crs == 'm': return 'm3/m3'            # NB: might actually be psi or bar
+      if from_crs == 'ft': return '0.001 bbl/ft3'
+      return None
+   if property_kind.endswith('multiplier'): return 'Euc'
+   # todo: 'degC' or 'degF' for thermodynamic temperature
+   return None
+
+
+def selective_version_of_collection(collection,
+                                    realization = None,
+                                    support_uuid = None,
+                                    grid = None,       # for backward compatibility
+                                    uuid = None,
+                                    continuous = None,
+                                    count = None,
+                                    indexable = None,
+                                    property_kind = None,
+                                    facet_type = None, facet = None,
+                                    citation_title = None,
+                                    time_series_uuid = None, time_index = None,
+                                    uom = None,
+                                    string_lookup_uuid = None,
+                                    categorical = None):
+   """Returns a new PropertyCollection with those parts which match all arguments that are not None.
+
+   arguments:
+      collection: an existing PropertyCollection from which a subset will be returned as a new object;
+                  the existing collection might often be the 'main' collection holding all the properties
+                  for a supporting representation (grid or wellbore frame)
+
+   Other optional arguments:
+   realization, support_uuid, grid, uuid, continuous, count, indexable, property_kind, facet_type, facet, citation_title,
+   time_series_uuid, time_index, uom, string_lookup_uuid, categorical:
+
+   for each of these arguments: if None, then all members of collection pass this filter;
+   if not None then only those members with the given value pass this filter;
+   finally, the filters for all the attributes must be passed for a given member
+   to be included in the returned collection.
+
+   returns:
+      a new PropertyCollection containing those properties which match the filter parameters that are not None
+
+   note:
+      the grid keyword argument is maintained for backward compatibility: support_uuid argument takes precedence;
+      the categorical boolean argument can be used to select only
+      categorical (or non-categorical) properties, even though this is not explicitly held as a field in the
+      internal dictionary
+   """
+
+   assert collection is not None
+   view = PropertyCollection()
+   if support_uuid is None and grid is not None: support_uuid = grid.uuid
+   if support_uuid is not None: view.set_support(support_uuid = support_uuid)
+   if realization is not None: view.set_realization(realization)
+   view.inherit_parts_selectively_from_other_collection(collection,
+                                                        realization = realization,
+                                                        support_uuid = support_uuid,
+                                                        uuid = uuid,
+                                                        continuous = continuous,
+                                                        count = count,
+                                                        indexable = indexable,
+                                                        property_kind = property_kind,
+                                                        facet_type = facet_type, facet = facet,
+                                                        citation_title = citation_title,
+                                                        time_series_uuid = time_series_uuid, time_index = time_index,
+                                                        uom = uom,
+                                                        string_lookup_uuid = string_lookup_uuid,
+                                                        categorical = categorical)
+   return view
+
+
+def property_over_time_series_from_collection(collection, example_part):
+   """Returns a new PropertyCollection with parts like the example part, over all indices in its time series.
+
+   arguments:
+      collection: an existing PropertyCollection from which a subset will be returned as a new object;
+                  the existing collection might often be the 'main' collection holding all the properties
+                  for a grid
+      example_part (string): the part name of an example member of collection (which has an associated time_series)
+
+   returns:
+      a new PropertyCollection containing those memners of collection which have the same property kind
+      (and facet, if any) as the example part and which have the same associated time series
+   """
+
+   assert collection is not None and example_part is not None
+   assert collection.part_in_collection(example_part)
+   view = PropertyCollection()
+   if collection.support_uuid is not None: view.set_support(support_uuid = collection.support_uuid)
+   if collection.realization is not None: view.set_realization(collection.realization)
+   view.inherit_similar_parts_for_time_series_from_other_collection(collection, example_part)
+   return view
+
+
+def property_collection_for_keyword(collection, keyword):
+   """Returns a new PropertyCollection with parts that match the property kind and facet deduced for the keyword.
+
+   arguments:
+      collection: an existing PropertyCollection from which a subset will be returned as a new object;
+                  the existing collection might often be the 'main' collection holding all the properties
+                  for a supporting representation (grid or wellbore frame)
+      keyword (string): a simulator keyword for which the property kind (and facet, if any) can be deduced
+
+   returns:
+      a new PropertyCollection containing those memners of collection which have the property kind
+      (and facet, if any) as that deduced for the keyword
+
+   note:
+      this function is particularly relevant to grid property collections for simulation models;
+      the handling of simulator keywords in this module is based on the main grid property keywords
+      for Nexus; if the resqml dataset was generated from simulator data using this module then
+      the result of this function should be reliable; resqml data sets from other sources might use facets
+      if a different way, leading to an omission in the results of this function
+   """
+
+   assert collection is not None and keyword
+   (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(keyword)
+   if property_kind is None:
+      log.warning('failed to deduce property kind for keyword: ' + keyword)
+      return None
+   return selective_version_of_collection(collection, property_kind = property_kind, facet_type = facet_type, facet = facet)
+
+
+def reformat_column_edges_to_resqml_format(array):
+   """Converts an array of shape (nj,ni,2,2) to shape (nj,ni,4) in RESQML edge ordering"""
+   newarray = np.empty((array.shape[0],array.shape[1],4))
+   newarray[:,:,0] = array[:,:,1,0]
+   newarray[:,:,1] = array[:,:,0,1]
+   newarray[:,:,2] = array[:,:,1,1]
+   newarray[:,:,3] = array[:,:,0,0]
+   return newarray
+
+
+def reformat_column_edges_from_resqml_format(array):
+   """Converts an array of shape (nj,ni,4) in RESQML edge ordering to shape (nj,ni,2,2)"""
+   newarray = np.empty((array.shape[0],array.shape[1],2,2))
+   newarray[:,:,0,0] = array[:,:,3]
+   newarray[:,:,0,1] = array[:,:,1]
+   newarray[:,:,1,0] = array[:,:,0]
+   newarray[:,:,1,1] = array[:,:,2]
+   return newarray
+
+
+# 'private' functions returning attribute name for cached version of property array
+# I find the leading underscore so ugly, I can't bring myself to use it for 'private' functions, even though many people do
+
+def _cache_name_for_uuid(uuid):
+   """
+      Returns the attribute name used for the cached copy of the property array for the given uuid.
+
+      :meta private:
+   """
+
+   return 'c_' + bu.string_from_uuid(uuid)
+
+def _cache_name(part):
+   """
+      Returns the attribute name used for the cached copy of the property array for the given part.
+
+      :meta private:
+   """
+
+   if part is None: return None
+   uuid = rqet.uuid_in_part_name(part)
+   if uuid is None: return None
+   return _cache_name_for_uuid(uuid)
+
+def dtype_flavour(continuous, use_32_bit):
+   """
+      Returns the numpy elemental data type depending on the two boolean flags.
+
+      :meta private:
+   """
+
+   if continuous:
+      if use_32_bit: dtype = np.float32
+      else: dtype = np.float64
+   else:
+      if use_32_bit: dtype = np.int32
+      else: dtype = np.int64
+   return dtype
+
 
 def return_cell_indices(i,cell_indices):
     if i == -1: return np.nan

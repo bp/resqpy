@@ -1,6 +1,6 @@
 """crs.py: RESQML coordinate reference system module."""
 
-version = '29th April 2021'
+version = '10th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -26,7 +26,10 @@ class Crs():
                 rotation = 0.0, xy_units = 'm', z_units = 'm',
                 z_inc_down = True, axis_order = 'easting northing',
                 time_units = None, epsg_code = None):
-      """Create a new coordinate reference system object."""
+      """Create a new coordinate reference system object.
+
+      :meta common:
+      """
 
       self.model = parent_model
       self.crs_root = None
@@ -106,6 +109,7 @@ class Crs():
 
    def global_to_local(self, xyz, global_z_inc_down = True):
       """Convert a single xyz point from the parent coordinate reference system to this one."""
+
       x, y, z = xyz
       if self.x_offset != 0.0: x -= self.x_offset
       if self.y_offset != 0.0: y -= self.y_offset
@@ -118,6 +122,7 @@ class Crs():
 
    def global_to_local_array(self, xyz, global_z_inc_down = True):
       """Convert in situ a numpy array of xyz points from the parent coordinate reference system to this one."""
+
       if self.x_offset != 0.0: xyz[..., 0] -= self.x_offset
       if self.y_offset != 0.0: xyz[..., 1] -= self.y_offset
       if global_z_inc_down != self.z_inc_down:
@@ -131,6 +136,7 @@ class Crs():
 
    def local_to_global(self, xyz, global_z_inc_down = True):
       """Convert a single xyz point from this coordinate reference system to the parent one."""
+
       if self.rotated:
          (x, y, z) = vec.rotate_vector(self.reverse_rotation_matrix, np.array(xyz))
       else:
@@ -144,6 +150,7 @@ class Crs():
 
    def local_to_global_array(self, xyz, global_z_inc_down = True):
       """Convert in situ a numpy array of xyz points from this coordinate reference system to the parent one."""
+
       if self.rotated:
          a = vec.rotate_array(self.reverse_rotation_matrix, xyz)
          xyz[:] = a
@@ -191,7 +198,11 @@ class Crs():
 
 
    def convert_to(self, other_crs, xyz):
-      """Converts a single xyz point from this coordinate reference system to the other."""
+      """Converts a single xyz point from this coordinate reference system to the other.
+
+      :meta common:
+      """
+
       if self is other_crs: return tuple(xyz)
       assert self.has_same_epsg_code(other_crs)
       xyz = self.local_to_global(xyz)
@@ -203,7 +214,11 @@ class Crs():
 
 
    def convert_array_to(self, other_crs, xyz):
-      """Converts in situ a numpy array of xyz points from this coordinate reference system to the other."""
+      """Converts in situ a numpy array of xyz points from this coordinate reference system to the other.
+
+      :meta common:
+      """
+
       if self.is_equivalent(other_crs): return
       assert self.has_same_epsg_code(other_crs)
       self.local_to_global_array(xyz)
@@ -217,7 +232,11 @@ class Crs():
 
 
    def convert_from(self, other_crs, xyz):
-      """Converts a single xyz point from the other coordinate reference system to this one."""
+      """Converts a single xyz point from the other coordinate reference system to this one.
+
+      :meta common:
+      """
+
       if self is other_crs: return tuple(xyz)
       assert self.has_same_epsg_code(other_crs)
       xyz = other_crs.local_to_global(xyz)
@@ -229,7 +248,11 @@ class Crs():
 
 
    def convert_array_from(self, other_crs, xyz):
-      """Converts in situ a numpy array of xyz points from the other coordinate reference system to this one."""
+      """Converts in situ a numpy array of xyz points from the other coordinate reference system to this one.
+
+      :meta common:
+      """
+
       if self.is_equivalent(other_crs): return
       assert self.has_same_epsg_code(other_crs)
       other_crs.local_to_global_array(xyz)
@@ -245,17 +268,19 @@ class Crs():
    def create_xml(self, add_as_part = True, root = None, title = 'Coordinate Reference System', originator = None):
       """Creates a Coordinate Reference System xml node and optionally adds as child of root and/or to parts forest.
 
-         arguments:
-            add_as_part (boolean, default True): if True the newly created crs node is added to the model
-               as a part
-            root (optional, usually None): if not None, the newly created crs node is appended as a child
-               of this node
-            title (string): used as the Title text in the citation node
-            originator (string, optional): the name of the human being who created the crs object;
-               default is to use the login name
+      arguments:
+         add_as_part (boolean, default True): if True the newly created crs node is added to the model
+            as a part
+         root (optional, usually None): if not None, the newly created crs node is appended as a child
+            of this node
+         title (string): used as the Title text in the citation node
+         originator (string, optional): the name of the human being who created the crs object;
+            default is to use the login name
 
-         returns:
-            newly created coordinate reference system xml node
+      returns:
+         newly created coordinate reference system xml node
+
+      :meta common:
       """
 
       # note: This function aims to create a crs node compatible with those generated by fesapi
@@ -337,4 +362,3 @@ class Crs():
       if self.model.crs_root is None: self.model.crs_root = crs
 
       return crs
-

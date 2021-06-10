@@ -316,6 +316,8 @@ class Model():
          'exception' causes a ValueError exception to be raised; 'none' causes None to be returned; 'first' causes the
          first part (as stored in the epc file or added) to be returned; 'oldest' causes the part with the oldest
          creation timestamp in the citation block to be returned; 'newest' causes the newest part to be returned
+
+      :meta common:
       """
 
       pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
@@ -343,6 +345,8 @@ class Model():
 
       returns:
          list of uuids, or None if no parts match criteria
+
+      :meta common:
       """
 
       sort_by_uuid = (sort_by == 'uuid')
@@ -368,6 +372,8 @@ class Model():
 
       returns:
          uuid of the single part matching all of the criteria, or None
+
+      :meta common:
       """
 
       part = self.part(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
@@ -388,6 +394,8 @@ class Model():
 
       returns:
          list of lxml.etree.Element objects, or None if no parts match criteria
+
+      :meta common:
       """
 
       pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
@@ -411,6 +419,8 @@ class Model():
 
       returns:
          lxml.etree.Element object being the root node of the xml for the single part matching all of the criteria, or None
+
+      :meta common:
       """
 
       part = self.part(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
@@ -431,6 +441,8 @@ class Model():
 
       returns:
          list of strings being the citation titles of matching parts, or None if no parts match criteria
+
+      :meta common:
       """
 
       pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
@@ -455,6 +467,8 @@ class Model():
 
       returns:
          string being the citation title of the single part matching all of the criteria, or None
+
+      :meta common:
       """
 
       part = self.part(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
@@ -662,8 +676,6 @@ class Model():
       Note:
          when copy_from is specified, the entire contents of the source dataset are copied,
          regardless of the epc_subdir setting which only affects the subsequent load into memory
-
-      :meta common:
       """
 
       def exclude(name, epc_subdir):
@@ -867,6 +879,8 @@ class Model():
 
       returns:
          a string being the part name which matches the uuid, or None if not found
+
+      :meta common:
       """
 
       if uuid is None: return None
@@ -883,6 +897,8 @@ class Model():
 
       returns:
          the xml root node for the part with the given uuid, or None if not found
+
+      :meta common:
       """
 
       return self.root_for_part(self.part_for_uuid(uuid))
@@ -1055,6 +1071,8 @@ class Model():
 
       returns:
          uuid.UUID for the specified part
+
+      :meta common:
       """
 
       if part_name is None: return None
@@ -1073,6 +1091,8 @@ class Model():
 
       returns:
          string being the type (resqml object class) for the named part
+
+      :meta common:
       """
 
       if part_name not in self.parts_forest: return None
@@ -1132,6 +1152,8 @@ class Model():
 
       returns:
          root node of the parsed xml tree (defined in lxml or ElementTree package) for the named part
+
+      :meta common:
       """
 
       if not part_name: return None
@@ -1309,7 +1331,10 @@ class Model():
 
 
    def citation_title_for_part(self, part):  # duplicate functionality to title_for_part()
-      """Returns the citation title for the specified part."""
+      """Returns the citation title for the specified part.
+
+      :meta common:
+      """
 
       return rqet.citation_title_for_node(self.root_for_part(part))
 
@@ -2108,6 +2133,8 @@ class Model():
       returns:
          string being the Title text from the citation node which is a child of root,
          or None if not found
+
+      :meta common:
       """
 
       title = rqet.find_tag(rqet.find_tag(root, 'Citation'), 'Title')
@@ -2125,6 +2152,8 @@ class Model():
       returns:
          string being the Title text from the citation node which is a child of the root xml node
          for the part, or None if not found
+
+      :meta common:
       """
 
       return self.title_for_root(self.root_for_part(part_name))
@@ -2139,6 +2168,8 @@ class Model():
 
       returns:
          the newly created Unknown xml node
+
+      :meta common:
       """
 
       unknown = rqet.Element(ns['eml'] + 'Unknown')
@@ -2867,6 +2898,7 @@ class Model():
          traj = resqpy.well.Trajectory(self, trajectory_root=traj_root)
          yield traj
 
+
    def md_datums(self):
       """ Iterable of all MdDatum objects associated with the model
 
@@ -2880,6 +2912,7 @@ class Model():
          datum_root = self.root_for_part(part)
          datum = resqpy.well.MdDatum(self, md_datum_root=datum_root)
          yield datum
+
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
