@@ -1,6 +1,6 @@
 """grid_surface.py: Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '29th April 2021'
+version = '10th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -21,192 +21,8 @@ import resqpy.well as rqw
 
 
 
-def _pl(n, use_es = False):
-   if n == 1: return ''
-   return 'es' if use_es else 's'
-
-
-def generate_untorn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top', quad_triangles = True, border = None):
-   """Returns a Surface object generated from the grid layer interface points after any faults are 'healed'.
-
-   arguments:
-      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
-      k0 (int): the layer number (zero based) to be used
-      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
-         interface of the layer is to be used
-      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
-         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
-      border (float, optional): If given, an extra border row of quadrangles is added around the grid mesh
-
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
-
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      If a border is specified and the outer grid cells have non-parallel edges, the resulting mesh might be
-      messed up.
-   """
-
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
-   kp = 1 if ref_k_faces == 'base' else 0
-   mesh = grid.horizon_points(ref_k0 = k0, heal_faults = True, kp = kp)
-   if border is None or border <= 0.0:
-      surf.set_from_irregular_mesh(mesh, quad_triangles = quad_triangles)
-   else:
-#      origin = np.mean(mesh, axis = (0, 1))
-      skirted_mesh = np.empty((mesh.shape[0] + 2, mesh.shape[1] + 2, 3))
-      skirted_mesh[1:-1, 1:-1, :] = mesh
-      # fill border values (other than corners)
-      for j in range(1, mesh.shape[0] + 1):
-         skirted_mesh[j, 0, :] = skirted_mesh[j, 1]  +  border * vec.unit_vector(skirted_mesh[j, 1] - skirted_mesh[j, 2])
-         skirted_mesh[j, -1, :] = skirted_mesh[j, -2]  +  border * vec.unit_vector(skirted_mesh[j, -2] - skirted_mesh[j, -3])
-      for i in range(1, mesh.shape[1] + 1):
-         skirted_mesh[0, i, :] = skirted_mesh[1, i]  +  border * vec.unit_vector(skirted_mesh[1, i] - skirted_mesh[2, i])
-         skirted_mesh[-1, i, :] = skirted_mesh[-2, i]  +  border * vec.unit_vector(skirted_mesh[-2, i] - skirted_mesh[-3, i])
-      # fill in corner values
-      skirted_mesh[0, 0, :] = skirted_mesh[0, 1]  +  skirted_mesh[1, 0] - skirted_mesh[1, 1]
-      skirted_mesh[0, -1, :] = skirted_mesh[0, -2]  +  skirted_mesh[1, -1] - skirted_mesh[1, -2]
-      skirted_mesh[-1, 0, :] = skirted_mesh[-1, 1]  +  skirted_mesh[-2, 0] - skirted_mesh[-2, 1]
-      skirted_mesh[-1, -1, :] = skirted_mesh[-1, -2]  +  skirted_mesh[-2, -1] - skirted_mesh[-2, -2]
-      surf.set_from_irregular_mesh(skirted_mesh, quad_triangles = quad_triangles)
-
-   return surf
-
-
-
-def generate_torn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top', quad_triangles = True):
-   """Returns a Surface object generated from the grid layer interface points.
-
-   arguments:
-      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
-      k0 (int): the layer number (zero based) to be used
-      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
-         interface of the layer is to be used
-      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
-         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
-
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
-
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
-      surface which are not joined; therefore, if fault tears cut off one area of the surface (eg. a fault running
-      fully across the grid), then more than one patch should be generated; however, at present the code uses a
-      single patch regardless.
-   """
-
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
-   kp = 1 if ref_k_faces == 'base' else 0
-   mesh = grid.split_horizon_points(ref_k0 = k0, kp = kp)
-   surf.set_from_torn_mesh(mesh, quad_triangles = quad_triangles)
-
-   return surf
-
-
-
-def generate_torn_surface_for_x_section(grid, axis, ref_slice0 = 0, plus_face = False,
-                                        quad_triangles = True, as_single_layer = False):
-   """Returns a Surface object generated from the grid cross section points.
-
-   arguments:
-      grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
-      axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-      ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-      plus_face (boolean, default False): if False, negative face is used; if True, positive
-      quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
-         gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
-      as_single_layer (boolean, default False): if True, the top points from the top layer are used together
-         with the basal points from the base layer, to effect a single layer equivalent cross section surface
-
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
-
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
-      surface which are not joined; therefore, a fault running down through the grid should result in separate
-      patches; however, at present the code uses a single patch regardless.
-   """
-
-   assert axis.upper() in ['I', 'J']
-
-   if grid.k_gaps is None or grid.k_gaps == 0:
-      x_sect_points = grid.split_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
-      if as_single_layer:
-         shape = np.array(x_sect_points.shape)
-         shape[0] = 1
-         x_sect_top = x_sect_points[0].reshape(tuple(shape))
-         x_sect_base = x_sect_points[-1].reshape(tuple(shape))
-      else:
-         x_sect_top = x_sect_points[:-1]
-         x_sect_base = x_sect_points[1:]
-      x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis = 2)
-   else:
-      x_sect_mesh = grid.split_gap_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
-
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
-   surf.set_from_torn_mesh(x_sect_mesh, quad_triangles = quad_triangles)
-
-   return surf
-
-
-
-def generate_untorn_surface_for_x_section(grid, axis, ref_slice0 = 0, plus_face = False,
-                                          quad_triangles = True, as_single_layer = False):
-   """Returns a Surface object generated from the grid cross section points for an unfaulted grid.
-
-   arguments:
-      grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
-      axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-      ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-      plus_face (boolean, default False): if False, negative face is used; if True, positive
-      quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
-         gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
-      as_single_layer (boolean, default False): if True, the top points from the top layer are used together
-         with the basal points from the base layer, to effect a single layer equivalent cross section surface
-
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
-
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
-      surface which are not joined; therefore, a fault running down through the grid should result in separate
-      patches; however, at present the code uses a single patch regardless.
-   """
-
-   assert axis.upper() in ['I', 'J']
-
-   x_sect_points = grid.x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
-   if as_single_layer:
-      shape = np.array(x_sect_points.shape)
-      shape[0] = 1
-      x_sect_top = x_sect_points[0]
-      x_sect_base = x_sect_points[-1]
-      x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis = 0)
-   else:
-      x_sect_mesh = x_sect_points
-
-   log.debug(f'x_sect_mesh.shape: {x_sect_mesh.shape}; grid.extent_kji: {grid.extent_kji}')
-
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
-   surf.set_from_irregular_mesh(x_sect_mesh, quad_triangles = quad_triangles)
-
-   return surf
-
-
-
 class GridSkin:
-   """Class of object consisting of outer skin of grid."""
+   """Class of object consisting of outer skin of grid (not a RESQML class in its own right)."""
 
    def __init__(self, grid, quad_triangles = True, use_single_layer_tactics = True):
       """Returns a composite surface object consisting of outer skin of grid."""
@@ -435,6 +251,185 @@ class GridSkin:
       assert len(k_gap_surf_list) == 2 * self.k_gaps
       assert len(self.k_gap_after_layer_list) == self.k_gaps
       return k_gap_surf_list
+
+
+
+def generate_untorn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top', quad_triangles = True, border = None):
+   """Returns a Surface object generated from the grid layer interface points after any faults are 'healed'.
+
+   arguments:
+      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
+      k0 (int): the layer number (zero based) to be used
+      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
+         interface of the layer is to be used
+      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
+         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+         the face; if False, only 2 triangles are used, which gives a non-unique solution
+      border (float, optional): If given, an extra border row of quadrangles is added around the grid mesh
+
+   returns:
+      a resqml_surface.Surface object with a single triangulated patch
+
+   notes:
+      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+      written.
+      If a border is specified and the outer grid cells have non-parallel edges, the resulting mesh might be
+      messed up.
+   """
+
+   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   kp = 1 if ref_k_faces == 'base' else 0
+   mesh = grid.horizon_points(ref_k0 = k0, heal_faults = True, kp = kp)
+   if border is None or border <= 0.0:
+      surf.set_from_irregular_mesh(mesh, quad_triangles = quad_triangles)
+   else:
+#      origin = np.mean(mesh, axis = (0, 1))
+      skirted_mesh = np.empty((mesh.shape[0] + 2, mesh.shape[1] + 2, 3))
+      skirted_mesh[1:-1, 1:-1, :] = mesh
+      # fill border values (other than corners)
+      for j in range(1, mesh.shape[0] + 1):
+         skirted_mesh[j, 0, :] = skirted_mesh[j, 1]  +  border * vec.unit_vector(skirted_mesh[j, 1] - skirted_mesh[j, 2])
+         skirted_mesh[j, -1, :] = skirted_mesh[j, -2]  +  border * vec.unit_vector(skirted_mesh[j, -2] - skirted_mesh[j, -3])
+      for i in range(1, mesh.shape[1] + 1):
+         skirted_mesh[0, i, :] = skirted_mesh[1, i]  +  border * vec.unit_vector(skirted_mesh[1, i] - skirted_mesh[2, i])
+         skirted_mesh[-1, i, :] = skirted_mesh[-2, i]  +  border * vec.unit_vector(skirted_mesh[-2, i] - skirted_mesh[-3, i])
+      # fill in corner values
+      skirted_mesh[0, 0, :] = skirted_mesh[0, 1]  +  skirted_mesh[1, 0] - skirted_mesh[1, 1]
+      skirted_mesh[0, -1, :] = skirted_mesh[0, -2]  +  skirted_mesh[1, -1] - skirted_mesh[1, -2]
+      skirted_mesh[-1, 0, :] = skirted_mesh[-1, 1]  +  skirted_mesh[-2, 0] - skirted_mesh[-2, 1]
+      skirted_mesh[-1, -1, :] = skirted_mesh[-1, -2]  +  skirted_mesh[-2, -1] - skirted_mesh[-2, -2]
+      surf.set_from_irregular_mesh(skirted_mesh, quad_triangles = quad_triangles)
+
+   return surf
+
+
+
+def generate_torn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top', quad_triangles = True):
+   """Returns a Surface object generated from the grid layer interface points.
+
+   arguments:
+      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
+      k0 (int): the layer number (zero based) to be used
+      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
+         interface of the layer is to be used
+      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
+         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+         the face; if False, only 2 triangles are used, which gives a non-unique solution
+
+   returns:
+      a resqml_surface.Surface object with a single triangulated patch
+
+   notes:
+      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+      written.
+      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
+      surface which are not joined; therefore, if fault tears cut off one area of the surface (eg. a fault running
+      fully across the grid), then more than one patch should be generated; however, at present the code uses a
+      single patch regardless.
+   """
+
+   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   kp = 1 if ref_k_faces == 'base' else 0
+   mesh = grid.split_horizon_points(ref_k0 = k0, kp = kp)
+   surf.set_from_torn_mesh(mesh, quad_triangles = quad_triangles)
+
+   return surf
+
+
+
+def generate_torn_surface_for_x_section(grid, axis, ref_slice0 = 0, plus_face = False,
+                                        quad_triangles = True, as_single_layer = False):
+   """Returns a Surface object generated from the grid cross section points.
+
+   arguments:
+      grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
+      axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+      ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+      plus_face (boolean, default False): if False, negative face is used; if True, positive
+      quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
+         gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+         the face; if False, only 2 triangles are used, which gives a non-unique solution
+      as_single_layer (boolean, default False): if True, the top points from the top layer are used together
+         with the basal points from the base layer, to effect a single layer equivalent cross section surface
+
+   returns:
+      a resqml_surface.Surface object with a single triangulated patch
+
+   notes:
+      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+      written.
+      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
+      surface which are not joined; therefore, a fault running down through the grid should result in separate
+      patches; however, at present the code uses a single patch regardless.
+   """
+
+   assert axis.upper() in ['I', 'J']
+
+   if grid.k_gaps is None or grid.k_gaps == 0:
+      x_sect_points = grid.split_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
+      if as_single_layer:
+         shape = np.array(x_sect_points.shape)
+         shape[0] = 1
+         x_sect_top = x_sect_points[0].reshape(tuple(shape))
+         x_sect_base = x_sect_points[-1].reshape(tuple(shape))
+      else:
+         x_sect_top = x_sect_points[:-1]
+         x_sect_base = x_sect_points[1:]
+      x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis = 2)
+   else:
+      x_sect_mesh = grid.split_gap_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
+
+   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   surf.set_from_torn_mesh(x_sect_mesh, quad_triangles = quad_triangles)
+
+   return surf
+
+
+
+def generate_untorn_surface_for_x_section(grid, axis, ref_slice0 = 0, plus_face = False,
+                                          quad_triangles = True, as_single_layer = False):
+   """Returns a Surface object generated from the grid cross section points for an unfaulted grid.
+
+   arguments:
+      grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
+      axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+      ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+      plus_face (boolean, default False): if False, negative face is used; if True, positive
+      quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
+         gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+         the face; if False, only 2 triangles are used, which gives a non-unique solution
+      as_single_layer (boolean, default False): if True, the top points from the top layer are used together
+         with the basal points from the base layer, to effect a single layer equivalent cross section surface
+
+   returns:
+      a resqml_surface.Surface object with a single triangulated patch
+
+   notes:
+      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+      written.
+      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
+      surface which are not joined; therefore, a fault running down through the grid should result in separate
+      patches; however, at present the code uses a single patch regardless.
+   """
+
+   assert axis.upper() in ['I', 'J']
+
+   x_sect_points = grid.x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
+   if as_single_layer:
+      shape = np.array(x_sect_points.shape)
+      shape[0] = 1
+      x_sect_top = x_sect_points[0]
+      x_sect_base = x_sect_points[-1]
+      x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis = 0)
+   else:
+      x_sect_mesh = x_sect_points
+
+   log.debug(f'x_sect_mesh.shape: {x_sect_mesh.shape}; grid.extent_kji: {grid.extent_kji}')
+
+   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   surf.set_from_irregular_mesh(x_sect_mesh, quad_triangles = quad_triangles)
+
+   return surf
 
 
 
@@ -1610,3 +1605,9 @@ def populate_blocked_well_from_trajectory(blocked_well, grid, active_only = Fals
    log.info(str(cell_count) + ' cell' + _pl(cell_count) + ' blocked for well trajectory uuid: ' + str(trajectory.uuid))
 
    return blocked_well
+
+
+
+def _pl(n, use_es = False):
+   if n == 1: return ''
+   return 'es' if use_es else 's'

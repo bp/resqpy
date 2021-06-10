@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation."""
 
-version = '22nd May 2021'
+version = '10th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -69,6 +69,8 @@ class GridConnectionSet():
          fault but not for matters of juxtaposition or absolute transmissibility calculations;
          if extract_from_xml is False and ascii_file is None and k_faces, j_faces & i_faces are None,
          then an empty connection set is returned
+
+      :meta common:
       """
 
       log.debug('initialising grid connection set')
@@ -407,7 +409,14 @@ class GridConnectionSet():
 
 
    def single_feature(self, feature_index = None, feature_name = None):
-      """Returns a new GridConnectionSet object containing the single feature copied from this set."""
+      """Returns a new GridConnectionSet object containing the single feature copied from this set.
+
+      note:
+         the single feature connection set is established in memory but this method does not write
+         to the hdf5 nor create xml or add as a part to the model
+
+      :meta common:
+      """
 
       assert feature_index is not None or feature_name is not None
 
@@ -491,7 +500,10 @@ class GridConnectionSet():
 
 
    def cache_arrays(self):
-      """Checks that the connection set array data is loaded and loads from hdf5 if not."""
+      """Checks that the connection set array data is loaded and loads from hdf5 if not.
+
+      :meta common:
+      """
 
       if self.cell_index_pairs is None or self.face_index_pairs is None or (
          self.feature_list is not None and self.feature_indices is None):
@@ -545,7 +557,10 @@ class GridConnectionSet():
 
 
    def number_of_grids(self):
-      """Returns the number of grids involved in the connection set."""
+      """Returns the number of grids involved in the connection set.
+
+      :meta common:
+      """
 
       return len(self.grid_list)
 
@@ -558,14 +573,20 @@ class GridConnectionSet():
 
 
    def number_of_features(self):
-      """Returns the number of features (faults) in the connection set."""
+      """Returns the number of features (faults) in the connection set.
+
+      :meta common:
+      """
 
       if self.feature_list is None: return 0
       return len(self.feature_list)
 
 
    def list_of_feature_names(self, strip = True):
-      """Returns a list of the feature (fault) names for which the connection set has cell face data."""
+      """Returns a list of the feature (fault) names for which the connection set has cell face data.
+
+      :meta common:
+      """
 
       if self.feature_list is None: return None
       name_list = []
@@ -779,7 +800,10 @@ class GridConnectionSet():
 
 
    def write_hdf5(self, file_name = None, mode = 'a'):
-      """Create or append to an hdf5 file, writing datasets for the connection set after caching arrays."""
+      """Create or append to an hdf5 file, writing datasets for the connection set after caching arrays.
+
+      :meta common:
+      """
 
       # NB: cell pairs, face pairs, and feature indices arrays must be ready, in memory
       # note: grid pairs not yet supported
@@ -812,7 +836,10 @@ class GridConnectionSet():
 
 
    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, title = 'ROOT', originator = None):
-      """Creates a Grid Connection Set (fault faces) xml node and optionally adds as child of root and/or to parts forest."""
+      """Creates a Grid Connection Set (fault faces) xml node and optionally adds as child of root and/or to parts forest.
+
+      :meta common:
+      """
 
       # NB: only one grid handled for now
       # xml for grid(s) must be created before calling this method

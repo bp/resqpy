@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '2nd June 2021'
+version = '10th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -87,6 +87,8 @@ class Grid():
          one grid, or more than one but only one with a citation title of ROOT, then the resqml module
          will treat that as the main grid, which will serve as the default here and elsewhere;
          only IJK grids are handled at the moment (the resqml standard also defines 5 other varieties)
+
+      :meta common:
       """
 
       # note: currently only handles IJK grids
@@ -1325,6 +1327,8 @@ class Grid():
          the last 3 are only present when the grid has one or more split pillars;
          the split pillar data includes the use of a 'jagged' array (effectively an array of lists represented as
          a linear array and a 'cumulative length' index array)
+
+      :meta common:
       """
 
       # todo: recheck the description of split pillar arrays given in the doc string
@@ -1385,6 +1389,8 @@ class Grid():
          array for a grid geometry with split pillars;
          for unsplit grid geometries, such a pillar index must be converted back into a j', i'
          pair of indices (or the points array must be reshaped to combine the two indices into one)
+
+      :meta common:
       """
 
       if hasattr(self, 'pillars_for_column') and self.pillars_for_column is not None: return self.pillars_for_column
@@ -2069,6 +2075,8 @@ class Grid():
          the shape is (nk + k_gaps + 1, nj + 1, ni + 1, 3) if there are no split coordinate lines (unfaulted);
          otherwise it is (nk + k_gaps + 1, np, 3), where np > (nj + 1) * (ni + 1), due to extra pillar data for
          the split pillars
+
+      :meta common:
       """
 
       if self.points_cached is None:
@@ -2170,6 +2178,8 @@ class Grid():
 
       note:
          if the lazy argument is True, the results are likely to under-report the ranges, especially for z
+
+      :meta common:
       """
 
       if self.xyz_box_cached is None or (not lazy and not self.xyz_box_cached_thoroughly):
@@ -2767,6 +2777,8 @@ class Grid():
          olio.grid_functions.resequence_nexus_corp() can be used to switch back and forth between this pagoda ordering
          and Nexus corp ordering;
          this is the usual way to access full corner points for cells where working with native resqml data is undesirable
+
+      :meta common:
       """
 
       # note: this function returns a derived object rather than a native resqml object
@@ -2873,6 +2885,8 @@ class Grid():
 
       note:
          resulting coordinates are in the same (local) crs as the grid points
+
+      :meta common:
       """
 
       if cell_kji0 is None: cache_centre_array = True
@@ -2991,6 +3005,8 @@ class Grid():
          at present, assumes K increases with same polarity as z; if not, negative thickness will be calculated;
          units of result are implicitly those of z coordinates in grid's coordinate reference system, or units of
          measure of property array if the result is based on a suitable property
+
+      :meta common:
       """
 
       def load_from_property(collection):
@@ -3125,6 +3141,8 @@ class Grid():
          at present, grid's coordinate reference system must use same units in z as xy (projected);
          units of result are implicitly those of coordinates in grid's coordinate reference system, or units of
          measure of property array if the result is based on a suitable property
+
+      :meta common:
       """
 
       def load_from_property(collection):
@@ -3179,7 +3197,10 @@ class Grid():
    def pinched_out(self, cell_kji0 = None, tolerance = 0.001, points_root = None,
                    cache_resqml_array = True, cache_cp_array = False,
                    cache_thickness_array = False, cache_pinchout_array = None):
-      """Returns boolean or boolean array indicating whether cell is pinched out; ie. has a thickness less than tolerance."""
+      """Returns boolean or boolean array indicating whether cell is pinched out; ie. has a thickness less than tolerance.
+
+      :meta common:
+      """
 
       # note: this function returns a derived object rather than a native resqml object
       # note: returns True for cells without geometry
@@ -3849,7 +3870,10 @@ class Grid():
 
 
    def z_inc_down(self):
-      """Returns True if z increases downwards in the coordinate reference system used by the grid geometry, False otherwise."""
+      """Returns True if z increases downwards in the coordinate reference system used by the grid geometry, False otherwise.
+
+      :meta common:
+      """
 
       assert self.crs_root is not None
       return rqet.find_tag_bool(self.crs_root, 'ZIncreasingDownward')
@@ -3971,7 +3995,10 @@ class Grid():
 
 
    def write_hdf5(self):
-      """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches()."""
+      """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches().
+
+      :meta common:
+      """
 
       self.write_hdf5_from_caches(mode = 'a', geometry = True, imported_properties = None, write_active = True)
 
@@ -4079,7 +4106,10 @@ class Grid():
                                    nan_substitute_value = nan_substitute_value)
 
    def xy_units(self):
-      """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid."""
+      """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid.
+
+      :meta common:
+      """
 
       crs_root = self.extract_crs_root()
       if crs_root is None: return None
@@ -4087,7 +4117,10 @@ class Grid():
 
 
    def z_units(self):
-      """Returns the vertical (z) units of measure of the coordinate reference system for the grid."""
+      """Returns the vertical (z) units of measure of the coordinate reference system for the grid.
+
+      :meta common:
+      """
 
       crs_root = self.extract_crs_root()
       if crs_root is None: return None
@@ -4256,6 +4289,8 @@ class Grid():
          the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
          the explicit geometry may be omitted for regular grids, in which case the arrays should not be written to the hdf5
          file either
+
+      :meta common:
       """
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
@@ -4618,6 +4653,8 @@ class RegularGrid(Grid):
          to store the geometry explicitly use the following methods: make_regular_points_cached(), write_hdf5(),
          create_xml(..., write_geometry = True);
          otherwise, avoid write_hdf5() and call create_xml(..., write_geometry = False)
+
+      :meta common:
       """
 
       if grid_root is None:
@@ -4892,6 +4929,8 @@ class RegularGrid(Grid):
          add_cell_length_properties (boolean, default True): if True, 3 constant property arrays with cells as
             indexable element are created to hold the lengths of the primary axes of the cells; the xml is
             created for the properties and they are added to the model (no hdf5 write needed)
+
+      :meta common:
       """
 
       node = super().create_xml(ext_uuid = ext_uuid, add_as_part = add_as_part,

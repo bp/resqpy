@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '22nd May 2021'
+version = '10th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -67,88 +67,6 @@ valid_md_reference_list = ["ground level", "kelly bushing", "mean sea level", "d
 
 # todo: could require/maintain DeviationSurvey mds in same units as md datum object's crs vertical units?
 
-def extract_xyz(xyz_node):
-   """Extracts an x,y,z coordinate from a solitary point xml node.
-
-      argument:
-         xyz_node: the xml node representing the solitary point (in 3D space)
-
-      returns:
-         triple float: (x, y, z) coordinates as a tuple
-   """
-
-   if xyz_node is None: return None
-   xyz = np.zeros(3)
-   for axis in range(3):
-      xyz[axis] = rqet.find_tag_float(xyz_node, 'Coordinate' + str(axis+1), must_exist=True)
-   return tuple(xyz)
-
-
-def well_names_in_cellio_file(cellio_file):
-   """Returns a list of well names as found in the RMS blocked well export cell I/O file."""
-
-   well_list = []
-   with open(cellio_file, 'r') as fp:
-      while True:
-         kf.skip_blank_lines_and_comments(fp)
-         line = fp.readline()  # file format version number?
-         if line == '': break  # end of file
-         fp.readline()  # 'Undefined'
-         words = fp.readline().split()
-         assert len(words), 'missing header info (well name) in cell I/O file'
-         well_list.append(words[0])
-         while not kf.blank_line(fp): fp.readline()  # skip to block of data for next well
-   return well_list
-
-
-# 'private' functions
-
-def load_hdf5_array(object, node, array_attribute, tag = 'Values', dtype = 'float', model = None):
-   """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
-
-      :meta private:
-   """
-
-   assert(rqet.node_type(node) in ['DoubleHdf5Array', 'IntegerHdf5Array', 'Point3dHdf5Array'])
-   if model is None: model = object.model
-   h5_key_pair = model.h5_uuid_and_path_for_node(node, tag = tag)
-   if h5_key_pair is None: return None
-   return model.h5_array_element(h5_key_pair, index = None, cache_array = True, dtype = dtype,
-                                 object = object, array_attribute = array_attribute)
-
-
-def find_entry_and_exit(cp, entry_vector, exit_vector, well_name):
-   """Returns (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz).
-
-      :meta private:
-   """
-
-   cell_centre = np.mean(cp, axis = (0, 1, 2))
-   face_triangles = gf.triangles_for_cell_faces(cp).reshape(-1, 3, 3)  # flattened first index 4 values per face
-   entry_points = intersect.line_triangles_intersects(cell_centre, entry_vector, face_triangles, line_segment = True)
-   entry_axis = entry_polarity = entry_xyz = exit_xyz = None
-   for t in range(24):
-      if not np.any(np.isnan(entry_points[t])):
-         entry_xyz = entry_points[t]
-         entry_axis = t // 8
-         entry_polarity = (t - 8 * entry_axis) // 4
-         break
-   assert entry_axis is not None, 'failed to find entry face for a perforation in well ' + str(well_name)
-   exit_points = intersect.line_triangles_intersects(cell_centre, exit_vector, face_triangles, line_segment = True)
-   exit_axis = exit_polarity = None
-   for t in range(24):
-      if not np.any(np.isnan(exit_points[t])):
-         exit_xyz = entry_points[t]
-         exit_axis = t // 8
-         exit_polarity = (t - 8 * exit_axis) // 4
-         break
-   assert exit_axis is not None, 'failed to find exit face for a perforation in well ' + str(well_name)
-
-   return (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz)
-
-
-def pl(i, e = False):
-   return '' if i == 1 else 'es' if e else 's'
 
 
 class MdDatum():
@@ -400,7 +318,6 @@ class DeviationSurvey():
       return self.model.part_for_uuid(self.uuid)
 
 
-
    @classmethod
    def from_data_frame(cls, parent_model, data_frame, md_datum=None, md_col='MD',
                        azimuth_col='AZIM_GN', inclination_col='INCL', x_col='X', y_col='Y',
@@ -504,6 +421,7 @@ class DeviationSurvey():
          angle_uom=angle_uom,
          md_datum=md_datum
       )
+
 
    def load_from_xml(self):
       """Load attributes from xml and associated hdf5 data.
@@ -705,6 +623,7 @@ class DeviationSurvey():
       return represented_interp
 
 
+
 class Trajectory():
    """Class for RESQML Wellbore Trajectory Representation (Geometry).
 
@@ -763,6 +682,8 @@ class Trajectory():
          using the azimuth and inclination data, then generate a trajectory from that based on minimum curvature;
          or, create a trajectory directly using X, Y, Z data from the deviation survey file (ie. minimum
          curvature or other algorithm already applied externally)
+
+      :meta common:
       """
 
       self.model = parent_model
@@ -1100,6 +1021,8 @@ class Trajectory():
 
       note:
          set md_col to None for a dataframe containing only X, Y & Z data
+
+      :meta common:
       """
 
       if md_col: column_list =  [md_col, x_col, y_col, z_col]
@@ -1140,6 +1063,8 @@ class Trajectory():
          the algorithm uses a simple linear interpolation between neighbouring knots (control points) on the trajectory;
          if the measured depth is less than zero or greater than the finish md, a single None is returned; if the md is
          less than the start md then a linear interpolation between the md datum location and the first knot is returned
+
+      :meta common:
       """
 
       def interpolate(p1, p2, f):
@@ -1259,6 +1184,7 @@ class Trajectory():
       else:
          raise ValueError("Cannot add WellboreFeature, trajectory already has an associated WellboreInterpretation")
 
+
    def create_xml(self, ext_uuid = None, wbt_uuid = None,
                   md_datum_root = None, md_datum_xyz = None,
                   add_as_part = True, add_relationships = True,
@@ -1270,6 +1196,8 @@ class Trajectory():
             branching well structures (multi-laterals) are supported by the resqml standard but not yet by
             this code;
             optional witsml trajectory reference not yet supported here
+
+      :meta common:
       """
 
       if not title: title = self.title
@@ -1410,7 +1338,10 @@ class Trajectory():
 
 
    def write_hdf5(self, file_name = None, mode = 'a'):
-      """Create or append to an hdf5 file, writing datasets for the measured depths, control points and tangent vectors."""
+      """Create or append to an hdf5 file, writing datasets for the measured depths, control points and tangent vectors.
+
+      :meta common:
+      """
 
       # NB: array data must all have been set up prior to calling this function
       if self.uuid is None: self.uuid = bu.new_uuid()
@@ -1703,6 +1634,8 @@ class BlockedWell:
          cell fluid phase units);
          mysterious RESQML WellboreFrameIndexableElements is not used in any other RESQML classes and is therefore
          not used here
+
+      :meta common:
       """
 
       self.model = parent_model
@@ -1862,7 +1795,12 @@ class BlockedWell:
 
 
    def map_cell_and_grid_indices(self):
-      """Returns a list of index values linking the grid_indices to cell_indices. Length will match grid_indices, and will show -1 where cell is unblocked."""
+      """Returns a list of index values linking the grid_indices to cell_indices.
+
+      note:
+         length will match grid_indices, and will show -1 where cell is unblocked
+      """
+
       indexmap = []
       j = 0
       for i in self.grid_indices:
@@ -1874,7 +1812,11 @@ class BlockedWell:
 
 
    def compressed_grid_indices(self):
-      """Returns a list of grid indices excluding the -1 elements (unblocked intervals); length will match that of cell_indices."""
+      """Returns a list of grid indices excluding the -1 elements (unblocked intervals).
+
+      note:
+         length will match that of cell_indices
+      """
 
       compressed = []
       for i in self.grid_indices:
@@ -1898,7 +1840,10 @@ class BlockedWell:
 
 
    def grid_uuid_list(self):
-      """Returns a list of the uuids of the grids referenced by the blocked well object."""
+      """Returns a list of the uuids of the grids referenced by the blocked well object.
+
+      :meta common:
+      """
 
       uuid_list = []
       if self.grid_list is None: return uuid_list
@@ -1907,14 +1852,20 @@ class BlockedWell:
 
 
    def cell_indices_kji0(self):
-      """Returns a numpy int array of shape (N, 3) of cells visited by well, for a single grid situation."""
+      """Returns a numpy int array of shape (N, 3) of cells visited by well, for a single grid situation.
+
+      :meta common:
+      """
 
       grid = self.single_grid()
       return grid.denaturalized_cell_indices(self.cell_indices)
 
 
    def cell_indices_and_grid_list(self):
-      """Returns a numpy int array of shape (N, 3) of cells visited by well, and a list of grid objects of length N."""
+      """Returns a numpy int array of shape (N, 3) of cells visited by well, and a list of grid objects of length N.
+
+      :meta common:
+      """
 
       grid_for_cell_list = []
       grid_indices = self.compressed_grid_indices()
@@ -1928,7 +1879,10 @@ class BlockedWell:
 
 
    def cell_indices_for_grid_uuid(self, grid_uuid):
-      """Returns a numpy int array of shape (N, 3) of cells visited by well in specified grid."""
+      """Returns a numpy int array of shape (N, 3) of cells visited by well in specified grid.
+
+      :meta common:
+      """
 
       if isinstance(grid_uuid, str): grid_uuid = bu.uuid_from_string(grid_uuid)
       ci_list, grid_list = self.cell_indices_and_grid_list()
@@ -2474,6 +2428,8 @@ class BlockedWell:
          the k0_list, perforation_list and region_list arguments should be set to None to disable the corresponding functionality,
          if set to an empty list, no rows will be included in the dataframe;
          if add_as_properties is True, the blocked well must already have been added as a part to the model
+
+      :meta common:
       """
 
       def prop_array(uuid_or_dict, grid):
@@ -3113,6 +3069,8 @@ class BlockedWell:
       note:
          trajectory xml node must be in place before calling this function;
          witsml log reference, interval stratigraphic units, and cell fluid phase units not yet supported
+
+      :meta common:
       """
 
       assert self.trajectory is not None, 'trajectory object missing'
@@ -3251,7 +3209,10 @@ class BlockedWell:
 
 
    def write_hdf5(self, file_name = None, mode = 'a', create_for_trajectory_if_needed = True):
-      """Create or append to an hdf5 file, writing datasets for the measured depths, grid, cell & face indices."""
+      """Create or append to an hdf5 file, writing datasets for the measured depths, grid, cell & face indices.
+
+      :meta common:
+      """
 
       # NB: array data must all have been set up prior to calling this function
 
@@ -4080,9 +4041,89 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
    log.info(f'{count} blocked wells created based on wellspec file: {wellspec_file}')
 
 
+def extract_xyz(xyz_node):
+   """Extracts an x,y,z coordinate from a solitary point xml node.
+
+      argument:
+         xyz_node: the xml node representing the solitary point (in 3D space)
+
+      returns:
+         triple float: (x, y, z) coordinates as a tuple
+   """
+
+   if xyz_node is None: return None
+   xyz = np.zeros(3)
+   for axis in range(3):
+      xyz[axis] = rqet.find_tag_float(xyz_node, 'Coordinate' + str(axis+1), must_exist=True)
+   return tuple(xyz)
+
+
+def well_names_in_cellio_file(cellio_file):
+   """Returns a list of well names as found in the RMS blocked well export cell I/O file."""
+
+   well_list = []
+   with open(cellio_file, 'r') as fp:
+      while True:
+         kf.skip_blank_lines_and_comments(fp)
+         line = fp.readline()  # file format version number?
+         if line == '': break  # end of file
+         fp.readline()  # 'Undefined'
+         words = fp.readline().split()
+         assert len(words), 'missing header info (well name) in cell I/O file'
+         well_list.append(words[0])
+         while not kf.blank_line(fp): fp.readline()  # skip to block of data for next well
+   return well_list
+
+
+# 'private' functions
+
+def load_hdf5_array(object, node, array_attribute, tag = 'Values', dtype = 'float', model = None):
+   """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
+
+      :meta private:
+   """
+
+   assert(rqet.node_type(node) in ['DoubleHdf5Array', 'IntegerHdf5Array', 'Point3dHdf5Array'])
+   if model is None: model = object.model
+   h5_key_pair = model.h5_uuid_and_path_for_node(node, tag = tag)
+   if h5_key_pair is None: return None
+   return model.h5_array_element(h5_key_pair, index = None, cache_array = True, dtype = dtype,
+                                 object = object, array_attribute = array_attribute)
+
+
+def find_entry_and_exit(cp, entry_vector, exit_vector, well_name):
+   """Returns (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz).
+
+      :meta private:
+   """
+
+   cell_centre = np.mean(cp, axis = (0, 1, 2))
+   face_triangles = gf.triangles_for_cell_faces(cp).reshape(-1, 3, 3)  # flattened first index 4 values per face
+   entry_points = intersect.line_triangles_intersects(cell_centre, entry_vector, face_triangles, line_segment = True)
+   entry_axis = entry_polarity = entry_xyz = exit_xyz = None
+   for t in range(24):
+      if not np.any(np.isnan(entry_points[t])):
+         entry_xyz = entry_points[t]
+         entry_axis = t // 8
+         entry_polarity = (t - 8 * entry_axis) // 4
+         break
+   assert entry_axis is not None, 'failed to find entry face for a perforation in well ' + str(well_name)
+   exit_points = intersect.line_triangles_intersects(cell_centre, exit_vector, face_triangles, line_segment = True)
+   exit_axis = exit_polarity = None
+   for t in range(24):
+      if not np.any(np.isnan(exit_points[t])):
+         exit_xyz = entry_points[t]
+         exit_axis = t // 8
+         exit_polarity = (t - 8 * exit_axis) // 4
+         break
+   assert exit_axis is not None, 'failed to find exit face for a perforation in well ' + str(well_name)
+
+   return (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz)
+
+
 def _as_optional_array(arr):
    """If not None, cast as numpy array.
-   
+
    Casting directly to an array can be problematic:
    np.array(None) creates an unsized array, which is potentially confusing.
    """
@@ -4090,3 +4131,7 @@ def _as_optional_array(arr):
       return None
    else:
       return np.array(arr)
+
+
+def pl(i, e = False):
+   return '' if i == 1 else 'es' if e else 's'

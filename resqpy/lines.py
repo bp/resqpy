@@ -1,6 +1,6 @@
 """polylines.py: Resqml polylines module."""
 
-version = '29th April 2021'
+version = '10th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -54,10 +54,11 @@ class _BasePolyline:
       interp_root = interp.create_xml(title_suffix = interp_title_suffix)
       self.rep_int_root = interp_root
 
+
 def load_hdf5_array(object, node, array_attribute, tag = 'Values'):
    """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
 
-      :meta private:
+   :meta private:
    """
 
    assert(rqet.node_type(node) in ['DoubleHdf5Array', 'IntegerHdf5Array', 'Point3dHdf5Array'])
@@ -82,7 +83,10 @@ class Polyline(_BasePolyline):
                 if None, wait for further improvements.
 
         returns:
-            the newly instantiated PolylineRepresentation object"""
+            the newly instantiated PolylineRepresentation object
+
+        :meta common:
+        """
 
         self.model = parent_model
         self.uuid = None
@@ -186,7 +190,10 @@ class Polyline(_BasePolyline):
 
 
     def point_is_inside_xy(self, p, mode = 'crossing'):
-        """Returns True if point p is inside closed polygon, in xy plane, otherwise False."""
+        """Returns True if point p is inside closed polygon, in xy plane, otherwise False.
+
+        :meta common:
+        """
 
         assert mode in ['crossing', 'winding'], 'unrecognised point inclusion mode: ' + str(mode)
         assert self.isclosed, 'point inclusion is not applicable to unclosed polylines'
@@ -210,7 +217,10 @@ class Polyline(_BasePolyline):
 
 
     def full_length(self, in_xy = False):
-        """Returns the naive length of the entire polyline."""
+        """Returns the naive length of the entire polyline.
+
+        :meta common:
+        """
 
         length = 0.0
         end_index = len(self.coordinates) - 1
@@ -221,7 +231,10 @@ class Polyline(_BasePolyline):
 
 
     def interpolated_point(self, fraction, in_xy = False):
-        """Returns x,y,z point on the polyline at fractional distance along entire polyline."""
+        """Returns x,y,z point on the polyline at fractional distance along entire polyline.
+
+        :meta common:
+        """
 
         assert 0.0 <= fraction <= 1.0
         target = fraction * self.full_length(in_xy = in_xy)
@@ -425,7 +438,10 @@ class Polyline(_BasePolyline):
 
     def splined(self, tangent_weight = 'square', min_subdivisions = 1, max_segment_length = None, max_degrees_per_knot = 5.0,
                 set_title = None, rep_int_root = None):
-        """Retrurns a new Polyline being a cubic spline of this polyline."""
+        """Retrurns a new Polyline being a cubic spline of this polyline.
+
+        :meta common:
+        """
 
         spline_coords = spline(self.coordinates, tangent_weight = tangent_weight,
                                min_subdivisions = min_subdivisions,
@@ -446,6 +462,8 @@ class Polyline(_BasePolyline):
 
         args:
             ext_uuid: the uuid of the hdf5 external part
+
+        :meta common:
         """
 
         if ext_uuid is None: ext_uuid = self.model.h5_uuid()
@@ -524,7 +542,11 @@ class Polyline(_BasePolyline):
 
 
     def write_hdf5(self, file_name = None, mode = 'a'):
-        """Create or append the coordinates hdf5 array to hdf5 file"""
+        """Create or append the coordinates hdf5 array to hdf5 file.
+
+        :meta common:
+        """
+
         if self.uuid is None: self.uuid = bu.new_uuid()
         h5_reg = rwh5.H5Register(self.model)
         h5_reg.register_dataset(self.uuid, 'points_patch0', self.coordinates)
@@ -532,34 +554,11 @@ class Polyline(_BasePolyline):
 
 
     def append_extra_metadata(self, meta_dict):
-        """Append a given dictionary of metadata to the existing metadata"""
+        """Append a given dictionary of metadata to the existing metadata."""
+
         if self.extra_metadata is None: self.extra_metadata = {}
         for key in meta_dict:
             self.extra_metadata[key] = meta_dict[key]
-
-
-def shift_polyline(parent_model, poly_root, xyz_shift=(0,0,0), title=''):
-    """Returns a new polyline object, shifted by given coordinates"""
-    poly = Polyline(parent_model=parent_model,poly_root=poly_root)
-    if title != '': poly.title = title
-    else: poly.title = poly.title + f" shifted by xyz({xyz_shift})"
-    poly.uuid = bu.new_uuid()
-    poly.coordinates = np.array(xyz_shift) + poly.coordinates
-    return poly
-
-
-def flatten_polyline(parent_model, poly_root, axis="z", value="0" , title=''):
-    """Returns a new polyline object, flattened on a chosen axis to a given value"""
-    assert axis in ["x","y","z","X","Y","Z"], 'Axis must be x, y or z'
-    poly = Polyline(parent_model=parent_model,poly_root=poly_root)
-    if title != '': poly.title = title
-    else: poly.title = poly.title + f" flattened on {axis} to value {value}"
-    poly.uuid = bu.new_uuid()
-    if axis.lower() == "x": index = 0
-    elif axis.lower() == "y": index = 1
-    else: index = 2
-    poly.coordinates[...,index,] = float(value)
-    return poly
 
 
 
@@ -577,7 +576,10 @@ class PolylineSet(_BasePolyline):
             polylines (optional): list of polyline objects from which to build the polylineset
 
         returns:
-            the newly instantiated PolylineSetRepresentation object"""
+            the newly instantiated PolylineSetRepresentation object
+
+        :meta common:
+        """
 
         self.model = parent_model
         self.root_node = None
@@ -718,7 +720,10 @@ class PolylineSet(_BasePolyline):
 
 
     def poly_index_containing_point_in_xy(self, p, mode = 'crossing'):
-        """Returns the index of the first (closed) polyline containing point p in the xy plane, or None."""
+        """Returns the index of the first (closed) polyline containing point p in the xy plane, or None.
+
+        :meta common:
+        """
 
         assert mode in ['crossing', 'winding'], 'unrecognised mode when looking for polygon containing point'
 
@@ -734,6 +739,8 @@ class PolylineSet(_BasePolyline):
 
         args:
             save_polylines: If true, polylines are also saved individually
+
+        :meta common:
         """
 
         if ext_uuid is None: ext_uuid = self.model.h5_uuid()
@@ -860,7 +867,11 @@ class PolylineSet(_BasePolyline):
 
 
     def write_hdf5(self, file_name = None, mode = 'a', save_polylines = False):
-        """Create or append the coordinates, counts and indices hdf5 arrays to hdf5 file"""
+        """Create or append the coordinates, counts and indices hdf5 arrays to hdf5 file.
+
+        :meta common:
+        """
+
         if self.uuid is None:
             self.uuid = bu.new_uuid()
         self.combine_polylines(self.polys)
@@ -913,7 +924,10 @@ class PolylineSet(_BasePolyline):
 
         returns:
             list of polyline objects
+
+        :meta common:
         """
+
         polys = []
         count = 0
         for i in range(len(count_perpol)):
@@ -938,6 +952,7 @@ class PolylineSet(_BasePolyline):
         args:
             polylines: list of polyline objects
         """
+
         self.count_perpol = []
         self.closed_array = []
 
@@ -970,6 +985,7 @@ class PolylineSet(_BasePolyline):
         self.boolvalue - value of isclosed for all polylines, or for the majority of polylines if mixed
         self.indices - array of indices where the values are not self.boolvalue, if the polylines are mixed
         """
+
         self.indices = []
         self.boolnotconstant = False
         if all(closed_array):
@@ -998,6 +1014,7 @@ class PolylineSet(_BasePolyline):
             rep_int_root: new rep_int_root
             recursive: boolean, if true will update individual polys with same root
         """
+
         self.rep_int_root = rep_int_root
 
         if recursive:
@@ -1044,10 +1061,39 @@ class PolylineSet(_BasePolyline):
 
 
     def append_extra_metadata(self, meta_dict):
-        """Append a given dictionary of metadata to the existing metadata"""
+        """Append a given dictionary of metadata to the existing metadata."""
+
         if self.extra_metadata is None: self.extra_metadata = {}
         for key in meta_dict:
             self.extra_metadata[key] = meta_dict[key]
+
+
+
+def shift_polyline(parent_model, poly_root, xyz_shift=(0,0,0), title=''):
+    """Returns a new polyline object, shifted by given coordinates."""
+
+    poly = Polyline(parent_model=parent_model,poly_root=poly_root)
+    if title != '': poly.title = title
+    else: poly.title = poly.title + f" shifted by xyz({xyz_shift})"
+    poly.uuid = bu.new_uuid()
+    poly.coordinates = np.array(xyz_shift) + poly.coordinates
+    return poly
+
+
+
+def flatten_polyline(parent_model, poly_root, axis="z", value="0" , title=''):
+    """Returns a new polyline object, flattened on a chosen axis to a given value."""
+
+    assert axis in ["x","y","z","X","Y","Z"], 'Axis must be x, y or z'
+    poly = Polyline(parent_model=parent_model,poly_root=poly_root)
+    if title != '': poly.title = title
+    else: poly.title = poly.title + f" flattened on {axis} to value {value}"
+    poly.uuid = bu.new_uuid()
+    if axis.lower() == "x": index = 0
+    elif axis.lower() == "y": index = 1
+    else: index = 2
+    poly.coordinates[...,index,] = float(value)
+    return poly
 
 
 
