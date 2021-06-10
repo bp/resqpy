@@ -22,7 +22,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 class TimeDuration():
-   """A thin wrapper around python's datatime timedelta objects."""
+   """A thin wrapper around python's datatime timedelta objects (not a RESQML class)."""
 
    def __init__(self, days = None, hours = None, minutes = None, seconds = None,
                 earlier_timestamp = None, later_timestamp = None):
@@ -65,12 +65,40 @@ class TimeDuration():
       return dt_result.isoformat() + 'Z'
 
 
+
 class TimeSeries():
    """Class for RESQML Time Series within RESQML model object."""
 
    def __init__(self, parent_model, extract_from_xml = True, time_series_root = None,
                 first_timestamp = None, daily = None, monthly = None, quarterly = None, yearly = None):
-      """Create a TimeSeries object, either from a time series node in parent model, or from given data."""
+      """Create a TimeSeries object, either from a time series node in parent model, or from given data.
+
+      arguments:
+         parent_model (model.Model): the resqpy model to which the time series will belong
+         extract_from_xml (boolean, default True): if True, the time series is populated from the xml
+            for an existing part in the model
+         time_series_root (xml node, optional): if extract_from_xml is True, then this argument is
+            usually passed to identify the xml root node; if absent the root for the 'main' time series
+            in the model is used
+         first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
+            this and the remaining arguments are ignored if loading from xml
+         daily (non-negative int, optional): the number of one day interval timesteps to start the series
+         monthly (non-negative int, optional): the number of 30 day interval timesteps to follow the daily
+            timesteps
+         quarterly (non-negative int, optional): the number of 90 day interval timesteps to follow the
+            monthly timesteps
+         yearly (non-negative int, optional): the number of 365 day interval timesteps to follow the
+            quarterly timesteps
+
+      returns:
+         newly instantiated TimeSeries object
+
+      note:
+         a new bespoke time series can be populated by passing the first timestamp here and using the
+         add_timestamp() and/or extend_by...() methods
+
+      :meta common:
+      """
 
       self.model = parent_model
       self.time_series_root = time_series_root
@@ -133,13 +161,19 @@ class TimeSeries():
 
 
    def number_of_timestamps(self):
-      """Returns the number of timestamps in the series."""
+      """Returns the number of timestamps in the series.
+
+      :meta common:
+      """
 
       return len(self.timestamps)
 
 
    def timestamp(self, index):
-      """Returns an individual timestamp, indexed by its position in the series."""
+      """Returns an individual timestamp, indexed by its position in the series.
+
+      :meta common:
+      """
 
       # individual timestamp is in iso format with a Z appended, eg: 2019-08-23T14:30:00Z
       if index < 0 or index >= len(self.timestamps): return None
@@ -147,7 +181,10 @@ class TimeSeries():
 
 
    def last_timestamp(self):
-      """Returns the last timestamp in the series."""
+      """Returns the last timestamp in the series.
+
+      :meta common:
+      """
 
       index = len(self.timestamps) - 1
       if index < 0: return None
@@ -155,7 +192,13 @@ class TimeSeries():
 
 
    def index_for_timestamp(self, timestamp):
-      """Returns the index for a given timestamp."""
+      """Returns the index for a given timestamp.
+
+      note:
+         this method uses a simplistic string comparison
+
+      :meta common:
+      """
 
       for index in range(len(self.timestamps)):
          if self.timestamps[index] == timestamp: return index
@@ -163,7 +206,10 @@ class TimeSeries():
 
 
    def index_for_timestamp_not_later_than(self, timestamp):
-      """Returns the index of the latest timestamp that is not later than the specified timestamp."""
+      """Returns the index of the latest timestamp that is not later than the specified timestamp.
+
+      :meta common:
+      """
 
       index = len(self.timestamps) - 1
       while (index >= 0) and (self.timestamps[index] > timestamp): index -= 1
@@ -172,7 +218,10 @@ class TimeSeries():
 
 
    def duration_between_timestamps(self, earlier_index, later_index):
-      """Returns the duration between a pair of timestamps."""
+      """Returns the duration between a pair of timestamps.
+
+      :meta common:
+      """
 
       if earlier_index < 0 or later_index >= len(self.timestamps) or later_index < earlier_index: return None
       return TimeDuration(earlier_timestamp = self.timestamps[earlier_index],
@@ -188,7 +237,10 @@ class TimeSeries():
 
 
    def duration_since_start(self, index):
-      """Returns the duration between the start of the time series and the indexed timestamp."""
+      """Returns the duration between the start of the time series and the indexed timestamp.
+
+      :meta common:
+      """
 
       if index < 0 or index >= len(self.timestamps): return None
       return self.duration_between_timestamps(0, index)
@@ -201,7 +253,10 @@ class TimeSeries():
 
 
    def step_duration(self, index):
-      """Returns the duration of the time step between the indexed timestamp and preceeding one."""
+      """Returns the duration of the time step between the indexed timestamp and preceeding one.
+
+      :meta common:
+      """
 
       if index < 1 or index >= len(self.timestamps): return None
       return self.duration_between_timestamps(index - 1, index)
@@ -252,17 +307,19 @@ class TimeSeries():
                   title = 'time series', originator = None):
       """Create a time series node from a TimeSeries object, optionally add as part.
 
-         arguments:
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-               in the model
-            root (optional, usually None): if present, the newly created xml node is appended as a child
-               in this node
-            title (string): used as the citation Title text for the new time series node
-            originator (string, optional): the name of the human being who created the time series object;
-               default is to use the login name
+      arguments:
+         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+            in the model
+         root (optional, usually None): if present, the newly created xml node is appended as a child
+            in this node
+         title (string): used as the citation Title text for the new time series node
+         originator (string, optional): the name of the human being who created the time series object;
+            default is to use the login name
 
-         returns:
-            the newly created time series xml node
+      returns:
+         the newly created time series xml node
+
+      :meta common:
       """
 
       ts_node = self.model.new_obj_node('TimeSeries')
@@ -293,19 +350,19 @@ class TimeSeries():
    def create_time_index(self, time_index, root = None):
       """Create a time index node, including time series reference, optionally add to root.
 
-         arguments:
-            time_index (int): non-negative integer index into the time series, identifying the datetime
-               being referenced by the new node
-            root (optional): if present, the newly created time index xml node is added
-               as a child to this node
+      arguments:
+         time_index (int): non-negative integer index into the time series, identifying the datetime
+            being referenced by the new node
+         root (optional): if present, the newly created time index xml node is added
+            as a child to this node
 
-         returns:
-            the newly created time index xml node
+      returns:
+         the newly created time index xml node
 
-         note:
-            a time index node is typically part of a recurrent grid property object; it identifies
-            the datetime relevant to the property array (or other data) by indexing into a time series
-            object
+      note:
+         a time index node is typically part of a recurrent grid property object; it identifies
+         the datetime relevant to the property array (or other data) by indexing into a time series
+         object
       """
 
       assert self.uuid is not None

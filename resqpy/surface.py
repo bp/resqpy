@@ -1,6 +1,6 @@
 """surface.py: surface class based on resqml standard."""
 
-version = '16th May 2021'
+version = '10th June 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -62,7 +62,11 @@ class TriangulatedPatch():
    """Class for RESQML TrianglePatch objects (used by Surface objects inter alia)."""
 
    def __init__(self, parent_model, patch_index = None, extract_from_xml = True, patch_node = None, crs_uuid = None):
-      """Create an empty TriangulatedPatch (TrianglePatch) node and optionally load from xml."""
+      """Create an empty TriangulatedPatch (TrianglePatch) node and optionally load from xml.
+
+      note:
+         not usually instantiated directly by application code
+      """
 
       self.model = parent_model
       self.node = patch_node
@@ -492,7 +496,7 @@ class Surface(_BaseSurface):
    def __init__(self, parent_model, extract_from_xml = True, surface_root = None, point_set = None,
                 mesh = None, mesh_file = None, mesh_format = None, tsurf_file = None, quad_triangles = False,
                 title = None, surface_role = 'map', crs_uuid = None):
-      """Create an empty Surface object and optionally populates from xml, point set or mesh.
+      """Create an empty Surface object (RESQML TriangulatedSetRepresentation) and optionally populates from xml, point set or mesh.
 
       arguments:
          parent_model (model.Model object): the model to which this surface belongs
@@ -523,15 +527,19 @@ class Surface(_BaseSurface):
          there are 5 ways to initialise a surface object, in order of precendence:
          1. extracting from xml
          2. as a Delaunay triangulation of points in a PointSet
-         3. as a triangulation of a Mesh object
-         4. as a triangulation of a mesh in an ascii file
+         3. as a simple triangulation of a Mesh object
+         4. as a simple triangulation of a mesh in an ascii file
+         5. from a GOCAD-TSurf format file
          5. as an empty surface
-         if an empty surface is created, methods are available to then set to one of:
+         if an empty surface is created, 'set_from_...' methods are available to then set for one of:
          - a horizontal plane
          - a single triangle
          - a 'sail' (a triangle wrapped onto a sphere)
+         - etc.
          the quad_triangles option is only applied if initialising from a mesh or mesh_file that is fully
          defined (ie. no NaN's)
+
+      :meta common:
       """
 
       assert surface_role in ['map', 'pick']
@@ -613,6 +621,8 @@ class Surface(_BaseSurface):
          * triangles (int array of shape[:, 3]): integer indices into points array,
            being the nodes of the corners of the triangles
          * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
+
+      :meta common:
       """
 
       if self.triangles is not None: return (self.triangles, self.points)
@@ -729,6 +739,8 @@ class Surface(_BaseSurface):
          otherwise (None, None) will be returned;
          the information needed to map from triangle to column is not persistently stored as part of a resqml surface;
          if triangle_index is a numpy int array, a pair of similarly shaped numpy arrays is returned
+
+      :meta common:
       """
 
       assert len(self.patch_list) == 1
@@ -788,6 +800,8 @@ class Surface(_BaseSurface):
             depth (float): z value to use in all points in the triangulated patch
             box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
             border (float): an optional border width added around the x,y area defined by box_xyz
+
+      :meta common:
       """
 
       tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
@@ -877,7 +891,10 @@ class Surface(_BaseSurface):
 
 
    def write_hdf5(self, file_name = None, mode = 'a'):
-      """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays."""
+      """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
+
+      :meta common:
+      """
 
       if self.uuid is None: self.uuid = bu.new_uuid()
       # NB: patch arrays must all have been set up prior to calling this function
@@ -911,6 +928,8 @@ class Surface(_BaseSurface):
 
          returns:
             the newly created triangulated representation (surface) xml node
+
+      :meta common:
       """
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
@@ -1026,7 +1045,7 @@ class Surface(_BaseSurface):
 
 
 class CombinedSurface:
-   """Class allowing a collection of Surface objects to be treated as a single surface."""
+   """Class allowing a collection of Surface objects to be treated as a single surface (not a RESQML class in its own right)."""
 
    def __init__(self, surface_list, crs_uuid = None):
       """Initialise a CombinedSurface object from a list of Surface (and/or CombinedSurface) objects.
@@ -1092,7 +1111,7 @@ class CombinedSurface:
 
 
 class PointSet(_BaseSurface):
-   """Class for RESQML Point Set Representation within RESQML model object."""   # TODO: Work in Progress
+   """Class for RESQML Point Set Representation within resqpy model object."""   # TODO: Work in Progress
 
    def __init__(self, parent_model, point_set_root = None, load_hdf5 = False,
                 points_array = None, crs_uuid = None, polyset = None, polyline = None,
@@ -1120,6 +1139,8 @@ class PointSet(_BaseSurface):
 
       returns:
          newly created PointSet object
+
+      :meta common:
       """
 
       self.model = parent_model
@@ -1268,7 +1289,10 @@ class PointSet(_BaseSurface):
 
 
    def full_array_ref(self):
-      """Return a single numpy float array of shape (N, 3) containing all points from all patches."""
+      """Return a single numpy float array of shape (N, 3) containing all points from all patches.
+
+      :meta common:
+      """
 
       if self.full_array is not None: return self.full_array
       self.load_all_patches()
@@ -1298,7 +1322,10 @@ class PointSet(_BaseSurface):
 
 
    def write_hdf5(self, file_name = None, mode = 'a'):
-      """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays."""
+      """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays.
+
+      :meta common:
+      """
 
       if not file_name: file_name = self.model.h5_file_name()
       if self.uuid is None: self.uuid = bu.new_uuid()
@@ -1328,6 +1355,8 @@ class PointSet(_BaseSurface):
 
          returns:
             the newly created point set representation xml node
+
+      :meta common:
       """
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
@@ -1408,6 +1437,7 @@ class PointSet(_BaseSurface):
 
       return ps_node
 
+
    def convert_to_charisma(self, file_name):
       """Output to Charisma 3D interepretation format from a pointset
 
@@ -1425,6 +1455,7 @@ class PointSet(_BaseSurface):
       with open(file_name, 'w') as f:
          for item in lines:
             f.write(item)
+
 
    def convert_to_irap(self, file_name):
       """Output to IRAP simple points format from a pointset
