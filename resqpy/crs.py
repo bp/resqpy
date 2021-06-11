@@ -340,7 +340,7 @@ class Crs():
          crs_uuids = self.model.uuids(obj_type = flavour)
          for old_crs_uuid in crs_uuids:
             old_crs = Crs(self.model, uuid = old_crs_uuid)
-            if new_crs == old_crs:
+            if old_crs == self:
                old_root = self.model.root(uuid = old_crs_uuid)
                if self.model.crs_root is None: self.model.crs_root = old_root  # mark's as 'main' crs for model
                return old_root
