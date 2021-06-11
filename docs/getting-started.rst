@@ -13,23 +13,16 @@ A first step is typically to instantiate a :class:`resqpy.model.Model` object fr
     >>> model = Model(epc_file='my_file.epc')
     <resqpy.model.Model at 0x7fdcd14e4700>
 
-To iterate over all wells in the model:
+If you don't have any RESQML datasets, you can use the tiny datasets included in the example_data directory of the resqpy repository.
+
+To list all the parts (high level objects) in the model:
 
 .. code-block:: python
 
-    for well in model.wells():
-       print(well.title)
+   for part in model.parts():
+      
+      part_type = model.type_of_part(part)
+      title = model.citation_title_for_part(part)
+      uuid = str(model.uuid_for_part(part))
 
-       for trajectory in well.trajectories():
-          print(trajectory.title)
-
-          for frame in trajectory.wellbore_frames():
-             print(frame.title)
-
-             # Measured depths
-             mds = frame.node_mds
-
-             # Logs
-             log_collection = frame.logs
-             for log in log_collection.logs():
-                values = log.values()
+      print(f'{title:<30s} {part_type:<35s} {uuid}')

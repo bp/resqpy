@@ -22,7 +22,6 @@ executed whilst progressing through the material.
 
    intro_to_resqml
    getting_started_with_model
-   creating_test
    working_with_coord
    high_level_objects
    cellular_grids

@@ -26,7 +26,7 @@ Physically, a resqml model is stored in a compressed file with the extension .ep
 
 The *epc* File
 ^^^^^^^^^^^^^^
-The *epc* (Energistics Package Convention) file is the 'main' file holding the metadata for the model, along with scalar data. It also contains links to any hdf5 (.h5) files holding array data for the model. The *epc* file itself conforms to another standard file structure (not specific to Energistics) known as opc. It is basically a zipped (compressed) file containing a set of xml files. An individual xml file might be one of the following (amongst others):
+The *epc* (Energistics Package Convention) file is the 'main' file holding the metadata for the model, along with scalar data. It also contains links to any hdf5 (.h5) files holding array data for the model. The *epc* file itself conforms to another standard file structure (not specific to Energistics) known as opc. It is basically a zipped file containing a set of xml files. An individual xml file might be one of the following (amongst others):
 
 * The main contents file holding a list of the other xml files.
 * A primary model part, holding data for an object such as a coordinate reference system (crs), a surface, a grid, a grid property etc.
@@ -36,7 +36,7 @@ The *epc* (Energistics Package Convention) file is the 'main' file holding the m
 
 The RESQML standard does not specify a minimum set of objects, or parts, for a model to be valid. So, for example, a coordinate reference system on its own would be a valid (if minimal) RESQML model (or package, to use the Energistics term). For maximum flexibility, there is not even a requirement that all the objects referred to in the relationships must be present. So, for example, if a grid object refers to a crs, then that crs may be absent. This allows a partial model to be transferred, for example, when only a small part of a model has changed.
 
-Because array data is not stored in the epc file, and because it uses a compressed format, file sizes are small – perhaps a few tens of kilobytes for a sizeable model.
+Because array data is not stored in the epc file, file sizes are small – perhaps a few tens of kilobytes for a sizeable model.
 
 The bulk of the RESQML standard is published in the form of xml schema definition files (with extension xsd). These files specify the required xml contents for each of the types of object.
 
@@ -44,7 +44,7 @@ hdf5 (.h5) Files
 ^^^^^^^^^^^^^^^^
 Any array data that forms part of the model must be stored in an hdf5 file, and not within one of the xml files within the epc (though those xml files will contain references to the hdf5 files). The hdf5 format – hierarchical data format – is not specific to Energistics. It is widely used in high performance technical computing. It stores array data in binary format and can handle extremely large data sets. A single hdf5 file can hold multiple arrays, organised within the file in a hierarchical structure rather like a directory structure. Random access to an array, or part of an array, within an hdf5 file is fast. The detailed format of the array storage is highly compatible with python numpy arrays.
 
-All the arrays for a RESQML model may be stored in a single hdf5 file, or they may be spread amongst multiple files. Furthermore, an hdf5 file may be referred to by more than one *epc* file, potentially reducing the duplication of data. A particular *epc* file does not need to refer to all the arrays within an hdf5 file. Despite all this flexibility, the recommendation is to keep a simple one-to-one correspondence between *epc* and hdf5 files wherever possible (and this is the default behaviour of the Bifröst code base).
+All the arrays for a RESQML model may be stored in a single hdf5 file, or they may be spread amongst multiple files. Furthermore, an hdf5 file may be referred to by more than one *epc* file, potentially reducing the duplication of data. A particular *epc* file does not need to refer to all the arrays within an hdf5 file. Despite all this flexibility, the recommendation is to keep a simple one-to-one correspondence between *epc* and hdf5 files wherever possible (and this is the default behaviour of the resqpy code base).
 
 The hdf5 files can be large: typically several gigabytes.
 

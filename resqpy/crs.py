@@ -266,13 +266,13 @@ class Crs():
 
 
    def create_xml(self, add_as_part = True, root = None, title = 'Coordinate Reference System', originator = None):
-      """Creates a Coordinate Reference System xml node and optionally adds as child of root and/or to parts forest.
+      """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
       arguments:
          add_as_part (boolean, default True): if True the newly created crs node is added to the model
             as a part
          root (optional, usually None): if not None, the newly created crs node is appended as a child
-            of this node
+            of this node (rarely used)
          title (string): used as the Title text in the citation node
          originator (string, optional): the name of the human being who created the crs object;
             default is to use the login name

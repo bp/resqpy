@@ -69,7 +69,7 @@ Each property array is a high level object in its own right, and the part name i
 
 Using RESQML property kinds and facets
 --------------------------------------
-In the examples above, we are using the citation title to uniquely identify a property array. That can work if the source of the dataset is known in advance, so that the values and uniqueness of citation titles is ensured. However, to write code that will work with RESQML data that has come from other sources, it is better to use the property kind to find the array of interest. The resqpy Nexus vdb import code also sets the property kind, so the following should work regardless of the source of the RESQML data:
+In the examples above, we are using the citation title to uniquely identify a property array. That can work if the source of the dataset is known in advance, so that the values and uniqueness of citation titles is ensured. However, to write code that will work with RESQML data that has come from other sources, it is better to use the *property kind* to find the array of interest. The resqpy Nexus vdb import code also sets the property kind, so the following should work regardless of the source of the RESQML data:
 
 .. code-block:: python
 
@@ -81,11 +81,27 @@ There is a fixed list of standard property kinds, defined in the RESQML standard
 
     rqp.supported_property_kind_list
 
-which evaluates to: ``['code', 'index', 'depth', 'rock volume', 'pore volume', 'volume', 'thickness', 'length', 'cell length', 'net to gross ratio', 'porosity', 'permeability thickness', 'permeability length', 'permeability rock', 'rock permeability', 'fluid volume', 'transmissibility', 'pressure', 'saturation', 'solution gas-oil ratio', 'vapor oil-gas ratio', 'property multiplier', 'thermodynamic temperature', 'continuous', 'discrete', 'categorical']``
+which evaluates to:
+
+.. code-block:: python
+
+    ['code', 'index', 'depth', 'rock volume', 'pore volume', 'volume',
+     'thickness', 'length', 'cell length', 'net to gross ratio', 'porosity',
+     'permeability thickness', 'permeability length', 'permeability rock',
+     'rock permeability', 'fluid volume', 'transmissibility', 'pressure',
+     'saturation', 'solution gas-oil ratio', 'vapor oil-gas ratio',
+     'property multiplier', 'thermodynamic temperature',
+     'continuous', 'discrete', 'categorical']
 
 That list is a small subset of the standard resqml property kinds – the subset which resqpy has some 'understanding' of. For the full list, see the definition of ResqmlPropertyKind in the RESQML schema definition file property.xsd, or find the same list in json format in the resqpy repository file: resqml/olio/data/properties.json. Using property kinds that are not in the supported_property_kind_list should usually be okay.
 
-Some of the property kinds may have an associated directional indication, which is stored as a property facet, with a facet type of 'direction'. So to get at PERMZ using the property kind, we would need:
+The following method returns a list of the distinct property kinds found within the collection:
+
+.. code-block:: python
+
+    property_kinds_present = pc.property_kind_list()
+
+Some of the property kinds may have an associated directional indication, which is stored as a property *facet*, with a facet type of 'direction'. So to get at PERMZ using the property kind, we would need:
 
 .. code-block:: python
 
@@ -101,11 +117,7 @@ Here are the facet types and facet values currently used by resqpy:
 
 The exact use of facets is not really pinned down in the RESQML standard, so we might choose to work with the citation titles in some situations.
 
-Another method relating to property kinds is the following, which returns a list of the distinct property kinds found within the collection:
-
-.. code-block:: python
-
-    property_kinds_present = pc.property_kind_list()
+The RESQML standard allows for a property object to have any number of facets. However, the resqpy PropertyCollection class currently handles at most one facet per property.
 
 Identifying basic static properties
 -----------------------------------
@@ -448,23 +460,23 @@ Then call the function to add the new array as shown below. The full argument li
     import resqpy.derived_model as rqdm
 
     rqdm.add_one_grid_property_array(epc_file = epc_path,
-                                    a = pressure_change_array,
-                                    property_kind = 'pressure',
-                                    grid_uuid = grid.uuid,
-                                    source_info = 'final pressure minus initial',
-                                    title = 'PRESSURE CHANGE',
-                                    discrete = False,
-                                    uom = pressure_units,
-                                    time_index = None,
-                                    time_series_uuid = None,
-                                    string_lookup_uuid = None,
-                                    null_value = None,
-                                    indexable_element = 'cells',
-                                    facet_type = None, facet = None,
-                                    realization = None,
-                                    local_property_kind_uuid = None,
-                                    count_per_element = 1,
-                                    new_epc_file = None)
+                                     a = pressure_change_array,
+                                     property_kind = 'pressure',
+                                     grid_uuid = grid.uuid,
+                                     source_info = 'final pressure minus initial',
+                                     title = 'PRESSURE CHANGE',
+                                     discrete = False,
+                                     uom = pressure_units,
+                                     time_index = None,
+                                     time_series_uuid = None,
+                                     string_lookup_uuid = None,
+                                     null_value = None,
+                                     indexable_element = 'cells',
+                                     facet_type = None, facet = None,
+                                     realization = None,
+                                     local_property_kind_uuid = None,
+                                     count_per_element = 1,
+                                     new_epc_file = None)
 
 The paragraphs below look at the argument list for that function in some more detail.
 
