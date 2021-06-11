@@ -55,3 +55,19 @@ def test_crs():
    a[:, 1] -= 100.0
    a[:, 2] -= 50.0
    assert np.max(np.abs(b - a)) < 1.0e-6
+
+
+def test_crs_reuse():
+   model = rq.Model(new_epc = True, create_basics = True)
+   crs_a = rqc.Crs.reuse(model)
+   crs_a.create_xml()
+   crs_b = rqc.Crs.reuse(model)
+   crs_b.create_xml()
+   assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 1
+   crs_c = rqc.Crs.reuse(model, z_inc_down = False)
+   crs_c.create_xml()
+   assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 2
+   crs_d = rqc.Crs.reuse(model, z_units = 'ft')
+   crs_d.create_xml()
+   assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 3
+
