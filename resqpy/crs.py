@@ -342,6 +342,7 @@ class Crs():
             old_crs = Crs(self.model, uuid = old_crs_uuid)
             if old_crs == self:
                old_root = self.model.root(uuid = old_crs_uuid)
+               self.uuid = old_crs_uuid
                if self.model.crs_root is None: self.model.crs_root = old_root  # mark's as 'main' crs for model
                return old_root
 
