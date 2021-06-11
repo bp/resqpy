@@ -108,8 +108,7 @@ class Crs():
                              not self.rotated)
 
 
-   @classmethod
-   def reuse(cls, parent_model, x_offset = 0.0, y_offset = 0.0, z_offset = 0.0,
+   def reuse(parent_model, x_offset = 0.0, y_offset = 0.0, z_offset = 0.0,
              rotation = 0.0, xy_units = 'm', z_units = 'm',
              z_inc_down = True, axis_order = 'easting northing',
              time_units = None, epsg_code = None):
@@ -117,12 +116,12 @@ class Crs():
       flavour = 'LocalDepth3dCrs' if time_units is None else 'LocalTime3dCrs'
       crs_uuids = parent_model.uuids(obj_type = flavour)
 
-      new_crs = cls(parent_model = parent_model, x_offset = x_offset, y_offset = y_offset, z_offset = z_offset,
+      new_crs = Crs(parent_model = parent_model, x_offset = x_offset, y_offset = y_offset, z_offset = z_offset,
                     rotation = rotation, xy_units = xy_units, z_units = z_units,
                     z_inc_down = z_inc_down, axis_order = axis_order, time_units = time_units, epsg_code = epsg_code)
 
       for old_crs_uuid in crs_uuids:
-         old_crs = cls(parent_model, uuid = old_crs_uuid)
+         old_crs = Crs(parent_model, uuid = old_crs_uuid)
          if new_crs == old_crs: return old_crs
 
       return new_crs
