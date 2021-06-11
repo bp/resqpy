@@ -10,8 +10,9 @@ The RESQML standard defines many classes of high level objects and specifies pre
 * Class names are usually different
 * Some resqpy classes cater for more than one RESQML class
 * There are a few circumstances where a RESQML object can be represented by more than one resqpy class
-* Whereas a RESQML class is defined in a hierarchical way, and makes use of inheritance (xsd extension base) and abstract classes, the comparable resqpy class is flattened and in most cases without inheritance
 * RESQML is purely concerned with what data is stored for a class, whilst a resqpy class also contains methods to provide different ways of viewing or processing the data
+* Whereas a RESQML class is defined in a hierarchical way, and makes use of inheritance (xsd extension base) and abstract classes, the comparable resqpy class is flattened with data elements held as simple attributes
+* Some resqpy classes use class inheritance to allow common functionality to be implemented in a base class – this is a different hierarchy to that used in the RESQML schema definition
 * Not all RESQML classes are yet catered for (except in the lowest level generic layer of code)
 * Some RESQML objects have optional attributes or multiple possible representations of an attribute – some of the options might not yet be implemented in resqpy
 
@@ -53,7 +54,7 @@ Step 3 occurs when the application code instantiates a resqpy object for one of 
     xml_root_node = model.root(obj_type = 'IjkGridRepresentation', title = 'FAULTED GRID')
     faulted_grid = grr.Grid(model, grid_root = xml_root_node)
 
-Step 4 only pertains to classes with large amounts of array data. To minimize memory and time usage, these arrays are not loaded until application code requests them using specific methods in the class. The names of these methods usually contain terms like cached and/or array_ref. There is often another method allowing for the uncaching of such arrays, which has the effect of deleting the associated attribute from the resqpy object. The following example loads a numpy boolean array from the hdf5 file (unless it has already been cached), indicating which cells in a resqpy Grid object have geometry defined; the array is stored as an attribute of the object (cached) and also returned by the method:
+Step 4 only pertains to classes with large amounts of array data. To minimize memory and time usage, these arrays are not loaded until application code requests them using specific methods in the class. The names of these methods usually contain terms like *cached* and/or *array_ref*. There is often another method allowing for the uncaching of such arrays, which has the effect of deleting the associated attribute from the resqpy object. The following example loads a numpy boolean array from the hdf5 file (unless it has already been cached), indicating which cells in a resqpy Grid object have geometry defined; the array is stored as an attribute of the object (cached) and also returned by the method:
 
 .. code-block:: python
 
@@ -67,7 +68,7 @@ The Grid class also has a method which ensures that all arrays are cached:
 
 Note that these steps are triggered by application code calling resqpy methods. Apart from step 4, the calling code needs to keep track of which state the information for a particular object is in – resqpy itself is not generally keeping a handle on high level objects as they are instantiated.
 
-When writing, the representation of an object typically passes through these states:
+When **writing**, the representation of an object typically passes through these states:
 
 1. Only in memory, as a resqpy object, with metadata and any array data held as attributes
 2. Metadata and any array data held as attributes of resqpy object; any array data also written to the hdf5 file
@@ -83,7 +84,9 @@ Step 1 in this sequence is achieved by calling the initialization method of the 
     existing_md_datum = rqw.MdDatum(model, md_datum_root = existing_md_root)
     x, y, z = existing_md_datum.location
     x += 5.0
-    new_md_datum = rqw.MdDatum(model, crs_root = existing_md_datrum.crs_root, location = (x, y, z))
+    new_md_datum = rqw.MdDatum(model,
+                               crs_root = existing_md_datrum.crs_root,
+                               location = (x, y, z))
 
 Step 2 is achieved by the application code calling a method, usually named ``write_hdf5()``, for the resqpy object. As the obj_MdDatum class does not involve any array data, this step does not apply to our example.
 
@@ -121,7 +124,7 @@ In general, though, it is up to the application code to manage the lifecycle of 
 
 RESQML to resqpy class mapping
 ------------------------------
-The table below shows which high level resqpy class is used to represelass. The blank rows indicate that a high level resqpy class has not yet been implemented for the RESQML class. (The lowest level resqpy code is generic, so steps 1 & 2 of the reading sequence above will function for all RESQML classes, as will step 4 of the writing sequence.)
+The table below shows which high level resqpy class is used to represent each RESQML class. The blank rows indicate that a high level resqpy class has not yet been implemented for the RESQML class. (The lowest level resqpy code is generic, so steps 1 & 2 of the reading sequence above will function for all RESQML classes, as will step 4 of the writing sequence.)
 
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | RESQML class                                           | array data | primary resqpy class                                      |

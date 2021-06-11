@@ -23,7 +23,7 @@ The RESQML standard requires all objects that involve a geometry (in 3D space) t
 
 Both these classes of CRS consist only of xml metadata – there is no associated array data, so no group in the hdf5 file. The metadata includes the units of measure (uom) for the x & y values, and an independent uom for the z values. It also indicates whether the z values are increasing upwards (away from the centre of the Earth), or downwards, and how the x & y axes relate to the compass directions.
 
-The local coordinate reference system may also be placed within a parent CRS, with an xyz origin which locates the local point (0.0, 0.0, 0.0) within another frame of reference. A rotation in the projected (plan) view may also be specified. The parent CRS may optionally be identified as another RESQML CRS or by specifying an EPSG code. The parent may also be left unspecified, in which case the implication is that all CRS objects within the RESQML dataset share the same parent frame of reference.
+The local coordinate reference system may also be placed within a parent CRS, with an xyz origin which locates the local point (0.0, 0.0, 0.0) within another frame of reference. A rotation in the projected (plan) view may also be specified. The parent CRS may optionally be identified as another RESQML CRS or by specifying an EPSG code. (For more information on EPSG codes visit https://epsg.org) The parent may also be left unspecified, in which case the implication is that all CRS objects within the RESQML dataset share the same parent frame of reference.
 
 The rest of this tutorial will focus on a depth based CRS (LocalDepth3dCrs).
 
@@ -51,7 +51,7 @@ or, of course, we could pick a single item out of the list, for example with:
 
 Instantiating a resqpy Crs object
 ---------------------------------
-Many of the RESQML object classes have corresponding resqpy python classes available, and that includes the CRS classes. Note that there is not always a one-to-one correspondence between RESQML and resqpy classes though. The resqpy Crs class caters for both the RESQML CRS classes: ``LocalTime3dCrs`` and ``LocalDepth3dCrs``
+Many of the RESQML object classes have corresponding resqpy python classes available, and that includes the CRS classes. Note that there is not always a one-to-one correspondence between RESQML and resqpy classes though. (The next tutorial discusses this in more detail.) The resqpy Crs class caters for both the RESQML CRS classes: ``LocalTime3dCrs`` and ``LocalDepth3dCrs``
 
 To instatiate a resqpy high level object, rather than accepting a uuid, the xml root node must be passed as an argument to the initializer method. If we have a uuid, we can find the corresponding xml root node with:
 
@@ -72,6 +72,8 @@ Having found our xml root node, we can instantiate a resqpy Crs object:
     crs = rqc.Crs(model, crs_root)
 
 A similar approach is used to instantiate objects for all the resqpy classes, when reading an existing dataset.
+
+A future release of resqpy will use the uuid, rather than the xml root node, as the argument when instantiating resqpy objects from existing RESQML objects.
 
 Inspecting the resqpy Crs object
 --------------------------------
@@ -104,7 +106,7 @@ The S-bend dataset only has one CRS. If it had more, the following Crs methods c
 .. code-block:: python
 
     crs.convert_to(another_crs, xyz)  # returns a new tuple for a single xyz point
-    crs.convert_array_to(another_crs, xyz_array)  # converts a numpy float array of shape (..., 3) in situ
+    crs.convert_array_to(another_crs, xyz_array)  # converts in situ a numpy float array of shape (..., 3)
 
 The two conversion methods above assume that the xyz data is starting in the space of this ``crs`` and being converted to ``another_crs``. There are an equivalent pair of methods for converting from the other crs (ie. the one passed as an argument), so the following two lines would have exactly the same affect as the two above:
 
@@ -112,6 +114,13 @@ The two conversion methods above assume that the xyz data is starting in the spa
 
     another_crs.convert_from(crs, xyz)
     another_crs.convert_array_from(crs, xyz_array)
+
+Along with some other simple resqpy classes, Crs includes a definition for __eq__() and __ne__(), so that the == and != operators can be used to test for equivalence between two coordinate reference system objects:
+
+.. code-block:: python
+
+    if crs == another_crs:
+        print('no coordinate transformation needed')
 
 The Crs class includes other methods but those mentioned above are the most commonly used ones.
 
