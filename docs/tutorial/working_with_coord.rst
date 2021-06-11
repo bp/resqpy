@@ -53,7 +53,16 @@ Instantiating a resqpy Crs object
 ---------------------------------
 Many of the RESQML object classes have corresponding resqpy python classes available, and that includes the CRS classes. Note that there is not always a one-to-one correspondence between RESQML and resqpy classes though. (The next tutorial discusses this in more detail.) The resqpy Crs class caters for both the RESQML CRS classes: ``LocalTime3dCrs`` and ``LocalDepth3dCrs``
 
-To instatiate a resqpy high level object, rather than accepting a uuid, the xml root node must be passed as an argument to the initializer method. If we have a uuid, we can find the corresponding xml root node with:
+Having found the uuid, we can instantiate a resqpy Crs object:
+
+.. code-block:: python
+    import resqpy.crs as rqc
+    crs = rqc.Crs(model, uuid = crs_uuid)
+
+A similar approach is used to instantiate objects for all the resqpy classes, when reading an existing dataset.
+
+Older releases of resqpy used the xml root instead of the uuid, when instantiating resqpy objects for existing RESQML
+objects. Some resqpy classes have not yet been updated to the uuid way of working. The older approach required an extra step to find the xml root as shown here:
 
 .. code-block:: python
 
@@ -65,15 +74,11 @@ Alternatively, we could in this case have skipped the uuid stage altogether with
 
     crs_root = model.root(obj_type = 'LocalDepth3dCrs')
 
-Having found our xml root node, we can instantiate a resqpy Crs object:
+And then the Crs object is instantiated from the root node:
 
 .. code-block:: python
-    import resqpy.crs as rqc
-    crs = rqc.Crs(model, crs_root)
 
-A similar approach is used to instantiate objects for all the resqpy classes, when reading an existing dataset.
-
-A future release of resqpy will use the uuid, rather than the xml root node, as the argument when instantiating resqpy objects from existing RESQML objects.
+    crs = rqc.Crs(model, crs_root = crs_root)
 
 Inspecting the resqpy Crs object
 --------------------------------
@@ -115,7 +120,7 @@ The two conversion methods above assume that the xyz data is starting in the spa
     another_crs.convert_from(crs, xyz)
     another_crs.convert_array_from(crs, xyz_array)
 
-Along with some other simple resqpy classes, Crs includes a definition for __eq__() and __ne__(), so that the == and != operators can be used to test for equivalence between two coordinate reference system objects:
+Along with some other simple resqpy classes, Crs includes a definition for __eq__() and __ne__(), so that the == and != operators can be used to test for equivalence between two coordinate reference system objects (behind the scenes this is calling the *is_equivalent()* method):
 
 .. code-block:: python
 

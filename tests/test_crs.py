@@ -60,23 +60,28 @@ def test_crs():
 
 def test_crs_reuse():
    model = rq.Model(new_epc = True, create_basics = True)
-   crs_a = rqc.Crs.reuse(model)
+   crs_a = rqc.Crs(model)
    crs_a.create_xml()
-   crs_b = rqc.Crs.reuse(model)
+   crs_b = rqc.Crs(model)
    crs_b.create_xml()
    assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 1
    assert crs_a == crs_b
    assert bu.matching_uuids(crs_a.uuid, crs_b.uuid)
-   crs_c = rqc.Crs.reuse(model, z_inc_down = False)
+   crs_c = rqc.Crs(model, z_inc_down = False)
    crs_c.create_xml()
    assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 2
    assert crs_c != crs_a
    assert not bu.matching_uuids(crs_c.uuid, crs_a.uuid)
-   crs_d = rqc.Crs.reuse(model, z_units = 'ft')
+   crs_d = rqc.Crs(model, z_units = 'ft')
    crs_d.create_xml()
    assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 3
-   crs_e = rqc.Crs.reuse(model, z_inc_down = False)
+   crs_e = rqc.Crs(model, z_inc_down = False)
    crs_e.create_xml()
    assert len(model.uuids(obj_type = 'LocalDepth3dCrs')) == 3
    assert crs_e == crs_c
    assert bu.matching_uuids(crs_e.uuid, crs_c.uuid)
+   crs_f = rqc.Crs(model)
+   crs_f.create_xml(reuse = False)
+   assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 4
+   assert crs_f == crs_a
+   assert not bu.matching_uuids(crs_f.uuid, crs_a.uuid)
