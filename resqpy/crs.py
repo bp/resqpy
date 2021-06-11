@@ -6,6 +6,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('crs.py version ' + version)
 
+import warnings
 import math as maths
 import numpy as np
 # import xml.etree.ElementTree as et
@@ -21,19 +22,59 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 class Crs():
    """ Coordinate reference system object """
 
-   def __init__(self, parent_model, crs_root = None,
+   def __init__(self, parent_model, crs_root = None, uuid = None,
                 x_offset = 0.0, y_offset = 0.0, z_offset = 0.0,
                 rotation = 0.0, xy_units = 'm', z_units = 'm',
                 z_inc_down = True, axis_order = 'easting northing',
                 time_units = None, epsg_code = None):
       """Create a new coordinate reference system object.
 
+      arguments:
+         parent_model (model.Model): the model to which the new Crs object will belong
+         crs_root (xml root node): DEPRECATED – use uuid instead; the xml root node for an existing RESQML crs object
+         crs_uuid (uuid.UUID): the uuid of an existing RESQML crs object in model, from which to instantiate the
+            resqpy Crs object; if present, all the remaining arguments are ignored
+         x_offset, y_offset, z_offset (floats, default zero): the local origin within an implicit parent crs
+         rotation (float, default zero): a projected view rotation (in the xy plane), in radians, relative to an
+            implicit parent crs
+         xy_units (str, default 'm'): the units applicable to x & y values; must be one of the RESQML length uom strings
+         z_units (str, default 'm'): the units applicable to z depth values; must be one of the RESQML length uom strings
+         z_inc_down (boolean, default True): if True, increasing z values indicate greater depth (ie. in direction of
+            gravity); if False, increasing z values indicate greater elevation
+         axis_order (str, default 'easting northing'): the compass directions of the positive x and y axes respectively
+         time_units (str, optional): if present, the time units of the z values (for seismic datasets), in which case the
+            z_units argument is irrelevant
+         epsg_code (str, optional): if present, the EPSG code of the implicit parent crs
+
+      returns:
+         a new resqpy Crs object
+
+      notes:
+         although resqpy does not have full support for identifying a parent crs, the modifiers such as a local origin
+         may be used on the assumption that all crs objects refer to the same implicit parent crs;
+         there are two equivalent RESQML classes and which one is generated depends on whether the time_units argument
+         is used, when instantiating from values;
+         it is strongly encourage to call the create_xml() method immediately after instantiation (unless the resqpy
+         crs is a temporary object) as the uuid may be modified at that point to re-use any existing equivalent RESQML
+         crs object in the model
+
       :meta common:
       """
 
       self.model = parent_model
+
       self.crs_root = None
-      self.uuid = None
+      if crs_root is not None:
+         warnings.warn("Argument crs_root is deprecated, please use uuid")
+         uuid = rqet.uuid_for_part_root(crs_root)
+         self.crs_root = crs_root
+
+      if uuid is None:
+         self.uuid = bu.new_uuid()
+      else:
+         self.uuid = uuid
+         if self.crs_root is None: self.crs_root = self.model.root(uuid = uuid)
+
       self.xy_units = None
       self.z_units = None
       self.time_units = None   # if None, z values are depth; if not None, z values are time (from seismic)
@@ -48,9 +89,7 @@ class Crs():
       self.rotation_matrix = None
       self.reverse_rotation_matrix = None
 
-      if crs_root is not None:
-         self.crs_root = crs_root
-         self.uuid = bu.uuid_from_string(self.crs_root.attrib['uuid'])
+      if self.crs_root is not None:
          flavour = rqet.node_type(self.crs_root)
          assert flavour in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
          self.xy_units = rqet.find_tag_text(self.crs_root, 'ProjectedUom')
@@ -75,7 +114,6 @@ class Crs():
          if axis_order is not None:
             assert axis_order in ["easting northing", "northing easting", "westing southing", "southing westing",
                                   "northing westing", "westing northing"], 'invalid axis order: ' + str(axis_order)
-         self.uuid = bu.new_uuid()
          self.xy_units = xy_units
          self.z_units = z_units
          self.time_units = time_units
@@ -97,8 +135,6 @@ class Crs():
                              maths.isclose(self.y_offset, 0.0, abs_tol = 1e-8) and
                              maths.isclose(self.z_offset, 0.0, abs_tol = 1e-8) and
                              not self.rotated)
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
 
 
    def is_right_handed_xyz(self):
@@ -265,7 +301,8 @@ class Crs():
       return xyz
 
 
-   def create_xml(self, add_as_part = True, root = None, title = 'Coordinate Reference System', originator = None):
+   def create_xml(self, add_as_part = True, root = None, title = 'Coordinate Reference System',
+                  originator = None, reuse = True):
       """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
       arguments:
@@ -276,18 +313,38 @@ class Crs():
          title (string): used as the Title text in the citation node
          originator (string, optional): the name of the human being who created the crs object;
             default is to use the login name
+         reuse (boolean, default True): if True and an equivalent crs already exists in the model then
+            the uuid for this Crs is modified to match that of the existing object and the existing
+            xml node is returned without anything new being added
 
       returns:
-         newly created coordinate reference system xml node
+         newly created (or reused) coordinate reference system xml node
+
+      notes:
+         if the reuse argument is True, it is strongly recommended to call this method immediately after
+         a new Crs has been instantiated from explicit values, as the uuid may be modified here;
+         if reuse is True, the title is not regarded as important and a match with an existing object
+         may occur even if the titles differ
 
       :meta common:
       """
 
-      # note: This function aims to create a crs node compatible with those generated by fesapi
-      if self.time_units is None:
-         flavour = 'LocalDepth3dCrs'
-      else:
-         flavour = 'LocalTime3dCrs'
+      if reuse and self.uuid is not None:
+         old_root = self.model.root(uuid = self.uuid)
+         if old_root is not None:
+            return old_root
+
+      flavour = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
+
+      if reuse:
+         crs_uuids = self.model.uuids(obj_type = flavour)
+         for old_crs_uuid in crs_uuids:
+            old_crs = Crs(self.model, uuid = old_crs_uuid)
+            if old_crs == self:
+               old_root = self.model.root(uuid = old_crs_uuid)
+               self.uuid = old_crs_uuid
+               if self.model.crs_root is None: self.model.crs_root = old_root  # mark's as 'main' crs for model
+               return old_root
 
       crs = self.model.new_obj_node(flavour)
 
@@ -329,6 +386,11 @@ class Crs():
       z_uom.set(ns['xsi'] + 'type', ns['eml'] + 'LengthUom')
       z_uom.text = wam.rq_length_unit(self.z_units)
 
+      if self.time_units is not None:
+         t_uom = rqet.SubElement(crs, ns['resqml2'] + 'TimeUom')
+         t_uom.set(ns['xsi'] + 'type', ns['eml'] + 'TimeUom')  # todo: check this
+         t_uom.text = self.time_units
+
       z_sense = rqet.SubElement(crs, ns['resqml2'] + 'ZIncreasingDownward')
       z_sense.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
       z_sense.text = str(self.z_inc_down).lower()
@@ -359,6 +421,6 @@ class Crs():
 
       if root is not None: root.append(crs)
       if add_as_part: self.model.add_part('obj_' + flavour, bu.uuid_from_string(crs.attrib['uuid']), crs)
-      if self.model.crs_root is None: self.model.crs_root = crs
+      if self.model.crs_root is None: self.model.crs_root = crs  # mark's as 'main' (ie. first) crs for model
 
       return crs
