@@ -56,6 +56,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.wellspec_keywords as wsk
+import resqpy.olio.attributes as attr
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.base import BaseResqpy
 
@@ -244,7 +245,25 @@ class DeviationSurvey(BaseResqpy):
    """
 
    _content_type = "DeviationSurveyRepresentation"
-   
+
+   _attrs =(
+      # Top-level tags
+      attr.XmlAttribute(key='station_count', tag='StationCount', xml_type='positiveInteger'),
+      attr.XmlAttribute(key='is_final', tag='IsFinal', xml_type='boolean'),
+      attr.XmlAttribute(key='md_uom', tag='MdUom', xml_type='LengthUom'),
+      attr.XmlAttribute(key='angle_uom', tag='AngleUom', xml_type='PlaneAngleUom'),
+      
+      # Nested tags, with custom write_xml
+      attr.XmlAttribute(key='_first_station_1', tag='FirstStationLocation/Coordinate1', xml_type="double", writable=False),
+      attr.XmlAttribute(key='_first_station_2', tag='FirstStationLocation/Coordinate2', xml_type="double", writable=False),
+      attr.XmlAttribute(key='_first_station_3', tag='FirstStationLocation/Coordinate3', xml_type="double", writable=False),
+
+      # HDF5 arrays
+      attr.HdfAttribute(key='measured_depths', tag='Mds', xml_type='DoubleHdf5Array'),
+      attr.HdfAttribute(key='azimuths', tag='Azimuths', xml_type='DoubleHdf5Array'),
+      attr.HdfAttribute(key='inclinations', tag='Inclinations', xml_type='DoubleHdf5Array'),
+   )
+
    def __init__(self, parent_model, uuid=None, title=None, deviation_survey_root=None,
                 represented_interp=None, md_datum=None, md_uom='m', angle_uom='degrees',
                 measured_depths=None, azimuths=None, inclinations=None, station_count=None,
@@ -282,9 +301,7 @@ class DeviationSurvey(BaseResqpy):
 
       self.is_final = is_final
       self.md_uom = bwam.rq_length_unit(md_uom)
-
-      self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
-      """boolean: True for degrees, False for radians (nothing else supported). Should be 'dega' or 'rad'"""
+      self.angle_uom = angle_uom
 
       # Array data
       self.measured_depths = _as_optional_array(measured_depths)
@@ -309,6 +326,25 @@ class DeviationSurvey(BaseResqpy):
          model=parent_model, uuid=uuid, title=title, originator=originator
       )
 
+   @property
+   def angles_in_degrees(self):
+      """True for degrees, False for radians (nothing else supported).
+
+      Not stored, calculated from self.angle_uom, which should be 'dega' or 'rad'
+      """
+      return self.angle_uom.strip().lower().startswith('deg')
+
+   @property
+   def first_station(self):
+      return self._first_station_1, self._first_station_2, self._first_station_3
+
+   @first_station.setter
+   def first_station(self, value):
+      if value is None:
+         value = [None] * 3
+      self._first_station_1 = value[0]
+      self._first_station_2 = value[1]
+      self._first_station_3 = value[2]
 
    @classmethod
    def from_data_frame(cls, parent_model, data_frame, md_datum=None, md_col='MD',
@@ -424,28 +460,10 @@ class DeviationSurvey(BaseResqpy):
          [bool]: True if sucessful
       """
 
-      # Base class XML load (handles citation block)
-      super().load_from_xml()      
+      # Load XML and HDF5 attributes
+      super().load_from_xml()
 
-      # Get node from self.uuid 
-      node = self.root
-
-      # Load XML data
-      self.md_uom=rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist=True))
-      self.angle_uom=rqet.find_tag_text(node, 'AngleUom', must_exist=True)
-      self.station_count = rqet.find_tag_int(node, 'StationCount', must_exist=True)
-      self.first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist=True))
-      self.is_final=rqet.find_tag_bool(node, 'IsFinal')
-
-      # Load HDF5 data
-      mds_node = rqet.find_tag(node, 'Mds', must_exist=True)
-      load_hdf5_array(self, mds_node, 'measured_depths')
-      azimuths_node = rqet.find_tag(node, 'Azimuths', must_exist=True)
-      load_hdf5_array(self, azimuths_node, 'azimuths')
-      inclinations_node = rqet.find_tag(node, 'Inclinations', must_exist=True)
-      load_hdf5_array(self, inclinations_node, 'inclinations')
-
-      # Set related objects
+      # Related objects
       self.md_datum = self._load_related_datum()
       self.represented_interp = self._load_related_wellbore_interp()
 
@@ -480,9 +498,16 @@ class DeviationSurvey(BaseResqpy):
          the newly created deviation survey xml node
       """
 
+      # Validate
       assert self.station_count > 0
+      assert self.uuid is not None
 
+      # Write XML and HDF5 attributes
+      super().create_xml(ext_uuid=ext_uuid)
+
+      # Write related objects
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
+      ds_node = self.root
 
       if md_datum_root is None:
          if self.md_datum is None:
@@ -495,61 +520,9 @@ class DeviationSurvey(BaseResqpy):
             md_datum_root = self.md_datum.root_node
       assert md_datum_root is not None
 
-      # Create root node, write citation block
-      ds_node = super().create_xml(title=title, originator=originator, add_as_part=False)
-      
-      if_node = rqet.SubElement(ds_node, ns['resqml2'] + 'IsFinal')
-      if_node.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-      if_node.text = str(self.is_final).lower()
-
-      sc_node = rqet.SubElement(ds_node, ns['resqml2'] + 'StationCount')
-      sc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-      sc_node.text = str(self.station_count)
-
-      md_uom = rqet.SubElement(ds_node, ns['resqml2'] + 'MdUom')
-      md_uom.set(ns['xsi'] + 'type', ns['eml'] + 'LengthUom')
-      md_uom.text = bwam.rq_length_unit(self.md_uom)
-
       self.model.create_md_datum_reference(md_datum_root, root = ds_node)
 
       self.model.create_solitary_point3d('FirstStationLocation', ds_node, self.first_station)
-
-      angle_uom = rqet.SubElement(ds_node, ns['resqml2'] + 'AngleUom')
-      angle_uom.set(ns['xsi'] + 'type', ns['eml'] + 'PlaneAngleUom')
-      if self.angles_in_degrees:
-         angle_uom.text = 'dega'
-      else:
-         angle_uom.text = 'rad'
-
-      mds = rqet.SubElement(ds_node, ns['resqml2'] + 'Mds')
-      mds.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
-      mds.text = rqet.null_xml_text
-
-      mds_values_node = rqet.SubElement(mds, ns['resqml2'] + 'Values')
-      mds_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
-      mds_values_node.text = rqet.null_xml_text
-
-      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Mds', root = mds_values_node)
-
-      azimuths = rqet.SubElement(ds_node, ns['resqml2'] + 'Azimuths')
-      azimuths.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
-      azimuths.text = rqet.null_xml_text
-
-      azimuths_values_node = rqet.SubElement(azimuths, ns['resqml2'] + 'Values')
-      azimuths_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
-      azimuths_values_node.text = rqet.null_xml_text
-
-      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Azimuths', root = azimuths_values_node)
-
-      inclinations = rqet.SubElement(ds_node, ns['resqml2'] + 'Inclinations')
-      inclinations.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
-      inclinations.text = rqet.null_xml_text
-
-      inclinations_values_node = rqet.SubElement(inclinations, ns['resqml2'] + 'Values')
-      inclinations_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Hdf5Dataset')
-      inclinations_values_node.text = rqet.null_xml_text
-
-      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Inclinations', root = inclinations_values_node)
 
       interp_root = None
       if self.wellbore_interpretation is not None:
@@ -572,17 +545,6 @@ class DeviationSurvey(BaseResqpy):
             self.model.create_reciprocal_relationship(ds_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
 
       return ds_node
-
-
-   def write_hdf5(self, file_name = None, mode = 'a'):
-      """Create or append to an hdf5 file, writing datasets for the measured depths, azimuths, and inclinations."""
-
-      # NB: array data must all have been set up prior to calling this function
-      h5_reg = rwh5.H5Register(self.model)
-      h5_reg.register_dataset(self.uuid, 'Mds', self.measured_depths, dtype=float)
-      h5_reg.register_dataset(self.uuid, 'Azimuths', self.azimuths, dtype=float)
-      h5_reg.register_dataset(self.uuid, 'Inclinations', self.inclinations, dtype=float)
-      h5_reg.write(file = file_name, mode = mode)
 
    def _load_related_datum(self):
       """Return related MdDatum object from XML if present"""

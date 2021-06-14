@@ -3,9 +3,12 @@
 import logging
 import warnings
 from abc import ABCMeta, abstractmethod
+from typing import Iterable
 
 import resqpy.olio.uuid as bu
+import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+from resqpy.olio.attributes import BaseAttribute, HdfAttribute
 
 
 logger = logging.getLogger(__name__)
@@ -18,14 +21,25 @@ class BaseResqpy(metaclass=ABCMeta):
 
     Implements generic magic methods, such as pretty printing and testing for
     equality.
+
+    To enable easy creation of subclasses, one can define in the subclass a
+    list of XML and HDF5 attributes, which can be loaded and saved with the
+    generic `load_from_xml` and `create_xml` methods.
     
     Example use::
 
         class AnotherResqmlObject(BaseResqpy):
             
             _content_type = 'obj_anotherresqmlobjectrepresentation'
+            _attrs = [
+                attr.XmlAttribute(key='is_final', tag='IsFinal', xml_type='boolean'),
+            ]
 
     """
+
+    # Subclasses can define simple XML or HDF attributes,
+    # and the base class will handle loading and saving
+    _attrs: Iterable[BaseAttribute] = ()
 
     @property
     @abstractmethod
@@ -77,17 +91,23 @@ class BaseResqpy(metaclass=ABCMeta):
         return self.model.root_for_uuid(self.uuid)
 
     def load_from_xml(self):
-        """Load citation block from XML.
+        """Load attributes from XML and HDF5
         
-        Note: derived classes should extend this to load other XML and HDF attributes
+        Loads the attributes as defined in self._attrs
         """
 
         # Citation block
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
 
-    def create_xml(self, title=None, originator=None, add_as_part=False):
-        """Write citation block to XML
+        # Any other simple attributes
+        for attr in self._attrs:
+            attr.load(self)
+
+    def create_xml(self, title=None, originator=None, ext_uuid=None, add_as_part=True):
+        """Write XML for all attributes
+
+        Writes to disk the attributes as defined in self._attrs
         
         Args:
             title (string): used as the citation Title text; should usually refer to the well name in a
@@ -96,7 +116,7 @@ class BaseResqpy(metaclass=ABCMeta):
                 default is to use the login name
             add_as_part (boolean, default True): if True, the newly created xml node is added as a part
                 in the model
-
+    
         Returns:
             node: the newly created root node
         """
@@ -117,11 +137,29 @@ class BaseResqpy(metaclass=ABCMeta):
         if add_as_part:
             self.model.add_part(self._content_type, self.uuid, node)
             assert self.root is not None
-        
+
+        # XML and HDF5 attributes
+        for attr in self._attrs:
+            attr.write_xml(obj=self)
+
         return node
 
-    # Generic magic methods
+    def write_hdf5(self, file_name=None, mode='a'):
+        """Create or append to an hdf5 file"""
 
+        hdf_attrs = [a for a in self._attrs if isinstance(a, HdfAttribute)]
+
+        if len(hdf_attrs) == 0:
+            raise ValueError(f"Class {self} has no HDF5 attributes to write")
+        
+        h5_reg = rwh5.H5Register(self.model)
+        for attr in hdf_attrs:
+            array = getattr(self, attr.key)
+            h5_reg.register_dataset(self.uuid, attr.tag, array, dtype=attr.dtype)
+        h5_reg.write(file=file_name, mode=mode)
+
+    # Generic magic methods
+    
     def __eq__(self, other):
         """Implements equals operator. By default, compare objects using uuid"""
         other_uuid = getattr(other, "uuid", None)
