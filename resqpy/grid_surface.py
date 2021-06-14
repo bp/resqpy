@@ -1320,7 +1320,7 @@ def populate_blocked_well_from_trajectory(blocked_well, grid, active_only = Fals
       use_single_layer_tactics = False
       log.debug('skin single layer tactics disabled')
 
-   grid_crs = rqc.Crs(grid.model, crs_uuid = grid.crs_uuid)
+   grid_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
    if blocked_well.trajectory.crs_root is grid.crs_root:
       trajectory = blocked_well.trajectory
    else:
