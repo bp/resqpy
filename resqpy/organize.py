@@ -17,6 +17,7 @@ import warnings
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
+from resqpy.olio.base import BaseResqpy
 
 
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)
@@ -71,74 +72,71 @@ def create_xml_has_occurred_during(model, parent_node, hod_pair, tag = 'HasOccur
    model.create_ref_node('ChronoTop', model.title_for_root(chrono_top_root), top_chrono_uuid, root = hod_node)
 
 
+def _alias_for_attribute(attribute_name):
+   """Return an attribute that is a direct alias for an existing attribute"""
 
-class OrganizationFeature():
+   def fget(self):
+      return getattr(self, attribute_name)
+   
+   def fset(self, value):
+      return setattr(self, attribute_name, value)
+
+   return property(fget, fset)
+
+
+class OrganizationFeature(BaseResqpy):
    """Class for generic RESQML Organization Feature objects."""
 
-   def __init__(self, parent_model, root_node=None, uuid=None, extract_from_xml=True, feature_name=None, organization_kind=None):
-      """Initialises an organization feature object."""
+   _content_type = "OrganizationFeature"
+   feature_name = _alias_for_attribute("title")
 
-      self.model = parent_model
-      self.uuid = uuid
-      self.feature_name = None
-      self.organization_kind = None
+   def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None,
+                organization_kind=None, originator=None):
+      """Initialises an organization feature object."""
 
       if root_node is not None:
          warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         self.root_node = root_node
-      else:
-         self.root_node = self.model.root_for_uuid(self.uuid)
+         uuid = rqet.uuid_for_part_root(root_node)
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.feature_name = rqet.find_nested_tags_text(self.root_node, ['Citation', 'Title'])
-         self.organization_kind = rqet.find_tag_text(self.root_node, 'OrganizationKind')
-      else:
-         self.uuid = bu.new_uuid()
-         self.feature_name = feature_name
-         if organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
-            raise ValueError(organization_kind)
-         self.organization_kind = organization_kind
-
+      self.organization_kind = organization_kind
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, originator=originator)
+   
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
 
-      if other is None or not isinstance(other, OrganizationFeature): return False
-      if self is other or bu.matching_uuids(self.uuid, other.uuid): return True
-      if self.feature_name != other.feature_name or self.organization_kind != other.organization_kind: return False
-      if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
-      return True
-
+      return isinstance(other, OrganizationFeature) and any(
+         self is other,
+         bu.matching_uuids(self.uuid, other.uuid),
+         all(
+            self.feature_name == other.feature_name,
+            self.organization_kind == other.organization_kind,
+            (equivalent_extra_metadata(self, other) or not check_extra_metadata)
+         )
+      )
 
    def __eq__(self, other):
       return self.is_equivalent(other)
 
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
+   def load_from_xml(self):
+       super().load_from_xml()
+       self.organization_kind = rqet.find_tag_text(self.root_node, 'OrganizationKind')
 
    def create_xml(self, add_as_part = True, originator = None):
       """Creates an organization feature xml node from this organization feature object."""
 
-      ofn = self.model.new_obj_node('OrganizationFeature')
+      # Create node with citation block
+      ofn = super().create_xml(add_as_part=False, originator=originator)
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(ofn.attrib['uuid'])
-      else:
-         ofn.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = ofn, title = self.feature_name, originator = originator)
-
+      # Extra element for organization_kind
+      if self.organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
+            raise ValueError(self.organization_kind)
       kind_node = rqet.SubElement(ofn, ns['resqml2'] + 'OrganizationKind')
       kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'OrganizationKind')
       kind_node.text = self.organization_kind
 
       if add_as_part:
          self.model.add_part('obj_OrganizationFeature', self.uuid, ofn)
-
-      self.root_node = ofn
 
       return ofn
 
