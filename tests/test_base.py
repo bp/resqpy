@@ -17,7 +17,7 @@ def test_base_creation(example_model):
     assert dummy.part is None
 
     # After creating XML, root and part should exist
-    dummy.create_xml()
+    dummy.create_xml(add_as_part=True)
     assert dummy.root is not None
     assert dummy.part is not None
 
