@@ -13,10 +13,8 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# Point to the current working copy of resqml
-import os
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',)))
+# Do not do sys.path surgery
+# Instead, resqpy package should be pip-installed in the python environment
 
 # Mock imports for things not available
 # autodoc_mock_imports = ["h5py"]
@@ -31,7 +29,7 @@ author = 'BP'
 # See https://github.com/pypa/setuptools_scm/#usage-from-sphinx
 try:
     from importlib import metadata
-    release = metadata.version('myproject')
+    release = metadata.version('resqpy')
 except Exception:
     release = '0.0.0-version-not-available'
 

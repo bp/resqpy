@@ -23,8 +23,8 @@ Ways of contributing
 * Documentation or test improvements
 * Publicity and support
 
-Making a Pull Request
----------------------
+Development environment setup
+-----------------------------
 
 1. Clone the repo
 
@@ -35,6 +35,7 @@ Making a Pull Request
    .. code-block:: bash
 
       git clone <url from GitHub>
+      cd resqpy
 
 2. Set up a python environment
 
@@ -45,13 +46,17 @@ Making a Pull Request
       conda create -n resqpy python=3.7
       conda activate resqpy
         
-   You should then make an “editable” installation of the package into your local environment. This will
-   also install required dependencies, including extra packages required to running
-   unit tests.
+   You should then make an “editable” installation of the package into your
+   local environment. This will also install required dependencies, including
+   extra packages required for running unit tests and building documentation.
 
    .. code-block:: bash
 
-      pip install --editable .[tests]
+      pip install --editable .[tests,docs]
+
+   Be sure to execute the above command from the top level of the repository.
+   The full stop ``.`` instructs pip to find the python package in the current
+   working directory.
     
 3. Make a Pull Request
 
@@ -78,7 +83,8 @@ Checklist for pull requests
 Code Style
 ----------
 
-Please try to write code according to the python style guide (PEP8), which
+Please try to write code according to the
+`PEP8 python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
 defines conventions such as variable naming and capitalisation. A consistent
 style makes it much easier for other developers to read and understand your
 code.
@@ -153,15 +159,18 @@ There are several command line options that can be appended:
 Static analysis
 ^^^^^^^^^^^^^^^
 
-We use flake8 to scan for obvious code errors. This is part of the CI tests, and
-can also be ran locally with:
+We use `flake8 <https://flake8.pycqa.org/en/latest/user/invocation.html>`_ to
+scan for obvious code errors. This is automatically run part as part of the CI
+tests, and can also be ran locally with:
 
 .. code:: bash
 
     flake8 .
 
-The configuration of which `error codes <https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3>`_
-are checked by default is stored in `setup.cfg <https://github.com/bp/resqpy/blob/master/setup.cfg>`_.
+The configuration of which
+`error codes <https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3>`_
+are checked by default is configured in the repo in
+`setup.cfg <https://github.com/bp/resqpy/blob/master/setup.cfg>`_.
 
 By default in resqpy:
 
@@ -174,11 +183,17 @@ You can test for PEP8 compliance by running flake8 with further error codes:
 
     flake8 . –select=F,E2,E3,E4,E7
 
-Links:
+Documentation
+-------------
 
--	`PEP8 Style Guide <https://www.python.org/dev/peps/pep-0008/>`_
--	`Flake8 reference <https://flake8.pycqa.org/en/latest/user/invocation.html>`_
--	`Flake8 error codes <https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3>`_
+The docs are built automatically when code is merged into master, and are hosted
+at `readthedocs <https://resqpy.readthedocs.io/>`_. You can also build the docs
+locally, providing you have installed all required dependencies as described
+above:
+
+.. code:: bash
+
+   sphinx-build docs docs/html
 
 Get in touch
 ------------
