@@ -63,6 +63,7 @@ class BaseResqpy(metaclass=ABCMeta):
     def part(self):
         """Part corresponding to self.uuid"""
 
+        # TODO: create directly from self._content_type
         if self.uuid is None:
             raise ValueError('Cannot get part if uuid is None')
         return self.model.part_for_uuid(self.uuid)
@@ -74,18 +75,12 @@ class BaseResqpy(metaclass=ABCMeta):
         if self.uuid is None:
             raise ValueError('Cannot get root if uuid is None')
         return self.model.root_for_uuid(self.uuid)
-    
-    @root.setter
-    def root(self, value):
-        """Update self.uuid to match new root. Ensure root is added as a part"""
-
-        new_uuid = rqet.uuid_for_part_root(value)
-        if new_uuid is None:
-            raise ValueError("Cannot set uuid to be None")
-        self.uuid = new_uuid
 
     def load_from_xml(self):
-        """Load citation block from XML"""
+        """Load citation block from XML.
+        
+        Note: derived classes should extend this to load other XML and HDF attributes
+        """
 
         # Citation block
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
@@ -118,7 +113,7 @@ class BaseResqpy(metaclass=ABCMeta):
         self.model.create_citation(
             root=node, title=self.title, originator=self.originator
         )
-        
+
         if add_as_part:
             self.model.add_part(self._content_type, self.uuid, node)
             assert self.root is not None

@@ -111,7 +111,8 @@ class OrganizationFeature(BaseResqpy):
          all(
             self.feature_name == other.feature_name,
             self.organization_kind == other.organization_kind,
-            (equivalent_extra_metadata(self, other) or not check_extra_metadata))
+            (equivalent_extra_metadata(self, other) or not check_extra_metadata)
+         )
       )
 
    def __eq__(self, other):
