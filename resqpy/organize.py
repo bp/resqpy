@@ -75,7 +75,7 @@ def create_xml_has_occurred_during(model, parent_node, hod_pair, tag = 'HasOccur
 class OrganizationFeature():
    """Class for generic RESQML Organization Feature objects."""
 
-   def __init__(self, parent_model, uuid=None, root_node = None, extract_from_xml = True, feature_name = None, organization_kind = None):
+   def __init__(self, parent_model, root_node=None, uuid=None, extract_from_xml=True, feature_name=None, organization_kind=None):
       """Initialises an organization feature object."""
 
       self.model = parent_model
@@ -147,7 +147,7 @@ class OrganizationFeature():
 class GeobodyFeature():
    """Class for RESQML Geobody Feature objects (note: definition may be incomplete in RESQML 2.0.1)."""
 
-   def __init__(self, parent_model, uuid=None, root_node = None, extract_from_xml = True, feature_name = None):
+   def __init__(self, parent_model, root_node=None, uuid=None, extract_from_xml=True, feature_name=None):
       """Initialises a geobody feature object."""
 
       self.model = parent_model
@@ -209,7 +209,7 @@ class GeobodyFeature():
 class BoundaryFeature():
    """Class for RESQML Boudary Feature organizational objects."""
 
-   def __init__(self, parent_model, uuid=None, root_node=None, feature_name = None):
+   def __init__(self, parent_model, root_node=None, uuid=None, feature_name = None):
       """Initialises a boundary feature organisational object."""
 
       self.model = parent_model
