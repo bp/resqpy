@@ -1206,14 +1206,14 @@ class PointSet(_BaseSurface):
          self.uuid = bu.new_uuid()
          for poly in polyset.polys:
             if poly == polyset.polys[0]:
-               master_crs = rcrs.Crs(self.model, poly.crs_root)
+               master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
                self.crs_root = poly.crs_root
                if poly.isclosed and vec.isclose(poly.coordinates[0],poly.coordinates[-1]):
                   poly_coords = poly.coordinates[:-1].copy()
                else:
                   poly_coords = poly.coordinates.copy()
             else:
-               curr_crs = rcrs.Crs(self.model, poly.crs_root)
+               curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
                if not curr_crs.is_equivalent(master_crs):
                   shifted = curr_crs.convert_array_to(master_crs, poly.coordinates)
                   if poly.isclosed and vec.isclose(shifted[0],shifted[-1]):

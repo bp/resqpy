@@ -2214,7 +2214,7 @@ class BlockedWell:
 
       grid_name = rqet.citation_title_for_node(grid.grid_root)
       length_uom = grid.z_units()
-      grid_z_inc_down = crs.Crs(grid.model, grid.crs_root).z_inc_down
+      grid_z_inc_down = crs.Crs(grid.model, uuid = grid.crs_uuid).z_inc_down
       log.debug('grid z increasing downwards: ' + str(grid_z_inc_down) + '(type: ' + str(type(grid_z_inc_down)) + ')')
       cellio_z_inc_down = None
 
@@ -2537,7 +2537,7 @@ class BlockedWell:
       doing_entry_exit = doing_angles or ('LENGTH' in column_list and length_mode == 'straight')
       grid_crs_list = []
       for grid in self.grid_list:
-         grid_crs = crs.Crs(self.model, crs_root = grid.crs_root)
+         grid_crs = crs.Crs(self.model, uuid = grid.crs_uuid)
          grid_crs_list.append(grid_crs)
          if grid_crs.z_units != grid_crs.xy_units and (len(column_list) > 1 or
                                                        (len(column_list) == 1 and column_list[0] != 'GRID')) is not None:
@@ -2551,7 +2551,7 @@ class BlockedWell:
          traj_crs = None
          traj_z_inc_down = None
       else:
-         traj_crs = crs.Crs(self.trajectory.model, self.trajectory.crs_root)
+         traj_crs = crs.Crs(self.trajectory.model, crs_root = self.trajectory.crs_root)
          assert traj_crs.xy_units == traj_crs.z_units
          traj_z_inc_down = traj_crs.z_inc_down
 

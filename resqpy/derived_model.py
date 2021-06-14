@@ -808,8 +808,8 @@ def interpolated_grid(epc_file, grid_a, grid_b, a_to_b_0_to_1 = 0.5, split_toler
    model = grid_a.model
 
    if not bu.matching_uuids(grid_a.crs_uuid, grid_b.crs_uuid):
-      crs_a = rqcrs.Crs(grid_a.model, grid_a.crs_root)
-      crs_b = rqcrs.Crs(grid_b.model, grid_b.crs_root)
+      crs_a = rqcrs.Crs(grid_a.model, uuid = grid_a.crs_uuid)
+      crs_b = rqcrs.Crs(grid_b.model, uuid = grid_b.crs_uuid)
       assert crs_a.is_equivalent(crs_b), 'end point grids for interpolation have different coordinate reference systems'
 
    log.info('loading geometry for two source grids')
@@ -1387,7 +1387,7 @@ def extract_box_for_well(epc_file = None, source_grid = None, min_k0 = None, max
       trajectory = rqw.Trajectory(traj_model, trajectory_root = trajectory_root)
       well_name = rqw.well_name(trajectory)
       traj_crs = rqcrs.Crs(trajectory.model, crs_root = trajectory.crs_root)
-      grid_crs = rqcrs.Crs(source_grid.model, crs_root = source_grid.crs_root)
+      grid_crs = rqcrs.Crs(source_grid.model, uuid = source_grid.crs_uuid)
       # modify in-memory trajectory data to be in the same crs as grid
       traj_crs.convert_array_to(grid_crs, trajectory.control_points)   # trajectory xyz points converted in situ to grid's crs
       trajectory.crs_root = source_grid.crs_root   # note: tangent vectors might be messed up, if present
@@ -2533,13 +2533,13 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
 
    # take a copy of the resqpy grid object, without writing to hdf5 or creating xml
    grid = copy_grid(source_grid, model)
-   grid_crs = rqcrs.Crs(model, crs_root = model.root_for_uuid(grid.crs_uuid))
+   grid_crs = rqcrs.Crs(model, uuid = grid.crs_uuid)
    assert grid_crs is not None
 
    if lines_crs_uuid is None:
       lines_crs = None
    else:
-      lines_crs = rqcrs.Crs(model, crs_root = model.root_for_uuid(lines_crs_uuid))
+      lines_crs = rqcrs.Crs(model, uuid = lines_crs_uuid)
 
    if full_pillar_list_dict is None:
       full_pillar_list_dict = {}
