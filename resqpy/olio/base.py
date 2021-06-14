@@ -101,7 +101,9 @@ class BaseResqml(metaclass=ABCMeta):
                 default is to use the login name
             add_as_part (boolean, default True): if True, the newly created xml node is added as a part
                 in the model
-    
+
+        Returns:
+            node: the newly created root node
         """
 
         assert self.uuid is not None
@@ -114,9 +116,7 @@ class BaseResqml(metaclass=ABCMeta):
 
         if add_as_part:
             self.model.add_part(self._content_type, self.uuid, node)
-        # self.root = node
-
-        assert self.root is not None
+            assert self.root is not None   
 
         # Citation block
         if title: self.title = title
@@ -124,6 +124,7 @@ class BaseResqml(metaclass=ABCMeta):
         self.model.create_citation(
             root=node, title=self.title, originator=self.originator
         )
+        return node
 
     # Generic magic methods
 

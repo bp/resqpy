@@ -57,6 +57,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.wellspec_keywords as wsk
 from resqpy.olio.xml_namespaces import curly_namespace as ns
+from resqpy.olio.base import BaseResqml
 
 
 valid_md_reference_list = ["ground level", "kelly bushing", "mean sea level", "derrick floor", "casing flange",
@@ -221,7 +222,7 @@ class MdDatum():
       return datum
 
 
-class DeviationSurvey():
+class DeviationSurvey(BaseResqml):
    """Class for RESQML wellbore deviation survey.
 
    RESQML documentation:
@@ -242,6 +243,8 @@ class DeviationSurvey():
 
    """
 
+   _content_type = "DeviationSurveyRepresentation"
+   
    def __init__(self, parent_model, uuid=None, title=None, deviation_survey_root=None,
                 represented_interp=None, md_datum=None, md_uom='m', angle_uom='degrees',
                 measured_depths=None, azimuths=None, inclinations=None, station_count=None,
@@ -277,11 +280,8 @@ class DeviationSurvey():
          this method does not create an xml node, nor write hdf5 arrays
       """
 
-      self.model = parent_model
       self.is_final = is_final
       self.md_uom = bwam.rq_length_unit(md_uom)
-      self.title = title
-      self.originator = originator
 
       self.angles_in_degrees = angle_uom.strip().lower().startswith('deg')
       """boolean: True for degrees, False for radians (nothing else supported). Should be 'dega' or 'rad'"""
@@ -305,25 +305,9 @@ class DeviationSurvey():
          warnings.warn("Argument deviation_survey_root is deprecated, please use uuid")
          uuid = rqet.uuid_for_part_root(deviation_survey_root)
 
-      if uuid is None:
-         self.uuid = bu.new_uuid()
-      else:
-         self.uuid = uuid
-         self.load_from_xml()
-
-   @property
-   def root(self):
-      """Node corresponding to self.uuid"""
-      if self.uuid is None:
-         raise ValueError('Cannot get root if uuid is None')
-      return self.model.root_for_uuid(self.uuid)
-
-   @property
-   def part(self):
-      """Part corresponding to self.uuid"""
-      if self.uuid is None:
-         raise ValueError('Cannot get part if uuid is None')
-      return self.model.part_for_uuid(self.uuid)
+      super().__init__(
+         model=parent_model, uuid=uuid, title=title, originator=originator
+      )
 
 
    @classmethod
@@ -440,6 +424,9 @@ class DeviationSurvey():
          [bool]: True if sucessful
       """
 
+      # Base class XML load (handles citation block)
+      super().load_from_xml()      
+
       # Get node from self.uuid 
       node = self.root
 
@@ -449,8 +436,6 @@ class DeviationSurvey():
       self.station_count = rqet.find_tag_int(node, 'StationCount', must_exist=True)
       self.first_station=extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist=True))
       self.is_final=rqet.find_tag_bool(node, 'IsFinal')
-      self.title = rqet.find_nested_tags_text(node, ['Citation', 'Title'])
-      self.originator = rqet.find_nested_tags_text(node, ['Citation', 'Originator'])
 
       # Load HDF5 data
       mds_node = rqet.find_tag(node, 'Mds', must_exist=True)
@@ -510,18 +495,9 @@ class DeviationSurvey():
             md_datum_root = self.md_datum.root_node
       assert md_datum_root is not None
 
-      assert self.uuid is not None
-
-      ds_node = self.model.new_obj_node('DeviationSurveyRepresentation')
-      ds_node.attrib['uuid'] = str(self.uuid)
-
-      if title:
-         self.title = title
-      if originator:
-         self.originator = originator
-
-      self.model.create_citation(root=ds_node, title=self.title, originator=self.originator)
-
+      # Create root node, write citation block
+      ds_node = super().create_xml(title=title, originator=originator, add_as_part=False)
+      
       if_node = rqet.SubElement(ds_node, ns['resqml2'] + 'IsFinal')
       if_node.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
       if_node.text = str(self.is_final).lower()
