@@ -72,13 +72,14 @@ valid_md_reference_list = ["ground level", "kelly bushing", "mean sea level", "d
 class MdDatum():
    """Class for RESQML measured depth datum."""
 
-   def __init__(self, parent_model, md_datum_root = None,
+   def __init__(self, parent_model, uuid=None, md_datum_root = None,
                 crs_root = None, location = None, md_reference = 'mean sea level'):
       """Initialises a new MdDatum object.
 
          arguments:
             parent_model (model.Model object): the model which the new md datum belongs to
-            md_datum_root (optional): the root node of the xml tree representing the md datum;
+            uuid: If not None, load from existing object. Else, create new.
+            md_datum_root (optional): DEPRECATED: the root node of the xml tree representing the md datum;
                if not None, the new md datum object is initialised based on data in the tree;
                if None, the new object is initialised from the remaining arguments
             crs_root: the root node of the coordinate reference system xml tree; ignored if
@@ -97,14 +98,21 @@ class MdDatum():
       """
 
       self.model = parent_model
-      self.root_node = None
-      self.uuid = None
+      self.uuid = uuid
       self.location = None
       self.md_reference = None
       self.crs_uuid = None
       self.crs_root = None
-      if md_datum_root is not None:     # load from xml
+
+      if md_datum_root is not None:
+         warnings.warn("Parameter md_datum_root is deprecated, use uuid", DeprecationWarning)
+         self.uuid = rqet.uuid_for_part_root(md_datum_root)
          self.root_node = md_datum_root
+      else:
+         self.root_node = self.model.root_for_uuid(self.uuid)
+
+      if self.root_node is not None:     # load from xml
+         md_datum_root = self.root_node
          self.uuid = rqet.uuid_for_part_root(md_datum_root)
          location_node = rqet.find_tag(md_datum_root, 'Location')
          self.location = (rqet.find_tag_float(location_node, 'Coordinate1'),

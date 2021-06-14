@@ -6,12 +6,40 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 
 from resqpy.model import Model
+from resqpy.crs import Crs
 import resqpy.well
 
-@pytest.mark.skip(reason="Example data not yet available")
-def test_trajectory_iterators():
+
+def test_MdDatum(example_model):
+
+   # Set up a new datum
+   model, crs = example_model
+   epc = model.epc_file
+   data = dict(
+      location=(0, -99999, 3.14),
+      md_reference='mean low water',
+   )
+   datum = resqpy.well.MdDatum(
+      parent_model=model, crs_root=crs.crs_root, **data
+   )
+   uuid = datum.uuid
+
+   # Save to disk and reload
+   datum.create_xml()
+   model.store_epc()
+
+   del model, crs, datum
+   model2 = Model(epc_file=epc)
+   datum2 = resqpy.well.MdDatum(parent_model=model2, uuid=uuid)
+   
+   for key, expected_value in data.items():
+      assert getattr(datum2, key) == expected_value, f"Issue with {key}"
+
+
+def test_trajectory_iterators(example_model_with_well):
    # Test that trajectories can be found via iterators
-   model = Model()
+
+   model, well_interp, datum, traj = example_model_with_well
 
    # Iterate via wells
    uuids_1 = []

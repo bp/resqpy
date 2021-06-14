@@ -12,6 +12,7 @@ log.debug('organize.py version ' + version)
 # from lxml import etree as et
 
 import math as maths
+import warnings
 
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
@@ -74,14 +75,19 @@ def create_xml_has_occurred_during(model, parent_node, hod_pair, tag = 'HasOccur
 class OrganizationFeature():
    """Class for generic RESQML Organization Feature objects."""
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True, feature_name = None, organization_kind = None):
+   def __init__(self, parent_model, root_node=None, uuid=None, extract_from_xml=True, feature_name=None, organization_kind=None):
       """Initialises an organization feature object."""
 
       self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
+      self.uuid = uuid
       self.feature_name = None
       self.organization_kind = None
+
+      if root_node is not None:
+         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
+         self.root_node = root_node
+      else:
+         self.root_node = self.model.root_for_uuid(self.uuid)
 
       if extract_from_xml and self.root_node is not None:
          self.uuid = self.root_node.attrib['uuid']
@@ -90,7 +96,8 @@ class OrganizationFeature():
       else:
          self.uuid = bu.new_uuid()
          self.feature_name = feature_name
-         assert organization_kind in ['earth model', 'fluid', 'stratigraphic', 'structural']
+         if organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
+            raise ValueError(organization_kind)
          self.organization_kind = organization_kind
 
 
@@ -140,13 +147,18 @@ class OrganizationFeature():
 class GeobodyFeature():
    """Class for RESQML Geobody Feature objects (note: definition may be incomplete in RESQML 2.0.1)."""
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True, feature_name = None):
+   def __init__(self, parent_model, root_node=None, uuid=None, extract_from_xml=True, feature_name=None):
       """Initialises a geobody feature object."""
 
       self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
+      self.uuid = uuid
       self.feature_name = None
+
+      if root_node is not None:
+         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
+         self.root_node = root_node
+      else:
+         self.root_node = self.model.root_for_uuid(self.uuid)
 
       if extract_from_xml and self.root_node is not None:
          self.uuid = self.root_node.attrib['uuid']
@@ -197,13 +209,18 @@ class GeobodyFeature():
 class BoundaryFeature():
    """Class for RESQML Boudary Feature organizational objects."""
 
-   def __init__(self, parent_model, root_node = None, feature_name = None):
+   def __init__(self, parent_model, root_node=None, uuid=None, feature_name = None):
       """Initialises a boundary feature organisational object."""
 
       self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
+      self.uuid = uuid
       self.feature_name = None
+
+      if root_node is not None:
+         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
+         self.root_node = root_node
+      else:
+         self.root_node = self.model.root_for_uuid(self.uuid)
 
       if self.root_node is not None:
          self.uuid = self.root_node.attrib['uuid']
