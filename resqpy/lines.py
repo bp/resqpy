@@ -958,11 +958,11 @@ class PolylineSet(_BasePolyline):
 
         for poly in polylines:
             if poly == polylines[0]:
-                master_crs = rcrs.Crs(self.model, poly.crs_root)
+                master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
                 self.crs_root = poly.crs_root
                 self.coordinates = poly.coordinates.copy()
             else:
-                curr_crs = rcrs.Crs(self.model, poly.crs_root)
+                curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
                 if not curr_crs.is_equivalent(master_crs):
                     shifted = curr_crs.convert_array_to(master_crs,poly.coordinates)
                     self.coordinates = np.concatenate((self.coordinates,shifted))

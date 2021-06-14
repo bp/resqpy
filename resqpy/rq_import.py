@@ -234,8 +234,8 @@ def import_nexus(resqml_file_root,                # output path and file name wi
 
    # create coodinate reference system (crs) in model and set references in grid object
    log.debug('creating coordinate reference system')
-   crs_roots = model.roots(obj_type = 'LocalDepth3dCrs')
-   if mode == 'w' or len(crs_roots) == 0:
+   crs_uuids = model.uuids(obj_type = 'LocalDepth3dCrs')
+   if mode == 'w' or len(crs_uuids) == 0:
       crs_node = model.create_crs(add_as_part = True,
                                   x_offset = local_origin[0], y_offset = local_origin[1], z_offset = local_origin[2],
                                   xy_units = resqml_xy_units, z_units = resqml_z_units,
@@ -244,15 +244,8 @@ def import_nexus(resqml_file_root,                # output path and file name wi
    else:
       new_crs = rqc.Crs(model, x_offset = local_origin[0], y_offset = local_origin[1], z_offset = local_origin[2],
                         xy_units = resqml_xy_units, z_units = resqml_z_units, z_inc_down = resqml_z_inc_down)
-      crs_uuid = None
-      for crs_root in crs_roots:
-         existing_crs = rqc.Crs(model, crs_root = crs_root)
-         if new_crs.is_equivalent(existing_crs):
-            crs_uuid = existing_crs.uuid
-            break
-      if crs_uuid is None:
-         new_crs.create_xml()
-         crs_uuid = new_crs.uuid
+      new_crs.create_xml(reuse = True)
+      crs_uuid = new_crs.uuid
 
    grid = grid_from_cp(model, cp_array, crs_uuid,
                        active_mask = active_mask,
@@ -1286,7 +1279,7 @@ def grid_from_cp(model, cp_array, crs_uuid,
 
    grid.crs_uuid = crs_uuid
    grid.crs_root = model.root_for_uuid(crs_uuid)
-   crs = rqc.Crs(grid.crs_root)
+   crs = rqc.Crs(model, uuid = crs_uuid)
 
    # add pillar points array to grid object
    log.debug('attaching points array to grid object')

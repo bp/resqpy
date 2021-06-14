@@ -498,7 +498,7 @@ def print_MdDatum(model, node, detail_level = 0):
       crs_ref = rqet.find_tag(node, 'LocalCrs')
       crs_part = print_reference_node_and_return_referenced_part(crs_ref, 'local coordinate reference system reference')
       if detail_level > 1:
-         crs = rqc.Crs(model, crs_root = model.root_for_part(crs_part))
+         crs = rqc.Crs(model, uuid = rqet.uuid_in_part_name(crs_part))
          global_xyz = crs.local_to_global(location_xyz)
          print('global location: ' + format_xyz(global_xyz))
 

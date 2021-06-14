@@ -1164,8 +1164,8 @@ def trajectory_grid_overlap(trajectory, grid, lazy = False):
    traj_box[1] = np.amax(trajectory.control_points, axis = 0)
    grid_box = grid.xyz_box(lazy = lazy, local = True)
    if trajectory.crs_root is not grid.crs_root:
-      t_crs = rqc.Crs(trajectory.model, trajectory.crs_root)
-      g_crs = rqc.Crs(grid.model, grid.crs_root)
+      t_crs = rqc.Crs(trajectory.model, crs_root = trajectory.crs_root)
+      g_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
       t_crs.convert_array_to(g_crs, traj_box)
    return bx.boxes_overlap(traj_box, grid_box)
 
@@ -1320,7 +1320,7 @@ def populate_blocked_well_from_trajectory(blocked_well, grid, active_only = Fals
       use_single_layer_tactics = False
       log.debug('skin single layer tactics disabled')
 
-   grid_crs = rqc.Crs(grid.model, crs_root = grid.crs_root)
+   grid_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
    if blocked_well.trajectory.crs_root is grid.crs_root:
       trajectory = blocked_well.trajectory
    else:
