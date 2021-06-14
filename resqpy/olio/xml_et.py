@@ -124,6 +124,25 @@ def find_nested_tags(root, tag_list):
    return find_nested_tags(head, tag_list[1:])
 
 
+def find_nested_tags_cast(root, tag_list, dtype=None):
+   """Return value of nested tags as desired dtype.
+   
+   Follows a list of tags in a nested xml hierarchy, returning the stripped text
+   of the node at the deepest level.
+   """
+
+   cast_func = {
+      int: node_int,
+      float: node_float,
+      bool: node_bool,
+      str: node_text,
+      None: lambda x: x,
+   }[dtype]
+
+   node = find_nested_tags(root, tag_list)
+   return cast_func(node)
+
+
 def find_nested_tags_text(root, tag_list):
    """Follows a list of tags in a nested xml hierarchy, returning the stripped text of the node at the deepest level."""
 
