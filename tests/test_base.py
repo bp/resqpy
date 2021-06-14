@@ -1,4 +1,6 @@
+import resqpy.olio.uuid as bu
 from resqpy.olio.base import BaseResqpy
+
 
 class DummyObj(BaseResqpy):
     _content_type = 'DummyResqmlInterpretation'
@@ -35,7 +37,7 @@ def test_base_save_and_load(example_model):
     dummy2 = DummyObj(model=model, uuid=dummy1.uuid)
 
     # Properties should match
-    assert dummy2.uuid == dummy1.uuid
+    assert bu.matching_uuids(dummy2.uuid, dummy1.uuid)
     assert dummy2.root is not None
     assert dummy2.title == title
     assert dummy2.originator == originator
