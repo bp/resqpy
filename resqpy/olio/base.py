@@ -91,7 +91,7 @@ class BaseResqml(metaclass=ABCMeta):
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
 
-    def create_xml(self, title=None, originator=None, ext_uuid=None, add_as_part=True):
+    def create_xml(self, title=None, originator=None, add_as_part=True):
         """Write citation block to XML
         
         Args:
@@ -107,8 +107,6 @@ class BaseResqml(metaclass=ABCMeta):
         """
 
         assert self.uuid is not None
-
-        if ext_uuid is None: ext_uuid = self.model.h5_uuid()
 
         # Create the root node
         node = self.model.new_obj_node(self._content_type)
