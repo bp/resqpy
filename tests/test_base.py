@@ -31,7 +31,7 @@ def test_base_save_and_load(example_model):
     originator = 'Scruffian'
     model, crs = example_model
     dummy1 = DummyObj(model=model, title=title, originator=originator)
-    dummy1.create_xml()
+    dummy1.create_xml(add_as_part=True)
 
     # Load a new object
     dummy2 = DummyObj(model=model, uuid=dummy1.uuid)
