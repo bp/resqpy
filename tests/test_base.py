@@ -1,6 +1,6 @@
-from resqpy.olio.base import BaseResqml
+from resqpy.olio.base import BaseResqpy
 
-class DummyObj(BaseResqml):
+class DummyObj(BaseResqpy):
     _content_type = 'DummyResqmlInterpretation'
 
 

@@ -11,7 +11,7 @@ import resqpy.olio.xml_et as rqet
 logger = logging.getLogger(__name__)
 
 
-class BaseResqml(metaclass=ABCMeta):
+class BaseResqpy(metaclass=ABCMeta):
     """Base class for generic RESQML objects
     
     Implements generic attributes such as uuid, root, part, title, originator.
@@ -21,7 +21,7 @@ class BaseResqml(metaclass=ABCMeta):
     
     Example use::
 
-        class AnotherResqmlObject(BaseResqml):
+        class AnotherResqmlObject(BaseResqpy):
             
             _content_type = 'obj_anotherresqmlobjectrepresentation'
 

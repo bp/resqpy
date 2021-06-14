@@ -57,7 +57,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.wellspec_keywords as wsk
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.olio.base import BaseResqml
+from resqpy.olio.base import BaseResqpy
 
 
 valid_md_reference_list = ["ground level", "kelly bushing", "mean sea level", "derrick floor", "casing flange",
@@ -222,7 +222,7 @@ class MdDatum():
       return datum
 
 
-class DeviationSurvey(BaseResqml):
+class DeviationSurvey(BaseResqpy):
    """Class for RESQML wellbore deviation survey.
 
    RESQML documentation:

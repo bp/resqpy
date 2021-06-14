@@ -17,7 +17,7 @@ import warnings
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.olio.base import BaseResqml
+from resqpy.olio.base import BaseResqpy
 
 
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)
@@ -84,7 +84,7 @@ def _alias_for_attribute(attribute_name):
    return property(fget, fset)
 
 
-class OrganizationFeature(BaseResqml):
+class OrganizationFeature(BaseResqpy):
    """Class for generic RESQML Organization Feature objects."""
 
    _content_type = "OrganizationFeature"
