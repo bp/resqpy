@@ -91,7 +91,7 @@ class BaseResqpy(metaclass=ABCMeta):
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
 
-    def create_xml(self, title=None, originator=None, add_as_part=True):
+    def create_xml(self, title=None, originator=None, add_as_part=False):
         """Write citation block to XML
         
         Args:
@@ -112,16 +112,17 @@ class BaseResqpy(metaclass=ABCMeta):
         node = self.model.new_obj_node(self._content_type)
         node.attrib['uuid'] = str(self.uuid)
 
-        if add_as_part:
-            self.model.add_part(self._content_type, self.uuid, node)
-            assert self.root is not None   
-
         # Citation block
         if title: self.title = title
         if originator: self.originator = originator
         self.model.create_citation(
             root=node, title=self.title, originator=self.originator
         )
+        
+        if add_as_part:
+            self.model.add_part(self._content_type, self.uuid, node)
+            assert self.root is not None
+        
         return node
 
     # Generic magic methods
