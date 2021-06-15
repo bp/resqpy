@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '10th June 2021'
+version = '15th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -1447,6 +1447,38 @@ class PropertyCollection():
       """
 
       return self.element_for_part(part, 14)
+
+
+   def patch_min_max_for_part(self, part, minimum = None, maximum = None, model = None):
+      """Updates the minimum and/ox maximum values stored in the metadata, optionally updating xml tree too.
+
+      arguments:
+         part (str): the part name of the property
+         minimum (float or int, optional): the new minimum value to be set in the metadata (unchanged if None)
+         maximum (float or int, optional): the new maximum value to be set in the metadata (unchanged if None)
+         model (model.Model, optional): if present and containing xml for the part, that xml is also patched
+
+      notes:
+         this method is rarely needed: only if a property array is being re-populated after being initialised
+         with temporary values; the xml tree for the part in the model will only be updated where the minimum
+         and/or maximum nodes already exist in the tree
+      """
+
+      if minimum is not None: self.dict[part][13] = minimum
+      if maximum is not None: self.dict[part][14] = maximum
+      if model is not None:
+         p_root = model.root_for_part(part)
+         if p_root is not None:
+            if minimum is not None:
+               min_node = rqet.find_tag(p_root, 'MinimumValue')
+               if min_node is not None:
+                  min_node.text = str(minimum)
+                  model.set_modified()
+            if maximum is not None:
+               max_node = rqet.find_tag(p_root, 'MaximumValue')
+               if max_node is not None:
+                  max_node.text = str(maximum)
+                  model.set_modified()
 
 
    def uom_for_part(self, part):
