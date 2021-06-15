@@ -57,14 +57,13 @@ def test_organize_classes(tmp_model, cls, data):
         assert getattr(obj2, key) == expected_value, f"Error for {key}"
 
 
-def test_RockFluidUnitFeature(example_model):
-    model, _ = example_model
+def test_RockFluidUnitFeature(tmp_model):
 
     # Create the features
-    top = rqo.BoundaryFeature(model, feature_name='the top')
-    base = rqo.BoundaryFeature(model, feature_name='the base')
+    top = rqo.BoundaryFeature(tmp_model, feature_name='the top')
+    base = rqo.BoundaryFeature(tmp_model, feature_name='the base')
     rfuf_1 = rqo.RockFluidUnitFeature(
-        parent_model=model, feature_name='foobar', phase='seal',
+        parent_model=tmp_model, feature_name='foobar', phase='seal',
         top_boundary_feature=top, base_boundary_feature=base
     )
     uuid = rfuf_1.uuid
@@ -73,10 +72,10 @@ def test_RockFluidUnitFeature(example_model):
     top.create_xml()
     base.create_xml()
     rfuf_1.create_xml()
-    model.store_epc()
+    tmp_model.store_epc()
 
     # Reload from disk
-    rfuf_2 = rqo.RockFluidUnitFeature(parent_model=model, uuid=uuid)
+    rfuf_2 = rqo.RockFluidUnitFeature(parent_model=tmp_model, uuid=uuid)
 
     # Check properties the same
     assert rfuf_2.feature_name == 'foobar'

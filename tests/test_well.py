@@ -43,8 +43,8 @@ def test_trajectory_iterators(example_model_with_well):
 
    # Iterate via wells
    uuids_1 = []
-   for well in model.iter_wells():
-      for traj in well.trajectories():
+   for well in model.iter_wellbore_interpretations():
+      for traj in well.iter_trajectories():
          uuids_1.append(traj.uuid)
 
    # Iterate directly
@@ -67,7 +67,7 @@ def test_logs():
    discovered_logs = 0
 
    for trajectory in model.iter_trajectories():
-      for frame in trajectory.wellbore_frames():
+      for frame in trajectory.iter_wellbore_frames():
 
          # Measured depths
          mds = frame.node_mds

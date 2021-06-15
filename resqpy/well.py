@@ -3,13 +3,13 @@
 Example::
 
    # Wellbore interpretations
-   for well in model.iter_wells():
+   for well in model.iter_wellbore_interpretations():
       print(well.title)
 
-      for trajectory in well.trajectories():
+      for trajectory in well.iter_trajectories():
          print(trajectory.title)
 
-         for frame in trajectory.wellbore_frames():
+         for frame in trajectory.iter_wellbore_frames():
             print(frame.title)
 
             # Measured depths
@@ -728,11 +728,13 @@ class Trajectory():
          self.md_datum = MdDatum(self.model, crs_root = self.crs_root, location = self.control_points[0])
 
 
-   def wellbore_frames(self):
+   def iter_wellbore_frames(self):
       """ Iterable of all WellboreFrames associated with a trajectory
 
       Yields:
          frame: instance of :class:`resqpy.organize.WellboreFrame`
+
+      :meta common:
       """
       parts = self.model.parts_list_related_to_uuid_of_type(
          self.uuid, type_of_interest='WellboreFrameRepresentation'

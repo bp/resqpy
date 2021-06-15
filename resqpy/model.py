@@ -2903,7 +2903,7 @@ class Model():
          self.consolidation.check_map_integrity()
 
 
-   def iter_wells(self):
+   def iter_wellbore_interpretations(self):
       """ Iterable of all WellboreInterpretations associated with the model
 
       Yields:
