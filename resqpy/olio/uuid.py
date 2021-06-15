@@ -3,7 +3,7 @@
 # NB: at present the code does not enforce multiprocessor safe generation of unique identifiers
 # it calls uuid.uuid1() to generate new uuids, ie. using version 1 of the iso standard options
 
-version = '24th November 2020'
+version = '15th June 2021'
 
 # import logging
 # log = logging.getLogger(__name__)
@@ -116,8 +116,24 @@ def uuid_as_bytes(uuid_obj):
          bytes (16 bytes long)
    """
 
+   if uuid_obj is None: return None
    if isinstance(uuid_obj, str): uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
    return uuid_obj.bytes
+
+
+def uuid_as_int(uuid_obj):
+   """Returns the uuid as a 128 bit int; same as uuid_obj.int.
+
+      argument:
+         uuid_obj (uuid.UUID object): the uuid for which a bytes representation is required
+
+      returns:
+         bytes (16 bytes long)
+   """
+
+   if uuid_obj is None: return None
+   if isinstance(uuid_obj, str): uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+   return uuid_obj.int
 
 
 def matching_uuids(uuid_a, uuid_b):

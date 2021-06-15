@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '8th June 2021'
+version = '15th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -154,6 +154,7 @@ class Model():
       self.grid_root = None      # extracted from tree as speed optimization (useful for single grid models), for 'main' grid
       self.time_series = None    # extracted as speed optimization (single time series only for now)
       self.parts_forest = {}     # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
+      self.uuid_part_dict = {}   # dictionary keyed on uuid.int; mapping to part_name
       self.rels_present = False
       self.rels_forest = {}      # dictionary keyed on part_name; mapping to (uuid, xml_tree)
       self.other_forest = {}     # dictionary keyed on part_name; mapping to (content_type, xml_tree); used for docProps
@@ -215,11 +216,9 @@ class Model():
 
       if not parts_list: parts_list = self.list_of_parts()
       if uuid is not None:
-         filtered_list = []
-         for part in parts_list:
-            if bu.matching_uuids(uuid, self.uuid_for_part(part)): filtered_list.append(part)
-         if len(filtered_list) == 0: return None
-         parts_list = filtered_list
+         part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
+         if part_name is None or part_name not in parts_list: return None
+         parts_list = [part_name]
       if epc_subdir:
          if epc_subdir.startswith('/'): epc_subdir = epc_subdir[1:]
          if epc_subdir:
@@ -381,7 +380,7 @@ class Model():
                        extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir,
                        multiple_handling = multiple_handling)
       if part is None: return None
-      return self.uuid_for_part(part)
+      return rqet.uuid_in_part_name(part)
 
 
    def roots(self, parts_list = None, obj_type = None, uuid = None,
@@ -551,6 +550,7 @@ class Model():
                elif uuid_from_tree is not None:
                   assert bu.matching_uuids(part_uuid, uuid_from_tree)
                self.parts_forest[part_name] = (part_type, part_uuid, part_tree)
+               self._set_uuid_to_part(part_name)
                if self.crs_root is None and part_type == 'obj_LocalDepth3dCrs':   # randomly assign first crs as primary crs for model
                   self.crs_root = part_tree.getroot()
 
@@ -588,6 +588,10 @@ class Model():
          not usually called directly
       """
 
+      try:
+         self._del_uuid_to_part(part_name)
+      except:
+         pass
       try:
          del self.parts_forest[part_name]
       except:
@@ -633,6 +637,7 @@ class Model():
       for part in deletion_list:
          log.debug('removing part due to lack of xml tree etc.: ' + str(part))
          if tidy_main_tree: self.remove_part_from_main_tree(part)
+         self._del_uuid_to_part(part)
          del self.parts_forest[part]
       deletion_list = []
       for part, info in self.rels_forest.items():
@@ -718,6 +723,7 @@ class Model():
                      self.rels_forest[name] = (part_uuid, None)
                   else:
                      self.parts_forest[name] = (None, part_uuid, None)
+                     self._set_uuid_to_part(name)
          with epc.open('[Content_Types].xml') as main_xml:
             self.main_tree = rqet.parse(main_xml)
             self.main_root = self.main_tree.getroot()
@@ -845,10 +851,16 @@ class Model():
 
       if type_of_interest and type_of_interest[0].isupper(): type_of_interest = 'obj_' + type_of_interest
 
+      if uuid is not None:
+         part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
+         if part_name is None or (type_of_interest is not None and (self.parts_forest[part_name][0] != type_of_interest)):
+            return []
+         return [part_name]
+
       parts_list = []
       for part_name in self.parts_forest:
-         if ((type_of_interest is None or self.parts_forest[part_name][0] == type_of_interest) and
-             (uuid is None or bu.matching_uuids(uuid, self.parts_forest[part_name][1]))): parts_list.append(part_name)
+         if type_of_interest is None or self.parts_forest[part_name][0] == type_of_interest:
+            parts_list.append(part_name)
       return parts_list
 
 
@@ -883,10 +895,7 @@ class Model():
       :meta common:
       """
 
-      if uuid is None: return None
-      parts_list = self.parts_list_of_type(uuid = uuid)
-      if not parts_list: return None
-      return parts_list[0]
+      return self.uuid_part_dict.get(bu.uuid_as_int(uuid))
 
 
    def root_for_uuid(self, uuid):
@@ -1072,6 +1081,10 @@ class Model():
       returns:
          uuid.UUID for the specified part
 
+      note:
+         this method will fail with an exception if the part is not in this model; a quicker alternative
+         to this method is simply to extract the uuid from the part name using olio.xml_et.uuid_in_part_name()
+
       :meta common:
       """
 
@@ -1095,10 +1108,29 @@ class Model():
       :meta common:
       """
 
-      if part_name not in self.parts_forest: return None
-      obj_type = self.parts_forest[part_name][0]
+      part_info = self.parts_forest.get(part_name)
+      if part_info is None: return None
+      obj_type = part_info[0]
       if obj_type is None or not strip_obj or not obj_type.startswith('obj_'): return obj_type
       return obj_type[4:]
+
+
+   def type_of_uuid(self, uuid, strip_obj = False):
+      """Returns content type for the uuid.
+
+      arguments:
+         uuid (uuid.UUID or str): the uuid for which the type is required
+         strip_obj (boolean, default False): if True, the leading 'obj_' is removed
+            from the returned string
+
+      returns:
+         string being the type (resqml object class) for the named part
+
+      :meta common:
+      """
+
+      part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
+      return self.type_of_part(part_name, strip_obj = strip_obj)
 
 
    def tree_for_part(self, part_name, is_rels = None):
@@ -1120,6 +1152,7 @@ class Model():
          if part_name not in self.rels_forest: return None
          (_, tree) = self.rels_forest[part_name]
          if tree is None:
+            if not self.epc_file: return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = True)
                if not load_success: return None
@@ -1128,6 +1161,7 @@ class Model():
          if part_name not in self.other_forest: return None
          (_, tree) = self.other_forest[part_name]
          if tree is None:
+            if not self.epc_file: return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = False)
                if not load_success: return None
@@ -1136,6 +1170,7 @@ class Model():
          if part_name not in self.parts_forest: return None
          (_, _, tree) = self.parts_forest[part_name]
          if tree is None:
+            if not self.epc_file: return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = False)
                if not load_success: return None
@@ -1205,9 +1240,10 @@ class Model():
       returns:
          None
 
-      note:
+      notes:
          use this method when the uuid of the high level part itself is changing; if the uuid of the hdf5 ext part
-         is changing, use change_hdf5_uuid_in_hdf5_references() instead
+         itself is changing, use change_hdf5_uuid_in_hdf5_references() instead; this method does not modify the
+         internal path names in the hdf5 file itself, if that has already been written
       """
 
       count = 0
@@ -1878,6 +1914,7 @@ class Model():
          self.other_forest[part_name] = (content_type, part_tree)
       else:
          self.parts_forest[part_name] = (content_type, uuid, part_tree)
+         self._set_uuid_to_part(part_name)
       main_ref = rqet.SubElement(self.main_root, ns['content_types'] + 'Override')
       main_ref.set('PartName', part_name)
       main_ref.set('ContentType', ct)
@@ -1894,7 +1931,7 @@ class Model():
 
 
    def patch_root_for_part(self, part, root):
-      """Updates the xml tree for the part without chaning the uuid."""
+      """Updates the xml tree for the part without changing the uuid."""
 
       content_type, uuid, part_tree = self.parts_forest[part]
       assert bu.matching_uuids(uuid, rqet.uuid_for_part_root(root))
@@ -1905,6 +1942,7 @@ class Model():
    def remove_part(self, part_name, remove_relationship_part = True):
       """Removes a part from the parts forest; optionally remove corresponding rels part and other relationships."""
 
+      self._del_uuid_to_part(part_name)
       self.parts_forest.pop(part_name)
       if remove_relationship_part:
          if 'docProps' in part_name:
@@ -2928,6 +2966,23 @@ class Model():
       for timestamp, index in reversed(sort_list):
          results.append(parts_list[index])
       return results
+
+
+   def _set_uuid_to_part(self, part_name):
+      """Adds an entry to the dictionary mapping from uuid to part name."""
+
+      uuid = rqet.uuid_in_part_name(part_name)
+      self.uuid_part_dict[bu.uuid_as_int(uuid)] = part_name
+
+
+   def _del_uuid_to_part(self, part_name):
+      """Deletes an entry from the dictionary mapping from uuid to part name."""
+
+      uuid = rqet.uuid_in_part_name(part_name)
+      try:
+         del self.uuid_part_dict[bu.uuid_as_int(uuid)]
+      except:
+         pass
 
 
 
