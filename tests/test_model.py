@@ -35,3 +35,20 @@ def test_model(tmp_path):
    p1 = model.uuid_part_dict[bu.uuid_as_int(datum_uuid_1)]
    p2 = model.uuid_part_dict[bu.uuid_as_int(datum_uuid_2)]
    assert p1 == datum_part_1 and p2 == datum_part_2
+
+
+def test_model_iter_crs(example_model_and_crs):
+   
+   model, crs_1 = example_model_and_crs
+
+   crs_list = list(model.iter_crs())
+   assert len(crs_list) == 1
+
+   crs_2 = crs_list[0]
+   assert crs_2 == crs_1
+
+def test_model_iter_crs_empty(tmp_model):
+
+   # Should raise an exception if no CRS exists
+   with pytest.raises(StopIteration):
+      next(tmp_model.iter_crs())

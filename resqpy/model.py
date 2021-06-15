@@ -2913,6 +2913,7 @@ class Model():
       """
       import resqpy.organize  # Imported here to avoid circular imports
 
+      # TODO: instantiate using UUIDs
       parts = self.parts_list_of_type('WellboreInterpretation')
       for part in parts:
          well_root = self.root_for_part(part)
@@ -2942,6 +2943,8 @@ class Model():
 
       Yields:
          md_datum: instance of :class:`resqpy.well.MdDatum`
+
+      :meta common:
       """
       import resqpy.well  # Imported here to avoid circular imports
 
@@ -2956,12 +2959,15 @@ class Model():
       
       Yields:
          crs: instance of :class:`resqpy.crs.CRS`
+
+      :meta common:
       """
       import resqpy.crs
 
-      uuids = self.uuid(obj_type = 'LocalDepth3dCrs')
-      for uuid in uuids:
-         yield resqpy.crs.Crs(self, uuid=uuid)
+      uuids = self.uuids(obj_type = 'LocalDepth3dCrs')
+      if uuids:
+         for uuid in uuids:
+            yield resqpy.crs.Crs(self, uuid=uuid)
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
