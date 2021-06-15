@@ -2951,6 +2951,17 @@ class Model():
          datum = resqpy.well.MdDatum(self, md_datum_root=datum_root)
          yield datum
 
+   def iter_crs(self):
+      """Iterable of all CRS objects associated with the model
+      
+      Yields:
+         crs: instance of :class:`resqpy.crs.CRS`
+      """
+      import resqpy.crs
+
+      uuids = self.uuid(obj_type = 'LocalDepth3dCrs')
+      for uuid in uuids:
+         yield resqpy.crs.Crs(self, uuid=uuid)
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
