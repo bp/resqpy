@@ -144,7 +144,7 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    trajectory = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
 
-   rqc.Crs(model, trajectory.crs_root).uuid == crs.uuid
+   rqc.Crs(model, uuid=trajectory.uuid).uuid == crs.uuid
 
    trajectory.write_hdf5()
    trajectory.create_xml()

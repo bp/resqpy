@@ -774,7 +774,7 @@ class Trajectory():
       assert md_datum_uuid is not None, 'failed to fetch uuid of md datum for trajectory'
       md_datum_part = relatives_model.part_for_uuid(md_datum_uuid)
       assert md_datum_part, 'md datum part not found in model'
-      self.md_datum = MdDatum(self.model, md_datum_root = relatives_model.root_for_part(md_datum_part))
+      self.md_datum = MdDatum(self.model, uuid=relatives_model.uuid_for_part(md_datum_part))
       ds_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['DeviationSurvey', 'UUID']))
       if ds_uuid is not None:  # this will probably not work when relatives model is different from self.model
          ds_part = 'obj_DeviationSurveyRepresentation_' + str(ds_uuid) + '.xml'
