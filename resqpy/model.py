@@ -2903,7 +2903,7 @@ class Model():
          self.consolidation.check_map_integrity()
 
 
-   def wells(self):
+   def iter_wells(self):
       """ Iterable of all WellboreInterpretations associated with the model
 
       Yields:
@@ -2920,7 +2920,7 @@ class Model():
          yield well
 
 
-   def trajectories(self):
+   def iter_trajectories(self):
       """ Iterable of all trajectories associated with the model
 
       Yields:
@@ -2937,7 +2937,7 @@ class Model():
          yield traj
 
 
-   def md_datums(self):
+   def iter_md_datums(self):
       """ Iterable of all MdDatum objects associated with the model
 
       Yields:

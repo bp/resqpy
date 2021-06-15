@@ -3,7 +3,7 @@
 Example::
 
    # Wellbore interpretations
-   for well in model.wells():
+   for well in model.iter_wells():
       print(well.title)
 
       for trajectory in well.trajectories():
