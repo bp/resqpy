@@ -38,6 +38,21 @@ def test_model(tmp_path):
    assert p1 == datum_part_1 and p2 == datum_part_2
 
 
+def test_model_iterators(example_model_with_well):
+   
+   model, well_interp, datum, traj = example_model_with_well
+
+   w = next(model.iter_wellbore_interpretations())
+   d = next(model.iter_md_datums())
+   t = next(model.iter_trajectories())
+
+   assert bu.matching_uuids(w.uuid, well_interp.uuid)
+   assert bu.matching_uuids(d.uuid, datum.uuid)
+   assert bu.matching_uuids(t.uuid, traj.uuid)
+   assert w == well_interp
+   assert d == datum
+   assert t == traj
+
 def test_model_iter_crs(example_model_and_crs):
    
    model, crs_1 = example_model_and_crs
@@ -54,17 +69,3 @@ def test_model_iter_crs_empty(tmp_model):
    with pytest.raises(StopIteration):
       next(tmp_model.iter_crs())
 
-def test_iter_wells(example_model_with_well):
-   model: rq.Model
-   model, well_interp, datum, traj = example_model_with_well
-
-   w = next(model.iter_wellbore_interpretations())
-   d = next(model.iter_md_datums())
-   t = next(model.iter_trajectories())
-
-   assert w.uuid == well_interp.uuid
-   assert w == well_interp
-   assert d.uuid == datum.uuid
-   assert d == datum
-   assert t.uuid == traj.uuid
-   assert t == traj
