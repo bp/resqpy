@@ -26,8 +26,8 @@ def test_model(tmp_path):
    model = rq.Model(epc)
    assert model is not None
    assert len(model.uuids(obj_type = 'MdDatum')) == 2
-   datum_part_1 = model.part(obj_type = 'MdDatum', title = '1', title_mode = 'endswith')
-   datum_part_2 = model.part(obj_type = 'MdDatum', title = '2', title_mode = 'endswith')
+   datum_part_1 = model.part(obj_type = 'MdDatum', title = '1', title_mode = 'ends')
+   datum_part_2 = model.part(obj_type = 'MdDatum', title = '2', title_mode = 'ends')
    assert datum_part_1 is not None and datum_part_2 is not None and datum_part_1 != datum_part_2
    datum_uuid_1 = rqet.uuid_in_part_name(datum_part_1)
    datum_uuid_2 = rqet.uuid_in_part_name(datum_part_2)
