@@ -1,24 +1,36 @@
 
 import pytest
 
-from resqpy import organize
+import resqpy.organize as rqo
 from resqpy.model import Model
 
 
 # Test saving and loading from disk
 @pytest.mark.parametrize("cls, data", [
     (
-        organize.OrganizationFeature,
+        rqo.OrganizationFeature,
         dict(feature_name='hello', organization_kind='stratigraphic'),
     ),
     (
-        organize.GeobodyFeature,
+        rqo.GeobodyFeature,
         dict(feature_name='hi'),
     ),
     (
-        organize.BoundaryFeature,
+        rqo.BoundaryFeature,
         dict(feature_name='foobar'),
-    )
+    ),
+    (
+        rqo.FrontierFeature,
+        dict(feature_name='foobar'),
+    ),
+    (
+        rqo.GeologicUnitFeature,
+        dict(feature_name='foobar'),
+    ),
+    (
+        rqo.FluidBoundaryFeature,
+        dict(feature_name='foobar', kind='gas oil contact'),
+    ),
 ])
 def test_organize_classes(example_model, cls, data):
 

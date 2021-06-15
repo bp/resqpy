@@ -120,7 +120,7 @@ class OrganizationFeature(BaseResqpy):
 
    def load_from_xml(self):
        super().load_from_xml()
-       self.organization_kind = rqet.find_tag_text(self.root_node, 'OrganizationKind')
+       self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')
 
    def create_xml(self, add_as_part = True, originator = None):
       """Creates an organization feature xml node from this organization feature object."""
@@ -203,8 +203,7 @@ class BoundaryFeature(BaseResqpy):
       return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
-
-class FrontierFeature():
+class FrontierFeature(BaseResqpy):
    """Class for RESQML Frontier Feature organizational objects."""
 
    _content_type = "FrontierFeature"
@@ -264,11 +263,12 @@ class GeologicUnitFeature(BaseResqpy):
       return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
-class FluidBoundaryFeature():
+class FluidBoundaryFeature(BaseResqpy):
    """Class for RESQML Fluid Boundary Feature (contact) organizational objects."""
 
    _content_type = "FluidBoundaryFeature"
    feature_name = _alias_for_attribute("title")
+   valid_kinds = ('free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact')
 
    def __init__(self, parent_model, root_node=None, uuid=None, kind=None, feature_name=None):
       """Initialises a fluid boundary feature (contact) organisational object."""
@@ -296,7 +296,7 @@ class FluidBoundaryFeature():
 
    def load_from_xml(self):
       super().load_from_xml()
-      self.kind = rqet.find_tag_text(self.root_node, 'TectonicBoundaryKind')
+      self.kind = rqet.find_tag_text(self.root, 'FluidContact')
 
    def create_xml(self, add_as_part = True, originator = None):
       """Creates a fluid boundary feature organisational xml node from this fluid boundary feature object."""
@@ -305,7 +305,7 @@ class FluidBoundaryFeature():
       fbf = super().create_xml(add_as_part=False, originator=originator)
 
       # Extra element for kind
-      if self.kind not in ['free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact']:
+      if self.kind not in self.valid_kinds:
          raise ValueError(f"fluid boundary feature kind '{self.kind}' not recognized")
 
       kind_node = rqet.SubElement(fbf, ns['resqml2'] + 'FluidContact')
