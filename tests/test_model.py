@@ -12,7 +12,7 @@ def test_model(tmp_path):
    epc = os.path.join(tmp_path, 'model.epc')
    model = rq.new_model(epc)
    assert model is not None
-   crs = rqc.Crs()
+   crs = rqc.Crs(model)
    crs_root = crs.create_xml()
    model.store_epc()
    assert os.path.exists(epc)
