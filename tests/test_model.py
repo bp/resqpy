@@ -3,6 +3,7 @@ import os
 
 import resqpy.model as rq
 import resqpy.crs as rqc
+import resqpy.well as rqw
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 
