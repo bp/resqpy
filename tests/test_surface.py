@@ -2,11 +2,11 @@ import resqpy.surface
 import resqpy.organize
 
 
-def test_surface(example_model):
+def test_surface(tmp_model):
 
     # Set up a Surface
     title = 'Mountbatten'
-    model, crs = example_model
+    model = tmp_model
     surf = resqpy.surface.Surface(
         parent_model=model, extract_from_xml=False, title=title
     )

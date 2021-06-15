@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import os
 
@@ -35,3 +36,36 @@ def test_model(tmp_path):
    p1 = model.uuid_part_dict[bu.uuid_as_int(datum_uuid_1)]
    p2 = model.uuid_part_dict[bu.uuid_as_int(datum_uuid_2)]
    assert p1 == datum_part_1 and p2 == datum_part_2
+
+
+def test_model_iterators(example_model_with_well):
+   
+   model, well_interp, datum, traj = example_model_with_well
+
+   w = next(model.iter_wellbore_interpretations())
+   d = next(model.iter_md_datums())
+   t = next(model.iter_trajectories())
+
+   assert bu.matching_uuids(w.uuid, well_interp.uuid)
+   assert bu.matching_uuids(d.uuid, datum.uuid)
+   assert bu.matching_uuids(t.uuid, traj.uuid)
+   assert w == well_interp
+   assert d == datum
+   assert t == traj
+
+def test_model_iter_crs(example_model_and_crs):
+   
+   model, crs_1 = example_model_and_crs
+
+   crs_list = list(model.iter_crs())
+   assert len(crs_list) == 1
+
+   crs_2 = crs_list[0]
+   assert crs_2 == crs_1
+
+def test_model_iter_crs_empty(tmp_model):
+
+   # Should raise an exception if no CRS exists
+   with pytest.raises(StopIteration):
+      next(tmp_model.iter_crs())
+

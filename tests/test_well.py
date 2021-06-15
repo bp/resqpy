@@ -10,10 +10,10 @@ from resqpy.crs import Crs
 import resqpy.well
 
 
-def test_MdDatum(example_model):
+def test_MdDatum(example_model_and_crs):
 
    # Set up a new datum
-   model, crs = example_model
+   model, crs = example_model_and_crs
    epc = model.epc_file
    data = dict(
       location=(0, -99999, 3.14),
@@ -43,13 +43,13 @@ def test_trajectory_iterators(example_model_with_well):
 
    # Iterate via wells
    uuids_1 = []
-   for well in model.wells():
-      for traj in well.trajectories():
+   for well in model.iter_wellbore_interpretations():
+      for traj in well.iter_trajectories():
          uuids_1.append(traj.uuid)
 
    # Iterate directly
    uuids_2 = []
-   for traj in model.trajectories():
+   for traj in model.iter_trajectories():
       uuids_2.append(traj.uuid)
 
    # Two sets of trajectories should match, assuming all trajectories have a parent well
@@ -66,8 +66,8 @@ def test_logs():
 
    discovered_logs = 0
 
-   for trajectory in model.trajectories():
-      for frame in trajectory.wellbore_frames():
+   for trajectory in model.iter_trajectories():
+      for frame in trajectory.iter_wellbore_frames():
 
          # Measured depths
          mds = frame.node_mds
@@ -97,11 +97,11 @@ def test_logs():
 
 # Trajectory
 
-def test_Trajectory_add_well_feature_and_interp(example_model):
+def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
 
    # Prepare an example Trajectory without a well feature
    wellname = "Hullabaloo"
-   model, crs = example_model
+   model, crs = example_model_and_crs
    datum = resqpy.well.MdDatum(
       parent_model=model, crs_root=crs.crs_root, location=(0, 0, -100), md_reference='kelly bushing'
    )

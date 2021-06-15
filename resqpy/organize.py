@@ -1474,7 +1474,7 @@ class WellboreInterpretation():
       if self.uuid is None: self.uuid = bu.new_uuid()
 
 
-   def trajectories(self):
+   def iter_trajectories(self):
       """ Iterable of associated trajectories """
 
       import resqpy.well
