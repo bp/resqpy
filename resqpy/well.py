@@ -220,6 +220,11 @@ class MdDatum():
       self.root_node = datum
 
       return datum
+   
+   def __eq__(self, other):
+      """Implements equals operator. Compares class type and uuid"""
+      other_uuid = getattr(other, "uuid", None)
+      return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
 
 
 class DeviationSurvey(BaseResqpy):
@@ -1339,6 +1344,10 @@ class Trajectory():
          h5_reg.register_dataset(self.uuid, 'tangentVectors', self.tangent_vectors)
       h5_reg.write(file = file_name, mode = mode)
 
+   def __eq__(self, other):
+      """Implements equals operator. Compares class type and uuid"""
+      other_uuid = getattr(other, "uuid", None)
+      return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
 
 
 class WellboreFrame:
