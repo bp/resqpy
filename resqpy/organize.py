@@ -614,8 +614,24 @@ class WellboreFeature():
       return not self.is_equivalent(other)
 
 
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a wellbore feature organisational xml node from this wellbore feature object."""
+
+      if reuse:
+         if self.uuid is not None:
+            old_root = self.model.root(uuid = self.uuid)
+            if old_root is not None:
+               self.root_node = old_root
+               return old_root
+         uuid_list = self.model.uuids(obj_type = self.__class__)
+         for other_uuid in uuid_list:
+            other = WellboreFeature(model, uuid = other_uuid)
+            if self == other:
+               self.uuid = other_uuid  # NB: change of uuid for this object
+               other_root = self.model.root(uuid = other_uuid)
+               assert other_root is not None
+               self.root_node = other_root
+               return self.root_node
 
       wbf = self.model.new_obj_node('WellboreFeature')
 
