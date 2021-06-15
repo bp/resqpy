@@ -19,12 +19,12 @@ def test_model(tmp_path):
    md_datum_1.create_xml(title = 'Datum 1')
    md_datum_2 = rqw.MdDatum(model, location = (3.0, 0.0, -50.0), crs_root = crs_root)
    md_datum_2.create_xml(title = 'Datum 2')
-   assert len(model.uuids(obj_type = 'MdDatum)) == 2
+   assert len(model.uuids(obj_type = 'MdDatum')) == 2
    model.store_epc()
 
    model = rq.Model(epc)
    assert model is not None
-   assert len(model.uuids(obj_type = 'MdDatum)) == 2
+   assert len(model.uuids(obj_type = 'MdDatum')) == 2
    datum_part_1 = model.part(obj_type = 'MdDatum', title = '1', title_mode = 'endswith')
    datum_part_2 = model.part(obj_type = 'MdDatum', title = '2', title_mode = 'endswith')
    assert datum_part_1 is not None and datum_part_2 is not None and datum_part_1 != datum_part_2
