@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from resqpy.model import Model
+from resqpy.model import Model, new_model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
 from resqpy.well import Trajectory, MdDatum
 from resqpy.crs import Crs
@@ -23,11 +23,7 @@ def capture_logs(caplog):
 def tmp_model(tmp_path):
    """Example resqpy model in a temporary directory unique to each test"""
 
-   model = Model(create_basics=True)
-   model_path = str(tmp_path / 'tmp_model.epc')
-   model.set_epc_file_and_directory(model_path)
-   model.create_hdf5_ext(add_as_part=True, file_name=model_path[:-4] + '.h5')
-   return model
+   return new_model(str(tmp_path / 'tmp_model.epc'))
 
 
 @pytest.fixture

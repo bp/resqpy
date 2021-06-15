@@ -777,7 +777,7 @@ class Trajectory():
       self.md_datum = MdDatum(self.model, uuid=relatives_model.uuid_for_part(md_datum_part))
       ds_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['DeviationSurvey', 'UUID']))
       if ds_uuid is not None:  # this will probably not work when relatives model is different from self.model
-         ds_part = 'obj_DeviationSurveyRepresentation_' + str(ds_uuid) + '.xml'
+         ds_part = rqet.part_name_for_object('obj_DeviationSurveyRepresentation_', ds_uuid)
          self.deviation_survey = DeviationSurvey(
             self.model, uuid=relatives_model.uuid_for_part(ds_part, is_rels=False), md_datum = self.md_datum
          )

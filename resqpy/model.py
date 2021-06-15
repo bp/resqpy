@@ -2964,7 +2964,7 @@ class Model():
       """
       import resqpy.crs
 
-      uuids = self.uuids(obj_type = 'LocalDepth3dCrs')
+      uuids = self.uuids(obj_type='LocalDepth3dCrs') + self.uuids(obj_type='LocalTime3dCrs')
       if uuids:
          for uuid in uuids:
             yield resqpy.crs.Crs(self, uuid=uuid)

@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import os
 
@@ -52,3 +53,18 @@ def test_model_iter_crs_empty(tmp_model):
    # Should raise an exception if no CRS exists
    with pytest.raises(StopIteration):
       next(tmp_model.iter_crs())
+
+def test_iter_wells(example_model_with_well):
+   model: rq.Model
+   model, well_interp, datum, traj = example_model_with_well
+
+   w = next(model.iter_wellbore_interpretations())
+   d = next(model.iter_md_datums())
+   t = next(model.iter_trajectories())
+
+   assert w.uuid == well_interp.uuid
+   assert w == well_interp
+   assert d.uuid == datum.uuid
+   assert d == datum
+   assert t.uuid == traj.uuid
+   assert t == traj
