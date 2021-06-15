@@ -625,7 +625,7 @@ class WellboreFeature():
                return old_root
          uuid_list = self.model.uuids(obj_type = self.__class__)
          for other_uuid in uuid_list:
-            other = WellboreFeature(model, uuid = other_uuid)
+            other = WellboreFeature(self.model, uuid = other_uuid)
             if self == other:
                self.uuid = other_uuid  # NB: change of uuid for this object
                other_root = self.model.root(uuid = other_uuid)
