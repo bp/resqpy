@@ -2911,7 +2911,7 @@ class Model():
 
       :meta common:
       """
-      import resqpy.organize  # Imported here to avoid circular imports
+      import resqpy.organize  # Imported here for speed, module is not always needed
 
       # TODO: instantiate using UUIDs
       parts = self.parts_list_of_type('WellboreInterpretation')
@@ -2929,7 +2929,7 @@ class Model():
 
       :meta common:
       """
-      import resqpy.well  # Imported here to avoid circular imports
+      import resqpy.well  # Imported here for speed, module is not always needed
 
       parts = self.parts_list_of_type('WellboreTrajectoryRepresentation')
       for part in parts:
@@ -2962,7 +2962,7 @@ class Model():
 
       :meta common:
       """
-      import resqpy.crs
+      import resqpy.crs  # Imported here for speed, module is not always needed
 
       uuids = self.uuids(obj_type='LocalDepth3dCrs') + self.uuids(obj_type='LocalTime3dCrs')
       if uuids:

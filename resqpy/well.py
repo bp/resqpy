@@ -223,6 +223,8 @@ class MdDatum():
    
    def __eq__(self, other):
       """Implements equals operator. Compares class type and uuid"""
+
+      # TODO: more detailed equality comparison
       other_uuid = getattr(other, "uuid", None)
       return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
 
@@ -1346,6 +1348,8 @@ class Trajectory():
 
    def __eq__(self, other):
       """Implements equals operator. Compares class type and uuid"""
+
+      # TODO: more detailed equality comparison
       other_uuid = getattr(other, "uuid", None)
       return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
 
