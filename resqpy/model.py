@@ -216,11 +216,9 @@ class Model():
 
       if not parts_list: parts_list = self.list_of_parts()
       if uuid is not None:
-         filtered_list = []
-         for part in parts_list:
-            if bu.matching_uuids(uuid, self.uuid_for_part(part)): filtered_list.append(part)
-         if len(filtered_list) == 0: return None
-         parts_list = filtered_list
+         part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
+         if part_name is None or part_name not in parts_list: return None
+         parts_list = [part_name]
       if epc_subdir:
          if epc_subdir.startswith('/'): epc_subdir = epc_subdir[1:]
          if epc_subdir:
@@ -382,7 +380,7 @@ class Model():
                        extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir,
                        multiple_handling = multiple_handling)
       if part is None: return None
-      return self.uuid_for_part(part)
+      return rqet.uuid_in_part_name(part)
 
 
    def roots(self, parts_list = None, obj_type = None, uuid = None,
@@ -1154,6 +1152,7 @@ class Model():
          if part_name not in self.rels_forest: return None
          (_, tree) = self.rels_forest[part_name]
          if tree is None:
+            if not self.epc_file: return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = True)
                if not load_success: return None
@@ -1162,6 +1161,7 @@ class Model():
          if part_name not in self.other_forest: return None
          (_, tree) = self.other_forest[part_name]
          if tree is None:
+            if not self.epc_file: return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = False)
                if not load_success: return None
@@ -1170,6 +1170,7 @@ class Model():
          if part_name not in self.parts_forest: return None
          (_, _, tree) = self.parts_forest[part_name]
          if tree is None:
+            if not self.epc_file: return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = False)
                if not load_success: return None
@@ -1239,9 +1240,10 @@ class Model():
       returns:
          None
 
-      note:
+      notes:
          use this method when the uuid of the high level part itself is changing; if the uuid of the hdf5 ext part
-         is changing, use change_hdf5_uuid_in_hdf5_references() instead
+         itself is changing, use change_hdf5_uuid_in_hdf5_references() instead; this method does not modify the
+         internal path names in the hdf5 file itself, if that has already been written
       """
 
       count = 0
