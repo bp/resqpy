@@ -7,7 +7,7 @@ from resqpy import model as makemodel
 #reversemode=True
 
 #@pytest.mark.parametrize("reversemode", [True, False])
-def test_merge_timeseries(reverse=False):
+def test_merge_timeseries():
     model=makemodel.Model(create_basics=True)
 
     timestamps1=['2020-01-01T00:00:00Z', '2015-01-01T00:00:00Z']
@@ -40,7 +40,3 @@ def test_merge_timeseries(reverse=False):
 
     return True
 
-if __name__ == "__main__":
-
-    for reversemode in [True, False]:
-        assert test_merge_timeseries(reverse=reversemode)
