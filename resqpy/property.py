@@ -1464,8 +1464,10 @@ class PropertyCollection():
          and/or maximum nodes already exist in the tree
       """
 
-      if minimum is not None: self.dict[part][13] = minimum
-      if maximum is not None: self.dict[part][14] = maximum
+      info = list(self.dict[part])
+      if minimum is not None: info[13] = minimum
+      if maximum is not None: info[14] = maximum
+      self.dict[part] = tuple(info)
       if model is not None:
          p_root = model.root_for_part(part)
          if p_root is not None:
