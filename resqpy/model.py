@@ -2978,7 +2978,7 @@ class Model():
 
       uuid = rqet.uuid_in_part_name(part_name)
       try:
-         del uuid_part_dict[bu.uuid_as_int(uuid)]
+         del self.uuid_part_dict[bu.uuid_as_int(uuid)]
       except:
          pass
 
