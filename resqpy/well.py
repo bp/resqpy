@@ -3,13 +3,13 @@
 Example::
 
    # Wellbore interpretations
-   for well in model.wells():
+   for well in model.iter_wellbore_interpretations():
       print(well.title)
 
-      for trajectory in well.trajectories():
+      for trajectory in well.iter_trajectories():
          print(trajectory.title)
 
-         for frame in trajectory.wellbore_frames():
+         for frame in trajectory.iter_wellbore_frames():
             print(frame.title)
 
             # Measured depths
@@ -220,6 +220,13 @@ class MdDatum():
       self.root_node = datum
 
       return datum
+   
+   def __eq__(self, other):
+      """Implements equals operator. Compares class type and uuid"""
+
+      # TODO: more detailed equality comparison
+      other_uuid = getattr(other, "uuid", None)
+      return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
 
 
 class DeviationSurvey(BaseResqpy):
@@ -728,11 +735,13 @@ class Trajectory():
          self.md_datum = MdDatum(self.model, crs_root = self.crs_root, location = self.control_points[0])
 
 
-   def wellbore_frames(self):
+   def iter_wellbore_frames(self):
       """ Iterable of all WellboreFrames associated with a trajectory
 
       Yields:
          frame: instance of :class:`resqpy.organize.WellboreFrame`
+
+      :meta common:
       """
       parts = self.model.parts_list_related_to_uuid_of_type(
          self.uuid, type_of_interest='WellboreFrameRepresentation'
@@ -772,10 +781,10 @@ class Trajectory():
       assert md_datum_uuid is not None, 'failed to fetch uuid of md datum for trajectory'
       md_datum_part = relatives_model.part_for_uuid(md_datum_uuid)
       assert md_datum_part, 'md datum part not found in model'
-      self.md_datum = MdDatum(self.model, md_datum_root = relatives_model.root_for_part(md_datum_part))
+      self.md_datum = MdDatum(self.model, uuid=relatives_model.uuid_for_part(md_datum_part))
       ds_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['DeviationSurvey', 'UUID']))
       if ds_uuid is not None:  # this will probably not work when relatives model is different from self.model
-         ds_part = 'obj_DeviationSurveyRepresentation_' + str(ds_uuid) + '.xml'
+         ds_part = rqet.part_name_for_object('obj_DeviationSurveyRepresentation_', ds_uuid)
          self.deviation_survey = DeviationSurvey(
             self.model, uuid=relatives_model.uuid_for_part(ds_part, is_rels=False), md_datum = self.md_datum
          )
@@ -1337,6 +1346,12 @@ class Trajectory():
          h5_reg.register_dataset(self.uuid, 'tangentVectors', self.tangent_vectors)
       h5_reg.write(file = file_name, mode = mode)
 
+   def __eq__(self, other):
+      """Implements equals operator. Compares class type and uuid"""
+
+      # TODO: more detailed equality comparison
+      other_uuid = getattr(other, "uuid", None)
+      return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
 
 
 class WellboreFrame:

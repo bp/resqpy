@@ -2903,7 +2903,7 @@ class Model():
          self.consolidation.check_map_integrity()
 
 
-   def wells(self):
+   def iter_wellbore_interpretations(self):
       """ Iterable of all WellboreInterpretations associated with the model
 
       Yields:
@@ -2911,8 +2911,9 @@ class Model():
 
       :meta common:
       """
-      import resqpy.organize  # Imported here to avoid circular imports
+      import resqpy.organize  # Imported here for speed, module is not always needed
 
+      # TODO: instantiate using UUIDs
       parts = self.parts_list_of_type('WellboreInterpretation')
       for part in parts:
          well_root = self.root_for_part(part)
@@ -2920,7 +2921,7 @@ class Model():
          yield well
 
 
-   def trajectories(self):
+   def iter_trajectories(self):
       """ Iterable of all trajectories associated with the model
 
       Yields:
@@ -2928,7 +2929,7 @@ class Model():
 
       :meta common:
       """
-      import resqpy.well  # Imported here to avoid circular imports
+      import resqpy.well  # Imported here for speed, module is not always needed
 
       parts = self.parts_list_of_type('WellboreTrajectoryRepresentation')
       for part in parts:
@@ -2937,11 +2938,13 @@ class Model():
          yield traj
 
 
-   def md_datums(self):
+   def iter_md_datums(self):
       """ Iterable of all MdDatum objects associated with the model
 
       Yields:
          md_datum: instance of :class:`resqpy.well.MdDatum`
+
+      :meta common:
       """
       import resqpy.well  # Imported here to avoid circular imports
 
@@ -2951,6 +2954,20 @@ class Model():
          datum = resqpy.well.MdDatum(self, md_datum_root=datum_root)
          yield datum
 
+   def iter_crs(self):
+      """Iterable of all CRS objects associated with the model
+      
+      Yields:
+         crs: instance of :class:`resqpy.crs.CRS`
+
+      :meta common:
+      """
+      import resqpy.crs  # Imported here for speed, module is not always needed
+
+      uuids = self.uuids(obj_type='LocalDepth3dCrs') + self.uuids(obj_type='LocalTime3dCrs')
+      if uuids:
+         for uuid in uuids:
+            yield resqpy.crs.Crs(self, uuid=uuid)
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""

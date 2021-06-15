@@ -19,6 +19,7 @@ import resqpy.well as rqw
 import resqpy.rq_import as rqi
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.uuid as bu
+import resqpy.olio.xml_et as rqet
 
 
 def test_s_bend_fn(tmp_path, epc = None):
@@ -144,7 +145,7 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    trajectory = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
 
-   rqc.Crs(model, trajectory.crs_root).uuid == crs.uuid
+   rqc.Crs(model, uuid=rqet.uuid_for_part_root(trajectory.crs_root)).uuid == crs.uuid
 
    trajectory.write_hdf5()
    trajectory.create_xml()
