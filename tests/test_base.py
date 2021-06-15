@@ -13,7 +13,8 @@ def test_base_creation(example_model):
     model, crs = example_model
     dummy = DummyObj(model=model, title=title)
 
-    # UUID and part should exist, but not root (yet)
+    # UUID should exist, and part (name) should be determinable,
+    # but root should not exist yet
     assert dummy.uuid is not None
     assert dummy.part is not None
     assert dummy.root is None
