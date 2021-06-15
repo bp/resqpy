@@ -13,15 +13,15 @@ def test_base_creation(example_model):
     model, crs = example_model
     dummy = DummyObj(model=model, title=title)
 
-    # UUID should exist, but not root or part
+    # UUID should exist, and part (name) should be determinable,
+    # but root should not exist yet
     assert dummy.uuid is not None
+    assert dummy.part is not None
     assert dummy.root is None
-    assert dummy.part is None
 
-    # After creating XML, root and part should exist
+    # After creating XML, root should exist
     dummy.create_xml(add_as_part=True)
     assert dummy.root is not None
-    assert dummy.part is not None
 
 
 def test_base_save_and_load(example_model):

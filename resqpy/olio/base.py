@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseResqpy(metaclass=ABCMeta):
-    """Base class for generic RESQML objects
+    """Base class for generic resqpy classes
     
     Implements generic attributes such as uuid, root, part, title, originator.
 
@@ -21,7 +21,7 @@ class BaseResqpy(metaclass=ABCMeta):
     
     Example use::
 
-        class AnotherResqmlObject(BaseResqpy):
+        class AnotherResqpyObject(BaseResqpy):
             
             _content_type = 'obj_anotherresqmlobjectrepresentation'
 
@@ -61,19 +61,14 @@ class BaseResqpy(metaclass=ABCMeta):
 
     @property
     def part(self):
-        """Part corresponding to self.uuid"""
+        """Standard part name corresponding to self.uuid"""
 
-        # TODO: create directly from self._content_type
-        if self.uuid is None:
-            raise ValueError('Cannot get part if uuid is None')
-        return self.model.part_for_uuid(self.uuid)
+        return rqet.part_name_for_object(self._content_type, self.uuid)
 
     @property
     def root(self):
-        """Node corresponding to self.uuid"""
+        """XML node corresponding to self.uuid"""
 
-        if self.uuid is None:
-            raise ValueError('Cannot get root if uuid is None')
         return self.model.root_for_uuid(self.uuid)
 
     def load_from_xml(self):
@@ -89,12 +84,18 @@ class BaseResqpy(metaclass=ABCMeta):
     def create_xml(self, title=None, originator=None, add_as_part=False):
         """Write citation block to XML
         
+        Note:
+
+            `add_as_part` is False by default in this base method. Derived classes should typically
+            extend this method to complete the XML representation, and then finally ensure the node
+            is added as a part to the model.
+
         Args:
             title (string): used as the citation Title text; should usually refer to the well name in a
                 human readable way
             originator (string, optional): the name of the human being who created the deviation survey part;
                 default is to use the login name
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+            add_as_part (boolean): if True, the newly created xml node is added as a part
                 in the model
 
         Returns:
@@ -123,7 +124,7 @@ class BaseResqpy(metaclass=ABCMeta):
     # Generic magic methods
 
     def __eq__(self, other):
-        """Implements equals operator. By default, compare objects using uuid"""
+        """Implements equals operator. Compares class type and uuid"""
         other_uuid = getattr(other, "uuid", None)
         return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
 
