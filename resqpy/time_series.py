@@ -302,6 +302,9 @@ class TimeSeries():
       duration = TimeDuration(days = days)
       self.extend_by_duration(duration)
 
+   def datetimes(self):
+      """Returns a list of python-datetime objects """
+      return [dt.datetime.fromisoformat(t.rstrip('z')) for t in self.timestamps]
 
    def create_xml(self, add_as_part = True, root = None,
                   title = 'time series', originator = None):
@@ -420,6 +423,28 @@ def time_series_from_list(timestamp_list, parent_model = None):
       timestamp = cleaned_timestamp(raw_timestamp)
       time_series.add_timestamp(timestamp)
    return time_series
+
+def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
+   """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). The new timeseries is sorted in ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
+   
+   reverse=False 
+
+   alltimestamps=set({})
+   timeserieslist=[]
+   for timeseries_uuid in timeseries_uuid_iter:
+       timeseriesroot=model.root(uuid=timeseries_uuid)
+       assert(rqet.node_type(timeseriesroot) == 'obj_TimeSeries')
+       
+       singlets=TimeSeries(model, time_series_root=timeseriesroot)
+       timeserieslist.append(singlets)
+       #alltimestamps.update( set(singlets.timestamps) )
+       alltimestamps.update( set(singlets.datetimes()) )
+   
+   sortedtimestamps=sorted(list(alltimestamps), reverse=reverse)
+    
+   new_time_series=time_series_from_list(sortedtimestamps, parent_model=model)
+   new_time_series_uuid=new_time_series.uuid
+   return (new_time_series, new_time_series_uuid, timeserieslist)
 
 
 def time_series_from_nexus_summary(summary_file, parent_model = None):
