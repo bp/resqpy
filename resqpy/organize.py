@@ -623,7 +623,7 @@ class WellboreFeature():
             if old_root is not None:
                self.root_node = old_root
                return old_root
-         uuid_list = self.model.uuids(obj_type = self.__class__)
+         uuid_list = self.model.uuids(obj_type = 'WellboreFeature')
          for other_uuid in uuid_list:
             other = WellboreFeature(self.model, uuid = other_uuid)
             if self == other:
