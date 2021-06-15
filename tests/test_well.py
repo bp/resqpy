@@ -10,10 +10,10 @@ from resqpy.crs import Crs
 import resqpy.well
 
 
-def test_MdDatum(example_model):
+def test_MdDatum(example_model_and_crs):
 
    # Set up a new datum
-   model, crs = example_model
+   model, crs = example_model_and_crs
    epc = model.epc_file
    data = dict(
       location=(0, -99999, 3.14),
@@ -97,11 +97,11 @@ def test_logs():
 
 # Trajectory
 
-def test_Trajectory_add_well_feature_and_interp(example_model):
+def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
 
    # Prepare an example Trajectory without a well feature
    wellname = "Hullabaloo"
-   model, crs = example_model
+   model, crs = example_model_and_crs
    datum = resqpy.well.MdDatum(
       parent_model=model, crs_root=crs.crs_root, location=(0, 0, -100), md_reference='kelly bushing'
    )

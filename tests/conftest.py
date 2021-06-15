@@ -20,36 +20,39 @@ def capture_logs(caplog):
 
 
 @pytest.fixture
-def example_model(tmp_path):
+def tmp_model(tmp_path):
+   """Example resqpy model in a temporary directory unique to each test"""
+
+   model = Model(create_basics=True)
+   model_path = str(tmp_path / 'tmp_model.epc')
+   model.set_epc_file_and_directory(model_path)
+   model.create_hdf5_ext(add_as_part=True, file_name=model_path[:-4] + '.h5')
+   return model
+
+
+@pytest.fixture
+def example_model_and_crs(tmp_model):
    """ Returns a fresh RESQML Model and Crs, in a temporary directory """
 
    # TODO: parameterise with m or feet
    xyz_uom = 'm'
 
    # Create a model with a coordinate reference system
-   model = Model(create_basics=True)
-   crs = Crs(parent_model=model, z_inc_down=True, xy_units=xyz_uom, z_units=xyz_uom)
+   crs = Crs(parent_model=tmp_model, z_inc_down=True, xy_units=xyz_uom, z_units=xyz_uom)
    crs.create_xml()
 
-   # Using tmp_path to get a temporary directory unique to each test
-   model_path = str(tmp_path / f'test_well_{crs.uuid}.epc')
-   model.set_epc_file_and_directory(model_path)
-
-   # Add an hdf5 reference part in anticipation of some arrays being used later on
-   model.create_hdf5_ext(add_as_part=True, file_name=model_path[:-4] + '.h5')
-
-   return model, crs
+   return tmp_model, crs
 
 
 @pytest.fixture
-def example_model_with_well(example_model):
+def example_model_with_well(example_model_and_crs):
    """ Model with a single well with a vertical trajectory """
 
    wellname = 'well A'
    elevation = 100
    md_uom = 'm'
 
-   model, crs = example_model
+   model, crs = example_model_and_crs
 
    # Create a single well feature and interpretation
    well_feature = WellboreFeature(parent_model=model, feature_name=wellname)

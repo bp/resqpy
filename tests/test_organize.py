@@ -32,11 +32,10 @@ from resqpy.model import Model
         dict(feature_name='foobar', kind='gas oil contact'),
     ),
 ])
-def test_organize_classes(example_model, cls, data):
+def test_organize_classes(tmp_model, cls, data):
 
     # Load example model from a fixture
-    model: Model
-    model, _ = example_model
+    model = tmp_model
     epc = model.epc_file
 
     # Create the feature
