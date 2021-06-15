@@ -77,10 +77,8 @@ def _alias_for_attribute(attribute_name):
 
    def fget(self):
       return getattr(self, attribute_name)
-   
    def fset(self, value):
       return setattr(self, attribute_name, value)
-
    return property(fget, fset)
 
 
@@ -99,8 +97,7 @@ class OrganizationFeature(BaseResqpy):
          uuid = rqet.uuid_for_part_root(root_node)
 
       self.organization_kind = organization_kind
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, originator=originator)
-   
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, originator=originator)  
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -119,8 +116,8 @@ class OrganizationFeature(BaseResqpy):
       return self.is_equivalent(other)
 
    def load_from_xml(self):
-       super().load_from_xml()
-       self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')
+      super().load_from_xml()
+      self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')
 
    def create_xml(self, add_as_part = True, originator = None):
       """Creates an organization feature xml node from this organization feature object."""
@@ -139,7 +136,6 @@ class OrganizationFeature(BaseResqpy):
          self.model.add_part('obj_OrganizationFeature', self.uuid, ofn)
 
       return ofn
-
 
 
 class GeobodyFeature(BaseResqpy):
@@ -318,44 +314,26 @@ class FluidBoundaryFeature(BaseResqpy):
       return fbf
 
 
-class RockFluidUnitFeature():
+class RockFluidUnitFeature(BaseResqpy):
    """Class for RESQML Rock Fluid Unit Feature organizational objects."""
 
-   def __init__(self, parent_model, root_node = None, phase = None, feature_name = None,
-                top_boundary_feature = None, base_boundary_feature = None):
+   _content_type = "RockFluidUnitFeature"
+   feature_name = _alias_for_attribute("title")
+   valid_phases = ('aquifer', 'gas cap', 'oil column', 'seal')
+
+   def __init__(self, parent_model, root_node=None, uuid=None, phase=None, feature_name=None,
+                top_boundary_feature=None, base_boundary_feature=None):
       """Initialises a rock fluid unit feature organisational object."""
 
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.phase = None
-      self.feature_name = None
-      self.top_boundary_feature = None
-      self.base_boundary_feature = None
+      if root_node is not None:
+         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
+         uuid = rqet.uuid_for_part_root(root_node)
+      
+      self.phase = phase
+      self.top_boundary_feature = top_boundary_feature
+      self.base_boundary_feature = base_boundary_feature
 
-      if self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.phase = rqet.find_tag_text(self.root_node, 'Phase')
-         self.feature_name = rqet.find_nested_tags_text(self.root_node, ['Citation', 'Title'])
-         feature_ref_node = rqet.find_tag(self.root_node, 'FluidBoundaryTop')
-         assert feature_ref_node is not None
-         feature_root = self.model.referenced_node(feature_ref_node)
-         assert feature_root is not None, 'rock fluid top boundary feature missing from model'
-         self.top_boundary_feature = BoundaryFeature(self.model, root_node = feature_root)
-         feature_ref_node = rqet.find_tag(self.root_node, 'FluidBoundaryBottom')
-         assert feature_ref_node is not None
-         feature_root = self.model.referenced_node(feature_ref_node)
-         assert feature_root is not None, 'rock fluid bottom boundary feature missing from model'
-         self.base_boundary_feature = BoundaryFeature(self.model, root_node = feature_root)
-      elif phase and feature_name and top_boundary_feature and base_boundary_feature:
-         self.uuid = bu.new_uuid()
-         self.phase = phase
-         self.feature_name = feature_name
-         self.top_boundary_feature = top_boundary_feature
-         self.base_boundary_feature = base_boundary_feature
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -372,41 +350,49 @@ class RockFluidUnitFeature():
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return True
 
-
    def __eq__(self, other):
       return self.is_equivalent(other)
 
+   def load_from_xml(self):
+      super().load_from_xml()
 
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
+      self.phase = rqet.find_tag_text(self.root, 'Phase')
 
+      feature_ref_node = rqet.find_tag(self.root, 'FluidBoundaryTop')
+      assert feature_ref_node is not None
+      feature_root = self.model.referenced_node(feature_ref_node)
+      feature_uuid = rqet.uuid_for_part_root(feature_root)
+      assert feature_uuid is not None, 'rock fluid top boundary feature missing from model'
+      self.top_boundary_feature = BoundaryFeature(self.model, uuid=feature_uuid)
+
+      feature_ref_node = rqet.find_tag(self.root, 'FluidBoundaryBottom')
+      assert feature_ref_node is not None
+      feature_root = self.model.referenced_node(feature_ref_node)
+      feature_uuid = rqet.uuid_for_part_root(feature_root)
+      assert feature_uuid is not None, 'rock fluid bottom boundary feature missing from model'
+      self.base_boundary_feature = BoundaryFeature(self.model, uuid=feature_uuid)
 
    def create_xml(self, add_as_part = True, add_relationships = True, originator = None):
       """Creates a rock fluid unit feature organisational xml node from this rock fluid unit feature object."""
 
       assert self.feature_name and self.phase and self.top_boundary_feature and self.base_boundary_feature
+      if self.phase not in self.valid_phases:
+         raise ValueError(f"Phase '{self.phase}' not recognized")
 
-      rfuf = self.model.new_obj_node('RockFluidUnitFeature')
+      # Create node with citation block
+      rfuf = super().create_xml(add_as_part=False, originator=originator)
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(rfuf.attrib['uuid'])
-      else:
-         rfuf.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = rfuf, title = self.feature_name, originator = originator)
-
-      assert self.phase in ['aquifer', 'gas cap', 'oil column', 'seal'], 'phase not recognized'
       phase_node = rqet.SubElement(rfuf, ns['resqml2'] + 'Phase')
       phase_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Phase')
       phase_node.text = self.phase
 
-      top_boundary_root = self.top_boundary_feature.root_node
+      top_boundary_root = self.top_boundary_feature.root
       assert top_boundary_root is not None
       self.model.create_ref_node('FluidBoundaryTop', self.model.title_for_root(top_boundary_root),
                                  top_boundary_root.attrib['uuid'],
                                  content_type = 'obj_BoundaryFeature', root = rfuf)
 
-      base_boundary_root = self.base_boundary_feature.root_node
+      base_boundary_root = self.base_boundary_feature.root
       assert base_boundary_root is not None
       self.model.create_ref_node('FluidBoundaryBottom', self.model.title_for_root(base_boundary_root),
                                  base_boundary_root.attrib['uuid'],
@@ -417,8 +403,6 @@ class RockFluidUnitFeature():
          if add_relationships:
             self.model.create_reciprocal_relationship(rfuf, 'destinationObject', top_boundary_root, 'sourceObject')
             self.model.create_reciprocal_relationship(rfuf, 'destinationObject', base_boundary_root, 'sourceObject')
-
-      self.root_node = rfuf
 
       return rfuf
 
