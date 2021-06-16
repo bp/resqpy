@@ -547,7 +547,7 @@ class FaultInterpretation(BaseResqpy):
       assert interp_feature_ref_node is not None
       self.feature_root = self.model.referenced_node(interp_feature_ref_node)
       if self.feature_root is not None:
-         self.tectonic_boundary_feature = TectonicBoundaryFeature(self.model, uuid = self.feature_root.attrib['uuid']
+         self.tectonic_boundary_feature = TectonicBoundaryFeature(self.model, uuid = self.feature_root.attrib['uuid'],
                                                                   feature_name = self.model.title_for_root(self.feature_root))
          self.main_has_occurred_during = extract_has_occurred_during(root_node)
          self.is_listric = rqet.find_tag_bool(root_node, 'IsListric')
