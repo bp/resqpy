@@ -145,7 +145,7 @@ class BaseResqpy(metaclass=ABCMeta):
         )
 
         # Extra metadata
-        if hasattr(self, extra_metadata) and self.extra_metadata:
+        if hasattr(self, 'extra_metadata') and self.extra_metadata:
             rqet.create_metadata_xml(node=node, extra_metadata=self.extra_metadata)
 
         if add_as_part:
