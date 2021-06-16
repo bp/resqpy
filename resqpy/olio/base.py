@@ -23,20 +23,20 @@ class BaseResqpy(metaclass=ABCMeta):
 
         class AnotherResqpyObject(BaseResqpy):
             
-            _content_type = 'obj_anotherresqmlobjectrepresentation'
+            resqml_type = 'obj_anotherresqmlobjectrepresentation'
 
     """
 
     @property
     @abstractmethod
-    def _content_type(self):
+    def resqml_type(self):
         """Definition of which RESQML object the class represents.
         
         Subclasses must overwrite this abstract attribute.
         """
         raise NotImplementedError
 
-    def __init__(self, model, uuid=None, title=None, originator=None):
+    def __init__(self, model, uuid=None, title=None, originator=None, root_node=None):
         """Load an existing resqml object, or create new.
 
         Args:
@@ -48,6 +48,10 @@ class BaseResqpy(metaclass=ABCMeta):
         self.model = model
         self.title = title
         self.originator = originator
+
+        if root_node is not None:
+            warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
+            uuid = rqet.uuid_for_part_root(root_node)
 
         if uuid is None:
             self.uuid = bu.new_uuid()
@@ -63,7 +67,7 @@ class BaseResqpy(metaclass=ABCMeta):
     def part(self):
         """Standard part name corresponding to self.uuid"""
 
-        return rqet.part_name_for_object(self._content_type, self.uuid)
+        return rqet.part_name_for_object(self.resqml_type, self.uuid)
 
     @property
     def root(self):
@@ -81,7 +85,7 @@ class BaseResqpy(metaclass=ABCMeta):
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
 
-    def create_xml(self, title=None, originator=None, add_as_part=False):
+    def create_xml(self, title=None, originator=None, add_as_part=False, reuse=False):
         """Write citation block to XML
         
         Note:
@@ -90,6 +94,10 @@ class BaseResqpy(metaclass=ABCMeta):
             extend this method to complete the XML representation, and then finally ensure the node
             is added as a part to the model.
 
+            if `reuse` is True, a side effect of this method may be to modify the uuid of self;
+            calling code should typically look for such a change and if detected, abandon any
+            further work on building or adding the xml node (as it is already complete)
+
         Args:
             title (string): used as the citation Title text; should usually refer to the well name in a
                 human readable way
@@ -97,15 +105,28 @@ class BaseResqpy(metaclass=ABCMeta):
                 default is to use the login name
             add_as_part (boolean): if True, the newly created xml node is added as a part
                 in the model
+            reuse (boolean, default False): if True, the xml for other parts in the model of the same class
+                is considered for reuse and if suitable the uuid of this object is modified
 
         Returns:
-            node: the newly created root node
+            node: the newly created root node, or reused root node as applicable
         """
 
         assert self.uuid is not None
 
+        if reuse:
+            if self.root is not None: return self.root
+            uuid_list = self.model.uuids(obj_type = self.resqml_type)
+            for other_uuid in uuid_list:
+                other = self.__class__(self.model, uuid = other_uuid)
+                if self == other:
+                    logger.debug(f'reusing equivalent resqml object with uuid {other_uuid}')
+                    self.uuid = other_uuid  # NB: change of uuid for this object
+                    assert self.root is not None
+                    return self.root
+
         # Create the root node
-        node = self.model.new_obj_node(self._content_type)
+        node = self.model.new_obj_node(self.resqml_type)
         node.attrib['uuid'] = str(self.uuid)
 
         # Citation block
@@ -116,7 +137,7 @@ class BaseResqpy(metaclass=ABCMeta):
         )
 
         if add_as_part:
-            self.model.add_part(self._content_type, self.uuid, node)
+            self.model.add_part(self.resqml_type, self.uuid, node)
             assert self.root is not None
         
         return node
@@ -125,8 +146,10 @@ class BaseResqpy(metaclass=ABCMeta):
 
     def __eq__(self, other):
         """Implements equals operator. Compares class type and uuid"""
+        if hasattr(self, 'is_equivalent'): return self.is_equivalent(other)
+        if not isinstance(other, self.__class__): return False
         other_uuid = getattr(other, "uuid", None)
-        return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
+        return bu.matching_uuids(self.uuid, other_uuid)
 
     def __ne__(self, other):
         """Implements not equal operator"""

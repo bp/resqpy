@@ -250,7 +250,7 @@ class DeviationSurvey(BaseResqpy):
 
    """
 
-   _content_type = "DeviationSurveyRepresentation"
+   resqml_type = "DeviationSurveyRepresentation"
    
    def __init__(self, parent_model, uuid=None, title=None, deviation_survey_root=None,
                 represented_interp=None, md_datum=None, md_uom='m', angle_uom='degrees',

@@ -1,6 +1,6 @@
 """organize.py: RESQML Feature and Interpretation classes."""
 
-version = '8th May 2021'
+version = '16th June 2021'
 
 # For now, fault features and interpretations, plus stubs for horizons
 
@@ -56,6 +56,7 @@ def equivalent_extra_metadata(a, b):
       b_em = rqet.load_metadata_from_xml(b.root_node)
       b_has = b_em is not None and len(b_em) > 0
    if a_has != b_has: return False
+   if not a_has: return True
    return a_em == b_em
 
 
@@ -85,45 +86,37 @@ def _alias_for_attribute(attribute_name):
 class OrganizationFeature(BaseResqpy):
    """Class for generic RESQML Organization Feature objects."""
 
-   _content_type = "OrganizationFeature"
+   resqml_type = "OrganizationFeature"
    feature_name = _alias_for_attribute("title")
 
    def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None,
                 organization_kind=None, originator=None):
       """Initialises an organization feature object."""
 
-      if root_node is not None:
-         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         uuid = rqet.uuid_for_part_root(root_node)
-
       self.organization_kind = organization_kind
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, originator=originator)  
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, originator=originator, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
 
-      return isinstance(other, OrganizationFeature) and any(
-         self is other,
-         bu.matching_uuids(self.uuid, other.uuid),
-         all(
-            self.feature_name == other.feature_name,
-            self.organization_kind == other.organization_kind,
-            (equivalent_extra_metadata(self, other) or not check_extra_metadata)
-         )
-      )
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
+      if not isinstance(other, OrganizationFeature): return False
+      if self is other or bu.matching_uuids(self.uuid, other.uuid): return True
+      return (
+         self.feature_name == other.feature_name and
+         self.organization_kind == other.organization_kind and
+         ((not check_extra_metadata) or equivalent_extra_metadata(self, other)))
 
    def load_from_xml(self):
       super().load_from_xml()
       self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')
 
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates an organization feature xml node from this organization feature object."""
 
-      # Create node with citation block
-      ofn = super().create_xml(add_as_part=False, originator=originator)
+      this_uuid = self.uuid
+      # Check for reusable objects; if not found, create node with citation block
+      ofn = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
+      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return ofn  # reuse detected
 
       # Extra element for organization_kind
       if self.organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
@@ -141,16 +134,13 @@ class OrganizationFeature(BaseResqpy):
 class GeobodyFeature(BaseResqpy):
    """Class for RESQML Geobody Feature objects (note: definition may be incomplete in RESQML 2.0.1)."""
 
-   _content_type = "GeobodyFeature"
+   resqml_type = "GeobodyFeature"
    feature_name = _alias_for_attribute("title")
 
    def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
       """Initialises a geobody feature object."""
 
-      if root_node is not None:
-         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         uuid = rqet.uuid_for_part_root(root_node)
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name)
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -160,28 +150,22 @@ class GeobodyFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name
 
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-   def create_xml(self, add_as_part=True, originator=None):
+   def create_xml(self, add_as_part=True, originator=None, reuse=True):
       """Creates a geobody feature xml node from this geobody feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator)
+      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
 
 
 
 class BoundaryFeature(BaseResqpy):
    """Class for RESQML Boudary Feature organizational objects."""
 
-   _content_type = "BoundaryFeature"
+   resqml_type = "BoundaryFeature"
    feature_name = _alias_for_attribute("title")
 
    def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
       """Initialises a boundary feature organisational object."""
 
-      if root_node is not None:
-         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         uuid = rqet.uuid_for_part_root(root_node)
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name)
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -191,27 +175,21 @@ class BoundaryFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name
 
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-   def create_xml(self, add_as_part=True, originator=None):
+   def create_xml(self, add_as_part=True, originator=None, reuse=True):
       """Creates a geobody feature xml node from this geobody feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator)
+      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
 
 
 class FrontierFeature(BaseResqpy):
    """Class for RESQML Frontier Feature organizational objects."""
 
-   _content_type = "FrontierFeature"
+   resqml_type = "FrontierFeature"
    feature_name = _alias_for_attribute("title")
 
    def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
       """Initialises a frontier feature organisational object."""
 
-      if root_node is not None:
-         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         uuid = rqet.uuid_for_part_root(root_node)
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name)
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -221,27 +199,21 @@ class FrontierFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name
 
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse=True):
       """Creates a frontier feature organisational xml node from this frontier feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator)
+      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
 
 
 class GeologicUnitFeature(BaseResqpy):
    """Class for RESQML Geologic Unit Feature organizational objects."""
 
-   _content_type = "GeologicUnitFeature"
+   resqml_type = "GeologicUnitFeature"
    feature_name = _alias_for_attribute("title")
 
    def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
       """Initialises a geologic unit feature organisational object."""
 
-      if root_node is not None:
-         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         uuid = rqet.uuid_for_part_root(root_node)
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name)
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -251,30 +223,23 @@ class GeologicUnitFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name
 
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a geologic unit feature organisational xml node from this geologic unit feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator)
+      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
 
 
 class FluidBoundaryFeature(BaseResqpy):
    """Class for RESQML Fluid Boundary Feature (contact) organizational objects."""
 
-   _content_type = "FluidBoundaryFeature"
+   resqml_type = "FluidBoundaryFeature"
    feature_name = _alias_for_attribute("title")
    valid_kinds = ('free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact')
 
    def __init__(self, parent_model, root_node=None, uuid=None, kind=None, feature_name=None):
       """Initialises a fluid boundary feature (contact) organisational object."""
 
-      if root_node is not None:
-         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         uuid = rqet.uuid_for_part_root(root_node)
-      
       self.kind = kind
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name)
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -284,21 +249,17 @@ class FluidBoundaryFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name and self.kind == other.kind
 
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
    def load_from_xml(self):
       super().load_from_xml()
       self.kind = rqet.find_tag_text(self.root, 'FluidContact')
 
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a fluid boundary feature organisational xml node from this fluid boundary feature object."""
 
-      # Create node with citation block
-      fbf = super().create_xml(add_as_part=False, originator=originator)
+      this_uuid = self.uuid
+      # Check for reusable objects; if not found, create node with citation block
+      fbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
+      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return fbf  # reuse detected
 
       # Extra element for kind
       if self.kind not in self.valid_kinds:
@@ -317,7 +278,7 @@ class FluidBoundaryFeature(BaseResqpy):
 class RockFluidUnitFeature(BaseResqpy):
    """Class for RESQML Rock Fluid Unit Feature organizational objects."""
 
-   _content_type = "RockFluidUnitFeature"
+   resqml_type = "RockFluidUnitFeature"
    feature_name = _alias_for_attribute("title")
    valid_phases = ('aquifer', 'gas cap', 'oil column', 'seal')
 
@@ -325,15 +286,11 @@ class RockFluidUnitFeature(BaseResqpy):
                 top_boundary_feature=None, base_boundary_feature=None):
       """Initialises a rock fluid unit feature organisational object."""
 
-      if root_node is not None:
-         warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
-         uuid = rqet.uuid_for_part_root(root_node)
-      
       self.phase = phase
       self.top_boundary_feature = top_boundary_feature
       self.base_boundary_feature = base_boundary_feature
 
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name)
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -349,9 +306,6 @@ class RockFluidUnitFeature(BaseResqpy):
       elif other.base_boundary_feature is not None: return False
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return True
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
 
    def load_from_xml(self):
       super().load_from_xml()
@@ -372,15 +326,17 @@ class RockFluidUnitFeature(BaseResqpy):
       assert feature_uuid is not None, 'rock fluid bottom boundary feature missing from model'
       self.base_boundary_feature = BoundaryFeature(self.model, uuid=feature_uuid)
 
-   def create_xml(self, add_as_part = True, add_relationships = True, originator = None):
+   def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
       """Creates a rock fluid unit feature organisational xml node from this rock fluid unit feature object."""
 
       assert self.feature_name and self.phase and self.top_boundary_feature and self.base_boundary_feature
       if self.phase not in self.valid_phases:
          raise ValueError(f"Phase '{self.phase}' not recognized")
 
-      # Create node with citation block
-      rfuf = super().create_xml(add_as_part=False, originator=originator)
+      this_uuid = self.uuid
+      # Check for reusable objects; if not found, create node with citation block
+      rfuf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
+      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return rfuf  # reuse detected
 
       phase_node = rqet.SubElement(rfuf, ns['resqml2'] + 'Phase')
       phase_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Phase')
@@ -408,68 +364,39 @@ class RockFluidUnitFeature(BaseResqpy):
 
 
 
-class TectonicBoundaryFeature():
+class TectonicBoundaryFeature(BaseResqpy):
    """Class for RESQML Tectonic Boundary Feature (fault) organizational objects."""
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True, kind = None, feature_name = None):
+   resqml_type = "TectonicBoundaryFeature"
+   feature_name = _alias_for_attribute("title")
+   valid_kinds = ('fault', 'fracture')
+
+   def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None):
       """Initialises a tectonic boundary feature (fault or fracture) organisational object."""
-
-      if kind is None:
-         assert extract_from_xml, 'kind must be specified unless extracting tectonic boundary feature from xml'
-      else:
-         assert kind in ['fault', 'fracture'], 'tectonic boundary feature kind not recognized'
-
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
       self.kind = kind
-      self.feature_name = None
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         xml_kind = rqet.find_tag_text(self.root_node, 'TectonicBoundaryKind')
-         if xml_kind and self.kind:
-            assert xml_kind.lower() == self.kind.lower(), 'Tectonic boundary kind mismatch'
-         else:
-            self.kind = xml_kind
-         self.feature_name = rqet.find_nested_tags_text(self.root_node, ['Citation', 'Title'])
-      else:
-         self.uuid = bu.new_uuid()
-         if not self.kind: self.kind = 'fault'
-         self.feature_name = feature_name
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+   def load_from_xml(self):
+      super().load_from_xml()
+      self.kind = rqet.find_tag_text(self.root, 'TectonicBoundaryKind')
+      if not self.kind: self.kind = 'fault'
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
-
       if other is None or not isinstance(other, TectonicBoundaryFeature): return False
       if self is other or bu.matching_uuids(self.uuid, other.uuid): return True
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name and self.kind == other.kind
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a tectonic boundary feature organisational xml node from this tectonic boundary feature object."""
 
-      tbf = self.model.new_obj_node('TectonicBoundaryFeature')
+      this_uuid = self.uuid
+      # Check for reusable objects; if not found, create node with citation block
+      tbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
+      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return tbf  # reuse detected
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(tbf.attrib['uuid'])
-      else:
-         tbf.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = tbf, title = self.feature_name, originator = originator)
-
+      assert self.kind in self.valid_kinds
       kind_node = rqet.SubElement(tbf, ns['resqml2'] + 'TectonicBoundaryKind')
       kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'TectonicBoundaryKind')
       kind_node.text = self.kind
@@ -477,79 +404,47 @@ class TectonicBoundaryFeature():
       if add_as_part:
          self.model.add_part('obj_TectonicBoundaryFeature', self.uuid, tbf)
 
-      self.root_node = tbf
-
       return tbf
 
 
 
-class GeneticBoundaryFeature():
+class GeneticBoundaryFeature(BaseResqpy):
    """Class for RESQML Genetic Boundary Feature (horizon) organizational objects."""
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True, kind = None, feature_name = None):
+   resqml_type = "GeneticBoundaryFeature"
+   feature_name = _alias_for_attribute("title")
+   valid_kinds = ('horizon', 'geobody boundary')
+
+   def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None):
       """Initialises a genetic boundary feature (horizon or geobody boundary) organisational object."""
-
-      if kind is None:
-         if not extract_from_xml: kind = 'horizon'
-      else:
-         assert kind in ['horizon', 'geobody boundary'], 'genetic boundary feature kind not recognized'
-
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
       self.kind = kind
       self.absolute_age = None   # (timestamp, year offset) pair, or None
-      self.feature_name = None
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         xml_kind = rqet.find_tag_text(self.root_node, 'GeneticBoundaryKind')
-         if xml_kind and self.kind:
-            assert xml_kind.lower() == self.kind.lower(), 'Genetic boundary kind mismatch'
-         else:
-            self.kind = xml_kind
-         self.feature_name = rqet.find_nested_tags_text(self.root_node, ['Citation', 'Title'])
-         age_node = rqet.find_tag(self.root_node, 'AbsoluteAge')
-         if age_node:
-            self.absolute_age = (rqet.find_tag_text(age_node, 'DateTime'),
-                                 rqet.find_tag_int(age_node, 'YearOffset'))  # year offset may be None
-      else:
-         self.uuid = bu.new_uuid()
-         self.feature_name = feature_name
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+   def load_from_xml(self):
+      super().load_from_xml()
+      self.kind = rqet.find_tag_text(self.root_node, 'GeneticBoundaryKind')
+      age_node = rqet.find_tag(self.root_node, 'AbsoluteAge')
+      if age_node:
+         self.absolute_age = (rqet.find_tag_text(age_node, 'DateTime'),
+                              rqet.find_tag_int(age_node, 'YearOffset'))  # year offset may be None
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
-
       if other is None or not isinstance(other, GeneticBoundaryFeature): return False
       if self is other or bu.matching_uuids(self.uuid, other.uuid): return True
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name and self.kind == other.kind and self.absolute_age == other.absolute_age
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a genetic boundary feature organisational xml node from this genetic boundary feature object."""
 
-      gbf = self.model.new_obj_node('GeneticBoundaryFeature')
+      this_uuid = self.uuid
+      # Check for reusable objects; if not found, create node with citation block
+      gbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
+      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return gbf  # reuse detected
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(gbf.attrib['uuid'])
-      else:
-         gbf.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = gbf, title = self.feature_name, originator = originator)
-
-      assert self.kind in ['horizon', 'geobody boundary']
+      assert self.kind in self.valid_kinds
       kind_node = rqet.SubElement(gbf, ns['resqml2'] + 'GeneticBoundaryKind')
       kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeneticBoundaryKind')
       kind_node.text = self.kind
@@ -570,84 +465,32 @@ class GeneticBoundaryFeature():
       if add_as_part:
          self.model.add_part('obj_GeneticBoundaryFeature', self.uuid, gbf)
 
-      self.root_node = gbf
-
       return gbf
 
 
 
-class WellboreFeature():
+class WellboreFeature(BaseResqpy):
    """Class for RESQML Wellbore Feature organizational objects."""
 
    # note: optional WITSML link not supported
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True, feature_name = None):
+   resqml_type = "WellboreFeature"
+   feature_name = _alias_for_attribute("title")
+
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extract_from_xml = None):
       """Initialises a wellbore feature organisational object."""
-
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.feature_name = None
-
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.feature_name = rqet.find_nested_tags_text(self.root_node, ['Citation', 'Title'])
-      else:
-         self.uuid = bu.new_uuid()
-         self.feature_name = feature_name
-
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
-
       if other is None or not isinstance(other, WellboreFeature): return False
       if self is other or bu.matching_uuids(self.uuid, other.uuid): return True
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a wellbore feature organisational xml node from this wellbore feature object."""
-
-      if reuse:
-         if self.uuid is not None:
-            old_root = self.model.root(uuid = self.uuid)
-            if old_root is not None:
-               self.root_node = old_root
-               return old_root
-         uuid_list = self.model.uuids(obj_type = 'WellboreFeature')
-         for other_uuid in uuid_list:
-            other = WellboreFeature(self.model, uuid = other_uuid)
-            if self == other:
-               self.uuid = other_uuid  # NB: change of uuid for this object
-               other_root = self.model.root(uuid = other_uuid)
-               assert other_root is not None
-               self.root_node = other_root
-               return self.root_node
-
-      wbf = self.model.new_obj_node('WellboreFeature')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(wbf.attrib['uuid'])
-      else:
-         wbf.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = wbf, title = self.feature_name, originator = originator)
-
-      if add_as_part:
-         self.model.add_part('obj_WellboreFeature', self.uuid, wbf)
-
-      self.root_node = wbf
-
-      return wbf
+      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
 
 
 
