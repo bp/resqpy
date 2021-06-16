@@ -793,7 +793,7 @@ class HorizonInterpretation(BaseResqpy):
       self.feature_root = self.model.referenced_node(interp_feature_ref_node)
       if self.feature_root is not None:
          self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, kind = 'horizon',
-                                             root_node = self.feature_root,
+                                             uuid = self.feature_root.attrib['uuid'],
                                              feature_name = self.model.title_for_root(self.feature_root))
       self.has_occurred_during = extract_has_occurred_during(self.root_node)
       br_node_list = rqet.list_of_tag(self.root_node, 'BoundaryRelation')
@@ -876,55 +876,41 @@ class HorizonInterpretation(BaseResqpy):
 
 
 
-class GeobodyBoundaryInterpretation():
+class GeobodyBoundaryInterpretation(BaseResqpy):
    """Class for RESQML Geobody Boudary Interpretation organizational objects."""
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True,
+   resqml_type = 'GeobodyBoundaryInterpretation'
+   valid_domains = ('depth', 'time', 'mixed')
+   valid_boundary_relations = ('conformable', 'unconformable below and above', 'unconformable above', 'unconformable below')
+
+   def __init__(self, parent_model, root_node = None, uuid = None, title = None,
                 genetic_boundary_feature = None, domain = 'depth',
                 boundary_relation_list = None):
 
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.domain = None
-      self.boundary_relation_list = None
-      self.genetic_boundary_feature = None  # InterpretedFeature RESQML field, when not loading from xml
-      self.feature_root = None
+      self.domain = domain
+      self.boundary_relation_list = boundary_relation_list.copy()
+      self.genetic_boundary_feature = genetic_boundary_feature  # InterpretedFeature RESQML field, when not loading from xml
+      self.feature_root = None if self.genetic_boundary_feature is None else self.genetic_boundary_feature.root
+      if (not title) and self.genetic_boundary_feature is not None: title = self.genetic_boundary_feature.feature_name
       self.has_occurred_during = (None, None)
-      self.extra_metadata = {}
+      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-         interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
-         assert interp_feature_ref_node is not None
-         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
-         if self.feature_root is not None:
-            self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, kind = 'geobody boundary',
-                                                root_node = self.feature_root,
-                                                feature_name = self.model.title_for_root(self.feature_root))
-         self.has_occurred_during = extract_has_occurred_during(self.root_node)
-         br_node_list = rqet.list_of_tag(self.root_node, 'BoundaryRelation')
-         if br_node_list is not None and len(br_node_list) > 0:
-            self.boundary_relation_list = []
-            for br_node in br_node_list:
-               self.boundary_relation_list.append(br_node.text)
-         self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-      else:
-         assert genetic_boundary_feature is not None
-         assert domain in ['depth', 'time', 'mixed']
-         self.uuid = bu.new_uuid()
-         self.domain = domain
-         self.genetic_boundary_feature = genetic_boundary_feature
-         self.boundary_relation_list = None
-         if boundary_relation_list is not None:
-            self.boundary_relation_list = boundary_relation_list.copy()
-            for boundary_relation in self.boundary_relation_list:
-               assert boundary_relation in ['conformable', 'unconformable below and above',
-                                            'unconformable above', 'unconformable below']
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+   def load_from_xml(self):
+      super().load_from_xml()
+      self.domain = rqet.find_tag_text(self.root_node, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      assert interp_feature_ref_node is not None
+      self.feature_root = self.model.referenced_node(interp_feature_ref_node)
+      if self.feature_root is not None:
+         self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, kind = 'geobody boundary',
+                                             uuid = self.feature_root.attrib['uuid'],
+                                             feature_name = self.model.title_for_root(self.feature_root))
+      self.has_occurred_during = extract_has_occurred_during(self.root_node)
+      br_node_list = rqet.list_of_tag(self.root_node, 'BoundaryRelation')
+      if br_node_list is not None and len(br_node_list) > 0:
+         self.boundary_relation_list = []
+         for br_node in br_node_list:
+            self.boundary_relation_list.append(br_node.text)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -944,21 +930,16 @@ class GeobodyBoundaryInterpretation():
       if not self.boundary_relation_list or not other.boundary_relation_list: return False
       return set(self.boundary_relation_list) == set(other.boundary_relation_list)
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
    def create_xml(self, genetic_boundary_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,
-                  title_suffix = 'geobody boundary interpretation'):
+                  title_suffix = None, reuse = True):
       """Creates a geobody boundary interpretation organisational xml node from a geobody boundary interpretation object."""
 
-      gbi = self.model.new_obj_node('GeobodyBoundaryInterpretation')
+      if not self.title: self.title = self.genetic_boundary_feature.feature_name
+      if title_suffix: self.title += ' ' + title_suffix
+
+      if reuse and self.try_reuse(): return self.root
+      gbi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.genetic_boundary_feature is not None:
          gbf_root = self.genetic_boundary_feature.root_node
@@ -970,22 +951,10 @@ class GeobodyBoundaryInterpretation():
       else:
          if genetic_boundary_feature_root is None: genetic_boundary_feature_root = self.feature_root
          assert genetic_boundary_feature_root is not None
-         self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, root_node = genetic_boundary_feature_root)
+         self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, uuid = genetic_boundary_feature_root.attrib['uuid'])
       self.feature_root = genetic_boundary_feature_root
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(gbi.attrib['uuid'])
-      else:
-         gbi.attrib['uuid'] = str(self.uuid)
-
-      title = self.genetic_boundary_feature.feature_name
-      if title_suffix: title += ' ' + title_suffix
-      self.model.create_citation(root = gbi, title = title, originator = originator)
-
-      if not self.extra_metadata == {}:
-         rqet.create_metadata_xml(node = gbi, extra_metadata=self.extra_metadata)
-
-      assert self.domain in ['depth', 'time', 'mixed'], 'illegal domain value for geobody boundary interpretation'
+      assert self.domain in self.valid_domains, 'illegal domain value for geobody boundary interpretation'
       dom_node = rqet.SubElement(gbi, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       dom_node.text = self.domain
@@ -994,8 +963,7 @@ class GeobodyBoundaryInterpretation():
 
       if self.boundary_relation_list is not None:
          for boundary_relation in self.boundary_relation_list:
-            assert boundary_relation in ['conformable', 'unconformable below and above',
-                                         'unconformable above', 'unconformable below']
+            assert boundary_relation in self.valid_boundary_relations
             br_node = rqet.SubElement(gbi, ns['resqml2'] + 'BoundaryRelation')
             br_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'BoundaryRelation')
             br_node.text = str(boundary_relation)
@@ -1009,57 +977,51 @@ class GeobodyBoundaryInterpretation():
          if add_relationships:
             self.model.create_reciprocal_relationship(gbi, 'destinationObject', genetic_boundary_feature_root, 'sourceObject')
 
-      self.root_node = gbi
-
       return gbi
 
 
 
-class GeobodyInterpretation():
+class GeobodyInterpretation(BaseResqpy):
    """Class for RESQML Geobody Interpretation objects."""
 
-   def __init__(self, parent_model, root_node = None, geobody_feature = None, domain = 'depth',
+   resqml_type = 'GeobodyInterpretation'
+   valid_domains = ('depth', 'time', 'mixed')
+   valid_compositions = ('intrusive clay', 'organic', 'intrusive mud', 'evaporite salt',
+                         'evaporite non salt', 'sedimentary siliclastic', 'carbonate',
+                         'magmatic intrusive granitoid', 'magmatic intrusive pyroclastic',
+                         'magmatic extrusive lava flow', 'other chemichal rock',  # chemichal (stet: from xsd)
+                         'other chemical rock', 'sedimentary turbidite')
+   valid_implacements = ('autochtonous', 'allochtonous')
+   valid_geobody_shapes = ('dyke', 'silt', 'sill', 'dome', 'sheeth', 'sheet', 'diapir',
+                           'batholith', 'channel', 'delta', 'dune', 'fan', 'reef', 'wedge')
+
+   def __init__(self, parent_model, root_node = None, uuid = None, title = None,
+                geobody_feature = None, domain = 'depth',
                 composition = None, material_implacement = None, geobody_shape = None):
       """Initialise a new geobody interpretation object, either from xml or explicitly."""
 
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.domain = None
-      self.geobody_feature = None  # InterpretedFeature RESQML field, when not loading from xml
-      self.feature_root = None
+      self.domain = domain
+      self.geobody_feature = geobody_feature  # InterpretedFeature RESQML field, when not loading from xml
+      self.feature_root = None if self.geobody_feature is None else self.geobody_feature.root
       self.has_occurred_during = (None, None)
-      self.composition = None
-      self.implacement = None
-      self.geobody_shape = None
-      self.extra_metadata = {}
+      self.composition = composition
+      self.implacement = material_implacement
+      self.geobody_shape = geobody_shape
+      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-      if root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-         interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
-         assert interp_feature_ref_node is not None
-         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
-         if self.feature_root is not None:
-            self.geobody_feature = GeobodyFeature(self.model,
-                                                  root_node = self.feature_root,
-                                                  feature_name = self.model.title_for_root(self.feature_root))
-         self.has_occurred_during = extract_has_occurred_during(self.root_node)
-         self.composition = rqet.find_tag_text(self.root_node, 'GeologicUnitComposition')
-         self.implacement = rqet.find_tag_text(self.root_node, 'GeologicUnitMaterialImplacement')
-         self.geobody_shape = rqet.find_tag_text(self.root_node, 'Geobody3dShape')
-         self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-      elif geobody_feature is not None:
-         self.uuid = bu.new_uuid()
-         self.domain = domain
-         self.geobody_feature = geobody_feature
-         self.feature_root = geobody_feature.root_node
-         self.composition = composition
-         self.implacement = material_implacement
-         self.geobody_shape = geobody_shape
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+   def load_from_xml(self):
+      super().load_from_xml()
+      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      assert interp_feature_ref_node is not None
+      self.feature_root = self.model.referenced_node(interp_feature_ref_node)
+      if self.feature_root is not None:
+         self.geobody_feature = GeobodyFeature(self.model,
+                                               uuid = self.feature_root.attrib['uuid'],
+                                               feature_name = self.model.title_for_root(self.feature_root))
+      self.has_occurred_during = extract_has_occurred_during(self.root_node)
+      self.composition = rqet.find_tag_text(self.root_node, 'GeologicUnitComposition')
+      self.implacement = rqet.find_tag_text(self.root_node, 'GeologicUnitMaterialImplacement')
+      self.geobody_shape = rqet.find_tag_text(self.root_node, 'Geobody3dShape')
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -1079,20 +1041,15 @@ class GeobodyInterpretation():
               self.implacement == other.implacement and
               self.geobody_shape == other.geobody_shape)
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
    def create_xml(self, geobody_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,
-                  title_suffix = 'geobody interpretation'):
+                  title_suffix = None, reuse = True):
 
-      gi = self.model.new_obj_node('GeobodyInterpretation')
+      if not self.title: self.title = self.geobody_feature.feature_name
+      if title_suffix: self.title += ' ' + title_suffix
+
+      if reuse and self.try_reuse(): return self.root
+      gi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.geobody_feature is not None:
          gbf_root = self.geobody_feature.root_node
@@ -1104,22 +1061,10 @@ class GeobodyInterpretation():
       else:
          if geobody_feature_root is None: geobody_feature_root = self.feature_root
          assert geobody_feature_root is not None
-         self.geobody_feature = GeobodyFeature(self.model, root_node = geobody_feature_root)
+         self.geobody_feature = GeobodyFeature(self.model, uuid = geobody_feature_root.attrib['uuid'])
       self.feature_root = geobody_feature_root
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(gi.attrib['uuid'])
-      else:
-         gi.attrib['uuid'] = str(self.uuid)
-
-      title = self.geobody_feature.feature_name
-      if title_suffix: title += ' ' + title_suffix
-      self.model.create_citation(root = gi, title = title, originator = originator)
-
-      if not self.extra_metadata == {}:
-         rqet.create_metadata_xml(node = gi, extra_metadata=self.extra_metadata)
-
-      assert self.domain in ['depth', 'time', 'mixed'], 'illegal domain value for geobody interpretation'
+      assert self.domain in self.valid_domains, 'illegal domain value for geobody interpretation'
       dom_node = rqet.SubElement(gi, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       dom_node.text = self.domain
@@ -1127,26 +1072,21 @@ class GeobodyInterpretation():
       create_xml_has_occurred_during(self.model, gi, self.has_occurred_during)
 
       if self.composition:
-         assert self.composition in ['intrusive clay', 'organic', 'intrusive mud', 'evaporite salt',
-                                     'evaporite non salt', 'sedimentary siliclastic', 'carbonate',
-                                     'magmatic intrusive granitoid', 'magmatic intrusive pyroclastic',
-                                     'magmatic extrusive lava flow', 'other chemichal rock',  # chemichal (stet)
-                                     'other chemical rock', 'sedimentary turbidite']
+         assert self.composition in self.valid_compositions
          guc_node = rqet.SubElement(gi, ns['resqml2'] + 'GeologicUnitComposition')
          guc_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitComposition')
          guc_node.text = self.composition
          # if self.composition.startswith('intrusive'): guc_node.text += ' '
 
       if self.implacement:
-         assert self.implacement in ['autochtonous', 'allochtonous']
+         assert self.implacement in self.valid_implacements
          gumi_node = rqet.SubElement(gi, ns['resqml2'] + 'GeologicUnitMaterialImplacement')
          gumi_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitMaterialImplacement')
          gumi_node.text = self.implacement
 
       if self.geobody_shape:
          # note: 'silt' & 'sheeth' believed erroneous, so 'sill' and 'sheet' added
-         assert self.geobody_shape in ['dyke', 'silt', 'sill', 'dome', 'sheeth', 'sheet', 'diapir',
-                                       'batholith', 'channel', 'delta', 'dune', 'fan', 'reef', 'wedge']
+         assert self.geobody_shape in self.valid_geobody_shapes
          gs_node = rqet.SubElement(gi, ns['resqml2'] + 'Geobody3dShape')
          gs_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Geobody3dShape')
          gs_node.text = self.geobody_shape
@@ -1160,13 +1100,11 @@ class GeobodyInterpretation():
          if add_relationships:
             self.model.create_reciprocal_relationship(gi, 'destinationObject', geobody_feature_root, 'sourceObject')
 
-      self.root_node = gi
-
       return gi
 
 
 
-class WellboreInterpretation():
+class WellboreInterpretation(BaseResqpy):
    """Class for RESQML Wellbore Interpretation organizational objects.
 
    RESQML documentation:
@@ -1183,44 +1121,33 @@ class WellboreInterpretation():
 
    """
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True, is_drilled = None,
+   resqml_type = 'WellboreInterpretation'
+   valid_domains = ('depth', 'time', 'mixed')
+
+   def __init__(self, parent_model, root_node = None, uuid = None, title = None, is_drilled = None,
                 wellbore_feature = None, domain = 'depth'):
       """Initialises a wellbore interpretation organisational object."""
 
       # note: will create a paired WellboreFeature object when loading from xml
 
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.is_drilled = None
-      self.feature_root = None
-      self.wellbore_feature = None
-      self.title = None
-      self.domain = None
-      self.extra_metadata = {}
+      self.is_drilled = is_drilled
+      self.wellbore_feature = wellbore_feature
+      self.feature_root = None if self.wellbore_feature is None else self.wellbore_feature.root
+      if (not title) and self.wellbore_feature is not None: title = self.wellbore_feature.feature_name
+      self.domain = domain
+      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.is_drilled = rqet.find_tag_bool(self.root_node, 'IsDrilled')
-         self.title = self.model.title_for_root(self.root_node)
-         self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-         interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
-         if interp_feature_ref_node is not None:
-            self.feature_root = self.model.referenced_node(interp_feature_ref_node)
-            if self.feature_root is not None:
-               self.wellbore_feature = WellboreFeature(self.model,
-                                                       root_node = self.feature_root,
-                                                       feature_name = self.model.title_for_root(self.feature_root))
-         self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-      else:
-         self.is_drilled = is_drilled
-         self.wellbore_feature = wellbore_feature
-         assert domain in ['depth', 'time', 'mixed'], 'unrecognised domain value for wellbore interpretation'
-         self.domain = domain
-         if wellbore_feature is not None: self.title = wellbore_feature.feature_name
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+   def load_from_xml(self):
+      root_node = self.root
+      self.is_drilled = rqet.find_tag_bool(root_node, 'IsDrilled')
+      self.domain = rqet.find_tag_text(root_node, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(root_node, 'InterpretedFeature')
+      if interp_feature_ref_node is not None:
+         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
+         if self.feature_root is not None:
+            self.wellbore_feature = WellboreFeature(self.model,
+                                                    uuid = self.feature_root.attrib['uuid'],
+                                                    feature_name = self.model.title_for_root(self.feature_root))
 
    def iter_trajectories(self):
       """ Iterable of associated trajectories """
@@ -1234,7 +1161,6 @@ class WellboreInterpretation():
          traj_root = self.model.root_for_part(part)
          traj = resqpy.well.Trajectory(self.model, trajectory_root=traj_root)
          yield traj
-
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -1251,43 +1177,26 @@ class WellboreInterpretation():
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return (self.title == other.title and self.is_drilled == other.is_drilled)
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
    def create_xml(self, wellbore_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,
-                  title_suffix = None):
+                  title_suffix = None, reuse = True):
       """Creates a wellbore interpretation organisational xml node from a wellbore interpretation object."""
 
       # note: related wellbore feature node should be created first and referenced here
 
-      wi = self.model.new_obj_node('WellboreInterpretation')
+      if not self.title: self.title = self.wellbore_feature.feature_name
+      if title_suffix: self.title += ' ' + title_suffix
+
+      if reuse and self.try_reuse(): return self.root
+      wi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.wellbore_feature is not None:
-         wbf_root = self.wellbore_feature.root_node
+         wbf_root = self.wellbore_feature.root
          if wbf_root is not None:
             if wellbore_feature_root is None:
                wellbore_feature_root = wbf_root
             else:
                assert wbf_root is wellbore_feature_root, 'wellbore feature mismatch'
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(wi.attrib['uuid'])
-      else:
-         wi.attrib['uuid'] = str(self.uuid)
-
-      title = self.wellbore_feature.feature_name
-      if title_suffix: title += ' ' + title_suffix
-      self.model.create_citation(root = wi, title = title, originator = originator)
-
-      if not self.extra_metadata == {}:
-         rqet.create_metadata_xml(node = wi, extra_metadata=self.extra_metadata)
 
       if self.is_drilled is None: self.is_drilled = False
 
@@ -1295,7 +1204,7 @@ class WellboreInterpretation():
       id_node.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
       id_node.text = str(self.is_drilled).lower()
 
-      assert self.domain in ['depth', 'time', 'mixed'], 'illegal domain value for wellbore interpretation'
+      assert self.domain in self.valid_domains, 'illegal domain value for wellbore interpretation'
       domain_node = rqet.SubElement(wi, ns['resqml2'] + 'Domain')
       domain_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       domain_node.text = str(self.domain).lower()
@@ -1308,7 +1217,5 @@ class WellboreInterpretation():
          self.model.add_part('obj_WellboreInterpretation', self.uuid, wi)
          if add_relationships:
             self.model.create_reciprocal_relationship(wi, 'destinationObject', wellbore_feature_root, 'sourceObject')
-
-      self.root_node = wi
 
       return wi
