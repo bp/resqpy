@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '10th June 2021'
+version = '16th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -1171,8 +1171,8 @@ class Trajectory():
 
       if self.wellbore_interpretation is None:
          log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
-         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model, feature_name=self.title)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model, wellbore_feature=self.wellbore_feature)
          self.feature_and_interpretation_to_be_written = True
       else:
          raise ValueError("Cannot add WellboreFeature, trajectory already has an associated WellboreInterpretation")
@@ -1484,8 +1484,8 @@ class WellboreFrame:
       """
       if self.wellbore_interpretation is not None:
          log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
-         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model, feature_name=self.title)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model, wellbore_feature=self.wellbore_feature)
          self.feature_and_interpretation_to_be_written = True
       else: log.info("WellboreInterpretation already exists")
 
@@ -3030,11 +3030,10 @@ class BlockedWell:
             if traj_feature_root is not None:
                self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, root_node = traj_feature_root)
       if self.wellbore_feature is None:
-         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.trajectory.title,extract_from_xml=False)
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model, feature_name=self.trajectory.title)
          self.feature_to_be_written = True
       if self.wellbore_interpretation is None:
-         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model, extract_from_xml = False,
-                                                                   wellbore_feature = self.wellbore_feature)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model, wellbore_feature = self.wellbore_feature)
          if self.trajectory.wellbore_interpretation is None and shared_interpretation:
             self.trajectory.wellbore_interpretation = self.wellbore_interpretation
          self.interpretation_to_be_written = True
@@ -3859,12 +3858,12 @@ def add_wells_from_ascii_file(model, crs_uuid, trajectory_file, comment_characte
       md_datum_list.append(md_datum)
 
       # create a well feature and add as part
-      feature = rqo.WellboreFeature(model, extract_from_xml = False, feature_name = well_name)
+      feature = rqo.WellboreFeature(model, feature_name = well_name)
       feature.create_xml()
       feature_list.append(feature)
 
       # create interpretation and add as part
-      interpretation = rqo.WellboreInterpretation(model, extract_from_xml = False, is_drilled = drilled, wellbore_feature = feature)
+      interpretation = rqo.WellboreInterpretation(model, is_drilled = drilled, wellbore_feature = feature)
       interpretation.create_xml(title_suffix = None)
       interpretation_list.append(interpretation)
 

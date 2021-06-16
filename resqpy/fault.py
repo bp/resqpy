@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation."""
 
-version = '10th June 2021'
+version = '16th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -267,20 +267,18 @@ class GridConnectionSet():
                   break
             if tbf is None:
                if feature_type == 'fault':
-                  tbf = rqo.TectonicBoundaryFeature(self.model, extract_from_xml = False, kind = 'fault',
-                                                    feature_name = feature_name)
+                  tbf = rqo.TectonicBoundaryFeature(self.model, kind = 'fault', feature_name = feature_name)
                else:
-                  tbf = rqo.GeneticBoundaryFeature(self.model, extract_from_xml = False, kind = feature_type,
-                                                   feature_name = feature_name)
+                  tbf = rqo.GeneticBoundaryFeature(self.model, kind = feature_type, feature_name = feature_name)
                tbf_root = tbf.create_xml()
             if feature_type == 'fault':
-               fi = rqo.FaultInterpretation(self.model, extract_from_xml = False, tectonic_boundary_feature = tbf,
+               fi = rqo.FaultInterpretation(self.model, tectonic_boundary_feature = tbf,
                                             is_normal = True)  # todo: set is_normal based on fault geometry in grid?
             elif feature_type == 'horizon':
-               fi = rqo.HorizonInterpretation(self.model, extract_from_xml = False, genetic_boundary_feature = tbf)
+               fi = rqo.HorizonInterpretation(self.model, genetic_boundary_feature = tbf)
                # todo: support boundary relation list and sequence stratigraphy surface
             else: # geobody boundary
-               fi = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False, genetic_boundary_feature = tbf)
+               fi = rqo.GeobodyBoundaryInterpretation(self.model, genetic_boundary_feature = tbf)
             fi_root = fi.create_xml(tbf_root)
             fi_uuid = rqet.uuid_for_part_root(fi_root)
          else:
@@ -347,9 +345,9 @@ class GridConnectionSet():
                   tbf = rqo.TectonicBoundaryFeature(self.model, root_node = tbf_root)
                   break
             if tbf is None:
-               tbf = rqo.TectonicBoundaryFeature(self.model, extract_from_xml = False, feature_name = name)
+               tbf = rqo.TectonicBoundaryFeature(self.model, feature_name = name)
                tbf_root = tbf.create_xml()
-            fi = rqo.FaultInterpretation(self.model, extract_from_xml = False, tectonic_boundary_feature = tbf,
+            fi = rqo.FaultInterpretation(self.model, tectonic_boundary_feature = tbf,
                is_normal = True)  # todo: set is_normal based on fault geometry in grid?
             fi_root = fi.create_xml(tbf_root)
             fi_uuid = rqet.uuid_for_part_root(fi_root)
@@ -1135,7 +1133,6 @@ class GridConnectionSet():
       for feature_index in feature_index_list:
          _, feature_uuid, _ = self.feature_list[feature_index]
          feat = rqo.FaultInterpretation(parent_model = self.model,
-                                        extract_from_xml = True,
                                         root_node = self.model.root(uuid = feature_uuid))
          if property_name not in feat.extra_metadata.keys(): log.info(f'Property name {property_name} not found in extra_metadata for {self.model.citation_title_for_part(self.model.part_for_uuid(feature_uuid))}')
          else: value_list.append(float(feat.extra_metadata[property_name]))
@@ -1494,9 +1491,9 @@ def add_connection_set_and_tmults(model,fault_incl,tmult_dict):
    """
    for fault in tmult_dict.keys():
        log.debug(f"Working on {fault}")
-       tbf = rqo.TectonicBoundaryFeature(parent_model=model,extract_from_xml=False,feature_name=fault,kind='fault')
+       tbf = rqo.TectonicBoundaryFeature(parent_model=model, feature_name=fault, kind='fault')
        tbf.create_xml()
-       fint = rqo.FaultInterpretation(parent_model=model,extract_from_xml=False,tectonic_boundary_feature=tbf,is_normal=True)
+       fint = rqo.FaultInterpretation(parent_model=model, tectonic_boundary_feature=tbf, is_normal=True)
        fint.extra_metadata = {"Transmissibility multiplier":tmult_dict[fault]}
        fint.create_xml()
        model.store_epc()
@@ -1599,9 +1596,9 @@ def _make_k_gcs_from_cip_list(grid, cip_list, feature_name):
    pcs.face_index_pairs[:, 0] = 1  # bottom face of cells above pinchout
 
    pcs.feature_indices = np.zeros(count, dtype = int)  # could create seperate features by layer above or below?
-   gbf = rqo.GeneticBoundaryFeature(grid.model, extract_from_xml = False, kind = 'horizon', feature_name = feature_name)
+   gbf = rqo.GeneticBoundaryFeature(grid.model, kind = 'horizon', feature_name = feature_name)
    gbf_root = gbf.create_xml()
-   fi = rqo.HorizonInterpretation(grid.model, extract_from_xml = False, genetic_boundary_feature = gbf)
+   fi = rqo.HorizonInterpretation(grid.model, genetic_boundary_feature = gbf)
    fi_root = fi.create_xml(gbf_root, title_suffix = None)
    fi_uuid = rqet.uuid_for_part_root(fi_root)
 

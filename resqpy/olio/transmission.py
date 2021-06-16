@@ -1,6 +1,6 @@
 # transmission.py
 
-version = '15th May 2021'
+version = '16th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -937,9 +937,9 @@ def fault_connection_set(grid, skip_inactive = False):
 
    feature_name = 'all faults with throw'
    fcs.feature_indices = np.zeros(count, dtype = int)  # could create seperate features by named fracture
-   tbf = rqo.TectonicBoundaryFeature(grid.model, extract_from_xml = False, kind = 'fault', feature_name = feature_name)
+   tbf = rqo.TectonicBoundaryFeature(grid.model, kind = 'fault', feature_name = feature_name)
    tbf_root = tbf.create_xml()
-   fi = rqo.FaultInterpretation(grid.model, extract_from_xml = False, tectonic_boundary_feature = tbf, is_normal = True)
+   fi = rqo.FaultInterpretation(grid.model, tectonic_boundary_feature = tbf, is_normal = True)
    fi_root = fi.create_xml(tbf_root, title_suffix = None)
    fi_uuid = rqet.uuid_for_part_root(fi_root)
 
