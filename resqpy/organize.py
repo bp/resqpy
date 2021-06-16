@@ -113,10 +113,9 @@ class OrganizationFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates an organization feature xml node from this organization feature object."""
 
-      this_uuid = self.uuid
-      # Check for reusable objects; if not found, create node with citation block
-      ofn = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
-      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return ofn  # reuse detected
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      # create node with citation block
+      ofn = super().create_xml(add_as_part=False, originator=originator)
 
       # Extra element for organization_kind
       if self.organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
@@ -152,7 +151,8 @@ class GeobodyFeature(BaseResqpy):
 
    def create_xml(self, add_as_part=True, originator=None, reuse=True):
       """Creates a geobody feature xml node from this geobody feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
 
@@ -177,7 +177,8 @@ class BoundaryFeature(BaseResqpy):
 
    def create_xml(self, add_as_part=True, originator=None, reuse=True):
       """Creates a geobody feature xml node from this geobody feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
 class FrontierFeature(BaseResqpy):
@@ -201,7 +202,8 @@ class FrontierFeature(BaseResqpy):
 
    def create_xml(self, add_as_part = True, originator = None, reuse=True):
       """Creates a frontier feature organisational xml node from this frontier feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
 class GeologicUnitFeature(BaseResqpy):
@@ -225,7 +227,8 @@ class GeologicUnitFeature(BaseResqpy):
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a geologic unit feature organisational xml node from this geologic unit feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
 class FluidBoundaryFeature(BaseResqpy):
@@ -256,10 +259,9 @@ class FluidBoundaryFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a fluid boundary feature organisational xml node from this fluid boundary feature object."""
 
-      this_uuid = self.uuid
-      # Check for reusable objects; if not found, create node with citation block
-      fbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
-      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return fbf  # reuse detected
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      # create node with citation block
+      fbf = super().create_xml(add_as_part=False, originator=originator)
 
       # Extra element for kind
       if self.kind not in self.valid_kinds:
@@ -333,10 +335,9 @@ class RockFluidUnitFeature(BaseResqpy):
       if self.phase not in self.valid_phases:
          raise ValueError(f"Phase '{self.phase}' not recognized")
 
-      this_uuid = self.uuid
-      # Check for reusable objects; if not found, create node with citation block
-      rfuf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
-      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return rfuf  # reuse detected
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      # create node with citation block
+      rfuf = super().create_xml(add_as_part=False, originator=originator)
 
       phase_node = rqet.SubElement(rfuf, ns['resqml2'] + 'Phase')
       phase_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Phase')
@@ -391,10 +392,9 @@ class TectonicBoundaryFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a tectonic boundary feature organisational xml node from this tectonic boundary feature object."""
 
-      this_uuid = self.uuid
-      # Check for reusable objects; if not found, create node with citation block
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      # create node with citation block
       tbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
-      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return tbf  # reuse detected
 
       assert self.kind in self.valid_kinds
       kind_node = rqet.SubElement(tbf, ns['resqml2'] + 'TectonicBoundaryKind')
@@ -439,10 +439,9 @@ class GeneticBoundaryFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a genetic boundary feature organisational xml node from this genetic boundary feature object."""
 
-      this_uuid = self.uuid
-      # Check for reusable objects; if not found, create node with citation block
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      # create node with citation block
       gbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
-      if reuse and not bu.matching_uuids(this_uuid, self.uuid): return gbf  # reuse detected
 
       assert self.kind in self.valid_kinds
       kind_node = rqet.SubElement(gbf, ns['resqml2'] + 'GeneticBoundaryKind')
@@ -490,11 +489,12 @@ class WellboreFeature(BaseResqpy):
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a wellbore feature organisational xml node from this wellbore feature object."""
-      return super().create_xml(add_as_part=add_as_part, originator=originator, reuse=reuse)
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
 
-class FaultInterpretation():
+class FaultInterpretation(BaseResqpy):
    """Class for RESQML Fault Interpretation organizational objects.
 
    RESQML documentation:
@@ -504,9 +504,11 @@ class FaultInterpretation():
 
    """
 
+   resqml_type = "FaultInterpretation"
+
    # note: many of the attributes could be deduced from geometry
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True,
+   def __init__(self, parent_model, root_node = None, uuid = None,
                 tectonic_boundary_feature = None, domain = 'depth',
                 is_normal = None, is_listric = None,
                 maximum_throw = None, mean_azimuth = None,
@@ -515,39 +517,37 @@ class FaultInterpretation():
 
       # note: will create a paired TectonicBoundaryFeature object when loading from xml
 
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.tectonic_boundary_feature = None  # InterpretedFeature RESQML field, when not loading from xml
-      self.feature_root = None
+      self.tectonic_boundary_feature = tectonic_boundary_feature  # InterpretedFeature RESQML field, when not loading from xml
+      self.feature_root = None if self.tectonic_boundary_feature is None else self.tectonic_boundary_feature.root
       self.main_has_occurred_during = (None, None)
-      self.is_normal = None                  # extra field, not explicitly in RESQML
-      self.domain = None
+      self.is_normal = is_normal                  # extra field, not explicitly in RESQML
+      self.domain = domain
       # RESQML xml business rule: IsListric must be present if the fault is normal; must not be present if the fault is not normal
-      self.is_listric = None
-      self.maximum_throw = None
-      self.mean_azimuth = None
-      self.mean_dip = None
+      self.is_listric = is_listric
+      self.maximum_throw = maximum_throw
+      self.mean_azimuth = mean_azimuth
+      self.mean_dip = mean_dip
       self.throw_interpretation_list = None  # list of (list of throw kind, (base chrono uuid, top chrono uuid)))
-      self.extra_metadata = {}
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-         interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
-         assert interp_feature_ref_node is not None
-         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
-         if self.feature_root is not None:
-            self.tectonic_boundary_feature = TectonicBoundaryFeature(self.model,
-                                                root_node = self.feature_root,
-                                                feature_name = self.model.title_for_root(self.feature_root))
-         self.main_has_occurred_during = extract_has_occurred_during(self.root_node)
-         self.is_listric = rqet.find_tag_bool(self.root_node, 'IsListric')
+      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+
+   def load_from_xml(self):
+      root_node = self.root
+      self.domain = rqet.find_tag_text(root_node, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(root_node, 'InterpretedFeature')
+      assert interp_feature_ref_node is not None
+      self.feature_root = self.model.referenced_node(interp_feature_ref_node)
+      if self.feature_root is not None:
+         self.tectonic_boundary_feature = TectonicBoundaryFeature(self.model, uuid = self.feature_root.attrib['uuid']
+                                                                  feature_name = self.model.title_for_root(self.feature_root))
+         self.main_has_occurred_during = extract_has_occurred_during(root_node)
+         self.is_listric = rqet.find_tag_bool(root_node, 'IsListric')
          self.is_normal = (self.is_listric is None)
-         self.maximum_throw = rqet.find_tag_float(self.root_node, 'MaximumThrow')  # todo: check that type="eml:LengthMeasure" is simple float
-         self.mean_azimuth = rqet.find_tag_float(self.root_node, 'MeanAzimuth')
-         self.mean_dip = rqet.find_tag_float(self.root_node, 'MeanDip')
-         throw_interpretation_nodes = rqet.list_of_tag(self.root_node, 'ThrowInterpretation')
+         self.maximum_throw = rqet.find_tag_float(root_node, 'MaximumThrow')
+         # todo: check that type="eml:LengthMeasure" is simple float
+         self.mean_azimuth = rqet.find_tag_float(root_node, 'MeanAzimuth')
+         self.mean_dip = rqet.find_tag_float(root_node, 'MeanDip')
+         throw_interpretation_nodes = rqet.list_of_tag(root_node, 'ThrowInterpretation')
          if throw_interpretation_nodes is not None and len(throw_interpretation_nodes):
             self.throw_interpretation_list = []
             for ti_node in throw_interpretation_nodes:
@@ -609,15 +609,6 @@ class FaultInterpretation():
          if this_ti[0] != other_ti[0]: return False   # throw kind
          if not equivalent_chrono_pairs(this_ti[1], other_ti[1]): return False
       return True
-
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
 
    def create_xml(self, tectonic_boundary_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,

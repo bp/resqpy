@@ -3,7 +3,7 @@ from resqpy.olio.base import BaseResqpy
 
 
 class DummyObj(BaseResqpy):
-    resmql_type = 'DummyResqmlInterpretation'
+    resqml_type = 'DummyResqmlInterpretation'
 
 
 def test_base_creation(tmp_model):
