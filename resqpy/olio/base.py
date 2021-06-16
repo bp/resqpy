@@ -85,6 +85,7 @@ class BaseResqpy(metaclass=ABCMeta):
         # Citation block
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
+        self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
 
     def try_reuse(self):
         """Look for an equivalent existing RESQML object and modify the uuid of this object if found.
@@ -118,10 +119,6 @@ class BaseResqpy(metaclass=ABCMeta):
             extend this method to complete the XML representation, and then finally ensure the node
             is added as a part to the model.
 
-            if `reuse` is True, a side effect of this method may be to modify the uuid of self;
-            calling code should typically look for such a change and if detected, abandon any
-            further work on building or adding the xml node (as it is already complete)
-
         Args:
             title (string): used as the citation Title text; should usually refer to the well name in a
                 human readable way
@@ -146,6 +143,10 @@ class BaseResqpy(metaclass=ABCMeta):
         self.model.create_citation(
             root=node, title=self.title, originator=self.originator
         )
+
+        # Extra metadata
+        if hasattr(self, extra_metadata) and self.extra_metadata:
+            rqet.create_metadata_xml(node=node, extra_metadata=self.extra_metadata)
 
         if add_as_part:
             self.model.add_part(self.resqml_type, self.uuid, node)

@@ -505,10 +505,11 @@ class FaultInterpretation(BaseResqpy):
    """
 
    resqml_type = "FaultInterpretation"
+   valid_domains = ('depth', 'time', 'mixed')
 
    # note: many of the attributes could be deduced from geometry
 
-   def __init__(self, parent_model, root_node = None, uuid = None,
+   def __init__(self, parent_model, root_node = None, uuid = None, title = None,
                 tectonic_boundary_feature = None, domain = 'depth',
                 is_normal = None, is_listric = None,
                 maximum_throw = None, mean_azimuth = None,
@@ -516,9 +517,16 @@ class FaultInterpretation(BaseResqpy):
       """Initialises a Fault interpretation organisational object."""
 
       # note: will create a paired TectonicBoundaryFeature object when loading from xml
+      # if not extracting from xml,:
+      # tectonic_boundary_feature is required and must be a TectonicBoundaryFeature object
+      # domain is required and must be one of 'depth', 'time' or 'mixed'
+      # is_listric is required if the fault is not normal (and must be None if normal)
+      # max throw, azimuth & dip are all optional
+      # the throw interpretation list is not supported for direct initialisation
 
       self.tectonic_boundary_feature = tectonic_boundary_feature  # InterpretedFeature RESQML field, when not loading from xml
       self.feature_root = None if self.tectonic_boundary_feature is None else self.tectonic_boundary_feature.root
+      if (not title) and self.tectonic_boundary_feature is not None: title = self.tectonic_boundary_feature.feature_name
       self.main_has_occurred_during = (None, None)
       self.is_normal = is_normal                  # extra field, not explicitly in RESQML
       self.domain = domain
@@ -529,9 +537,10 @@ class FaultInterpretation(BaseResqpy):
       self.mean_dip = mean_dip
       self.throw_interpretation_list = None  # list of (list of throw kind, (base chrono uuid, top chrono uuid)))
 
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
    def load_from_xml(self):
+      super().load_from_xml()
       root_node = self.root
       self.domain = rqet.find_tag_text(root_node, 'Domain')
       interp_feature_ref_node = rqet.find_tag(root_node, 'InterpretedFeature')
@@ -555,30 +564,6 @@ class FaultInterpretation(BaseResqpy):
                throw_kind_list = rqet.list_of_tag(ti_node, 'Throw')
                for tk_node in throw_kind_list:
                   self.throw_interpretation_list.append((tk_node.text, hod_pair))
-         self.extra_metadata = rqet.load_metadata_from_xml(root_node)
-      else:
-         assert tectonic_boundary_feature is not None
-         assert domain in ['depth', 'time', 'mixed'], 'unrecognised domain value for fault interpretation'
-         assert is_normal is not None and isinstance(is_normal, bool) and is_normal == (is_listric is None)
-         self.uuid = bu.new_uuid()
-         self.is_normal = is_normal
-         self.tectonic_boundary_feature = tectonic_boundary_feature
-         self.domain = domain
-         self.is_listric = is_listric
-         self.maximum_throw = maximum_throw
-         self.mean_azimuth = mean_azimuth
-         self.mean_dip = mean_dip
-         self.throw_interpretation_list = None  # not curerntly supported for direct initialisation
-
-      # if not extracting from xml,:
-      # tectonic_boundary_feature is required and must be a TectonicBoundaryFeature object
-      # domain is required and must be one of 'depth', 'time' or 'mixed'
-      # is_listric is required if the fault is not normal (and must be None if normal)
-      # max throw, azimuth & dip are all optional
-      # the throw interpretation list is not supported for direct initialisation
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -612,14 +597,22 @@ class FaultInterpretation(BaseResqpy):
 
    def create_xml(self, tectonic_boundary_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,
-                  title_suffix = 'fault interpretation'):
+                  title_suffix = None, reuse = True):
       """Creates a fault interpretation organisational xml node from a fault interpretation object."""
 
       # note: related tectonic boundary feature node should be created first and referenced here
 
       assert self.is_normal == (self.is_listric is None)
+      if not self.title:
+         if tectonic_boundary_feature_root is not None:
+            title = rqet.find_nested_tags_text(tectonic_boundary_feature_root, ['Citation', 'Title'])
+         else:
+            title = 'fault interpretation'
+         if title_suffix: title += ' ' + title_suffix
 
-      fi = self.model.new_obj_node('FaultInterpretation')
+      if reuse and self.try_reuse(): return self.root
+
+      fi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.tectonic_boundary_feature is not None:
          tbf_root = self.tectonic_boundary_feature.root_node
@@ -629,20 +622,8 @@ class FaultInterpretation(BaseResqpy):
             else:
                assert tbf_root is tectonic_boundary_feature_root, 'tectonic boundary feature mismatch'
       assert tectonic_boundary_feature_root is not None
-      title = rqet.find_nested_tags_text(tectonic_boundary_feature_root, ['Citation', 'Title'])
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(fi.attrib['uuid'])
-      else:
-         fi.attrib['uuid'] = str(self.uuid)
-
-      if title_suffix: title += ' ' + title_suffix
-      self.model.create_citation(root = fi, title = title, originator = originator)
-
-      if not self.extra_metadata == {}:
-         rqet.create_metadata_xml(node = fi, extra_metadata=self.extra_metadata)
-
-      assert self.domain in ['depth', 'time', 'mixed'], 'illegal domain value for fault interpretation'
+      assert self.domain in self.valid_domains, 'illegal domain value for fault interpretation'
       dom_node = rqet.SubElement(fi, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       dom_node.text = self.domain
@@ -693,53 +674,40 @@ class FaultInterpretation(BaseResqpy):
          if add_relationships:
             self.model.create_reciprocal_relationship(fi, 'destinationObject', tectonic_boundary_feature_root, 'sourceObject')
 
-      self.root_node = fi
-
       return fi
 
 
 
-class EarthModelInterpretation():
+class EarthModelInterpretation(BaseResqpy):
    """Class for RESQML Earth Model Interpretation organizational objects."""
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True,
+   resqml_type = 'EarthModelInterpretation'
+   valid_domains = ('depth', 'time', 'mixed')
+
+   def __init__(self, parent_model, root_node = None, uuid = None, title = None,
                 organization_feature = None, domain = 'depth'):
       """Initialises an earth model interpretation organisational object."""
-
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.domain = None
-      self.organization_feature = None  # InterpretedFeature RESQML field
-      self.feature_root = None
+      self.domain = domain
+      self.organization_feature = organization_feature  # InterpretedFeature RESQML field
+      self.feature_root = None if self.organization_feature is None else self.organization_feature.root
       self.has_occurred_during = (None, None)
-      self.extra_metadata = {}
+      if (not title) and organization_feature is not None: title = organization_feature.feature_name
+      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-         interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
-         assert interp_feature_ref_node is not None
-         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
-         if self.feature_root is not None:
-            self.organization_feature = OrganizationFeature(self.model,
-                                                            root_node = self.feature_root,
-                                                            feature_name = self.model.title_for_root(self.feature_root))
-         self.has_occurred_during = extract_has_occurred_during(self.root_node)
-         self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-      else:
-         assert organization_feature is not None
-         assert domain in ['depth', 'time', 'mixed'], 'unrecognised domain value for earth model interpretation'
-         self.uuid = bu.new_uuid()
-         self.organization_feature = organization_feature
-         self.domain = domain
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+   def load_from_xml(self):
+      super().load_from_xml()
+      self.domain = rqet.find_tag_text(self.root_node, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      assert interp_feature_ref_node is not None
+      self.feature_root = self.model.referenced_node(interp_feature_ref_node)
+      if self.feature_root is not None:
+         self.organization_feature = OrganizationFeature(self.model,
+                                                         uuid = self.feature_root.attrib['uuid'],
+                                                         feature_name = self.model.title_for_root(self.feature_root))
+      self.has_occurred_during = extract_has_occurred_during(self.root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
-
       if other is None or not isinstance(other, EarthModelInterpretation): return False
       if self is other or bu.matching_uuids(self.uuid, other.uuid): return True
       if self.organization_feature is not None:
@@ -751,23 +719,18 @@ class EarthModelInterpretation():
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.domain == other.domain and equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during)
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
    def create_xml(self, organization_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,
-                  title_suffix = 'earth model interpretation'):
+                  title_suffix = None, reuse = True):
       """Creates an earth model interpretation organisational xml node from an earth model interpretation object."""
 
       # note: related organization feature node should be created first and referenced here
 
-      emi = self.model.new_obj_node('EarthModelInterpretation')
+      if not self.title: self.title = self.organization_feature.feature_name
+      if title_suffix: self.title += ' ' + title_suffix
+
+      if reuse and self.try_reuse(): return self.root
+      emi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.organization_feature is not None:
          of_root = self.organization_feature.root_node
@@ -777,19 +740,7 @@ class EarthModelInterpretation():
             else:
                assert of_root is organization_feature_root, 'organization feature mismatch'
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(emi.attrib['uuid'])
-      else:
-         emi.attrib['uuid'] = str(self.uuid)
-
-      title = self.organization_feature.feature_name
-      if title_suffix: title += ' ' + title_suffix
-      self.model.create_citation(root = emi, title = title, originator = originator)
-
-      if not self.extra_metadata == {}:
-         rqet.create_metadata_xml(node = emi, extra_metadata=self.extra_metadata)
-
-      assert self.domain in ['depth', 'time', 'mixed'], 'illegal domain value for horizon interpretation'
+      assert self.domain in self.valid_domains, 'illegal domain value for earth model interpretation'
       dom_node = rqet.SubElement(emi, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       dom_node.text = self.domain
@@ -805,16 +756,19 @@ class EarthModelInterpretation():
          if add_relationships:
             self.model.create_reciprocal_relationship(emi, 'destinationObject', organization_feature_root, 'sourceObject')
 
-      self.root_node = emi
-
       return emi
 
 
 
-class HorizonInterpretation():
+class HorizonInterpretation(BaseResqpy):
    """Class for RESQML Horizon Interpretation organizational objects."""
 
-   def __init__(self, parent_model, root_node = None, extract_from_xml = True,
+   resqml_type = 'HorizonInterpretation'
+   valid_domains = ('depth', 'time', 'mixed')
+   valid_sequence_stratigraphy_surfaces = ('flooding', 'ravinement', 'maximum flooding', 'transgressive')
+   valid_boundary_relations = ('conformable', 'unconformable below and above', 'unconformable above', 'unconformable below')
+
+   def __init__(self, parent_model, root_node = None, uuid = None, title = None,
                 genetic_boundary_feature = None, domain = 'depth',
                 boundary_relation_list = None,
                 sequence_stratigraphy_surface = None):
@@ -822,52 +776,32 @@ class HorizonInterpretation():
 
       # note: will create a paired GeneticBoundaryFeature object when loading from xml (and possibly a Surface object)
 
-      self.model = parent_model
-      self.root_node = root_node
-      self.uuid = None
-      self.domain = None
-      self.genetic_boundary_feature = None  # InterpretedFeature RESQML field, when not loading from xml
-      self.feature_root = None
+      self.domain = domain
+      self.genetic_boundary_feature = genetic_boundary_feature  # InterpretedFeature RESQML field, when not loading from xml
+      self.feature_root = None if self.genetic_boundary_feature is None else self.genetic_boundary_feature.root
+      if (not title) and self.genetic_boundary_feature is not None: title = self.genetic_boundary_feature.feature_name
       self.has_occurred_during = (None, None)
-      self.boundary_relation_list = None
-      self.sequence_stratigraphy_surface = None
-      self.extra_metadata = {}
+      self.boundary_relation_list = boundary_relation_list.copy()
+      self.sequence_stratigraphy_surface = sequence_stratigraphy_surface
+      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-      if extract_from_xml and self.root_node is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-         interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
-         assert interp_feature_ref_node is not None
-         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
-         if self.feature_root is not None:
-            self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, kind = 'horizon',
-                                                root_node = self.feature_root,
-                                                feature_name = self.model.title_for_root(self.feature_root))
-         self.has_occurred_during = extract_has_occurred_during(self.root_node)
-         br_node_list = rqet.list_of_tag(self.root_node, 'BoundaryRelation')
-         if br_node_list is not None and len(br_node_list) > 0:
-            self.boundary_relation_list = []
-            for br_node in br_node_list:
-               self.boundary_relation_list.append(br_node.text)
-         self.sequence_stratigraphy_surface = rqet.find_tag_text(self.root_node, 'SequenceStratigraphySurface')
-         self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-      else:
-         assert genetic_boundary_feature is not None
-         assert domain in ['depth', 'time', 'mixed'], 'unrecognised domain value for horizon interpretation'
-         if sequence_stratigraphy_surface is not None:
-            assert sequence_stratigraphy_surface in ['flooding', 'ravinement', 'maximum flooding', 'transgressive']
-            self.sequence_stratigraphy_surface = sequence_stratigraphy_surface
-         self.uuid = bu.new_uuid()
-         self.genetic_boundary_feature = genetic_boundary_feature
-         self.domain = domain
-         self.boundary_relation_list = boundary_relation_list
-         if self.boundary_relation_list is not None:
-            for boundary_relation in self.boundary_relation_list:
-               assert boundary_relation in ['conformable', 'unconformable below and above',
-                                            'unconformable above', 'unconformable below']
-
-      if self.uuid is None: self.uuid = bu.new_uuid()
-
+   def load_from_xml(self):
+      super().load_from_xml()
+      self.domain = rqet.find_tag_text(self.root_node, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      assert interp_feature_ref_node is not None
+      self.feature_root = self.model.referenced_node(interp_feature_ref_node)
+      if self.feature_root is not None:
+         self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, kind = 'horizon',
+                                             root_node = self.feature_root,
+                                             feature_name = self.model.title_for_root(self.feature_root))
+      self.has_occurred_during = extract_has_occurred_during(self.root_node)
+      br_node_list = rqet.list_of_tag(self.root_node, 'BoundaryRelation')
+      if br_node_list is not None and len(br_node_list) > 0:
+         self.boundary_relation_list = []
+         for br_node in br_node_list:
+            self.boundary_relation_list.append(br_node.text)
+      self.sequence_stratigraphy_surface = rqet.find_tag_text(self.root_node, 'SequenceStratigraphySurface')
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -888,23 +822,18 @@ class HorizonInterpretation():
       if not self.boundary_relation_list or not other.boundary_relation_list: return False
       return set(self.boundary_relation_list) == set(other.boundary_relation_list)
 
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
    def create_xml(self, genetic_boundary_feature_root = None,
                   add_as_part = True, add_relationships = True, originator = None,
-                  title_suffix = 'horizon interpretation'):
+                  title_suffix = None, reuse = True):
       """Creates a horizon interpretation organisational xml node from a horizon interpretation object."""
 
       # note: related genetic boundary feature node should be created first and referenced here
 
-      hi = self.model.new_obj_node('HorizonInterpretation')
+      if not self.title: self.title = self.genetic_boundary_feature.feature_name
+      if title_suffix: self.title += ' ' + title_suffix
+
+      if reuse and self.try_reuse(): return self.root
+      hi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.genetic_boundary_feature is not None:
          gbf_root = self.genetic_boundary_feature.root_node
@@ -914,19 +843,7 @@ class HorizonInterpretation():
             else:
                assert gbf_root is genetic_boundary_feature_root, 'genetic boundary feature mismatch'
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(hi.attrib['uuid'])
-      else:
-         hi.attrib['uuid'] = str(self.uuid)
-
-      title = self.genetic_boundary_feature.feature_name
-      if title_suffix: title += ' ' + title_suffix
-      self.model.create_citation(root = hi, title = title, originator = originator)
-
-      if not self.extra_metadata == {}:
-         rqet.create_metadata_xml(node = hi, extra_metadata=self.extra_metadata)
-
-      assert self.domain in ['depth', 'time', 'mixed'], 'illegal domain value for horizon interpretation'
+      assert self.domain in self.valid_domains, 'illegal domain value for horizon interpretation'
       dom_node = rqet.SubElement(hi, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       dom_node.text = self.domain
@@ -935,14 +852,13 @@ class HorizonInterpretation():
 
       if self.boundary_relation_list is not None:
          for boundary_relation in self.boundary_relation_list:
-            assert boundary_relation in ['conformable', 'unconformable below and above',
-                                         'unconformable above', 'unconformable below']
+            assert boundary_relation in self.valid_boundary_relations
             br_node = rqet.SubElement(hi, ns['resqml2'] + 'BoundaryRelation')
             br_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'BoundaryRelation')
             br_node.text = boundary_relation
 
       if self.sequence_stratigraphy_surface is not None:
-         assert self.sequence_stratigraphy_surface in ['flooding', 'ravinement', 'maximum flooding', 'transgressive']
+         assert self.sequence_stratigraphy_surface in self.valid_sequence_stratigraphy_surfaces
          sss_node = rqet.SubElement(hi, ns['resqml2'] + 'SequenceStratigraphySurface')
          sss_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'SequenceStratigraphySurface')
          sss_node.text = self.sequence_stratigraphy_surface
@@ -955,8 +871,6 @@ class HorizonInterpretation():
          self.model.add_part('obj_HorizonInterpretation', self.uuid, hi)
          if add_relationships:
             self.model.create_reciprocal_relationship(hi, 'destinationObject', genetic_boundary_feature_root, 'sourceObject')
-
-      self.root_node = hi
 
       return hi
 
