@@ -200,7 +200,7 @@ class FrontierFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name
 
-   def create_xml(self, add_as_part = True, originator = None, reuse=True):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a frontier feature organisational xml node from this frontier feature object."""
       if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
       return super().create_xml(add_as_part=add_as_part, originator=originator)
@@ -394,7 +394,7 @@ class TectonicBoundaryFeature(BaseResqpy):
 
       if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
       # create node with citation block
-      tbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
+      tbf = super().create_xml(add_as_part=False, originator=originator)
 
       assert self.kind in self.valid_kinds
       kind_node = rqet.SubElement(tbf, ns['resqml2'] + 'TectonicBoundaryKind')
@@ -441,7 +441,7 @@ class GeneticBoundaryFeature(BaseResqpy):
 
       if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
       # create node with citation block
-      gbf = super().create_xml(add_as_part=False, originator=originator, reuse=reuse)
+      gbf = super().create_xml(add_as_part=False, originator=originator)
 
       assert self.kind in self.valid_kinds
       kind_node = rqet.SubElement(gbf, ns['resqml2'] + 'GeneticBoundaryKind')
