@@ -131,7 +131,7 @@ def test_EarthModel(tmp_model):
 
 def test_Horizon(tmp_model):
 
-    gen = rqo.GeneticBoundaryFeature(tmp_model)
+    gen = rqo.GeneticBoundaryFeature(tmp_model, kind='horizon')
     hor = rqo.HorizonInterpretation(
         tmp_model, genetic_boundary_feature=gen, sequence_stratigraphy_surface='maximum flooding'
     )
