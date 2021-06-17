@@ -139,7 +139,7 @@ def test_Horizon(tmp_model):
     gen.create_xml()
     hor.create_xml()
 
-    hor2 = rqo.HorizonInterpretation(tmp_model, uuid=gen.uuid)
+    hor2 = rqo.HorizonInterpretation(tmp_model, uuid=hor.uuid)
     assert hor2.sequence_stratigraphy_surface == hor.sequence_stratigraphy_surface
 
 def test_GeobodyBoundary(tmp_model):
