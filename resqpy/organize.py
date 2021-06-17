@@ -47,13 +47,13 @@ def equivalent_extra_metadata(a, b):
       a_em = a.extra_metadata
       a_has = len(a_em) > 0
    else:
-      a_em = rqet.load_metadata_from_xml(a.root_node)
+      a_em = rqet.load_metadata_from_xml(a.root)
       a_has = a_em is not None and len(a_em) > 0
    if b_has:
       b_em = b.extra_metadata
       b_has = len(b_em) > 0
    else:
-      b_em = rqet.load_metadata_from_xml(b.root_node)
+      b_em = rqet.load_metadata_from_xml(b.root)
       b_has = b_em is not None and len(b_em) > 0
    if a_has != b_has: return False
    if not a_has: return True
@@ -423,8 +423,8 @@ class GeneticBoundaryFeature(BaseResqpy):
 
    def load_from_xml(self):
       super().load_from_xml()
-      self.kind = rqet.find_tag_text(self.root_node, 'GeneticBoundaryKind')
-      age_node = rqet.find_tag(self.root_node, 'AbsoluteAge')
+      self.kind = rqet.find_tag_text(self.root, 'GeneticBoundaryKind')
+      age_node = rqet.find_tag(self.root, 'AbsoluteAge')
       if age_node:
          self.absolute_age = (rqet.find_tag_text(age_node, 'DateTime'),
                               rqet.find_tag_int(age_node, 'YearOffset'))  # year offset may be None
@@ -573,9 +573,9 @@ class FaultInterpretation(BaseResqpy):
       if self.tectonic_boundary_feature is not None:
          if not self.tectonic_boundary_feature.is_equivalent(other.tectonic_boundary_feature): return False
       elif other.tectonic_boundary_feature is not None: return False
-      if self.root_node is not None and other.root_node is not None:
-         if rqet.citation_title_for_node(self.root_node) !=  rqet.citation_title_for_node(other.root_node): return False
-      elif self.root_node is not None or other.root_node is not None: return False
+      if self.root is not None and other.root is not None:
+         if rqet.citation_title_for_node(self.root) !=  rqet.citation_title_for_node(other.root): return False
+      elif self.root is not None or other.root is not None: return False
       if (not equivalent_chrono_pairs(self.main_has_occurred_during, other.main_has_occurred_during) or
           self.is_normal != other.is_normal or
           self.domain != other.domain or
@@ -615,7 +615,7 @@ class FaultInterpretation(BaseResqpy):
       fi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.tectonic_boundary_feature is not None:
-         tbf_root = self.tectonic_boundary_feature.root_node
+         tbf_root = self.tectonic_boundary_feature.root
          if tbf_root is not None:
             if tectonic_boundary_feature_root is None:
                tectonic_boundary_feature_root = tbf_root
@@ -696,15 +696,15 @@ class EarthModelInterpretation(BaseResqpy):
 
    def load_from_xml(self):
       super().load_from_xml()
-      self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      self.domain = rqet.find_tag_text(self.root, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
       self.feature_root = self.model.referenced_node(interp_feature_ref_node)
       if self.feature_root is not None:
          self.organization_feature = OrganizationFeature(self.model,
                                                          uuid = self.feature_root.attrib['uuid'],
                                                          feature_name = self.model.title_for_root(self.feature_root))
-      self.has_occurred_during = extract_has_occurred_during(self.root_node)
+      self.has_occurred_during = extract_has_occurred_during(self.root)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -713,9 +713,9 @@ class EarthModelInterpretation(BaseResqpy):
       if self.organization_feature is not None:
          if not self.organization_feature.is_equivalent(other.organization_feature): return False
       elif other.organization_feature is not None: return False
-      if self.root_node is not None and other.root_node is not None:
-         if rqet.citation_title_for_node(self.root_node) !=  rqet.citation_title_for_node(other.root_node): return False
-      elif self.root_node is not None or other.root_node is not None: return False
+      if self.root is not None and other.root is not None:
+         if rqet.citation_title_for_node(self.root) !=  rqet.citation_title_for_node(other.root): return False
+      elif self.root is not None or other.root is not None: return False
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.domain == other.domain and equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during)
 
@@ -733,7 +733,7 @@ class EarthModelInterpretation(BaseResqpy):
       emi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.organization_feature is not None:
-         of_root = self.organization_feature.root_node
+         of_root = self.organization_feature.root
          if of_root is not None:
             if organization_feature_root is None:
                organization_feature_root = of_root
@@ -787,21 +787,21 @@ class HorizonInterpretation(BaseResqpy):
 
    def load_from_xml(self):
       super().load_from_xml()
-      self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      self.domain = rqet.find_tag_text(self.root, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
       self.feature_root = self.model.referenced_node(interp_feature_ref_node)
       if self.feature_root is not None:
          self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, kind = 'horizon',
                                              uuid = self.feature_root.attrib['uuid'],
                                              feature_name = self.model.title_for_root(self.feature_root))
-      self.has_occurred_during = extract_has_occurred_during(self.root_node)
-      br_node_list = rqet.list_of_tag(self.root_node, 'BoundaryRelation')
+      self.has_occurred_during = extract_has_occurred_during(self.root)
+      br_node_list = rqet.list_of_tag(self.root, 'BoundaryRelation')
       if br_node_list is not None and len(br_node_list) > 0:
          self.boundary_relation_list = []
          for br_node in br_node_list:
             self.boundary_relation_list.append(br_node.text)
-      self.sequence_stratigraphy_surface = rqet.find_tag_text(self.root_node, 'SequenceStratigraphySurface')
+      self.sequence_stratigraphy_surface = rqet.find_tag_text(self.root, 'SequenceStratigraphySurface')
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -811,9 +811,9 @@ class HorizonInterpretation(BaseResqpy):
       if self.genetic_boundary_feature is not None:
          if not self.genetic_boundary_feature.is_equivalent(other.genetic_boundary_feature): return False
       elif other.genetic_boundary_feature is not None: return False
-      if self.root_node is not None and other.root_node is not None:
-         if rqet.citation_title_for_node(self.root_node) !=  rqet.citation_title_for_node(other.root_node): return False
-      elif self.root_node is not None or other.root_node is not None: return False
+      if self.root is not None and other.root is not None:
+         if rqet.citation_title_for_node(self.root) !=  rqet.citation_title_for_node(other.root): return False
+      elif self.root is not None or other.root is not None: return False
       if (self.domain != other.domain or
           not equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during) or
           self.sequence_stratigraphy_surface != other.sequence_stratigraphy_surface): return False
@@ -836,7 +836,7 @@ class HorizonInterpretation(BaseResqpy):
       hi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.genetic_boundary_feature is not None:
-         gbf_root = self.genetic_boundary_feature.root_node
+         gbf_root = self.genetic_boundary_feature.root
          if gbf_root is not None:
             if genetic_boundary_feature_root is None:
                genetic_boundary_feature_root = gbf_root
@@ -897,16 +897,16 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
 
    def load_from_xml(self):
       super().load_from_xml()
-      self.domain = rqet.find_tag_text(self.root_node, 'Domain')
-      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      self.domain = rqet.find_tag_text(self.root, 'Domain')
+      interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
       self.feature_root = self.model.referenced_node(interp_feature_ref_node)
       if self.feature_root is not None:
          self.genetic_boundary_feature = GeneticBoundaryFeature(self.model, kind = 'geobody boundary',
                                              uuid = self.feature_root.attrib['uuid'],
                                              feature_name = self.model.title_for_root(self.feature_root))
-      self.has_occurred_during = extract_has_occurred_during(self.root_node)
-      br_node_list = rqet.list_of_tag(self.root_node, 'BoundaryRelation')
+      self.has_occurred_during = extract_has_occurred_during(self.root)
+      br_node_list = rqet.list_of_tag(self.root, 'BoundaryRelation')
       if br_node_list is not None and len(br_node_list) > 0:
          self.boundary_relation_list = []
          for br_node in br_node_list:
@@ -920,9 +920,9 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
       if self.genetic_boundary_feature is not None:
          if not self.genetic_boundary_feature.is_equivalent(other.genetic_boundary_feature): return False
       elif other.genetic_boundary_feature is not None: return False
-      if self.root_node is not None and other.root_node is not None:
-         if rqet.citation_title_for_node(self.root_node) !=  rqet.citation_title_for_node(other.root_node): return False
-      elif self.root_node is not None or other.root_node is not None: return False
+      if self.root is not None and other.root is not None:
+         if rqet.citation_title_for_node(self.root) !=  rqet.citation_title_for_node(other.root): return False
+      elif self.root is not None or other.root is not None: return False
       if (self.domain != other.domain or
           not equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during)): return False
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
@@ -942,7 +942,7 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
       gbi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.genetic_boundary_feature is not None:
-         gbf_root = self.genetic_boundary_feature.root_node
+         gbf_root = self.genetic_boundary_feature.root
          if gbf_root is not None:
             if genetic_boundary_feature_root is None:
                genetic_boundary_feature_root = gbf_root
@@ -1011,17 +1011,17 @@ class GeobodyInterpretation(BaseResqpy):
 
    def load_from_xml(self):
       super().load_from_xml()
-      interp_feature_ref_node = rqet.find_tag(self.root_node, 'InterpretedFeature')
+      interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
       self.feature_root = self.model.referenced_node(interp_feature_ref_node)
       if self.feature_root is not None:
          self.geobody_feature = GeobodyFeature(self.model,
                                                uuid = self.feature_root.attrib['uuid'],
                                                feature_name = self.model.title_for_root(self.feature_root))
-      self.has_occurred_during = extract_has_occurred_during(self.root_node)
-      self.composition = rqet.find_tag_text(self.root_node, 'GeologicUnitComposition')
-      self.implacement = rqet.find_tag_text(self.root_node, 'GeologicUnitMaterialImplacement')
-      self.geobody_shape = rqet.find_tag_text(self.root_node, 'Geobody3dShape')
+      self.has_occurred_during = extract_has_occurred_during(self.root)
+      self.composition = rqet.find_tag_text(self.root, 'GeologicUnitComposition')
+      self.implacement = rqet.find_tag_text(self.root, 'GeologicUnitMaterialImplacement')
+      self.geobody_shape = rqet.find_tag_text(self.root, 'Geobody3dShape')
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -1031,9 +1031,9 @@ class GeobodyInterpretation(BaseResqpy):
       if self.geobody_feature is not None:
          if not self.geobody_feature.is_equivalent(other.geobody_feature): return False
       elif other.geobody_feature is not None: return False
-      if self.root_node is not None and other.root_node is not None:
-         if rqet.citation_title_for_node(self.root_node) !=  rqet.citation_title_for_node(other.root_node): return False
-      elif self.root_node is not None or other.root_node is not None: return False
+      if self.root is not None and other.root is not None:
+         if rqet.citation_title_for_node(self.root) !=  rqet.citation_title_for_node(other.root): return False
+      elif self.root is not None or other.root is not None: return False
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return (self.domain == other.domain and
               equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during) and
@@ -1052,7 +1052,7 @@ class GeobodyInterpretation(BaseResqpy):
       gi = super().create_xml(add_as_part=False, originator=originator)
 
       if self.geobody_feature is not None:
-         gbf_root = self.geobody_feature.root_node
+         gbf_root = self.geobody_feature.root
          if gbf_root is not None:
             if geobody_feature_root is None:
                geobody_feature_root = gbf_root
@@ -1170,10 +1170,10 @@ class WellboreInterpretation(BaseResqpy):
       if self.wellbore_feature is not None:
          if not self.wellbore_feature.is_equivalent(other.wellbore_feature): return False
       elif other.wellbore_feature is not None: return False
-      if self.root_node is not None and other.root_node is not None:
-         if rqet.citation_title_for_node(self.root_node) !=  rqet.citation_title_for_node(other.root_node): return False
+      if self.root is not None and other.root is not None:
+         if rqet.citation_title_for_node(self.root) !=  rqet.citation_title_for_node(other.root): return False
          if self.domain != other.domain: return False
-      elif self.root_node is not None or other.root_node is not None: return False
+      elif self.root is not None or other.root is not None: return False
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return (self.title == other.title and self.is_drilled == other.is_drilled)
 

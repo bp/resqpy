@@ -85,7 +85,7 @@ class BaseResqpy(metaclass=ABCMeta):
         # Citation block
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
-        self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
+        self.extra_metadata = rqet.load_metadata_from_xml(self.root)
 
     def try_reuse(self):
         """Look for an equivalent existing RESQML object and modify the uuid of this object if found.
