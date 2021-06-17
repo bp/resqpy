@@ -1375,7 +1375,7 @@ def test_add_faults(tmp_path):
       # re-open and check a few things
       model = rq.Model(epc)
       for title in model.titles(obj_type = 'IjkGridRepresentation'):
-         log.debug(f{test_mode}: ADD FAULTS GRID {title}')
+         log.debug(f'{test_mode}: ADD FAULTS GRID {title}')
       assert len(model.titles(obj_type = 'IjkGridRepresentation')) == 8
       g1 = model.grid(title = 'ttt_f7')
       assert g1.split_pillars_count == 5
