@@ -131,13 +131,14 @@ def convert_times(a, from_units, to_units, invert = False):
    if from_units == 's': factor = s_to_d
    elif from_units == 'h': factor = 1.0 / 24.0
    elif from_units == 'ms': factor = 0.001 * s_to_d
-   elif from_units == 'min': factor = 60 * s_to_d
+   elif from_units == 'min': factor = 60.0 * s_to_d
    if to_units == 's': factor *= d_to_s
    elif to_units == 'h': factor *= 24.0
    elif to_units == 'ms': factor *= 1000.0 * d_to_s
    elif to_units == 'min': factor *= d_to_s / 60.0
    if invert: factor = 1.0 / factor
-   return a * factor
+   a *= factor
+   return a
 
 
 def convert_lengths(a, from_units, to_units):
@@ -266,8 +267,9 @@ def convert_flow_rates(a, from_units, to_units):
    to_unit_pair = to_units.split('/')
    assert len(from_unit_pair) == len(to_unit_pair) == 2
 
-   a = convert_volumes(a, from_unit_pair[0], to_unit_pair[0])
-   return convert_times(a, from_unit_pair[1], to_unit_pair[1], invert = True)
+   convert_volumes(a, from_unit_pair[0], to_unit_pair[0])
+   convert_times(a, from_unit_pair[1], to_unit_pair[1], invert = True)
+   return a
 
 
 
