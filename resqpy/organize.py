@@ -890,7 +890,7 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
                 boundary_relation_list = None):
 
       self.domain = domain
-      self.boundary_relation_list = boundary_relation_list.copy()
+      self.boundary_relation_list = None if not boundary_relation_list else boundary_relation_list.copy()
       self.genetic_boundary_feature = genetic_boundary_feature  # InterpretedFeature RESQML field, when not loading from xml
       self.feature_root = None if self.genetic_boundary_feature is None else self.genetic_boundary_feature.root
       if (not title) and self.genetic_boundary_feature is not None: title = self.genetic_boundary_feature.feature_name
