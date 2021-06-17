@@ -94,3 +94,62 @@ def test_RockFluidUnitFeature(tmp_model):
     assert rfuf_2.phase == 'seal'
     assert rfuf_2.top_boundary_feature.feature_name == 'the top'
     assert rfuf_2.base_boundary_feature.feature_name == 'the base'
+
+
+def test_FaultInterp(tmp_model):
+    
+    title = "not my fault"
+    tect_boundary = rqo.TectonicBoundaryFeature(tmp_model, kind='fault')
+    fault_interp = rqo.FaultInterpretation(
+        tmp_model,
+        tectonic_boundary_feature=tect_boundary,
+        title=title,
+        domain="depth",
+        is_normal=True,
+        maximum_throw=3,
+    )
+
+    tect_boundary.create_xml()
+    fault_interp.create_xml()
+
+    fault_interp_2 = rqo.FaultInterpretation(tmp_model, uuid=fault_interp.uuid)
+    assert fault_interp_2.title == title
+    assert fault_interp_2.maximum_throw == 3
+
+def test_EarthModel(tmp_model):
+
+    title='gaia'
+    org_feat = rqo.OrganizationFeature(tmp_model, feature_name='marie kondo', organization_kind="earth model")
+    em1 = rqo.EarthModelInterpretation(tmp_model, title=title, organization_feature=org_feat)
+    
+    org_feat.create_xml()
+    em1.create_xml()
+
+    em2 = rqo.EarthModelInterpretation(tmp_model, uuid=em1.uuid)
+    assert em2.title == title
+
+
+def test_Horizon(tmp_model):
+
+    gen = rqo.GeneticBoundaryFeature(tmp_model)
+    hor = rqo.HorizonInterpretation(
+        tmp_model, genetic_boundary_feature=gen, sequence_stratigraphy_surface='maximum flooding'
+    )
+
+    gen.create_xml()
+    hor.create_xml()
+
+    hor2 = rqo.HorizonInterpretation(tmp_model, uuid=gen.uuid)
+    assert hor2.sequence_stratigraphy_surface == hor.sequence_stratigraphy_surface
+
+def test_GeobodyBoundary(tmp_model):
+
+    gen = rqo.GeneticBoundaryFeature(tmp_model, kind='geobody boundary')
+    gb = rqo.GeobodyBoundaryInterpretation(
+        tmp_model, genetic_boundary_feature=gen
+    )
+
+    gen.create_xml()
+    gb.create_xml()
+    gb2 = rqo.GeobodyBoundaryInterpretation(tmp_model, uuid=gb.uuid)
+    assert gb == gb2
