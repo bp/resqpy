@@ -5,9 +5,6 @@ from resqpy.olio.base import BaseResqpy
 class DummyObj(BaseResqpy):
     resqml_type = 'DummyResqmlInterpretation'
 
-    def is_equivalent(self, other):
-       return True
-
 
 class ReusableDummyObj(BaseResqpy):
     resqml_type = 'ReusableDummyResqmlInterpretation'
