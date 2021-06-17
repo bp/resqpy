@@ -23,10 +23,10 @@ def test_lines(example_model_and_crs):
     # Check fault can be loaded in again
     model.store_epc()
     fault_interp = resqpy.organize.FaultInterpretation(
-        model, root_node=line.rep_int_root
+        model, uuid=line.rep_int_uuid
     )
     fault_feature = resqpy.organize.TectonicBoundaryFeature(
-        model, root_node=fault_interp.feature_root
+        model, uuid=fault_interp.feature_uuid
     )
 
     # Check title matches expected title
