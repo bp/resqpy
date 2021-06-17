@@ -131,12 +131,12 @@ def convert_times(a, from_units, to_units, invert = False):
    if from_units == 's': factor = s_to_d
    elif from_units == 'h': factor = 1.0 / 24.0
    elif from_units == 'ms': factor = 0.001 * s_to_d
-   elif from_units == 'min': factor = s_to_d / 60.0
+   elif from_units == 'min': factor = 60 * s_to_d
    if to_units == 's': factor *= d_to_s
    elif to_units == 'h': factor *= 24.0
    elif to_units == 'ms': factor *= 1000.0 * d_to_s
    elif to_units == 'min': factor *= d_to_s / 60.0
-   if invert: factor = 1.0/factor
+   if invert: factor = 1.0 / factor
    return a * factor
 
 
