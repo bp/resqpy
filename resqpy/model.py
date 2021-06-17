@@ -1911,6 +1911,7 @@ class Model():
       if use_other:
          self.other_forest[part_name] = (content_type, part_tree)
       else:
+         if content_type[0].isupper(): content_type = 'obj_' + content_type
          self.parts_forest[part_name] = (content_type, uuid, part_tree)
          self._set_uuid_to_part(part_name)
       main_ref = rqet.SubElement(self.main_root, ns['content_types'] + 'Override')
