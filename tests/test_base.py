@@ -84,6 +84,7 @@ def test_base_reuse_duplicate(tmp_model):
 
     # Create object and save
     dummy_1 = ReusableDummyObj(model=tmp_model)
+    assert not dummy_1.try_reuse()
     dummy_1.create_xml(add_as_part=True)
 
     # Should be present in model
