@@ -28,7 +28,11 @@ def test_base_save_and_load(tmp_model):
     # Create and save a DummyObj
     title = 'feefifofum'
     originator = 'Scruffian'
+    metadata = {"balderdash": "pumpernickel"}
     dummy1 = DummyObj(model=tmp_model, title=title, originator=originator)
+    dummy1.extra_metadata = metadata
+
+    # Save to XML
     dummy1.create_xml(add_as_part=True)
 
     # Load a new object
@@ -39,6 +43,7 @@ def test_base_save_and_load(tmp_model):
     assert dummy2.root is not None
     assert dummy2.title == title
     assert dummy2.originator == originator
+    assert dummy2.extra_metadata == metadata
 
 
 def test_base_comparison(tmp_model):
@@ -65,3 +70,24 @@ def test_base_repr(tmp_model):
     # Check HTML can be generated
     html = dummy._repr_html_()
     assert len(html) > 0
+
+
+def test_base_reuse_duplicate(tmp_model):
+
+    # Create object and save
+    dummy_1 = DummyObj(model=tmp_model)
+    dummy_1.create_xml(add_as_part=True)
+
+    # Should be present in model
+    uuids = tmp_model.uuids(obj_type=DummyObj.resqml_type)
+    assert len(uuids) == 1
+    assert dummy_1.try_reuse() is False
+
+    # Create duplicate object
+    dummy_2 = DummyObj(model=tmp_model)
+    dummy_2.uuid = dummy_1.uuid
+
+    # Two should exist in model
+    uuids = tmp_model.uuids(obj_type=DummyObj.resqml_type)
+    assert len(uuids) == 2
+    assert dummy_2.try_reuse() is True
