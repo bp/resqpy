@@ -418,7 +418,7 @@ class GeneticBoundaryFeature(BaseResqpy):
    def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None):
       """Initialises a genetic boundary feature (horizon or geobody boundary) organisational object."""
       self.kind = kind
-      self.absolute_age = None   # (timestamp, year offset) pair, or None
+      self.absolute_age = None   # (timestamp, year offset) pair, or None; todo: support setting from args
       super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
    def load_from_xml(self):
@@ -740,6 +740,8 @@ class EarthModelInterpretation(BaseResqpy):
             else:
                assert of_root is organization_feature_root, 'organization feature mismatch'
 
+      assert organization_feature_root is not None, 'interpreted feature not established for model interpretation'
+
       assert self.domain in self.valid_domains, 'illegal domain value for earth model interpretation'
       dom_node = rqet.SubElement(emi, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
@@ -781,7 +783,7 @@ class HorizonInterpretation(BaseResqpy):
       self.feature_root = None if self.genetic_boundary_feature is None else self.genetic_boundary_feature.root
       if (not title) and self.genetic_boundary_feature is not None: title = self.genetic_boundary_feature.feature_name
       self.has_occurred_during = (None, None)
-      self.boundary_relation_list = boundary_relation_list.copy()
+      self.boundary_relation_list = None if not boundary_relation_list else boundary_relation_list.copy()
       self.sequence_stratigraphy_surface = sequence_stratigraphy_surface
       super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
