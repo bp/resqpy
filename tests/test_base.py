@@ -9,6 +9,14 @@ class DummyObj(BaseResqpy):
        return True
 
 
+class ReusableDummyObj(BaseResqpy):
+    resqml_type = 'ReusableDummyResqmlInterpretation'
+
+    # a class must have this method to allow meaningful reusability
+    def is_equivalent(self, other):
+       return True
+
+
 def test_base_creation(tmp_model):
 
     # Setup new object
@@ -78,21 +86,21 @@ def test_base_repr(tmp_model):
 def test_base_reuse_duplicate(tmp_model):
 
     # Create object and save
-    dummy_1 = DummyObj(model=tmp_model)
+    dummy_1 = ReusableDummyObj(model=tmp_model)
     dummy_1.create_xml(add_as_part=True)
 
     # Should be present in model
-    uuids = tmp_model.uuids(obj_type=DummyObj.resqml_type)
+    uuids = tmp_model.uuids(obj_type=ReusableDummyObj.resqml_type)
     assert len(uuids) == 1
     assert dummy_1.try_reuse()  # after a part has had xml created and added to model, it is reusable
 
     # Create duplicate object
-    dummy_2 = DummyObj(model=tmp_model)
+    dummy_2 = ReusableDummyObj(model=tmp_model)
     assert not bu.matching_uuids(dummy_1.uuid, dummy_2.uuid)
     assert dummy_2.try_reuse()  # should have matched dummy_1
     assert bu.matching_uuids(dummy_1.uuid, dummy_2.uuid)
 
     # Only one 'RESQML' object should exist in model, despite us having two resqpy objects
-    uuids = tmp_model.uuids(obj_type=DummyObj.resqml_type)
+    uuids = tmp_model.uuids(obj_type=ReusableDummyObj.resqml_type)
     assert len(uuids) == 1
     assert bu.matching_uuids(uuids[0], dummy_2.uuid)
