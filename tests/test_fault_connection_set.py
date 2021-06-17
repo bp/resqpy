@@ -1344,7 +1344,7 @@ def test_add_faults(tmp_path):
       grid = model.grid(title = 'ttt_f5 horst')
       assert grid is not None
       gcs_roots = model.roots(obj_type = 'GridConnectionSetRepresentation', related_uuid = grid.uuid)
-      assert gcs_roots is not None
+      assert gcs_roots
       scaling_dict = {'ttt_f4a': 3.0, 'ttt_f4b': 1.7}
       for i, gcs_root in enumerate(gcs_roots):
           gcs = rqf.GridConnectionSet(model, connection_set_root = gcs_root)

@@ -2600,7 +2600,7 @@ def add_faults(epc_file, source_grid, polylines = None, lines_file_list = None, 
       ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
-   if create_gcs and lines_file_list is not None:
+   if create_gcs and (polylines is not None or lines_file_list is not None):
       if new_epc_file is not None:
          grid_uuid = grid.uuid
          model = rq.Model(new_epc_file)
