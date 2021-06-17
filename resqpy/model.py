@@ -2948,11 +2948,11 @@ class Model():
       """
       import resqpy.well  # Imported here to avoid circular imports
 
-      parts = self.parts_list_of_type('MdDatum')
-      for part in parts:
-         datum_root = self.root_for_part(part)
-         datum = resqpy.well.MdDatum(self, md_datum_root=datum_root)
-         yield datum
+      uuids = self.uuids(obj_type='MdDatum')
+      if uuids:
+         for uuid in uuids:
+            datum = resqpy.well.MdDatum(self, uuid=uuid)
+            yield datum
 
    def iter_crs(self):
       """Iterable of all CRS objects associated with the model
