@@ -1,6 +1,8 @@
 import pytest
 import os
 import numpy as np
+import logging
+log = logging.getLogger(__name__)
 
 import resqpy.model as rq
 import resqpy.crs as rqc
