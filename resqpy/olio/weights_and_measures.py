@@ -8,7 +8,7 @@ from functools import lru_cache
 # Temporary version based on pagoda code
 # todo: Replace with RESQML uom based version at a later date
 
-version = '5th May 2021'
+version = '17th June 2021'
 
 # physical constants
 feet_to_metres = 0.3048
@@ -19,6 +19,9 @@ bbl_to_m3 = 0.158987294928
 m3_to_bbl = 1.0 / bbl_to_m3
 psi_to_kPa = 44.482216152605 / 6.4516
 kPa_to_psi = 1.0 / psi_to_kPa
+d_to_s = float(24 * 60 * 60)
+s_to_d = 1.0 / d_to_s
+
 
 
 def rq_uom(units):
@@ -91,6 +94,7 @@ def p_time_unit(units):
    """Returns human readable version of time units string."""
 
    #  NB: other time units are supported by resqml
+   if units.lower() in ['d', 'day', 'days']: return 'days'
    if units.lower() in ['s', 'sec', 'secs', 'second', 'seconds']: return 'seconds'
    if units.lower() in ['ms', 'msec', 'millisecs', 'millisecond', 'milliseconds']: return 'milliseconds'
    if units.lower() in ['min', 'mins', 'minute', 'minutes']: return 'minutes'
@@ -104,6 +108,7 @@ def rq_time_unit(units):
    """Returns time units string as expected by resqml."""
 
    #  NB: other time units are supported by resqml
+   if units.lower() in ['d', 'day', 'days']: return 'd'  # note: 'D' is actually RESQML uom for D'Arcy
    if units.lower() in ['s', 'sec', 'secs', 'second', 'seconds']: return 's'
    if units.lower() in ['ms', 'msec', 'millisecs', 'millisecond', 'milliseconds']: return 'ms'
    if units.lower() in ['min', 'mins', 'minute', 'minutes']: return 'min'
@@ -111,6 +116,28 @@ def rq_time_unit(units):
    if units.lower() in ['wk', 'week', 'weeks']: return 'wk'
    if units.lower() in ['a', 'yr', 'year', 'years']: return 'a'
    assert(False)  # unrecognised time units
+
+
+def convert_times(a, from_units, to_units, invert = False):
+   """Converts values in numpy array (or a scalar) from one time unit to another, in situ if array."""
+
+   # TODO: check RESQML standard definition of length of day, week, year
+   valid_units = ('d', 's', 'h', 'ms', 'min')
+   from_units = rq_time_unit(from_units)
+   to_units = rq_time_unit(to_units)
+   if from_units == to_units: return a
+   assert from_units in valid_units and to_units in valid_units
+   factor = 1.0
+   if from_units == 's': factor = s_to_d
+   elif from_units == 'h': factor = 1.0 / 24.0
+   elif from_units == 'ms': factor = 0.001 * s_to_d
+   elif from_units == 'min': factor = s_to_d / 60.0
+   if to_units == 's': factor *= d_to_s
+   elif to_units == 'h': factor *= 24.0
+   elif to_units == 'ms': factor *= 1000.0 * d_to_s
+   elif to_units == 'min': factor *= d_to_s / 60.0
+   if invert: factor = 1.0/factor
+   return a * factor
 
 
 def convert_lengths(a, from_units, to_units):
@@ -166,27 +193,82 @@ def convert_volumes(a, from_units, to_units):
 
       arguments:
          a (numpy float array, or float): array of volume values to undergo unit conversion in situ, or a scalar
-         from_units (string): 'm3', 'ft3' or 'bbl' being the units of the data before conversion
-         to_units (string): 'm3', 'ft3' or 'bbl' being the required units
+         from_units (string): units of the data before conversion; see note for accepted units
+         to_units (string): the required units; see note for accepted units
 
       returns:
          a after unit conversion
+
+      note:
+         currently accepted units are:
+         'm3', 'ft3', 'bbl', '1000 m3', '1000 ft3', '1000 bbl', '1E6 m3', '1E6 ft3', '1E6 bbl'
    """
 
+   valid_units = ('m3', 'ft3', 'bbl', '1000 m3', '1000 ft3', '1000 bbl', '1E6 m3', '1E6 ft3', '1E6 bbl')
    from_units = rq_uom(from_units)
    to_units = rq_uom(to_units)
-   assert from_units in ['m3', 'ft3', 'bbl'] and to_units in ['m3', 'ft3', 'bbl']
+   factor = 1.0
+   assert from_units in valid_units and to_units in valid_units
    if from_units == to_units: return a
+   if from_units.startswith('1000 ') and to_units.startswith('1000 '):
+      from_units = from_units[5:]
+      to_units = from_units[5:]
+   elif from_units.startswith('1000 '):
+      factor = 1000.0
+      from_units = from_units[5:]
+   elif to_units.startswith('1000 '):
+      factor = 0.001
+      to_units = to_units[5:]
+   if from_units.startswith('1E6 ') and to_units.startswith('1E6 '):
+      from_units = from_units[4:]
+      to_units = from_units[4:]
+   elif from_units.startswith('1E6 '):
+      factor *= 1000000.0
+      from_units = from_units[4:]
+   elif to_units.startswith('1E6 '):
+      factor *= 0.000001
+      to_units = to_units[4:]
    if from_units == 'm3':
-      if to_units == 'ft3': a *= m3_to_ft3
-      else: a *= m3_to_bbl
+      if to_units == 'ft3': factor *= m3_to_ft3
+      else: factor *= m3_to_bbl
    elif from_units == 'ft3':
-      if to_units == 'm3': a *= ft3_to_m3
-      else: a *= ft3_to_m3 * m3_to_bbl
+      if to_units == 'm3': factor *= ft3_to_m3
+      else: factor *= ft3_to_m3 * m3_to_bbl
    else:  # from_units == 'bbl'
-      if to_units == 'm3': a *= bbl_to_m3
-      else: a *= bbl_to_m3 * m3_to_ft3
+      if to_units == 'm3': factor *= bbl_to_m3
+      else: factor *= bbl_to_m3 * m3_to_ft3
+   a *= factor
    return a
+
+
+def convert_flow_rates(a, from_units, to_units):
+   """Converts values in numpy array (or a scalar) from one volume flow rate unit to another, in situ if array.
+
+      arguments:
+         a (numpy float array, or float): array of volume flow rate values to undergo unit conversion in situ, or a scalar
+         from_units (string): units of the data before conversion, eg. 'm3/d'; see notes for acceptable units
+         to_units (string): required units of the data after conversion, eg. 'ft3/d'; see notes for acceptable units
+
+      returns:
+         a after unit conversion
+
+      note:
+         units should be in the form volume/time where valid volume units are:
+         'm3', 'ft3', 'bbl', '1000 m3', '1000 ft3', '1000 bbl', '1E6 m3', '1E6 ft3', '1E6 bbl'
+         and valid time units are:
+         'd', 's', 'h', 'ms', 'min'
+   """
+
+   valid_volume_units = ('m3', 'ft3', 'bbl', '1000 m3', '1000 ft3', '1000 bbl', '1E6 m3', '1E6 ft3', '1E6 bbl')
+   valid_time_units = ('d', 'h', 's')
+
+   from_unit_pair = from_units.split('/')
+   to_unit_pair = to_units.split('/')
+   assert len(from_unit_pair) == len(to_unit_pair) == 2
+
+   a = convert_volumes(a, from_unit_pair[0], to_unit_pair[0])
+   return convert_times(a, from_unit_pair[1], to_unit_pair[1], invert = True)
+
 
 
 @lru_cache(maxsize=None)
