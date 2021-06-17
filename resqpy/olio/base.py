@@ -46,8 +46,8 @@ class BaseResqpy(metaclass=ABCMeta):
             originator (str, optional): Creator of object. By default, uses user id.
         """
         self.model = model
-        self.title = title
-        self.originator = originator
+        self.title = title  #: Citation title
+        self.originator = originator  #: Creator of object. By default, user id.
         self.extra_metadata = {}
 
         if root_node is not None:
@@ -55,7 +55,7 @@ class BaseResqpy(metaclass=ABCMeta):
             uuid = rqet.uuid_for_part_root(root_node)
 
         if uuid is None:
-            self.uuid = bu.new_uuid()
+            self.uuid = bu.new_uuid()  #: Unique identifier
             logger.debug(f"Created new uuid for object {self}")
         else:
             self.uuid = uuid
@@ -185,10 +185,12 @@ class BaseResqpy(metaclass=ABCMeta):
 
     @property
     def root_node(self):
+        """DEPRECATED. Alias for root"""
         warnings.warn("Attribute 'root_node' is deprecated. Use 'root'", DeprecationWarning)
         return self.root
 
     @property
     def node(self):
+        """DEPRECATED. Alias for root"""
         warnings.warn("Attribute 'node' is deprecated. Sse 'root'", DeprecationWarning)
         return self.root

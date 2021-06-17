@@ -80,7 +80,7 @@ def _alias_for_attribute(attribute_name):
       return getattr(self, attribute_name)
    def fset(self, value):
       return setattr(self, attribute_name, value)
-   return property(fget, fset)
+   return property(fget, fset, doc=f"Alias for {attribute_name}")
 
 
 class OrganizationFeature(BaseResqpy):
