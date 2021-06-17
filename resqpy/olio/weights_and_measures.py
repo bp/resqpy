@@ -213,7 +213,7 @@ def convert_volumes(a, from_units, to_units):
    if from_units == to_units: return a
    if from_units.startswith('1000 ') and to_units.startswith('1000 '):
       from_units = from_units[5:]
-      to_units = from_units[5:]
+      to_units = to_units[5:]
    elif from_units.startswith('1000 '):
       factor = 1000.0
       from_units = from_units[5:]
@@ -222,22 +222,25 @@ def convert_volumes(a, from_units, to_units):
       to_units = to_units[5:]
    if from_units.startswith('1E6 ') and to_units.startswith('1E6 '):
       from_units = from_units[4:]
-      to_units = from_units[4:]
+      to_units = to_units[4:]
    elif from_units.startswith('1E6 '):
       factor *= 1000000.0
       from_units = from_units[4:]
    elif to_units.startswith('1E6 '):
       factor *= 0.000001
       to_units = to_units[4:]
-   if from_units == 'm3':
-      if to_units == 'ft3': factor *= m3_to_ft3
-      else: factor *= m3_to_bbl
-   elif from_units == 'ft3':
-      if to_units == 'm3': factor *= ft3_to_m3
-      else: factor *= ft3_to_m3 * m3_to_bbl
-   else:  # from_units == 'bbl'
-      if to_units == 'm3': factor *= bbl_to_m3
-      else: factor *= bbl_to_m3 * m3_to_ft3
+   if from_units != to_units:
+      if from_units == 'm3':
+         if to_units == 'ft3': factor *= m3_to_ft3
+         else: factor *= m3_to_bbl
+      elif from_units == 'ft3':
+         if to_units == 'm3': factor *= ft3_to_m3
+         else: factor *= ft3_to_m3 * m3_to_bbl
+      elif from_units == 'bbl':
+         if to_units == 'm3': factor *= bbl_to_m3
+         else: factor *= bbl_to_m3 * m3_to_ft3
+      else:
+         raise ValueError(f'unacceptable volume units {from_units}')
    a *= factor
    return a
 
@@ -267,8 +270,8 @@ def convert_flow_rates(a, from_units, to_units):
    to_unit_pair = to_units.split('/')
    assert len(from_unit_pair) == len(to_unit_pair) == 2
 
-   convert_volumes(a, from_unit_pair[0], to_unit_pair[0])
-   convert_times(a, from_unit_pair[1], to_unit_pair[1], invert = True)
+   a = convert_volumes(a, from_unit_pair[0], to_unit_pair[0])
+   a = convert_times(a, from_unit_pair[1], to_unit_pair[1], invert = True)
    return a
 
 
