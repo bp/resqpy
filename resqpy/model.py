@@ -217,7 +217,7 @@ class Model():
       if not parts_list: parts_list = self.list_of_parts()
       if uuid is not None:
          part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
-         if part_name is None or part_name not in parts_list: return None
+         if part_name is None or part_name not in parts_list: return []
          parts_list = [part_name]
       if epc_subdir:
          if epc_subdir.startswith('/'): epc_subdir = epc_subdir[1:]
@@ -226,14 +226,14 @@ class Model():
             filtered_list = []
             for part in parts_list:
                if part.startswith[epc_subdir]: filtered_list.append(part)
-            if len(filtered_list) == 0: return None
+            if len(filtered_list) == 0: return []
             parts_list = filtered_list
       if obj_type:
          if obj_type[0].isupper(): obj_type = 'obj_' + obj_type
          filtered_list = []
          for part in parts_list:
             if self.parts_forest[part][0] == obj_type: filtered_list.append(part)
-         if len(filtered_list) == 0: return None
+         if len(filtered_list) == 0: return []
          parts_list = filtered_list
       if title:
          assert title_mode in ['is', 'starts', 'ends', 'contains', 'is not', 'does not start', 'does not end', 'does not contain']
@@ -258,7 +258,7 @@ class Model():
                if not part_title.endswith(title): filtered_list.append(part)
             elif title_mode == 'does not contain':
                if title not in part_title: filtered_list.append(part)
-         if len(filtered_list) == 0: return None
+         if len(filtered_list) == 0: return []
          parts_list = filtered_list
       if extra:
          filtered_list = []
@@ -271,11 +271,11 @@ class Model():
                   match = False
                   break
             if match: filtered_list.append(part)
-         if len(filtered_list) == 0: return None
+         if len(filtered_list) == 0: return []
          parts_list = filtered_list
       if related_uuid is not None:
          parts_list = self.parts_list_filtered_by_related_uuid(parts_list, related_uuid)
-      if len(parts_list) == 0: return None
+      if len(parts_list) == 0: return []
       if sort_by:
          if sort_by == 'type':
             parts_list.sort()
@@ -322,7 +322,7 @@ class Model():
       pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
                       title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
                       extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir)
-      if pl is None or len(pl) == 0: return None
+      if len(pl) == 0: return None
       if len(pl) == 1 or multiple_handling == 'first': return pl[0]
       if multiple_handling == 'none':
          return None
@@ -343,7 +343,7 @@ class Model():
          (as for parts() method)
 
       returns:
-         list of uuids, or None if no parts match criteria
+         list of uuids
 
       :meta common:
       """
@@ -353,7 +353,7 @@ class Model():
       pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
                       title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
                       extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir, sort_by = sort_by)
-      if pl is None: return []
+      if len(pl) == 0: return []
       uuid_list = []
       for part in pl:
          uuid_list.append(self.uuid_for_part(part))
@@ -392,7 +392,7 @@ class Model():
          (as for parts() method)
 
       returns:
-         list of lxml.etree.Element objects, or None if no parts match criteria
+         list of lxml.etree.Element objects
 
       :meta common:
       """
@@ -400,7 +400,6 @@ class Model():
       pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
                       title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
                       extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir, sort_by = sort_by)
-      if pl is None: return []
       root_list = []
       for part in pl:
          root_list.append(self.root_for_part(part))
@@ -439,7 +438,7 @@ class Model():
          (as for parts() method)
 
       returns:
-         list of strings being the citation titles of matching parts, or None if no parts match criteria
+         list of strings being the citation titles of matching parts
 
       :meta common:
       """
@@ -448,7 +447,6 @@ class Model():
                       title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
                       extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir,
                       sort_by = sort_by)
-      if pl is None: return []
       title_list = []
       for part in pl:
          title_list.append(self.citation_title_for_part(part))
@@ -1913,6 +1911,7 @@ class Model():
       if use_other:
          self.other_forest[part_name] = (content_type, part_tree)
       else:
+         if content_type[0].isupper(): content_type = 'obj_' + content_type
          self.parts_forest[part_name] = (content_type, uuid, part_tree)
          self._set_uuid_to_part(part_name)
       main_ref = rqet.SubElement(self.main_root, ns['content_types'] + 'Override')
