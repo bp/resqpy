@@ -128,7 +128,7 @@ class BaseResqpy(metaclass=ABCMeta):
                 in the model
 
         Returns:
-            node: the newly created root node, or reused root node as applicable
+            node: the newly created root node
         """
 
         assert self.uuid is not None
