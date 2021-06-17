@@ -31,6 +31,18 @@ from resqpy.model import Model
         rqo.FluidBoundaryFeature,
         dict(feature_name='foobar', kind='gas oil contact'),
     ),
+    (
+        rqo.TectonicBoundaryFeature,
+        dict(feature_name='foobar', kind='fracture'),
+    ),
+    (
+        rqo.GeneticBoundaryFeature,
+        dict(feature_name='foobar', kind='geobody boundary'),  # Age as well?
+    ),
+    (
+        rqo.WellboreFeature,
+        dict(feature_name='foobar'),
+    ),
 ])
 def test_organize_classes(tmp_model, cls, data):
 
