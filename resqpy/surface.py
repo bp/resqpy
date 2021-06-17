@@ -572,6 +572,9 @@ class Surface(_BaseSurface):
          self.set_from_tsurf_file(tsurf_file)
       if self.uuid is None: self.uuid = bu.new_uuid()
 
+   @property
+   def represented_interpretation_uuid(self):
+      return rqet.uuid_for_part_root(self.represented_interpretation_root)
 
    def set_represented_interpretation_root(self, interp_root):
       """Makes a note of the xml root of the represented interpretation."""
