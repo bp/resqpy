@@ -78,11 +78,8 @@ class TimeSeries(BaseResqpy):
 
       arguments:
          parent_model (model.Model): the resqpy model to which the time series will belong
-         extract_from_xml (boolean, default True): if True, the time series is populated from the xml
-            for an existing part in the model
-         time_series_root (xml node, optional): if extract_from_xml is True, then this argument is
-            usually passed to identify the xml root node; if absent the root for the 'main' time series
-            in the model is used
+         uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
+         time_series_root (xml node, DEPRECATED): the xml root node; use uuid instead
          first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
             this and the remaining arguments are ignored if loading from xml
          daily (non-negative int, optional): the number of one day interval timesteps to start the series
@@ -421,8 +418,7 @@ def time_series_from_list(timestamp_list, parent_model = None):
 
    assert(len(timestamp_list) > 0)
    sorted_timestamps = sorted(timestamp_list)
-   time_series = TimeSeries(parent_model = parent_model, extract_from_xml = False,
-                            first_timestamp = cleaned_timestamp(sorted_timestamps[0]))
+   time_series = TimeSeries(parent_model = parent_model, first_timestamp = cleaned_timestamp(sorted_timestamps[0]))
    for raw_timestamp in sorted_timestamps[1:]:
       timestamp = cleaned_timestamp(raw_timestamp)
       time_series.add_timestamp(timestamp)
@@ -492,8 +488,7 @@ def time_series_from_nexus_summary(summary_file, parent_model = None):
       else:   # back calculate time zero from first entry
          delta = dt.timedelta(days = summary_entries[0][1])
          tz_date = summary_entries[0][2] - delta
-      time_series = TimeSeries(parent_model = parent_model, extract_from_xml = False,
-                               first_timestamp = tz_date.isoformat() + 'T00:00:00Z')
+      time_series = TimeSeries(parent_model = parent_model, first_timestamp = tz_date.isoformat() + 'T00:00:00Z')
       last_timestep = 0
       last_cumulative_time = 0.0
       for entry in summary_entries:
