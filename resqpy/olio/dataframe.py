@@ -99,7 +99,7 @@ class DataFrame:
          self.column_lookup = rqp.StringLookup(self.model, uuid = cl_uuid)
          self.column_lookup_uuid = self.column_lookup.uuid
          assert self.column_lookup.length() == self.n_cols
-         ul_uuid = self.model.root(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe units')
+         ul_uuid = self.model.uuid(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe units')
          if ul_uuid is not None:
             self.uom_lookup = rqp.StringLookup(self.model, uuid = ul_uuid)
             self.uom_lookup_uuid = self.uom_lookup.uuid
