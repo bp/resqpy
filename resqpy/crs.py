@@ -105,15 +105,16 @@ class Crs(BaseResqpy):
       root_node = self.root
       flavour = rqet.node_type(root_node)
       assert flavour in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
-      self.xy_units = rqet.find_tag_text(root_node, 'ProjectedUom')
-      self.axis_order = rqet.find_tag_text(root_node, 'ProjectedAxisOrder')
-      self.z_units = rqet.find_tag_text(root_node, 'VerticalUom')
-      self.z_inc_down = rqet.find_tag_bool(root_node, 'ZIncreasingDownward')
       if flavour == 'obj_LocalTime3dCrs':
          self.time_units = rqet.find_tag_text(root_node, 'TimeUom')
          assert self.time_units
       else:
          self.time_units = None
+      super().load_from_xml()
+      self.xy_units = rqet.find_tag_text(root_node, 'ProjectedUom')
+      self.axis_order = rqet.find_tag_text(root_node, 'ProjectedAxisOrder')
+      self.z_units = rqet.find_tag_text(root_node, 'VerticalUom')
+      self.z_inc_down = rqet.find_tag_bool(root_node, 'ZIncreasingDownward')
       self.x_offset = rqet.find_tag_float(root_node, 'XOffset')
       self.y_offset = rqet.find_tag_float(root_node, 'YOffset')
       self.z_offset = rqet.find_tag_float(root_node, 'ZOffset')

@@ -4190,6 +4190,7 @@ class PropertyKind(BaseResqpy):
 
 
    def load_from_xml(self):
+      super().load_from_xml()
       root_node = self.root
       self.is_abstract = rqet.find_tag_bool(root_node, 'IsAbstract')
       self.naming_system = rqet.find_tag_text(root_node, 'NamingSystem')
