@@ -86,7 +86,7 @@ class Crs(BaseResqpy):
       super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = crs_root)
       self.resqml_type = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
 
-      assert axis_order in valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
+      assert self.axis_order in self.valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
 
       self.rotated = (not maths.isclose(self.rotation, 0.0, abs_tol = 1e-8) and
                       not maths.isclose(self.rotation, 2.0 * maths.pi, abs_tol = 1e-8))
@@ -375,7 +375,7 @@ class Crs(BaseResqpy):
          epsg_node.text = str(self.epsg_code)
 
       if root is not None: root.append(crs)
-      if add_as_part: self.model.add_part('obj_' + flavour, bu.uuid_from_string(crs.attrib['uuid']), crs)
+      if add_as_part: self.model.add_part('obj_' + self.resqml_type, bu.uuid_from_string(crs.attrib['uuid']), crs)
       if self.model.crs_root is None: self.model.crs_root = crs  # mark's as 'main' (ie. first) crs for model
 
       return crs
