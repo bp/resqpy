@@ -2655,8 +2655,8 @@ class PropertyCollection():
       if time_series_uuid is None or time_index is None:
          related_time_series_node = None
       else:
-         related_time_series_node = self.model.root_for_part(rqet.part_name_for_object('obj_TimeSeries', time_series_uuid))
-         time_series = rts.TimeSeries(self.model, time_series_root = related_time_series_node)
+         related_time_series_node = self.model.root(uuid = time_series_uuid)
+         time_series = rts.TimeSeries(self.model, uuid = time_series_uuid)
          time_series.create_time_index(time_index, root = p_node)
 
       self.model.create_supporting_representation(support_uuid = support_uuid, root = p_node,
