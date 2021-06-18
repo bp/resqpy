@@ -4178,7 +4178,7 @@ class PropertyKind(BaseResqpy):
    resqml_type = "PropertyKind"
 
    def __init__(self, parent_model, root_node = None, uuid = None, title = None, is_abstract = False,
-                example_uom = None, naming_system = 'urn:resqml:bp.com:resqpy', parent_property_kind = 'continuous'
+                example_uom = None, naming_system = 'urn:resqml:bp.com:resqpy', parent_property_kind = 'continuous',
                 originator = None):
       """Initialise a new bespoke property kind."""
 
