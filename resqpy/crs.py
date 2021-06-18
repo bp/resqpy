@@ -381,8 +381,8 @@ class Crs(BaseResqpy):
       return crs
 
 
-    @property
-    def crs_root(self):
-        """DEPRECATED. Alias for root"""
-        warnings.warn("Attribute 'crs_root' is deprecated. Use 'root'", DeprecationWarning)
-        return self.root
+   @property
+   def crs_root(self):
+      """DEPRECATED. Alias for root"""
+      warnings.warn("Attribute 'crs_root' is deprecated. Use 'root'", DeprecationWarning)
+      return self.root
