@@ -1,5 +1,6 @@
 import pytest
 
+import resqpy.model as rq
 import resqpy.property as rqp
 import resqpy.olio.weights_and_measures as bwam
 
@@ -52,7 +53,7 @@ def test_infer_property_kind(input_name, input_unit, kind, facet_type, facet):
 
 def test_bespoke_property_kind():
    model = rq.Model(create_basics = True)
-   em = {something: 'important', and_another_thing: 'significant'}
+   em = {'something': 'important', 'and_another_thing': 42}
    pk1 = rqp.PropertyKind(model, title = 'my kind of property', extra_metadata = em)
    pk1.create_xml()
    assert len(model.uuids(obj_type = 'PropertyKind')) == 1
