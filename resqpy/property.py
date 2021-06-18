@@ -3992,7 +3992,8 @@ class StringLookup(BaseResqpy):
 
    resqml_type = "StringTableLookup"
 
-   def __init__(self, parent_model, root_node = None, uuid = None, int_to_str_dict = None, title = None, originator = None):
+   def __init__(self, parent_model, root_node = None, uuid = None, int_to_str_dict = None, title = None,
+                extra_metadata = None, originator = None):
       """Creates a new string lookup (RESQML obj_StringTableLookup) object.
 
       arguments:
@@ -4013,7 +4014,8 @@ class StringLookup(BaseResqpy):
       self.str_list = []
       self.str_dict = {}
       self.stored_as_list = False
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = root_node)
       if uuid is None and root_node is None: self.load_from_dict(int_to_str_dict)
 
 
@@ -4179,14 +4181,15 @@ class PropertyKind(BaseResqpy):
 
    def __init__(self, parent_model, root_node = None, uuid = None, title = None, is_abstract = False,
                 example_uom = None, naming_system = 'urn:resqml:bp.com:resqpy', parent_property_kind = 'continuous',
-                originator = None):
+                extra_metadata = None, originator = None):
       """Initialise a new bespoke property kind."""
 
       self.is_abstract = is_abstract
       self.naming_system = naming_system
       self.example_uom = example_uom
       self.parent_kind = parent_property_kind
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
 
    def load_from_xml(self):

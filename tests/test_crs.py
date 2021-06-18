@@ -12,10 +12,12 @@ def test_crs():
    # create some coordinate reference systems
    model = rq.Model(new_epc = True, create_basics = True)
    crs_default = rqc.Crs(model)
+   assert crs_default.null_transform
    crs_m = rqc.Crs(model, xy_units = 'm', z_units = 'm')
    crs_ft = rqc.Crs(model, xy_units = 'ft', z_units = 'ft')
    crs_mixed = rqc.Crs(model, xy_units = 'm', z_units = 'ft')
    crs_offset = rqc.Crs(model, xy_units = 'm', z_units = 'm', x_offset = 100.0, y_offset = -100.0, z_offset = -50.0)
+   assert not crs_offset.null_transform
    crs_elevation = rqc.Crs(model, z_inc_down = 'False')
 
    # check that distincitveness is recognised
@@ -57,6 +59,8 @@ def test_crs():
    a[:, 2] -= 50.0
    assert np.max(np.abs(b - a)) < 1.0e-6
 
+   # todo: test rotation
+
 
 def test_crs_reuse():
    model = rq.Model(new_epc = True, create_basics = True)
@@ -85,3 +89,5 @@ def test_crs_reuse():
    assert len(model.parts(obj_type = 'LocalDepth3dCrs')) == 4
    assert crs_f == crs_a
    assert not bu.matching_uuids(crs_f.uuid, crs_a.uuid)
+
+   # todo: test parent epsg code equivalence

@@ -46,3 +46,29 @@ def test_infer_property_kind(input_name, input_unit, kind, facet_type, facet):
    assert kind == kind_
    assert facet_type == facet_type_
    assert facet == facet_
+
+
+# ---- Test bespoke property kind reuse ---
+
+def test_bespoke_property_kind():
+   model = rq.Model(create_basics = True)
+   em = {something: 'important', and_another_thing: 'significant'}
+   pk1 = rqp.PropertyKind(model, title = 'my kind of property', extra_metadata = em)
+   pk1.create_xml()
+   assert len(model.uuids(obj_type = 'PropertyKind')) == 1
+   pk2 = rqp.PropertyKind(model, title = 'my kind of property', extra_metadata = em)
+   pk2.create_xml()
+   assert len(model.uuids(obj_type = 'PropertyKind')) == 1
+   pk3 = rqp.PropertyKind(model, title = 'your kind of property', extra_metadata = em)
+   pk3.create_xml()
+   assert len(model.uuids(obj_type = 'PropertyKind')) == 2
+   pk4 = rqp.PropertyKind(model, title = 'my kind of property')
+   pk4.create_xml()
+   assert len(model.uuids(obj_type = 'PropertyKind')) == 3
+   pk5 = rqp.PropertyKind(model, title = 'my kind of property', parent_property_kind = 'discrete', extra_metadata = em)
+   pk5.create_xml()
+   assert len(model.uuids(obj_type = 'PropertyKind')) == 4
+   pk6 = rqp.PropertyKind(model, title = 'my kind of property', parent_property_kind = 'continuous')
+   pk6.create_xml()
+   assert len(model.uuids(obj_type = 'PropertyKind')) == 4
+   assert pk6 == pk4
