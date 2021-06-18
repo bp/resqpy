@@ -4214,8 +4214,8 @@ class PropertyKind(BaseResqpy):
       if (self.parent_kind != other_pk.parent_kind or
           self.title != other_pk.title or
           self.is_abstract != other_pk.is_abstract or
-          self.naming_system == other_pk.naming_system or
-          self.example_uom == other_pk.example_uom): return False
+          self.naming_system != other_pk.naming_system or
+          self.example_uom != other_pk.example_uom): return False
       if check_extra_metadata:
          if (self.extra_metadata or other_pk.extra_metadata) and self.extra_metadata != other_pk.extra_metadata:
             return False

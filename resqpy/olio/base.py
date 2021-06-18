@@ -48,7 +48,7 @@ class BaseResqpy(metaclass=ABCMeta):
         self.model = model
         self.title = title  #: Citation title
         self.originator = originator  #: Creator of object. By default, user id.
-        self.extra_metadata = extra_metadata if extra_metadata else {}
+        self.extra_metadata = extra_metadata.copy() if extra_metadata else {}
 
         if root_node is not None:
             warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
