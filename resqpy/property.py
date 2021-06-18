@@ -4205,17 +4205,21 @@ class PropertyKind(BaseResqpy):
       self.parent_kind = ppk_kind_node.text
 
 
-   def is_equivalent(self, other_pk):
+   def is_equivalent(self, other_pk, check_extra_metadata = True):
       """Returns True if this property kind is essentially the same as the other; False otherwise."""
 
       if other_pk is None: return False
       if self is other_pk: return True
       if bu.matching_uuids(self.uuid, other_pk.uuid): return True
-      return (self.title == other_pk.title and
-              self.is_abstract == other_pk.is_abstract and
-              self.naming_system == other_pk.naming_system and
-              self.example_uom == other_pk.example_uom and
-              self.parent_kind == other_pk.parent_kind)
+      if (self.parent_kind != other_pk.parent_kind or
+          self.title != other_pk.title or
+          self.is_abstract != other_pk.is_abstract or
+          self.naming_system == other_pk.naming_system or
+          self.example_uom == other_pk.example_uom) return False
+      if check_extra_metadata:
+         if (self.extra_metadata or other_pk.extra_metadata) and self.extra_metadata != other_pk.extra_metadata:
+            return False
+      return True
 
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
