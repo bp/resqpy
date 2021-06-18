@@ -23,7 +23,10 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 class Crs(BaseResqpy):
    """ Coordinate reference system object """
 
-   # note: resqml_type is set dynamically
+   @property
+   def resqml_type(self):
+      return 'LocalTime3dCrs' if hasattr(self, 'time_units') and self.time_units else 'LocalDepth3dCrs'
+
    valid_axis_orders = ("easting northing", "northing easting", "westing southing",
                         "southing westing", "northing westing", "westing northing")
 
@@ -82,9 +85,7 @@ class Crs(BaseResqpy):
       self.rotation_matrix = None
       self.reverse_rotation_matrix = None
 
-      self.resqml_type = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
       super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = crs_root)
-      self.resqml_type = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
 
       assert self.axis_order in self.valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
 
@@ -305,8 +306,6 @@ class Crs(BaseResqpy):
 
       :meta common:
       """
-
-      self.resqml_type = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
 
       if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
 
