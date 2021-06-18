@@ -82,7 +82,7 @@ class BaseResqpy(metaclass=ABCMeta):
         Note: derived classes should extend this to load other XML and HDF attributes
         """
 
-        # Citation block
+        # Citation block and extra metadata
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
         self.extra_metadata = rqet.load_metadata_from_xml(self.root)

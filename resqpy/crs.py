@@ -1,6 +1,6 @@
 """crs.py: RESQML coordinate reference system module."""
 
-version = '10th June 2021'
+version = '18th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -12,6 +12,7 @@ import numpy as np
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.vector_utilities as vec
@@ -19,14 +20,19 @@ import resqpy.olio.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
-class Crs():
+class Crs(BaseResqpy):
    """ Coordinate reference system object """
+
+   # note: resqml_type is set dynamically
+   valid_axis_orders = ("easting northing", "northing easting", "westing southing",
+                        "southing westing", "northing westing", "westing northing")
 
    def __init__(self, parent_model, crs_root = None, uuid = None,
                 x_offset = 0.0, y_offset = 0.0, z_offset = 0.0,
                 rotation = 0.0, xy_units = 'm', z_units = 'm',
                 z_inc_down = True, axis_order = 'easting northing',
-                time_units = None, epsg_code = None):
+                time_units = None, epsg_code = None,
+                title = None, originator = None):
       """Create a new coordinate reference system object.
 
       arguments:
@@ -61,69 +67,26 @@ class Crs():
       :meta common:
       """
 
-      self.model = parent_model
-
-      self.crs_root = None
-      if crs_root is not None:
-         warnings.warn("Argument crs_root is deprecated, please use uuid")
-         uuid = rqet.uuid_for_part_root(crs_root)
-         self.crs_root = crs_root
-
-      if uuid is None:
-         self.uuid = bu.new_uuid()
-      else:
-         self.uuid = uuid
-         if self.crs_root is None: self.crs_root = self.model.root(uuid = uuid)
-
-      self.xy_units = None
-      self.z_units = None
-      self.time_units = None   # if None, z values are depth; if not None, z values are time (from seismic)
-      self.z_inc_down = None
-      self.x_offset = None
-      self.y_offset = None
-      self.z_offset = None
-      self.rotation = None     # radians
-      self.axis_order = None
-      self.epsg_code = None
+      self.xy_units = xy_units
+      self.z_units = z_units
+      self.time_units = time_units   # if None, z values are depth; if not None, z values are time (from seismic)
+      self.z_inc_down = z_inc_down
+      self.x_offset = x_offset
+      self.y_offset = y_offset
+      self.z_offset = z_offset
+      self.rotation = rotation    # radians
+      self.axis_order = axis_order
+      self.epsg_code = epsg_code
+      # following are derived attributes, set below
       self.rotated = None
       self.rotation_matrix = None
       self.reverse_rotation_matrix = None
 
-      if self.crs_root is not None:
-         flavour = rqet.node_type(self.crs_root)
-         assert flavour in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
-         self.xy_units = rqet.find_tag_text(self.crs_root, 'ProjectedUom')
-         self.axis_order = rqet.find_tag_text(self.crs_root, 'ProjectedAxisOrder')
-         self.z_units = rqet.find_tag_text(self.crs_root, 'VerticalUom')
-         self.z_inc_down = rqet.find_tag_bool(self.crs_root, 'ZIncreasingDownward')
-         if flavour == 'obj_LocalTime3dCrs':
-            self.time_units = rqet.find_tag_text(self.crs_root, 'TimeUom')
-         else:
-            self.time_units = None
-         self.x_offset = rqet.find_tag_float(self.crs_root, 'XOffset')
-         self.y_offset = rqet.find_tag_float(self.crs_root, 'YOffset')
-         self.z_offset = rqet.find_tag_float(self.crs_root, 'ZOffset')
-         self.rotation = rqet.find_tag_float(self.crs_root, 'ArealRotation')  # todo: extract uom attribute from this node
-         parent_xy_crs = rqet.find_tag(self.crs_root, 'ProjectedCrs')
-         if parent_xy_crs is not None and rqet.node_type(parent_xy_crs) == 'ProjectedCrsEpsgCode':
-            self.epsg_code = rqet.find_tag_text(parent_xy_crs, 'EpsgCode')    # should be an integer?
-         else:
-            self.epsg_code = None
+      self.resqml_type = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = crs_root)
+      self.resqml_type = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
 
-      else:
-         if axis_order is not None:
-            assert axis_order in ["easting northing", "northing easting", "westing southing", "southing westing",
-                                  "northing westing", "westing northing"], 'invalid axis order: ' + str(axis_order)
-         self.xy_units = xy_units
-         self.z_units = z_units
-         self.time_units = time_units
-         self.z_inc_down = z_inc_down
-         self.x_offset = x_offset
-         self.y_offset = y_offset
-         self.z_offset = z_offset
-         self.rotation = rotation    # radians
-         self.axis_order = axis_order
-         self.epsg_code = epsg_code
+      assert axis_order in valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
 
       self.rotated = (not maths.isclose(self.rotation, 0.0, abs_tol = 1e-8) and
                       not maths.isclose(self.rotation, 2.0 * maths.pi, abs_tol = 1e-8))
@@ -135,6 +98,30 @@ class Crs():
                              maths.isclose(self.y_offset, 0.0, abs_tol = 1e-8) and
                              maths.isclose(self.z_offset, 0.0, abs_tol = 1e-8) and
                              not self.rotated)
+
+
+   def load_from_xml(self):
+      root_node = self.root
+      flavour = rqet.node_type(root_node)
+      assert flavour in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
+      self.xy_units = rqet.find_tag_text(root_node, 'ProjectedUom')
+      self.axis_order = rqet.find_tag_text(root_node, 'ProjectedAxisOrder')
+      self.z_units = rqet.find_tag_text(root_node, 'VerticalUom')
+      self.z_inc_down = rqet.find_tag_bool(root_node, 'ZIncreasingDownward')
+      if flavour == 'obj_LocalTime3dCrs':
+         self.time_units = rqet.find_tag_text(root_node, 'TimeUom')
+         assert self.time_units
+      else:
+         self.time_units = None
+      self.x_offset = rqet.find_tag_float(root_node, 'XOffset')
+      self.y_offset = rqet.find_tag_float(root_node, 'YOffset')
+      self.z_offset = rqet.find_tag_float(root_node, 'ZOffset')
+      self.rotation = rqet.find_tag_float(root_node, 'ArealRotation')  # todo: extract uom attribute from this node
+      parent_xy_crs = rqet.find_tag(root_node, 'ProjectedCrs')
+      if parent_xy_crs is not None and rqet.node_type(parent_xy_crs) == 'ProjectedCrsEpsgCode':
+         self.epsg_code = rqet.find_tag_text(parent_xy_crs, 'EpsgCode')    # should be an integer?
+      else:
+         self.epsg_code = None
 
 
    def is_right_handed_xyz(self):
@@ -200,8 +187,7 @@ class Crs():
 
    def has_same_epsg_code(self, other_crs):
       """Returns True if either of the crs'es has a null EPSG code, or if they are the same."""
-      if self.epsg_code is None or other_crs.epsg_code is None or self.epsg_code == other_crs.epsg_code: return True
-      return False
+      return self.epsg_code is None or other_crs.epsg_code is None or self.epsg_code == other_crs.epsg_code
 
 
    def is_equivalent(self, other_crs):
@@ -221,16 +207,8 @@ class Crs():
           maths.isclose(self.y_offset, other_crs.y_offset, abs_tol = 1e-4) and
           maths.isclose(self.z_offset, other_crs.z_offset, abs_tol = 1e-4) and
           maths.isclose(self.rotation, other_crs.rotation, abs_tol = 1e-4)): return True
-          # todo: handle and check rotation units
+          # todo: handle and check rotation units; modularly equivalent rotations
       return False
-
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
 
 
    def convert_to(self, other_crs, xyz):
@@ -301,8 +279,7 @@ class Crs():
       return xyz
 
 
-   def create_xml(self, add_as_part = True, root = None, title = 'Coordinate Reference System',
-                  originator = None, reuse = True):
+   def create_xml(self, add_as_part = True, root = None, title = None, originator = None, reuse = True):
       """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
       arguments:
@@ -310,7 +287,7 @@ class Crs():
             as a part
          root (optional, usually None): if not None, the newly created crs node is appended as a child
             of this node (rarely used)
-         title (string): used as the Title text in the citation node
+         title (string, optional): used as the Title text in the citation node
          originator (string, optional): the name of the human being who created the crs object;
             default is to use the login name
          reuse (boolean, default True): if True and an equivalent crs already exists in the model then
@@ -329,31 +306,11 @@ class Crs():
       :meta common:
       """
 
-      if reuse and self.uuid is not None:
-         old_root = self.model.root(uuid = self.uuid)
-         if old_root is not None:
-            return old_root
+      self.resqml_type = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
 
-      flavour = 'LocalDepth3dCrs' if self.time_units is None else 'LocalTime3dCrs'
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
 
-      if reuse:
-         crs_uuids = self.model.uuids(obj_type = flavour)
-         for old_crs_uuid in crs_uuids:
-            old_crs = Crs(self.model, uuid = old_crs_uuid)
-            if old_crs == self:
-               old_root = self.model.root(uuid = old_crs_uuid)
-               self.uuid = old_crs_uuid
-               if self.model.crs_root is None: self.model.crs_root = old_root  # mark's as 'main' crs for model
-               return old_root
-
-      crs = self.model.new_obj_node(flavour)
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(crs.attrib['uuid'])
-      else:
-         crs.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = crs, title = title, originator = originator)
+      crs = super().create_xml(add_as_part = False, originator = originator)
 
       xoffset = rqet.SubElement(crs, ns['resqml2'] + 'XOffset')
       xoffset.set(ns['xsi'] + 'type', ns['xsd'] + 'double')
@@ -417,10 +374,15 @@ class Crs():
          epsg_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
          epsg_node.text = str(self.epsg_code)
 
-      self.crs_root = crs
-
       if root is not None: root.append(crs)
       if add_as_part: self.model.add_part('obj_' + flavour, bu.uuid_from_string(crs.attrib['uuid']), crs)
       if self.model.crs_root is None: self.model.crs_root = crs  # mark's as 'main' (ie. first) crs for model
 
       return crs
+
+
+    @property
+    def crs_root(self):
+        """DEPRECATED. Alias for root"""
+        warnings.warn("Attribute 'crs_root' is deprecated. Use 'root'", DeprecationWarning)
+        return self.root
