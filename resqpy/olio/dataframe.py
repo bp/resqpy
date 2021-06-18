@@ -94,14 +94,14 @@ class DataFrame:
          self.mesh = rqs.Mesh(self.model, root_node = support_root)
          self.title = self.mesh.title
          self.n_rows, self.n_cols = self.mesh.nj, self.mesh.ni
-         cl_root = self.model.root(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe columns')
-         assert cl_root is not None, 'column name lookup table not found for dataframe'
-         self.column_lookup = rqp.StringLookup(self.model, root_node = cl_root)
+         cl_uuid = self.model.uuid(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe columns')
+         assert cl_uuid is not None, 'column name lookup table not found for dataframe'
+         self.column_lookup = rqp.StringLookup(self.model, uuid = cl_uuid)
          self.column_lookup_uuid = self.column_lookup.uuid
          assert self.column_lookup.length() == self.n_cols
-         ul_root = self.model.root(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe units')
-         if ul_root is not None:
-            self.uom_lookup = rqp.StringLookup(self.model, root_node = ul_root)
+         ul_uuid = self.model.root(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe units')
+         if ul_uuid is not None:
+            self.uom_lookup = rqp.StringLookup(self.model, uuid = ul_uuid)
             self.uom_lookup_uuid = self.uom_lookup.uuid
             self.uom_list = self.uom_lookup.get_list()
          da = self.mesh.full_array_ref()[..., 2]  # dataframe data as 2D numpy array, defaulting to z values in mesh
@@ -132,12 +132,12 @@ class DataFrame:
          self.n_rows = len(self.df)
          self.n_cols = len(self.df.columns)
          if column_lookup_uuid is not None:
-            self.column_lookup = rqp.StringLookup(self.model, root_node = self.model.root(uuid = column_lookup_uuid))
+            self.column_lookup = rqp.StringLookup(self.model, uuid = column_lookup_uuid)
             assert self.column_lookup is not None
             assert self.column_lookup.length() == self.n_cols
             assert all(self.df.columns == self.column_lookup.get_list())  # exact match of column names required!
          if uom_lookup_uuid is not None:
-            self.uom_lookup = rqp.StringLookup(self.model, root_node = self.model.root(uuid = uom_lookup_uuid))
+            self.uom_lookup = rqp.StringLookup(self.model, uuid = uom_lookup_uuid)
             assert self.uom_lookup is not None
          if uom_list is not None:
             assert len(uom_list) == self.n_cols

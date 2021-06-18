@@ -254,7 +254,7 @@ def print_TimeSeries(model, node, detail_level = 0):
    if node is None: return
    print('number of timestamps: ' + str(rqet.count_tag(node, 'Time')))
    if not detail_level: return
-   time_series = rts.TimeSeries(model, time_series_root = node)
+   time_series = rts.TimeSeries(model, uuid = node.attrib['uuid'])
    for index in range(time_series.number_of_timestamps()):
       if index:
          print('{0:>5d}  {1} {2:>5d}'.format(index, rts.simplified_timestamp(time_series.timestamp(index)), time_series.step_days(index)))
@@ -353,11 +353,11 @@ def print_Property(model, node, detail_level = 0):
       time_series_ref_node = rqet.find_tag(time_index_node, 'TimeSeries')
       time_series_part = print_reference_node_and_return_referenced_part(time_series_ref_node, 'time series')
       if detail_level > 0:
-         time_series_node = model.root_for_part(time_series_part)
-         if time_series_node is None:
+         time_series_uuid = model.uuid_for_part(time_series_part)
+         if time_series_uuid is None:
             print('   time series part not found!')
          else:
-            time_series = rts.TimeSeries(model, time_series_root = time_series_node)
+            time_series = rts.TimeSeries(model, uuid = time_series_uuid)
             print('   number of timestamps in series: ' + str(time_series.number_of_timestamps()))
          if time_index is not None:
             print('timestamp for this part: ' + str(rts.simplified_timestamp(time_series.timestamp(time_index))))

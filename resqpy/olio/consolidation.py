@@ -1,6 +1,6 @@
 """Support for consolidation of datasets based on equivalence between parts ."""
 
-version = '29th April 2021'
+version = '18th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -76,37 +76,33 @@ class Consolidation:
             if bu.matching_uuids(resident_uuid, immigrant_uuid):
 #               log.debug('   uuid already resident: ' + str(resident_uuid))
                return resident_uuid
-      immigrant_root = immigrant_model.root_for_part(part)
-      assert immigrant_root is not None
 #      log.debug('   preparing immigrant object')
       if obj_type.endswith('Interpretation') or obj_type.endswith('Feature'):
-         immigrant_obj = rqo.__dict__[obj_type](immigrant_model, immigrant_root)
+         immigrant_obj = rqo.__dict__[obj_type](immigrant_model, uuid = immigrant_uuid)
       elif obj_type.endswith('Crs'):
-         immigrant_obj = rqc.Crs(immigrant_model, immigrant_root)
+         immigrant_obj = rqc.Crs(immigrant_model, uuid = immigrant_uuid)
       elif obj_type == 'TimeSeries':
-         immigrant_obj = rqt.TimeSeries(immigrant_model, time_series_root = immigrant_root)
+         immigrant_obj = rqt.TimeSeries(immigrant_model, uuid = immigrant_uuid)
       elif obj_type == 'StringTableLookup':
-         immigrant_obj = rqp.StringLookup(immigrant_model, immigrant_root)
+         immigrant_obj = rqp.StringLookup(immigrant_model, uuid = immigrant_uuid)
       elif obj_type == 'PropertyKind':
-         immigrant_obj = rqp.PropertyKind(immigrant_model, immigrant_root)
+         immigrant_obj = rqp.PropertyKind(immigrant_model, uuid = immigrant_uuid)
       else:
          raise Exception('code failure')
       assert immigrant_obj is not None
       for resident_uuid in resident_uuids:
 #         log.debug('   considering resident: ' + str(resident_uuid))
          if ignore_identical_part and bu.matching_uuids(resident_uuid, immigrant_uuid): continue
-         resident_root = self.model.root(uuid = resident_uuid)
-         assert resident_root is not None
          if obj_type.endswith('Interpretation') or obj_type.endswith('Feature'):
-            resident_obj = rqo.__dict__[obj_type](self.model, resident_root)
+            resident_obj = rqo.__dict__[obj_type](self.model, uuid = resident_uuid)
          elif obj_type.endswith('Crs'):
-            resident_obj = rqc.Crs(self.model, resident_root)
+            resident_obj = rqc.Crs(self.model, uuid = resident_uuid)
          elif obj_type == 'TimeSeries':
-            resident_obj = rqt.TimeSeries(self.model, time_series_root = resident_root)
+            resident_obj = rqt.TimeSeries(self.model, uuid = resident_uuid)
          elif obj_type == 'StringTableLookup':
-            resident_obj = rqp.StringLookup(self.model, resident_root)
+            resident_obj = rqp.StringLookup(self.model, uuid = resident_uuid)
          elif obj_type == 'PropertyKind':
-            resident_obj = rqp.PropertyKind(self.model, resident_root)
+            resident_obj = rqp.PropertyKind(self.model, uuid = resident_uuid)
          else:
             raise Exception('code failure')
          assert resident_obj is not None
