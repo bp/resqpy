@@ -76,6 +76,12 @@ class BaseResqpy(metaclass=ABCMeta):
 
         return self.model.root_for_uuid(self.uuid)
 
+    @property
+    def citation_title(self):
+        """Citation block title equivalent to self.title"""
+
+        return self.title
+
     def load_from_xml(self):
         """Load citation block from XML.
         
@@ -108,7 +114,6 @@ class BaseResqpy(metaclass=ABCMeta):
                 assert self.root is not None
                 return True
         return False
-
 
     def create_xml(self, title=None, originator=None, add_as_part=False):
         """Write citation block to XML

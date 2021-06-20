@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '17th June 2021'
+version = '20th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -19,6 +19,7 @@ from functools import lru_cache
 
 import lasio
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.ab_toolbox as abt
 import resqpy.olio.write_data as wd
 import resqpy.olio.load_data as ld
@@ -2508,7 +2509,7 @@ class PropertyCollection():
             prop_parts_list.append(rqet.part_name_for_part_root(p_node))
             uuid_list.append(rqet.uuid_for_part_root(p_node))
       self.add_parts_list_to_dict(prop_parts_list)
-      self.imported_list = None
+      self.imported_list = []
       return uuid_list
 
 
@@ -3036,6 +3037,160 @@ class PropertyCollection():
               'PERMI': five_uuids[2],
               'PERMJ': five_uuids[3],
               'PERMK': five_uuids[4]}
+
+
+
+class Property(BaseResqpy):
+   """Class for an individual property object; uses a single element PropertyCollection behind the scenes."""
+
+   @property
+   def resqml_type(self):
+      if (not hasattr(self, 'collection') or
+          self.collection.number_of_parts() != 1 or
+          self.is_continuous()): return 'ContinuousProperty'
+      return 'CategoricalProperty' if self.is_categorical() else 'DiscreteProperty'
+
+   def __init__(self, parent_model, uuid = None, title = None, originator = None):
+      self.collection = PropertyCollection()
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator)
+
+   def load_from_xml(self):
+      part = self.model.part_for_uuid(self.uuid)
+      assert part is not None
+      self.part = part
+      self.collection.add_part_to_dict(part)
+      self.collection.has_single_property_kind_flag = True
+      self.collection.has_single_indexable_element_flag = True
+      self.collection.has_single_uom = True
+      self.collection.has_multiple_realizations_flag = False
+
+   def from_singleton_collection(self, property_collection):
+      assert self.collection.number_of_parts() == 0
+      assert property_collection is not None
+      assert property_collection.number_of_parts() == 1
+      self.collection.inherit_parts_from_other_collection(property_collection)
+      self.part = self.collection.parts()[0]
+      self.uuid = self.collection.uuid_for_part(self.part)
+      self.title = self.collection.citation_title_for_part(self.part)
+      self.extra_metadata = self.collection.extra_metadata_for_part(self.part)
+      self.collection.has_single_property_kind_flag = True
+      self.collection.has_single_indexable_element_flag = True
+      self.collection.has_single_uom = True
+      self.collection.has_multiple_realizations_flag = False
+
+   def array_ref(self, dtype = None, masked = False, exclude_null = False):
+      return self.collection.cached_part_array_ref(self.part, dtype = dtype, masked = masked, exclude_null = exclude_null)
+
+#   def citation_title(self):
+#      return self.collection.citation_title_for_part(self.part)
+
+   def is_continuous(self):
+      return self.collection.continuous_for_part(self.part)
+
+   def is_categorical(self):
+      return self.collection.part_is_categorical(self.part)
+
+   def null_value(self):
+      return self.collection.null_value_for_part(self.part)
+
+   def count(self):
+      return self.collection.count_for_part(self.part)
+
+   def indexable_element(self):
+      return self.collection.indexable_for_part(self.part)
+
+   def property_kind(self):
+      return self.collection.property_kind_for_part(self.part)
+
+   def local_property_kind_uuid(self):
+      return self.collection.local_property_kind_uuid(self.part)
+
+   def facet_type(self):
+      return self.collection.facet_type_for_part(self.part)
+
+   def facet(self):
+      return self.collection.facet_for_part(self.part)
+
+   def time_series_uuid(self):
+      return self.collection.time_series_uuid_for_part(self.part)
+
+   def time_index(self):
+      return self.collection.time_index_for_part(self.part)
+
+   def minimum_value(self):
+      return self.collection.minimum_value_for_part(self.part)
+
+   def maximum_value(self):
+      return self.collection.maximum_value_for_part(self.part)
+
+   def uom(self):
+      return self.collection.uom_for_part(self.part)
+
+   def string_lookup_uuid(self):
+      return self.collection.string_lookup_uuid_for_part(self.part)
+
+   def string_lookup(self):
+      return self.collection.string_lookup_for_part(self.part)
+
+   def constant_value(self):
+      return self.collection.constant_value_for_part(self.part)
+
+   def from_array(self, cached_array, source_info, keyword,
+                  discrete = False, uom = None, time_index = None, null_value = None,
+                  property_kind = None, local_property_kind_uuid = None,
+                  facet_type = None, facet = None, realization = None,
+                  indexable_element = None, count = 1, const_value = None,
+                  support_uuid = None, time_series_uuid = None,
+                  string_lookup_uuid = None, property_kind_uuid = None,
+                  find_local_property_kind = True, extra_metadata = {}):
+      self.prepare_import(cached_array, source_info, keyword,
+                  discrete = discrete, uom = uom, time_index = time_index, null_value = null_value,
+                  property_kind = property_kind, local_property_kind_uuid = local_property_kind_uuid,
+                  facet_type = facet_type, facet = facet, realization = realization,
+                  indexable_element = indexable_element, count = count, const_value = const_value)
+      self.write_hdf5()
+      self.create_xml(support_uuid = support_uuid, time_series_uuid = time_series_uuid,
+                      string_lookup_uuid = string_lookup_uuid, property_kind_uuid = property_kind_uuid,
+                      find_local_property_kind = find_local_property_kind, extra_metadata = extra_metadata)
+
+   def prepare_import(self, cached_array, source_info, keyword,
+                      discrete = False, uom = None, time_index = None, null_value = None,
+                      property_kind = None, local_property_kind_uuid = None,
+                      facet_type = None, facet = None, realization = None,
+                      indexable_element = None, count = 1, const_value = None):
+      assert self.number_of_parts() == 0
+      assert not self.collection.imported_list
+      self.collection.add_cached_array_to_imported_list(cached_array, source_info, keyword,
+                                                        discrete = discrete, uom = uom, time_index = time_index,
+                                                        null_value = null_value, property_kind = property_kind,
+                                                        local_property_kind_uuid = local_property_kind_uuid,
+                                                        facet_type = facet_type, facet = facet,
+                                                        realization = realization,
+                                                        indexable_element = indexable_element,
+                                                        count = count, const_value = const_value)
+
+   def write_hdf5(self, file_name = None, mode = 'a'):
+      if not self.collection.imported_list:
+         log.warning('no imported Property array to write to hdf5')
+         return
+      self.collection.write_hdf5_for_imported_list(file_name = file_name, mode = mode)
+
+   def create_xml(self, ext_uuid = None, support_uuid = None, time_series_uuid = None,
+                  string_lookup_uuid = None, property_kind_uuid = None,
+                  find_local_property_kind = True, extra_metadata = {}):
+      if not self.collection.imported_list:
+         log.warning('no imported Property array to create xml for')
+         return
+      self.collection.create_xml_for_imported_list_and_add_parts_to_model(
+         ext_uuid = ext_uuid, support_uuid = support_uuid, time_series_uuid = time_series_uuid,
+         selected_time_indices_list = None,
+         string_lookup_uuid = string_lookup_uuid, property_kind_uuid = property_kind_uuid,
+         find_local_property_kinds = find_local_property_kind, extra_metadata = extra_metadata)
+      self.collection.has_single_property_kind_flag = True
+      self.collection.has_single_uom_flag = True
+      self.collection.has_single_indexable_element_flag = True
+      self.collection.has_multiple_realizations_flag = False
+
 
 
 class GridPropertyCollection(PropertyCollection):
