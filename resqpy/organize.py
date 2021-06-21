@@ -476,7 +476,7 @@ class WellboreFeature(BaseResqpy):
    resqml_type = "WellboreFeature"
    feature_name = _alias_for_attribute("title")
 
-   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extract_from_xml = None):
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None):
       """Initialises a wellbore feature organisational object."""
       super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 

@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '17th June 2021'
+version = '18th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -19,6 +19,7 @@ from functools import lru_cache
 
 import lasio
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.ab_toolbox as abt
 import resqpy.olio.write_data as wd
 import resqpy.olio.load_data as ld
@@ -2654,8 +2655,8 @@ class PropertyCollection():
       if time_series_uuid is None or time_index is None:
          related_time_series_node = None
       else:
-         related_time_series_node = self.model.root_for_part(rqet.part_name_for_object('obj_TimeSeries', time_series_uuid))
-         time_series = rts.TimeSeries(self.model, time_series_root = related_time_series_node)
+         related_time_series_node = self.model.root(uuid = time_series_uuid)
+         time_series = rts.TimeSeries(self.model, uuid = time_series_uuid)
          time_series.create_time_index(time_index, root = p_node)
 
       self.model.create_supporting_representation(support_uuid = support_uuid, root = p_node,
@@ -3986,10 +3987,13 @@ class WellLog:
 
 
 
-class StringLookup():
+class StringLookup(BaseResqpy):
    """Class catering for RESQML obj_StringLookupTable objects."""
 
-   def __init__(self, parent_model, root_node = None, int_to_str_dict = None, title = None):
+   resqml_type = "StringTableLookup"
+
+   def __init__(self, parent_model, root_node = None, uuid = None, int_to_str_dict = None, title = None,
+                extra_metadata = None, originator = None):
       """Creates a new string lookup (RESQML obj_StringTableLookup) object.
 
       arguments:
@@ -4005,39 +4009,35 @@ class StringLookup():
       :meta common:
       """
 
-      self.model = parent_model
-      self.uuid = None
-      self.root_node = root_node
-      self.title = title
       self.min_index = None
       self.max_index = None
       self.str_list = []
       self.str_dict = {}
       self.stored_as_list = False
-      self.extra_metadata = None
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = root_node)
+      if uuid is None and root_node is None: self.load_from_dict(int_to_str_dict)
 
-      if root_node is not None:
-         self.uuid = rqet.uuid_for_part_root(root_node)
-         self.title = rqet.citation_title_for_node(root_node)
-         self.extra_metadata = rqet.load_metadata_from_xml(root_node)
-         for v_node in rqet.list_of_tag(root_node, 'Value'):
-            key = rqet.find_tag_int(v_node, 'Key')
-            value = rqet.find_tag_text(v_node, 'Value')
-            assert key not in self.str_dict, 'key value ' + str(key) + ' occurs more than once in string lookup table xml'
-            self.str_dict[key] = value
-            if self.min_index is None or key < self.min_index: self.min_index = key
-            if self.max_index is None or key > self.max_index: self.max_index = key
-      elif int_to_str_dict is not None:
-         assert len(int_to_str_dict), 'empty dictionary passed to string lookup initialisation'
-         self.str_dict = int_to_str_dict.copy()
-         self.min_index = min(self.str_dict.keys())
-         self.max_index = max(self.str_dict.keys())
-      if not len(self.str_dict):
-         log.warning('empty string lookup table during initialisation')
-      else:
-         self.set_list_from_dict_conditionally()
 
-      if self.uuid is None: self.uuid = bu.new_uuid()
+   def load_from_xml(self):
+      super().load_from_xml()
+      root_node = self.root
+      for v_node in rqet.list_of_tag(root_node, 'Value'):
+         key = rqet.find_tag_int(v_node, 'Key')
+         value = rqet.find_tag_text(v_node, 'Value')
+         assert key not in self.str_dict, 'key value ' + str(key) + ' occurs more than once in string lookup table xml'
+         self.str_dict[key] = value
+         if self.min_index is None or key < self.min_index: self.min_index = key
+         if self.max_index is None or key > self.max_index: self.max_index = key
+
+
+   def load_from_dict(self, int_to_str_dict):
+      if int_to_str_dict is None: return
+      assert len(int_to_str_dict), 'empty dictionary passed to string lookup initialisation'
+      self.str_dict = int_to_str_dict.copy()
+      self.min_index = min(self.str_dict.keys())
+      self.max_index = max(self.str_dict.keys())
+      self.set_list_from_dict_conditionally()
 
 
    def is_equivalent(self, other):
@@ -4048,14 +4048,6 @@ class StringLookup():
       if bu.matching_uuids(self.uuid, other.uuid): return True
       if self.title != other.title or self.min_index != other.min_index or self.max_index != other.max_index: return False
       return self.str_dict == other.str_dict
-
-
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
 
 
    def set_list_from_dict_conditionally(self):
@@ -4144,7 +4136,7 @@ class StringLookup():
          self.extra_metadata[key] = meta_dict[key]
 
 
-   def create_xml(self, title = None, originator = None, add_as_part = True):
+   def create_xml(self, title = None, originator = None, add_as_part = True, reuse = True):
       """Creates an xml node for the string table lookup.
 
       arguments:
@@ -4155,18 +4147,11 @@ class StringLookup():
       :meta common:
       """
 
-      sl_node = self.model.new_obj_node('StringTableLookup')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(sl_node.attrib['uuid'])
-      else:
-         sl_node.attrib['uuid'] = str(self.uuid)
-
       if title: self.title = title
 
-      self.model.create_citation(root = sl_node, title = self.title, originator = originator)
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
 
-      rqet.create_metadata_xml(node=sl_node, extra_metadata=self.extra_metadata)
+      sl_node = super().create_xml(add_as_part = False, originator = originator)
 
       for k, v in self.str_dict.items():
 
@@ -4185,80 +4170,64 @@ class StringLookup():
       if add_as_part:
          self.model.add_part('obj_StringTableLookup', self.uuid, sl_node)
 
-      self.root_node = sl_node
-
       return sl_node
 
 
 
-class PropertyKind():
+class PropertyKind(BaseResqpy):
    """Class catering for RESQML bespoke PropertyKind objects."""
 
-   def __init__(self, parent_model, root_node = None, title = None, is_abstract = False, example_uom = None,
-                naming_system = 'urn:resqml:bp.com:resqpy', parent_property_kind = 'continuous'):
+   resqml_type = "PropertyKind"
+
+   def __init__(self, parent_model, root_node = None, uuid = None, title = None, is_abstract = False,
+                example_uom = None, naming_system = 'urn:resqml:bp.com:resqpy', parent_property_kind = 'continuous',
+                extra_metadata = None, originator = None):
       """Initialise a new bespoke property kind."""
 
-      self.model = parent_model
-      self.root_node = None
-      self.uuid = None
-      self.title = None
-      self.is_abstract = None
-      self.naming_system = None
-      self.example_uom = None
-      self.parent_kind = None
-      if root_node is not None:
-         self.root_node = root_node
-         self.uuid = rqet.uuid_for_part_root(root_node)
-         self.title = rqet.find_nested_tags_text(root_node, ['Citation', 'Title'])
-         self.is_abstract = rqet.find_tag_bool(root_node, 'IsAbstract')
-         self.naming_system = rqet.find_tag_text(root_node, 'NamingSystem')
-         self.example_uom = rqet.find_tag_text(root_node, 'RepresentativeUom')
-         ppk_node = rqet.find_tag(root_node, 'ParentPropertyKind')
-         assert ppk_node is not None
-         ppk_kind_node = rqet.find_tag(ppk_node, 'Kind')
-         assert ppk_kind_node is not None, 'only standard property kinds supported as parent kind'
-         self.parent_kind = ppk_kind_node.text
-      elif title:
-         self.title = title
-         self.is_abstract = is_abstract
-         self.naming_system = naming_system
-         self.parent_kind = parent_property_kind
-         self.example_uom = example_uom
-      if self.uuid is None: self.uuid = bu.new_uuid()
+      self.is_abstract = is_abstract
+      self.naming_system = naming_system
+      self.example_uom = example_uom
+      self.parent_kind = parent_property_kind
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
 
-   def is_equivalent(self, other_pk):
+   def load_from_xml(self):
+      super().load_from_xml()
+      root_node = self.root
+      self.is_abstract = rqet.find_tag_bool(root_node, 'IsAbstract')
+      self.naming_system = rqet.find_tag_text(root_node, 'NamingSystem')
+      self.example_uom = rqet.find_tag_text(root_node, 'RepresentativeUom')
+      ppk_node = rqet.find_tag(root_node, 'ParentPropertyKind')
+      assert ppk_node is not None
+      ppk_kind_node = rqet.find_tag(ppk_node, 'Kind')
+      assert ppk_kind_node is not None, 'only standard property kinds supported as parent kind'
+      self.parent_kind = ppk_kind_node.text
+
+
+   def is_equivalent(self, other_pk, check_extra_metadata = True):
       """Returns True if this property kind is essentially the same as the other; False otherwise."""
 
       if other_pk is None: return False
       if self is other_pk: return True
       if bu.matching_uuids(self.uuid, other_pk.uuid): return True
-      return (self.title == other_pk.title and
-              self.is_abstract == other_pk.is_abstract and
-              self.naming_system == other_pk.naming_system and
-              self.example_uom == other_pk.example_uom and
-              self.parent_kind == other_pk.parent_kind)
+      if (self.parent_kind != other_pk.parent_kind or
+          self.title != other_pk.title or
+          self.is_abstract != other_pk.is_abstract or
+          self.naming_system != other_pk.naming_system): return False
+      if (self.example_uom and other_pk.example_uom) and self.example_uom != other_pk.example_uom: return False
+      if check_extra_metadata:
+         if (self.extra_metadata or other_pk.extra_metadata) and self.extra_metadata != other_pk.extra_metadata:
+            return False
+      return True
 
 
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
-   def create_xml(self, add_as_part = True, originator = None):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Create xml for this bespoke property kind."""
 
-      pk = self.model.new_obj_node('PropertyKind')
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(pk.attrib['uuid'])
-      else:
-         pk.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = pk, title = self.title, originator = originator)
+      pk = super().create_xml(add_as_part = False, originator = originator)
 
       ns_node= rqet.SubElement(pk, ns['resqml2'] + 'NamingSystem')
       ns_node.set(ns['xsi'] + 'type', ns['xsd'] + 'anyURI')
@@ -4287,14 +4256,12 @@ class PropertyKind():
          self.model.add_part('obj_PropertyKind', self.uuid, pk)
          # no relationships at present, if local parent property kinds were to be supported then a rel. is needed there
 
-      self.root_node = pk
-
       return pk
 
 
 
 class WellIntervalProperty:
-   """Thin wrapper class around RESQML interval properties within a Wellbore Frame (ie interval well logs, or blocked well logs)."""
+   """Thin wrapper class around interval properties for a Wellbore Frame or Blocked Wellbore (ie interval or cell well logss)."""
 
    def __init__(self, collection, part):
       """Create an interval log or blocked well log from a part name"""

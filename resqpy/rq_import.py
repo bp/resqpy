@@ -1,6 +1,6 @@
 """rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
-version = '16th June 2021'
+version = '18th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -412,7 +412,7 @@ def import_nexus(resqml_file_root,                # output path and file name wi
             recur_prop_list = vdbase.grid_list_of_recurrent_properties(grid_title, timestep_number)
             common_recur_prop_set = set()
             if recur_time_series is None:
-               recur_time_series = rts.TimeSeries(model, extract_from_xml = False, first_timestamp = stamp)
+               recur_time_series = rts.TimeSeries(model, first_timestamp = stamp)
                if recur_prop_list is not None: common_recur_prop_set = set(recur_prop_list)
             else:
                recur_time_series.add_timestamp(stamp)
@@ -700,7 +700,7 @@ def import_vdb_ensemble(epc_file,
          log.error('disabling recurrent property import')
          vdb_recurrent_properties = False
    if vdb_recurrent_properties:
-      recur_time_series = rts.TimeSeries(model, extract_from_xml = False, first_timestamp = first_stamp)
+      recur_time_series = rts.TimeSeries(model, first_timestamp = first_stamp)
       if timestep_selection == 'all': remaining_list = timestep_list[1:]
       elif timestep_selection == 'first and last': remaining_list = [timestep_list[-1]]
       else: remaining_list = []
