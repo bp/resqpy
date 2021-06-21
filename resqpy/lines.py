@@ -1,6 +1,6 @@
 """polylines.py: Resqml polylines module."""
 
-version = '16th June 2021'
+version = '17th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -908,13 +908,16 @@ class PolylineSet(_BasePolyline):
             indices_arr = load_hdf5_array(self, closed_node, 'indices_arr', tag = 'Indices')
             istrue = rqet.bool_from_text(rqet.node_text(rqet.find_tag(closed_node, 'IndexIsTrue')))
             out = np.full((count), not istrue)
-            for ind in indices_arr:
-                out[ind] = istrue
+            out[indices_arr] = istrue
             return out
 
 
-    def convert_to_polylines(self, closed_array, count_perpol, coordinates, crs_uuid, crs_root, rep_int_root):
+    def convert_to_polylines(self, closed_array = None, count_perpol = None, coordinates = None,
+                             crs_uuid = None, crs_root = None, rep_int_root = None):
         """Returns a list of Polylines objects from a PolylineSet
+
+        note:
+            all arguments are optional and by default the data will be taken from self
 
         args:
             closed_array: array containing a bool for each polygon in if it is open (False) or closed (True)
@@ -930,20 +933,31 @@ class PolylineSet(_BasePolyline):
         :meta common:
         """
 
+        if count_perpol is None: count_perpol = self.count_perpol
+        if closed_array is None:
+           closed_array = np.zeros(count_perpol, dtype = bool)
+           closed_node = rqet.find_nested_tag(self.root_node, ['LinePatch', 'ClosedPolylines'])
+           if closed_node is not None: closed_array[:] = self.get_bool_array(closed_node)
+        if coordinates is None: coordinates = self.coordinates
+        if crs_uuid is None: crs_uuid = self.crs_uuid
+        if crs_root is None: crs_root = self.crs_root
+        if rep_int_root is None: rep_int_root = self.rep_int_root
         polys = []
         count = 0
         for i in range(len(count_perpol)):
             if i != len(count_perpol)-1:
-                subset = coordinates[count:int(count_perpol[i])+count]
+                subset = coordinates[count:int(count_perpol[i])+count].copy()
             else:
-                subset = coordinates[count:int(count_perpol[i])+count+1]
+                subset = coordinates[count:int(count_perpol[i])+count+1].copy()
             if vu.isclose(subset[0],subset[-1]):
                 isclosed = True
             else:
                 isclosed = closed_array[i]
-            count = int(count_perpol[i])+count
+            count += int(count_perpol[i])
             subtitle = f"{self.title} {i+1}"
-            polys.append(Polyline(self.model, poly_root = None, set_bool = isclosed, set_coord = subset, set_crs = crs_uuid, set_crsroot = crs_root, set_title = subtitle, rep_int_root = rep_int_root))
+            polys.append(Polyline(self.model, poly_root = None, set_bool = isclosed, set_coord = subset,
+                                  set_crs = crs_uuid, set_crsroot = crs_root, set_title = subtitle,
+                                  rep_int_root = rep_int_root))
 
         return polys
 
@@ -1083,18 +1097,18 @@ def shift_polyline(parent_model, poly_root, xyz_shift=(0,0,0), title=''):
 
 
 
-def flatten_polyline(parent_model, poly_root, axis="z", value="0" , title=''):
-    """Returns a new polyline object, flattened on a chosen axis to a given value."""
+def flatten_polyline(parent_model, poly_root, axis="z", value=0.0, title=''):
+    """Returns a new polyline object, flattened (projected) on a chosen axis to a given value."""
 
-    assert axis in ["x","y","z","X","Y","Z"], 'Axis must be x, y or z'
+    axis = axis.lower()
+    value = float(value)
+    assert axis in ["x","y","z"], 'Axis must be x, y or z'
     poly = Polyline(parent_model=parent_model,poly_root=poly_root)
     if title != '': poly.title = title
-    else: poly.title = poly.title + f" flattened on {axis} to value {value}"
+    else: poly.title = poly.title + f" flattened in {axis} to value {value:.3f}"
     poly.uuid = bu.new_uuid()
-    if axis.lower() == "x": index = 0
-    elif axis.lower() == "y": index = 1
-    else: index = 2
-    poly.coordinates[...,index,] = float(value)
+    index = "xyz".index(axis)
+    poly.coordinates[...,index] = value
     return poly
 
 

@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '8th June 2021'
+version = '17th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -30,6 +30,7 @@ import resqpy.grid_surface as rgs
 import resqpy.property as rqp
 import resqpy.well as rqw
 import resqpy.fault as rqf
+import resqpy.lines as rql
 import resqpy.rq_import as rqi
 
 
@@ -2338,7 +2339,7 @@ def unsplit_grid(epc_file, source_grid = None,
 
 
 
-def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = None,
+def add_faults(epc_file, source_grid, polylines = None, lines_file_list = None, lines_crs_uuid = None,
                full_pillar_list_dict = None, left_right_throw_dict = None,
                create_gcs = True, inherit_properties = False, inherit_realization = None, inherit_all_realizations = False,
                new_grid_title = None, new_epc_file = None):
@@ -2348,13 +2349,15 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
          (or one 'ROOT' grid) which is used as the source grid
+      polylines (lines.PolylineSet or list of lines.Polyline, optional): list of poly lines for which curtain faults
+         are to be added; either this or lines_file_list or full_pillar_list_dict must be present
       lines_file_list (list of str, optional): a list of file paths, each containing one or more poly lines in simple
-         ascii format§; see notes; either this or full_pillar_list_dicr must be present
+         ascii format§; see notes; either this or polylines or full_pillar_list_dicr must be present
       lines_crs_uuid (uuid, optional): if present, the uuid of a coordinate reference system with which to interpret
          the contents of the lines files; if None, the crs used by the grid will be assumed
       full_pillar_list_dict (dict mapping str to list of pairs of ints, optional): dictionary mapping from a fault name
          to a list of pairs of ints being the ordered neigbouring primary pillar (j0, i0) defining the curtain fault;
-         either this or lines_file_list must be present
+         either this or polylines or lines_file_list must be present
       left_right_throw_dict (dict mapping str to pair of floats, optional): dictionary mapping from a fault name to a
          pair of floats being the semi-throw adjustment on the left and the right of the fault (see notes); semi-throw
          values default to (+0.5, -0.5)
@@ -2386,7 +2389,12 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
       this function does not add a GridConnectionSet to the model – calling code may wish to do that
    """
 
-   # todo: accept polyline set as alternative to ascii files or dict
+   def make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict):
+      """Adds entries to full_pillar_list_dict & composite_face_set_dict for new lines."""
+      pillar_list_list = sl.nearest_pillars(new_lines, grid)
+      face_set_dict, full_pll_dict = grid.make_face_sets_from_pillar_lists(pillar_list_list, face_set_id)
+      for key, pll in full_pll_dict.items(): full_pillar_list_dict[key] = pll
+      for key, fs_info in face_set_dict.items(): composite_face_set_dict[key] = fs_info
 
    def fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_throw_right):
       """Creates and/or adjusts throw on a single fault defined by a full pillar list, in memory.
@@ -2528,13 +2536,15 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
       model = source_grid.model
    assert source_grid.grid_representation == 'IjkGrid'  # RegularGrid not catered for
    assert model is not None
-   assert lines_file_list is not None or full_pillar_list_dict is not None
-   assert lines_file_list is None or full_pillar_list_dict is None
+   assert len([arg for arg in (polylines, lines_file_list, full_pillar_list_dict) if arg is not None]) == 1
 
    # take a copy of the resqpy grid object, without writing to hdf5 or creating xml
    grid = copy_grid(source_grid, model)
    grid_crs = rqcrs.Crs(model, uuid = grid.crs_uuid)
    assert grid_crs is not None
+
+   if isinstance(polylines, rql.PolylineSet):
+      polylines = polylines.convert_to_polylines()
 
    if lines_crs_uuid is None:
       lines_crs = None
@@ -2544,18 +2554,25 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
    if full_pillar_list_dict is None:
       full_pillar_list_dict = {}
       composite_face_set_dict = {}
-      for filename in lines_file_list:
-         new_lines = sl.read_lines(filename)
-         if lines_crs is not None:
-            for a in new_lines:
-               lines_crs.convert_array_to(grid_crs, a)
-         _, f_name = os.path.split(filename)
-         if f_name.lower().endswith('.dat'): face_set_id = f_name[:-4]
-         else: face_set_id = f_name
-         pillar_list_list = sl.nearest_pillars(new_lines, grid)
-         face_set_dict, full_pll_dict = grid.make_face_sets_from_pillar_lists(pillar_list_list, face_set_id)
-         for key, pll in full_pll_dict.items(): full_pillar_list_dict[key] = pll
-         for key, fs_info in face_set_dict.items(): composite_face_set_dict[key] = fs_info
+      if polylines:
+         for i, polyline in enumerate(polylines):
+            new_line = polyline.coordinates.copy()
+            if polyline.crs_uuid is not None and polyline.crs_uuid != lines_crs_uuid:
+               lines_crs_uuid = polyline.crs_uuid
+               lines_crs = rqcrs.Crs(model, uuid = lines_crs_uuid)
+            if lines_crs: lines_crs.convert_array_to(grid_crs, new_line)
+            title = polyline.title if polyline.title else 'fault_' + str(i)
+            make_face_sets_for_new_lines([new_line], title, grid, full_pillar_list_dict, composite_face_set_dict)
+      else:
+         for filename in lines_file_list:
+            new_lines = sl.read_lines(filename)
+            if lines_crs is not None:
+               for a in new_lines:
+                  lines_crs.convert_array_to(grid_crs, a)
+            _, f_name = os.path.split(filename)
+            if f_name.lower().endswith('.dat'): face_set_id = f_name[:-4]
+            else: face_set_id = f_name
+            make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict)
 
 #   log.debug(f'full_pillar_list_dict:\n{full_pillar_list_dict}')
 
@@ -2583,7 +2600,7 @@ def add_faults(epc_file, source_grid, lines_file_list = None, lines_crs_uuid = N
       ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
-   if create_gcs and lines_file_list is not None:
+   if create_gcs and (polylines is not None or lines_file_list is not None):
       if new_epc_file is not None:
          grid_uuid = grid.uuid
          model = rq.Model(new_epc_file)
