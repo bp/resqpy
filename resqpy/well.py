@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '10th June 2021'
+version = '16th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -250,7 +250,7 @@ class DeviationSurvey(BaseResqpy):
 
    """
 
-   _content_type = "DeviationSurveyRepresentation"
+   resqml_type = "DeviationSurveyRepresentation"
    
    def __init__(self, parent_model, uuid=None, title=None, deviation_survey_root=None,
                 represented_interp=None, md_datum=None, md_uom='m', angle_uom='degrees',
@@ -560,7 +560,7 @@ class DeviationSurvey(BaseResqpy):
 
       interp_root = None
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
@@ -609,8 +609,7 @@ class DeviationSurvey(BaseResqpy):
       if interp_uuid is None:
          represented_interp = None
       else:
-         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
-         represented_interp = rqo.WellboreInterpretation(self.model, root_node=self.model.root_for_part(wellbore_interp_part))
+         represented_interp = rqo.WellboreInterpretation(self.model, uuid=interp_uuid)
       return represented_interp
 
 
@@ -792,8 +791,7 @@ class Trajectory():
       if interp_uuid is None:
          self.wellbore_interpretation = None
       else:
-         wellbore_interp_part = relatives_model.part_for_uuid(interp_uuid)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, root_node = relatives_model.root_for_part(wellbore_interp_part))
+         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid=interp_uuid)
 
 
    def compute_from_deviation_survey(self, survey = None, method = 'minimum curvature', md_domain = None, set_tangent_vectors = True):
@@ -1171,8 +1169,8 @@ class Trajectory():
 
       if self.wellbore_interpretation is None:
          log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
-         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model, feature_name=self.title)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model, wellbore_feature=self.wellbore_feature)
          self.feature_and_interpretation_to_be_written = True
       else:
          raise ValueError("Cannot add WellboreFeature, trajectory already has an associated WellboreInterpretation")
@@ -1303,7 +1301,7 @@ class Trajectory():
 
       interp_root = None
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
@@ -1484,8 +1482,8 @@ class WellboreFrame:
       """
       if self.wellbore_interpretation is not None:
          log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
-         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.title,extract_from_xml=False)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model,extract_from_xml=False,wellbore_feature=self.wellbore_feature)
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model, feature_name=self.title)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model=self.model, wellbore_feature=self.wellbore_feature)
          self.feature_and_interpretation_to_be_written = True
       else: log.info("WellboreInterpretation already exists")
 
@@ -1552,7 +1550,7 @@ class WellboreFrame:
                                  content_type = 'obj_WellboreTrajectoryRepresentation', root = wf_node)
 
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
@@ -1566,7 +1564,7 @@ class WellboreFrame:
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(wf_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
             if self.wellbore_interpretation is not None:
-               interp_root = self.wellbore_interpretation.root_node
+               interp_root = self.wellbore_interpretation.root
                self.model.create_reciprocal_relationship(wf_node, 'destinationObject', interp_root, 'sourceObject')
 
       self.root_node = wf_node
@@ -3030,11 +3028,10 @@ class BlockedWell:
             if traj_feature_root is not None:
                self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, root_node = traj_feature_root)
       if self.wellbore_feature is None:
-         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model,feature_name=self.trajectory.title,extract_from_xml=False)
+         self.wellbore_feature = rqo.WellboreFeature(parent_model=self.model, feature_name=self.trajectory.title)
          self.feature_to_be_written = True
       if self.wellbore_interpretation is None:
-         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model, extract_from_xml = False,
-                                                                   wellbore_feature = self.wellbore_feature)
+         self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model, wellbore_feature = self.wellbore_feature)
          if self.trajectory.wellbore_interpretation is None and shared_interpretation:
             self.trajectory.wellbore_interpretation = self.wellbore_interpretation
          self.interpretation_to_be_written = True
@@ -3189,7 +3186,7 @@ class BlockedWell:
 
       interp_root = None
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
@@ -3859,12 +3856,12 @@ def add_wells_from_ascii_file(model, crs_uuid, trajectory_file, comment_characte
       md_datum_list.append(md_datum)
 
       # create a well feature and add as part
-      feature = rqo.WellboreFeature(model, extract_from_xml = False, feature_name = well_name)
+      feature = rqo.WellboreFeature(model, feature_name = well_name)
       feature.create_xml()
       feature_list.append(feature)
 
       # create interpretation and add as part
-      interpretation = rqo.WellboreInterpretation(model, extract_from_xml = False, is_drilled = drilled, wellbore_feature = feature)
+      interpretation = rqo.WellboreInterpretation(model, is_drilled = drilled, wellbore_feature = feature)
       interpretation.create_xml(title_suffix = None)
       interpretation_list.append(interpretation)
 

@@ -304,7 +304,7 @@ class TimeSeries():
 
    def datetimes(self):
       """Returns a list of python-datetime objects """
-      return [dt.datetime.fromisoformat(t.rstrip('z')) for t in self.timestamps]
+      return [dt.datetime.fromisoformat(t.rstrip('Z')) for t in self.timestamps]
 
    def create_xml(self, add_as_part = True, root = None,
                   title = 'time series', originator = None):

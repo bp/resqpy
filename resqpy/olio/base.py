@@ -23,20 +23,20 @@ class BaseResqpy(metaclass=ABCMeta):
 
         class AnotherResqpyObject(BaseResqpy):
             
-            _content_type = 'obj_anotherresqmlobjectrepresentation'
+            resqml_type = 'obj_anotherresqmlobjectrepresentation'
 
     """
 
     @property
     @abstractmethod
-    def _content_type(self):
+    def resqml_type(self):
         """Definition of which RESQML object the class represents.
         
         Subclasses must overwrite this abstract attribute.
         """
         raise NotImplementedError
 
-    def __init__(self, model, uuid=None, title=None, originator=None):
+    def __init__(self, model, uuid=None, title=None, originator=None, root_node=None):
         """Load an existing resqml object, or create new.
 
         Args:
@@ -46,11 +46,16 @@ class BaseResqpy(metaclass=ABCMeta):
             originator (str, optional): Creator of object. By default, uses user id.
         """
         self.model = model
-        self.title = title
-        self.originator = originator
+        self.title = title  #: Citation title
+        self.originator = originator  #: Creator of object. By default, user id.
+        self.extra_metadata = {}
+
+        if root_node is not None:
+            warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
+            uuid = rqet.uuid_for_part_root(root_node)
 
         if uuid is None:
-            self.uuid = bu.new_uuid()
+            self.uuid = bu.new_uuid()  #: Unique identifier
             logger.debug(f"Created new uuid for object {self}")
         else:
             self.uuid = uuid
@@ -63,7 +68,7 @@ class BaseResqpy(metaclass=ABCMeta):
     def part(self):
         """Standard part name corresponding to self.uuid"""
 
-        return rqet.part_name_for_object(self._content_type, self.uuid)
+        return rqet.part_name_for_object(self.resqml_type, self.uuid)
 
     @property
     def root(self):
@@ -80,6 +85,30 @@ class BaseResqpy(metaclass=ABCMeta):
         # Citation block
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
+        self.extra_metadata = rqet.load_metadata_from_xml(self.root)
+
+    def try_reuse(self):
+        """Look for an equivalent existing RESQML object and modify the uuid of this object if found.
+
+        returns:
+           boolean: True if an equivalent object was found, False if not
+
+        note:
+           by design this method may change this object's uuid as a side effect
+        """
+
+        assert self.uuid is not None
+        if self.root is not None: return True
+        uuid_list = self.model.uuids(obj_type = self.resqml_type)
+        for other_uuid in uuid_list:
+            other = self.__class__(self.model, uuid = other_uuid)
+            if self == other:
+                logger.debug(f'reusing equivalent resqml object with uuid {other_uuid}')
+                self.uuid = other_uuid  # NB: change of uuid for this object
+                assert self.root is not None
+                return True
+        return False
+
 
     def create_xml(self, title=None, originator=None, add_as_part=False):
         """Write citation block to XML
@@ -105,7 +134,7 @@ class BaseResqpy(metaclass=ABCMeta):
         assert self.uuid is not None
 
         # Create the root node
-        node = self.model.new_obj_node(self._content_type)
+        node = self.model.new_obj_node(self.resqml_type)
         node.attrib['uuid'] = str(self.uuid)
 
         # Citation block
@@ -115,8 +144,12 @@ class BaseResqpy(metaclass=ABCMeta):
             root=node, title=self.title, originator=self.originator
         )
 
+        # Extra metadata
+        if hasattr(self, 'extra_metadata') and self.extra_metadata:
+            rqet.create_metadata_xml(node=node, extra_metadata=self.extra_metadata)
+
         if add_as_part:
-            self.model.add_part(self._content_type, self.uuid, node)
+            self.model.add_part(self.resqml_type, self.uuid, node)
             assert self.root is not None
         
         return node
@@ -124,9 +157,11 @@ class BaseResqpy(metaclass=ABCMeta):
     # Generic magic methods
 
     def __eq__(self, other):
-        """Implements equals operator. Compares class type and uuid"""
+        """Implements equals operator; uses is_equivalent() otherwise compares class type and uuid"""
+        if hasattr(self, 'is_equivalent'): return self.is_equivalent(other)
+        if not isinstance(other, self.__class__): return False
         other_uuid = getattr(other, "uuid", None)
-        return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
+        return bu.matching_uuids(self.uuid, other_uuid)
 
     def __ne__(self, other):
         """Implements not equal operator"""
@@ -146,14 +181,16 @@ class BaseResqpy(metaclass=ABCMeta):
         return html
 
     # Include some aliases for root, but raise warnings if they are used
-    # TODO: remove these aliases for self.node
+    # TODO: remove these aliases for self.root
 
     @property
     def root_node(self):
+        """DEPRECATED. Alias for root"""
         warnings.warn("Attribute 'root_node' is deprecated. Use 'root'", DeprecationWarning)
         return self.root
 
     @property
     def node(self):
+        """DEPRECATED. Alias for root"""
         warnings.warn("Attribute 'node' is deprecated. Sse 'root'", DeprecationWarning)
         return self.root

@@ -1,6 +1,6 @@
 """rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
-version = '25th May 2021'
+version = '16th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -979,10 +979,9 @@ def add_surfaces(epc_file,                       # existing resqml model
       surface.write_hdf5(hdf5_file, mode = h5_mode)
 
       if make_horizon_interpretations_and_features:
-         feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', extract_from_xml = False, feature_name = short_name)
+         feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', feature_name = short_name)
          feature.create_xml()
-         interp = rqo.HorizonInterpretation(model, extract_from_xml = False,
-                                            genetic_boundary_feature = feature, domain = 'depth')
+         interp = rqo.HorizonInterpretation(model, genetic_boundary_feature = feature, domain = 'depth')
          interp_root = interp.create_xml()
          surface.set_represented_interpretation_root(interp_root)
 

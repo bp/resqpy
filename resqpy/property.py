@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '15th June 2021'
+version = '17th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -4578,6 +4578,7 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
 
    if property_kind in ['rock volume', 'pore volume', 'volume']:
       if from_crs is None: return None
+      if from_crs == 'ft' and property_kind == 'pore volume': return 'bbl'  # seems to be Nexus 'ENGLISH' uom for pv out
       return from_crs + '3'  # ie. m3 or ft3
    if property_kind == 'depth':
       if crs_node is None: return None

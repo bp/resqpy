@@ -36,18 +36,16 @@ class _BasePolyline:
          log.debug(f'represented interpretation already exisrs for surface {self.title}')
          return
       if kind in ['horizon', 'geobody boundary']:
-         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, feature_name = name)
          feature.create_xml()
          if kind == 'horizon':
-            interp = rqo.HorizonInterpretation(self.model, extract_from_xml = False,
-                                               genetic_boundary_feature = feature, domain = 'depth')
+            interp = rqo.HorizonInterpretation(self.model, genetic_boundary_feature = feature, domain = 'depth')
          else:
-            interp = rqo.GeobodyBoundaryInterpretation(self.model, extract_from_xml = False,
-                                                       genetic_boundary_feature = feature, domain = 'depth')
+            interp = rqo.GeobodyBoundaryInterpretation(self.model, genetic_boundary_feature = feature, domain = 'depth')
       elif kind in ['fault', 'fracture']:
-         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, extract_from_xml = False, feature_name = name)
+         feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, feature_name = name)
          feature.create_xml()
-         interp = rqo.FaultInterpretation(self.model, extract_from_xml = False, is_normal = is_normal,
+         interp = rqo.FaultInterpretation(self.model, is_normal = is_normal,
                                           tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
       else:
          log.critical('code failure')
@@ -160,6 +158,10 @@ class Polyline(_BasePolyline):
 
         if self.uuid is None: self.uuid = bu.new_uuid()
 
+    @property
+    def rep_int_uuid(self):
+        # TODO: Track uuid only, not root
+        return rqet.uuid_for_part_root(self.rep_int_root)
 
     def is_convex(self, trust_metadata = True):
         """Returns True if the polyline is closed and convex in the xy plane, otherwise False."""
