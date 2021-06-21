@@ -62,7 +62,7 @@ def test_time_series_from_list(tmp_path):
    ts_list = ['2022-01-01', '2022-02-01', '2022-03-01', '2022-04-01']
    ts = rqts.time_series_from_list(ts_list, parent_model = model)
    assert ts.number_of_timestamps() == 4
-   assert ts.days_between_timestamps(0, 4) == 31 + 28 + 31
+   assert ts.days_between_timestamps(0, 3) == 31 + 28 + 31
    ts.create_xml()
    model.store_epc()
    model = rq.Model(epc)
@@ -70,7 +70,7 @@ def test_time_series_from_list(tmp_path):
    assert ts_uuid is not None
    ts = rqts.TimeSeries(model, uuid = ts_uuid)
    assert ts.number_of_timestamps() == 4
-   assert ts.days_between_timestamps(0, 4) == 31 + 28 + 31
+   assert ts.days_between_timestamps(0, 3) == 31 + 28 + 31
 
 
 def test_time_series_from_args(tmp_path):

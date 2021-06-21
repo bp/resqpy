@@ -93,11 +93,11 @@ def test_string_lookup():
          173: 'amazing',
          1072: 'brilliant'}
    sl2 = rqp.StringLookup(model, int_to_str_dict = d2, title = 'head in the clouds')
-   assert not sl.stored_as_list
-   assert sl.length() == 4
-   assert sl.get_string(1072) == 'brilliant'
-   assert sl.get_string(555) is None
-   assert sl.get_index_for_string('amazing') == 173
+   assert not sl2.stored_as_list
+   assert sl2.length() == 4
+   assert sl2.get_string(1072) == 'brilliant'
+   assert sl2.get_string(555) is None
+   assert sl2.get_index_for_string('amazing') == 173
    sl2.create_xml()
    assert set(model.titles(obj_type = 'StringTableLookup')) == set(['stargazing', 'head in the clouds'])
    assert sl != sl2
