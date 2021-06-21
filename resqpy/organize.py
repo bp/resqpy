@@ -113,7 +113,7 @@ class OrganizationFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates an organization feature xml node from this organization feature object."""
 
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       # create node with citation block
       ofn = super().create_xml(add_as_part=False, originator=originator)
 
@@ -151,7 +151,7 @@ class GeobodyFeature(BaseResqpy):
 
    def create_xml(self, add_as_part=True, originator=None, reuse=True):
       """Creates a geobody feature xml node from this geobody feature object."""
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
@@ -177,7 +177,7 @@ class BoundaryFeature(BaseResqpy):
 
    def create_xml(self, add_as_part=True, originator=None, reuse=True):
       """Creates a geobody feature xml node from this geobody feature object."""
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
@@ -202,7 +202,7 @@ class FrontierFeature(BaseResqpy):
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a frontier feature organisational xml node from this frontier feature object."""
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
@@ -227,7 +227,7 @@ class GeologicUnitFeature(BaseResqpy):
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a geologic unit feature organisational xml node from this geologic unit feature object."""
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
@@ -259,7 +259,7 @@ class FluidBoundaryFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a fluid boundary feature organisational xml node from this fluid boundary feature object."""
 
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       # create node with citation block
       fbf = super().create_xml(add_as_part=False, originator=originator)
 
@@ -335,7 +335,7 @@ class RockFluidUnitFeature(BaseResqpy):
       if self.phase not in self.valid_phases:
          raise ValueError(f"Phase '{self.phase}' not recognized")
 
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       # create node with citation block
       rfuf = super().create_xml(add_as_part=False, originator=originator)
 
@@ -392,7 +392,7 @@ class TectonicBoundaryFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a tectonic boundary feature organisational xml node from this tectonic boundary feature object."""
 
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       # create node with citation block
       tbf = super().create_xml(add_as_part=False, originator=originator)
 
@@ -439,7 +439,7 @@ class GeneticBoundaryFeature(BaseResqpy):
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a genetic boundary feature organisational xml node from this genetic boundary feature object."""
 
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       # create node with citation block
       gbf = super().create_xml(add_as_part=False, originator=originator)
 
@@ -489,7 +489,7 @@ class WellboreFeature(BaseResqpy):
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
       """Creates a wellbore feature organisational xml node from this wellbore feature object."""
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse(): return self.root  # check for reusable (equivalent) object
       return super().create_xml(add_as_part=add_as_part, originator=originator)
 
 
@@ -538,6 +538,11 @@ class FaultInterpretation(BaseResqpy):
       self.throw_interpretation_list = None  # list of (list of throw kind, (base chrono uuid, top chrono uuid)))
 
       super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
+
+   @property
+   def feature_uuid(self):
+      # TODO: rewrite using uuid as primary key
+      return rqet.uuid_for_part_root(self.feature_root)
 
    def load_from_xml(self):
       super().load_from_xml()

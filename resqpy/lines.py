@@ -158,6 +158,10 @@ class Polyline(_BasePolyline):
 
         if self.uuid is None: self.uuid = bu.new_uuid()
 
+    @property
+    def rep_int_uuid(self):
+        # TODO: Track uuid only, not root
+        return rqet.uuid_for_part_root(self.rep_int_root)
 
     def is_convex(self, trust_metadata = True):
         """Returns True if the polyline is closed and convex in the xy plane, otherwise False."""
