@@ -99,6 +99,6 @@ def test_string_lookup():
    assert sl.get_string(555) is None
    assert sl.get_index_for_string('amazing') == 173
    sl2.create_xml()
-   assert set(model.titles(obj_type == 'StringTableLookup')) == set(['stargazing', 'head in the clouds'])
+   assert set(model.titles(obj_type = 'StringTableLookup')) == set(['stargazing', 'head in the clouds'])
    assert sl != sl2
 

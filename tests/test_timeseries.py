@@ -66,7 +66,7 @@ def test_time_series_from_list(tmp_path):
    ts.create_xml()
    model.store_epc()
    model = rq.Model(epc)
-   ts_uuid = model.uuid(obj_type == 'TimeSeries')
+   ts_uuid = model.uuid(obj_type = 'TimeSeries')
    assert ts_uuid is not None
    ts = rqts.TimeSeries(model, uuid = ts_uuid)
    assert ts.number_of_timestamps() == 4
@@ -83,7 +83,7 @@ def test_time_series_from_args(tmp_path):
    ts.create_xml()
    model.store_epc()
    model = rq.Model(epc)
-   ts_uuid = model.uuid(obj_type == 'TimeSeries')
+   ts_uuid = model.uuid(obj_type = 'TimeSeries')
    assert ts_uuid is not None
    ts = rqts.TimeSeries(model, uuid = ts_uuid)
    assert ts.number_of_timestamps() == 26
