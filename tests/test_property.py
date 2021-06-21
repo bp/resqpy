@@ -73,3 +73,32 @@ def test_bespoke_property_kind():
    pk6.create_xml()
    assert len(model.uuids(obj_type = 'PropertyKind')) == 4
    assert pk6 == pk4
+
+
+# ---- Test string lookup ---
+
+def test_string_lookup():
+   model = rq.Model(create_basics = True)
+   d = {1: 'peaty',
+        2: 'muddy',
+        3: 'sandy',
+        4: 'granite'}
+   sl = rqp.StringLookup(model, int_to_str_dict = d, title = 'stargazing')
+   sl.create_xml()
+   assert sl.length() == 5 if sl.stored_as_list else 4
+   assert sl.get_string(3) == 'sandy'
+   assert sl.get_index_for_string('muddy') == 2
+   d2 = {0: 'nothing',
+         27: 'something',
+         173: 'amazing',
+         1072: 'brilliant'}
+   sl2 = rqp.StringLookup(model, int_to_str_dict = d2, title = 'head in the clouds')
+   assert not sl.stored_as_list
+   assert sl.length() == 4
+   assert sl.get_string(1072) == 'brilliant'
+   assert sl.get_string(555) is None
+   assert sl.get_index_for_string('amazing') == 173
+   sl2.create_xml()
+   assert set(model.titles(obj_type == 'StringTableLookup')) == set(['stargazing', 'head in the clouds'])
+   assert sl != sl2
+
