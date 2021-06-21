@@ -2902,6 +2902,32 @@ class Model():
          self.consolidation.check_map_integrity()
 
 
+   def iter_objs(self, cls):
+      """Iterate over all available objects of given resqpy class within the model
+
+      Note:
+
+         The resqpy class must expose a class attribute `resqml_type`, and must support
+         being created with the signature: `obj = cls(model, uuid=uuid)`.
+
+      Example use::
+
+         for well in model.iter_objs(cls=resqpy.well.WellboreFeature):
+            print(well.title, well.uuid)
+
+      Args:
+         cls: resqpy class to iterate
+
+      Yields:
+         list of instances of cls
+
+      :meta common:
+      """
+
+      uuids = self.uuids(obj_type=cls.resqml_type)
+      for uuid in uuids:
+         yield cls(self, uuid=uuid)
+
    def iter_wellbore_interpretations(self):
       """ Iterable of all WellboreInterpretations associated with the model
 
