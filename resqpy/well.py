@@ -1460,10 +1460,7 @@ class WellboreFrame:
       if interp_uuid is None:
          self.wellbore_interpretation = None
       else:
-         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(
-            self.model, root_node = self.model.root_for_part(wellbore_interp_part)
-         )
+         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid=interp_uuid)
 
       # Set wellboreframe title
       self.title = rqet.citation_title_for_node(self.root_node)

@@ -58,7 +58,7 @@ def example_model_with_well(example_model_and_crs):
 
    # Create a measured depth datum
    datum = MdDatum(
-      parent_model=model, crs_root=crs.crs_root, location=(0, 0, -elevation), md_reference='kelly bushing'
+      parent_model=model, crs_root=crs.root, location=(0, 0, -elevation), md_reference='kelly bushing'
    )
    datum.create_xml()
 
