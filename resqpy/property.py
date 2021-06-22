@@ -3897,7 +3897,7 @@ class WellLogCollection(PropertyCollection):
 
       # Add to the "import list"
       self.add_cached_array_to_imported_list(
-         cached_array=data,
+         cached_array=np.array(data),
          source_info='',
          # TODO: put the curve.descr somewhere
          keyword=title,
@@ -3984,12 +3984,14 @@ class WellLogCollection(PropertyCollection):
       # todo: include datum information in description
       las.append_curve('MD', md_values, unit=md_unit)
 
-      for log in self.iter_logs():
-         name = log.title
-         unit = log.uom
-         values = log.values()
+      for well_log in self.iter_logs():
+         name = well_log.title
+         unit = well_log.uom
+         values = well_log.values()
          if values.ndim > 1:
             raise NotImplementedError('Multidimensional logs not yet supported in pandas')
+         assert len(values) > 0
+         log.debug(f"Writing log {name} of length {len(values)} and shape {values.shape}")
          las.append_curve(name, values, unit=unit, descr=None)
       return las
 

@@ -1412,15 +1412,19 @@ class WellboreFrame:
 
       #: All logs associated with the wellbore frame; an instance of :class:`resqpy.property.WellLogCollection`
       self.logs = None
-
+      
       if frame_root is not None:
          self.load_from_xml(frame_root)
       elif trajectory is not None and mds is not None and len(mds) > 1:
          self.node_count = len(mds)
          self.node_mds = np.array(mds)
          assert self.node_mds is not None and self.node_mds.ndim == 1
-
+          
       if self.uuid is None: self.uuid = bu.new_uuid()
+
+      # UUID needs to have been created before LogCollection can be made
+      # TODO: Figure out when this should be created, and how it is kept in sync when new logs are created
+      self.logs = rqp.WellLogCollection(frame=self)
 
 
    def load_from_xml(self, node):

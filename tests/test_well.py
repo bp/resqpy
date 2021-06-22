@@ -3,7 +3,9 @@ from resqpy.organize import WellboreFeature
 
 import pytest
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_array_almost_equal
+from pandas.testing import assert_frame_equal
 
 from resqpy.model import Model
 from resqpy.crs import Crs
@@ -79,14 +81,17 @@ def test_logs(example_model_with_logs):
    log_list = list(log_collection.iter_logs())
    assert len(log_list) == 2
 
+   # TODO: would be nice to write: log_collection.get_curve("GR")
    gr = log_list[0]
    assert gr.title == "GR"
-   assert gr.unit == "gAPI"
+   assert gr.uom == "gAPI"
    assert_array_almost_equal(gr.values(), [1,2,1,2])
 
    nphi = log_list[1]
    assert nphi.title == 'NPHI'
-   assert nphi.unit == "v/v"
+
+   # TODO: get more units working
+   # assert nphi.uom == "v/v"
    assert_array_almost_equal(nphi.values(), [0.1, 0.1, np.NaN, np.NaN])
    
 
@@ -95,13 +100,24 @@ def test_logs_conversion(example_model_with_logs):
    model, well_interp, datum, traj, frame, log_collection = example_model_with_logs
 
    # Pandas
-   df = log_collection.to_pandas()
-   assert len(df.columns) == 2
-   assert len(df) > 0
-
+   df = log_collection.to_df()
+   df_expected = pd.DataFrame(
+      data={"GR": [1,2,1,2], "NPHI": [0.1, 0.1, np.NaN, np.NaN]},
+      index=[1,2,3,4]
+   )
+   assert_frame_equal(df_expected, df, check_dtype=False)
+   
    # LAS
    las = log_collection.to_las()
-   assert las.well.WELL == 'well A'
+   assert las.well.WELL.value == 'well A'
+
+   gr = las.get_curve("GR")
+   assert gr.unit.casefold() == "GAPI".casefold()
+   assert_array_almost_equal(gr.data, [1,2,1,2])
+
+   nphi = las.get_curve("NPHI")
+   # assert nphi.unit == "GAPI"
+   assert_array_almost_equal(nphi.data, [0.1, 0.1, np.NaN, np.NaN])
 
 
 # Trajectory
