@@ -792,6 +792,15 @@ class PropertyCollection():
 
       return list(self.dict.keys())
 
+   def uuids(self):
+      """Return list of uuids in this collection.
+
+      returns:
+         list of uuids being the members of this collection; there is one uuid per property array
+
+      :meta common:
+      """
+      return [self.model.uuid_for_part(p) for p in self.dict.keys()]
 
    def selective_parts_list(self,
                             realization = None,
@@ -3927,7 +3936,7 @@ class WellLogCollection(PropertyCollection):
             print(log.title)
       """
       
-      return (WellLog(collection=self, part=part) for part in self.parts())
+      return (WellLog(collection=self, uuid=uuid) for uuid in self.uuids())
 
    def to_df(self, include_units=False):
       """ Return pandas dataframe of log data
@@ -4010,19 +4019,20 @@ class WellLogCollection(PropertyCollection):
 class WellLog:
    """ Thin wrapper class around RESQML properties for well logs """
 
-   def __init__(self, collection, part):
+   def __init__(self, collection, uuid):
       """ Create a well log from a part name """
 
       self.collection: PropertyCollection = collection
       self.model = collection.model
-      self.part = part
+      self.uuid = uuid
 
+      part = self.model.part_for_uuid(uuid)
       indexable = self.collection.indexable_for_part(part)
       if indexable != 'nodes':
          raise NotImplementedError('well frame related property does not have nodes as indexable element')
 
       #: Name of log
-      self.title = self.model.citation_title_for_part(part)  # make this title
+      self.title = self.model.citation_title_for_part(part)
 
       #: Unit of measure
       self.uom = self.collection.uom_for_part(part)
@@ -4034,7 +4044,8 @@ class WellLog:
          may return 2D numpy array with shape (num_depths, num_columns).
       """
 
-      return self.collection.cached_part_array_ref(self.part)
+      part = self.model.part_for_uuid(self.uuid)
+      return self.collection.cached_part_array_ref(part)
 
 
 
