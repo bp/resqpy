@@ -3863,20 +3863,70 @@ class WellLogCollection(PropertyCollection):
          for actual well logs, the realization argument will usually be None; for synthetic logs created from an ensemble
          it may be of use
 
-      note:
-         When iterated over, yields instances of :class:`resqpy.property.WellLog` .
-
-         For example::
-
-            for log in log_collection.logs():
-               print(log.name)
       """
 
       super().__init__(support=frame, property_set_root=property_set_root, realization=realization)
 
-   def logs(self):
-      """ Generator that yeilds component Log objects """
+   def add_log(self, title, data, unit, discrete=False, case_sensitive_units=False, realization=None, write=True):
+      """Add a well log to the collection, and optionally save to HDF / XML
+      
+      Args:
+         title (str): Name of log, typically the mnemonic
+         data (array-like): log data to write. Must have same length as frame MDs
+         unit (str): Unit of measure
+         discrete (bool): by default False, i.e. continuous
+         case_sensitive_units (bool): If True, consider case when parsing units.
+         realization (int): If given, assign data to a realisation.
 
+      Returns:
+         uuids: list of uuids of newly added properties. Only returned if write=True.
+
+      """
+      # Validate
+      if self.support is None:
+         raise ValueError('Supporting WellboreFrame not present')
+      if len(data) != self.support.node_count:
+         raise ValueError(
+            f'Data mismatch: data length={len(data)}, but MD node count={self.support.node_count}'
+         )
+
+      # Infer valid RESQML properties
+      # TODO: Store orginal unit somewhere if it's not a valid RESQML unit
+      uom = validate_uom_from_string(unit, case_sensitive=case_sensitive_units)
+      property_kind, facet_type, facet = infer_property_kind(title, uom)
+
+      # Add to the "import list"
+      self.add_cached_array_to_imported_list(
+         cached_array=data,
+         source_info='',
+         # TODO: put the curve.descr somewhere
+         keyword=title,
+         discrete=discrete,
+         uom=uom,
+         property_kind=property_kind,
+         facet_type=facet_type,
+         facet=facet,
+         realization=realization,
+      )
+
+      if write:
+         self.write_hdf5_for_imported_list()
+         return self.create_xml_for_imported_list_and_add_parts_to_model()
+      else:
+         return None
+
+   def iter_logs(self):
+      """ Generator that yields component Log objects.
+      
+      Yields:
+         instances of :class:`resqpy.property.WellLog` .
+
+      Example::
+
+         for log in log_collection.logs():
+            print(log.title)
+      """
+      
       return (WellLog(collection=self, part=part) for part in self.parts())
 
    def to_df(self, include_units=False):
@@ -3894,9 +3944,9 @@ class WellLogCollection(PropertyCollection):
 
       # Get logs
       data = {}
-      for log in self.logs():
+      for log in self.iter_logs():
 
-         col_name = log.name
+         col_name = log.title
          if include_units and log.uom:
             col_name += f' ({log.uom})'
 
@@ -3934,8 +3984,8 @@ class WellLogCollection(PropertyCollection):
       # todo: include datum information in description
       las.append_curve('MD', md_values, unit=md_unit)
 
-      for log in self.logs():
-         name = log.name
+      for log in self.iter_logs():
+         name = log.title
          unit = log.uom
          values = log.values()
          if values.ndim > 1:
@@ -3955,7 +4005,6 @@ class WellLogCollection(PropertyCollection):
       self.set_support(support = frame)
 
 
-
 class WellLog:
    """ Thin wrapper class around RESQML properties for well logs """
 
@@ -3971,7 +4020,7 @@ class WellLog:
          raise NotImplementedError('well frame related property does not have nodes as indexable element')
 
       #: Name of log
-      self.name = self.model.citation_title_for_part(part)
+      self.title = self.model.citation_title_for_part(part)  # make this title
 
       #: Unit of measure
       self.uom = self.collection.uom_for_part(part)

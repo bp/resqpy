@@ -3610,42 +3610,17 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization=None,
    # Create a WellLogCollection in which to put logs
    collection = rqp.WellLogCollection(frame=well_frame, realization=realization)
 
-   # Step 1. Read in data from each curve in turn (skipping first curve which has depths)
+   # Read in data from each curve in turn (skipping first curve which has depths)
    for curve in las.curves[1:]:
-
-      # Steps to load in array data:
-      # 1. read array of data into a numpy array (already performed by las.curves[])
-      # 2. add to the "import list"
-      # 3. write imported list arrays to hdf5 file
-      # 4. create resqml xml nodes for imported list arrays and add as parts to model
-      # 5. include newly added parts in collection
-
-      # Infer valid RESQML properties
-      # TODO: Store orginal unit somewhere if it's not a valid RESQML unit
-      uom = rqp.validate_uom_from_string(curve.unit, case_sensitive=case_sensitive_units)
-      property_kind, facet_type, facet = rqp.infer_property_kind(curve.mnemonic, uom)
-
-      assert len(curve.data) == well_frame.node_count
-
-      # Step 2. add to the "import list"
-      collection.add_cached_array_to_imported_list(
-         cached_array=curve.data,
-         source_info='',
-         # TODO: put the curve.descr somewhere
-         keyword=curve.mnemonic,  # ': '.join([curve.mnemonic, curve.descr]),
-         discrete=False,
-         uom=uom,
-         property_kind=property_kind,
-         facet_type=facet_type,
-         facet=facet,
-         realization=realization,
+      
+      collection.add_log(
+         title=curve.mnemonic,
+         data=curve.data,
+         unit=curve.unit,
+         case_sensitive_units=case_sensitive_units,
+         realization=realization
       )
-
-   # Step 3. write imported list arrays to hdf5 file
-   collection.write_hdf5_for_imported_list()
-   # Step 4. create resqml xml nodes for imported list arrays and add as parts to model
-   # And step 5. include newly added parts in collection
-   collection.create_xml_for_imported_list_and_add_parts_to_model()
+      # TODO: for speed, only write on last log
 
    return collection, well_frame
 
