@@ -57,42 +57,51 @@ def test_trajectory_iterators(example_model_with_well):
    assert sorted(uuids_1) == sorted(uuids_2)
 
 
-@pytest.mark.skip(reason="Example data not yet available")
-def test_logs():
+def test_logs(example_model_with_logs):
+
+   model, well_interp, datum, traj, frame, log_collection = example_model_with_logs
+
    # Check logs can be extracted from resqml dataset
 
-   epc_path = Path(__file__).parent / 'example_data/my_model.epc'
-   model = Model(epc_file=str(epc_path))
-
-   discovered_logs = 0
-
+   # Check exactly one wellbore frame exists in the model
+   discovered_frames = 0
    for trajectory in model.iter_trajectories():
       for frame in trajectory.iter_wellbore_frames():
+         discovered_frames += 1
+   assert discovered_frames == 1
 
-         # Measured depths
-         mds = frame.node_mds
-         assert isinstance(mds, np.ndarray)
-         assert len(mds) > 0
+   # Check MDs
+   mds = frame.node_mds
+   assert isinstance(mds, np.ndarray)
+   assert_array_almost_equal(mds, [1,2,3,4])
 
-         # Logs
-         # TODO: some way of testing whether log collection is empty or not
-         log_collection = frame.logs
+   # Check logs
+   log_list = list(log_collection.iter_logs())
+   assert len(log_list) == 2
 
-         # Test conversion
-         df = log_collection.to_pandas()
-         las = log_collection.to_las()
-         assert len(df.columns) > 0
-         assert len(df) > 0
-         assert len(las.well.WELL) > 0
+   gr = log_list[0]
+   assert gr.title == "GR"
+   assert gr.unit == "gAPI"
+   assert_array_almost_equal(gr.values(), [1,2,1,2])
 
-         for log in log_collection:
-            values = log.values()
+   nphi = log_list[1]
+   assert nphi.title == 'NPHI'
+   assert nphi.unit == "v/v"
+   assert_array_almost_equal(nphi.values(), [0.1, 0.1, np.NaN, np.NaN])
+   
 
-            assert len(log.name) > 0
-            assert values.shape[-1] == len(mds)
-            discovered_logs += 1
+def test_logs_conversion(example_model_with_logs):
 
-   assert discovered_logs > 0
+   model, well_interp, datum, traj, frame, log_collection = example_model_with_logs
+
+   # Pandas
+   df = log_collection.to_pandas()
+   assert len(df.columns) == 2
+   assert len(df) > 0
+
+   # LAS
+   las = log_collection.to_las()
+   assert las.well.WELL == 'well A'
 
 
 # Trajectory
