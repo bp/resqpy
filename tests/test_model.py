@@ -1,4 +1,4 @@
-import uuid
+from numpy.lib.arraysetops import isin
 import pytest
 import os
 
@@ -52,6 +52,31 @@ def test_model_iterators(example_model_with_well):
    assert w == well_interp
    assert d == datum
    assert t == traj
+
+
+def test_model_iterate_objects(example_model_with_well):
+
+   from resqpy.organize import WellboreFeature, WellboreInterpretation
+
+   model, well_interp, _, _ = example_model_with_well
+   
+   # Try iterating over wellbore features
+
+   wells = model.iter_objs(WellboreFeature)
+   wells = list(wells)
+   w = wells[0]
+   assert len(wells) == 1
+   assert isinstance(wells[0], WellboreFeature)
+   assert wells[0].title == "well A"
+   
+   # Try iterating over wellbore interpretations
+
+   interps = model.iter_objs(WellboreInterpretation)
+   interps = list(interps)
+   assert len(interps) == 1
+   assert isinstance(interps[0], WellboreInterpretation)
+   assert interps[0] == well_interp
+
 
 def test_model_iter_crs(example_model_and_crs):
    

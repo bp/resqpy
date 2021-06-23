@@ -1,6 +1,6 @@
 """time_series.py: RESQML time series class."""
 
-version = '19th May 2021'
+version = '18th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -12,16 +12,16 @@ log.debug('resqml_time_series.py version ' + version)
 
 import os
 import datetime as dt
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
+import warnings
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 
-class TimeDuration():
+class TimeDuration:
    """A thin wrapper around python's datatime timedelta objects (not a RESQML class)."""
 
    def __init__(self, days = None, hours = None, minutes = None, seconds = None,
@@ -66,20 +66,20 @@ class TimeDuration():
 
 
 
-class TimeSeries():
+class TimeSeries(BaseResqpy):
    """Class for RESQML Time Series within RESQML model object."""
 
-   def __init__(self, parent_model, extract_from_xml = True, time_series_root = None,
-                first_timestamp = None, daily = None, monthly = None, quarterly = None, yearly = None):
+   resqml_type = 'TimeSeries'
+
+   def __init__(self, parent_model, uuid = None, time_series_root = None,
+                first_timestamp = None, daily = None, monthly = None, quarterly = None, yearly = None,
+                title = None, originator = None):
       """Create a TimeSeries object, either from a time series node in parent model, or from given data.
 
       arguments:
          parent_model (model.Model): the resqpy model to which the time series will belong
-         extract_from_xml (boolean, default True): if True, the time series is populated from the xml
-            for an existing part in the model
-         time_series_root (xml node, optional): if extract_from_xml is True, then this argument is
-            usually passed to identify the xml root node; if absent the root for the 'main' time series
-            in the model is used
+         uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
+         time_series_root (xml node, DEPRECATED): the xml root node; use uuid instead
          first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
             this and the remaining arguments are ignored if loading from xml
          daily (non-negative int, optional): the number of one day interval timesteps to start the series
@@ -100,35 +100,29 @@ class TimeSeries():
       :meta common:
       """
 
-      self.model = parent_model
-      self.time_series_root = time_series_root
       self.timestamps = []    # ordered list of timestamp strings in resqml/iso format
-      self.uuid = None
-      if extract_from_xml:
-         self.time_series_root = self.model.resolve_time_series_root(time_series_root)
-         if self.time_series_root is None: return  # no time series in model
-         self.uuid = self.time_series_root.attrib['uuid']
-         for child in self.time_series_root:
-            if rqet.stripped_of_prefix(child.tag) != 'Time': continue
-            dt_node = rqet.find_tag(child, 'DateTime')
-            if dt_node is None: continue          # could raise an exception here
-            self.timestamps.append(dt_node.text)  # todo: trim and check timestamp
-            self.timestamps.sort()
-      elif first_timestamp is not None:
+      if first_timestamp is not None:
          self.timestamps.append(first_timestamp)  # todo: check format of first_timestamp
          if daily is not None:
-            for _ in range(daily):
-               self.extend_by_days(1)
+            for _ in range(daily): self.extend_by_days(1)
          if monthly is not None:
-            for _ in range(monthly):
-               self.extend_by_days(30)
+            for _ in range(monthly): self.extend_by_days(30)
          if quarterly is not None:
-            for _ in range(quarterly):
-               self.extend_by_days(90)   # could use 91
+            for _ in range(quarterly): self.extend_by_days(90)   # could use 91
          if yearly is not None:
-            for _ in range(yearly):
-               self.extend_by_days(365)  # could use 360
-      if self.uuid is None: self.uuid = bu.new_uuid()
+            for _ in range(yearly): self.extend_by_days(365)  # could use 360
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = time_series_root)
+
+
+   def load_from_xml(self):
+      super().load_from_xml()
+      time_series_root = self.root
+      for child in self.time_series_root:
+         if rqet.stripped_of_prefix(child.tag) != 'Time': continue
+         dt_node = rqet.find_tag(child, 'DateTime')
+         if dt_node is None: continue          # could raise an exception here
+         self.timestamps.append(dt_node.text)  # todo: trim and check timestamp
+         self.timestamps.sort()
 
 
    def is_equivalent(self, other_ts, tol_seconds = 1):
@@ -146,17 +140,8 @@ class TimeSeries():
       return True
 
 
-   def __eq__(self, other):
-      return self.is_equivalent(other)
-
-
-   def __ne__(self, other):
-      return not self.is_equivalent(other)
-
-
    def set_model(self, parent_model):
       """Associate the time series with a resqml model (does not create xml or write hdf5 data)."""
-
       self.model = parent_model
 
 
@@ -165,7 +150,6 @@ class TimeSeries():
 
       :meta common:
       """
-
       return len(self.timestamps)
 
 
@@ -180,15 +164,21 @@ class TimeSeries():
       return self.timestamps[index]
 
 
+   def iter_timestamps(self):
+      """Iterator over timestamps.
+
+      :meta common:
+      """
+      for t_stamp in self.timestamps:
+         yield t_stamp
+
+
    def last_timestamp(self):
       """Returns the last timestamp in the series.
 
       :meta common:
       """
-
-      index = len(self.timestamps) - 1
-      if index < 0: return None
-      return self.timestamps[index]
+      return self.timestamps[-1] if self.timestamps else None
 
 
    def index_for_timestamp(self, timestamp):
@@ -199,22 +189,46 @@ class TimeSeries():
 
       :meta common:
       """
-
       for index in range(len(self.timestamps)):
          if self.timestamps[index] == timestamp: return index
       return None
 
 
    def index_for_timestamp_not_later_than(self, timestamp):
-      """Returns the index of the latest timestamp that is not later than the specified timestamp.
+      """Returns the index of the latest timestamp that is not later than the specified date.
 
       :meta common:
       """
-
       index = len(self.timestamps) - 1
       while (index >= 0) and (self.timestamps[index] > timestamp): index -= 1
       if index < 0: return None
       return index
+
+
+   def index_for_timestamp_not_earlier_than(self, timestamp):
+      """Returns the index of the earliest timestamp that is not earlier than the specified date.
+
+      :meta common:
+      """
+      index = 0
+      while (index < len(self.timestamps)) and (self.timestamps[index] < timestamp): index += 1
+      if index >= len(self.timestamps): return None
+      return index
+
+
+   def index_for_timestamp_closest_to(self, timestamp):
+      """Returns the index of the timestamp that is closest to the specified date.
+
+      :meta common:
+      """
+      if not self.timestamps: return None
+      before = self.index_for_timestamp_not_later_than(self, timestamp)
+      if not before: return 0
+      if before == len(self.timestamps) - 1 or self.timestamps[before] == timestamp: return before
+      after = before + 1
+      early_delta = TimeDuration(earlier_timestamp = self.timestamps[before], later_timestamp = timestamp)
+      later_delta = TimeDuration(earlier_timestamp = timestamp, later_timestamp = self.timestamps[after])
+      return before if early_delta <= later_delta else after
 
 
    def duration_between_timestamps(self, earlier_index, later_index):
@@ -222,7 +236,6 @@ class TimeSeries():
 
       :meta common:
       """
-
       if earlier_index < 0 or later_index >= len(self.timestamps) or later_index < earlier_index: return None
       return TimeDuration(earlier_timestamp = self.timestamps[earlier_index],
                           later_timestamp = self.timestamps[later_index])
@@ -230,7 +243,6 @@ class TimeSeries():
 
    def days_between_timestamps(self, earlier_index, later_index):
       """Returns the number of whole days between a pair of timestamps, as an integer."""
-
       delta = self.duration_between_timestamps(earlier_index, later_index)
       if delta is None: return None
       return delta.duration.days
@@ -241,14 +253,12 @@ class TimeSeries():
 
       :meta common:
       """
-
       if index < 0 or index >= len(self.timestamps): return None
       return self.duration_between_timestamps(0, index)
 
 
    def days_since_start(self, index):
       """Returns the number of days between the start of the time series and the indexed timestamp."""
-
       return self.duration_since_start(index).duration.days
 
 
@@ -257,14 +267,12 @@ class TimeSeries():
 
       :meta common:
       """
-
       if index < 1 or index >= len(self.timestamps): return None
       return self.duration_between_timestamps(index - 1, index)
 
 
    def step_days(self, index):
       """Returns the number of days between the indexed timestamp and preceeding one."""
-
       delta = self.step_duration(index)
       if delta is None: return None
       return delta.duration.days
@@ -274,7 +282,6 @@ class TimeSeries():
    # Could check for relationships involving the time series and disallow changes if any found?
    def add_timestamp(self, new_timestamp, allow_insertion = False):
       """Inserts a new timestamp into the time series."""
-
       # todo: check that new_timestamp is in valid format (iso format + 'Z')
       if allow_insertion:
          # NB: This can insert a timestamp anywhere in the series, which will invalidate indices, possibly corrupting model
@@ -290,7 +297,6 @@ class TimeSeries():
 
    def extend_by_duration(self, duration):
       """Adds a timestamp to the end of the series, at duration beyond the last timestamp."""
-
       assert(duration.duration.days >= 0)    # duration may not be negative
       assert(len(self.timestamps) > 0)       # there must be something to extend from
       self.timestamps.append(duration.timestamp_after_duration(self.last_timestamp()))
@@ -298,23 +304,21 @@ class TimeSeries():
 
    def extend_by_days(self, days):
       """Adds a timestamp to the end of the series, at a duration of days beyond the last timestamp."""
-
       duration = TimeDuration(days = days)
       self.extend_by_duration(duration)
+
 
    def datetimes(self):
       """Returns a list of python-datetime objects """
       return [dt.datetime.fromisoformat(t.rstrip('Z')) for t in self.timestamps]
 
-   def create_xml(self, add_as_part = True, root = None,
-                  title = 'time series', originator = None):
+
+   def create_xml(self, add_as_part = True, title = None, originator = None, reuse = True):
       """Create a time series node from a TimeSeries object, optionally add as part.
 
       arguments:
          add_as_part (boolean, default True): if True, the newly created xml node is added as a part
             in the model
-         root (optional, usually None): if present, the newly created xml node is appended as a child
-            in this node
          title (string): used as the citation Title text for the new time series node
          originator (string, optional): the name of the human being who created the time series object;
             default is to use the login name
@@ -325,14 +329,9 @@ class TimeSeries():
       :meta common:
       """
 
-      ts_node = self.model.new_obj_node('TimeSeries')
+      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
 
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(ts_node.attrib['uuid'])
-      else:
-         ts_node.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = ts_node, title = title, originator = originator)
+      ts_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       for index in range(self.number_of_timestamps()):
          time_node = rqet.SubElement(ts_node, ns['resqml2'] + 'Time')
@@ -342,10 +341,7 @@ class TimeSeries():
          dt_node.set(ns['xsi'] + 'type', ns['xsd'] + 'dateTime')
          dt_node.text = self.timestamp(index)
 
-      if root is not None: root.append(ts_node)
       if add_as_part: self.model.add_part('obj_TimeSeries', self.uuid, ts_node)
-
-      self.time_series_root = ts_node
 
       return ts_node
 
@@ -384,14 +380,19 @@ class TimeSeries():
       return t_node
 
 
+   @property
+   def time_series_root(self):
+      """DEPRECATED. Alias for root"""
+      warnings.warn("Attribute 'time_series_root' is deprecated. Use 'root'", DeprecationWarning)
+      return self.root
 
-def selected_time_series(full_series, indices_list):
+
+def selected_time_series(full_series, indices_list, title = None):
    """Returns a new TimeSeries object with timestamps selected from the full series by a list of indices."""
 
-   selected_ts = TimeSeries(full_series.model, extract_from_xml = False)
-   for full_index in indices_list:
-      selected_ts.add_timestamp(full_series.timestamp(full_index))
-   return selected_time_series
+   selected_ts = TimeSeries(full_series.model, title = title)
+   selected_ts.timestamps = [full_series.timestamps[i] for i in sorted(indices_list)]
+   return selected_ts
 
 
 def simplified_timestamp(timestamp):
@@ -417,12 +418,12 @@ def time_series_from_list(timestamp_list, parent_model = None):
 
    assert(len(timestamp_list) > 0)
    sorted_timestamps = sorted(timestamp_list)
-   time_series = TimeSeries(parent_model = parent_model, extract_from_xml = False,
-                            first_timestamp = cleaned_timestamp(sorted_timestamps[0]))
+   time_series = TimeSeries(parent_model = parent_model, first_timestamp = cleaned_timestamp(sorted_timestamps[0]))
    for raw_timestamp in sorted_timestamps[1:]:
       timestamp = cleaned_timestamp(raw_timestamp)
       time_series.add_timestamp(timestamp)
    return time_series
+
 
 def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
    """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). The new timeseries is sorted in ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
@@ -487,8 +488,7 @@ def time_series_from_nexus_summary(summary_file, parent_model = None):
       else:   # back calculate time zero from first entry
          delta = dt.timedelta(days = summary_entries[0][1])
          tz_date = summary_entries[0][2] - delta
-      time_series = TimeSeries(parent_model = parent_model, extract_from_xml = False,
-                               first_timestamp = tz_date.isoformat() + 'T00:00:00Z')
+      time_series = TimeSeries(parent_model = parent_model, first_timestamp = tz_date.isoformat() + 'T00:00:00Z')
       last_timestep = 0
       last_cumulative_time = 0.0
       for entry in summary_entries:

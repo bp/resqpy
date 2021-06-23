@@ -560,7 +560,7 @@ class DeviationSurvey(BaseResqpy):
 
       interp_root = None
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
@@ -609,8 +609,7 @@ class DeviationSurvey(BaseResqpy):
       if interp_uuid is None:
          represented_interp = None
       else:
-         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
-         represented_interp = rqo.WellboreInterpretation(self.model, root_node=self.model.root_for_part(wellbore_interp_part))
+         represented_interp = rqo.WellboreInterpretation(self.model, uuid=interp_uuid)
       return represented_interp
 
 
@@ -792,8 +791,7 @@ class Trajectory():
       if interp_uuid is None:
          self.wellbore_interpretation = None
       else:
-         wellbore_interp_part = relatives_model.part_for_uuid(interp_uuid)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, root_node = relatives_model.root_for_part(wellbore_interp_part))
+         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid=interp_uuid)
 
 
    def compute_from_deviation_survey(self, survey = None, method = 'minimum curvature', md_domain = None, set_tangent_vectors = True):
@@ -1303,7 +1301,7 @@ class Trajectory():
 
       interp_root = None
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
@@ -1552,7 +1550,7 @@ class WellboreFrame:
                                  content_type = 'obj_WellboreTrajectoryRepresentation', root = wf_node)
 
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
@@ -1566,7 +1564,7 @@ class WellboreFrame:
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(wf_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
             if self.wellbore_interpretation is not None:
-               interp_root = self.wellbore_interpretation.root_node
+               interp_root = self.wellbore_interpretation.root
                self.model.create_reciprocal_relationship(wf_node, 'destinationObject', interp_root, 'sourceObject')
 
       self.root_node = wf_node
@@ -3188,7 +3186,7 @@ class BlockedWell:
 
       interp_root = None
       if self.wellbore_interpretation is not None:
-         interp_root = self.wellbore_interpretation.root_node
+         interp_root = self.wellbore_interpretation.root
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),

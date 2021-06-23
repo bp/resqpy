@@ -36,7 +36,7 @@ class BaseResqpy(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def __init__(self, model, uuid=None, title=None, originator=None, root_node=None):
+    def __init__(self, model, uuid=None, title=None, originator=None, root_node=None, extra_metadata=None):
         """Load an existing resqml object, or create new.
 
         Args:
@@ -49,6 +49,9 @@ class BaseResqpy(metaclass=ABCMeta):
         self.title = title  #: Citation title
         self.originator = originator  #: Creator of object. By default, user id.
         self.extra_metadata = {}
+        if extra_metadata:
+           self.extra_metadata = extra_metadata
+           self.standardise_extra_metadata()  # has side effect of making a copy
 
         if root_node is not None:
             warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
@@ -88,10 +91,11 @@ class BaseResqpy(metaclass=ABCMeta):
         Note: derived classes should extend this to load other XML and HDF attributes
         """
 
-        # Citation block
+        # Citation block and extra metadata
         self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
         self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
         self.extra_metadata = rqet.load_metadata_from_xml(self.root)
+        # extra_metadata should be in standard form when loaded from xml
 
     def try_reuse(self):
         """Look for an equivalent existing RESQML object and modify the uuid of this object if found.
@@ -158,6 +162,13 @@ class BaseResqpy(metaclass=ABCMeta):
             assert self.root is not None
         
         return node
+
+    def standardise_extra_metadata(self):
+       if self.extra_metadata:
+          em = {}
+          for key, value in self.extra_metadata.items(): em[str(key)] = str(value)
+          self.extra_metadata = em
+
 
     # Generic magic methods
 
