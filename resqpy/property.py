@@ -3300,7 +3300,7 @@ class Property(BaseResqpy):
       note:
          see the documentation for the convenience method from_array()
       """
-      assert self.number_of_parts() == 0
+      assert self.collection.number_of_parts() == 0
       assert not self.collection.imported_list
       self.collection.add_cached_array_to_imported_list(cached_array, source_info, keyword,
                                                         discrete = discrete, uom = uom, time_index = time_index,
