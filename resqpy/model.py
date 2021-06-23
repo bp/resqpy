@@ -3060,8 +3060,8 @@ class Model():
       for uuid in uuids_subset:
          part = self.part_for_uuid(uuid)
          nodes[uuid] = dict(
-            resqml_type=part.split("_")[1],
-            title=self.citation_title_for_part(part)
+            resqml_type=self.type_of_part(part, strip_obj=True),
+            title=self.citation_title_for_part(part),
          )
          for rel in map(str, self.uuids(related_uuid=uuid)):
             if rel in uuids_subset:
