@@ -3275,10 +3275,12 @@ class Property(BaseResqpy):
       notes:
          this method writes to the hdf5 file and creates the xml node, which is added as a part to the model;
          calling code must still call the model's store_epc() method;
-         this from_array() method is a convenience method calling prepare_import(), write_hdf5() and create_xml()
+         this from_array() method is a convenience method calling self.collection.set_support(),
+         self.prepare_import(), self.write_hdf5() and self.create_xml()
 
       :meta common:
       """
+      self.collection.set_support(model = self.model, support_uuid = support_uuid)  # this can be expensive; todo: optimise
       self.prepare_import(cached_array, source_info, keyword,
                   discrete = discrete, uom = uom, time_index = time_index, null_value = null_value,
                   property_kind = property_kind, local_property_kind_uuid = local_property_kind_uuid,
