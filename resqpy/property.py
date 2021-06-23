@@ -3045,20 +3045,21 @@ class Property(BaseResqpy):
 
    @property
    def resqml_type(self):
+      root_node = self.root
+      if root_node is not None:
+         return rqet.node_type(root_node, strip_obj = True)
       if (not hasattr(self, 'collection') or
           self.collection.number_of_parts() != 1 or
           self.is_continuous()): return 'ContinuousProperty'
       return 'CategoricalProperty' if self.is_categorical() else 'DiscreteProperty'
 
-   def __init__(self, parent_model, uuid = None, title = None, originator = None, support_uuid = None):
+   def __init__(self, parent_model, uuid = None, title = None, support_uuid = None):
       """Initialises a resqpy Property object, either for an existing RESQML property, or empty for support.
 
       arguments:
          parent_model (model.Model): the model to which the property belongs
          uuid (uuid.UUID, optional): required if initialising from an existing RESQML property object
          title (str, optional): the citation title to use for the property; ignored if uuid is present
-         originator (str, optional): the citation originator (person) to use for the property; defaults
-            to login id; ignored if uuid is present
          support_uuid (uuid.UUID, optional): identifies the supporting representation for the property;
             ignored if uuid is present
 
@@ -3067,10 +3068,10 @@ class Property(BaseResqpy):
       """
 
       self.collection = PropertyCollection()
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator)
+      super().__init__(model = parent_model, uuid = uuid, title = title)
       if support_uuid is not None:
          if self.collection.support_uuid is None:
-            self.collection.set_support(support_uuid = support_uuid)
+            self.collection.set_support(model = parent_model, support_uuid = support_uuid)
          else:
             assert bu.matching_uuids(support_uuid, self.collection.support_uuid)
 
@@ -3079,6 +3080,8 @@ class Property(BaseResqpy):
 
       part = self.part
       assert part is not None
+      if self.collection is None: self.collection = PropertyCollection()
+      if self.collection.model is None: self.collection.model = self.model
       self.collection.add_part_to_dict(part)
       self.collection.has_single_property_kind_flag = True
       self.collection.has_single_indexable_element_flag = True
@@ -3106,6 +3109,7 @@ class Property(BaseResqpy):
       self.collection.has_single_indexable_element_flag = True
       self.collection.has_single_uom = True
       self.collection.has_multiple_realizations_flag = False
+      if self.collection.model is None: self.collection.model = self.model
 
    def array_ref(self, dtype = None, masked = False, exclude_null = False):
       """Returns a (cached) numpy array containing the property values.
@@ -3280,7 +3284,9 @@ class Property(BaseResqpy):
 
       :meta common:
       """
-      self.collection.set_support(model = self.model, support_uuid = support_uuid)  # this can be expensive; todo: optimise
+      if self.collection.support_uuid is None:
+         self.collection.set_support(model = self.model, support_uuid = support_uuid)  # this can be expensive; todo: optimise
+      if self.collection.model is None: self.collection.model = self.model
       self.prepare_import(cached_array, source_info, keyword,
                   discrete = discrete, uom = uom, time_index = time_index, null_value = null_value,
                   property_kind = property_kind, local_property_kind_uuid = local_property_kind_uuid,
@@ -3316,8 +3322,8 @@ class Property(BaseResqpy):
    def write_hdf5(self, file_name = None, mode = 'a'):
       """Writes the array data to the hdf5 file; not usually called directly.
 
-      note:
-         see the documentation for the convenience method from_array()
+      notes:
+         see the documentation for the convenience method from_array();
       """
       if not self.collection.imported_list:
          log.warning('no imported Property array to write to hdf5')
@@ -3331,6 +3337,8 @@ class Property(BaseResqpy):
 
       note:
          see the documentation for the convenience method from_array()
+         NB. this method has the deliberate side effect of modifying the uuid and title of self to match those
+         of the property collection part!
       """
       if not self.collection.imported_list:
          log.warning('no imported Property array to create xml for')
@@ -3344,7 +3352,10 @@ class Property(BaseResqpy):
       self.collection.has_single_uom_flag = True
       self.collection.has_single_indexable_element_flag = True
       self.collection.has_multiple_realizations_flag = False
-
+      part = self.collection.parts()[0]
+      assert part is not None
+      self.uuid = self.collection.uuid_for_part(part)
+      self.title = self.collection.citation_title_for_part(part)
 
 
 class GridPropertyCollection(PropertyCollection):

@@ -71,7 +71,9 @@ class BaseResqpy(metaclass=ABCMeta):
     def part(self):
         """Standard part name corresponding to self.uuid"""
 
-        return rqet.part_name_for_object(self.resqml_type, self.uuid)
+# following caused trouble when resqml_type dynamically determined
+#       return rqet.part_name_for_object(self.resqml_type, self.uuid)
+        return self.model.part_for_uuid(self.uuid)
 
     @property
     def root(self):

@@ -49,9 +49,9 @@ def test_property(tmp_path):
    assert facies_uuid is not None
    p2p = rqp.Property(model, uuid = facies_uuid)
    assert np.all(p2p.array_ref() == p2.array_ref())
-   assert p2p.null_value is not None and p2p.null_value == 0
+   assert p2p.null_value() is not None and p2p.null_value() == 0
    grid = model.grid()
-   assert grid.property_collection.number_of_parts() == 2
+   assert grid.property_collection.number_of_parts() == 5  # two created here, plus 3 regular grid cell lengths properties
 
 
 # ---- Test uom from string ---
