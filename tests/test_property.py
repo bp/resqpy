@@ -54,6 +54,18 @@ def test_property(tmp_path):
    assert grid.property_collection.number_of_parts() == 5  # two created here, plus 3 regular grid cell lengths properties
 
 
+def test_create_Property_from_singleton_collection(tmp_model):
+
+   # Arrange
+   grid = grr.RegularGrid(tmp_model, extent_kji = (2, 3, 4))
+   grid.write_hdf5()
+   grid.create_xml()
+   collection = rqp.selective_version_of_collection(grid.property_collection, facet='J')
+
+   # Check property can be created
+   prop = rqp.Property.from_singleton_collection(collection)
+
+
 # ---- Test uom from string ---
 
 

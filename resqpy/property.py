@@ -3053,7 +3053,7 @@ class Property(BaseResqpy):
           self.is_continuous()): return 'ContinuousProperty'
       return 'CategoricalProperty' if self.is_categorical() else 'DiscreteProperty'
 
-   def __init__(self, parent_model, uuid = None, title = None, support_uuid = None):
+   def __init__(self, parent_model, uuid = None, title = None, support_uuid = None, extra_metadata = None):
       """Initialises a resqpy Property object, either for an existing RESQML property, or empty for support.
 
       arguments:
@@ -3068,7 +3068,7 @@ class Property(BaseResqpy):
       """
 
       self.collection = PropertyCollection()
-      super().__init__(model = parent_model, uuid = uuid, title = title)
+      super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
       if support_uuid is not None:
          if self.collection.support_uuid is None:
             self.collection.set_support(model = parent_model, support_uuid = support_uuid)
@@ -3085,31 +3085,38 @@ class Property(BaseResqpy):
       self.collection.add_part_to_dict(part)
       self.collection.has_single_property_kind_flag = True
       self.collection.has_single_indexable_element_flag = True
-      self.collection.has_single_uom = True
       self.collection.has_multiple_realizations_flag = False
       assert self.collection.number_of_parts() == 1
 
-   def from_singleton_collection(self, property_collection):
+   @classmethod
+   def from_singleton_collection(cls, property_collection: PropertyCollection):
       """Populates this (empty) property from a PropertyCollection containing just one part.
 
       arguments:
          property_collection (PropertyCollection): the singleton collection from which to populate this Property
       """
 
-      assert self.collection.number_of_parts() == 0
+      # Validate
+      assert property_collection.model is not None
       assert property_collection is not None
       assert property_collection.number_of_parts() == 1
-      self.collection.inherit_parts_from_other_collection(property_collection)
-      assert self.collection.number_of_parts() == 1
-      part = self.collection.parts()[0]
-      self.uuid = self.collection.uuid_for_part(part)
-      self.title = self.collection.citation_title_for_part(part)
-      self.extra_metadata = self.collection.extra_metadata_for_part(part)
-      self.collection.has_single_property_kind_flag = True
-      self.collection.has_single_indexable_element_flag = True
-      self.collection.has_single_uom = True
-      self.collection.has_multiple_realizations_flag = False
-      if self.collection.model is None: self.collection.model = self.model
+
+      # Instantiate the object i.e. call the class __init__ method
+      part = property_collection.parts()[0]
+      prop = cls(
+         parent_model=property_collection.model,
+         uuid=property_collection.uuid_for_part(part),
+         title=property_collection.citation_title_for_part(part),
+         extra_metadata=property_collection.extra_metadata_for_part(part)
+      )
+      prop.collection.inherit_parts_from_other_collection(property_collection)
+            
+      # Edit properties of parent collection
+      prop.collection.has_single_property_kind_flag = True
+      prop.collection.has_single_indexable_element_flag = True
+      prop.collection.has_multiple_realizations_flag = False
+
+      return prop
 
    def array_ref(self, dtype = None, masked = False, exclude_null = False):
       """Returns a (cached) numpy array containing the property values.
