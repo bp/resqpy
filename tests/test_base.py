@@ -20,10 +20,11 @@ def test_base_creation(tmp_model):
     title = 'Wondermuffin'
     dummy = DummyObj(model=tmp_model, title=title)
 
-    # UUID should exist, and part (name) should be determinable,
-    # but root should not exist yet
+    # UUID should exist
+    # but root should not exist yet and part name does not exist in the parent model
     assert dummy.uuid is not None
-    assert dummy.part is not None
+#   assert dummy.part is not None  # this version constructed the part from resqml_type and uuid
+    assert dummy.part is None
     assert dummy.root is None
 
     # After creating XML, root should exist
