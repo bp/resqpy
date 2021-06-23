@@ -32,7 +32,7 @@ def test_property(tmp_path):
    for i in range(1, 10): facies_dict[i] = 'facies ' + str(i)
    sl = rqp.StringLookup(model, int_to_str_dict = facies_dict, title = 'facies table')
    sl.create_xml()
-   shape2 = tuple(list(grid.extent_kji).append(2))
+   shape2 = tuple(list(grid.extent_kji) + [2])
    a2 = (np.random.random(shape2) * 10.0).astype(int)
    p2 = rqp.Property(model)
    p2.from_array(a2, source_info = 'random', keyword = 'FACIES', support_uuid = grid.uuid,
