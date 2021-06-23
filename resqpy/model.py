@@ -3027,11 +3027,15 @@ class Model():
          g.add_nodes_from(nodes.items())
          g.add_edges_from(edges)
 
-         # Visualize with holoviews
+         # Import holoviews
          import holoviews as hv
          from holoviews import opts
          hv.extension('bokeh')
-         hv.Graph.from_networkx(g, nx.layout.spring_layout).opts(tools=['hover'])
+
+         # Plot
+         hv.Graph.from_networkx(g, nx.layout.spring_layout)\
+            .opts(tools=['hover'], width=600, height=600,
+                  node_color='resqml_type', cmap='Category10')
 
       Args:
          uuids_subset (iterable): If present, only consider uuids in this list.
