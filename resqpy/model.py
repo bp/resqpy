@@ -3052,13 +3052,19 @@ class Model():
       nodes = {}
       edges = set()
 
-      for uuid in map(str, self.uuids()):
+      if uuids_subset is None:
+         uuids_subset = self.uuids()
+      
+      uuids_subset = set(map(str, uuids_subset))
+
+      for uuid in uuids_subset:
          part = self.part_for_uuid(uuid)
          nodes[uuid] = dict(
             resqml_type=part.split("_")[1],
             title=self.citation_title_for_part(part)
          )
          for rel in map(str, self.uuids(related_uuid=uuid)):
+            if rel in uuids_subset:
                edges.add(frozenset([uuid, rel]))
                
       return nodes, edges

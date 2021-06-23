@@ -113,5 +113,8 @@ def test_model_as_graph(example_model_with_well):
    assert frozenset([str(traj.uuid), str(crs.uuid)]) in edges
    assert frozenset([str(traj.uuid), str(well_interp.uuid)]) in edges
    assert frozenset([str(datum.uuid), str(traj.uuid)]) in edges
-   
 
+   # Test uuid subset
+   nodes, edges = model.as_graph(uuids_subset=[datum.uuid])
+   assert len(nodes.keys()) == 1
+   assert len(edges) == 0
