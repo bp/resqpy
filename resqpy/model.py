@@ -3042,6 +3042,8 @@ class Model():
 
          - nodes: dict mapping uuid to attributes (e.g. citation title)
          - edges: set of unordered pairs of uuids, representing relationships
+
+      :meta common:
       """
       nodes = {}
       edges = set()
