@@ -44,13 +44,15 @@ def test_property(tmp_path):
    assert ntg_uuid is not None
    p1p = rqp.Property(model, uuid = ntg_uuid)
    assert np.all(p1p.array_ref() == p1.array_ref())
+   assert p1p.uom() == 'm3/m3'
    facies_uuid = model.uuid(obj_type = p2.resqml_type, title = 'FACIES')
    assert facies_uuid is not None
    p2p = rqp.Property(model, uuid = facies_uuid)
    assert np.all(p2p.array_ref() == p2.array_ref())
+   assert p2p.null_value is not None and p2p.null_value == 0
    grid = model.grid()
    assert grid.property_collection.number_of_parts() == 2
-   
+
 
 # ---- Test uom from string ---
 
