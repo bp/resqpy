@@ -3024,7 +3024,7 @@ class Model():
          # Load into a NetworkX graph
          import networkx as nx
          g = nx.Graph()
-         g.add_nodes_from(nodes)
+         g.add_nodes_from(nodes.items())
          g.add_edges_from(edges)
 
          # Visualize with holoviews
