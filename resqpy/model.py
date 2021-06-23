@@ -3009,6 +3009,13 @@ class Model():
    def as_graph(self, uuids_subset=None):
       """Return representation of model as nodes and edges, suitable for plotting in a graph
 
+      Note:
+         The graph can be most readily visualised with other packages such as
+         NetworkX and HoloViews, which are not part of resqpy.
+
+         For a guide to plotting graphs interactively, see:
+         http://holoviews.org/user_guide/Network_Graphs.html
+
       Example::
 
          # Create the nodes and edges
@@ -3038,7 +3045,7 @@ class Model():
       """
       nodes = {}
       edges = set()
-         
+
       for uuid in map(str, self.uuids()):
          part = self.part_for_uuid(uuid)
          nodes[uuid] = dict(
