@@ -3066,7 +3066,6 @@ class Property(BaseResqpy):
          new resqpy Property object
       """
 
-      self.part = None
       self.collection = PropertyCollection()
       super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator)
       if support_uuid is not None:
@@ -3078,14 +3077,14 @@ class Property(BaseResqpy):
    def load_from_xml(self):
       """Populates this property object from xml; not usually called directly."""
 
-      part = self.model.part_for_uuid(self.uuid)
+      part = self.part
       assert part is not None
-      self.part = part
       self.collection.add_part_to_dict(part)
       self.collection.has_single_property_kind_flag = True
       self.collection.has_single_indexable_element_flag = True
       self.collection.has_single_uom = True
       self.collection.has_multiple_realizations_flag = False
+      assert self.collection.number_of_parts() == 1
 
    def from_singleton_collection(self, property_collection):
       """Populates this (empty) property from a PropertyCollection containing just one part.
@@ -3098,10 +3097,11 @@ class Property(BaseResqpy):
       assert property_collection is not None
       assert property_collection.number_of_parts() == 1
       self.collection.inherit_parts_from_other_collection(property_collection)
-      self.part = self.collection.parts()[0]
-      self.uuid = self.collection.uuid_for_part(self.part)
-      self.title = self.collection.citation_title_for_part(self.part)
-      self.extra_metadata = self.collection.extra_metadata_for_part(self.part)
+      assert self.collection.number_of_parts() == 1
+      part = self.collection.parts()[0]
+      self.uuid = self.collection.uuid_for_part(part)
+      self.title = self.collection.citation_title_for_part(part)
+      self.extra_metadata = self.collection.extra_metadata_for_part(part)
       self.collection.has_single_property_kind_flag = True
       self.collection.has_single_indexable_element_flag = True
       self.collection.has_single_uom = True
