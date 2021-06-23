@@ -195,6 +195,10 @@ above:
 
    sphinx-build docs docs/html
 
+The autoclasstoc extension is used to group some of the most commonly-used methods
+together at the top of the class summary tables. To make a method appear in this list,
+add `:meta common:` to the botton of the method docstring.
+
 Get in touch
 ------------
 
