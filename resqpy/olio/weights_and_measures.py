@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import json
+import re
 from functools import lru_cache
 from pint import UnitRegistry, set_application_registry
 
@@ -12,17 +13,94 @@ from pint import UnitRegistry, set_application_registry
 version = '17th June 2021'
 
 # Shared instance of pint unit registry
-ureg = UnitRegistry(
-   filename=str(Path(__file__).parent / 'data/unit_registry.txt'),
-   preprocessors=(
-      # Preprocessors: see https://github.com/hgrecco/pint/issues/185
-      lambda s: s.replace('%', ' percent '),
-      lambda s: s.replace('p.u.', ' poreunits '),
-   ),
-
-)
+ureg = UnitRegistry(filename=str(Path(__file__).parent / 'data/unit_registry.txt'))
 set_application_registry(ureg)
 Q_ = ureg.Quantity
+
+
+def convert(value, from_unit, to_unit):
+   """Convert a value between any two compatible units
+   
+   Args:
+      value (float): value in old units
+      from_unit (str): old units
+      to_unit (str): desired units
+
+   Returns:
+      float: converted unit
+   """
+   s1, u1 = parse_unit(from_unit)
+   s2, u2 = parse_unit(to_unit)
+
+   quantity_from = Q_(value * s1, u1)
+   quantity_to = quantity_from.to(u2)
+   return quantity_to.magnitude / s2
+
+
+def parse_unit(unit_string):
+   """Parse a unit into a scaling factor and a pint UnitContainer.
+
+   Note:
+      Scaling prefixes (e.g. "0.001 kg") are not allowed in pint Units.
+      But, they may be part of pint Quantities, e.g. Q_(value, unit)
+   
+   Returns:
+      2-tuple of (scaling factor, pint UnitContainer)
+
+   Raises:
+      UndefinedUnitError if unit is not understood
+   """
+   scaling, unit = strip_scaling_prefix(unit_string)
+
+   # Handle special characters (e.g. %), which are not supported in pint.
+   # See https://github.com/hgrecco/pint/issues/185
+   mapping = {
+      "%[area]": " percent ",
+      "%[mass]": " percent ",
+      "%[molar]": " percent ",
+      "%[vol]": " percent ",
+      "%": " percent ",
+      "p.u.": " pu ",
+   }
+   for k, v in mapping.items():
+      unit = unit.replace(k, v)
+
+   return scaling, ureg.parse_units(unit)
+
+
+def strip_scaling_prefix(unit_string):
+   """Identify and strip any scaling factor from a unit
+
+   E.g. "0.001 bbl" is decomposed into (0.001, "bbl"). 
+
+   Returns:
+      2-tuple of (scaling factor, remaining_unit)
+   """
+   # Look for a numerical prefix
+   pat = re.compile(
+      r"^(\d+"        # Begin with one or more digits
+      r"(?:"          # Optionally followed by..
+      r"[\.\/eE]"       # Decimal point, or fraction, or exponent
+      r"-?"             # Possibly negative
+      r"\d+)?"          # One or more digits
+      r") (.+)"       # Followed by a space, and a unit string
+   )
+   match = re.match(pat, unit_string)
+   if match:
+      scaling = match.group(1)
+      unit = match.group(2)
+   else:
+      scaling = 1
+      unit = unit_string
+
+   try:
+      scaling = float(scaling)
+   except ValueError:
+      # May be a fraction
+      num, denom = scaling.split('/')
+      scaling = float(num) / float(denom)
+   return scaling, unit
+
 
 # physical constants
 feet_to_metres = 0.3048

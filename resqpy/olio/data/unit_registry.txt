@@ -51,6 +51,7 @@ month = year / 12
 # Volume
 cm3 = cm**3
 ft3 = foot**3
+m3 = m**3
 poreunits = cm3 / (cm3 * 100) = pu
 percent = 0.01 = %
 bbl = (m**3) * 0.1234
