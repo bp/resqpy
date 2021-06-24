@@ -1,6 +1,6 @@
 """surface.py: surface class based on resqml standard."""
 
-version = '16th June 2021'
+version = '24th June 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -13,6 +13,7 @@ import numpy as np
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.uuid as bu
@@ -25,7 +26,7 @@ from resqpy.olio.zmap_reader import read_mesh
 import resqpy.organize as rqo
 
 
-class _BaseSurface:
+class _BaseSurface(BaseResqpy):
    """Base class to implement shared methods for other classes in this module"""
 
    def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
@@ -59,7 +60,7 @@ class _BaseSurface:
 class TriangulatedPatch():
    """Class for RESQML TrianglePatch objects (used by Surface objects inter alia)."""
 
-   def __init__(self, parent_model, patch_index = None, extract_from_xml = True, patch_node = None, crs_uuid = None):
+   def __init__(self, parent_model, patch_index = None, patch_node = None, crs_uuid = None):
       """Create an empty TriangulatedPatch (TrianglePatch) node and optionally load from xml.
 
       note:
@@ -77,8 +78,7 @@ class TriangulatedPatch():
       self.points = None
       self.crs_uuid = crs_uuid
       self.crs_root = None
-      if extract_from_xml:
-         assert patch_node is not None
+      if patch_node is not None:
          xml_patch_index = rqet.find_tag_int(patch_node, 'PatchIndex')
          assert xml_patch_index is not None
          if self.patch_index is not None:
@@ -491,16 +491,17 @@ class TriangulatedPatch():
 class Surface(_BaseSurface):
    """Class for RESQML triangulated set surfaces."""
 
-   def __init__(self, parent_model, extract_from_xml = True, surface_root = None, point_set = None,
+   resqml_type = 'TriangulatedSetRepresentation'
+
+   def __init__(self, parent_model, uuid = None, surface_root = None, point_set = None,
                 mesh = None, mesh_file = None, mesh_format = None, tsurf_file = None, quad_triangles = False,
-                title = None, surface_role = 'map', crs_uuid = None):
+                title = None, surface_role = 'map', crs_uuid = None, originator = None, extra_metadata = {}):
       """Create an empty Surface object (RESQML TriangulatedSetRepresentation) and optionally populates from xml, point set or mesh.
 
       arguments:
          parent_model (model.Model object): the model to which this surface belongs
-         extract_from_xml (boolean, default True): if True, the new surface is initialised based on
-            data in surface_root xml
-         surface_root (xml tree root node, optional): required if extract_from_xml is True
+         uuid (uuid.UUID, optional): if present, the surface is initialised from an existing RESQML object with this uuid
+         surface_root (xml tree root node, optional): DEPRECATED: alternative to using uuid
          point_set (PointSet object, optional): if present, the surface is initialised as a Delaunay
             triangulation of the points in the point set; ignored if extracting from xml
          mesh (Mesh object, optional): if present, the surface is initialised as a triangulation of
@@ -517,12 +518,16 @@ class Surface(_BaseSurface):
          surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
          crs_uuid (uuid.UUID, optional): if present and not extracting from xml, is set as the crs uuid
             applicable to mesh etc. data
+         originator (str, optional): the name of the person creating the object; defaults to login id; ignored
+            when initialising from an existing RESQML object
+         extra_metadata (dict): items in this dictionary are added as extra metadata; ignored
+            when initialising from an existing RESQML object
 
       returns:
          a newly created surface object
 
       notes:
-         there are 5 ways to initialise a surface object, in order of precendence:
+         there are 6 ways to initialise a surface object, in order of precendence:
          1. extracting from xml
          2. as a Delaunay triangulation of points in a PointSet
          3. as a simple triangulation of a Mesh object
@@ -542,26 +547,17 @@ class Surface(_BaseSurface):
 
       assert surface_role in ['map', 'pick']
 
-      self.model = parent_model
-      self.root = surface_root
       self.surface_role = surface_role
       self.patch_list = []         # ordered list of patches
-      self.uuid = None
       self.crs_uuid = crs_uuid
       self.triangles = None        # composite triangles (all patches)
       self.points = None           # composite points (all patches)
       self.boundaries = None       # todo: read up on what this is for and look out for examples
       self.represented_interpretation_root = None
       self.title = title
-      if extract_from_xml:
-         assert self.root is not None
-         self.uuid = self.root.attrib['uuid']
-         self.title = rqet.citation_title_for_node(self.root)
-         self.extract_patches(self.root)
-         ref_node = rqet.find_tag(self.root, 'RepresentedInterpretation')
-         if ref_node is not None:
-            interp_root = self.model.referenced_node(ref_node)
-            self.set_represented_interpretation_root(interp_root)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator=originator, root_node = surface_root)
+      if self.root is not None:
+         pass
       elif point_set is not None:
          self.set_from_point_set(point_set)
       elif mesh is not None:
@@ -570,11 +566,22 @@ class Surface(_BaseSurface):
          self.set_from_mesh_file(mesh_file, mesh_format, quad_triangles = quad_triangles)
       elif tsurf_file is not None:
          self.set_from_tsurf_file(tsurf_file)
-      if self.uuid is None: self.uuid = bu.new_uuid()
+
+
+   def load_from_xml(self):
+      root_node = self.root
+      assert root_node is not None
+      self.extract_patches(root_node)
+      ref_node = rqet.find_tag(root_node, 'RepresentedInterpretation')
+      if ref_node is not None:
+         interp_root = self.model.referenced_node(ref_node)
+         self.set_represented_interpretation_root(interp_root)
+
 
    @property
    def represented_interpretation_uuid(self):
       return rqet.uuid_for_part_root(self.represented_interpretation_root)
+
 
    def set_represented_interpretation_root(self, interp_root):
       """Makes a note of the xml root of the represented interpretation."""
@@ -644,7 +651,7 @@ class Surface(_BaseSurface):
    def set_from_triangles_and_points(self, triangles, points):
       """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_triangles_and_points(triangles, points)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -674,7 +681,7 @@ class Surface(_BaseSurface):
 
       mesh_shape = mesh_xyz.shape
       assert len(mesh_shape) == 3 and mesh_shape[2] == 3
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_irregular_mesh(mesh_xyz, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -689,7 +696,7 @@ class Surface(_BaseSurface):
 
       mesh_shape = mesh_xyz.shape
       assert len(mesh_shape) == 3 and mesh_shape[2] == 3
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_sparse_mesh(mesh_xyz)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -718,7 +725,7 @@ class Surface(_BaseSurface):
 
       mesh_shape = mesh_xyz.shape
       assert len(mesh_shape) == 5 and mesh_shape[2:] == (2, 2, 3)
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_torn_mesh(mesh_xyz, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -752,7 +759,7 @@ class Surface(_BaseSurface):
       """Populates this (empty) surface to represent faces of a cell, from corner points of shape (2, 2, 2, 3)."""
 
       assert cp.size == 24
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -766,7 +773,7 @@ class Surface(_BaseSurface):
       self.patch_list = []
       p_index = 0
       for cell_cp in cp:
-         tri_patch = TriangulatedPatch(self.model, patch_index = p_index, extract_from_xml = False, crs_uuid = self.crs_uuid)
+         tri_patch = TriangulatedPatch(self.model, patch_index = p_index, crs_uuid = self.crs_uuid)
          tri_patch.set_to_cell_faces_from_corner_points(cell_cp, quad_triangles = quad_triangles)
          self.patch_list.append(tri_patch)
          p_index += 1
@@ -805,7 +812,7 @@ class Surface(_BaseSurface):
       :meta common:
       """
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -814,7 +821,7 @@ class Surface(_BaseSurface):
    def set_to_triangle(self, corners):
       """Populate this (empty) surface with a patch of one triangle."""
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_triangle(corners)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -823,7 +830,7 @@ class Surface(_BaseSurface):
    def set_to_sail(self, n, centre, radius, azimuth, delta_theta):
       """Populate this (empty) surface with a patch representing a triangle wrapped on a sphere."""
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_sail(n, centre, radius, azimuth, delta_theta)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -909,8 +916,8 @@ class Surface(_BaseSurface):
 
 
    def create_xml(self, ext_uuid = None,
-                  add_as_part = True, add_relationships = True, crs_root = None,
-                  root = None, title = None, originator = None):
+                  add_as_part = True, add_relationships = True, crs_uuid = None,
+                  title = None, originator = None):
       """Creates a triangulated surface xml node from this surface object and optionally adds as part of model.
 
          arguments:
@@ -919,10 +926,8 @@ class Surface(_BaseSurface):
                in the model
             add_relationships (boolean, default True): if True, a relationship xml part is created relating the
                new triangulated representation part to the crs part (and optional interpretation part)
-            crs_root (optional): the coordinate reference system root xml node applicable to the surface points data;
+            crs_uuid (optional): the uuid of the coordinate reference system applicable to the surface points data;
                if None, the main crs for the model is assumed to apply
-            root (optional, usually None): if not None, the newly created triangulated representation node is appended
-               as a child to this node
             title (string): used as the citation Title text; should be meaningful to a human
             originator (string, optional): the name of the human being who created the triangulated representation part;
                default is to use the login name
@@ -934,22 +939,15 @@ class Surface(_BaseSurface):
       """
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
+      if not self.title: self.title = 'surface'
 
-      tri_rep = self.model.new_obj_node('TriangulatedSetRepresentation')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(tri_rep.attrib['uuid'])
-      else:
-         tri_rep.attrib['uuid'] = str(self.uuid)
-
-      if not title: title = self.title
-      if not title: title = 'surface'
+      tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       # todo: if crs_root is None, attempt to derive from surface patch crs uuid (within patch loop, below)
-      if crs_root is None: crs_root = self.model.crs_root     # maverick use of model's default crs
-
-      # Temporary solution to allow surfaces to load in RMS - move citation block above representedinterpretation
-      self.model.create_citation(root = tri_rep, title = title, originator = originator)
+      if crs_uuid is None:
+         crs_root = self.model.crs_root     # maverick use of model's default crs
+      else:
+         crs_root = self.model.root_for_uuid(crs_uuid)
 
       if self.represented_interpretation_root is not None:
          interp_root = self.represented_interpretation_root
@@ -1024,7 +1022,6 @@ class Surface(_BaseSurface):
 
          patch.node = p_node
 
-      if root is not None: root.append(tri_rep)
       if add_as_part:
          self.model.add_part('obj_TriangulatedSetRepresentation', self.uuid, tri_rep)
          if add_relationships:
@@ -1037,9 +1034,6 @@ class Surface(_BaseSurface):
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(tri_rep, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
-
-
-      self.root = tri_rep
 
       return tri_rep
 
@@ -1831,7 +1825,7 @@ class Mesh(_BaseSurface):
    def surface(self, quad_triangles = False):
       """Returns a surface object generated from this mesh."""
 
-      return Surface(self.model, extract_from_xml = False, mesh = self, quad_triangles = quad_triangles)
+      return Surface(self.model, mesh = self, quad_triangles = quad_triangles)
 
 
    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
