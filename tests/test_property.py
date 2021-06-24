@@ -60,7 +60,8 @@ def test_create_Property_from_singleton_collection(tmp_model):
    grid = grr.RegularGrid(tmp_model, extent_kji = (2, 3, 4))
    grid.write_hdf5()
    grid.create_xml()
-   collection = rqp.selective_version_of_collection(grid.property_collection, facet='J')
+   collection = rqp.selective_version_of_collection(grid.property_collection, property_kind = 'cell length',
+                                                    facet_type = 'direction', facet='J')
 
    # Check property can be created
    prop = rqp.Property.from_singleton_collection(collection)
