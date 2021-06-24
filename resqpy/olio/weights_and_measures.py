@@ -12,8 +12,15 @@ from pint import UnitRegistry, set_application_registry
 version = '17th June 2021'
 
 # Shared instance of pint unit registry
+ureg = UnitRegistry(
+   filename=str(Path(__file__).parent / 'data/unit_registry.txt'),
+   preprocessors=(
+      # Preprocessors: see https://github.com/hgrecco/pint/issues/185
+      lambda s: s.replace('%', ' percent '),
+      lambda s: s.replace('p.u.', ' poreunits '),
+   ),
 
-ureg = UnitRegistry(str(Path(__file__).parent / 'data/unit_registry.txt'))
+)
 set_application_registry(ureg)
 Q_ = ureg.Quantity
 
