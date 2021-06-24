@@ -23,9 +23,8 @@ def test_property(tmp_path):
    grid.write_hdf5()
    grid.create_xml()
    a1 = np.random.random(grid.extent_kji)
-   p1 = rqp.Property(model)
-   p1.from_array(a1, source_info = 'random', keyword = 'NETGRS', support_uuid = grid.uuid,
-                 property_kind = 'net to gross ratio', indexable_element = 'cells', uom = 'm3/m3')
+   p1 = rqp.Property.from_array(model, a1, source_info = 'random', keyword = 'NETGRS', support_uuid = grid.uuid,
+                                property_kind = 'net to gross ratio', indexable_element = 'cells', uom = 'm3/m3')
    pk = rqp.PropertyKind(model, title = 'facies', parent_property_kind = 'discrete')
    pk.create_xml()
    facies_dict = {0: 'background'}
@@ -34,10 +33,9 @@ def test_property(tmp_path):
    sl.create_xml()
    shape2 = tuple(list(grid.extent_kji) + [2])
    a2 = (np.random.random(shape2) * 10.0).astype(int)
-   p2 = rqp.Property(model)
-   p2.from_array(a2, source_info = 'random', keyword = 'FACIES', support_uuid = grid.uuid,
-                 local_property_kind_uuid = pk.uuid, indexable_element = 'cells', discrete = True,
-                 null_value = 0, count = 2, string_lookup_uuid = sl.uuid)
+   p2 = rqp.Property.from_array(model, a2, source_info = 'random', keyword = 'FACIES', support_uuid = grid.uuid,
+                                local_property_kind_uuid = pk.uuid, indexable_element = 'cells', discrete = True,
+                                null_value = 0, count = 2, string_lookup_uuid = sl.uuid)
    model.store_epc()
    model = rq.Model(epc)
    ntg_uuid = model.uuid(obj_type = p1.resqml_type, title = 'NETGRS')
@@ -65,6 +63,7 @@ def test_create_Property_from_singleton_collection(tmp_model):
    assert collection.number_of_parts() == 1
    # Check property can be created
    prop = rqp.Property.from_singleton_collection(collection)
+   assert np.all(np.isclose(prop.array_ref(), 1.0))
 
 
 # ---- Test uom from string ---

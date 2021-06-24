@@ -3091,7 +3091,7 @@ class Property(BaseResqpy):
 
    @classmethod
    def from_singleton_collection(cls, property_collection: PropertyCollection):
-      """Populates this (empty) property from a PropertyCollection containing just one part.
+      """Populates a new Property from a PropertyCollection containing just one part.
 
       arguments:
          property_collection (PropertyCollection): the singleton collection from which to populate this Property
@@ -3105,17 +3105,100 @@ class Property(BaseResqpy):
       # Instantiate the object i.e. call the class __init__ method
       part = property_collection.parts()[0]
       prop = cls(
-         parent_model=property_collection.model,
-         uuid=property_collection.uuid_for_part(part),
-         title=property_collection.citation_title_for_part(part),
-         extra_metadata=property_collection.extra_metadata_for_part(part)
+         parent_model = property_collection.model,
+         uuid = property_collection.uuid_for_part(part),
+         title = property_collection.citation_title_for_part(part),
+         extra_metadata = property_collection.extra_metadata_for_part(part)
       )
 
-      # Edit properties of parent collection
+      # Edit properties of collection attribute
       prop.collection.has_single_property_kind_flag = True
       prop.collection.has_single_indexable_element_flag = True
       prop.collection.has_multiple_realizations_flag = False
 
+      return prop
+
+   @classmethod
+   def from_array(cls, parent_model, cached_array, source_info, keyword,
+                  support_uuid, property_kind = None, local_property_kind_uuid = None,
+                  indexable_element = None, facet_type = None, facet = None,
+                  discrete = False, uom = None, null_value = None,
+                  time_series_uuid = None, time_index = None,
+                  realization = None, count = 1, const_value = None,
+                  string_lookup_uuid = None, find_local_property_kind = True, extra_metadata = {}):
+      """Populates a new Property from a numpy array and metadata; NB. Writes data to hdf5 and adds part to model.
+
+      arguments:
+         parent_model (model.Model): the model to which the new property belongs
+         cached_array: a numpy array to be made into a property; for a constant array set cached_array to None
+            (and use const_value)
+         source_info (string): typically the name of a file from which the array has been read but can be any
+            information regarding the source of the data
+         keyword (string): this will be used as the citation title for the property
+         support_uuid (uuid): the uuid of the supporting representation
+         property_kind (string): resqml property kind (required unless a local propery kind is identified with
+            local_property_kind_uuid)
+         local_property_kind_uuid (uuid.UUID or string, optional): uuid of local property kind, or None if a
+            standard property kind applies or if the local property kind is identified by its name (see
+            find_local_property_kind)
+         indexable_element (string): the indexable element in the supporting representation; if None
+            then the 'typical' indexable element for the class of supporting representation will be assumed
+         facet_type (string, optional): resqml facet type, or None; resqpy only supports at most one facet per
+            property though RESQML allows for multiple)
+         facet (string, optional): resqml facet, or None; resqpy only supports at most one facet per property
+            though RESQML allows for multiple)
+         discrete (boolean, optional, default False): if True, the array should contain integer (or boolean)
+            data, if False, float; set True for any discrete data including categorical
+         uom (string, optional, default None): the resqml units of measure for the data; required for
+            continuous (float) array
+         null_value (int, optional, default None): if present, this is used in the metadata to indicate that
+            the value is to be interpreted as a null value wherever it appears in the discrete data; not used
+            for continuous data where NaN is always the null value
+         time_series_uuid (optional): the uuid of the full or reduced time series that the time_index is for
+         time_index (integer, optional, default None): if not None, the time index for the property (see also
+            time_series_uuid)
+         realization (int, optional): realization number, or None
+         count (int, default 1): the number of values per indexable element; if greater than one then this
+            must be the fastest cycling axis in the cached array, ie last index
+         const_value (int, float or bool, optional): the value with which a constant array is filled;
+            required if cached_array is None, must be None otherwise
+         string_lookup_uuid (optional): if present, the uuid of the string table lookup which the categorical data
+            relates to; if None, the property will not be configured as categorical
+         find_local_property_kind (boolean, default True): if True, local property kind uuid need not be provided as
+            long as the property_kind is set to match the title of the appropriate local property kind object
+         extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
+
+      returns:
+         new Property object built from numpy array; the hdf5 data has been written, xml created and the part
+         added to the model
+
+      notes:
+         this method writes to the hdf5 file and creates the xml node, which is added as a part to the model;
+         calling code must still call the model's store_epc() method;
+         this from_array() method is a convenience method calling self.collection.set_support(),
+         self.prepare_import(), self.write_hdf5() and self.create_xml()
+
+      :meta common:
+      """
+      # Validate
+      assert parent_model is not None
+      assert cached_array is not None or const_value is not None
+
+      # Instantiate the object i.e. call the class __init__ method
+      prop = cls(parent_model = property_collection.model, title=keyword, extra_metadata = extra_metadata)
+
+      # Prepare array data in collection attribute and add to model
+      prop.collection.set_support(model = prop.model, support_uuid = support_uuid)  # this can be expensive; todo: optimise
+      if prop.collection.model is None: prop.collection.model = prop.model
+      prop.prepare_import(cached_array, source_info, keyword,
+                          discrete = discrete, uom = uom, time_index = time_index, null_value = null_value,
+                          property_kind = property_kind, local_property_kind_uuid = local_property_kind_uuid,
+                          facet_type = facet_type, facet = facet, realization = realization,
+                          indexable_element = indexable_element, count = count, const_value = const_value)
+      prop.write_hdf5()
+      prop.create_xml(support_uuid = support_uuid, time_series_uuid = time_series_uuid,
+                      string_lookup_uuid = string_lookup_uuid, property_kind_uuid = local_property_kind_uuid,
+                      find_local_property_kind = find_local_property_kind, extra_metadata = extra_metadata)
       return prop
 
    def array_ref(self, dtype = None, masked = False, exclude_null = False):
@@ -3231,79 +3314,6 @@ class Property(BaseResqpy):
    def constant_value(self):
       """For a constant property, returns the constant value (float or int or bool, or None if not constant)."""
       return self.collection.constant_value_for_part(self.part)
-
-   def from_array(self, cached_array, source_info, keyword,
-                  support_uuid, property_kind = None, local_property_kind_uuid = None,
-                  indexable_element = None, facet_type = None, facet = None,
-                  discrete = False, uom = None, null_value = None,
-                  time_series_uuid = None, time_index = None,
-                  realization = None, count = 1, const_value = None,
-                  string_lookup_uuid = None, find_local_property_kind = True, extra_metadata = {}):
-      """Populates this (empty) property from a numpy array and associated metadata.
-
-      arguments:
-         cached_array: a numpy array to be made into a property; for a constant array set cached_array to None
-            (and use const_value)
-         source_info (string): typically the name of a file from which the array has been read but can be any
-            information regarding the source of the data
-         keyword (string): this will be used as the citation title for the property
-         support_uuid (uuid): the uuid of the supporting representation
-         property_kind (string): resqml property kind (required unless a local propery kind is identified with
-            local_property_kind_uuid)
-         local_property_kind_uuid (uuid.UUID or string, optional): uuid of local property kind, or None if a
-            standard property kind applies or if the local property kind is identified by its name (see
-            find_local_property_kind)
-         indexable_element (string): the indexable element in the supporting representation; if None
-            then the 'typical' indexable element for the class of supporting representation will be assumed
-         facet_type (string, optional): resqml facet type, or None; resqpy only supports at most one facet per
-            property though RESQML allows for multiple)
-         facet (string, optional): resqml facet, or None; resqpy only supports at most one facet per property
-            though RESQML allows for multiple)
-         discrete (boolean, optional, default False): if True, the array should contain integer (or boolean)
-            data, if False, float; set True for any discrete data including categorical
-         uom (string, optional, default None): the resqml units of measure for the data; required for
-            continuous (float) array
-         null_value (int, optional, default None): if present, this is used in the metadata to indicate that
-            the value is to be interpreted as a null value wherever it appears in the discrete data; not used
-            for continuous data where NaN is always the null value
-         time_series_uuid (optional): the uuid of the full or reduced time series that the time_index is for
-         time_index (integer, optional, default None): if not None, the time index for the property (see also
-            time_series_uuid)
-         realization (int, optional): realization number, or None
-         count (int, default 1): the number of values per indexable element; if greater than one then this
-            must be the fastest cycling axis in the cached array, ie last index
-         const_value (int, float or bool, optional): the value with which a constant array is filled;
-            required if cached_array is None, must be None otherwise
-         string_lookup_uuid (optional): if present, the uuid of the string table lookup which the categorical data
-            relates to; if None, the property will not be configured as categorical
-         find_local_property_kind (boolean, default True): if True, local property kind uuid need not be provided as
-            long as the property_kind is set to match the title of the appropriate local property kind object
-         extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
-
-      returns:
-         self
-
-      notes:
-         this method writes to the hdf5 file and creates the xml node, which is added as a part to the model;
-         calling code must still call the model's store_epc() method;
-         this from_array() method is a convenience method calling self.collection.set_support(),
-         self.prepare_import(), self.write_hdf5() and self.create_xml()
-
-      :meta common:
-      """
-      if self.collection.support_uuid is None:
-         self.collection.set_support(model = self.model, support_uuid = support_uuid)  # this can be expensive; todo: optimise
-      if self.collection.model is None: self.collection.model = self.model
-      self.prepare_import(cached_array, source_info, keyword,
-                  discrete = discrete, uom = uom, time_index = time_index, null_value = null_value,
-                  property_kind = property_kind, local_property_kind_uuid = local_property_kind_uuid,
-                  facet_type = facet_type, facet = facet, realization = realization,
-                  indexable_element = indexable_element, count = count, const_value = const_value)
-      self.write_hdf5()
-      self.create_xml(support_uuid = support_uuid, time_series_uuid = time_series_uuid,
-                      string_lookup_uuid = string_lookup_uuid, property_kind_uuid = local_property_kind_uuid,
-                      find_local_property_kind = find_local_property_kind, extra_metadata = extra_metadata)
-      return self
 
    def prepare_import(self, cached_array, source_info, keyword,
                       discrete = False, uom = None, time_index = None, null_value = None,
