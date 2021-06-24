@@ -3185,7 +3185,7 @@ class Property(BaseResqpy):
       assert cached_array is not None or const_value is not None
 
       # Instantiate the object i.e. call the class __init__ method
-      prop = cls(parent_model = property_collection.model, title=keyword, extra_metadata = extra_metadata)
+      prop = cls(parent_model = parent_model, title = keyword, extra_metadata = extra_metadata)
 
       # Prepare array data in collection attribute and add to model
       prop.collection.set_support(model = prop.model, support_uuid = support_uuid)  # this can be expensive; todo: optimise
