@@ -4216,6 +4216,13 @@ class WellLogCollection(PropertyCollection):
    def add_log(self, title, data, unit, discrete=False, case_sensitive_units=False, realization=None, write=True):
       """Add a well log to the collection, and optionally save to HDF / XML
       
+      Note:
+         If write=False, the data are not written to the model and are saved to be written later.
+         To write the data, you can subsequently call::
+
+            logs.write_hdf5_for_imported_list()
+            logs.create_xml_for_imported_list_and_add_parts_to_model()
+
       Args:
          title (str): Name of log, typically the mnemonic
          data (array-like): log data to write. Must have same length as frame MDs
@@ -4223,6 +4230,7 @@ class WellLogCollection(PropertyCollection):
          discrete (bool): by default False, i.e. continuous
          case_sensitive_units (bool): If True, consider case when parsing units.
          realization (int): If given, assign data to a realisation.
+         write (bool): If True, write XML and HDF5.
 
       Returns:
          uuids: list of uuids of newly added properties. Only returned if write=True.
