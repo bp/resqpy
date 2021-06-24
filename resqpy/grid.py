@@ -4952,7 +4952,9 @@ class RegularGrid(Grid):
                                                   const_value = axes_lengths_kji[axis])
          dpc.create_xml_for_imported_list_and_add_parts_to_model()
          if self.property_collection is None: self.property_collection = dpc
-         else: self.property_collection.inherit_parts_from_other_collection(dpc)
+         else:
+            if self.property_collection.support is None: self.property_collection.set_support(support = self)
+            self.property_collection.inherit_parts_from_other_collection(dpc)
 
       return node
 
