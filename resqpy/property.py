@@ -792,6 +792,15 @@ class PropertyCollection():
 
       return list(self.dict.keys())
 
+   def uuids(self):
+      """Return list of uuids in this collection.
+
+      returns:
+         list of uuids being the members of this collection; there is one uuid per property array
+
+      :meta common:
+      """
+      return [self.model.uuid_for_part(p) for p in self.dict.keys()]
 
    def selective_parts_list(self,
                             realization = None,
@@ -4200,21 +4209,79 @@ class WellLogCollection(PropertyCollection):
          for actual well logs, the realization argument will usually be None; for synthetic logs created from an ensemble
          it may be of use
 
-      note:
-         When iterated over, yields instances of :class:`resqpy.property.WellLog` .
-
-         For example::
-
-            for log in log_collection.logs():
-               print(log.name)
       """
 
       super().__init__(support=frame, property_set_root=property_set_root, realization=realization)
 
-   def logs(self):
-      """ Generator that yeilds component Log objects """
+   def add_log(self, title, data, unit, discrete=False, case_sensitive_units=False, realization=None, write=True):
+      """Add a well log to the collection, and optionally save to HDF / XML
+      
+      Note:
+         If write=False, the data are not written to the model and are saved to be written later.
+         To write the data, you can subsequently call::
 
-      return (WellLog(collection=self, part=part) for part in self.parts())
+            logs.write_hdf5_for_imported_list()
+            logs.create_xml_for_imported_list_and_add_parts_to_model()
+
+      Args:
+         title (str): Name of log, typically the mnemonic
+         data (array-like): log data to write. Must have same length as frame MDs
+         unit (str): Unit of measure
+         discrete (bool): by default False, i.e. continuous
+         case_sensitive_units (bool): If True, consider case when parsing units.
+         realization (int): If given, assign data to a realisation.
+         write (bool): If True, write XML and HDF5.
+
+      Returns:
+         uuids: list of uuids of newly added properties. Only returned if write=True.
+
+      """
+      # Validate
+      if self.support is None:
+         raise ValueError('Supporting WellboreFrame not present')
+      if len(data) != self.support.node_count:
+         raise ValueError(
+            f'Data mismatch: data length={len(data)}, but MD node count={self.support.node_count}'
+         )
+
+      # Infer valid RESQML properties
+      # TODO: Store orginal unit somewhere if it's not a valid RESQML unit
+      uom = validate_uom_from_string(unit, case_sensitive=case_sensitive_units)
+      property_kind, facet_type, facet = infer_property_kind(title, uom)
+
+      # Add to the "import list"
+      self.add_cached_array_to_imported_list(
+         cached_array=np.array(data),
+         source_info='',
+         # TODO: put the curve.descr somewhere
+         keyword=title,
+         discrete=discrete,
+         uom=uom,
+         property_kind=property_kind,
+         facet_type=facet_type,
+         facet=facet,
+         realization=realization,
+      )
+
+      if write:
+         self.write_hdf5_for_imported_list()
+         return self.create_xml_for_imported_list_and_add_parts_to_model()
+      else:
+         return None
+
+   def iter_logs(self):
+      """ Generator that yields component Log objects.
+      
+      Yields:
+         instances of :class:`resqpy.property.WellLog` .
+
+      Example::
+
+         for log in log_collection.logs():
+            print(log.title)
+      """
+      
+      return (WellLog(collection=self, uuid=uuid) for uuid in self.uuids())
 
    def to_df(self, include_units=False):
       """ Return pandas dataframe of log data
@@ -4231,9 +4298,9 @@ class WellLogCollection(PropertyCollection):
 
       # Get logs
       data = {}
-      for log in self.logs():
+      for log in self.iter_logs():
 
-         col_name = log.name
+         col_name = log.title
          if include_units and log.uom:
             col_name += f' ({log.uom})'
 
@@ -4271,12 +4338,14 @@ class WellLogCollection(PropertyCollection):
       # todo: include datum information in description
       las.append_curve('MD', md_values, unit=md_unit)
 
-      for log in self.logs():
-         name = log.name
-         unit = log.uom
-         values = log.values()
+      for well_log in self.iter_logs():
+         name = well_log.title
+         unit = well_log.uom
+         values = well_log.values()
          if values.ndim > 1:
             raise NotImplementedError('Multidimensional logs not yet supported in pandas')
+         assert len(values) > 0
+         log.debug(f"Writing log {name} of length {len(values)} and shape {values.shape}")
          las.append_curve(name, values, unit=unit, descr=None)
       return las
 
@@ -4292,23 +4361,23 @@ class WellLogCollection(PropertyCollection):
       self.set_support(support = frame)
 
 
-
 class WellLog:
    """ Thin wrapper class around RESQML properties for well logs """
 
-   def __init__(self, collection, part):
+   def __init__(self, collection, uuid):
       """ Create a well log from a part name """
 
       self.collection: PropertyCollection = collection
       self.model = collection.model
-      self.part = part
+      self.uuid = uuid
 
+      part = self.model.part_for_uuid(uuid)
       indexable = self.collection.indexable_for_part(part)
       if indexable != 'nodes':
          raise NotImplementedError('well frame related property does not have nodes as indexable element')
 
       #: Name of log
-      self.name = self.model.citation_title_for_part(part)
+      self.title = self.model.citation_title_for_part(part)
 
       #: Unit of measure
       self.uom = self.collection.uom_for_part(part)
@@ -4320,7 +4389,8 @@ class WellLog:
          may return 2D numpy array with shape (num_depths, num_columns).
       """
 
-      return self.collection.cached_part_array_ref(self.part)
+      part = self.model.part_for_uuid(self.uuid)
+      return self.collection.cached_part_array_ref(part)
 
 
 
