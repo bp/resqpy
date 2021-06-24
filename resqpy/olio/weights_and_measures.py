@@ -3,12 +3,19 @@
 from pathlib import Path
 import json
 from functools import lru_cache
+from pint import UnitRegistry, set_application_registry
 
 # Bifrost weights and measures module
 # Temporary version based on pagoda code
 # todo: Replace with RESQML uom based version at a later date
 
 version = '17th June 2021'
+
+# Shared instance of pint unit registry
+
+ureg = UnitRegistry(str(Path(__file__).parent / 'data/unit_registry.txt'))
+set_application_registry(ureg)
+Q_ = ureg.Quantity
 
 # physical constants
 feet_to_metres = 0.3048
