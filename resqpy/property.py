@@ -3107,6 +3107,7 @@ class Property(BaseResqpy):
       prop = cls(
          parent_model = property_collection.model,
          uuid = property_collection.uuid_for_part(part),
+         support_uuid = property_collection.support_uuid,
          title = property_collection.citation_title_for_part(part),
          extra_metadata = property_collection.extra_metadata_for_part(part)
       )
