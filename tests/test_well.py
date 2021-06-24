@@ -3,7 +3,9 @@ from resqpy.organize import WellboreFeature
 
 import pytest
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_array_almost_equal
+from pandas.testing import assert_frame_equal
 
 from resqpy.model import Model
 from resqpy.crs import Crs
@@ -20,7 +22,7 @@ def test_MdDatum(example_model_and_crs):
       md_reference='mean low water',
    )
    datum = resqpy.well.MdDatum(
-      parent_model=model, crs_root=crs.crs_root, **data
+      parent_model=model, crs_root=crs.root, **data
    )
    uuid = datum.uuid
 
@@ -57,42 +59,65 @@ def test_trajectory_iterators(example_model_with_well):
    assert sorted(uuids_1) == sorted(uuids_2)
 
 
-@pytest.mark.skip(reason="Example data not yet available")
-def test_logs():
+def test_logs(example_model_with_logs):
+
+   model, well_interp, datum, traj, frame, log_collection = example_model_with_logs
+
    # Check logs can be extracted from resqml dataset
 
-   epc_path = Path(__file__).parent / 'example_data/my_model.epc'
-   model = Model(epc_file=str(epc_path))
-
-   discovered_logs = 0
-
+   # Check exactly one wellbore frame exists in the model
+   discovered_frames = 0
    for trajectory in model.iter_trajectories():
       for frame in trajectory.iter_wellbore_frames():
+         discovered_frames += 1
+   assert discovered_frames == 1
 
-         # Measured depths
-         mds = frame.node_mds
-         assert isinstance(mds, np.ndarray)
-         assert len(mds) > 0
+   # Check MDs
+   mds = frame.node_mds
+   assert isinstance(mds, np.ndarray)
+   assert_array_almost_equal(mds, [1,2,3,4])
 
-         # Logs
-         # TODO: some way of testing whether log collection is empty or not
-         log_collection = frame.logs
+   # Check logs
+   log_list = list(log_collection.iter_logs())
+   assert len(log_list) == 2
 
-         # Test conversion
-         df = log_collection.to_pandas()
-         las = log_collection.to_las()
-         assert len(df.columns) > 0
-         assert len(df) > 0
-         assert len(las.well.WELL) > 0
+   # TODO: would be nice to write: log_collection.get_curve("GR")
+   gr = log_list[0]
+   assert gr.title == "GR"
+   assert gr.uom == "gAPI"
+   assert_array_almost_equal(gr.values(), [1,2,1,2])
 
-         for log in log_collection:
-            values = log.values()
+   nphi = log_list[1]
+   assert nphi.title == 'NPHI'
 
-            assert len(log.name) > 0
-            assert values.shape[-1] == len(mds)
-            discovered_logs += 1
+   # TODO: get more units working
+   # assert nphi.uom == "v/v"
+   assert_array_almost_equal(nphi.values(), [0.1, 0.1, np.NaN, np.NaN])
+   
 
-   assert discovered_logs > 0
+def test_logs_conversion(example_model_with_logs):
+
+   model, well_interp, datum, traj, frame, log_collection = example_model_with_logs
+
+   # Pandas
+   df = log_collection.to_df()
+   df_expected = pd.DataFrame(
+      data={"GR": [1,2,1,2], "NPHI": [0.1, 0.1, np.NaN, np.NaN]},
+      index=[1,2,3,4]
+   )
+   assert_frame_equal(df_expected, df, check_dtype=False)
+   
+   # LAS
+   las = log_collection.to_las()
+   assert las.well.WELL.value == 'well A'
+
+   gr = las.get_curve("GR")
+   assert gr.unit.casefold() == "GAPI".casefold()
+   assert_array_almost_equal(gr.data, [1,2,1,2])
+
+   nphi = las.get_curve("NPHI")
+   # assert nphi.unit == "GAPI"
+   assert_array_almost_equal(nphi.data, [0.1, 0.1, np.NaN, np.NaN])
 
 
 # Trajectory
@@ -103,7 +128,7 @@ def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
    wellname = "Hullabaloo"
    model, crs = example_model_and_crs
    datum = resqpy.well.MdDatum(
-      parent_model=model, crs_root=crs.crs_root, location=(0, 0, -100), md_reference='kelly bushing'
+      parent_model=model, crs_root=crs.root, location=(0, 0, -100), md_reference='kelly bushing'
    )
    datum.create_xml()
    traj = resqpy.well.Trajectory(parent_model=model, md_datum=datum, well_name=wellname)

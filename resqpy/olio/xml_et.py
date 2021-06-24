@@ -214,22 +214,23 @@ def content_type(content_type_str):
    return content_type_str
 
 
-def node_type(node, is_rels = False):
+def node_type(node, is_rels = False, strip_obj = False):
    """Returns the type as held in attributes of xml node; defining authority is stripped out."""
 
    if node is None: return None
    if is_rels:
       if 'Type' not in node.attrib.keys(): return None
       type_str = node.attrib['Type']
-      return type_str[type_str.rfind('/') + 1:]
+      result = type_str[type_str.rfind('/') + 1:]
    else:
       for key in node.attrib.keys():
          if stripped_of_prefix(key) == 'type':
 #           type_str = node.attrib[key]
 #           return type_str[type_str.rfind(':') + 1:]
             type_str = stripped_of_prefix(node.attrib[key])
-            return type_str
-   return None
+            result = type_str
+   if result is not None and strip_obj and result.startswith('obj_'): result = result[4:]
+   return result
 
 
 def print_xml_tree(root, level = 0, max_level = None, strip_tag_refs = True,

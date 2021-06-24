@@ -3033,9 +3033,9 @@ class Model():
          hv.extension('bokeh')
 
          # Plot
-         hv.Graph.from_networkx(g, nx.layout.spring_layout)\
-            .opts(tools=['hover'], width=600, height=600,
-                  node_color='resqml_type', cmap='Category10')
+         hv.Graph.from_networkx(g, nx.layout.spring_layout).opts(
+            tools=['hover'], node_color='resqml_type', cmap='Category10'
+         )
 
       Args:
          uuids_subset (iterable): If present, only consider uuids in this list.

@@ -71,13 +71,21 @@ class BaseResqpy(metaclass=ABCMeta):
     def part(self):
         """Standard part name corresponding to self.uuid"""
 
-        return rqet.part_name_for_object(self.resqml_type, self.uuid)
+# following caused trouble when resqml_type dynamically determined
+#       return rqet.part_name_for_object(self.resqml_type, self.uuid)
+        return self.model.part_for_uuid(self.uuid)
 
     @property
     def root(self):
         """XML node corresponding to self.uuid"""
 
         return self.model.root_for_uuid(self.uuid)
+
+    @property
+    def citation_title(self):
+        """Citation block title equivalent to self.title"""
+
+        return self.title
 
     def load_from_xml(self):
         """Load citation block from XML.

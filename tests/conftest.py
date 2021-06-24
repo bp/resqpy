@@ -8,7 +8,7 @@ import pandas as pd
 
 from resqpy.model import Model, new_model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
-from resqpy.well import Trajectory, MdDatum
+from resqpy.well import Trajectory, MdDatum, WellboreFrame
 from resqpy.crs import Crs
 
 
@@ -58,7 +58,7 @@ def example_model_with_well(example_model_and_crs):
 
    # Create a measured depth datum
    datum = MdDatum(
-      parent_model=model, crs_root=crs.crs_root, location=(0, 0, -elevation), md_reference='kelly bushing'
+      parent_model=model, crs_root=crs.root, location=(0, 0, -elevation), md_reference='kelly bushing'
    )
    datum.create_xml()
 
@@ -78,3 +78,22 @@ def example_model_with_well(example_model_and_crs):
    return model, well_interp, datum, traj
 
 
+@pytest.fixture
+def example_model_with_logs(example_model_with_well):
+
+   model, well_interp, datum, traj = example_model_with_well
+
+   frame = WellboreFrame(
+      model,
+      trajectory=traj,
+      represented_interp=well_interp,
+      mds=[1,2,3,4],
+   )
+   frame.write_hdf5()
+   frame.create_xml(title='Log run A')
+
+   log_collection = frame.logs
+   log_collection.add_log("GR", [1,2,1,2], 'gAPI')
+   log_collection.add_log("NPHI", [0.1, 0.1, np.NaN, np.NaN], 'v/v')
+
+   return model, well_interp, datum, traj, frame, log_collection

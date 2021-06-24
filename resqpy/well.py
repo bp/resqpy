@@ -1412,15 +1412,19 @@ class WellboreFrame:
 
       #: All logs associated with the wellbore frame; an instance of :class:`resqpy.property.WellLogCollection`
       self.logs = None
-
+      
       if frame_root is not None:
          self.load_from_xml(frame_root)
       elif trajectory is not None and mds is not None and len(mds) > 1:
          self.node_count = len(mds)
          self.node_mds = np.array(mds)
          assert self.node_mds is not None and self.node_mds.ndim == 1
-
+          
       if self.uuid is None: self.uuid = bu.new_uuid()
+
+      # UUID needs to have been created before LogCollection can be made
+      # TODO: Figure out when this should be created, and how it is kept in sync when new logs are created
+      self.logs = rqp.WellLogCollection(frame=self)
 
 
    def load_from_xml(self, node):
@@ -1456,10 +1460,7 @@ class WellboreFrame:
       if interp_uuid is None:
          self.wellbore_interpretation = None
       else:
-         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(
-            self.model, root_node = self.model.root_for_part(wellbore_interp_part)
-         )
+         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid=interp_uuid)
 
       # Set wellboreframe title
       self.title = rqet.citation_title_for_node(self.root_node)
@@ -3610,42 +3611,20 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization=None,
    # Create a WellLogCollection in which to put logs
    collection = rqp.WellLogCollection(frame=well_frame, realization=realization)
 
-   # Step 1. Read in data from each curve in turn (skipping first curve which has depths)
+   # Read in data from each curve in turn (skipping first curve which has depths)
    for curve in las.curves[1:]:
-
-      # Steps to load in array data:
-      # 1. read array of data into a numpy array (already performed by las.curves[])
-      # 2. add to the "import list"
-      # 3. write imported list arrays to hdf5 file
-      # 4. create resqml xml nodes for imported list arrays and add as parts to model
-      # 5. include newly added parts in collection
-
-      # Infer valid RESQML properties
-      # TODO: Store orginal unit somewhere if it's not a valid RESQML unit
-      uom = rqp.validate_uom_from_string(curve.unit, case_sensitive=case_sensitive_units)
-      property_kind, facet_type, facet = rqp.infer_property_kind(curve.mnemonic, uom)
-
-      assert len(curve.data) == well_frame.node_count
-
-      # Step 2. add to the "import list"
-      collection.add_cached_array_to_imported_list(
-         cached_array=curve.data,
-         source_info='',
-         # TODO: put the curve.descr somewhere
-         keyword=curve.mnemonic,  # ': '.join([curve.mnemonic, curve.descr]),
-         discrete=False,
-         uom=uom,
-         property_kind=property_kind,
-         facet_type=facet_type,
-         facet=facet,
+      
+      collection.add_log(
+         title=curve.mnemonic,
+         data=curve.data,
+         unit=curve.unit,
+         case_sensitive_units=case_sensitive_units,
          realization=realization,
+         write=False,
       )
+      collection.write_hdf5_for_imported_list()
+      collection.create_xml_for_imported_list_and_add_parts_to_model()
 
-   # Step 3. write imported list arrays to hdf5 file
-   collection.write_hdf5_for_imported_list()
-   # Step 4. create resqml xml nodes for imported list arrays and add as parts to model
-   # And step 5. include newly added parts in collection
-   collection.create_xml_for_imported_list_and_add_parts_to_model()
 
    return collection, well_frame
 
