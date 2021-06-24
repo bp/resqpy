@@ -1,0 +1,96 @@
+# Pint units definition file
+
+#### PREFIXES ####
+
+nano- =  1e-9  = n-
+micro- = 1e-6  = µ- = u-
+milli- = 1e-3  = m-
+centi- = 1e-2  = c-
+deci- =  1e-1  = d-
+deca- =  1e+1  = da- = deka-
+hecto- = 1e2   = h-
+kilo- =  1e3   = k-
+mega- =  1e6   = M-
+giga- =  1e9   = G-
+tera- =  1e12  = T-
+
+
+#### BASE UNITS ####
+
+meter = [length] = m = metre
+second = [time] = s = sec
+gram = [mass] = g
+kelvin = [temperature]; offset: 0 = K = degK = °K = degree_Kelvin = degreeK  # older names supported for compatibility
+radian = [] = rad
+count = []
+
+# Derived dimensions
+[area] = [length] ** 2
+[volume] = [length] ** 3
+[velocity] = [length] / [time] = [speed]
+[acceleration] = [velocity] / [time]
+
+#### CONSTANTS ####
+
+pi     = 3.1415926535897932384626433832795028841971693993751 = π  # pi
+tau    = 2 * pi = τ                                               # Far more beautiful than pi
+tansec = 4.8481368111333441675396429478852851658848753880815e-6   # tangent of 1 arc-second ~ arc_second/radian
+ln10   = 2.3025850929940456840179914546843642076011014886288      # natural logarithm of 10
+
+#### UNITS ####
+
+# Time
+minute = 60 * second = min
+hour = 60 * minute = hr
+day = 24 * hour = d
+week = 7 * day
+fortnight = 2 * week
+year = 365.25 * day = a = yr = julian_year
+month = year / 12
+
+# Volume
+cm3 = cm**3
+ft3 = foot**3
+pu = cm3 / (cm3 * 100)  # pore units
+bbl = (m**3) * 0.1234
+
+# Force
+[force] = [mass] * [acceleration]
+newton = kilogram * meter / second ** 2 = N
+
+# Pressure
+[pressure] = [force] / [area]
+pascal = newton / meter ** 2 = Pa
+
+# Viscosity
+[viscosity] = [pressure] * [time]
+poise = 0.1 * Pa * second = P
+
+# Petrophysical
+gAPI = [radioactivity] = gapi = _ = GAPI
+
+# Permeability
+darcy = 10**-12 * m**2 = D
+
+
+#### UNIT GROUPS ####
+
+@group USCSLengthInternational
+    inch = yard / 36 = in = international_inch = inches = international_inches
+    foot = yard / 3 = ft = international_foot = feet = international_feet
+    yard = 0.9144 * meter = yd = international_yard  # since Jul 1959
+    mile = 1760 * yard = mi = international_mile
+
+    square_inch = inch ** 2 = sq_in = square_inches
+    square_foot = foot ** 2 = sq_ft = square_feet
+    square_yard = yard ** 2 = sq_yd
+    square_mile = mile ** 2 = sq_mi
+
+    cubic_inch = in ** 3 = cu_in
+    cubic_foot = ft ** 3 = cu_ft = cubic_feet
+    cubic_yard = yd ** 3 = cu_yd
+@end
+
+@group USCSLengthSurvey
+    survey_foot = 1200 / 3937 * meter = sft = ft[US]
+@end
