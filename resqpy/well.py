@@ -3619,9 +3619,12 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization=None,
          data=curve.data,
          unit=curve.unit,
          case_sensitive_units=case_sensitive_units,
-         realization=realization
+         realization=realization,
+         write=False,
       )
-      # TODO: for speed, only write on last log
+      collection.write_hdf5_for_imported_list()
+      collection.create_xml_for_imported_list_and_add_parts_to_model()
+
 
    return collection, well_frame
 
