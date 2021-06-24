@@ -3006,6 +3006,68 @@ class Model():
          results.append(parts_list[index])
       return results
 
+   def as_graph(self, uuids_subset=None):
+      """Return representation of model as nodes and edges, suitable for plotting in a graph
+
+      Note:
+         The graph can be most readily visualised with other packages such as
+         NetworkX and HoloViews, which are not part of resqpy.
+
+         For a guide to plotting graphs interactively, see:
+         http://holoviews.org/user_guide/Network_Graphs.html
+
+      Example::
+
+         # Create the nodes and edges
+         nodes, edges = model.as_graph()
+
+         # Load into a NetworkX graph
+         import networkx as nx
+         g = nx.Graph()
+         g.add_nodes_from(nodes.items())
+         g.add_edges_from(edges)
+
+         # Import holoviews
+         import holoviews as hv
+         from holoviews import opts
+         hv.extension('bokeh')
+
+         # Plot
+         hv.Graph.from_networkx(g, nx.layout.spring_layout)\
+            .opts(tools=['hover'], width=600, height=600,
+                  node_color='resqml_type', cmap='Category10')
+
+      Args:
+         uuids_subset (iterable): If present, only consider uuids in this list.
+            By default, use all uuids in the model.
+
+      Returns:
+         2-tuple of nodes and edges:
+
+         - nodes: dict mapping uuid to attributes (e.g. citation title)
+         - edges: set of unordered pairs of uuids, representing relationships
+
+      :meta common:
+      """
+      nodes = {}
+      edges = set()
+
+      if uuids_subset is None:
+         uuids_subset = self.uuids()
+      
+      uuids_subset = set(map(str, uuids_subset))
+
+      for uuid in uuids_subset:
+         part = self.part_for_uuid(uuid)
+         nodes[uuid] = dict(
+            resqml_type=self.type_of_part(part, strip_obj=True),
+            title=self.citation_title_for_part(part),
+         )
+         for rel in map(str, self.uuids(related_uuid=uuid)):
+            if rel in uuids_subset:
+               edges.add(frozenset([uuid, rel]))
+               
+      return nodes, edges
 
    def _set_uuid_to_part(self, part_name):
       """Adds an entry to the dictionary mapping from uuid to part name."""

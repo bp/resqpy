@@ -94,3 +94,27 @@ def test_model_iter_crs_empty(tmp_model):
    with pytest.raises(StopIteration):
       next(tmp_model.iter_crs())
 
+
+def test_model_as_graph(example_model_with_well):
+
+   model, well_interp, datum, traj = example_model_with_well
+   crs = next(model.iter_crs())
+
+   nodes, edges = model.as_graph()
+
+   # Check nodes
+   for obj in [well_interp, datum, traj, crs]:
+      assert str(obj.uuid) in nodes.keys()
+      if hasattr(obj, 'title'):  # TODO: remove this when all objects have this attribute
+         assert obj.title == nodes[str(obj.uuid)]['title']
+
+   # Check edges
+   assert frozenset([str(traj.uuid), str(datum.uuid)]) in edges
+   assert frozenset([str(traj.uuid), str(crs.uuid)]) in edges
+   assert frozenset([str(traj.uuid), str(well_interp.uuid)]) in edges
+   assert frozenset([str(datum.uuid), str(traj.uuid)]) in edges
+
+   # Test uuid subset
+   nodes, edges = model.as_graph(uuids_subset=[datum.uuid])
+   assert len(nodes.keys()) == 1
+   assert len(edges) == 0
