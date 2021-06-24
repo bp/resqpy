@@ -3110,8 +3110,6 @@ class Property(BaseResqpy):
          title=property_collection.citation_title_for_part(part),
          extra_metadata=property_collection.extra_metadata_for_part(part)
       )
-      assert prop.collection.number_of_parts() == 0
-      prop.collection.inherit_parts_from_other_collection(property_collection)
 
       # Edit properties of parent collection
       prop.collection.has_single_property_kind_flag = True
