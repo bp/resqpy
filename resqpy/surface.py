@@ -1910,7 +1910,7 @@ class Mesh(_BaseSurface):
       geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
       geom.text = '\n'
 
-      self.model.create_crs_reference(crs_root, root = geom)
+      self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
       p_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
       p_node.text = '\n'
@@ -2065,7 +2065,7 @@ class Mesh(_BaseSurface):
       if add_as_part:
          self.model.add_part('obj_Grid2dRepresentation', self.uuid, g2d_node)
          if add_relationships:
-            self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', crs_root, 'sourceObject')
+            self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', self.crs_root, 'sourceObject')
             if self.represented_interpretation_root is not None:
                self.model.create_reciprocal_relationship(g2d_node, 'destinationObject',
                                                          self.represented_interpretation_root, 'sourceObject')

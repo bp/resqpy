@@ -2305,21 +2305,28 @@ class Model():
       return crs_node
 
 
-   def create_crs_reference(self, crs_root, root = None):
+   def create_crs_reference(self, crs_root = None, root = None, crs_uuid = None):
       """Creates a node refering to an existing crs node and optionally adds as child of root.
 
       arguments:
-         crs_root: the root xml node for the coordinate reference system being referenced
+         crs_root: DEPRECATED, use uuid instead; the root xml node for the coordinate reference system being referenced
          root: the xml node to which the new reference node is to appended as a child (ie. the xml node
             for the object that is referring to the crs)
+         crs_uuid: the uuid of the crs
 
       returns:
          newly created crs reference xml node
       """
 
+      if crs_uuid is None:
+         warnings.warn('use of crs_root is deprecated in Model.create_crs_reference(); use crs_uuid instead')
+         crs_uuid = rqet.uuid_for_part_root(crs_root)
+      else:
+         crs_root = self.root_for_uuid(crs_uuid)
+      assert crs_root is not None
+
       return self.create_ref_node('LocalCrs', rqet.find_nested_tags_text(crs_root, ['Citation', 'Title']),
-                                  bu.uuid_from_string(crs_root.attrib['uuid']),
-                                  content_type = 'obj_LocalDepth3dCrs', root = root)
+                                  crs_uuid, content_type = 'obj_LocalDepth3dCrs', root = root)
 
 
    def create_md_datum_reference(self, md_datum_root, root = None):
