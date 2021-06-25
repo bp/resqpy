@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation."""
 
-version = '16th June 2021'
+version = '25th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -14,6 +14,7 @@ import os
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.read_nexus_fault as rnf
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
@@ -25,22 +26,23 @@ import resqpy.organize as rqo
 
 
 
-class GridConnectionSet():
+class GridConnectionSet(BaseResqpy):
    """Class for obj_GridConnectionSetRepresentation holding pairs of connected faces, usually for faults."""
 
-   def __init__(self, parent_model, extract_from_xml = True, connection_set_root = None, grid = None,
+   resqml_type = 'GridConnectionSetRepresentation'
+
+   def __init__(self, parent_model, uuid = None, connection_set_root = None, grid = None,
                 ascii_load_format = None, ascii_file = None,
                 k_faces = None, j_faces = None, i_faces = None, feature_name = None,
-                create_organizing_objects_where_needed = False):
+                create_organizing_objects_where_needed = False, title = None, originator = None):
       """Initializes a new GridConnectionSet and optionally loads it from xml or a list of simulator format ascii files.
 
       arguments:
          parent_model (model.Model object): the resqml model that this grid connection set will be part of
-         extract_from_xml (boolean, default True): If True, the new connection set is populated from the xml
-               (and hdf5) data associated with the connection_set_root argument
-         connection_set_root (optional): the root node of the xml tree for the obj_GridConnectionSet part;
-               preferred if extract_from_xml argument is True; if None, the last in the list of grid connection
-               sets in the model is used (usually the most recent); ignored if extract_from_xml is False
+         uuid (uuid.UUID, optional): the uuid of an existing RESQML GridConnectionSetRepresentation from which
+               this resqpy object is populated
+         connection_set_root (DEPRECATED): use uuid instead; the root node of the xml tree for the
+               obj_GridConnectionSet part; ignored if uuid is present
          grid (grid.Grid object, optional): If present, the grid object that this connection set relates to;
                if absent, the main grid for the parent model is assumed; only used if connection set root is
                None; see also notes
@@ -74,9 +76,6 @@ class GridConnectionSet():
       """
 
       log.debug('initialising grid connection set')
-      self.model = parent_model
-      self.root = connection_set_root
-      self.uuid = bu.new_uuid()
       self.count = None              # number of face-juxtaposition pairs in this connection set
       self.cell_index_pairs = None   # shape (count, 2); dtype int; index normalized for flattened array
       self.cell_index_pairs_null_value = -1  # integer null value for array above
@@ -102,50 +101,11 @@ class GridConnectionSet():
 #     self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = int)
       self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = int)
       # note: the rework_face_pairs() method, below, overwrites the face indices based on I, J cell indices
+      if not title: title = feature_name
 
-      if extract_from_xml:
-         if self.root is None:
-            cs_parts_list = self.model.parts_list_related_to_uuid_of_type(self.grid_list[0].uuid,
-                                                                          'obj_GridConnectionSetRepresentation')
-            assert len(cs_parts_list), 'no grid connection set parts found for grid in model'
-            if len(cs_parts_list) > 1:
-               log.warning('more than one grid connection set part in model, using last in list')
-            self.root = self.model.root_for_part(cs_parts_list[-1])
-         self.uuid = self.root.attrib['uuid']
-         self.count = rqet.find_tag_int(self.root, 'Count')
-         assert self.count > 0, 'empty grid connection set'
-         self.cell_index_pairs_null_value = rqet.find_nested_tags_int(self.root, ['CellIndexPairs', 'NullValue'])
-         self.face_index_pairs_null_value = rqet.find_nested_tags_int(self.root, ['LocalFacePerCellIndexPairs', 'NullValue'])
-         # postpone loading of hdf5 array data till on-demand load (cell, grid & face index pairs)
-         interp_root = rqet.find_tag(self.root, 'ConnectionInterpretations')
-         if interp_root is None: return
-         # load ordered feature list
-         self.feature_list = []  # ordered list of (content_type, uuid, title) for faults
-         for child in interp_root:
-            if rqet.stripped_of_prefix(child.tag) != 'FeatureInterpretation': continue
-            feature_type = rqet.content_type(rqet.find_tag_text(child, 'ContentType'))
-            feature_uuid = bu.uuid_from_string(rqet.find_tag_text(child, 'UUID'))
-            feature_title = rqet.find_tag_text(child, 'Title')
-            # for now, only accept faults
-            assert feature_type in ['obj_FaultInterpretation', 'obj_HorizonInterpretation']
-            self.feature_list.append((feature_type, feature_uuid, feature_title))
-            log.debug('connection set references fault interpretation: ' + feature_title)
-         log.debug('number of faults referred to in connection set: ' + str(len(self.feature_list)))
-         assert len(self.feature_list) > 0, 'list of fault interpretation references is empty for connection set'
-         # leave feature indices till on-demand load
-         self.grid_list = []
-         for child in interp_root:
-            if rqet.stripped_of_prefix(child.tag) != 'Grid': continue
-            grid_type = rqet.content_type(rqet.find_tag_text(child, 'ContentType'))
-            grid_uuid = bu.uuid_from_string(rqet.find_tag_text(child, 'UUID'))
-            assert grid_type == 'obj_IjkGridRepresentation', 'only IJK grids supported for grid connection sets'
-            grid = self.model.grid(uuid = grid_uuid, find_properties = False)  # centralised list of grid objects for shared use
-            self.grid_list.append(grid)
-         if len(self.grid_list) == 0:  # this code only needed to handle defective datasets generated by earlier versions!
-            grid = self.model.grid(find_properties = False)  # should find only or ROOT grid
-            assert grid is not None, 'No ROOT grid found in model'
-            self.grid_list = [grid]
-      else:
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = connection_set_root)
+
+      if self.root is None:
          if grid is None:
             grid = self.model.grid(find_properties = False)  # should find only or ROOT grid
             assert grid is not None, 'No ROOT grid found in model'
@@ -170,6 +130,44 @@ class GridConnectionSet():
             # note: grid structures assume curtain like set of kelp
          elif k_faces is not None or j_faces is not None or i_faces is not None:
             self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name, create_organizing_objects_where_needed)
+
+
+   def load_from_xml(self):
+      root = self.root
+      assert root is not None
+      self.count = rqet.find_tag_int(root, 'Count')
+      assert self.count > 0, 'empty grid connection set'
+      self.cell_index_pairs_null_value = rqet.find_nested_tags_int(root, ['CellIndexPairs', 'NullValue'])
+      self.face_index_pairs_null_value = rqet.find_nested_tags_int(root, ['LocalFacePerCellIndexPairs', 'NullValue'])
+      # postpone loading of hdf5 array data till on-demand load (cell, grid & face index pairs)
+      interp_root = rqet.find_tag(root, 'ConnectionInterpretations')
+      if interp_root is None: return
+      # load ordered feature list
+      self.feature_list = []  # ordered list of (content_type, uuid, title) for faults
+      for child in interp_root:
+         if rqet.stripped_of_prefix(child.tag) != 'FeatureInterpretation': continue
+         feature_type = rqet.content_type(rqet.find_tag_text(child, 'ContentType'))
+         feature_uuid = bu.uuid_from_string(rqet.find_tag_text(child, 'UUID'))
+         feature_title = rqet.find_tag_text(child, 'Title')
+         # for now, only accept faults
+         assert feature_type in ['obj_FaultInterpretation', 'obj_HorizonInterpretation']
+         self.feature_list.append((feature_type, feature_uuid, feature_title))
+         log.debug('connection set references fault interpretation: ' + feature_title)
+      log.debug('number of faults referred to in connection set: ' + str(len(self.feature_list)))
+      assert len(self.feature_list) > 0, 'list of fault interpretation references is empty for connection set'
+      # leave feature indices till on-demand load
+      self.grid_list = []
+      for child in interp_root:
+         if rqet.stripped_of_prefix(child.tag) != 'Grid': continue
+         grid_type = rqet.content_type(rqet.find_tag_text(child, 'ContentType'))
+         grid_uuid = bu.uuid_from_string(rqet.find_tag_text(child, 'UUID'))
+         assert grid_type == 'obj_IjkGridRepresentation', 'only IJK grids supported for grid connection sets'
+         grid = self.model.grid(uuid = grid_uuid, find_properties = False)  # centralised list of grid objects for shared use
+         self.grid_list.append(grid)
+      if len(self.grid_list) == 0:  # this code only needed to handle defective datasets generated by earlier versions!
+         grid = self.model.grid(find_properties = False)  # should find only or ROOT grid
+         assert grid is not None, 'No ROOT grid found in model'
+         self.grid_list = [grid]
 
 
    def set_pairs_from_kelp(self, kelp_0, kelp_1, feature_name, create_organizing_objects_where_needed, axis = 'K'):
@@ -833,7 +831,7 @@ class GridConnectionSet():
       h5_reg.write(file_name, mode = mode)
 
 
-   def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, title = 'ROOT', originator = None):
+   def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, title = None, originator = None):
       """Creates a Grid Connection Set (fault faces) xml node and optionally adds as child of root and/or to parts forest.
 
       :meta common:
@@ -843,15 +841,9 @@ class GridConnectionSet():
       # xml for grid(s) must be created before calling this method
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
+      if not self.title and not title: title = 'ROOT'
 
-      gcs = self.model.new_obj_node('GridConnectionSetRepresentation')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(gcs.attrib['uuid'])
-      else:
-         gcs.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = gcs, title = title, originator = originator)
+      gcs = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       c_node = rqet.SubElement(gcs, ns['resqml2'] + 'Count')
       c_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
@@ -975,8 +967,6 @@ class GridConnectionSet():
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(gcs, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
             self.model.create_reciprocal_relationship(gcs, 'destinationObject', self.grid_list[0].grid_root, 'sourceObject')
-
-      self.root = gcs
 
       return gcs
 
