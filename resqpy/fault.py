@@ -1506,7 +1506,7 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict):
    gcs.write_hdf5(model.h5_file_name())
    gcs.create_xml(model.h5_uuid())
    model.store_epc()
-   if os.path.exists(os.path.join(os.path.dirname(model.epc_file), faults_combined_temp.txt')):
+   if os.path.exists(os.path.join(os.path.dirname(model.epc_file), 'faults_combined_temp.txt')):
       os.remove(os.path.join(os.path.dirname(model.epc_file), 'faults_combined_temp.txt'))
    log.info("Grid connection set added")
 
