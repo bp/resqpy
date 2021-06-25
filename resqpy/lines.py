@@ -514,7 +514,7 @@ class Polyline(_BasePolyline):
         geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
         geom.text = '\n'
 
-        self.model.create_crs_reference(self.crs_root, root = geom)
+        self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
         points = rqet.SubElement(geom, ns['resqml2'] + 'Points')
         points.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
@@ -616,9 +616,8 @@ class PolylineSet(_BasePolyline):
 
                 self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
                 assert self.crs_root is not None # Required field
-                uuid_str = self.crs_root.attrib['uuid']
-                crs_uuid = bu.uuid_from_string(uuid_str)
-                assert crs_uuid is not None # Required field
+                self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
+                assert self.crs_uuid is not None # Required field
 
                 closed_node = rqet.find_tag(patch_node, 'ClosedPolylines')
                 assert closed_node is not None # Required field
@@ -637,7 +636,8 @@ class PolylineSet(_BasePolyline):
                 assert len(self.count_perpol) == len(closed_array)
                 assert np.sum(self.count_perpol) == len(self.coordinates)
 
-                subpolys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, crs_uuid, self.crs_root, self.rep_int_root)
+                subpolys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates,
+                                                     self.crs_uuid, self.crs_root, self.rep_int_root)
                 # Check we have the right number of polygons
                 assert len(subpolys) == len(self.count_perpol)
 
@@ -652,7 +652,7 @@ class PolylineSet(_BasePolyline):
             for poly in polylines:
                 crs_list.append(poly.crs_uuid)
             crs_set = set(crs_list)
-            assert len(crs_set) == 1, 'More than one CRS found in input polylines - only handling the first'
+            assert len(crs_set) == 1, 'More than one CRS found in input polylines for polyline set'
             for crs_uuid in crs_set:
                 self.crs_uuid = crs_uuid
                 self.crs_root = self.model.root_for_uuid(self.crs_uuid)
@@ -683,7 +683,7 @@ class PolylineSet(_BasePolyline):
             self.count_perpol = np.array(self.count_perpol)
             if self.crs_root is None: # If no crs_uuid is provided, assume the main model crs is valid
                 self.crs_root = self.model.crs_root
-                self.crs_uuid = self.crs_root.attrib['uuid']
+                self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
             self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates,
                                                    self.crs_uuid, self.crs_root, self.rep_int_root)
 
@@ -836,7 +836,7 @@ class PolylineSet(_BasePolyline):
         geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
         geom.text = '\n'
 
-        self.model.create_crs_reference(self.crs_root, root = geom)
+        self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
         points = rqet.SubElement(geom, ns['resqml2'] + 'Points')
         points.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
