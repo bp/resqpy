@@ -947,6 +947,7 @@ class Surface(_BaseSurface):
       # todo: if crs_root is None, attempt to derive from surface patch crs uuid (within patch loop, below)
       if crs_uuid is None:
          crs_root = self.model.crs_root     # maverick use of model's default crs
+         crs_uuid = rqet.uuid_for_part_root(crs_root)
       else:
          crs_root = self.model.root_for_uuid(crs_uuid)
 
@@ -1007,7 +1008,7 @@ class Surface(_BaseSurface):
          geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
          geom.text = '\n'
 
-         self.model.create_crs_reference(crs_root, root = geom)
+         self.model.create_crs_reference(crs_uuid = crs_uuid, root = geom)
 
          points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
          points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
@@ -1368,9 +1369,11 @@ class PointSet(_BaseSurface):
       if crs_root is None:
          if self.crs_uuid is None:
             crs_root = self.model.crs_root     # maverick use of model's default crs
-            self.crs_uuid = bu.uuid_from_string(crs_root.attrib['uuid'])
+            self.crs_uuid = rqet.uuid_for_part_root(crs_root)
          else:
             crs_root = self.model.root_for_part(self.model.part_for_uuid(self.crs_uuid))
+      else:
+         self.crs_uuid = rqet.uuid_for_part_root(crs_root)
 
       if self.represented_interpretation_root is not None:
          interp_root = self.represented_interpretation_root
@@ -1399,7 +1402,7 @@ class PointSet(_BaseSurface):
          geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
          geom.text = '\n'
 
-         self.model.create_crs_reference(crs_root, root = geom)
+         self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
          points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
          points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
