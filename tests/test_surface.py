@@ -8,7 +8,7 @@ def test_surface(tmp_model):
     title = 'Mountbatten'
     model = tmp_model
     surf = resqpy.surface.Surface(
-        parent_model=model, extract_from_xml=False, title=title
+        parent_model=model, title=title
     )
     surf.create_xml()
 

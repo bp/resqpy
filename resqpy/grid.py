@@ -4436,7 +4436,7 @@ class Grid():
          geom.text = '\n'
 
          # the remainder of this function is populating the geometry node
-         self.model.create_crs_reference(self.crs_root, root = geom)
+         self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
          k_dir = rqet.SubElement(geom, ns['resqml2'] + 'KDirection')
          k_dir.set(ns['xsi'] + 'type', ns['resqml2'] + 'KDirection')
