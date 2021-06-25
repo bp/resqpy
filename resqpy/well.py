@@ -193,6 +193,7 @@ class MdDatum():
 
       crs_root = self.crs_root
       assert crs_root is not None
+      crs_uuid = rqet.uuid_for_part_root(crs_root)
 
       datum = self.model.new_obj_node('MdDatum')
 
@@ -209,7 +210,7 @@ class MdDatum():
       md_ref.set(ns['xsi'] + 'type', ns['resqml2'] + 'MdReference')
       md_ref.text = md_reference
 
-      self.model.create_crs_reference(crs_root, root = datum)
+      self.model.create_crs_reference(crs_uuid = crs_uuid, root = datum)
 
       if root is not None: root.append(datum)
       if add_as_part:
@@ -1244,9 +1245,9 @@ class Trajectory():
          # note: resqml standard allows trajectory to be in different crs to md datum
          #       however, this module often uses the md datum crs, if the trajectory has been imported
          if self.crs_root is None:
-            self.model.create_crs_reference(self.md_datum.crs_root, root = geom)
+            self.model.create_crs_reference(crs_uuid = self.md_datum.crs_uuid, root = geom)
          else:
-            self.model.create_crs_reference(self.crs_root, root = geom)
+            self.model.create_crs_reference(crs_uuid = rqet.uuid_for_part_root(self.crs_root), root = geom)
 
          kc_node = rqet.SubElement(geom, ns['resqml2'] + 'KnotCount')
          kc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
