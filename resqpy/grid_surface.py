@@ -1323,7 +1323,7 @@ def populate_blocked_well_from_trajectory(blocked_well, grid, active_only = Fals
       log.debug('skin single layer tactics disabled')
 
    grid_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
-   if bu.matching_uuids(rqet.uuid_for_part_root(blocked_well.trajectory.crs_root)), grid.crs_uuid):
+   if bu.matching_uuids(rqet.uuid_for_part_root(blocked_well.trajectory.crs_root), grid.crs_uuid):
       trajectory = blocked_well.trajectory
    else:
       # create a temporary orphanage model (in memory only) to host a copy of the trajectory for crs alignment
