@@ -867,7 +867,7 @@ def find_faces_to_represent_surface_elephantine(grid, surface, name):
          r['face'] = face_letter
       faces_df.append(r)
 #   log.debug('building grid connection set from dataframe')
-   gcs = rqf.GridConnectionSet(grid.model, extract_from_xml = False)
+   gcs = rqf.GridConnectionSet(grid.model)
    gcs.set_pairs_from_faces_df(faces_df, True)
    return gcs
 
@@ -972,7 +972,7 @@ def find_faces_to_represent_surface_loopy(grid, surface, name, progress_fn = Non
 #   log.debug('skip count: ' + str(skip_count))
    if progress_fn is not None: progress_fn(1.0)
 
-   gcs = rqf.GridConnectionSet(grid.model, extract_from_xml = False, grid = grid,
+   gcs = rqf.GridConnectionSet(grid.model, grid = grid,
                                k_faces = k_faces, j_faces = j_faces, i_faces = i_faces,
                                feature_name = name,
                                create_organizing_objects_where_needed = True)
@@ -1092,7 +1092,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
 #                        '; I: ' + str(np.count_nonzero(i_faces)))
    if progress_fn is not None: progress_fn(1.0)
 
-   gcs = rqf.GridConnectionSet(grid.model, extract_from_xml = False, grid = grid,
+   gcs = rqf.GridConnectionSet(grid.model, grid = grid,
                                k_faces = k_faces, j_faces = j_faces, i_faces = i_faces,
                                feature_name = name,
                                create_organizing_objects_where_needed = True)

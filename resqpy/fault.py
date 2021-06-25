@@ -419,7 +419,7 @@ class GridConnectionSet(BaseResqpy):
       if feature_index is None: feature_index, _ = self.feature_index_and_uuid_for_fault_name(feature_name)
       if feature_index is None: return None
       if feature_index < 0 or feature_index >= len(self.feature_list): return None
-      singleton = GridConnectionSet(self.model, extract_from_xml = False, grid = self.grid_list[0])
+      singleton = GridConnectionSet(self.model, grid = self.grid_list[0])
       singleton.cell_index_pairs, singleton.face_index_pairs =  \
          self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
       singleton.count = singleton.cell_index_pairs.shape[0]
@@ -441,7 +441,7 @@ class GridConnectionSet(BaseResqpy):
       if min_k0 <= 0: min_k0 = None
       if max_k0 >= grid.extent_kji[0] - 1: max_k0 = None
       if min_k0 is None and max_k0 is None:
-         dupe = GridConnectionSet(self.model, extract_from_xml = False, grid = grid)
+         dupe = GridConnectionSet(self.model, grid = grid)
          dupe.append(self)
          return dupe
       mask = np.zeros(grid.extent_kji, dtype = bool)
@@ -471,7 +471,7 @@ class GridConnectionSet(BaseResqpy):
       if len(indices) == 0:
          log.warning('no connections have passed filtering')
          return None
-      masked_gcs = GridConnectionSet(self.model, extract_from_xml = False, grid = grid)
+      masked_gcs = GridConnectionSet(self.model, grid = grid)
       masked_gcs.count = len(indices)
       masked_gcs.cell_index_pairs = self.cell_index_pairs[indices, :]
       masked_gcs.face_index_pairs = self.face_index_pairs[indices, :]
@@ -1467,7 +1467,7 @@ def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap conne
 
 
 
-def add_connection_set_and_tmults(model,fault_incl,tmult_dict):
+def add_connection_set_and_tmults(model, fault_incl, tmult_dict):
    """Add a grid connection set to a resqml model, based on a fault include file and a dictionary of fault:tmult pairs.
 
    Grid connection set added to resqml model, with extra_metadata on the fault interpretation containing the MULTFL values
@@ -1493,7 +1493,7 @@ def add_connection_set_and_tmults(model,fault_incl,tmult_dict):
         if len(fault_incl) > 1:
             # Making a concatenated version of the faultincl files
             # TODO: perhaps a better/more unique name and location could be used in future?
-            temp_faults = os.path.join(os.path.dirname(model.epc_file),'faults_combined_temp.txt')
+            temp_faults = os.path.join(os.path.dirname(model.epc_file), 'faults_combined_temp.txt')
             with open(temp_faults, 'w') as outfile:
                 log.debug("combining multiple include files into one")
                 for fname in fault_incl:
@@ -1502,12 +1502,12 @@ def add_connection_set_and_tmults(model,fault_incl,tmult_dict):
                             outfile.write(line)
         else: temp_faults = fault_incl[0]
    else: temp_faults = fault_incl
-   gcs = GridConnectionSet(parent_model=model, extract_from_xml=False, ascii_load_format='nexus',ascii_file=temp_faults)
+   gcs = GridConnectionSet(parent_model = model, ascii_load_format = 'nexus', ascii_file = temp_faults)
    gcs.write_hdf5(model.h5_file_name())
    gcs.create_xml(model.h5_uuid())
    model.store_epc()
-   if os.path.exists(os.path.join(os.path.dirname(model.epc_file),'faults_combined_temp.txt')):
-      os.remove(os.path.join(os.path.dirname(model.epc_file),'faults_combined_temp.txt'))
+   if os.path.exists(os.path.join(os.path.dirname(model.epc_file), faults_combined_temp.txt')):
+      os.remove(os.path.join(os.path.dirname(model.epc_file), 'faults_combined_temp.txt'))
    log.info("Grid connection set added")
 
    return gcs.uuid
@@ -1577,7 +1577,7 @@ def _make_k_gcs_from_cip_list(grid, cip_list, feature_name):
 
    if count == 0: return None
 
-   pcs = GridConnectionSet(grid.model, extract_from_xml = False)
+   pcs = GridConnectionSet(grid.model)
    pcs.grid_list = [grid]
    pcs.count = count
    pcs.grid_index_pairs = np.zeros((count, 2), dtype = int)

@@ -1733,7 +1733,7 @@ class Grid():
       if face_set_dict is None: face_set_dict = self.face_set_dict
       self.face_set_gcs_list = []
       for feature in face_set_dict:
-         gcs = rqf.GridConnectionSet(self.model, extract_from_xml = False, grid = self)
+         gcs = rqf.GridConnectionSet(self.model, grid = self)
          kelp_j, kelp_i, axis = face_set_dict[feature]
          log.debug(f'creating gcs for: {feature} {axis}')
          gcs.set_pairs_from_kelp(kelp_j, kelp_i, feature, create_organizing_objects_where_needed, axis = axis)

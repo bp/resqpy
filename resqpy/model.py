@@ -1535,8 +1535,8 @@ class Model():
       gcs_list = []
       gcs_parts_list = self.parts_list_of_type('GridConnectionSetRepresentation')
       for part in gcs_parts_list:
-         gcs_root = self.root_for_part(part)
-         gcs = rqf.GridConnectionSet(self, connection_set_root = gcs_root)
+         gcs_uuid = self.uuid_for_part(part)
+         gcs = rqf.GridConnectionSet(self, uuid = gcs_uuid)
          gcs_list.append(gcs)
       return gcs_list
 
