@@ -1,6 +1,6 @@
 """grid_surface.py: Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '10th June 2021'
+version = '24th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -9,9 +9,11 @@ log.debug('grid_surface.py version ' + version)
 import numpy as np
 import pandas as pd
 
+import resqpy.olio.xml_et as rqet
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.intersection as meet
 import resqpy.olio.box_utilities as bx
+import resqpy.olio.uuid as bu
 
 import resqpy.model as rq
 import resqpy.crs as rqc
@@ -277,7 +279,7 @@ def generate_untorn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top
       messed up.
    """
 
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   surf = rqs.Surface(grid.model)
    kp = 1 if ref_k_faces == 'base' else 0
    mesh = grid.horizon_points(ref_k0 = k0, heal_faults = True, kp = kp)
    if border is None or border <= 0.0:
@@ -328,7 +330,7 @@ def generate_torn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top',
       single patch regardless.
    """
 
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   surf = rqs.Surface(grid.model)
    kp = 1 if ref_k_faces == 'base' else 0
    mesh = grid.split_horizon_points(ref_k0 = k0, kp = kp)
    surf.set_from_torn_mesh(mesh, quad_triangles = quad_triangles)
@@ -379,7 +381,7 @@ def generate_torn_surface_for_x_section(grid, axis, ref_slice0 = 0, plus_face = 
    else:
       x_sect_mesh = grid.split_gap_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
 
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   surf = rqs.Surface(grid.model)
    surf.set_from_torn_mesh(x_sect_mesh, quad_triangles = quad_triangles)
 
    return surf
@@ -426,7 +428,7 @@ def generate_untorn_surface_for_x_section(grid, axis, ref_slice0 = 0, plus_face 
 
    log.debug(f'x_sect_mesh.shape: {x_sect_mesh.shape}; grid.extent_kji: {grid.extent_kji}')
 
-   surf = rqs.Surface(grid.model, extract_from_xml = False)
+   surf = rqs.Surface(grid.model)
    surf.set_from_irregular_mesh(x_sect_mesh, quad_triangles = quad_triangles)
 
    return surf
@@ -676,7 +678,7 @@ def find_first_intersection_of_trajectory_with_cell_surface(trajectory, grid, kj
    """Searches along the trajectory from a starting point until the first intersection with the cell's surface is encountered."""
 
    cp = grid.corner_points(kji0)
-   cell_surface = rqs.Surface(grid.model, extract_from_xml = False)
+   cell_surface = rqs.Surface(grid.model)
    cell_surface.set_to_single_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
    t, p = cell_surface.triangles_and_points()
    triangles = p[t]
@@ -720,7 +722,7 @@ def point_is_within_cell(xyz, grid, kji0, cell_surface = None, false_on_pinchout
    if false_on_pinchout and grid.pinched_out(kji0, cache_pinchout_array = False): return False
    if cell_surface is None:
       cp = grid.corner_points(kji0)
-      cell_surface = rqs.Surface(grid.model, extract_from_xml = False)
+      cell_surface = rqs.Surface(grid.model)
       cell_surface.set_to_single_cell_faces_from_corner_points(cp, quad_triangles = True)
    t, p = cell_surface.triangles_and_points()
    triangles = p[t]
@@ -763,7 +765,7 @@ def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_tria
 
    if not as_single_layer and grid.k_gaps:
       col_face_mesh = None
-      col_face_surface = rqs.Surface(grid.model, extract_from_xml = False)
+      col_face_surface = rqs.Surface(grid.model)
       mesh = np.empty((1, grid.nk, 2, 2, 3))
       mesh[0, :, 0, 0, :] = points[grid.k_raw_index_array, pillar_index_pair[0], :]
       mesh[0, :, 1, 0, :] = points[grid.k_raw_index_array, pillar_index_pair[1], :]
@@ -784,7 +786,7 @@ def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_tria
          col_face_xyz[1] = points[:, pillar_index_pair[1]]
       col_face_mesh = rqs.Mesh(grid.model, xyz_values = col_face_xyz, crs_uuid = grid.crs_uuid)
       title = 'column face for j0,i0: ' + str(col_ji0[0]) + ',' + str(col_ji0[1]) + ' face ' + 'KJI'[axis] + '-+'[polarity]
-      col_face_surface = rqs.Surface(grid.model, extract_from_xml = False, mesh = col_face_mesh,
+      col_face_surface = rqs.Surface(grid.model, mesh = col_face_mesh,
                                      quad_triangles = quad_triangles, title = title)
 
    return col_face_mesh, col_face_surface
@@ -1136,14 +1138,14 @@ def generate_surface_for_blocked_well_cells(blocked_well, combined = True, activ
          composite_cp[cell_p] = cp
          cell_p += 1
       else:
-         cs = rqs.Surface(blocked_well.model, extract_from_xml = False)
+         cs = rqs.Surface(blocked_well.model)
          cs.set_to_single_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
          surface_list.append(cs)
 
    if cell_p == 0 and len(surface_list) == 0: return None
 
    if combined:
-      cs = rqs.Surface(blocked_well.model, extract_from_xml = False)
+      cs = rqs.Surface(blocked_well.model)
       cs.set_to_multi_cell_faces_from_corner_points(composite_cp[:cell_p])
       return cs
 
@@ -1163,8 +1165,8 @@ def trajectory_grid_overlap(trajectory, grid, lazy = False):
    traj_box[0] = np.amin(trajectory.control_points, axis = 0)
    traj_box[1] = np.amax(trajectory.control_points, axis = 0)
    grid_box = grid.xyz_box(lazy = lazy, local = True)
-   if trajectory.crs_root is not grid.crs_root:
-      t_crs = rqc.Crs(trajectory.model, crs_root = trajectory.crs_root)
+   if not bu.matching_uuids(rqet.uuid_for_part_root(trajectory.crs_root), grid.crs_uuid):
+      t_crs = rqc.Crs(trajectory.model, uuid = rqet.uuid_for_part_root(trajectory.crs_root))
       g_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
       t_crs.convert_array_to(g_crs, traj_box)
    return bx.boxes_overlap(traj_box, grid_box)
@@ -1321,7 +1323,7 @@ def populate_blocked_well_from_trajectory(blocked_well, grid, active_only = Fals
       log.debug('skin single layer tactics disabled')
 
    grid_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
-   if blocked_well.trajectory.crs_root is grid.crs_root:
+   if bu.matching_uuids(rqet.uuid_for_part_root(blocked_well.trajectory.crs_root), grid.crs_uuid):
       trajectory = blocked_well.trajectory
    else:
       # create a temporary orphanage model (in memory only) to host a copy of the trajectory for crs alignment
@@ -1329,7 +1331,7 @@ def populate_blocked_well_from_trajectory(blocked_well, grid, active_only = Fals
       model = rq.Model(create_basics = True)
       trajectory = rqw.Trajectory(model, blocked_well.trajectory.root_node, hdf5_source_model = blocked_well.trajectory.model)
       assert trajectory is not None
-      traj_crs = rqc.Crs(blocked_well.model, crs_root = blocked_well.trajectory.crs_root)
+      traj_crs = rqc.Crs(blocked_well.model, uuid = rqet.uuid_for_part_root(blocked_well.trajectory.crs_root))
       traj_crs.convert_array_to(grid_crs, trajectory.control_points)   # trajectory xyz converted in situ to grid's crs
       trajectory.crs_root = model.duplicate_node(grid.crs_root)
       # note: any represented interpretation object will not be present in the temporary model

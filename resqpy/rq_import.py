@@ -953,12 +953,12 @@ def add_surfaces(epc_file,                       # existing resqml model
       log.info('surface ' + short_name + ' processing file: ' + surf_file + ' using format: ' + surface_file_format)
       if rq_class == 'surface':
          if surface_file_format == 'GOCAD-Tsurf':
-            surface = rqs.Surface(model, extract_from_xml = False,
+            surface = rqs.Surface(model,
                                   tsurf_file = surf_file,
                                   surface_role = surface_role,
                                   quad_triangles = quad_triangles)
          else:
-            surface = rqs.Surface(model, extract_from_xml = False,
+            surface = rqs.Surface(model,
                                   mesh_file = surf_file, mesh_format = surface_file_format,
                                   surface_role = surface_role,
                                   quad_triangles = quad_triangles)
@@ -986,7 +986,7 @@ def add_surfaces(epc_file,                       # existing resqml model
          surface.set_represented_interpretation_root(interp_root)
 
       surface.create_xml(ext_uuid, add_as_part = True, add_relationships = True,
-                         crs_root = crs_root, root = None,
+                         crs_uuid = rqet.uuid_for_part_root(crs_root),
                          title = short_name + ' sourced from ' + surf_file,
                          originator = None)
 

@@ -1,10 +1,11 @@
 """surface.py: surface class based on resqml standard."""
 
-version = '16th June 2021'
+version = '25th June 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
 import logging
+import warnings
 log = logging.getLogger(__name__)
 log.debug('surface.py version ' + version)
 
@@ -13,6 +14,7 @@ import numpy as np
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.uuid as bu
@@ -25,7 +27,7 @@ from resqpy.olio.zmap_reader import read_mesh
 import resqpy.organize as rqo
 
 
-class _BaseSurface:
+class _BaseSurface(BaseResqpy):
    """Base class to implement shared methods for other classes in this module"""
 
    def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
@@ -59,7 +61,7 @@ class _BaseSurface:
 class TriangulatedPatch():
    """Class for RESQML TrianglePatch objects (used by Surface objects inter alia)."""
 
-   def __init__(self, parent_model, patch_index = None, extract_from_xml = True, patch_node = None, crs_uuid = None):
+   def __init__(self, parent_model, patch_index = None, patch_node = None, crs_uuid = None):
       """Create an empty TriangulatedPatch (TrianglePatch) node and optionally load from xml.
 
       note:
@@ -77,8 +79,7 @@ class TriangulatedPatch():
       self.points = None
       self.crs_uuid = crs_uuid
       self.crs_root = None
-      if extract_from_xml:
-         assert patch_node is not None
+      if patch_node is not None:
          xml_patch_index = rqet.find_tag_int(patch_node, 'PatchIndex')
          assert xml_patch_index is not None
          if self.patch_index is not None:
@@ -491,16 +492,17 @@ class TriangulatedPatch():
 class Surface(_BaseSurface):
    """Class for RESQML triangulated set surfaces."""
 
-   def __init__(self, parent_model, extract_from_xml = True, surface_root = None, point_set = None,
+   resqml_type = 'TriangulatedSetRepresentation'
+
+   def __init__(self, parent_model, uuid = None, surface_root = None, point_set = None,
                 mesh = None, mesh_file = None, mesh_format = None, tsurf_file = None, quad_triangles = False,
-                title = None, surface_role = 'map', crs_uuid = None):
+                title = None, surface_role = 'map', crs_uuid = None, originator = None, extra_metadata = {}):
       """Create an empty Surface object (RESQML TriangulatedSetRepresentation) and optionally populates from xml, point set or mesh.
 
       arguments:
          parent_model (model.Model object): the model to which this surface belongs
-         extract_from_xml (boolean, default True): if True, the new surface is initialised based on
-            data in surface_root xml
-         surface_root (xml tree root node, optional): required if extract_from_xml is True
+         uuid (uuid.UUID, optional): if present, the surface is initialised from an existing RESQML object with this uuid
+         surface_root (xml tree root node, optional): DEPRECATED: alternative to using uuid
          point_set (PointSet object, optional): if present, the surface is initialised as a Delaunay
             triangulation of the points in the point set; ignored if extracting from xml
          mesh (Mesh object, optional): if present, the surface is initialised as a triangulation of
@@ -517,12 +519,16 @@ class Surface(_BaseSurface):
          surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
          crs_uuid (uuid.UUID, optional): if present and not extracting from xml, is set as the crs uuid
             applicable to mesh etc. data
+         originator (str, optional): the name of the person creating the object; defaults to login id; ignored
+            when initialising from an existing RESQML object
+         extra_metadata (dict): items in this dictionary are added as extra metadata; ignored
+            when initialising from an existing RESQML object
 
       returns:
          a newly created surface object
 
       notes:
-         there are 5 ways to initialise a surface object, in order of precendence:
+         there are 6 ways to initialise a surface object, in order of precendence:
          1. extracting from xml
          2. as a Delaunay triangulation of points in a PointSet
          3. as a simple triangulation of a Mesh object
@@ -542,26 +548,17 @@ class Surface(_BaseSurface):
 
       assert surface_role in ['map', 'pick']
 
-      self.model = parent_model
-      self.root = surface_root
       self.surface_role = surface_role
       self.patch_list = []         # ordered list of patches
-      self.uuid = None
       self.crs_uuid = crs_uuid
       self.triangles = None        # composite triangles (all patches)
       self.points = None           # composite points (all patches)
       self.boundaries = None       # todo: read up on what this is for and look out for examples
       self.represented_interpretation_root = None
       self.title = title
-      if extract_from_xml:
-         assert self.root is not None
-         self.uuid = self.root.attrib['uuid']
-         self.title = rqet.citation_title_for_node(self.root)
-         self.extract_patches(self.root)
-         ref_node = rqet.find_tag(self.root, 'RepresentedInterpretation')
-         if ref_node is not None:
-            interp_root = self.model.referenced_node(ref_node)
-            self.set_represented_interpretation_root(interp_root)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator=originator, root_node = surface_root)
+      if self.root is not None:
+         pass
       elif point_set is not None:
          self.set_from_point_set(point_set)
       elif mesh is not None:
@@ -570,11 +567,22 @@ class Surface(_BaseSurface):
          self.set_from_mesh_file(mesh_file, mesh_format, quad_triangles = quad_triangles)
       elif tsurf_file is not None:
          self.set_from_tsurf_file(tsurf_file)
-      if self.uuid is None: self.uuid = bu.new_uuid()
+
+
+   def load_from_xml(self):
+      root_node = self.root
+      assert root_node is not None
+      self.extract_patches(root_node)
+      ref_node = rqet.find_tag(root_node, 'RepresentedInterpretation')
+      if ref_node is not None:
+         interp_root = self.model.referenced_node(ref_node)
+         self.set_represented_interpretation_root(interp_root)
+
 
    @property
    def represented_interpretation_uuid(self):
       return rqet.uuid_for_part_root(self.represented_interpretation_root)
+
 
    def set_represented_interpretation_root(self, interp_root):
       """Makes a note of the xml root of the represented interpretation."""
@@ -644,7 +652,7 @@ class Surface(_BaseSurface):
    def set_from_triangles_and_points(self, triangles, points):
       """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_triangles_and_points(triangles, points)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -674,7 +682,7 @@ class Surface(_BaseSurface):
 
       mesh_shape = mesh_xyz.shape
       assert len(mesh_shape) == 3 and mesh_shape[2] == 3
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_irregular_mesh(mesh_xyz, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -689,7 +697,7 @@ class Surface(_BaseSurface):
 
       mesh_shape = mesh_xyz.shape
       assert len(mesh_shape) == 3 and mesh_shape[2] == 3
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_sparse_mesh(mesh_xyz)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -718,7 +726,7 @@ class Surface(_BaseSurface):
 
       mesh_shape = mesh_xyz.shape
       assert len(mesh_shape) == 5 and mesh_shape[2:] == (2, 2, 3)
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_from_torn_mesh(mesh_xyz, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -752,7 +760,7 @@ class Surface(_BaseSurface):
       """Populates this (empty) surface to represent faces of a cell, from corner points of shape (2, 2, 2, 3)."""
 
       assert cp.size == 24
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -766,7 +774,7 @@ class Surface(_BaseSurface):
       self.patch_list = []
       p_index = 0
       for cell_cp in cp:
-         tri_patch = TriangulatedPatch(self.model, patch_index = p_index, extract_from_xml = False, crs_uuid = self.crs_uuid)
+         tri_patch = TriangulatedPatch(self.model, patch_index = p_index, crs_uuid = self.crs_uuid)
          tri_patch.set_to_cell_faces_from_corner_points(cell_cp, quad_triangles = quad_triangles)
          self.patch_list.append(tri_patch)
          p_index += 1
@@ -805,7 +813,7 @@ class Surface(_BaseSurface):
       :meta common:
       """
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -814,7 +822,7 @@ class Surface(_BaseSurface):
    def set_to_triangle(self, corners):
       """Populate this (empty) surface with a patch of one triangle."""
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_triangle(corners)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -823,7 +831,7 @@ class Surface(_BaseSurface):
    def set_to_sail(self, n, centre, radius, azimuth, delta_theta):
       """Populate this (empty) surface with a patch representing a triangle wrapped on a sphere."""
 
-      tri_patch = TriangulatedPatch(self.model, patch_index = 0, extract_from_xml = False, crs_uuid = self.crs_uuid)
+      tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
       tri_patch.set_to_sail(n, centre, radius, azimuth, delta_theta)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
@@ -909,8 +917,8 @@ class Surface(_BaseSurface):
 
 
    def create_xml(self, ext_uuid = None,
-                  add_as_part = True, add_relationships = True, crs_root = None,
-                  root = None, title = None, originator = None):
+                  add_as_part = True, add_relationships = True, crs_uuid = None,
+                  title = None, originator = None):
       """Creates a triangulated surface xml node from this surface object and optionally adds as part of model.
 
          arguments:
@@ -919,10 +927,8 @@ class Surface(_BaseSurface):
                in the model
             add_relationships (boolean, default True): if True, a relationship xml part is created relating the
                new triangulated representation part to the crs part (and optional interpretation part)
-            crs_root (optional): the coordinate reference system root xml node applicable to the surface points data;
+            crs_uuid (optional): the uuid of the coordinate reference system applicable to the surface points data;
                if None, the main crs for the model is assumed to apply
-            root (optional, usually None): if not None, the newly created triangulated representation node is appended
-               as a child to this node
             title (string): used as the citation Title text; should be meaningful to a human
             originator (string, optional): the name of the human being who created the triangulated representation part;
                default is to use the login name
@@ -934,22 +940,16 @@ class Surface(_BaseSurface):
       """
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
+      if not self.title: self.title = 'surface'
 
-      tri_rep = self.model.new_obj_node('TriangulatedSetRepresentation')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(tri_rep.attrib['uuid'])
-      else:
-         tri_rep.attrib['uuid'] = str(self.uuid)
-
-      if not title: title = self.title
-      if not title: title = 'surface'
+      tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       # todo: if crs_root is None, attempt to derive from surface patch crs uuid (within patch loop, below)
-      if crs_root is None: crs_root = self.model.crs_root     # maverick use of model's default crs
-
-      # Temporary solution to allow surfaces to load in RMS - move citation block above representedinterpretation
-      self.model.create_citation(root = tri_rep, title = title, originator = originator)
+      if crs_uuid is None:
+         crs_root = self.model.crs_root     # maverick use of model's default crs
+         crs_uuid = rqet.uuid_for_part_root(crs_root)
+      else:
+         crs_root = self.model.root_for_uuid(crs_uuid)
 
       if self.represented_interpretation_root is not None:
          interp_root = self.represented_interpretation_root
@@ -1008,7 +1008,7 @@ class Surface(_BaseSurface):
          geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
          geom.text = '\n'
 
-         self.model.create_crs_reference(crs_root, root = geom)
+         self.model.create_crs_reference(crs_uuid = crs_uuid, root = geom)
 
          points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
          points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
@@ -1024,7 +1024,6 @@ class Surface(_BaseSurface):
 
          patch.node = p_node
 
-      if root is not None: root.append(tri_rep)
       if add_as_part:
          self.model.add_part('obj_TriangulatedSetRepresentation', self.uuid, tri_rep)
          if add_relationships:
@@ -1037,9 +1036,6 @@ class Surface(_BaseSurface):
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(tri_rep, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
-
-
-      self.root = tri_rep
 
       return tri_rep
 
@@ -1114,14 +1110,20 @@ class CombinedSurface:
 class PointSet(_BaseSurface):
    """Class for RESQML Point Set Representation within resqpy model object."""   # TODO: Work in Progress
 
-   def __init__(self, parent_model, point_set_root = None, load_hdf5 = False,
+   resqml_type = 'PointSetRepresentation'
+
+   def __init__(self, parent_model, point_set_root = None, uuid = None, load_hdf5 = False,
                 points_array = None, crs_uuid = None, polyset = None, polyline = None,
-                random_point_count = None, charisma_file = None, irap_file = None):
-      """Create an empty Point Set object and optionally populates from xml.
+                random_point_count = None, charisma_file = None, irap_file = None,
+                title = None, originator = None):
+      """Creates an empty Point Set object and optionally populates from xml or other source.
 
       arguments:
          parent_model (model.Model object): the model to which the new point set belongs
-         point_set_root (xml node, optional): if present, the new point set is created based on the xml
+         point_set_root (xml node, optional): DEPRECATED, use uuid instead;
+            if present, the new point set is created based on the xml
+         uuid (uuid.UUID, optional): if present, the object is populated from the RESQML PointSetRepresentation
+            with this uuid
          load_hdf5 (boolean, default False): if True and point_set_root is present, the actual points are
             pre-loaded into a numpy array; otherwise the points will be loaded on demand
          points_array (numpy float array of shape (..., 3), optional): if present, the xyz data which
@@ -1144,51 +1146,23 @@ class PointSet(_BaseSurface):
       :meta common:
       """
 
-      self.model = parent_model
-      self.root_node = point_set_root
-      self.crs_uuid = None
+      self.crs_uuid = crs_uuid
       self.patch_count = None
       self.patch_ref_list = []      # ordered list of (patch hdf5 ext uuid, path in hdf5, point count)
       self.patch_array_list = []    # ordered list of numpy float arrays (or None before loading), each of shape (N, 3)
       self.full_array = None
-      self.uuid = None
       self.points = None            # composite points (all patches)
       self.represented_interpretation_root = None
-      self.title = 'point set'
+      super().__init__(model = parent_model, uuid = uuid, titl = title, originator = originator, root_node = point_set_root)
 
-      if point_set_root is not None:
-         self.uuid = self.root_node.attrib['uuid']
-         self.title = rqet.citation_title_for_node(self.root_node)
-         self.patch_count = rqet.count_tag(self.root_node, 'NodePatch')
-         assert self.patch_count, 'no patches found in xml for point set'
-         self.patch_array_list = [None for _ in range(self.patch_count)]
-         patch_index = 0
-         for child in rqet.list_of_tag(point_set_root, 'NodePatch'):
-            point_count = rqet.find_tag_int(child, 'Count')
-            geom_node = rqet.find_tag(child, 'Geometry')
-            assert geom_node, 'geometry missing in xml for point set patch'
-            crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
-            assert crs_uuid, 'crs uuid missing in geometry xml for point set patch'
-            if self.crs_uuid is None: self.crs_uuid = crs_uuid
-            else: assert bu.matching_uuids(crs_uuid, self.crs_uuid), 'mixed coordinate reference systems in point set'
-            ext_uuid = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'HdfProxy', 'UUID'])
-            assert ext_uuid, 'missing hdf5 uuid in goemetry xml for point set patch'
-            hdf5_path = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'PathInHdfFile'])
-            assert hdf5_path, 'missing internal hdf5 path in goemetry xml for point set patch'
-            self.patch_ref_list.append((ext_uuid, hdf5_path, point_count))
-            patch_index += 1
+      if self.root is not None:
          if load_hdf5: self.load_all_patches()
-         ref_node = rqet.find_tag(self.root_node, 'RepresentedInterpretation')
-         if ref_node is not None:
-            interp_root = self.model.referenced_node(ref_node)
-            self.set_represented_interpretation_root(interp_root)
 
       elif points_array is not None:
+         assert self.crs_uuid is not None, 'missing crs uuid when establishing point set from array'
          self.add_patch(points_array)
-         if self.crs_uuid is None: self.crs_uuid = crs_uuid
 
       elif polyline is not None: # Points from or within polyline
-         self.uuid = bu.new_uuid()
          if random_point_count:
             assert polyline.is_convex()
             points = np.zeros((random_point_count, 3))
@@ -1200,11 +1174,11 @@ class PointSet(_BaseSurface):
             self.add_patch(polyline.coordinates)
             if polyline.rep_int_root is not None:
                self.set_represented_interpretation_root(polyline.rep_int_root)
-         self.crs_uuid = polyline.crs_uuid
-         self.title = polyline.title
+         if self.crs_uuid is None: self.crs_uuid = polyline.crs_uuid
+         else: assert bu.matching_uuids(self.crs_uuid, polyline.crs_uuid), 'mismatched crs uuids'
+         if not self.title: self.title = polyline.title
 
       elif polyset is not None: # Points from polylineSet
-         self.uuid = bu.new_uuid()
          for poly in polyset.polys:
             if poly == polyset.polys[0]:
                master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
@@ -1229,11 +1203,11 @@ class PointSet(_BaseSurface):
          self.add_patch(poly_coords)
          if polyset.rep_int_root is not None:
             self.set_represented_interpretation_root(polyset.rep_int_root)
-         self.crs_uuid = polyset.polys[0].crs_uuid
-         self.title = polyset.title
+         if self.crs_uuid is None: self.crs_uuid = polyset.polys[0].crs_uuid
+         else: assert bu.matching_uuids(self.crs_uuid, polyset.polys[0].crs_uuid), 'mismatched crs uuids'
+         if not self.title: self.title = polyset.title
 
       elif charisma_file is not None: # Points from Charisma 3D interpretation lines
-         self.uuid = bu.new_uuid()
          with open(charisma_file,'r') as surf:
             for i, line in enumerate(surf.readlines()):
                if i == 0:
@@ -1242,8 +1216,8 @@ class PointSet(_BaseSurface):
                   curr = np.array([[float(x) for x in line.split()[6:]]])
                   cpoints = np.concatenate((cpoints, curr))
          self.add_patch(cpoints)
-         if self.crs_uuid is None: self.crs_uuid = crs_uuid
-         self.title = charisma_file
+         assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from charisma file'
+         if not self.title: self.title = charisma_file
 
       elif irap_file is not None: # Points from IRAP simple points
          with open(irap_file,'r') as points:
@@ -1254,10 +1228,38 @@ class PointSet(_BaseSurface):
                   curr = np.array([[float(x) for x in line.split(" ")]])
                   cpoints = np.concatenate((cpoints, curr))
          self.add_patch(cpoints)
-         if self.crs_uuid is None: self.crs_uuid = crs_uuid
-         self.title = irap_file
+         assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from irap file'
+         if not self.title: self.title = irap_file
 
-      if self.uuid is None: self.uuid = bu.new_uuid()
+      if not self.title: self.title = 'point set'
+
+
+   def load_from_xml(self):
+      root_node = self.root
+      assert root_node is not None
+      self.patch_count = rqet.count_tag(root_node, 'NodePatch')
+      assert self.patch_count, 'no patches found in xml for point set'
+      self.patch_array_list = [None for _ in range(self.patch_count)]
+      patch_index = 0
+      for child in rqet.list_of_tag(root_node, 'NodePatch'):
+         point_count = rqet.find_tag_int(child, 'Count')
+         geom_node = rqet.find_tag(child, 'Geometry')
+         assert geom_node, 'geometry missing in xml for point set patch'
+         crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
+         assert crs_uuid, 'crs uuid missing in geometry xml for point set patch'
+         if self.crs_uuid is None: self.crs_uuid = crs_uuid
+         else: assert bu.matching_uuids(crs_uuid, self.crs_uuid), 'mixed coordinate reference systems in point set'
+         ext_uuid = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'HdfProxy', 'UUID'])
+         assert ext_uuid, 'missing hdf5 uuid in goemetry xml for point set patch'
+         hdf5_path = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'PathInHdfFile'])
+         assert hdf5_path, 'missing internal hdf5 path in goemetry xml for point set patch'
+         self.patch_ref_list.append((ext_uuid, hdf5_path, point_count))
+         patch_index += 1
+      ref_node = rqet.find_tag(self.root, 'RepresentedInterpretation')
+      if ref_node is not None:
+         interp_root = self.model.referenced_node(ref_node)
+         self.set_represented_interpretation_root(interp_root)
+      # note: load of patches handled elsewhere
 
 
    def set_represented_interpretation_root(self, interp_root):
@@ -1284,7 +1286,7 @@ class PointSet(_BaseSurface):
 
 
    def load_all_patches(self):
-      """Load hdf5 data for all patches and cache as separate numpy arrays."""
+      """Load hdf5 data for all patches and cache as separate numpy arrays; not usually called directly."""
 
       for patch_index in range(self.patch_count): self.single_patch_array_ref(patch_index)
 
@@ -1362,23 +1364,16 @@ class PointSet(_BaseSurface):
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
 
-      ps_node = self.model.new_obj_node('PointSetRepresentation')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(ps_node.attrib['uuid'])
-      else:
-         ps_node.attrib['uuid'] = str(self.uuid)
-
-      if not title: title = self.title
+      ps_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       if crs_root is None:
          if self.crs_uuid is None:
             crs_root = self.model.crs_root     # maverick use of model's default crs
-            self.crs_uuid = bu.uuid_from_string(crs_root.attrib['uuid'])
+            self.crs_uuid = rqet.uuid_for_part_root(crs_root)
          else:
             crs_root = self.model.root_for_part(self.model.part_for_uuid(self.crs_uuid))
-
-      self.model.create_citation(root = ps_node, title = title, originator = originator)
+      else:
+         self.crs_uuid = rqet.uuid_for_part_root(crs_root)
 
       if self.represented_interpretation_root is not None:
          interp_root = self.represented_interpretation_root
@@ -1407,7 +1402,7 @@ class PointSet(_BaseSurface):
          geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
          geom.text = '\n'
 
-         self.model.create_crs_reference(crs_root, root = geom)
+         self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
          points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
          points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
@@ -1433,8 +1428,6 @@ class PointSet(_BaseSurface):
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(ps_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
-
-      self.root_node = ps_node
 
       return ps_node
 
@@ -1481,19 +1474,24 @@ class PointSet(_BaseSurface):
 class Mesh(_BaseSurface):
    """Class covering meshes (lattices: surfaces where points form a 2D grid; RESQML obj_Grid2dRepresentation)."""
 
-   def __init__(self, parent_model, root_node = None,
+   resqml_type = 'Grid2dRepresentation'
+
+   def __init__(self, parent_model, root_node = None, uuid = None,
                 mesh_file = None, mesh_format = None, mesh_flavour = 'explicit',
                 xyz_values = None,
                 nj = None, ni = None,
                 origin = None, dxyz_dij = None,
                 z_values = None, z_supporting_mesh_uuid = None,
-                surface_role = 'map', crs_uuid = None):
+                surface_role = 'map', crs_uuid = None,
+                title = None, originator = None):
       """Initialises a Mesh object from xml, or a regular mesh from arguments.
 
       arguments:
          parent_model (model.Model object): the model to which this Mesh object will be associated
-         root_node (optional): required if initialising from xml, the root node for an obj_Grid2dRepresentation part;
-            remaining arguments are ignored if root_node is not None
+         root_node (optional): DEPRECATED, use uuid instead; the root node for an obj_Grid2dRepresentation part;
+            remaining arguments are ignored if uuid or root_node is not None
+         uuid (uuid.UUID, optional): the uuid of an existing RESQML obj_Grid2dRepresentation object from which
+            this resqpy Mesh object is populated
          mesh_file (string, optional): file name, required if initialising from an RMS text or zmap+ ascii file
          mesh_format (string, optional): 'rms' or 'zmap', required if initialising from an ascii file
          mesh_flavour (string, default 'explicit'): required flavour when reading from a mesh file; one of:
@@ -1536,9 +1534,6 @@ class Mesh(_BaseSurface):
 
       assert surface_role in ['map', 'pick']
 
-      self.model = parent_model
-      self.root_node = None
-      self.uuid = None
       self.surface_role = surface_role
       self.ni = None  # NB: these are the number of nodes (points) in the mesh, unlike 3D grids
       self.nj = None
@@ -1551,118 +1546,15 @@ class Mesh(_BaseSurface):
       self.ref_mesh = None
       self.ref_z_h5_key_pair = None
       # note: in this class, z values for ref&z meshes are held in the full_array (xy data will be duplicated in memory)
-      self.crs_root = None
-      self.crs_uuid = None
-      self.title = 'mesh'
+      self.crs_uuid = crs_uuid
       self.represented_interpretation_root = None
 
-      if root_node is not None:
-         assert rqet.node_type(root_node) == 'obj_Grid2dRepresentation'
-         self.root_node = root_node
-         self.uuid = self.root_node.attrib['uuid']
-         self.title = rqet.citation_title_for_node(root_node)
-         self.surface_role = rqet.find_tag_text(root_node, 'SurfaceRole')
-         ref_node = rqet.find_tag(root_node, 'RepresentedInterpretation')
-         if ref_node is not None:
-            self.represented_interpretation_root = self.model.referenced_node(ref_node)
-         patch_node = rqet.find_tag(root_node, 'Grid2dPatch')
-         assert rqet.find_tag_int(patch_node, 'PatchIndex') == 0
-         self.ni = rqet.find_tag_int(patch_node, 'FastestAxisCount')
-         self.nj = rqet.find_tag_int(patch_node, 'SlowestAxisCount')
-         assert self.ni is not None and self.nj is not None, 'mesh extent info missing in xml'
-         geom_node = rqet.find_tag(patch_node, 'Geometry')
-         assert geom_node is not None, 'geometry missing in mesh xml'
-         self.crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
-         assert self.crs_uuid is not None, 'crs reference missing in mesh geometry xml'
-         self.crs_root = self.model.root_for_uuid(crs_uuid)
-         point_node = rqet.find_tag(geom_node, 'Points')
-         assert point_node is not None, 'missing Points node in mesh geometry xml'
-         flavour = rqet.node_type(point_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = root_node)
 
-         if flavour == 'Point3dLatticeArray':
-            self.flavour = 'regular'
-            origin_node = rqet.find_tag(point_node, 'Origin')
-            self.regular_origin = (rqet.find_tag_float(origin_node, 'Coordinate1'),
-                                   rqet.find_tag_float(origin_node, 'Coordinate2'),
-                                   rqet.find_tag_float(origin_node, 'Coordinate3'))
-            assert self.regular_origin is not None, 'origin missing in xml for regular mesh (lattice)'
-            offset_nodes = rqet.list_of_tag(point_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
-            assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for regular mesh (lattice)'
-            self.regular_dxyz_dij = np.empty((2, 3))
-            for j_or_i in range(2):   # 0 = J, 1 = I
-               axial_offset_node = rqet.find_tag(offset_nodes[j_or_i], 'Offset')
-               assert axial_offset_node is not None, 'missing offset offset node in xml'
-               self.regular_dxyz_dij[1 - j_or_i] = (rqet.find_tag_float(axial_offset_node, 'Coordinate1'),
-                                                    rqet.find_tag_float(axial_offset_node, 'Coordinate2'),
-                                                    rqet.find_tag_float(axial_offset_node, 'Coordinate3'))
-               if not maths.isclose(vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]), 1.0):
-                  log.warning('non-orthogonal axes and/or scaling in xml for regular mesh (lattice)')
-               spacing_node = rqet.find_tag(offset_nodes[j_or_i], 'Spacing')
-               stride = rqet.find_tag_float(spacing_node, 'Value')
-               count = rqet.find_tag_int(spacing_node, 'Count')
-               assert stride is not None and count is not None, 'missing spacing info in xml'
-               assert count == (self.nj, self.ni)[j_or_i] - 1,  \
-                      'unexpected value for count in xml spacing info for regular mesh (lattice)'
-               assert stride > 0.0, 'spacing distance is not positive in xml for regular mesh (lattice)'
-               self.regular_dxyz_dij[1 - j_or_i] *= stride
+      self.crs_root = None if self.crs_uuid is None else self.model.root_for_uuid(self.crs_uuid)
 
-         elif flavour == 'Point3dZValueArray':
-            # note: only simple, full use of supporting mesh is handled at present
-            z_ref_node = rqet.find_tag(point_node, 'ZValues')
-            self.ref_z_h5_key_pair = self.model.h5_uuid_and_path_for_node(z_ref_node, tag = 'Values')
-            support_geom_node = rqet.find_tag(point_node, 'SupportingGeometry')
-            if rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray':
-               self.flavour = 'ref&z'
-               # assert rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray'  # only this supported for now
-               self.ref_uuid = rqet.find_nested_tags_text(support_geom_node, ['SupportingRepresentation', 'UUID'])
-               assert self.ref_uuid, 'missing supporting representation info in xml for z-value mesh'
-               self.ref_mesh = Mesh(self.model, root_node = self.model.root_for_uuid(self.ref_uuid))
-               assert self.nj == self.ref_mesh.nj and self.ni == self.ref_mesh.ni  # only this supported for now
-               niosr_node = rqet.find_tag(support_geom_node, 'NodeIndicesOnSupportingRepresentation')
-               start_value = rqet.find_tag_int(niosr_node, 'StartValue')
-               assert start_value == 0, 'only full use of supporting mesh catered for at present'
-               offset_nodes = rqet.list_of_tag(niosr_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
-               assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for regular mesh (lattice)'
-               for j_or_i in range(2):   # 0 = J, 1 = I
-                  assert rqet.node_type(offset_nodes[j_or_i]) == 'IntegerConstantArray', 'variable step not catered for'
-                  assert rqet.find_tag_int(offset_nodes[j_or_i], 'Value') == 1, 'step other than 1 not catered for'
-                  count = rqet.find_tag_int(offset_nodes[j_or_i], 'Count')
-                  assert count == (self.nj, self.ni)[j_or_i] - 1,  \
-                          'unexpected value for count in xml spacing info for regular mesh (lattice)'
-            elif rqet.node_type(support_geom_node) == 'Point3dLatticeArray':
-               self.flavour = 'reg&z'
-               orig_node = rqet.find_tag(support_geom_node,'Origin')
-               self.regular_origin = (rqet.find_tag_float(orig_node,'Coordinate1'),
-                                      rqet.find_tag_float(orig_node,'Coordinate2'),
-                                      rqet.find_tag_float(orig_node,'Coordinate3'))
-               assert self.regular_origin is not None, 'origin missing in xml for reg&z mesh (lattice)'
-               offset_nodes = rqet.list_of_tag(support_geom_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
-               assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for reg&z mesh (lattice)'
-               self.regular_dxyz_dij = np.empty((2, 3))
-               for j_or_i in range(2):   # 0 = J, 1 = I
-                  axial_offset_node = rqet.find_tag(offset_nodes[j_or_i], 'Offset')
-                  assert axial_offset_node is not None, 'missing offset offset node in xml'
-                  self.regular_dxyz_dij[1 - j_or_i] = (rqet.find_tag_float(axial_offset_node, 'Coordinate1'),
-                                                       rqet.find_tag_float(axial_offset_node, 'Coordinate2'),
-                                                       rqet.find_tag_float(axial_offset_node, 'Coordinate3'))
-                  if not maths.isclose(vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]), 1.0):
-                     log.warning('non-orthogonal axes and/or scaling in xml for regular mesh (lattice)')
-                  spacing_node = rqet.find_tag(offset_nodes[j_or_i], 'Spacing')
-                  stride = rqet.find_tag_float(spacing_node, 'Value')
-                  count = rqet.find_tag_int(spacing_node, 'Count')
-                  assert stride is not None and count is not None, 'missing spacing info in xml'
-                  assert count == (self.nj, self.ni)[j_or_i] - 1,  \
-                         'unexpected value for count in xml spacing info for regular mesh (lattice)'
-                  assert stride > 0.0, 'spacing distance is not positive in xml for regular mesh (lattice)'
-                  self.regular_dxyz_dij[1 - j_or_i] *= stride
-
-         elif flavour in ['Point3dHdf5Array', 'Point2dHdf5Array']:
-            self.flavour = 'explicit'
-            self.explicit_h5_key_pair = self.model.h5_uuid_and_path_for_node(point_node, tag = 'Coordinates')
-            # load full_array on demand later (see full_array_ref() method)
-
-         else:
-            raise Exception('unrecognised flavour for mesh points')
+      if self.root is not None:
+         pass
 
       elif mesh_file and mesh_format and crs_uuid is not None:
          # load an explicit mesh from an ascii file in RMS text or zmap format
@@ -1691,9 +1583,7 @@ class Mesh(_BaseSurface):
                assert self.ref_mesh.nj == nj and self.ref_mesh.ni == ni
             else:
                log.critical('code failure')
-         self.crs_uuid = crs_uuid
-         self.crs_root = self.model.root_for_uuid(self.crs_uuid)
-         self.uuid = bu.new_uuid()
+         assert self.crs_uuid is not None, 'crs uuid missing'
          # todo: option to create a regular and ref&z pair instead of an explicit mesh
 
       elif xyz_values is not None and crs_uuid is not None:
@@ -1703,11 +1593,10 @@ class Mesh(_BaseSurface):
          self.nj = xyz_values.shape[0]
          self.ni = xyz_values.shape[1]
          self.full_array = xyz_values.copy()
-         self.crs_uuid = crs_uuid
-         self.crs_root = self.model.root_for_uuid(self.crs_uuid)
-         self.uuid = bu.new_uuid()
+         assert self.crs_uuid is not None, 'crs uuid missing'
 
-      elif nj is not None and ni is not None and origin is not None and dxyz_dij is not None and crs_uuid is not None and z_values is None:
+      elif (nj is not None and ni is not None and origin is not None and dxyz_dij is not None and
+            crs_uuid is not None and z_values is None):
          # create a regular mesh from arguments
          assert nj > 0 and ni > 0
          assert len(origin) == 3
@@ -1717,9 +1606,7 @@ class Mesh(_BaseSurface):
          self.ni = ni
          self.regular_origin = origin
          self.regular_dxyz_dij = np.array(dxyz_dij, dtype = float)
-         self.crs_uuid = crs_uuid
-         self.crs_root = self.model.root_for_uuid(self.crs_uuid)
-         self.uuid = bu.new_uuid()
+         assert self.crs_uuid is not None, 'crs uuid missing'
 
       elif nj is not None and ni is not None and z_values is not None and z_supporting_mesh_uuid is not None:
          # create a ref&z mesh from arguments
@@ -1734,11 +1621,10 @@ class Mesh(_BaseSurface):
          assert self.ref_mesh.nj == nj and self.ref_mesh.ni == ni
          self.full_array = self.ref_mesh.full_array_ref().copy()
          self.full_array[..., 2] = z_values.reshape(tuple(self.full_array.shape[:-1]))
-         self.crs_uuid = crs_uuid
-         self.crs_root = self.model.root_for_uuid(self.crs_uuid)
-         self.uuid = bu.new_uuid()
+         assert self.crs_uuid is not None, 'crs uuid missing'
 
-      elif nj is not None and ni is not None and z_values is not None and dxyz_dij is not None and crs_uuid is not None and origin is not None:
+      elif (nj is not None and ni is not None and z_values is not None and dxyz_dij is not None and
+            crs_uuid is not None and origin is not None):
          # create a reg&z mesh from arguments
          assert nj > 0 and ni > 0
          assert len(origin) == 3
@@ -1748,18 +1634,122 @@ class Mesh(_BaseSurface):
          self.ni = ni
          self.regular_origin = origin
          self.regular_dxyz_dij = np.array(dxyz_dij, dtype = float)
-         self.crs_uuid = crs_uuid
-         self.crs_root = self.model.root_for_uuid(self.crs_uuid)
+         assert self.crs_uuid is not None, 'crs uuid missing'
          self.flavour = 'regular'
          self.full_array = None
          _ = self.full_array_ref()
          self.full_array[..., 2] = z_values.reshape(tuple(self.full_array.shape[:-1]))
          self.flavour = 'reg&z'
-         self.uuid = bu.new_uuid()
 
-      if self.uuid is None: self.uuid = bu.new_uuid()
+      assert self.crs_uuid is not None
+      if not self.title: self.title = 'mesh'
+#     log.debug(f'new mesh has flavour {self.flavour}')
 
-#      log.debug(f'new mesh has flavour {self.flavour}')
+
+   def load_from_xml(self):
+      root_node = self.root
+      assert root_node is not None
+      self.surface_role = rqet.find_tag_text(root_node, 'SurfaceRole')
+      ref_node = rqet.find_tag(root_node, 'RepresentedInterpretation')
+      if ref_node is not None:
+         self.represented_interpretation_root = self.model.referenced_node(ref_node)
+      patch_node = rqet.find_tag(root_node, 'Grid2dPatch')
+      assert rqet.find_tag_int(patch_node, 'PatchIndex') == 0
+      self.ni = rqet.find_tag_int(patch_node, 'FastestAxisCount')
+      self.nj = rqet.find_tag_int(patch_node, 'SlowestAxisCount')
+      assert self.ni is not None and self.nj is not None, 'mesh extent info missing in xml'
+      geom_node = rqet.find_tag(patch_node, 'Geometry')
+      assert geom_node is not None, 'geometry missing in mesh xml'
+      self.crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
+      assert self.crs_uuid is not None, 'crs reference missing in mesh geometry xml'
+      point_node = rqet.find_tag(geom_node, 'Points')
+      assert point_node is not None, 'missing Points node in mesh geometry xml'
+      flavour = rqet.node_type(point_node)
+
+      if flavour == 'Point3dLatticeArray':
+         self.flavour = 'regular'
+         origin_node = rqet.find_tag(point_node, 'Origin')
+         self.regular_origin = (rqet.find_tag_float(origin_node, 'Coordinate1'),
+                                rqet.find_tag_float(origin_node, 'Coordinate2'),
+                                rqet.find_tag_float(origin_node, 'Coordinate3'))
+         assert self.regular_origin is not None, 'origin missing in xml for regular mesh (lattice)'
+         offset_nodes = rqet.list_of_tag(point_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
+         assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for regular mesh (lattice)'
+         self.regular_dxyz_dij = np.empty((2, 3))
+         for j_or_i in range(2):   # 0 = J, 1 = I
+            axial_offset_node = rqet.find_tag(offset_nodes[j_or_i], 'Offset')
+            assert axial_offset_node is not None, 'missing offset offset node in xml'
+            self.regular_dxyz_dij[1 - j_or_i] = (rqet.find_tag_float(axial_offset_node, 'Coordinate1'),
+                                                 rqet.find_tag_float(axial_offset_node, 'Coordinate2'),
+                                                 rqet.find_tag_float(axial_offset_node, 'Coordinate3'))
+            if not maths.isclose(vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]), 1.0):
+               log.warning('non-orthogonal axes and/or scaling in xml for regular mesh (lattice)')
+            spacing_node = rqet.find_tag(offset_nodes[j_or_i], 'Spacing')
+            stride = rqet.find_tag_float(spacing_node, 'Value')
+            count = rqet.find_tag_int(spacing_node, 'Count')
+            assert stride is not None and count is not None, 'missing spacing info in xml'
+            assert count == (self.nj, self.ni)[j_or_i] - 1,  \
+                   'unexpected value for count in xml spacing info for regular mesh (lattice)'
+            assert stride > 0.0, 'spacing distance is not positive in xml for regular mesh (lattice)'
+            self.regular_dxyz_dij[1 - j_or_i] *= stride
+
+      elif flavour == 'Point3dZValueArray':
+         # note: only simple, full use of supporting mesh is handled at present
+         z_ref_node = rqet.find_tag(point_node, 'ZValues')
+         self.ref_z_h5_key_pair = self.model.h5_uuid_and_path_for_node(z_ref_node, tag = 'Values')
+         support_geom_node = rqet.find_tag(point_node, 'SupportingGeometry')
+         if rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray':
+            self.flavour = 'ref&z'
+            # assert rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray'  # only this supported for now
+            self.ref_uuid = rqet.find_nested_tags_text(support_geom_node, ['SupportingRepresentation', 'UUID'])
+            assert self.ref_uuid, 'missing supporting representation info in xml for z-value mesh'
+            self.ref_mesh = Mesh(self.model, root_node = self.model.root_for_uuid(self.ref_uuid))
+            assert self.nj == self.ref_mesh.nj and self.ni == self.ref_mesh.ni  # only this supported for now
+            niosr_node = rqet.find_tag(support_geom_node, 'NodeIndicesOnSupportingRepresentation')
+            start_value = rqet.find_tag_int(niosr_node, 'StartValue')
+            assert start_value == 0, 'only full use of supporting mesh catered for at present'
+            offset_nodes = rqet.list_of_tag(niosr_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
+            assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for regular mesh (lattice)'
+            for j_or_i in range(2):   # 0 = J, 1 = I
+               assert rqet.node_type(offset_nodes[j_or_i]) == 'IntegerConstantArray', 'variable step not catered for'
+               assert rqet.find_tag_int(offset_nodes[j_or_i], 'Value') == 1, 'step other than 1 not catered for'
+               count = rqet.find_tag_int(offset_nodes[j_or_i], 'Count')
+               assert count == (self.nj, self.ni)[j_or_i] - 1,  \
+                       'unexpected value for count in xml spacing info for regular mesh (lattice)'
+         elif rqet.node_type(support_geom_node) == 'Point3dLatticeArray':
+            self.flavour = 'reg&z'
+            orig_node = rqet.find_tag(support_geom_node,'Origin')
+            self.regular_origin = (rqet.find_tag_float(orig_node,'Coordinate1'),
+                                   rqet.find_tag_float(orig_node,'Coordinate2'),
+                                   rqet.find_tag_float(orig_node,'Coordinate3'))
+            assert self.regular_origin is not None, 'origin missing in xml for reg&z mesh (lattice)'
+            offset_nodes = rqet.list_of_tag(support_geom_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
+            assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for reg&z mesh (lattice)'
+            self.regular_dxyz_dij = np.empty((2, 3))
+            for j_or_i in range(2):   # 0 = J, 1 = I
+               axial_offset_node = rqet.find_tag(offset_nodes[j_or_i], 'Offset')
+               assert axial_offset_node is not None, 'missing offset offset node in xml'
+               self.regular_dxyz_dij[1 - j_or_i] = (rqet.find_tag_float(axial_offset_node, 'Coordinate1'),
+                                                    rqet.find_tag_float(axial_offset_node, 'Coordinate2'),
+                                                    rqet.find_tag_float(axial_offset_node, 'Coordinate3'))
+               if not maths.isclose(vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]), 1.0):
+                  log.warning('non-orthogonal axes and/or scaling in xml for regular mesh (lattice)')
+               spacing_node = rqet.find_tag(offset_nodes[j_or_i], 'Spacing')
+               stride = rqet.find_tag_float(spacing_node, 'Value')
+               count = rqet.find_tag_int(spacing_node, 'Count')
+               assert stride is not None and count is not None, 'missing spacing info in xml'
+               assert count == (self.nj, self.ni)[j_or_i] - 1,  \
+                      'unexpected value for count in xml spacing info for regular mesh (lattice)'
+               assert stride > 0.0, 'spacing distance is not positive in xml for regular mesh (lattice)'
+               self.regular_dxyz_dij[1 - j_or_i] *= stride
+
+      elif flavour in ['Point3dHdf5Array', 'Point2dHdf5Array']:
+         self.flavour = 'explicit'
+         self.explicit_h5_key_pair = self.model.h5_uuid_and_path_for_node(point_node, tag = 'Coordinates')
+         # load full_array on demand later (see full_array_ref() method)
+
+      else:
+         raise Exception('unrecognised flavour for mesh points')
 
 
    def set_represented_interpretation_root(self, interp_root):
@@ -1831,7 +1821,7 @@ class Mesh(_BaseSurface):
    def surface(self, quad_triangles = False):
       """Returns a surface object generated from this mesh."""
 
-      return Surface(self.model, extract_from_xml = False, mesh = self, quad_triangles = quad_triangles)
+      return Surface(self.model, mesh = self, quad_triangles = quad_triangles)
 
 
    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
@@ -1862,7 +1852,7 @@ class Mesh(_BaseSurface):
 
          arguments:
             ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the mesh array
-            crs_root (optional): if present, the xml root node of a crs to use in place of any other
+            crs_root (DEPRECATED): ignored, crs must now be established at time of initialisation
             use_xy_only (boolean, default False): if True and the flavour of this mesh is explicit, only
                the xy coordinates are stored in the hdf5 dataset, otherwise xyz are stored
             add_as_part (boolean, default True): if True, the newly created xml node is added as a part
@@ -1872,7 +1862,7 @@ class Mesh(_BaseSurface):
                interpretation if present
             root (optional, usually None): if not None, the newly created grid 2d representation node is appended
                as a child to this node
-            title (string): used as the citation Title text; should be meaningful to a human
+            title (string, optional): used as the citation Title text; should be meaningful to a human
             originator (string, optional): the name of the human being who created the grid 2d representation part;
                default is to use the login name
 
@@ -1880,27 +1870,11 @@ class Mesh(_BaseSurface):
             the newly created grid 2d representation (mesh) xml node
       """
 
+      if crs_root is not None: warnings.warn('crs_root argument is deprecated and ignored in Mesh.create_xml()')
+
       if ext_uuid is None and self.flavour != 'regular': ext_uuid = self.model.h5_uuid()
 
-      g2d_node = self.model.new_obj_node('Grid2dRepresentation')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(g2d_node.attrib['uuid'])
-      else:
-         g2d_node.attrib['uuid'] = str(self.uuid)
-
-      if not title: title = self.title
-
-      if crs_root is None: crs_root = self.crs_root
-      if crs_root is None:
-         if self.crs_uuid is None:
-            crs_root = self.model.crs_root     # maverick use of model's default crs
-            self.crs_uuid == bu.uuid_from_string(crs_root.attrib['uuid'])
-         else:
-            crs_root = self.model.root_for_uuid(self.crs_uuid)
-      assert crs_root is not None, 'failed to resolve xml root of crs for mesh; crs uuid: ' + str(self.crs_uuid)
-
-      self.model.create_citation(root = g2d_node, title = title, originator = originator)
+      g2d_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       if self.represented_interpretation_root is not None:
          interp_root = self.represented_interpretation_root
@@ -1935,7 +1909,7 @@ class Mesh(_BaseSurface):
       geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
       geom.text = '\n'
 
-      self.model.create_crs_reference(crs_root, root = geom)
+      self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
       p_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
       p_node.text = '\n'
@@ -2090,7 +2064,7 @@ class Mesh(_BaseSurface):
       if add_as_part:
          self.model.add_part('obj_Grid2dRepresentation', self.uuid, g2d_node)
          if add_relationships:
-            self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', crs_root, 'sourceObject')
+            self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', self.crs_root, 'sourceObject')
             if self.represented_interpretation_root is not None:
                self.model.create_reciprocal_relationship(g2d_node, 'destinationObject',
                                                          self.represented_interpretation_root, 'sourceObject')
@@ -2101,6 +2075,5 @@ class Mesh(_BaseSurface):
                 ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(g2d_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
-      self.root_node = g2d_node
 
       return g2d_node
