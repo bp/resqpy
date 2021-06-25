@@ -1254,7 +1254,7 @@ class PointSet(_BaseSurface):
          assert hdf5_path, 'missing internal hdf5 path in goemetry xml for point set patch'
          self.patch_ref_list.append((ext_uuid, hdf5_path, point_count))
          patch_index += 1
-      ref_node = rqet.find_tag(self.root_node, 'RepresentedInterpretation')
+      ref_node = rqet.find_tag(self.root, 'RepresentedInterpretation')
       if ref_node is not None:
          interp_root = self.model.referenced_node(ref_node)
          self.set_represented_interpretation_root(interp_root)
@@ -1646,10 +1646,6 @@ class Mesh(_BaseSurface):
    def load_from_xml(self):
       root_node = self.root
       assert root_node is not None
-      assert rqet.node_type(root_node) == 'obj_Grid2dRepresentation'
-      self.root_node = root_node
-      self.uuid = self.root_node.attrib['uuid']
-      self.title = rqet.citation_title_for_node(root_node)
       self.surface_role = rqet.find_tag_text(root_node, 'SurfaceRole')
       ref_node = rqet.find_tag(root_node, 'RepresentedInterpretation')
       if ref_node is not None:
