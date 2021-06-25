@@ -2854,7 +2854,6 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       gcs_inheritance_model = rq.Model(epc_file)
       for gcs, gcs_title in gcs_list:
          gcs.uuid = bu.new_uuid()
-         gcs.root = None
          grid_list_modifications = []
          for gi, g in enumerate(gcs.grid_list):
             if bu.matching_uuids(g.uuid, source_grid.uuid): grid_list_modifications.append(gi)
