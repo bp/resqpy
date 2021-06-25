@@ -22,19 +22,25 @@ def convert(value, from_unit, to_unit):
    """Convert a value between any two compatible units
    
    Args:
-      value (float): value in old units
+      value (float or array): value in old units
       from_unit (str): old units
       to_unit (str): desired units
 
    Returns:
-      float: converted unit
+      float or array: converted unit
    """
+   return value * conversion_factor(from_unit, to_unit)
+
+
+@lru_cache()   # Memoized for speed
+def conversion_factor(from_unit, to_unit):
+   """Return a numerical factor to convert between compatible units"""
+
    s1, u1 = parse_unit(from_unit)
    s2, u2 = parse_unit(to_unit)
-
-   quantity_from = Q_(value * s1, u1)
-   quantity_to = quantity_from.to(u2)
-   return quantity_to.magnitude / s2
+   quantity_from = Q_(s1, u1)
+   quantity_to = quantity_from.to(u2) / s2
+   return quantity_to.magnitude
 
 
 def parse_unit(unit_string):
