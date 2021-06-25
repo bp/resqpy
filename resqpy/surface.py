@@ -1544,10 +1544,11 @@ class Mesh(_BaseSurface):
       self.ref_z_h5_key_pair = None
       # note: in this class, z values for ref&z meshes are held in the full_array (xy data will be duplicated in memory)
       self.crs_uuid = crs_uuid
-      self.crs_root = None if crs_uuid is None else self.model.root_for_uuid(self.crs_uuid)
       self.represented_interpretation_root = None
 
       super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = root_node)
+
+      self.crs_root = None if self.crs_uuid is None else self.model.root_for_uuid(self.crs_uuid)
 
       if self.root is not None:
          pass
@@ -1662,7 +1663,6 @@ class Mesh(_BaseSurface):
       assert geom_node is not None, 'geometry missing in mesh xml'
       self.crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
       assert self.crs_uuid is not None, 'crs reference missing in mesh geometry xml'
-      self.crs_root = self.model.root_for_uuid(self.crs_uuid)
       point_node = rqet.find_tag(geom_node, 'Points')
       assert point_node is not None, 'missing Points node in mesh geometry xml'
       flavour = rqet.node_type(point_node)
