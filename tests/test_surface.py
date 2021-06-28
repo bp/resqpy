@@ -39,6 +39,8 @@ def test_faces_for_surface(tmp_model):
     crs.create_xml()
     grid = resqpy.grid.RegularGrid(tmp_model, extent_kji = (3, 3, 3),
                                    crs_uuid = crs.uuid, set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
     # todo: create sloping planar surface
     # call find faces for each of 3 different methods
     points = np.zeros((2, 2, 3))
