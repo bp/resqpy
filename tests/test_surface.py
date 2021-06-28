@@ -1,6 +1,9 @@
+import numpy as np
+
 import resqpy.surface
 import resqpy.organize
 import resqpy.grid
+import resqpy.grid_surface as rqgs
 
 
 def test_surface(tmp_model):
@@ -43,7 +46,7 @@ def test_faces_for_surface(tmp_model):
     triangles = np.zeros((2, 3), dtype = int)
     triangles[0] = (0, 1, 2)
     triangles[1] = (3, 1, 2)
-    surf = rqs.Surface(tmp_model).set_from_triangles_and_points(triangles, points)
+    surf = resqpy.surface.Surface(tmp_model).set_from_triangles_and_points(triangles, points)
     assert surf is not None
     gcs1 = rqgs.find_faces_to_represent_surface(grid, surface, 'elephantine', mode = 'elephantine')
     assert gcs1 is not None
