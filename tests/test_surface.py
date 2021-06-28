@@ -56,19 +56,19 @@ def test_faces_for_surface(tmp_model):
     cip2 = set([tuple(pair) for pair in gcs2.cell_index_pairs])
     cip3 = set([tuple(pair) for pair in gcs3.cell_index_pairs])
     expected_cip = grid.normalized_cell_indices(
-       np.array([[[0,0,0], [1,0,0]], [[0,0,1], [1,0,1]], [[0,0,2], [1,0,2]],
-                 [[1,0,0], [1,1,0]], [[1,0,1], [1,1,1]], [[1,0,2], [1,1,2]],
-                 [[1,1,0], [2,1,0]], [[1,1,1], [2,1,1]], [[1,1,2], [2,1,2]],
-                 [[2,1,0], [2,2,0]], [[2,1,1], [2,2,1]], [[2,1,2], [2,2,2]]], dtype = int))
-   e_cip = set([tuple(pair) for pair in expected_cip])
-   assert cip1 == cip2 == cip3 == e_cip
-   # todo: check face indices
-   gcs_uuids = set()
-   for gcs in (gcs1, gcs2, gcs3):
-      gcs.write_hdf5()
-      gcs.create_xml()
-      gcs_uiuds += gcs.uuid
-   for gcs in tmp_model.iter_grid_connection_sets():
-      assert gcs.uuid in gcs_uuids
-      gcs_uuids -= gcs.uuid
-   assert len(gcs_uuids) == 0
+        np.array([[[0,0,0], [1,0,0]], [[0,0,1], [1,0,1]], [[0,0,2], [1,0,2]],
+                  [[1,0,0], [1,1,0]], [[1,0,1], [1,1,1]], [[1,0,2], [1,1,2]],
+                  [[1,1,0], [2,1,0]], [[1,1,1], [2,1,1]], [[1,1,2], [2,1,2]],
+                  [[2,1,0], [2,2,0]], [[2,1,1], [2,2,1]], [[2,1,2], [2,2,2]]], dtype = int))
+    e_cip = set([tuple(pair) for pair in expected_cip])
+    assert cip1 == cip2 == cip3 == e_cip
+    # todo: check face indices
+    gcs_uuids = set()
+    for gcs in (gcs1, gcs2, gcs3):
+        gcs.write_hdf5()
+        gcs.create_xml()
+        gcs_uiuds += gcs.uuid
+    for gcs in tmp_model.iter_grid_connection_sets():
+        assert gcs.uuid in gcs_uuids
+        gcs_uuids -= gcs.uuid
+    assert len(gcs_uuids) == 0
