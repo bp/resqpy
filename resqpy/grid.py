@@ -4836,9 +4836,9 @@ class RegularGrid(Grid):
 
       centres = np.zeros((self.nk, self.nj, self.ni, 3))
       # todo: replace for loops with linspace
-      for k in range(self.nk): centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
-      for j in range(self.nj): centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
-      for i in range(self.ni): centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
+      for k in range(self.nk - 1): centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
+      for j in range(self.nj - 1): centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
+      for i in range(self.ni - 1): centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
       centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
       return centres
 
