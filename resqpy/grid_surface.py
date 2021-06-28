@@ -832,7 +832,7 @@ def find_faces_to_represent_surface_elephantine(grid, surface, name):
    t, p = surface.triangles_and_points()
    triangles = p[t]
 #   log.debug('computing cell centres')
-   grid.centre_point(cache_centre_array = True)
+   centre_points = grid.centre_point()
    # create empty faces_df with required columns
    faces_df = pd.DataFrame(columns = ['name', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'face'])
    for axis in range(3):   # k, j, i
@@ -842,9 +842,9 @@ def find_faces_to_represent_surface_elephantine(grid, surface, name):
 #      log.debug('considering axis: ' + str(axis))
       if grid.extent_kji[axis] == 1: continue
 #      log.debug('computing facial vectors')
-      facial_vectors = (grid.array_centre_point[:grid.nk-ap[0], :grid.nj-ap[1], :grid.ni-ap[2]]  -
-                        grid.array_centre_point[ap[0]:, ap[1]:, ap[2]:])
-      line_ps = grid.array_centre_point[ap[0]:, ap[1]:, ap[2]:].reshape((-1, 3))
+      facial_vectors = (centre_points[:grid.nk-ap[0], :grid.nj-ap[1], :grid.ni-ap[2]]  -
+                        centre_points[ap[0]:, ap[1]:, ap[2]:])
+      line_ps = centre_points[ap[0]:, ap[1]:, ap[2]:].reshape((-1, 3))
       line_vs = facial_vectors.reshape((-1, 3))
 #      log.debug('finding intersections')
       full_intersects = meet.line_set_triangles_intersects(line_ps, line_vs, triangles, line_segment = True)
