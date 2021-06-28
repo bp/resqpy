@@ -48,11 +48,11 @@ def test_faces_for_surface(tmp_model):
     triangles[1] = (3, 1, 2)
     surf = resqpy.surface.Surface(tmp_model).set_from_triangles_and_points(triangles, points)
     assert surf is not None
-    gcs1 = rqgs.find_faces_to_represent_surface(grid, surface, 'elephantine', mode = 'elephantine')
+    gcs1 = rqgs.find_faces_to_represent_surface(grid, surf, 'elephantine', mode = 'elephantine')
     assert gcs1 is not None
-    gcs2 = rqgs.find_faces_to_represent_surface(grid, surface, 'loopy', mode = 'loopy')
+    gcs2 = rqgs.find_faces_to_represent_surface(grid, surf, 'loopy', mode = 'loopy')
     assert gcs2 is not None
-    gcs3 = rqgs.find_faces_to_represent_surface(grid, surface, 'staffa', mode = 'staffa')
+    gcs3 = rqgs.find_faces_to_represent_surface(grid, surf, 'staffa', mode = 'staffa')
     assert gcs3 is not None
     assert gcs1.count == gcs2.count == gcs3.count == 12
     cip1 = set([tuple(pair) for pair in gcs1.cell_index_pairs])
@@ -70,7 +70,7 @@ def test_faces_for_surface(tmp_model):
     for gcs in (gcs1, gcs2, gcs3):
         gcs.write_hdf5()
         gcs.create_xml()
-        gcs_uiuds += gcs.uuid
+        gcs_uuids += gcs.uuid
     for gcs in tmp_model.iter_grid_connection_sets():
         assert gcs.uuid in gcs_uuids
         gcs_uuids -= gcs.uuid
