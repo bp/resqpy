@@ -35,7 +35,10 @@ def test_surface(tmp_model):
 
 
 def test_faces_for_surface(tmp_model):
-    grid = resqpy.grid.RegularGrid(tmp_model, extent_kji = (3, 3, 3), set_points_cached = True)
+    crs = resqpy.crs.Crs(tmp_model)
+    crs.create_xml()
+    grid = resqpy.grid.RegularGrid(tmp_model, extent_kji = (3, 3, 3),
+                                   crs_uuid = crs.uuid, set_points_cached = True)
     # todo: create sloping planar surface
     # call find faces for each of 3 different methods
     points = np.zeros((2, 2, 3))
@@ -46,7 +49,8 @@ def test_faces_for_surface(tmp_model):
     triangles = np.zeros((2, 3), dtype = int)
     triangles[0] = (0, 1, 2)
     triangles[1] = (3, 1, 2)
-    surf = resqpy.surface.Surface(tmp_model).set_from_triangles_and_points(triangles, points.reshape((-1, 3)))
+    surf = resqpy.surface.Surface(tmp_model, crs_uuid = crs.uuid)
+    surf.set_from_triangles_and_points(triangles, points.reshape((-1, 3)))
     assert surf is not None
     gcs1 = rqgs.find_faces_to_represent_surface(grid, surf, 'elephantine', mode = 'elephantine')
     assert gcs1 is not None
