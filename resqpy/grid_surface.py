@@ -865,7 +865,7 @@ def find_faces_to_represent_surface_elephantine(grid, surface, name):
          r['j2'] = denaturalised_distillation[i, 4] + 1
          r['k2'] = denaturalised_distillation[i, 3] + 1
          r['face'] = face_letter
-      faces_df.append(r)
+      faces_df.append(r, ignore_index = True)
 #   log.debug('building grid connection set from dataframe')
    gcs = rqf.GridConnectionSet(grid.model)
    gcs.set_pairs_from_faces_df(faces_df, True)
