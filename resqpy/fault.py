@@ -69,7 +69,7 @@ class GridConnectionSet(BaseResqpy):
          there is no throw on the fault); this is because the simulator input does not include the full
          juxtaposition information; the simple mode is adequate for identifying which faces are involved in a
          fault but not for matters of juxtaposition or absolute transmissibility calculations;
-         if extract_from_xml is False and ascii_file is None and k_faces, j_faces & i_faces are None,
+         if uuid is None and connection_set_root is None and ascii_file is None and k_faces, j_faces & i_faces are None,
          then an empty connection set is returned
 
       :meta common:
