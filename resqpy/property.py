@@ -3093,6 +3093,7 @@ class Property(BaseResqpy):
       if self.collection is None: self.collection = PropertyCollection()
       if self.collection.model is None: self.collection.model = self.model
       self.collection.add_part_to_dict(part)
+      self.extra_metadata = self.collection.extra_metadata_for_part(part)  # duplicate, as standard attribute in BaseResqpy
       self.collection.has_single_property_kind_flag = True
       self.collection.has_single_indexable_element_flag = True
       self.collection.has_multiple_realizations_flag = False

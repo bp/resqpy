@@ -6,6 +6,7 @@ import numpy as np
 import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.property as rqp
+import resqpy.derived_model as rqdm
 import resqpy.olio.weights_and_measures as bwam
 
 
@@ -162,3 +163,23 @@ def test_string_lookup():
    sl2.create_xml()
    assert set(model.titles(obj_type = 'StringTableLookup')) == set(['stargazing', 'head in the clouds'])
    assert sl != sl2
+
+
+
+def test_property_extra_metadata(tmp_path):
+   # set up test model with a grid
+   epc = os.path.join(tmp_path, 'em_test.epc')
+   model = rq.new_model(epc)
+   grid = grr.RegularGrid(model, extent_kji = (2,3,4))
+   grid.write_hdf5()
+   grid.create_xml()
+   model.store_epc()
+   # add a grid property with some extra metadata
+   a = np.arange(24).astype(float).reshape((2, 3, 4))
+   em = {'important': 'something', 'also': 'nothing'}
+   uuid = rqdm.add_one_grid_property_array(epc, a, 'length', title = 'nonsense', uom = 'm', extra_metadata = em)
+   # re-open the model and check that extra metadata has been preserved
+   model = rq.Model(epc)
+   p = rqp.Property(model, uuid = uuid)
+   for item in em.items():
+       assert item in p.extra_metadata.items()
