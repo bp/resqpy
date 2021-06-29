@@ -297,3 +297,21 @@ def properties_data():
       data = json.load(f)
    return data
 
+
+@lru_cache(None)
+def valid_uoms():
+   """Return set of valid uoms"""
+
+   return set(properties_data()['units'].keys())
+
+@lru_cache(None)
+def valid_uoms_caseless_mapping():
+   """Return dict mapping from caseless uom to actual uom"""
+
+   return {u.casefold(): u for u in valid_uoms()}
+
+@lru_cache(None)
+def valid_property_kinds():
+   """Return set of valid property kinds"""
+   
+   return set(properties_data()['property_kinds'].keys())

@@ -70,6 +70,19 @@ def test_create_Property_from_singleton_collection(tmp_model):
 # ---- Test uom from string ---
 
 
+def test_valid_uoms():
+
+   # Good units
+   assert "0.001 gal[US]/gal[US]" in bwam.valid_uoms()
+   assert "Btu[IT]/min" in bwam.valid_uoms()
+   assert "%" in bwam.valid_uoms()
+
+   # Bad units
+   assert "foo barr" not in bwam.valid_uoms()
+   assert "" not in bwam.valid_uoms()
+   assert None not in bwam.valid_uoms()
+
+
 @pytest.mark.parametrize("case_sensitive, input_uom, expected_uom", [
    (False, 'gapi', 'gAPI'),
    (True, 'gapi', 'Euc'),
@@ -80,6 +93,7 @@ def test_create_Property_from_singleton_collection(tmp_model):
    (False, 'gal[UK]/mi', 'gal[UK]/mi'),
    (False, 'GAL[UK]/MI', 'gal[UK]/mi'),
    (False, None, 'Euc'),
+   (True, "0.001 gal[US]/gal[US]", "0.001 gal[US]/gal[US]"),
 ])
 def test_uom_from_string(case_sensitive, input_uom, expected_uom):
    validated_uom = rqp.validate_uom_from_string(input_uom, case_sensitive=case_sensitive)
@@ -90,12 +104,9 @@ def test_uom_from_string(case_sensitive, input_uom, expected_uom):
 
 
 def test_property_kinds():
-   prop_kinds = bwam.properties_data()['property_kinds']
-   assert "angle per time" in prop_kinds.keys()
-   assert "foobar" not in prop_kinds.keys()
-   assert prop_kinds['area'] is None
-   assert prop_kinds['amplitude'] == "Amplitude of the acoustic signal recorded. " \
-                                     "It is not a physical property, only a value."
+   prop_kinds = bwam.valid_property_kinds()
+   assert "angle per time" in prop_kinds
+   assert "foobar" not in prop_kinds
 
 
 # ---- Test infer_property_kind ---

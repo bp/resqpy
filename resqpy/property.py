@@ -4878,22 +4878,18 @@ def validate_uom_from_string(input_unit, case_sensitive=True):
    if not input_unit:
       return default
 
-   # Get set of all valid uoms
-   valid_uoms = set(bwam.properties_data()['units'].keys())
-
    if case_sensitive:
-      if input_unit in valid_uoms:
+      if input_unit in bwam.valid_uoms():
          return input_unit
       else:
          return default
 
    else:
-      # Dict mapping from lowercase unit to real unit
-      unit_dict = {u.casefold(): u for u in valid_uoms}
+      caseless_mapping = bwam.valid_uoms_caseless_mapping()
       input_unit_lowercase = input_unit.casefold()
 
-      if input_unit_lowercase in unit_dict.keys():
-         return unit_dict[input_unit_lowercase]
+      if input_unit_lowercase in caseless_mapping.keys():
+         return caseless_mapping[input_unit_lowercase]
       else:
          return default
 
@@ -4903,7 +4899,7 @@ def infer_property_kind(name, unit):
 
    # Currently unit is ignored
 
-   valid_kinds = bwam.properties_data()['property_kinds']
+   valid_kinds = bwam.valid_property_kinds()
 
    if name in valid_kinds:
       kind = name
