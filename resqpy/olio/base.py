@@ -64,9 +64,9 @@ class BaseResqpy(metaclass=ABCMeta):
             self.uuid = uuid
             logger.debug(f"Loading existing object {self}")
             citation_node = rqet.find_tag(self.root, 'Citation')
-            assert citation_node is not None
-            self.title = rqet.find_tag_text(citation_node, 'Title')
-            self.originator = rqet.find_tag_text(citation_node, 'Originator')
+            if citation_node is not None:
+                self.title = rqet.find_tag_text(citation_node, 'Title')
+                self.originator = rqet.find_tag_text(citation_node, 'Originator')
             self.extra_metadata = rqet.load_metadata_from_xml(self.root)
             self.load_from_xml()
     
