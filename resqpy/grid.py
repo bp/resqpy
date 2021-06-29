@@ -134,6 +134,10 @@ class Grid():
       super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
                        extra_metadata = extra_metadata, root_node = grid_root)
 
+      if (uuid is not None or grid_root is not None):
+         if geometry_required: assert self.geometry_root is not None, 'grid geometry not present in xml'
+         if find_properties: self.extract_property_collection()
+
 
    def load_from_xml(self):
       # Extract simple attributes from xml and set as attributes in this resqpy object
@@ -146,7 +150,6 @@ class Grid():
       self.ni = self.extent_kji[2]
       self.nk_plus_k_gaps = self.nk         # temporarily, set properly by self.extract_k_gaps()
       self.geometry_root = rqet.find_tag(grid_root, 'Geometry')
-      if geometry_required: assert self.geometry_root is not None, 'grid geometry not present in xml'
       if self.geometry_root is None:
          self.geometry_defined_for_all_pillars_cached = True
          self.geometry_defined_for_all_cells_cached = True
@@ -167,7 +170,6 @@ class Grid():
       self.extract_parent()
       self.extract_children()
 #        self.create_column_pillar_mapping()  # mapping now created on demand in other methods
-      if find_properties: self.extract_property_collection()
       self.extract_inactive_mask()
 
 
@@ -5000,13 +5002,13 @@ def is_regular_grid(grid_root):
 
 
 
-def any_grid(parent_model, grid_root, find_properties = True):
+def any_grid(parent_model, grid_root, uuid = None, find_properties = True):
    """Returns a Grid or RegularGrid object depending on the extra metadata in the xml."""
 
    flavour = grid_flavour(grid_root)
    if flavour is None: return None
    if flavour == 'IjkGrid':
-      return Grid(parent_model, grid_root = grid_root, find_properties = find_properties)
+      return Grid(parent_model, uuid = uuid, grid_root = grid_root, find_properties = find_properties)
    if flavour == 'IjkBlockGrid':
-      return RegularGrid(parent_model, extent_kji = None, grid_root = grid_root, find_properties = find_properties)
+      return RegularGrid(parent_model, extent_kji = None, uuid = uuid, grid_root = grid_root, find_properties = find_properties)
    return None
