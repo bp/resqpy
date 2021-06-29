@@ -4995,13 +4995,14 @@ def is_regular_grid(grid_root):
 
 
 
-def any_grid(parent_model, grid_root, uuid = None, find_properties = True):
+def any_grid(parent_model, grid_root = None, uuid = None, find_properties = True):
    """Returns a Grid or RegularGrid object depending on the extra metadata in the xml."""
 
-   flavour = grid_flavour(grid_root)
+   if uuid is None and grid_root is not None: uuid = rqet.uuid_for_part_root(grid_root)
+   flavour = grid_flavour(parent_model.root_for_uuid(uuid))
    if flavour is None: return None
    if flavour == 'IjkGrid':
-      return Grid(parent_model, uuid = uuid, grid_root = grid_root, find_properties = find_properties)
+      return Grid(parent_model, uuid = uuid, find_properties = find_properties)
    if flavour == 'IjkBlockGrid':
-      return RegularGrid(parent_model, extent_kji = None, uuid = uuid, grid_root = grid_root, find_properties = find_properties)
+      return RegularGrid(parent_model, extent_kji = None, uuid = uuid, find_properties = find_properties)
    return None
