@@ -4,6 +4,7 @@ import resqpy.surface
 import resqpy.organize
 import resqpy.grid
 import resqpy.grid_surface as rqgs
+import resqpy.olio.uuid as bu
 
 
 def test_surface(tmp_model):
@@ -54,30 +55,18 @@ def test_faces_for_surface(tmp_model):
     surf = resqpy.surface.Surface(tmp_model, crs_uuid = crs.uuid)
     surf.set_from_triangles_and_points(triangles, points.reshape((-1, 3)))
     assert surf is not None
-    gcs1 = rqgs.find_faces_to_represent_surface(grid, surf, 'elephantine', mode = 'elephantine')
-    assert gcs1 is not None
-    gcs2 = rqgs.find_faces_to_represent_surface(grid, surf, 'loopy', mode = 'loopy')
-    assert gcs2 is not None
-    gcs3 = rqgs.find_faces_to_represent_surface(grid, surf, 'staffa', mode = 'staffa')
-    assert gcs3 is not None
-    assert gcs1.count == gcs2.count == gcs3.count == 12
-    cip1 = set([tuple(pair) for pair in gcs1.cell_index_pairs])
-    cip2 = set([tuple(pair) for pair in gcs2.cell_index_pairs])
-    cip3 = set([tuple(pair) for pair in gcs3.cell_index_pairs])
-    expected_cip = grid.normalized_cell_indices(
-        np.array([[[0,0,0], [1,0,0]], [[0,0,1], [1,0,1]], [[0,0,2], [1,0,2]],
-                  [[1,0,0], [1,1,0]], [[1,0,1], [1,1,1]], [[1,0,2], [1,1,2]],
-                  [[1,1,0], [2,1,0]], [[1,1,1], [2,1,1]], [[1,1,2], [2,1,2]],
-                  [[2,1,0], [2,2,0]], [[2,1,1], [2,2,1]], [[2,1,2], [2,2,2]]], dtype = int))
+    gcs = rqgs.find_faces_to_represent_surface(grid, surf, 'staffa', mode = 'staffa')
+    assert gcs is not None
+    assert gcs.count == 12
+    cip = set([tuple(pair) for pair in gcs.cell_index_pairs])
+    expected_cip = grid.natural_cell_indices(
+        np.array([[[0,0,0], [1,0,0]], [[0,1,0], [1,1,0]], [[0,2,0], [1,2,0]],
+                  [[1,0,0], [1,0,1]], [[1,1,0], [1,1,1]], [[1,2,0], [1,2,1]],
+                  [[1,0,1], [2,0,1]], [[1,1,1], [2,1,1]], [[1,2,1], [2,2,1]],
+                  [[2,0,1], [2,0,2]], [[2,1,1], [2,1,2]], [[2,2,1], [2,2,2]]], dtype = int))
     e_cip = set([tuple(pair) for pair in expected_cip])
-    assert cip1 == cip2 == cip3 == e_cip
+    assert cip == e_cip  # note: this assumes lower cell index is first, which happens to be true
     # todo: check face indices
-    gcs_uuids = set()
-    for gcs in (gcs1, gcs2, gcs3):
-        gcs.write_hdf5()
-        gcs.create_xml()
-        gcs_uuids += gcs.uuid
-    for gcs in tmp_model.iter_grid_connection_sets():
-        assert gcs.uuid in gcs_uuids
-        gcs_uuids -= gcs.uuid
-    assert len(gcs_uuids) == 0
+    gcs.write_hdf5()
+    gcs.create_xml()
+    assert bu.matching_uuids(tmp_model.uuid(obj_type = 'GridConnectionSetRepresentation', gcs.uuid)
