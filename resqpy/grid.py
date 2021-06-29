@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '10th June 2021'
+version = '29th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -17,6 +17,7 @@ import numpy.ma as ma
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.transmission as rqtr
 import resqpy.olio.fine_coarse as fc
 import resqpy.olio.vector_utilities as vec
@@ -63,29 +64,32 @@ def _add_to_kelp_list(extent_kji, kelp_list, face_axis, ji):
 class Grid():
    """Class for RESQML Grid (extent and geometry) within RESQML model object."""
 
-   def __init__(self, parent_model, extract_basics_from_xml = True, grid_root = None,
-                find_properties = True, geometry_required = True):
+   resqml_type = 'IjkGridRepresentation'
+
+   def __init__(self, parent_model, uuid = None, grid_root = None,
+                find_properties = True, geometry_required = True,
+                title = None, originator = None, extra_metadata = {}):
       """Create a Grid object and optionally populate from xml tree.
 
       arguments:
          parent_model (model.Model object): the model which this grid is part of
-         extract_basics_from_xml (boolean, default True): if True, the new grid object is populated
-            from information in an xml tree; if False, an empty grid object is returned
-         grid_root (optional): the root of the xml tree for the grid part; if None, the xml for the
-            'main grid' for the model is used; ignored if extract_basics_from_xml is False
-         find_properties (boolean, default True): if True and extract_basics_from_xml is True, a
+         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+         grid_root (DEPRECATED): use uuid instead; the root of the xml tree for the grid part
+         find_properties (boolean, default True): if True and uuid (or grid_root) is present, a
             grid property collection is instantiated as an attribute, holding properties for which
             this grid is the supporting representation
          geometry_required (boolean, default True): if True and no geometry node exists in the xml,
-            an assertion error is raised; ignore if extract_basics_from_xml is False
+            an assertion error is raised; ignored if uuid is None (and grid_root is None)
+         title (str, optional): citation title for new grid; ignored if loading from xml
+         originator (str, optional): name of person creating the grid; defaults to login id;
+            ignored if loading from xml
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+            ignored if loading from xml
 
       returns:
          a newly created Grid object
 
       notes:
-         resqml itself does not have the concept of a 'main grid'; however if the model only contains
-         one grid, or more than one but only one with a citation title of ROOT, then the resqml module
-         will treat that as the main grid, which will serve as the default here and elsewhere;
          only IJK grids are handled at the moment (the resqml standard also defines 5 other varieties)
 
       :meta common:
@@ -99,7 +103,7 @@ class Grid():
       self.parent_window = None               #: FineCoarse cell index mapping info between self and parent grid
       self.is_refinement = None               #: True indicates self is a refinement wrt. parent; False means coarsening
       self.local_grid_uuid_list = None        #: LGR & LGC children list
-      self.grid_representation = None         #: flavour of grid, currently 'IjkGrid' or 'IjkBlockGrid'
+      self.grid_representation = None         #: flavour of grid, currently 'IjkGrid' or 'IjkBlockGrid'; not much used
       self.uuid = None                        #: uuid of this grid
       self.geometry_root = None               #: xml node at root of geometry sub-tree
       self.extent_kji = None                  #: size of grid: (nk, nj, ni)
@@ -127,43 +131,50 @@ class Grid():
       self.pinchout = None                    #: numpy bool array: pinchout mask, only set on demand (not native resqml)
       self.grid_skin = None                   #: outer skin of grid as a GridSkin object, computed and cached on demand
 
-      if extract_basics_from_xml:
-         # Extract simple attributes from xml and set as attributes in this object
-         self.grid_root = self.model.resolve_grid_root(grid_root)
-         assert self.grid_root is not None
-         self.grid_representation = 'IjkGrid'  # only flavour currently supported
-         self.uuid = bu.uuid_from_string(self.grid_root.attrib['uuid'])
-         self.extract_extent_kji()
-         self.nk = self.extent_kji[0]         # for convenience available as individual attribs as well as np triplet
-         self.nj = self.extent_kji[1]
-         self.ni = self.extent_kji[2]
-         self.nk_plus_k_gaps = self.nk        # temporarily, set properly by self.extract_k_gaps()
-         self.geometry_root = rqet.find_tag(self.grid_root, 'Geometry')
-         if geometry_required: assert self.geometry_root is not None, 'grid geometry not present in xml'
-         if self.geometry_root is None:
-            self.geometry_defined_for_all_pillars_cached = True
-            self.geometry_defined_for_all_cells_cached = True
-            self.pillar_shape = 'straight'
-            self.has_split_coordinate_lines = False
-            self.k_direction_is_down = True      # arbitrary, as 'down' is rather meaningless without a crs
-         else:
-            self.extract_crs_root()
-            self.extract_crs_uuid()
-            self.extract_has_split_coordinate_lines()
-            self.extract_grid_is_right_handed()
-            self.pillar_geometry_is_defined()    # note: if there is no geometry at all, resqpy sets this True
-            self.cell_geometry_is_defined()      # note: if there is no geometry at all, resqpy sets this True
-            self.extract_pillar_shape()
-            self.extract_k_direction_is_down()
-         self.extract_k_gaps()
-         if self.geometry_root is None: assert not self.k_gaps, 'K gaps present in grid without geometry'
-         self.extract_parent()
-         self.extract_children()
-#        self.create_column_pillar_mapping()  # mapping now created on demand in other methods
-         if find_properties: self.extract_property_collection()
-         self.extract_inactive_mask()
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = grid_root)
 
-      if self.uuid is None: self.uuid = bu.new_uuid()
+
+   def load_from_xml(self):
+      # Extract simple attributes from xml and set as attributes in this resqpy object
+      grid_root = self.root
+      assert grid_root is not None
+      self.grid_representation = 'IjkGrid'  # this attribute not much used
+      self.extract_extent_kji()
+      self.nk = self.extent_kji[0]          # for convenience available as individual attribs as well as np triplet
+      self.nj = self.extent_kji[1]
+      self.ni = self.extent_kji[2]
+      self.nk_plus_k_gaps = self.nk         # temporarily, set properly by self.extract_k_gaps()
+      self.geometry_root = rqet.find_tag(grid_root, 'Geometry')
+      if geometry_required: assert self.geometry_root is not None, 'grid geometry not present in xml'
+      if self.geometry_root is None:
+         self.geometry_defined_for_all_pillars_cached = True
+         self.geometry_defined_for_all_cells_cached = True
+         self.pillar_shape = 'straight'
+         self.has_split_coordinate_lines = False
+         self.k_direction_is_down = True      # arbitrary, as 'down' is rather meaningless without a crs
+      else:
+         self.extract_crs_root()
+         self.extract_crs_uuid()
+         self.extract_has_split_coordinate_lines()
+         self.extract_grid_is_right_handed()
+         self.pillar_geometry_is_defined()    # note: if there is no geometry at all, resqpy sets this True
+         self.cell_geometry_is_defined()      # note: if there is no geometry at all, resqpy sets this True
+         self.extract_pillar_shape()
+         self.extract_k_direction_is_down()
+      self.extract_k_gaps()
+      if self.geometry_root is None: assert not self.k_gaps, 'K gaps present in grid without geometry'
+      self.extract_parent()
+      self.extract_children()
+#        self.create_column_pillar_mapping()  # mapping now created on demand in other methods
+      if find_properties: self.extract_property_collection()
+      self.extract_inactive_mask()
+
+
+    @property
+    def grid_root(self):
+        """Alias for root"""
+        return self.root
 
 
    def set_modified(self, update_xml = False, update_hdf5 = False):
@@ -4255,7 +4266,7 @@ class Grid():
 
 
    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, set_as_grid_root = True,
-                  root = None, title = 'ROOT', originator = None, write_active = True, write_geometry = True,
+                  root = None, title = None, originator = None, write_active = True, write_geometry = True,
                   extra_metadata = {}):
       """Creates an IJK grid node from a grid object and optionally adds as child of root and/or to parts forest.
 
@@ -4294,17 +4305,10 @@ class Grid():
       """
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
+      if title: self.title = title
+      if not self.title: self.title = 'ROOT'
 
-      ijk = self.model.new_obj_node('IjkGridRepresentation')
-
-      if self.uuid is None:
-         self.uuid = bu.uuid_from_string(ijk.attrib['uuid'])
-      else:
-         ijk.attrib['uuid'] = str(self.uuid)
-
-      self.model.create_citation(root = ijk, title = title, originator = originator)
-
-      rqet.create_metadata_xml(node = ijk, extra_metadata = extra_metadata)
+      ijk = super().create_xml(add_as_part = False, originator = originator, extra_metadata = extra_metadata)
 
       if self.grid_representation and not write_geometry:
          rqet.create_metadata_xml(node = ijk, extra_metadata = {'grid_flavour': self.grid_representation})
@@ -4586,8 +4590,6 @@ class Grid():
                self.model.create_reciprocal_relationship(ijk, 'destinationObject',
                                                          self.model.root_for_uuid(self.parent_grid_uuid), 'sourceObject')
 
-      self.grid_root = ijk
-
       if write_active and self.active_property_uuid is not None and self.model.part(uuid = self.active_property_uuid) is None:
          active_collection = rprop.PropertyCollection()
          active_collection.set_support(support = self)
@@ -4609,7 +4611,7 @@ class RegularGrid(Grid):
    # todo: use RESQML lattice like geometry specification
 
    def __init__(self, parent_model, extent_kji = None, dxyz = None, dxyz_dkji = None, origin = (0.0, 0.0, 0.0),
-                crs_uuid = None, use_vertical = False, mesh = None, mesh_dz_dk = 1.0, grid_root = None,
+                crs_uuid = None, use_vertical = False, mesh = None, mesh_dz_dk = 1.0, uuid = None,
                 set_points_cached = False, find_properties = True):
       """Creates a regular grid object based on dxyz, or derived from a Mesh object.
 
@@ -4633,7 +4635,7 @@ class RegularGrid(Grid):
             dxyz_dkji must be None
          mesh_dz_dk (float, default 1.0): the size of cells in the K axis, which is aligned with the z axis, when
             starting from a mesh; ignored if mesh is None
-         grid_root (optional): the root of the xml tree for the grid part; if present, the RegularGrid object is
+         uuid (optional): the root of the xml tree for the grid part; if present, the RegularGrid object is
             based on existing data or a mix of that data and other arguments where present
          set_points_cached (boolean, default False): if True, an explicit geometry is created for the regular grid
             in the form of the cached points array
@@ -4657,8 +4659,8 @@ class RegularGrid(Grid):
       :meta common:
       """
 
-      if grid_root is None:
-         super().__init__(parent_model, extract_basics_from_xml = False)
+      if uuid is None:
+         super().__init__(parent_model)
          self.grid_representation = 'IjkBlockGrid'  # this is not RESQML and might cause issues elsewhere; revert to IjkGrid if needed
          self.extent_kji = np.array(extent_kji).copy()
          self.nk, self.nj, self.ni = self.extent_kji
@@ -4674,8 +4676,8 @@ class RegularGrid(Grid):
          self.geometry_defined_for_all_pillars_cached = True
          self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype = bool)
       else:
-         assert is_regular_grid(grid_root)
-         super().__init__(parent_model, extract_basics_from_xml = True, grid_root = grid_root,
+         assert is_regular_grid(parent_model.root_for_uuid(uuid))
+         super().__init__(parent_model, uuid = uuid,
                           find_properties = find_properties, geometry_required = False)
          self.grid_representation = 'IjkBlockGrid'
          if dxyz is None and dxyz_dkji is None:
@@ -4919,7 +4921,7 @@ class RegularGrid(Grid):
 
 
    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, set_as_grid_root = True,
-                  root = None, title = 'ROOT', originator = None, write_active = True, write_geometry = False,
+                  root = None, title = None, originator = None, write_active = True, write_geometry = False,
                   extra_metadata = {}, add_cell_length_properties = True):
       """Creates xml for this RegularGrid object; by default the explicit geometry is not included.
 

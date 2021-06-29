@@ -606,7 +606,7 @@ def zonal_grid(epc_file, source_grid = None,
                              dxyz_dkji = dxyz_dkji, origin = source_grid.block_origin,
                              crs_uuid = source_grid.crs_uuid, set_points_cached = False)
    else:
-      grid = grr.Grid(model, extract_basics_from_xml = False)
+      grid = grr.Grid(model)
       # inherit attributes from source grid
       grid.grid_representation = 'IjkGrid'
       grid.extent_kji = np.array((zone_count, source_grid.nj, source_grid.ni), dtype = 'int')
@@ -851,7 +851,7 @@ def interpolated_grid(epc_file, grid_a, grid_b, a_to_b_0_to_1 = 0.5, split_toler
    else: log.warning('interpolating between corner points due to pillar incompatibilities')
 
    # create a new, empty grid object
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'
@@ -1118,7 +1118,7 @@ def extract_box(epc_file = None, source_grid = None, box = None, box_inactive = 
    if not source_grid.k_gaps and source_grid.nk_plus_k_gaps is None: source_grid.nk_plus_k_gaps = source_grid.nk
 
    # create a new, empty grid object
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'
@@ -1717,7 +1717,7 @@ def refined_grid(epc_file, source_grid, fine_coarse,
    else:
 
       # create a new, empty grid object
-      grid = grr.Grid(model, extract_basics_from_xml = False)
+      grid = grr.Grid(model)
 
       # inherit attributes from source grid
       grid.grid_representation = 'IjkGrid'
@@ -1947,7 +1947,7 @@ def coarsened_grid(epc_file, source_grid, fine_coarse,
    source_points = source_grid.points_ref().reshape((source_grid.nk + 1), (source_grid.nj + 1) * (source_grid.ni + 1), 3)
 
    # create a new, empty grid object
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'
@@ -3156,7 +3156,7 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
    if target_model is model: copy_crs = False
 
    # create empty grid object (with new uuid)
-   grid = grr.Grid(target_model, extract_basics_from_xml = False)
+   grid = grr.Grid(target_model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'

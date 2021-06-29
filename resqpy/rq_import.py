@@ -1262,7 +1262,7 @@ def grid_from_cp(model, cp_array, crs_uuid,
 
    # create an empty grid object and fill in some basic info
    log.debug('initialising grid object')
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
    grid.grid_representation = 'IjkGrid'
    grid.extent_kji = np.array((nk, nj, ni), dtype = 'int')
    grid.nk, grid.nj, grid.ni = nk, nj, ni

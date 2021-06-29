@@ -121,7 +121,7 @@ class BaseResqpy(metaclass=ABCMeta):
                 return True
         return False
 
-    def create_xml(self, title=None, originator=None, add_as_part=False):
+    def create_xml(self, title=None, originator=None, extra_metadata=None, add_as_part=False):
         """Write citation block to XML
         
         Note:
@@ -135,6 +135,7 @@ class BaseResqpy(metaclass=ABCMeta):
                 human readable way
             originator (string, optional): the name of the human being who created the deviation survey part;
                 default is to use the login name
+            extra_metadata (dict, optional): extra metadata items to be added
             add_as_part (boolean): if True, the newly created xml node is added as a part
                 in the model
 
@@ -156,6 +157,10 @@ class BaseResqpy(metaclass=ABCMeta):
         )
 
         # Extra metadata
+        if extra_metadata:
+            if not hasattr(self, 'extra_metadata'): self.extra_metadata = {}
+            for key, value in extra_metadata.items():
+                self.extra_metadata[str(key)] = str(value)
         if hasattr(self, 'extra_metadata') and self.extra_metadata:
             rqet.create_metadata_xml(node=node, extra_metadata=self.extra_metadata)
 
