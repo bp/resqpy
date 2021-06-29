@@ -27,5 +27,6 @@ dist
 resqpy/version.py
 
 # XSD files
-resqml/olio/data/Properties.xsd
+resqpy/olio/data/*.xml
+resqpy/olio/data/*.xsd
 
