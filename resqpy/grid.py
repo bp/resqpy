@@ -61,7 +61,7 @@ def _add_to_kelp_list(extent_kji, kelp_list, face_axis, ji):
 
 
 
-class Grid():
+class Grid(BaseResqpy):
    """Class for RESQML Grid (extent and geometry) within RESQML model object."""
 
    resqml_type = 'IjkGridRepresentation'
