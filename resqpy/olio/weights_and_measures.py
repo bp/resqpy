@@ -58,7 +58,7 @@ def rq_uom(units):
    if ul in ['1E6 m3/d', '1E6 m3/day']: return '1E6 m3/d'
    if units in ['mD.m', 'mD.ft']: return units
    if ul == 'count': return 'Euc'
-   uom_list = properties_data()['uoms']
+   uom_list = properties_data()['units'].keys()
    if units in uom_list: return units
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
    return 'Euc'
@@ -275,16 +275,25 @@ def convert_flow_rates(a, from_units, to_units):
    return a
 
 
-
 @lru_cache(maxsize=None)
 def properties_data():
-   """ Return valid resqml uoms and property kinds.
+   """ Return a data structure that represents resqml unit system.
 
-   Returns a dict with keys:
-   - "uoms" : list of valid units of measure
-   - "property_kinds" : dict mapping valid property kinds to their description
+   The dict is loaded directly from a JSON file which is bundled with resqpy.
+   The unit system is represented as a dict with the following keys:
+
+   - dimensions
+   - quantities
+   - units
+   - prefixes
+   - property_kinds
+
+   Returns:
+      dict: resqml unit system
+      
    """
    json_path = Path(__file__).parent / 'data' / 'properties.json'
    with open(json_path) as f:
       data = json.load(f)
    return data
+

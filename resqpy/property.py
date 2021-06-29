@@ -4879,7 +4879,7 @@ def validate_uom_from_string(input_unit, case_sensitive=True):
       return default
 
    # Get set of all valid uoms
-   valid_uoms = set(bwam.properties_data()['uoms'])
+   valid_uoms = set(bwam.properties_data()['units'].keys())
 
    if case_sensitive:
       if input_unit in valid_uoms:
