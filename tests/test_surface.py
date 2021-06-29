@@ -69,4 +69,4 @@ def test_faces_for_surface(tmp_model):
     # todo: check face indices
     gcs.write_hdf5()
     gcs.create_xml()
-    assert bu.matching_uuids(tmp_model.uuid(obj_type = 'GridConnectionSetRepresentation', gcs.uuid)
+    assert bu.matching_uuids(tmp_model.uuid(obj_type = 'GridConnectionSetRepresentation'), gcs.uuid)
