@@ -214,7 +214,7 @@ class PropertyCollection():
             support_type = model.type_of_part(support_part)
             assert support_type is not None
             if support_type == 'obj_IjkGridRepresentation':
-               self.support = grr.any_grid(model, grid_root = self.support_root, find_properties = False)
+               self.support = grr.any_grid(model, uuid = self.support_uuid, find_properties = False)
             elif support_type == 'obj_WellboreFrameRepresentation':
                self.support = rqw.WellboreFrame(model, frame_root = self.support_root)
             elif support_type == 'obj_BlockedWellboreRepresentation':
@@ -226,10 +226,10 @@ class PropertyCollection():
             else:
                raise TypeError('unsupported property supporting representation class: ' + str(support_type))
          else:
-            if isinstance(self.support, grr.Grid): self.support_root = self.support.grid_root
+            if isinstance(self.support, grr.Grid): self.support_root = self.support.root
             elif isinstance(self.support, rqw.WellboreFrame): self.support_root = self.support.root_node
             elif isinstance(self.support, rqw.BlockedWell): self.support_root = self.support.root_node
-            elif isinstance(self.support, rqs.Mesh): self.support_root = self.support.root_node
+            elif isinstance(self.support, rqs.Mesh): self.support_root = self.support.root
             elif isinstance(self.support, rqf.GridConnectionSet): self.support_root = self.support.root
             else:
                raise TypeError('unsupported property supporting representation class: ' + str(type(support)))
@@ -1128,7 +1128,7 @@ class PropertyCollection():
       assert self.model is not None
       part = self.model.part_for_uuid(support_uuid)
       assert part is not None and self.model.type_of_part(part) == 'obj_IjkGridRepresentation'
-      return grr.any_grid(self.model, grid_root = self.model.root_for_part(part), find_properties = False)
+      return grr.any_grid(self.model, uuid = support_uuid, find_properties = False)
 
 
    def uuid_for_part(self, part):
@@ -3412,7 +3412,7 @@ class GridPropertyCollection(PropertyCollection):
       """
 
       if grid is not None:
-         log.debug('initialising grid property collection for grid: ' + str(rqet.citation_title_for_node(grid.grid_root)))
+         log.debug('initialising grid property collection for grid: ' + str(rqet.citation_title_for_node(grid.root)))
          log.debug('grid uuid: ' + str(grid.uuid))
       super().__init__(support = grid, property_set_root = property_set_root, realization = realization)
       self._copy_support_to_grid_attributes()

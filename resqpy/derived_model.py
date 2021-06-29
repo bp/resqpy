@@ -175,9 +175,7 @@ def add_zone_by_layer_property(epc_file,
    else:
       grid = model.grid_for_uuid_from_grid_list(grid_uuid)
       if grid is None:
-         grid_root = model.root_for_uuid(grid_uuid)
-         assert grid_root is not None, 'no grid object found with given uuid'
-         grid = grr.any_grid(model, grid_root = grid_root, find_properties = True)
+         grid = grr.any_grid(model, uuid = grid_uuid, find_properties = True)
    assert grid is not None, 'failed to establish grid object'
 
    if zone_by_layer_vector is not None:
@@ -291,10 +289,7 @@ def add_one_grid_property_array(epc_file,
       grid_uuid = grid.uuid
    else:
       grid = model.grid_for_uuid_from_grid_list(grid_uuid)
-      if grid is None:
-         grid_root = model.root_for_uuid(grid_uuid)
-         assert grid_root is not None, 'no grid object found with given uuid'
-         grid = grr.any_grid(model, grid_root = grid_root, find_properties = False)
+      if grid is None: grid = grr.any_grid(model, uuid = grid_uuid, find_properties = False)
    assert grid is not None, 'failed to establish grid object'
 
    if not discrete: string_lookup_uuid = None
@@ -316,7 +311,7 @@ def add_one_grid_property_array(epc_file,
    # write or re-write model
    model.h5_release()
    if new_epc_file:
-      grid_title = rqet.citation_title_for_node(grid.grid_root)
+      grid_title = rqet.citation_title_for_node(grid.root)
       uuid_list = write_grid(new_epc_file, grid, property_collection = gpc, grid_title = grid_title, mode = 'w',
                              time_series_uuid = time_series_uuid, string_lookup_uuid = string_lookup_uuid,
                              extra_metadata = extra_metadata)
@@ -598,7 +593,7 @@ def zonal_grid(epc_file, source_grid = None,
    assert zone_count > 0, 'unexpected lack of zones'
 
    # create a new, empty grid object
-   is_regular = grr.is_regular_grid(source_grid.grid_root) and single_layer_mode
+   is_regular = grr.is_regular_grid(source_grid.root) and single_layer_mode
    if is_regular:
       dxyz_dkji = source_grid.block_dxyz_dkji.copy()
       dxyz_dkji[0] *= k0_max - k0_min + 1
@@ -606,7 +601,7 @@ def zonal_grid(epc_file, source_grid = None,
                              dxyz_dkji = dxyz_dkji, origin = source_grid.block_origin,
                              crs_uuid = source_grid.crs_uuid, set_points_cached = False)
    else:
-      grid = grr.Grid(model, extract_basics_from_xml = False)
+      grid = grr.Grid(model)
       # inherit attributes from source grid
       grid.grid_representation = 'IjkGrid'
       grid.extent_kji = np.array((zone_count, source_grid.nj, source_grid.ni), dtype = 'int')
@@ -728,13 +723,13 @@ def zonal_grid(epc_file, source_grid = None,
    if new_grid_title is None or len(new_grid_title) == 0:
       if single_layer_mode: preamble = 'single layer'
       else: preamble = 'zonal'
-      new_grid_title = preamble + ' version of ' + str(rqet.citation_title_for_node(source_grid.grid_root))
+      new_grid_title = preamble + ' version of ' + str(rqet.citation_title_for_node(source_grid.root))
 
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, grid_title = new_grid_title, mode = 'w')
    else:
-#      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+#      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = None, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -851,7 +846,7 @@ def interpolated_grid(epc_file, grid_a, grid_b, a_to_b_0_to_1 = 0.5, split_toler
    else: log.warning('interpolating between corner points due to pillar incompatibilities')
 
    # create a new, empty grid object
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'
@@ -1025,7 +1020,7 @@ def interpolated_grid(epc_file, grid_a, grid_b, a_to_b_0_to_1 = 0.5, split_toler
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(grid_a.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(grid_a.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -1118,7 +1113,7 @@ def extract_box(epc_file = None, source_grid = None, box = None, box_inactive = 
    if not source_grid.k_gaps and source_grid.nk_plus_k_gaps is None: source_grid.nk_plus_k_gaps = source_grid.nk
 
    # create a new, empty grid object
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'
@@ -1281,13 +1276,13 @@ def extract_box(epc_file = None, source_grid = None, box = None, box_inactive = 
                                                                                        copy_all_realizations = inherit_all_realizations)
 
    if new_grid_title is None or len(new_grid_title) == 0:
-      new_grid_title = 'local grid ' + box_str + ' extracted from ' + str(rqet.citation_title_for_node(source_grid.grid_root))
+      new_grid_title = 'local grid ' + box_str + ' extracted from ' + str(rqet.citation_title_for_node(source_grid.root))
 
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -1630,12 +1625,12 @@ def refined_grid(epc_file, source_grid, fine_coarse,
             source_grid = model_in.grid()
          else:
             log.debug('selecting source grid from existing epc based on uuid')
-            source_grid = grr.Grid(model_in, grid_root = model_in.root_for_uuid(source_grid_uuid))
+            source_grid = grr.Grid(model_in, uuid = source_grid_uuid)
       else:
          if source_grid_uuid is not None: assert bu.matching_uuids(source_grid_uuid, source_grid.uuid)
          grid_uuid = source_grid.uuid
          log.debug('reloading source grid from existing epc file')
-         source_grid = grr.Grid(model_in, grid_root = model_in.root_for_uuid(grid_uuid))
+         source_grid = grr.Grid(model_in, uuid = grid_uuid)
       if model is None: model = model_in
    else:
       model_in = source_grid.model
@@ -1717,7 +1712,7 @@ def refined_grid(epc_file, source_grid, fine_coarse,
    else:
 
       # create a new, empty grid object
-      grid = grr.Grid(model, extract_basics_from_xml = False)
+      grid = grr.Grid(model)
 
       # inherit attributes from source grid
       grid.grid_representation = 'IjkGrid'
@@ -1852,14 +1847,14 @@ def refined_grid(epc_file, source_grid, fine_coarse,
                assert source_fine_coarse.fine_extent_kji == source_fine_coarse.coarse_extent_kji, 'parentage involves refinement or coarsening'
                if source_fine_coarse.within_coarse_box is not None: fine_coarse.within_coarse_box = source_fine_coarse.within_coarse_box
                else: fine_coarse.within_coarse_box = source_fine_coarse.within_fine_box
-               pw_grid_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(source_grid.grid_root, ['ParentWindow', 'ParentGrid', 'UUID']))
+               pw_grid_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(source_grid.root, ['ParentWindow', 'ParentGrid', 'UUID']))
          else:
             assert set_parent_window == 'parent', 'set_parent_window value not recognized: ' + set_parent_window
       grid.set_parent(pw_grid_uuid, True, fine_coarse)
 
    # write grid
    if new_grid_title is None or len(new_grid_title) == 0:
-      new_grid_title = 'grid refined from ' + str(rqet.citation_title_for_node(source_grid.grid_root))
+      new_grid_title = 'grid refined from ' + str(rqet.citation_title_for_node(source_grid.root))
 
    model.h5_release()
    if model is not model_in: model_in.h5_release()
@@ -1867,7 +1862,7 @@ def refined_grid(epc_file, source_grid, fine_coarse,
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -1947,7 +1942,7 @@ def coarsened_grid(epc_file, source_grid, fine_coarse,
    source_points = source_grid.points_ref().reshape((source_grid.nk + 1), (source_grid.nj + 1) * (source_grid.ni + 1), 3)
 
    # create a new, empty grid object
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'
@@ -2012,20 +2007,20 @@ def coarsened_grid(epc_file, source_grid, fine_coarse,
                assert source_fine_coarse.fine_extent_kji == source_fine_coarse.coarse_extent_kji, 'parentage involves refinement or coarsening'
                if source_fine_coarse.within_fine_box is not None: fine_coarse.within_fine_box = source_fine_coarse.within_fine_box
                else: fine_coarse.within_fine_box = source_fine_coarse.within_coarse_box
-               pw_grid_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(source_grid.grid_root, ['ParentWindow', 'ParentGrid', 'UUID']))
+               pw_grid_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(source_grid.root, ['ParentWindow', 'ParentGrid', 'UUID']))
          else:
             assert set_parent_window == 'parent', 'set_parent_window value not recognized: ' + set_parent_window
       grid.set_parent(pw_grid_uuid, False, fine_coarse)
 
    # write grid
    if new_grid_title is None or len(new_grid_title) == 0:
-      new_grid_title = 'grid coarsened from ' + str(rqet.citation_title_for_node(source_grid.grid_root))
+      new_grid_title = 'grid coarsened from ' + str(rqet.citation_title_for_node(source_grid.root))
 
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -2184,14 +2179,14 @@ def local_depth_adjustment(epc_file, source_grid, centre_x, centre_y, radius, ce
 
    if new_grid_title is None or len(new_grid_title) == 0:
       new_grid_title = 'grid derived from {0} with local depth shift of {1:3.1f} applied'.format(
-         str(rqet.citation_title_for_node(source_grid.grid_root)), centre_shift)
+         str(rqet.citation_title_for_node(source_grid.root)), centre_shift)
 
    # write model
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -2261,14 +2256,14 @@ def tilted_grid(epc_file, source_grid = None, pivot_xyz = None, azimuth = None, 
       collection.inherit_imported_list_from_other_collection(displacement_collection, copy_cached_arrays = False)
 
    if new_grid_title is None or len(new_grid_title) == 0:
-      new_grid_title = 'tilted version ({0:4.2f} degree dip) of '.format(abs(dip)) + str(rqet.citation_title_for_node(source_grid.grid_root))
+      new_grid_title = 'tilted version ({0:4.2f} degree dip) of '.format(abs(dip)) + str(rqet.citation_title_for_node(source_grid.root))
 
    # write model
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -2339,13 +2334,13 @@ def unsplit_grid(epc_file, source_grid = None,
    # todo: recompute depth properties (and volumes, cell lengths etc. if being strict)
 
    if new_grid_title is None or len(new_grid_title) == 0:
-      new_grid_title = 'unfaulted version of ' + str(rqet.citation_title_for_node(source_grid.grid_root))
+      new_grid_title = 'unfaulted version of ' + str(rqet.citation_title_for_node(source_grid.root))
 
    # write model
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -2604,20 +2599,20 @@ def add_faults(epc_file, source_grid, polylines = None, lines_file_list = None, 
    # todo: recompute depth properties (and volumes, cell lengths etc. if being strict)
 
    if new_grid_title is None or len(new_grid_title) == 0:
-      new_grid_title = 'copy of ' + str(rqet.citation_title_for_node(source_grid.grid_root)) + ' with added faults'
+      new_grid_title = 'copy of ' + str(rqet.citation_title_for_node(source_grid.root)) + ' with added faults'
 
    # write model
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    if create_gcs and (polylines is not None or lines_file_list is not None):
       if new_epc_file is not None:
          grid_uuid = grid.uuid
          model = rq.Model(new_epc_file)
-         grid = grr.Grid(model, grid_root = model.root(uuid = grid_uuid), find_properties = False)
+         grid = grr.Grid(model, root = model.root(uuid = grid_uuid), find_properties = False)
       grid.set_face_set_gcs_list_from_dict(composite_face_set_dict, create_organizing_objects_where_needed = True)
       combined_gcs = grid.face_set_gcs_list[0]
       for gcs in grid.face_set_gcs_list[1:]: combined_gcs.append(gcs)
@@ -2842,7 +2837,7 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
 
    if new_grid_title is None or len(new_grid_title) == 0:
       new_grid_title = 'grid with fault throws scaled by ' + str(scaling_factor) + ' from ' +  \
-                       str(rqet.citation_title_for_node(source_grid.grid_root))
+                       str(rqet.citation_title_for_node(source_grid.root))
 
    gcs_list = []
    if inherit_gcs:
@@ -2859,22 +2854,24 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
       epc_file = new_epc_file
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    if len(gcs_list):
-      log.debug('inheriting grid connection sets')
+      log.debug(f'inheriting grid connection sets related to source grid: {source_grid.uuid}')
       gcs_inheritance_model = rq.Model(epc_file)
       for gcs, gcs_title in gcs_list:
+#         log.debug(f'inheriting gcs: {gcs_title}; old gcs uuid: {gcs.uuid}')
          gcs.uuid = bu.new_uuid()
          grid_list_modifications = []
          for gi, g in enumerate(gcs.grid_list):
+#            log.debug(f'gcs uses grid: {g.title}; grid uuid: {g.uuid}')
             if bu.matching_uuids(g.uuid, source_grid.uuid): grid_list_modifications.append(gi)
          assert len(grid_list_modifications)
          for gi in grid_list_modifications:
             gcs.grid_list[gi] = grid
-         gcs.write_hdf5()
          gcs.model = gcs_inheritance_model
+         gcs.write_hdf5()
          gcs.create_xml(title = gcs_title)
       gcs_inheritance_model.store_epc()
       gcs_inheritance_model.h5_release()
@@ -3089,14 +3086,14 @@ def drape_to_surface(epc_file, source_grid = None, surface = None, scaling_facto
       collection.inherit_imported_list_from_other_collection(displacement_collection, copy_cached_arrays = False)
 
    if new_grid_title is None or len(new_grid_title) == 0:
-      new_grid_title = 'grid flexed from ' + str(rqet.citation_title_for_node(source_grid.grid_root))
+      new_grid_title = 'grid flexed from ' + str(rqet.citation_title_for_node(source_grid.root))
 
    # write model
    model.h5_release()
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.grid_root, ['Geometry', 'Points']), 'Coordinates')
+      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    return grid
@@ -3156,7 +3153,7 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
    if target_model is model: copy_crs = False
 
    # create empty grid object (with new uuid)
-   grid = grr.Grid(target_model, extract_basics_from_xml = False)
+   grid = grr.Grid(target_model)
 
    # inherit attributes from source grid
    grid.grid_representation = 'IjkGrid'
@@ -3282,7 +3279,7 @@ def write_grid(epc_file, grid, ext_uuid = None, property_collection = None,
 
    if not epc_file.endswith('.epc'): epc_file += '.epc'
 
-   is_regular = grr.is_regular_grid(grid.grid_root)
+   is_regular = grr.is_regular_grid(grid.root)
 
    if not is_regular: grid.cache_all_geometry_arrays()
    working_model = grid.model
@@ -3323,9 +3320,8 @@ def write_grid(epc_file, grid, ext_uuid = None, property_collection = None,
       log.debug('building xml for grid object')
       ijk_node = grid.create_xml(ext_uuid, add_as_part = True, add_relationships = True, title = grid_title)
       assert ijk_node is not None, 'failed to create IjkGrid node in xml tree'
-      grid.grid_root = ijk_node
       if collection is not None:
-         collection.set_grid(grid, grid_root = grid.grid_root)
+         collection.set_grid(grid, grid_root = grid.root)
       grid.geometry_root = rqet.find_tag(ijk_node, 'Geometry')
 
    # add derived inactive array as part

@@ -1461,11 +1461,12 @@ class Model():
       else:
          grid_root = self.root(obj_type = 'IjkGridRepresentation', uuid = uuid, title = title)
       assert grid_root is not None, 'IJK Grid part not found'
+      if uuid is None: uuid = rqet.uuid_for_part_root(grid_root)
       for grid in self.grid_list:
-         if grid.grid_root is grid_root:
+         if grid.root is grid_root:
             if find_properties: grid.extract_property_collection()
             return grid
-      grid = grr.any_grid(self, grid_root = grid_root, find_properties = find_properties)
+      grid = grr.any_grid(self, uuid = uuid, find_properties = find_properties)
       assert grid is not None, 'failed to instantiate grid object'
       if find_properties: grid.extract_property_collection()
       self.add_grid(grid)
@@ -1487,7 +1488,7 @@ class Model():
 
       if check_for_duplicates:
          for g in self.grid_list:
-            if g.grid_root is grid_object.grid_root: return
+            if bu.mathcing_uuids(g.uuid, grid_object.uuid): return
       self.grid_list.append(grid_object)
 
 

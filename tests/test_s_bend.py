@@ -93,7 +93,7 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    model = rq.Model(epc_file = epc, new_epc = True, create_basics = True, create_hdf5_ext = True)
 
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
 
    crs = rqc.Crs(model)
    crs_node = crs.create_xml()

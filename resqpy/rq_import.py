@@ -854,9 +854,11 @@ def add_ab_properties(epc_file,                  # existing resqml model
    assert ab_property_list, 'property list is empty or missing'
 
    model = rq.Model(epc_file = epc_file)
-   grid_node = model.root_for_ijk_grid(uuid = grid_uuid)    # will raise an exception if uuid is None and Model has more than 1 grid
-   assert grid_node is not None, 'grid not found in model'
-   grid = grr.any_grid(parent_model = model, grid_root = grid_node, find_properties = False)
+   if grid_uuid is None:
+      grid_node = model.root_for_ijk_grid()    # will raise an exception if Model has more than 1 grid
+      assert grid_node is not None, 'grid not found in model'
+      grid_uuid = rqet.uuid_for_part_root(grid_node)
+   grid = grr.any_grid(parent_model = model, uuid = grid_uuid, find_properties = False)
 
    if ext_uuid is None:
       ext_node = rqet.find_nested_tags(grid.geometry_root, ['Points', 'Coordinates', 'HdfProxy', 'UUID'])
@@ -1262,7 +1264,7 @@ def grid_from_cp(model, cp_array, crs_uuid,
 
    # create an empty grid object and fill in some basic info
    log.debug('initialising grid object')
-   grid = grr.Grid(model, extract_basics_from_xml = False)
+   grid = grr.Grid(model)
    grid.grid_representation = 'IjkGrid'
    grid.extent_kji = np.array((nk, nj, ni), dtype = 'int')
    grid.nk, grid.nj, grid.ni = nk, nj, ni
