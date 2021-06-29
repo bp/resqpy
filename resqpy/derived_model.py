@@ -135,7 +135,8 @@ def add_zone_by_layer_property(epc_file,
                                use_local_property_kind = True,
                                null_value = -1,
                                title = 'ZONE',
-                               realization = None):
+                               realization = None,
+                               extra_metadata = {}):
    """Adds a discrete zone property (and local property kind) with indexable element of layers.
 
    arguments:
@@ -156,6 +157,8 @@ def add_zone_by_layer_property(epc_file,
       title (str, default 'ZONE'): the citation title of the new zone by layer property
       realization (int, optional): if present the new zone by layer property is marked as belonging to this
          realization
+      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+         property
 
    returns:
       numpy vector of zone numbers (by layer), uuid of newly created property
@@ -215,7 +218,8 @@ def add_zone_by_layer_property(epc_file,
                                                null_value = null_value,
                                                indexable_element = 'layers',
                                                realization = realization,
-                                               local_property_kind_uuid = local_property_kind_uuid)
+                                               local_property_kind_uuid = local_property_kind_uuid,
+                                               extra_metadata = extra_metadata)
 
    return zone_by_layer, property_uuid
 
@@ -235,6 +239,7 @@ def add_one_grid_property_array(epc_file,
                                 local_property_kind_uuid = None,
                                 count_per_element = 1,
                                 const_value = None,
+                                extra_metadata = {},
                                 new_epc_file = None):
    """Adds a grid property from a numpy array to an existing resqml dataset.
 
@@ -266,6 +271,8 @@ def add_one_grid_property_array(epc_file,
          must be the fastest cycling axis in the cached array, ie last index
       const_value (float or int, optional): if present, a constant array is added 'filled' with this value, in which
          case argument a should be None
+      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+         property
       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
          a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
 
@@ -311,11 +318,13 @@ def add_one_grid_property_array(epc_file,
    if new_epc_file:
       grid_title = rqet.citation_title_for_node(grid.grid_root)
       uuid_list = write_grid(new_epc_file, grid, property_collection = gpc, grid_title = grid_title, mode = 'w',
-                             time_series_uuid = time_series_uuid, string_lookup_uuid = string_lookup_uuid)
+                             time_series_uuid = time_series_uuid, string_lookup_uuid = string_lookup_uuid,
+                             extra_metadata = extra_metadata)
    else:
       # add arrays to hdf5 file holding source grid geometry
       uuid_list = write_grid(epc_file, grid, property_collection = gpc, mode = 'a', geometry = False,
-                             time_series_uuid = time_series_uuid, string_lookup_uuid = string_lookup_uuid)
+                             time_series_uuid = time_series_uuid, string_lookup_uuid = string_lookup_uuid,
+                             extra_metadata = extra_metadata)
 
    if uuid_list is None or len(uuid_list) == 0: return None
    return uuid_list[0]
@@ -3229,7 +3238,8 @@ def displacement_properties(new_grid, old_grid):
 
 def write_grid(epc_file, grid, ext_uuid = None, property_collection = None,
                grid_title = None, mode = 'a', geometry = True,
-               time_series_uuid = None, string_lookup_uuid = None):
+               time_series_uuid = None, string_lookup_uuid = None,
+               extra_metadata = {}):
    """Append to or create epc and h5 files, with grid and optionally property collection.
 
    arguments:
@@ -3250,6 +3260,8 @@ def write_grid(epc_file, grid, ext_uuid = None, property_collection = None,
       string_lookup_uuid (optional): if present, the uuid of the string table lookup which any non-continuous
          properties relate to (ie. they are all taken to be categorical); leave as None if discrete property
          objects are required rather than categorical
+      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to any new
+         properties
 
    returns:
       list of uuid.UUID, being the uuids of property parts added from the property_collection, if any
@@ -3316,7 +3328,8 @@ def write_grid(epc_file, grid, ext_uuid = None, property_collection = None,
    if collection is not None:
       prop_uuid_list = collection.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid, support_uuid = grid.uuid,
                                                                                       time_series_uuid = time_series_uuid,
-                                                                                      string_lookup_uuid = string_lookup_uuid)
+                                                                                      string_lookup_uuid = string_lookup_uuid,
+                                                                                      extra_metadata = extra_metadata)
    else:
       prop_uuid_list = []
 
@@ -3343,6 +3356,7 @@ def add_edges_per_column_property_array(epc_file,
                                         null_value = None,
                                         facet_type = None, facet = None, realization = None,
                                         local_property_kind_uuid = None,
+                                        extra_metadata = {},
                                         new_epc_file = None):
    """Adds an edges per column grid property from a numpy array to an existing resqml dataset.
 
@@ -3368,6 +3382,8 @@ def add_edges_per_column_property_array(epc_file,
       facet (string): resqml facet, or None
       realization (int): realization number, or None
       local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
+      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+         property
       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
          a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
 
@@ -3390,6 +3406,7 @@ def add_edges_per_column_property_array(epc_file,
                                                facet_type = facet_type, facet = facet, realization = realization,
                                                local_property_kind_uuid = local_property_kind_uuid,
                                                count_per_element = 1,
+                                               extra_metadata = extra_metadata,
                                                new_epc_file = new_epc_file)
    return property_uuid
 
