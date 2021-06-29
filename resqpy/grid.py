@@ -171,10 +171,10 @@ class Grid():
       self.extract_inactive_mask()
 
 
-    @property
-    def grid_root(self):
-        """Alias for root"""
-        return self.root
+   @property
+   def grid_root(self):
+      """Alias for root"""
+      return self.root
 
 
    def set_modified(self, update_xml = False, update_hdf5 = False):
