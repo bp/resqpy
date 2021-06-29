@@ -58,7 +58,7 @@ def rq_uom(units):
    if ul in ['1E6 m3/d', '1E6 m3/day']: return '1E6 m3/d'
    if units in ['mD.m', 'mD.ft']: return units
    if ul == 'count': return 'Euc'
-   uom_list = properties_data()['units'].keys()
+   uom_list = valid_uoms()
    if units in uom_list: return units
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
    return 'Euc'
