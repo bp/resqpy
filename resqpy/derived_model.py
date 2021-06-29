@@ -344,6 +344,7 @@ def add_one_blocked_well_property(epc_file,
                                   facet_type = None, facet = None, realization = None,
                                   local_property_kind_uuid = None,
                                   count_per_element = 1,
+                                  extra_metadata = {},
                                   new_epc_file = None):
    """Adds a blocked well property from a numpy array to an existing resqml dataset.
 
@@ -371,6 +372,8 @@ def add_one_blocked_well_property(epc_file,
       local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
       count_per_element (int, default 1): the number of values per indexable element; if greater than one then this
          must be the fastest cycling axis in the cached array, ie last index; if greater than 1 then a must be a 2D array
+      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+         property
       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
          a new epc file (& associated h5 file) is created to contain a copy of the blocked well (and dependencies) and
          the new property
@@ -407,7 +410,8 @@ def add_one_blocked_well_property(epc_file,
    bwpc.write_hdf5_for_imported_list()
    uuid_list = bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid,
                                                                         string_lookup_uuid = string_lookup_uuid,
-                                                                        property_kind_uuid = local_property_kind_uuid)
+                                                                        property_kind_uuid = local_property_kind_uuid,
+                                                                        extra_metadata = extra_metadata)
    assert len(uuid_list) == 1
    model.store_epc()
    return uuid_list[0]
