@@ -952,7 +952,7 @@ class GridConnectionSet(BaseResqpy):
                raise Exception('unsupported content type in grid connection set')
 
       for grid in self.grid_list:
-         self.model.create_ref_node('Grid', self.model.title_for_root(grid.grid_root),
+         self.model.create_ref_node('Grid', self.model.title_for_root(grid.root),
                                     grid.uuid, content_type = 'obj_IjkGridRepresentation', root = gcs)
 
       if add_as_part:
@@ -966,7 +966,7 @@ class GridConnectionSet(BaseResqpy):
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
             self.model.create_reciprocal_relationship(gcs, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
-            self.model.create_reciprocal_relationship(gcs, 'destinationObject', self.grid_list[0].grid_root, 'sourceObject')
+            self.model.create_reciprocal_relationship(gcs, 'destinationObject', self.grid_list[0].root, 'sourceObject')
 
       return gcs
 

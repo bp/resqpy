@@ -206,16 +206,16 @@ class Grid(BaseResqpy):
       else:
          log.info('setting new uuid for grid: ' + str(self.uuid))
       if update_xml:
-         rqet.patch_uuid_in_part_root(self.grid_root, self.uuid)
-         self.model.add_part('obj_IjkGridRepresentation', self.uuid, self.grid_root)
+         rqet.patch_uuid_in_part_root(self.root, self.uuid)
+         self.model.add_part('obj_IjkGridRepresentation', self.uuid, self.root)
          self.model.remove_part(rqet.part_name_for_object('obj_IjkGridRepresentation', old_uuid))
       if update_hdf5:
-         hdf5_uuid_list = self.model.h5_uuid_list(self.grid_root)
+         hdf5_uuid_list = self.model.h5_uuid_list(self.root)
          for ext_uuid in hdf5_uuid_list:
             hdf5_file = self.model.h5_access(ext_uuid, mode = 'r+')
             rwh5.change_uuid(hdf5_file, old_uuid, self.uuid)
       if update_xml and update_hdf5:
-         self.model.change_uuid_in_hdf5_references(self.grid_root, old_uuid, self.uuid)
+         self.model.change_uuid_in_hdf5_references(self.root, old_uuid, self.uuid)
       self.model.set_modified()
       return self.uuid
 
@@ -231,9 +231,9 @@ class Grid(BaseResqpy):
 
       if self.extent_kji is not None: return self.extent_kji
       self.extent_kji = np.ones(3, dtype = 'int')  # todo: handle other varieties of grid
-      self.extent_kji[0] = int(rqet.find_tag(self.grid_root, 'Nk').text)
-      self.extent_kji[1] = int(rqet.find_tag(self.grid_root, 'Nj').text)
-      self.extent_kji[2] = int(rqet.find_tag(self.grid_root, 'Ni').text)
+      self.extent_kji[0] = int(rqet.find_tag(self.root, 'Nk').text)
+      self.extent_kji[1] = int(rqet.find_tag(self.root, 'Nj').text)
+      self.extent_kji[2] = int(rqet.find_tag(self.root, 'Ni').text)
       return self.extent_kji
 
 
@@ -464,10 +464,10 @@ class Grid(BaseResqpy):
       if self.k_gaps is not None:
          self.nk_plus_k_gaps = self.nk + self.k_gaps
          return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
-      self.k_gaps = rqet.find_nested_tags_int(self.grid_root, ['KGaps', 'Count'])
+      self.k_gaps = rqet.find_nested_tags_int(self.root, ['KGaps', 'Count'])
       if self.k_gaps:
          self.nk_plus_k_gaps = self.nk + self.k_gaps
-         k_gap_after_root = rqet.find_nested_tags(self.grid_root, ['KGaps', 'GapAfterLayer'])
+         k_gap_after_root = rqet.find_nested_tags(self.root, ['KGaps', 'GapAfterLayer'])
          assert k_gap_after_root is not None
          bool_array_type = rqet.node_type(k_gap_after_root)
          assert bool_array_type == 'BooleanHdf5Array'   # could be a constant array but not handled by this code
@@ -501,7 +501,7 @@ class Grid(BaseResqpy):
       if self.parent_grid_uuid is not None: return self.parent_grid_uuid
       self.parent_window = None               # FineCoarse cell index mapping info with respect to parent
       self.is_refinement = None
-      pw_node = rqet.find_tag(self.grid_root, 'ParentWindow')
+      pw_node = rqet.find_tag(self.root, 'ParentWindow')
       if pw_node is None: return None
       # load a FineCoarse object as parent_window attirbute and set parent_grid_uuid attribute
       self.parent_grid_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(pw_node, ['ParentGrid', 'UUID']))

@@ -79,7 +79,7 @@ def make_pixel_map(grid, width, height, origin = None, dx = None, dy = None, bor
 
    p_map = grid.pixel_maps(origin, width, height, dx, dy = dy, k0 = k0, vertical_ref = vertical_ref)
 
-   source_str = 'pixel map for grid ' + rqet.citation_title_for_node(grid.grid_root)
+   source_str = 'pixel map for grid ' + rqet.citation_title_for_node(grid.root)
 
    p_mesh = rqs.Mesh(parent_model = model, nj = height + 1, ni = width + 1,
                      origin = origin_xyz, dxyz_dij = np.array([[dx, 0.0, 0.0], [0.0, dy, 0.0]]),
@@ -105,7 +105,7 @@ def make_pixel_map(grid, width, height, origin = None, dx = None, dy = None, bor
 
    p_node = model.root_for_uuid(p_uuid)
 
-   model.create_reciprocal_relationship(p_node, 'destinationObject', grid.grid_root, 'sourceObject')
+   model.create_reciprocal_relationship(p_node, 'destinationObject', grid.root, 'sourceObject')
 
    log.debug('pixel map made')
 

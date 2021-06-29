@@ -2015,7 +2015,7 @@ class BlockedWell:
 
       col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
       if check_grid_name:
-         grid_name = rqet.citation_title_for_node(grid.grid_root).upper()
+         grid_name = rqet.citation_title_for_node(grid.root).upper()
          if not grid_name: check_grid_name = False
          else: col_list.append('GRID')
 
@@ -2211,7 +2211,7 @@ class BlockedWell:
       if well_name: self.well_name = well_name
       else: well_name = self.well_name
 
-      grid_name = rqet.citation_title_for_node(grid.grid_root)
+      grid_name = rqet.citation_title_for_node(grid.root)
       length_uom = grid.z_units()
       grid_z_inc_down = crs.Crs(grid.model, uuid = grid.crs_uuid).z_inc_down
       log.debug('grid z increasing downwards: ' + str(grid_z_inc_down) + '(type: ' + str(type(grid_z_inc_down)) + ')')
@@ -2567,7 +2567,7 @@ class BlockedWell:
          row_dict = {}
          grid = self.grid_list[self.grid_indices[interval]]
          grid_crs = grid_crs_list[self.grid_indices[interval]]
-         grid_name = rqet.citation_title_for_node(grid.grid_root).replace(' ', '_')
+         grid_name = rqet.citation_title_for_node(grid.root).replace(' ', '_')
          natural_cell = self.cell_indices[ci]
          cell_kji0 = grid.denaturalized_cell_index(natural_cell)
          tuple_kji0 = tuple(cell_kji0)
@@ -3181,7 +3181,7 @@ class BlockedWell:
 
       for grid in self.grid_list:
 
-         grid_root = grid.grid_root
+         grid_root = grid.root
          self.model.create_ref_node('Grid', rqet.find_nested_tags_text(grid_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(grid_root.attrib['uuid']),
                                     content_type = 'obj_IjkGridRepresentation', root = bw_node)
@@ -3201,7 +3201,7 @@ class BlockedWell:
             self.model.create_reciprocal_relationship(bw_node, 'destinationObject', self.trajectory.root_node, 'sourceObject')
 
             for grid in self.grid_list:
-               self.model.create_reciprocal_relationship(bw_node, 'destinationObject', grid.grid_root, 'sourceObject')
+               self.model.create_reciprocal_relationship(bw_node, 'destinationObject', grid.root, 'sourceObject')
             if interp_root is not None:
                self.model.create_reciprocal_relationship(bw_node, 'destinationObject', interp_root, 'sourceObject')
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
