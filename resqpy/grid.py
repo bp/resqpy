@@ -97,14 +97,11 @@ class Grid():
 
       # note: currently only handles IJK grids
       # todo: check grid_root, if passed, is for an IJK grid
-      self.model = parent_model               #: parent model object
-      self.grid_root = None                   #: xml root node for this grid
       self.parent_grid_uuid = None            #: parent grid when this is a local grid
       self.parent_window = None               #: FineCoarse cell index mapping info between self and parent grid
       self.is_refinement = None               #: True indicates self is a refinement wrt. parent; False means coarsening
       self.local_grid_uuid_list = None        #: LGR & LGC children list
       self.grid_representation = None         #: flavour of grid, currently 'IjkGrid' or 'IjkBlockGrid'; not much used
-      self.uuid = None                        #: uuid of this grid
       self.geometry_root = None               #: xml node at root of geometry sub-tree
       self.extent_kji = None                  #: size of grid: (nk, nj, ni)
       self.ni = self.nj = self.nk = None      #: duplicated extent information as individual integers
@@ -4268,7 +4265,7 @@ class Grid():
 
 
    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, set_as_grid_root = True,
-                  root = None, title = None, originator = None, write_active = True, write_geometry = True,
+                  title = None, originator = None, write_active = True, write_geometry = True,
                   extra_metadata = {}):
       """Creates an IJK grid node from a grid object and optionally adds as child of root and/or to parts forest.
 
@@ -4280,8 +4277,6 @@ class Grid():
             new grid part to: the crs, and the hdf5 external part
          set_as_grid_root (boolean, default True): if True, the new grid node is noted as being the 'main' grid
             for the model
-         root (optional, usually None): if not None, the newly created grid node is appended as a child to
-            this node
          title (string, default 'ROOT'): used as the citation Title text; careful consideration should be given
             to this argument when dealing with multiple grids in one model, as it is the means by which a
             human will distinguish them
@@ -4575,8 +4570,6 @@ class Grid():
 
             self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'ColumnsPerSplitCoordinateLine/cumulativeLength', root = cl_values)
 
-      if set_as_grid_root: self.grid_root = ijk
-      if root is not None: root.append(ijk)
       if add_as_part:
          self.model.add_part('obj_IjkGridRepresentation', self.uuid, ijk)
          if add_relationships:
@@ -4939,7 +4932,7 @@ class RegularGrid(Grid):
 
       node = super().create_xml(ext_uuid = ext_uuid, add_as_part = add_as_part,
                                 add_relationships = add_relationships, set_as_grid_root = set_as_grid_root,
-                                root = root, title = title, originator = originator,
+                                title = title, originator = originator,
                                 write_active = write_active, write_geometry = write_geometry,
                                 extra_metadata = extra_metadata)
 
