@@ -2858,18 +2858,20 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       write_grid(epc_file, grid, ext_uuid = ext_uuid, property_collection = collection, grid_title = new_grid_title, mode = 'a')
 
    if len(gcs_list):
-      log.debug('inheriting grid connection sets')
+      log.debug(f'inheriting grid connection sets related to source grid: {source_grid.uuid}')
       gcs_inheritance_model = rq.Model(epc_file)
       for gcs, gcs_title in gcs_list:
+#         log.debug(f'inheriting gcs: {gcs_title}; old gcs uuid: {gcs.uuid}')
          gcs.uuid = bu.new_uuid()
          grid_list_modifications = []
          for gi, g in enumerate(gcs.grid_list):
+#            log.debug(f'gcs uses grid: {g.title}; grid uuid: {g.uuid}')
             if bu.matching_uuids(g.uuid, source_grid.uuid): grid_list_modifications.append(gi)
          assert len(grid_list_modifications)
          for gi in grid_list_modifications:
             gcs.grid_list[gi] = grid
-         gcs.write_hdf5()
          gcs.model = gcs_inheritance_model
+         gcs.write_hdf5()
          gcs.create_xml(title = gcs_title)
       gcs_inheritance_model.store_epc()
       gcs_inheritance_model.h5_release()
