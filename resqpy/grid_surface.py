@@ -1,6 +1,6 @@
 """grid_surface.py: Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '24th June 2021'
+version = '29th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -826,169 +826,15 @@ def find_intersection_of_trajectory_interval_with_column_face(trajectory, grid, 
 
 
 
-def find_faces_to_represent_surface_elephantine(grid, surface, name):
-   """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
-
-   t, p = surface.triangles_and_points()
-   triangles = p[t]
-#   log.debug('computing cell centres')
-   grid.centre_point(cache_centre_array = True)
-   # create empty faces_df with required columns
-   faces_df = pd.DataFrame(columns = ['name', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'face'])
-   for axis in range(3):   # k, j, i
-      face_letter = 'KJI'[axis]
-      ap = np.zeros(3, dtype = int)
-      ap[axis] = 1
-#      log.debug('considering axis: ' + str(axis))
-      if grid.extent_kji[axis] == 1: continue
-#      log.debug('computing facial vectors')
-      facial_vectors = (grid.array_centre_point[:grid.nk-ap[0], :grid.nj-ap[1], :grid.ni-ap[2]]  -
-                        grid.array_centre_point[ap[0]:, ap[1]:, ap[2]:])
-      line_ps = grid.array_centre_point[ap[0]:, ap[1]:, ap[2]:].reshape((-1, 3))
-      line_vs = facial_vectors.reshape((-1, 3))
-#      log.debug('finding intersections')
-      full_intersects = meet.line_set_triangles_intersects(line_ps, line_vs, triangles, line_segment = True)
-#      log.debug('distilling intersections')
-      distilled_intersects, _, _ = meet.distilled_intersects(full_intersects)
-      k0s, ji0s = np.divmod(distilled_intersects, (grid.nj-ap[1]) * (grid.ni-ap[2]))
-      j0s, i0s = np.divmod(ji0s, grid.ni-ap[2])
-      denaturalised_distillation = np.stack((k0s, j0s, i0s, k0s, j0s, i0s), axis = -1).reshape((-1, 6))
-      denaturalised_distillation[:, 3 + axis] += 1
-#      log.debug('appending to faces dataframe')
-      for i in range(denaturalised_distillation.shape[0]):
-         r = {}
-         r['name'] = surface.title
-         r['i1'] = denaturalised_distillation[i, 2] + 1
-         r['j1'] = denaturalised_distillation[i, 1] + 1
-         r['k1'] = denaturalised_distillation[i, 0] + 1
-         r['i2'] = denaturalised_distillation[i, 5] + 1
-         r['j2'] = denaturalised_distillation[i, 4] + 1
-         r['k2'] = denaturalised_distillation[i, 3] + 1
-         r['face'] = face_letter
-      faces_df.append(r)
-#   log.debug('building grid connection set from dataframe')
-   gcs = rqf.GridConnectionSet(grid.model, extract_from_xml = False)
-   gcs.set_pairs_from_faces_df(faces_df, True)
-   return gcs
-
-
-
-def find_faces_to_represent_surface_loopy(grid, surface, name, progress_fn = None):
-   """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
-
-#   log.debug('computing cell centres')
-   grid.centre_point(cache_centre_array = True)
-#   log.debug('computing inter cell centre vectors and boxes')
-   if grid.nk > 1:
-      l = grid.array_centre_point[:-1, :, :]
-      u = grid.array_centre_point[1:, :, :]
-      k_vectors = l - u
-      combo = np.stack((l, u))
-      k_vector_boxes = np.empty((grid.nk - 1, grid.nj, grid.ni, 2, 3))
-      k_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
-      k_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
-      k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
-   else:
-      k_vectors = None
-      k_vector_boxes = None
-      k_faces = None
-   if grid.nj > 1:
-      l = grid.array_centre_point[:, :-1, :]
-      u = grid.array_centre_point[:, 1:, :]
-      j_vectors = l - u
-      combo = np.stack((l, u))
-      j_vector_boxes = np.empty((grid.nk, grid.nj - 1, grid.ni, 2, 3))
-      j_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
-      j_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
-      j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
-   else:
-      j_vectors = None
-      j_vector_boxes = None
-      j_faces = None
-   if grid.ni > 1:
-      i_vectors = grid.array_centre_point[:, :, 1:] - grid.array_centre_point[:, :, :-1]
-      l = grid.array_centre_point[:, :, :-1]
-      u = grid.array_centre_point[:, :, 1:]
-      i_vectors = l - u
-      combo = np.stack((l, u))
-      i_vector_boxes = np.empty((grid.nk, grid.nj, grid.ni - 1, 2, 3))
-      i_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
-      i_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
-      i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
-   else:
-      i_vectors = None
-      i_vector_boxes = None
-      i_faces = None
-
-#   log.debug('finding surface triangle boxes')
-   t, p = surface.triangles_and_points()
-   triangles = p[t]
-   assert triangles.size > 0, 'no triangles in surface'
-   triangle_boxes = np.empty((triangles.shape[0], 2, 3))
-   triangle_boxes[:, 0, :] = np.amin(triangles, axis = 1)
-   triangle_boxes[:, 1, :] = np.amax(triangles, axis = 1)
-
-   grid_box = grid.xyz_box(lazy = False)
-
-#   log.debug('looking for cell faces for each triangle')
-   log_count = 0
-   skip_count = 0
-   triangle_count = triangles.shape[0]
-   progress_period = triangle_count // 100
-   if progress_fn is not None: progress_fn(0.0)
-   for ti in range(triangle_count):
-      if log_count >= progress_period:
-#         log.debug('triangles processed: ' + str(ti))
-#         log.debug('interim face counts: K: ' + str(np.count_nonzero(k_faces)) +
-#                                      '; J: ' + str(np.count_nonzero(j_faces)) +
-#                                      '; I: ' + str(np.count_nonzero(i_faces)))
-         log_count = 0
-         if progress_fn is not None: progress_fn(float(ti) / float(triangle_count))
-      log_count += 1
-      if not bx.boxes_overlap(grid_box, triangle_boxes[ti]):
-         skip_count += 1
-         continue
-      for k in range(grid.nk):
-         for j in range(grid.nj):
-            for i in range(grid.ni):
-               if (k < grid.nk - 1 and not k_faces[k, j, i] and
-                   bx.boxes_overlap(triangle_boxes[ti], k_vector_boxes[k, j, i])):
-                  meeting = meet.line_triangle_intersect(grid.array_centre_point[k, j, i], k_vectors[k, j, i],
-                                                         triangles[ti], line_segment = True)
-                  if meeting is not None: k_faces[k, j, i] = True
-               if (j < grid.nj - 1 and not j_faces[k, j, i] and
-                   bx.boxes_overlap(triangle_boxes[ti], j_vector_boxes[k, j, i])):
-                  meeting = meet.line_triangle_intersect(grid.array_centre_point[k, j, i], j_vectors[k, j, i],
-                                                         triangles[ti], line_segment = True)
-                  if meeting is not None: j_faces[k, j, i] = True
-               if (i < grid.ni - 1 and not i_faces[k, j, i] and
-                   bx.boxes_overlap(triangle_boxes[ti], i_vector_boxes[k, j, i])):
-                  meeting = meet.line_triangle_intersect(grid.array_centre_point[k, j, i], i_vectors[k, j, i],
-                                                         triangles[ti], line_segment = True)
-                  if meeting is not None: i_faces[k, j, i] = True
-#   log.debug('face counts: K: ' + str(np.count_nonzero(k_faces)) +
-#                        '; J: ' + str(np.count_nonzero(j_faces)) +
-#                        '; I: ' + str(np.count_nonzero(i_faces)))
-#   log.debug('skip count: ' + str(skip_count))
-   if progress_fn is not None: progress_fn(1.0)
-
-   gcs = rqf.GridConnectionSet(grid.model, extract_from_xml = False, grid = grid,
-                               k_faces = k_faces, j_faces = j_faces, i_faces = i_faces,
-                               feature_name = name,
-                               create_organizing_objects_where_needed = True)
-   return gcs
-
-
-
 def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = None):
    """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
 #   log.debug('computing cell centres')
-   grid.centre_point(cache_centre_array = True)
+   centre_points = grid.centre_point()
 #   log.debug('computing inter cell centre vectors and boxes')
    if grid.nk > 1:
-      l = grid.array_centre_point[:-1, :, :]
-      u = grid.array_centre_point[1:, :, :]
+      l = centre_points[:-1, :, :]
+      u = centre_points[1:, :, :]
       k_vectors = u - l
       combo = np.stack((l, u))
       k_vector_boxes = np.empty((grid.nk - 1, grid.nj, grid.ni, 2, 3))
@@ -1004,8 +850,8 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
       column_k_vector_boxes = None
       k_faces = None
    if grid.nj > 1:
-      l = grid.array_centre_point[:, :-1, :]
-      u = grid.array_centre_point[:, 1:, :]
+      l = centre_points[:, :-1, :]
+      u = centre_points[:, 1:, :]
       j_vectors = u - l
       combo = np.stack((l, u))
       j_vector_boxes = np.empty((grid.nk, grid.nj - 1, grid.ni, 2, 3))
@@ -1021,9 +867,9 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
       column_j_vector_boxes = None
       j_faces = None
    if grid.ni > 1:
-      i_vectors = grid.array_centre_point[:, :, 1:] - grid.array_centre_point[:, :, :-1]
-      l = grid.array_centre_point[:, :, :-1]
-      u = grid.array_centre_point[:, :, 1:]
+      i_vectors = centre_points[:, :, 1:] - centre_points[:, :, :-1]
+      l = centre_points[:, :, :-1]
+      u = centre_points[:, :, 1:]
       i_vectors = u - l
       combo = np.stack((l, u))
       i_vector_boxes = np.empty((grid.nk, grid.nj, grid.ni - 1, 2, 3))
@@ -1066,17 +912,17 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
             if progress_fn is not None: progress_fn(progress_base  +  progress_batch * (float(j) / float(grid.nj)))
             for i in range(grid.ni):
                if column_k_vector_boxes is not None and bx.boxes_overlap(batch_box, column_k_vector_boxes[j, i]):
-                  full_intersects = meet.line_set_triangles_intersects(grid.array_centre_point[:-1, j, i], k_vectors[:, j, i],
+                  full_intersects = meet.line_set_triangles_intersects(centre_points[:-1, j, i], k_vectors[:, j, i],
                                                                        triangles[ti_base:ti_end], line_segment = True)
                   distilled_intersects, _, _ = meet.distilled_intersects(full_intersects)
                   k_faces[distilled_intersects, j, i] = True
                if j < grid.nj - 1 and column_j_vector_boxes is not None and bx.boxes_overlap(batch_box, column_j_vector_boxes[j, i]):
-                  full_intersects = meet.line_set_triangles_intersects(grid.array_centre_point[:, j, i], j_vectors[:, j, i],
+                  full_intersects = meet.line_set_triangles_intersects(centre_points[:, j, i], j_vectors[:, j, i],
                                                                        triangles[ti_base:ti_end], line_segment = True)
                   distilled_intersects, _, _ = meet.distilled_intersects(full_intersects)
                   j_faces[distilled_intersects, j, i] = True
                if i < grid.ni - 1 and column_i_vector_boxes is not None and bx.boxes_overlap(batch_box, column_i_vector_boxes[j, i]):
-                  full_intersects = meet.line_set_triangles_intersects(grid.array_centre_point[:, j, i], i_vectors[:, j, i],
+                  full_intersects = meet.line_set_triangles_intersects(centre_points[:, j, i], i_vectors[:, j, i],
                                                                        triangles[ti_base:ti_end], line_segment = True)
                   distilled_intersects, _, _ = meet.distilled_intersects(full_intersects)
                   i_faces[distilled_intersects, j, i] = True
@@ -1092,7 +938,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
 #                        '; I: ' + str(np.count_nonzero(i_faces)))
    if progress_fn is not None: progress_fn(1.0)
 
-   gcs = rqf.GridConnectionSet(grid.model, extract_from_xml = False, grid = grid,
+   gcs = rqf.GridConnectionSet(grid.model, grid = grid,
                                k_faces = k_faces, j_faces = j_faces, i_faces = i_faces,
                                feature_name = name,
                                create_organizing_objects_where_needed = True)
@@ -1104,8 +950,6 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'staffa', progre
    """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
    log.debug('finding cell faces for surface')
-   if mode == 'elephantine': return find_faces_to_represent_surface_elephantine(grid, surface, name)
-   if mode == 'loopy': return find_faces_to_represent_surface_loopy(grid, surface, name, progress_fn = progress_fn)
    if mode == 'staffa': return find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = progress_fn)
    log.critical('unrecognised mode: ' + str(mode))
    return None

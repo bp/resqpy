@@ -1733,7 +1733,7 @@ class Grid():
       if face_set_dict is None: face_set_dict = self.face_set_dict
       self.face_set_gcs_list = []
       for feature in face_set_dict:
-         gcs = rqf.GridConnectionSet(self.model, extract_from_xml = False, grid = self)
+         gcs = rqf.GridConnectionSet(self.model, grid = self)
          kelp_j, kelp_i, axis = face_set_dict[feature]
          log.debug(f'creating gcs for: {feature} {axis}')
          gcs.set_pairs_from_kelp(kelp_j, kelp_i, feature, create_organizing_objects_where_needed, axis = axis)
@@ -4836,9 +4836,9 @@ class RegularGrid(Grid):
 
       centres = np.zeros((self.nk, self.nj, self.ni, 3))
       # todo: replace for loops with linspace
-      for k in range(self.nk): centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
-      for j in range(self.nj): centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
-      for i in range(self.ni): centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
+      for k in range(self.nk - 1): centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
+      for j in range(self.nj - 1): centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
+      for i in range(self.ni - 1): centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
       centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
       return centres
 

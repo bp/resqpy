@@ -1,6 +1,6 @@
 # transmission.py
 
-version = '16th June 2021'
+version = '25th June 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -922,7 +922,7 @@ def fault_connection_set(grid, skip_inactive = False):
    if count == 0: return None, None
 
    # build connection set
-   fcs = rqf.GridConnectionSet(grid.model, extract_from_xml = False, grid = grid)
+   fcs = rqf.GridConnectionSet(grid.model, grid = grid)
    fcs.grid_list = [grid]
    fcs.count = count
    fcs.grid_index_pairs = np.zeros((count, 2), dtype = int)

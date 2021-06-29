@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '15th June 2021'
+version = '28th June 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -1529,18 +1529,6 @@ class Model():
       return self.time_series
 
 
-   def grid_connection_set_list(self):
-      """Returns a list of grid connection set objects, one for each gcs in this model."""
-
-      gcs_list = []
-      gcs_parts_list = self.parts_list_of_type('GridConnectionSetRepresentation')
-      for part in gcs_parts_list:
-         gcs_root = self.root_for_part(part)
-         gcs = rqf.GridConnectionSet(self, connection_set_root = gcs_root)
-         gcs_list.append(gcs)
-      return gcs_list
-
-
    def h5_uuid_and_path_for_node(self, node, tag = 'Values'):
       """Returns a (hdf5_uuid, hdf5_internal_path) pair for an xml array node.
 
@@ -2935,6 +2923,15 @@ class Model():
       for uuid in uuids:
          yield cls(self, uuid=uuid)
 
+
+   def iter_grid_connection_sets(self):
+      """Yields grid connection set objects, one for each gcs in this model."""
+
+      gcs_uuids = self.uuids(obj_type = 'GridConnectionSetRepresentation')
+      for gcs_uuid in gcs_uuids:
+         yield rqf.GridConnectionSet(self, uuid = gcs_uuid)
+
+
    def iter_wellbore_interpretations(self):
       """ Iterable of all WellboreInterpretations associated with the model
 
@@ -2949,6 +2946,7 @@ class Model():
       if uuids:
          for uuid in uuids:
             yield resqpy.organize.WellboreInterpretation(self, uuid=uuid)
+
 
    def iter_trajectories(self):
       """ Iterable of all trajectories associated with the model
@@ -2983,6 +2981,7 @@ class Model():
             datum = resqpy.well.MdDatum(self, uuid=uuid)
             yield datum
 
+
    def iter_crs(self):
       """Iterable of all CRS objects associated with the model
       
@@ -2998,6 +2997,7 @@ class Model():
          for uuid in uuids:
             yield resqpy.crs.Crs(self, uuid=uuid)
 
+
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
 
@@ -3012,6 +3012,7 @@ class Model():
       for timestamp, index in reversed(sort_list):
          results.append(parts_list[index])
       return results
+
 
    def as_graph(self, uuids_subset=None):
       """Return representation of model as nodes and edges, suitable for plotting in a graph
@@ -3075,6 +3076,7 @@ class Model():
                edges.add(frozenset([uuid, rel]))
                
       return nodes, edges
+
 
    def _set_uuid_to_part(self, part_name):
       """Adds an entry to the dictionary mapping from uuid to part name."""

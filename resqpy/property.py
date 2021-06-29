@@ -220,9 +220,9 @@ class PropertyCollection():
             elif support_type == 'obj_BlockedWellboreRepresentation':
                self.support = rqw.BlockedWell(model, blocked_well_root = self.support_root)
             elif support_type == 'obj_Grid2dRepresentation':
-               self.support = rqs.Mesh(model, root_node = self.support_root)
+               self.support = rqs.Mesh(model, uuid = self.support_uuid)
             elif support_type == 'obj_GridConnectionSetRepresentation':
-               self.support = rqf.GridConnectionSet(model, connection_set_root = self.support_root)
+               self.support = rqf.GridConnectionSet(model, uuid = self.support_uuid)
             else:
                raise TypeError('unsupported property supporting representation class: ' + str(support_type))
          else:

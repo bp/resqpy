@@ -2833,11 +2833,11 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
 
    gcs_list = []
    if inherit_gcs:
-      gcs_roots = model.roots(obj_type = 'GridConnectionSetRepresentation', related_uuid = source_grid.uuid)
-      for gcs_root in gcs_roots:
-         gcs = rqf.GridConnectionSet(model, connection_set_root = gcs_root)
+      gcs_uuids = model.uuids(obj_type = 'GridConnectionSetRepresentation', related_uuid = source_grid.uuid)
+      for gcs_uuid in gcs_uuids:
+         gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
          gcs.cache_arrays()
-         gcs_list.append((gcs, rqet.citation_title_for_node(gcs_root)))
+         gcs_list.append((gcs, gcs.title))
       log.debug(f'{len(gcs_list)} grid connection sets to be inherited')
 
    # write model
@@ -2854,7 +2854,6 @@ def fault_throw_scaling(epc_file, source_grid = None, scaling_factor = None,
       gcs_inheritance_model = rq.Model(epc_file)
       for gcs, gcs_title in gcs_list:
          gcs.uuid = bu.new_uuid()
-         gcs.root = None
          grid_list_modifications = []
          for gi, g in enumerate(gcs.grid_list):
             if bu.matching_uuids(g.uuid, source_grid.uuid): grid_list_modifications.append(gi)
