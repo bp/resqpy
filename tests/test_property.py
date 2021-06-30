@@ -137,6 +137,13 @@ def test_convert_array():
    assert_array_almost_equal(result, expected)
 
 
+def test_conversion_factors_are_numeric():
+   for uom in bwam.valid_uoms():
+      factors = bwam.get_conversion_factors(uom)
+      assert len(factors) == 4, f"Issue with {uom}"
+      assert all(isinstance(f, (int, float)) for f in factors), f"Issue with {uom}"
+
+
 # ---- Test property kind parsing ---
 
 
