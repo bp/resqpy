@@ -4,7 +4,6 @@ from pathlib import Path
 import json
 from functools import lru_cache
 
-# Bifrost weights and measures module
 
 version = '17th June 2021'
 
@@ -23,7 +22,7 @@ s_to_d = 1.0 / d_to_s
 # Mapping from uom to set of common (non-resqml) aliases
 ALIASES = {
    'm': {'metre', 'metres', 'meter', 'meters'},
-   'ft': {'foot', 'feet'},
+   'ft': {'foot', 'feet', 'FT'},
    'd': {'day', 'days'},
    '%': {'pu', 'p.u.'},
    'm3/m3': {'v/v', 'V/V'},
@@ -31,30 +30,6 @@ ALIASES = {
 }
 # Mapping from invalid alias to valid uom
 ALIAS_MAP = {alias: uom for uom, aliases in ALIASES.items() for alias in aliases}
-
-
-# TODO: Clean up unused / redundant functions in this module
-
-def convert(x, unit_from, unit_to):
-   """Convert value between two compatible units
-   
-   Args:
-      x (numeric or np.array): value(s) to convert
-      unit_from (str): resqml uom
-      unit_to (str): resqml uom
-
-   Returns:
-      Converted value(s)
-
-   """
-   # conversion data assume the formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
-   # Backwards formula: x=(A-Cy)/(Dy-B)
-   # All current units have D==0
-
-   A1, B1, C1, D1 = get_conversion_factors(rq_uom(unit_from))
-   A2, B2, C2, D2 = get_conversion_factors(rq_uom(unit_to))
-   y = (A1 + (B1*x)) / (C1 + (D1*x))
-   return (A2 - (C2*y)) / ((D2*y) - B2)
 
 
 @lru_cache(None)
@@ -102,6 +77,51 @@ def rq_uom(units):
    if ul == 'count': return 'Euc'
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
    return 'Euc'
+
+
+def convert(x, unit_from, unit_to):
+   """Convert value between two compatible units
+   
+   Args:
+      x (numeric or np.array): value(s) to convert
+      unit_from (str): resqml uom
+      unit_to (str): resqml uom
+
+   Returns:
+      Converted value(s)
+
+   """
+   # TODO: robust handling of errors. At present, bad units are treated as "EUC", and will fail silently.
+
+   # conversion data assume the formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
+   # Backwards formula: x=(A-Cy)/(Dy-B)
+   # All current units have D==0
+
+   A1, B1, C1, D1 = get_conversion_factors(rq_uom(unit_from))
+   A2, B2, C2, D2 = get_conversion_factors(rq_uom(unit_to))
+   y = (A1 + (B1*x)) / (C1 + (D1*x))
+   return (A2 - (C2*y)) / ((D2*y) - B2)
+
+
+@lru_cache(None)
+def valid_uoms():
+   """Return set of valid uoms"""
+
+   return set(_properties_data()['units'].keys())
+
+
+@lru_cache(None)
+def valid_uoms_caseless_mapping():
+   """Return dict mapping from caseless uom to actual uom"""
+
+   return {u.casefold(): u for u in valid_uoms()}
+
+
+@lru_cache(None)
+def valid_property_kinds():
+   """Return set of valid property kinds"""
+   
+   return set(_properties_data()['property_kinds'].keys())
 
 
 def rq_uom_list(units_list):
@@ -288,27 +308,6 @@ def convert_flow_rates(a, from_units, to_units):
    a = convert_volumes(a, from_unit_pair[0], to_unit_pair[0])
    a = convert_times(a, from_unit_pair[1], to_unit_pair[1], invert = True)
    return a
-
-
-@lru_cache(None)
-def valid_uoms():
-   """Return set of valid uoms"""
-
-   return set(_properties_data()['units'].keys())
-
-
-@lru_cache(None)
-def valid_uoms_caseless_mapping():
-   """Return dict mapping from caseless uom to actual uom"""
-
-   return {u.casefold(): u for u in valid_uoms()}
-
-
-@lru_cache(None)
-def valid_property_kinds():
-   """Return set of valid property kinds"""
-   
-   return set(_properties_data()['property_kinds'].keys())
 
 
 @lru_cache(None)
