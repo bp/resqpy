@@ -1,7 +1,9 @@
-import pytest
-
 import os
+import math as maths
+
+import pytest
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 
 import resqpy.model as rq
 import resqpy.grid as grr
@@ -67,7 +69,7 @@ def test_create_Property_from_singleton_collection(tmp_model):
    assert np.all(np.isclose(prop.array_ref(), 1.0))
 
 
-# ---- Test uom from string ---
+# ---- Test uoms ---
 
 
 def test_valid_uoms():
@@ -108,6 +110,31 @@ def test_uom_aliases():
 def test_uom_from_string(case_sensitive, input_uom, expected_uom):
    validated_uom = rqp.validate_uom_from_string(input_uom, case_sensitive=case_sensitive)
    assert expected_uom == validated_uom
+
+
+# ---- Test property conversions -------
+
+@pytest.mark.parametrize("unit_from, unit_to, value, expected", [
+   ("m", "m", 1, 1),
+   ("m", "km", 1, 0.001),
+   ("ft", "m", 1, 0.3048),
+   ("ft", "ft[US]", 1, 0.999998),
+   ("pu", "v/v", 1, 0.01),
+   ("%", "v/v", 1, 0.01),
+   ("pu", "%", 1, 1),
+   ("p.u.", "%", 1, 1),
+])
+def test_unit_conversion(unit_from, unit_to, value, expected):
+   result = bwam.convert(value, unit_from, unit_to)
+   assert maths.isclose(result, expected)
+
+
+def test_convert_array():
+   # Duck typing should work
+   value = np.array([1,2,3])
+   expected = np.array([1000, 2000, 3000])
+   result = bwam.convert(value, unit_from="km", unit_to="m")
+   assert_array_almost_equal(result, expected)
 
 
 # ---- Test property kind parsing ---

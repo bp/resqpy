@@ -33,6 +33,31 @@ ALIASES = {
 ALIAS_MAP = {alias: uom for uom, aliases in ALIASES.items() for alias in aliases}
 
 
+# TODO: Clean up unused / redundant functions in this module
+
+def convert(x, unit_from, unit_to):
+   """Convert value between two compatible units
+   
+   Args:
+      x (numeric or np.array): value(s) to convert
+      unit_from (str): resqml uom
+      unit_to (str): resqml uom
+
+   Returns:
+      Converted value(s)
+
+   """
+   # conversion data assume the formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
+   # Backwards formula: x=(A-Cy)/(Dy-B)
+   # All current units have D==0
+
+   A1, B1, C1, D1 = get_conversion_factors(rq_uom(unit_from))
+   A2, B2, C2, D2 = get_conversion_factors(rq_uom(unit_to))
+   y = (A1 + (B1*x)) / (C1 + (D1*x))
+   return (A2 - (C2*y)) / ((D2*y) - B2)
+
+
+@lru_cache(None)
 def rq_uom(units):
    """Returns RESQML uom string equivalent to units, or 'Euc' if not determined."""
 
@@ -75,7 +100,6 @@ def rq_uom(units):
    if ul in ['1E6 m3/d', '1E6 m3/day']: return '1E6 m3/d'
    if units in ['mD.m', 'mD.ft']: return units
    if ul == 'count': return 'Euc'
-   
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
    return 'Euc'
 
@@ -289,8 +313,54 @@ def convert_flow_rates(a, from_units, to_units):
    return a
 
 
-@lru_cache(maxsize=None)
-def properties_data():
+@lru_cache(None)
+def valid_uoms():
+   """Return set of valid uoms"""
+
+   return set(_properties_data()['units'].keys())
+
+
+@lru_cache(None)
+def valid_uoms_caseless_mapping():
+   """Return dict mapping from caseless uom to actual uom"""
+
+   return {u.casefold(): u for u in valid_uoms()}
+
+
+@lru_cache(None)
+def valid_property_kinds():
+   """Return set of valid property kinds"""
+   
+   return set(_properties_data()['property_kinds'].keys())
+
+
+@lru_cache(None)
+def get_conversion_factors(uom):
+   """Return conversion factors (A, B, C, D) for a given uom.
+   
+   The formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
+
+   Returns:
+      4-tuple of conversion factors
+
+   Raises:
+      ValueError if either uom is not a valid resqml uom
+   """
+   if uom not in valid_uoms():
+      raise ValueError(f"{uom} is not a valid uom")
+   uoms_data = _properties_data()["units"][uom]
+   try:
+      a, b, c, d = uoms_data["A"], uoms_data["B"], uoms_data["C"], uoms_data["D"]
+   except KeyError:  # Base units do not have factors defined
+      a, b, c, d = 0, 1, 1, 0
+   return a, b, c, d
+
+
+# Private functions
+
+
+@lru_cache(None)
+def _properties_data():
    """ Return a data structure that represents resqml unit system.
 
    The dict is loaded directly from a JSON file which is bundled with resqpy.
@@ -312,20 +382,4 @@ def properties_data():
    return data
 
 
-@lru_cache(None)
-def valid_uoms():
-   """Return set of valid uoms"""
 
-   return set(properties_data()['units'].keys())
-
-@lru_cache(None)
-def valid_uoms_caseless_mapping():
-   """Return dict mapping from caseless uom to actual uom"""
-
-   return {u.casefold(): u for u in valid_uoms()}
-
-@lru_cache(None)
-def valid_property_kinds():
-   """Return set of valid property kinds"""
-   
-   return set(properties_data()['property_kinds'].keys())
