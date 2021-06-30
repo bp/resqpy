@@ -110,15 +110,6 @@ def rq_uom_list(units_list):
    return [rq_uom(u) for u in units_list]
 
 
-def p_length_unit(units):
-   """Returns length units string as expected by pagoda weights and measures module."""
-
-   # NB: other length units are supported by resqml
-   if units.lower() in ['m', 'metre', 'metres']: return 'metres'
-   if units.lower() in ['ft', 'foot', 'feet', 'ft[us]']: return 'feet'
-   raise ValueError(f'unrecognised length units {units}')
-
-
 def rq_length_unit(units):
    """Returns length units string as expected by resqml."""
 
@@ -126,20 +117,6 @@ def rq_length_unit(units):
    if units.lower() in ['m', 'metre', 'metres']: return 'm'
    if units.lower() in ['ft', 'foot', 'feet', 'ft[us]']: return 'ft'  # NB. treating different foot sizes as identical
    raise ValueError(f'unrecognised length units {units}')
-
-
-def p_time_unit(units):
-   """Returns human readable version of time units string."""
-
-   #  NB: other time units are supported by resqml
-   if units.lower() in ['d', 'day', 'days']: return 'days'
-   if units.lower() in ['s', 'sec', 'secs', 'second', 'seconds']: return 'seconds'
-   if units.lower() in ['ms', 'msec', 'millisecs', 'millisecond', 'milliseconds']: return 'milliseconds'
-   if units.lower() in ['min', 'mins', 'minute', 'minutes']: return 'minutes'
-   if units.lower() in ['h', 'hr', 'hour', 'hours']: return 'hours'
-   if units.lower() in ['wk', 'week', 'weeks']: return 'weeks'
-   if units.lower() in ['a', 'yr', 'year', 'years']: return 'years'
-   raise ValueError(f'unrecognised time units {units}')
 
 
 def rq_time_unit(units):
