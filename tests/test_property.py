@@ -83,6 +83,16 @@ def test_valid_uoms():
    assert None not in bwam.valid_uoms()
 
 
+def test_uom_aliases():
+   for uom, aliases in bwam.ALIASES.items():
+      assert uom in bwam.valid_uoms(), f"Bad uom {uom}"
+      for alias in aliases:
+         assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
+
+   for alias, uom in bwam.ALIAS_MAP.items():
+      assert uom in bwam.valid_uoms(), f"Bad uom {uom}"
+      assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
+
 @pytest.mark.parametrize("case_sensitive, input_uom, expected_uom", [
    (False, 'gapi', 'gAPI'),
    (True, 'gapi', 'Euc'),

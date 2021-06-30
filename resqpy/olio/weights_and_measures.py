@@ -5,8 +5,6 @@ import json
 from functools import lru_cache
 
 # Bifrost weights and measures module
-# Temporary version based on pagoda code
-# todo: Replace with RESQML uom based version at a later date
 
 version = '17th June 2021'
 
@@ -22,14 +20,30 @@ kPa_to_psi = 1.0 / psi_to_kPa
 d_to_s = float(24 * 60 * 60)
 s_to_d = 1.0 / d_to_s
 
+# Mapping from uom to set of common (non-resqml) aliases
+ALIASES = {
+   'm': {'metre', 'metres', 'meter', 'meters'},
+   'ft': {'foot', 'feet'},
+   'd': {'day', 'days'},
+   '%': {'pu', 'p.u.'},
+   'm3/m3': {'v/v', 'V/V'},
+   'g/cm3': {'g/cc'},
+}
+# Mapping from invalid alias to valid uom
+ALIAS_MAP = {alias: uom for uom, aliases in ALIASES.items() for alias in aliases}
 
 
 def rq_uom(units):
    """Returns RESQML uom string equivalent to units, or 'Euc' if not determined."""
 
+   # Valid uoms
    uom_list = valid_uoms()
    if units in uom_list: return units
 
+   # Common alises
+   if units in ALIAS_MAP: return ALIAS_MAP[units]
+
+   # Other special cases
    if not isinstance(units, str): return 'Euc'
    if units == '' or units == 'Euc': return 'Euc'
    ul = units.lower()
