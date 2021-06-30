@@ -27,6 +27,9 @@ s_to_d = 1.0 / d_to_s
 def rq_uom(units):
    """Returns RESQML uom string equivalent to units, or 'Euc' if not determined."""
 
+   uom_list = valid_uoms()
+   if units in uom_list: return units
+
    if not isinstance(units, str): return 'Euc'
    if units == '' or units == 'Euc': return 'Euc'
    ul = units.lower()
@@ -58,8 +61,7 @@ def rq_uom(units):
    if ul in ['1E6 m3/d', '1E6 m3/day']: return '1E6 m3/d'
    if units in ['mD.m', 'mD.ft']: return units
    if ul == 'count': return 'Euc'
-   uom_list = valid_uoms()
-   if units in uom_list: return units
+   
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
    return 'Euc'
 
@@ -67,9 +69,7 @@ def rq_uom(units):
 def rq_uom_list(units_list):
    """Returns a list of RESQML uom equivalents for units in list."""
 
-   rq_list = []
-   for u in units_list: rq_list.append(rq_uom(u))
-   return rq_list
+   return [rq_uom(u) for u in units_list]
 
 
 def p_length_unit(units):
@@ -78,7 +78,7 @@ def p_length_unit(units):
    # NB: other length units are supported by resqml
    if units.lower() in ['m', 'metre', 'metres']: return 'metres'
    if units.lower() in ['ft', 'foot', 'feet', 'ft[us]']: return 'feet'
-   assert(False)  # unrecognised length units
+   raise ValueError(f'unrecognised length units {units}')
 
 
 def rq_length_unit(units):
@@ -101,7 +101,7 @@ def p_time_unit(units):
    if units.lower() in ['h', 'hr', 'hour', 'hours']: return 'hours'
    if units.lower() in ['wk', 'week', 'weeks']: return 'weeks'
    if units.lower() in ['a', 'yr', 'year', 'years']: return 'years'
-   assert(False)  # unrecognised time units
+   raise ValueError(f'unrecognised time units {units}')
 
 
 def rq_time_unit(units):
