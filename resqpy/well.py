@@ -669,9 +669,6 @@ class Trajectory(BaseResqpy):
       :meta common:
       """
 
-      self.model = parent_model
-      self.root_node = None
-      self.uuid = None
       self.crs_root = None
       self.title = well_name
       self.start_md = None
