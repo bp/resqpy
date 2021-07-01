@@ -125,7 +125,8 @@ class Polyline(_BasePolyline):
 
     def load_from_xml(self):
 
-        assert self.root is not None:  # polyline xml node is specified
+        assert self.root is not None  # polyline xml node is specified
+        poly_root = self.root
 
         self.title = rqet.citation_title_for_node(poly_root)
 
@@ -670,12 +671,12 @@ class PolylineSet(_BasePolyline):
 
     def load_from_xml(self):
 
-        assert self.root is not None: # polyline set xml node specified
+        assert self.root is not None # polyline set xml node specified
+        root = self.root
 
-        self.rep_int_root = self.model.referenced_node(rqet.find_tag(set_root, 'RepresentedInterpretation'))
+        self.rep_int_root = self.model.referenced_node(rqet.find_tag(root, 'RepresentedInterpretation'))
 
-        self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-        for patch_node in rqet.list_of_tag(set_root, 'LinePatch'): # Loop over all LinePatches - likely just the one
+        for patch_node in rqet.list_of_tag(root, 'LinePatch'): # Loop over all LinePatches - likely just the one
             assert patch_node is not None # Required field
 
             geometry_node = rqet.find_tag(patch_node, 'Geometry')
