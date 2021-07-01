@@ -207,7 +207,6 @@ class MdDatum(BaseResqpy):
 
       self.model.create_crs_reference(crs_uuid = crs_uuid, root = datum)
 
-      if root is not None: root.append(datum)
       if add_as_part:
          self.model.add_part('obj_MdDatum', self.uuid, datum)
          if add_relationships:
@@ -456,7 +455,7 @@ class DeviationSurvey(BaseResqpy):
 
 
    def create_xml(self, ext_uuid = None, md_datum_root = None, md_datum_xyz = None, add_as_part = True,
-                  add_relationships = True, root = None, title = None, originator = None):
+                  add_relationships = True, title = None, originator = None):
       """Creates a deviation survey representation xml element from this DeviationSurvey object.
 
       arguments:
@@ -468,8 +467,6 @@ class DeviationSurvey(BaseResqpy):
             in the model
          add_relationships (boolean, default True): if True, a relationship xml part is created relating the
             new deviation survey part to the measured depth datum part
-         root (optional, usually None): if not None, the newly created deviation survey node is appended
-            as a child to this node
          title (string): used as the citation Title text; should usually refer to the well name in a
             human readable way
          originator (string, optional): the name of the human being who created the deviation survey part;
@@ -558,7 +555,6 @@ class DeviationSurvey(BaseResqpy):
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
                                     content_type = 'obj_WellboreInterpretation', root = ds_node)
 
-      if root is not None: root.append(ds_node)
       if add_as_part:
          self.model.add_part('obj_DeviationSurveyRepresentation', self.uuid, ds_node)
          if add_relationships:
@@ -617,6 +613,7 @@ class Trajectory(BaseResqpy):
    """
 
    resqml_type = 'WellboreTrajectoryRepresentation'
+   well_name = rqo._alias_for_attribute("title")
 
    def __init__(self, parent_model, trajectory_root = None, uuid = None, md_datum = None, deviation_survey = None,
                 data_frame = None, grid = None, cell_kji0_list = None, wellspec_file = None, spline_mode = 'cube',
@@ -702,7 +699,7 @@ class Trajectory(BaseResqpy):
       # todo: parent intersection for multi-lateral wells
       # todo: witsml trajectory reference (optional)
 
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, extra_metadata = extra_metadata,
+      super().__init__(model = parent_model, uuid = uuid, title = well_name, originator = originator, extra_metadata = extra_metadata,
                        root_node = trajectory_root)
 
       if self.root is not None: return
@@ -765,13 +762,13 @@ class Trajectory(BaseResqpy):
       self.line_kind_index = int(rqet.node_text(rqet.find_tag(geometry_node, 'LineKindIndex')).strip())
       mds_node = rqet.find_tag(geometry_node, 'ControlPointParameters')
       if mds_node is not None:   # not required for vertical or z linear cubic spline
-         load_hdf5_array(self, mds_node, 'measured_depths', model = hdf5_source_model)
+         load_hdf5_array(self, mds_node, 'measured_depths')
       control_points_node = rqet.find_tag(geometry_node, 'ControlPoints')
-      load_hdf5_array(self, control_points_node, 'control_points', tag = 'Coordinates', model = hdf5_source_model)
+      load_hdf5_array(self, control_points_node, 'control_points', tag = 'Coordinates')
       tangents_node = rqet.find_tag(geometry_node, 'TangentVectors')
       if tangents_node is not None:
-         load_hdf5_array(self, tangents_node, 'tangent_vectors', tag = 'Coordinates', model = hdf5_source_model)
-      relatives_model = self.model if hdf5_source_model is None else hdf5_source_model
+         load_hdf5_array(self, tangents_node, 'tangent_vectors', tag = 'Coordinates')
+      relatives_model = self.model  # if hdf5_source_model is None else hdf5_source_model
       # md_datum - separate part, referred to in this tree
       md_datum_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['MdDatum', 'UUID']))
       assert md_datum_uuid is not None, 'failed to fetch uuid of md datum for trajectory'
@@ -1176,7 +1173,7 @@ class Trajectory(BaseResqpy):
    def create_xml(self, ext_uuid = None, wbt_uuid = None,
                   md_datum_root = None, md_datum_xyz = None,
                   add_as_part = True, add_relationships = True,
-                  root = None, title = None, originator = None):
+                  title = None, originator = None):
       """Create a wellbore trajectory representation node from a Trajectory object, optionally add as part.
 
          notes:
@@ -1297,7 +1294,6 @@ class Trajectory(BaseResqpy):
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
                                     content_type = 'obj_WellboreInterpretation', root = wbt_node)
 
-      if root is not None: root.append(wbt_node)
       if add_as_part:
          self.model.add_part('obj_WellboreTrajectoryRepresentation', self.uuid, wbt_node)
          if add_relationships:
@@ -1484,7 +1480,7 @@ class WellboreFrame:
 
    def create_xml(self, ext_uuid = None,
                   add_as_part = True, add_relationships = True,
-                  root = None, title = None, originator = None):
+                  title = None, originator = None):
       """Create a wellbore frame representation node from this WellboreFrame object, optionally add as part.
 
       note:
@@ -1533,7 +1529,7 @@ class WellboreFrame:
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
                                     content_type = 'obj_WellboreInterpretation', root = wf_node)
-      if root is not None: root.append(wf_node)
+
       if add_as_part:
          self.model.add_part('obj_WellboreFrameRepresentation', self.uuid, wf_node)
          if add_relationships:
@@ -1563,7 +1559,7 @@ class BlockedWell:
    """
 
    resqml_type = 'BlockedWellboreRepresentation'
-   well_name = _alias_for_attribute("title")
+   well_name = rqo._alias_for_attribute("title")
 
    def __init__(self, parent_model, blocked_well_root = None, uuid = None, grid = None, trajectory = None,
                 wellspec_file = None, cellio_file = None, column_ji0 = None, well_name = None,
@@ -3154,7 +3150,6 @@ class BlockedWell:
                                     bu.uuid_from_string(interp_root.attrib['uuid']),
                                     content_type = 'obj_WellboreInterpretation', root = bw_node)
 
-      if root is not None: root.append(bw_node)
       if add_as_part:
          self.model.add_part('obj_BlockedWellboreRepresentation', self.uuid, bw_node)
          if add_relationships:
@@ -4060,13 +4055,3 @@ def _as_optional_array(arr):
 
 def _pl(i, e = False):
    return '' if i == 1 else 'es' if e else 's'
-
-
-def _alias_for_attribute(attribute_name):
-   """Return an attribute that is a direct alias for an existing attribute"""
-
-   def fget(self):
-      return getattr(self, attribute_name)
-   def fset(self, value):
-      return setattr(self, attribute_name, value)
-   return property(fget, fset, doc=f"Alias for {attribute_name}")
