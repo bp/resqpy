@@ -1326,7 +1326,7 @@ class Trajectory(BaseResqpy):
 
 
 
-class WellboreFrame:
+class WellboreFrame(BaseResqpy):
    """Class for RESQML WellboreFrameRepresentation objects (supporting well log Properties)
 
    RESQML documentation:
@@ -1534,7 +1534,7 @@ class WellboreFrame:
 
 
 
-class BlockedWell:
+class BlockedWell(BaseResqpy):
    """Class for RESQML Blocked Wellbore Representation (Wells), ie cells visited by wellbore.
 
    RESQML documentation:
