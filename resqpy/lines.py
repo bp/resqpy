@@ -1,11 +1,12 @@
 """polylines.py: Resqml polylines module."""
 
-version = '17th June 2021'
+version = '1st July 2021'
 
 import logging
 log = logging.getLogger(__name__)
 log.debug('polylines.py version ' + version)
 
+from resqpy.olio.base import BaseResqpy
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
@@ -22,7 +23,7 @@ import numpy as np
 import os
 
 
-class _BasePolyline:
+class _BasePolyline(BaseResqpy):
    """Base class to implement shared methods for other classes in this module"""
 
    def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
@@ -70,73 +71,41 @@ def load_hdf5_array(object, node, array_attribute, tag = 'Values'):
 class Polyline(_BasePolyline):
     """Class for RESQML polyline representation."""
 
-    def __init__(self, parent_model, poly_root = None, set_bool = None, set_coord = None, set_crs = None,
-                 set_crsroot = None, set_title = None, rep_int_root = None):
+    resqml_type = 'PolylineRepresentation'
+
+    def __init__(self, parent_model, poly_root = None, uuid = None, set_bool = None, set_coord = None, set_crs = None,
+                 set_crsroot = None, title = None, rep_int_root = None, originator = None, extra_metadata = None):
         """Initialises a new PolylineRepresentation object.
 
         arguments:
             parent_model (model.Model object): the model which the new PolylineRepresentation belongs to
-            poly_root (optional): the root node of the xml tree representing the PolylineRepresentation;
+            poly_root (DEPRECATED): use uuid instead;
+                the root node of the xml tree representing the PolylineRepresentation;
                 if not None, the new PolylineRepresentation object is initialised based on data in tree;
-                if None, wait for further improvements.
+                if None, wait for further improvements
+            uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineRepresentation from which
+                to initialise the resqpy Polyline
 
         returns:
-            the newly instantiated PolylineRepresentation object
+            the newly instantiated Polyline object
 
         :meta common:
         """
 
         self.model = parent_model
-        self.uuid = None
-        self.root_node = None
-        self.isclosed = None
+        self.isclosed = set_bool
         self.nodepatch = None
-        self.crs_root = None
-        self.crs_uuid = None
+        self.crs_uuid = set_crs
+        self.crs_root = set_crsroot
         self.coordinates = None
         self.centre = None
         self.rep_int_root = rep_int_root # Optional
-        self.title = None # Optional
-        self.extra_metadata = None
+        super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = poly_root,
+                         extra_metadata = extra_metadata)
 
-        if poly_root is not None:  # polyline xml node is specified
-            self.root_node = poly_root
-            self.uuid = rqet.uuid_for_part_root(poly_root)
-
-            self.title = rqet.citation_title_for_node(poly_root)
-
-            self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-
-            self.isclosed = rqet.bool_from_text(rqet.node_text(rqet.find_tag(poly_root, 'IsClosed')))
-            assert self.isclosed is not None # Required field
-
-            patch_node = rqet.find_tag(poly_root, 'NodePatch')
-            assert patch_node is not None # Required field
-
-            geometry_node = rqet.find_tag(patch_node, 'Geometry')
-            assert geometry_node is not None # Required field
-
-            self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
-            assert self.crs_root is not None # Required field
-            uuid_str = self.crs_root.attrib['uuid']
-            self.crs_uuid = bu.uuid_from_string(uuid_str)
-            assert self.crs_uuid is not None # Required field
-
-            points_node = rqet.find_tag(geometry_node, 'Points')
-            assert points_node is not None # Required field
-            load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
-
-            self.nodepatch = (rqet.find_tag_int(patch_node, 'PatchIndex'),
-                              rqet.find_tag_int(patch_node, 'Count'))
-            assert not any(map(lambda x: x is None, self.nodepatch)) # Required fields - assert neither are None
-
-            self.rep_int_root = self.model.referenced_node(rqet.find_tag(poly_root, 'RepresentedInterpretation'))
-
-        elif all(i is not None for i in [set_bool, set_coord, set_crs, set_crsroot, set_title]):
+        if self.root is None and all(i is not None for i in [set_bool, set_coord, set_crs, set_crsroot, title]):
             # Using data from a polyline set
             assert set_coord.ndim > 1 and 2 <= set_coord.shape[-1] <= 3
-            self.uuid = bu.new_uuid()
-            self.isclosed = set_bool
             if rep_int_root is not None:
                 self.rep_int_root = rep_int_root
             else:
@@ -149,19 +118,51 @@ class Polyline(_BasePolyline):
             if set_coord.ndim > 2: self.coordinates = self.coordinates.reshape((-1, 3))
             self.nodepatch = (0,len(self.coordinates))
             assert not any(map(lambda x: x is None, self.nodepatch)) # Required fields - assert neither are None
-            self.crs_uuid = set_crs
-            self.crs_root = set_crsroot
-            self.title = set_title
 
         # TODO: Add SeismicCoordinates later - optional field
         # TODO: Add LineRole later - optional field
 
-        if self.uuid is None: self.uuid = bu.new_uuid()
+
+    def load_from_xml(self):
+
+        assert self.root is not None  # polyline xml node is specified
+        poly_root = self.root
+
+        self.title = rqet.citation_title_for_node(poly_root)
+
+        self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
+
+        self.isclosed = rqet.bool_from_text(rqet.node_text(rqet.find_tag(poly_root, 'IsClosed')))
+        assert self.isclosed is not None # Required field
+
+        patch_node = rqet.find_tag(poly_root, 'NodePatch')
+        assert patch_node is not None # Required field
+
+        geometry_node = rqet.find_tag(patch_node, 'Geometry')
+        assert geometry_node is not None # Required field
+
+        self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
+        assert self.crs_root is not None # Required field
+        uuid_str = self.crs_root.attrib['uuid']
+        self.crs_uuid = bu.uuid_from_string(uuid_str)
+        assert self.crs_uuid is not None # Required field
+
+        points_node = rqet.find_tag(geometry_node, 'Points')
+        assert points_node is not None # Required field
+        load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
+
+        self.nodepatch = (rqet.find_tag_int(patch_node, 'PatchIndex'),
+                          rqet.find_tag_int(patch_node, 'Count'))
+        assert not any(map(lambda x: x is None, self.nodepatch)) # Required fields - assert neither are None
+
+        self.rep_int_root = self.model.referenced_node(rqet.find_tag(poly_root, 'RepresentedInterpretation'))
+
 
     @property
     def rep_int_uuid(self):
         # TODO: Track uuid only, not root
         return rqet.uuid_for_part_root(self.rep_int_root)
+
 
     def is_convex(self, trust_metadata = True):
         """Returns True if the polyline is closed and convex in the xy plane, otherwise False."""
@@ -439,7 +440,7 @@ class Polyline(_BasePolyline):
 
 
     def splined(self, tangent_weight = 'square', min_subdivisions = 1, max_segment_length = None, max_degrees_per_knot = 5.0,
-                set_title = None, rep_int_root = None):
+                title = None, rep_int_root = None):
         """Retrurns a new Polyline being a cubic spline of this polyline.
 
         :meta common:
@@ -451,15 +452,16 @@ class Polyline(_BasePolyline):
                                max_degrees_per_knot = max_degrees_per_knot,
                                closed = self.isclosed)
 
-        if not set_title: set_title = self.title
+        if not title: title = self.title
         if rep_int_root is None: rep_int_root = self.rep_int_root  # todo: check whether it is legal to have 2 representations for 1 interpretation
 
         return Polyline(self.model, set_bool = self.isclosed, set_coord = spline_coords,
                         set_crs = self.crs_uuid, set_crsroot = self.crs_root,
-                        set_title = set_title, rep_int_root = rep_int_root)
+                        title = title, rep_int_root = rep_int_root)
 
 
-    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, root = None, title = 'Polyline', originator = None):
+    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, root = None,
+                   title = None, originator = None):
         """Create xml from polyline.
 
         args:
@@ -470,18 +472,10 @@ class Polyline(_BasePolyline):
 
         if ext_uuid is None: ext_uuid = self.model.h5_uuid()
 
-        polyline = self.model.new_obj_node('PolylineRepresentation')
+        if title is not None: self.title = title
+        if self.title is None: self.title = 'polyline'
 
-        if self.uuid is None:
-            self.uuid = bu.uuid_from_string(polyline.attrib['uuid'])
-        else:
-            polyline.attrib['uuid'] = str(self.uuid)
-
-        if self.title is None: self.title = title
-
-        self.model.create_citation(root = polyline, title = self.title, originator = originator)
-
-        rqet.create_metadata_xml(node=polyline, extra_metadata=self.extra_metadata)
+        polyline = super().create_xml(add_as_part=False, originator=originator)
 
         if self.rep_int_root is not None:
             rep_int = self.rep_int_root
@@ -538,8 +532,6 @@ class Polyline(_BasePolyline):
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(polyline, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
 
-        self.root_node = polyline
-
         return polyline
 
 
@@ -567,87 +559,45 @@ class Polyline(_BasePolyline):
 class PolylineSet(_BasePolyline):
     """Class for RESQML polyline set representation."""
 
-    def __init__(self, parent_model, set_root = None, polylines = None, irap_file = None, charisma_file = None):
-        """Initialises a new PolylineSetRepresentation object.
+    resqml_type = 'PolylineSetRepresentation'
+
+    def __init__(self, parent_model, set_root = None, uuid = None, polylines = None, irap_file = None, charisma_file = None,
+                 title = None, originator = None, extra_metadata = None):
+        """Initialises a new PolylineSet object.
 
         arguments:
             parent_model (model.Model object): the model which the new PolylineSetRepresentation belongs to
-            poly_root (optional): the root node of the xml tree representing the PolylineSetRepresentation;
+            set_root (DEPRECATED): use uuid instead;
+                the root node of the xml tree representing the PolylineSetRepresentation;
                 if not None, the new PolylineSetRepresentation object is initialised based on data in tree;
                 if None, expectes a list of polyline objects
+            uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineSetRepresentation object from
+                which to initialise this resqpy PolylineSet
             polylines (optional): list of polyline objects from which to build the polylineset
 
         returns:
-            the newly instantiated PolylineSetRepresentation object
+            the newly instantiated PolylineSet object
 
         :meta common:
         """
 
         self.model = parent_model
-        self.root_node = None
         self.coordinates = None
         self.count_perpol = None
         self.polys = []
         self.rep_int_root = None
-        self.title = None
         self.save_polys = False
         self.boolnotconstant = None
         self.boolvalue = None
         self.crs_root = None
         self.crs_uuid = None
-        self.uuid = None
-        self.extra_metadata = None
 
-        if set_root is not None: # polyline set xml node specified
+        super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = set_root,
+                         extra_metadata = extra_metadata)
 
-            self.root_node = set_root
-            self.uuid = rqet.uuid_for_part_root(set_root)
+        if self.root is not None: return
 
-            self.title = rqet.citation_title_for_node(set_root)
-
-            self.rep_int_root = self.model.referenced_node(rqet.find_tag(set_root, 'RepresentedInterpretation'))
-
-            self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
-            for patch_node in rqet.list_of_tag(set_root, 'LinePatch'): # Loop over all LinePatches - likely just the one
-                assert patch_node is not None # Required field
-
-                geometry_node = rqet.find_tag(patch_node, 'Geometry')
-                assert geometry_node is not None # Required field
-
-                self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
-                assert self.crs_root is not None # Required field
-                self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
-                assert self.crs_uuid is not None # Required field
-
-                closed_node = rqet.find_tag(patch_node, 'ClosedPolylines')
-                assert closed_node is not None # Required field
-                # The ClosedPolylines could be a BooleanConstantArray, or a BooleanArrayFromIndexArray
-                closed_array = self.get_bool_array(closed_node)
-
-                count_node = rqet.find_tag(patch_node,'NodeCountPerPolyline')
-                load_hdf5_array(self, count_node, 'count_perpol', tag = 'Values')
-
-                points_node = rqet.find_tag(geometry_node, 'Points')
-                assert points_node is not None # Required field
-                load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
-
-                # Check that the number of bools aligns with the number of count_perpoly
-                # Check that the total of the count_perpoly aligns with the number of coordinates
-                assert len(self.count_perpol) == len(closed_array)
-                assert np.sum(self.count_perpol) == len(self.coordinates)
-
-                subpolys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates,
-                                                     self.crs_uuid, self.crs_root, self.rep_int_root)
-                # Check we have the right number of polygons
-                assert len(subpolys) == len(self.count_perpol)
-
-                # Remove duplicate coordinates and count arrays (exist in polylines now)
-                # delattr(self,'coordinates')
-                # delattr(self,'count_perpol')
-
-                self.polys.extend(subpolys)
-
-        elif polylines is not None: # Create from list of polylines
+        if polylines is not None: # Create from list of polylines
             crs_list = []
             for poly in polylines:
                 crs_list.append(poly.crs_uuid)
@@ -718,7 +668,52 @@ class PolylineSet(_BasePolyline):
             self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates,
                                                    self.crs_uuid, self.crs_root, self.rep_int_root)
 
-        if self.uuid is None: self.uuid = bu.new_uuid()
+
+    def load_from_xml(self):
+
+        assert self.root is not None # polyline set xml node specified
+        root = self.root
+
+        self.rep_int_root = self.model.referenced_node(rqet.find_tag(root, 'RepresentedInterpretation'))
+
+        for patch_node in rqet.list_of_tag(root, 'LinePatch'): # Loop over all LinePatches - likely just the one
+            assert patch_node is not None # Required field
+
+            geometry_node = rqet.find_tag(patch_node, 'Geometry')
+            assert geometry_node is not None # Required field
+
+            self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
+            assert self.crs_root is not None # Required field
+            self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
+            assert self.crs_uuid is not None # Required field
+
+            closed_node = rqet.find_tag(patch_node, 'ClosedPolylines')
+            assert closed_node is not None # Required field
+            # The ClosedPolylines could be a BooleanConstantArray, or a BooleanArrayFromIndexArray
+            closed_array = self.get_bool_array(closed_node)
+
+            count_node = rqet.find_tag(patch_node,'NodeCountPerPolyline')
+            load_hdf5_array(self, count_node, 'count_perpol', tag = 'Values')
+
+            points_node = rqet.find_tag(geometry_node, 'Points')
+            assert points_node is not None # Required field
+            load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
+
+            # Check that the number of bools aligns with the number of count_perpoly
+            # Check that the total of the count_perpoly aligns with the number of coordinates
+            assert len(self.count_perpol) == len(closed_array)
+            assert np.sum(self.count_perpol) == len(self.coordinates)
+
+            subpolys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates,
+                                                 self.crs_uuid, self.crs_root, self.rep_int_root)
+            # Check we have the right number of polygons
+            assert len(subpolys) == len(self.count_perpol)
+
+            # Remove duplicate coordinates and count arrays (exist in polylines now)
+            # delattr(self,'coordinates')
+            # delattr(self,'count_perpol')
+
+            self.polys.extend(subpolys)
 
 
     def poly_index_containing_point_in_xy(self, p, mode = 'crossing'):
@@ -735,7 +730,7 @@ class PolylineSet(_BasePolyline):
         return None
 
 
-    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, root = None, title = 'PolylineSet',
+    def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, root = None, title = None,
                    originator = None, save_polylines = False):
         """Create xml from polylineset
 
@@ -749,22 +744,14 @@ class PolylineSet(_BasePolyline):
 
         self.save_polys = save_polylines
 
+        if title: self.title = title
+        if not self.title: self.title = 'polyline set'
+
         if self.save_polys:
             for poly in self.polys:
-                poly.create_xml(ext_uuid, add_relationships = add_relationships, title = poly.title)
+                poly.create_xml(ext_uuid, add_relationships = add_relationships, originator = originator)
 
-        polyset = self.model.new_obj_node('PolylineSetRepresentation')
-
-        if self.uuid is None:
-            self.uuid = bu.uuid_from_string(polyset.attrib['uuid'])
-        else:
-            polyset.attrib['uuid'] = str(self.uuid)
-
-        if self.title is None: self.title = title
-
-        self.model.create_citation(root = polyset, title = self.title, originator = originator)
-
-        rqet.create_metadata_xml(node=polyset, extra_metadata=self.extra_metadata)
+        polyset = super().create_xml(add_as_part=False, originator=originator)
 
         if self.rep_int_root is not None:
             rep_int = self.rep_int_root
@@ -863,8 +850,6 @@ class PolylineSet(_BasePolyline):
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(polyset, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
 
-        self.root_node = polyset
-
         return polyset
 
 
@@ -956,7 +941,7 @@ class PolylineSet(_BasePolyline):
             count += int(count_perpol[i])
             subtitle = f"{self.title} {i+1}"
             polys.append(Polyline(self.model, poly_root = None, set_bool = isclosed, set_coord = subset,
-                                  set_crs = crs_uuid, set_crsroot = crs_root, set_title = subtitle,
+                                  set_crs = crs_uuid, set_crsroot = crs_root, title = subtitle,
                                   rep_int_root = rep_int_root))
 
         return polys
