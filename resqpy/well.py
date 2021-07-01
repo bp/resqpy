@@ -125,7 +125,6 @@ class MdDatum(BaseResqpy):
    def _load_from_xml(self):
       md_datum_root = self.root
       assert md_datum_root is not None
-      self.uuid = rqet.uuid_for_part_root(md_datum_root)
       location_node = rqet.find_tag(md_datum_root, 'Location')
       self.location = (rqet.find_tag_float(location_node, 'Coordinate1'),
                        rqet.find_tag_float(location_node, 'Coordinate2'),
@@ -163,10 +162,9 @@ class MdDatum(BaseResqpy):
       """Creates xml for this md datum object and adds to parent model as a part; returns root node for part."""
 
       # note: deprecated, call create_xml() directly
-      assert self.root_node is None
+      assert self.root is None
       assert self.location is not None
-      self.root_node = self.create_xml(add_as_part = True)
-      self.uuid = rqet.uuid_for_part_root(self.root_node)
+      self.create_xml(add_as_part = True)
 
 
    def create_xml(self, add_as_part = True,
@@ -796,8 +794,6 @@ class Trajectory(BaseResqpy):
 
       assert method in ['minimum curvature']  # if adding other methods, set line_kind_index appropriately
 
-      self.root_node = None
-      self.uuid = bu.new_uuid()
       self.knot_count = survey.station_count
       assert self.knot_count >= 2        # vertical well could be hamdled by allowing a single station in survey?
       self.line_kind_index = 5           # minimum curvature spline
@@ -852,8 +848,6 @@ class Trajectory(BaseResqpy):
       try:
          for col in [md_col, x_col, y_col, z_col]:
             assert col in data_frame.columns
-         self.root_node = None
-         self.uuid = bu.new_uuid()
          self.knot_count = len(data_frame)
          assert self.knot_count >= 2        # vertical well could be hamdled by allowing a single station in survey?
          self.line_kind_index = 5              # assume minimum curvature spline
@@ -887,8 +881,6 @@ class Trajectory(BaseResqpy):
 
       cell_centres = grid.centre_point_list(cell_kji0_list)
 
-      self.root_node = None
-      self.uuid = bu.new_uuid()
       knot_count = len(cell_kji0_list) + 2
       self.line_kind_index = 5              # 5 means minimum curvature spline; todo: set to cubic spline value?
       self.md_uom = bwam.rq_length_unit(md_uom)
