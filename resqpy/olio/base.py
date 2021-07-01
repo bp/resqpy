@@ -69,7 +69,11 @@ class BaseResqpy(metaclass=ABCMeta):
                 self.originator = rqet.find_tag_text(citation_node, 'Originator')
             self.extra_metadata = rqet.load_metadata_from_xml(self.root)
             self._load_from_xml()
-    
+
+    # usually overridden by derived class, unless generic code above handles all attributes
+    def _load_from_xml(self):
+        pass
+
     # Define attributes self.part and self.root, using uuid as the primary key
 
     @property
