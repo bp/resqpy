@@ -3085,7 +3085,7 @@ class Property(BaseResqpy):
          else:
             assert bu.matching_uuids(support_uuid, self.collection.support_uuid)
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       """Populates this property object from xml; not usually called directly."""
 
       part = self.part
@@ -4427,8 +4427,7 @@ class StringLookup(BaseResqpy):
       if uuid is None and root_node is None: self.load_from_dict(int_to_str_dict)
 
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       root_node = self.root
       for v_node in rqet.list_of_tag(root_node, 'Value'):
          key = rqet.find_tag_int(v_node, 'Key')
@@ -4600,8 +4599,7 @@ class PropertyKind(BaseResqpy):
                        extra_metadata = extra_metadata, root_node = root_node)
 
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       root_node = self.root
       self.is_abstract = rqet.find_tag_bool(root_node, 'IsAbstract')
       self.naming_system = rqet.find_tag_text(root_node, 'NamingSystem')

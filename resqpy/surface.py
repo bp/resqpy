@@ -569,7 +569,7 @@ class Surface(_BaseSurface):
          self.set_from_tsurf_file(tsurf_file)
 
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       root_node = self.root
       assert root_node is not None
       self.extract_patches(root_node)
@@ -1234,7 +1234,7 @@ class PointSet(_BaseSurface):
       if not self.title: self.title = 'point set'
 
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       root_node = self.root
       assert root_node is not None
       self.patch_count = rqet.count_tag(root_node, 'NodePatch')
@@ -1646,7 +1646,7 @@ class Mesh(_BaseSurface):
 #     log.debug(f'new mesh has flavour {self.flavour}')
 
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       root_node = self.root
       assert root_node is not None
       self.surface_role = rqet.find_tag_text(root_node, 'SurfaceRole')
