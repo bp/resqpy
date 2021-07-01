@@ -1272,7 +1272,7 @@ def test_add_faults(tmp_path):
    def make_poly(model, a, title, crs):
       return [rql.Polyline(model, set_bool = False, set_coord = a,
                            set_crs = crs.uuid, set_crsroot = crs.crs_root,
-                           set_title = title)]
+                           title = title)]
 
    epc = os.path.join(tmp_path, 'tic_tac_toe.epc')
 

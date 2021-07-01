@@ -1,3 +1,5 @@
+import pytest
+
 import resqpy.lines
 import resqpy.organize
 import numpy as np
@@ -9,7 +11,7 @@ def test_lines(example_model_and_crs):
     title = 'Nazca'
     model, crs = example_model_and_crs
     line = resqpy.lines.Polyline(
-        parent_model=model, set_title=title, 
+        parent_model=model, title=title,
         set_crs=crs.uuid, set_crsroot=crs.crs_root,
         set_bool=True, set_coord=np.array([[0,0,0],[1,1,1]])
     )
