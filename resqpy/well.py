@@ -123,8 +123,8 @@ class MdDatum(BaseResqpy):
 
 
    def _load_from_xml(self):
-      assert self.root is not None:     # load from xml
       md_datum_root = self.root
+      assert md_datum_root is not None
       self.uuid = rqet.uuid_for_part_root(md_datum_root)
       location_node = rqet.find_tag(md_datum_root, 'Location')
       self.location = (rqet.find_tag_float(location_node, 'Coordinate1'),
