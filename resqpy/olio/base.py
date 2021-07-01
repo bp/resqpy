@@ -59,16 +59,16 @@ class BaseResqpy(metaclass=ABCMeta):
 
         if uuid is None:
             self.uuid = bu.new_uuid()  #: Unique identifier
-            logger.debug(f"Created new uuid for object {self}")
+            logger.debug(f"created new uuid for object {self}")
         else:
             self.uuid = uuid
-            logger.debug(f"Loading existing object {self}")
+            logger.debug(f"loading existing object {self}")
             citation_node = rqet.find_tag(self.root, 'Citation')
             if citation_node is not None:
                 self.title = rqet.find_tag_text(citation_node, 'Title')
                 self.originator = rqet.find_tag_text(citation_node, 'Originator')
             self.extra_metadata = rqet.load_metadata_from_xml(self.root)
-            self.load_from_xml()
+            self._load_from_xml()
     
     # Define attributes self.part and self.root, using uuid as the primary key
 
@@ -91,18 +91,6 @@ class BaseResqpy(metaclass=ABCMeta):
         """Citation block title equivalent to self.title"""
 
         return self.title
-
-    def load_from_xml(self):
-        """Load citation block from XML.
-        
-        Note: derived classes should extend this to load other XML and HDF attributes
-        """
-
-        # Citation block and extra metadata
-        self.title = rqet.find_nested_tags_text(self.root, ['Citation', 'Title'])
-        self.originator = rqet.find_nested_tags_text(self.root, ['Citation', 'Originator'])
-        self.extra_metadata = rqet.load_metadata_from_xml(self.root)
-        # extra_metadata should be in standard form when loaded from xml
 
     def try_reuse(self):
         """Look for an equivalent existing RESQML object and modify the uuid of this object if found.

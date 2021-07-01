@@ -123,7 +123,7 @@ class Polyline(_BasePolyline):
         # TODO: Add LineRole later - optional field
 
 
-    def load_from_xml(self):
+    def _load_from_xml(self):
 
         assert self.root is not None  # polyline xml node is specified
         poly_root = self.root
@@ -669,7 +669,7 @@ class PolylineSet(_BasePolyline):
                                                    self.crs_uuid, self.crs_root, self.rep_int_root)
 
 
-    def load_from_xml(self):
+    def _load_from_xml(self):
 
         assert self.root is not None # polyline set xml node specified
         root = self.root

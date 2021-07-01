@@ -1,6 +1,6 @@
 """crs.py: RESQML coordinate reference system module."""
 
-version = '18th June 2021'
+version = '1st July 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class Crs(BaseResqpy):
                              not self.rotated)
 
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       root_node = self.root
       flavour = rqet.node_type(root_node)
       assert flavour in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
@@ -110,7 +110,6 @@ class Crs(BaseResqpy):
          assert self.time_units
       else:
          self.time_units = None
-      super().load_from_xml()
       self.xy_units = rqet.find_tag_text(root_node, 'ProjectedUom')
       self.axis_order = rqet.find_tag_text(root_node, 'ProjectedAxisOrder')
       self.z_units = rqet.find_tag_text(root_node, 'VerticalUom')

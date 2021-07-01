@@ -1,6 +1,6 @@
 """time_series.py: RESQML time series class."""
 
-version = '18th June 2021'
+version = '1st July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -114,9 +114,9 @@ class TimeSeries(BaseResqpy):
       super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = time_series_root)
 
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       time_series_root = self.root
+      assert time_series_root is not None
       for child in self.time_series_root:
          if rqet.stripped_of_prefix(child.tag) != 'Time': continue
          dt_node = rqet.find_tag(child, 'DateTime')

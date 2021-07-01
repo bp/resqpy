@@ -136,7 +136,7 @@ class Grid(BaseResqpy):
          if find_properties: self.extract_property_collection()
 
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       # Extract simple attributes from xml and set as attributes in this resqpy object
       grid_root = self.root
       assert grid_root is not None

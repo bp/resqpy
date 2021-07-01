@@ -1,6 +1,6 @@
 """organize.py: RESQML Feature and Interpretation classes."""
 
-version = '16th June 2021'
+version = '1st July 2021'
 
 # For now, fault features and interpretations, plus stubs for horizons
 
@@ -106,8 +106,7 @@ class OrganizationFeature(BaseResqpy):
          self.organization_kind == other.organization_kind and
          ((not check_extra_metadata) or equivalent_extra_metadata(self, other)))
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
@@ -252,8 +251,7 @@ class FluidBoundaryFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return self.feature_name == other.feature_name and self.kind == other.kind
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       self.kind = rqet.find_tag_text(self.root, 'FluidContact')
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True):
@@ -309,8 +307,7 @@ class RockFluidUnitFeature(BaseResqpy):
       if check_extra_metadata and not equivalent_extra_metadata(self, other): return False
       return True
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
 
       self.phase = rqet.find_tag_text(self.root, 'Phase')
 
@@ -377,8 +374,7 @@ class TectonicBoundaryFeature(BaseResqpy):
       self.kind = kind
       super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       self.kind = rqet.find_tag_text(self.root, 'TectonicBoundaryKind')
       if not self.kind: self.kind = 'fault'
 
@@ -421,8 +417,7 @@ class GeneticBoundaryFeature(BaseResqpy):
       self.absolute_age = None   # (timestamp, year offset) pair, or None; todo: support setting from args
       super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       self.kind = rqet.find_tag_text(self.root, 'GeneticBoundaryKind')
       age_node = rqet.find_tag(self.root, 'AbsoluteAge')
       if age_node:
@@ -544,8 +539,7 @@ class FaultInterpretation(BaseResqpy):
       # TODO: rewrite using uuid as primary key
       return rqet.uuid_for_part_root(self.feature_root)
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       root_node = self.root
       self.domain = rqet.find_tag_text(root_node, 'Domain')
       interp_feature_ref_node = rqet.find_tag(root_node, 'InterpretedFeature')
@@ -699,8 +693,7 @@ class EarthModelInterpretation(BaseResqpy):
       if (not title) and organization_feature is not None: title = organization_feature.feature_name
       super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       self.domain = rqet.find_tag_text(self.root, 'Domain')
       interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
@@ -792,8 +785,7 @@ class HorizonInterpretation(BaseResqpy):
       self.sequence_stratigraphy_surface = sequence_stratigraphy_surface
       super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       self.domain = rqet.find_tag_text(self.root, 'Domain')
       interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
@@ -902,8 +894,7 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
       self.has_occurred_during = (None, None)
       super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       self.domain = rqet.find_tag_text(self.root, 'Domain')
       interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
@@ -1016,8 +1007,7 @@ class GeobodyInterpretation(BaseResqpy):
       self.geobody_shape = geobody_shape
       super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-   def load_from_xml(self):
-      super().load_from_xml()
+   def _load_from_xml(self):
       interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
       assert interp_feature_ref_node is not None
       self.feature_root = self.model.referenced_node(interp_feature_ref_node)
@@ -1144,7 +1134,7 @@ class WellboreInterpretation(BaseResqpy):
       self.domain = domain
       super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       root_node = self.root
       self.is_drilled = rqet.find_tag_bool(root_node, 'IsDrilled')
       self.domain = rqet.find_tag_text(root_node, 'Domain')

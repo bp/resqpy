@@ -1,10 +1,10 @@
 """rq_print.py: simple print functionality for summarizing resqml objects."""
 
-version = '29th April 2021'
+version = '1st July 2021'
 
 import logging
 log = logging.getLogger(__name__)
-log.debug('print.py version ' + version)
+log.debug('rq_print.py version ' + version)
 
 import numpy as np
 import h5py
@@ -301,7 +301,7 @@ def print_reference_node_and_return_referenced_part(node, heading):
    uuid_str = rqet.node_text(rqet.find_tag(node, 'UUID'))
    if uuid_str is not None: print('   uuid:  ' + str(uuid_str))
    if content_type is None or content_type[:4] != 'obj_' or uuid_str is None: return None
-   if uuid_str[0] == '_': uuid_str = uuid_str[1:]   # tolerate fespi quirk
+   if uuid_str[0] == '_': uuid_str = uuid_str[1:]   # tolerate fesapi quirk
    return content_type + '_' + uuid_str + '.xml'
 
 
@@ -342,6 +342,7 @@ def print_Property(model, node, detail_level = 0):
          else: print('(derived kind: ' + str(derived_property_kind) + '; facet: ' + str(derived_facet_type) + ': ' + str(derived_facet) + ')')
    print('realization: ' + optional(rqet.find_tag_int(node, 'RealizationIndex')))
    grid = None
+   time_series = time_series_uuid = time_series_part = None
    time_index_node = rqet.find_tag(node, 'TimeIndex')
    if time_index_node is None:
       print('static property (no time index)')
@@ -356,10 +357,11 @@ def print_Property(model, node, detail_level = 0):
          time_series_uuid = model.uuid_for_part(time_series_part)
          if time_series_uuid is None:
             print('   time series part not found!')
+            log.warning('missing time series part: ' + str(time_series_part))
          else:
             time_series = rts.TimeSeries(model, uuid = time_series_uuid)
             print('   number of timestamps in series: ' + str(time_series.number_of_timestamps()))
-         if time_index is not None:
+         if time_index is not None and time_series is not None:
             print('timestamp for this part: ' + str(rts.simplified_timestamp(time_series.timestamp(time_index))))
    minimum = rqet.node_text(rqet.find_tag(node, 'MinimumValue'))
    print('minimum (xml): ' + str(minimum))

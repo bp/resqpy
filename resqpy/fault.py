@@ -133,7 +133,7 @@ class GridConnectionSet(BaseResqpy):
             self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name, create_organizing_objects_where_needed)
 
 
-   def load_from_xml(self):
+   def _load_from_xml(self):
       root = self.root
       assert root is not None
       self.count = rqet.find_tag_int(root, 'Count')
