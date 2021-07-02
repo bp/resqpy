@@ -86,7 +86,7 @@ The following are just a few of the attributes which calling code is likely to a
 
 * model: the 'parent' model.Model object
 * uuid
-* grid_root: the xml root node
+* root: the xml root node
 * extent_kji: a triplet of integers containing the size of the grid (nk, nj, ni)
 * ni, nj, nk: separate integer attributes, duplicating the information in extent_kji for convenience
 * crs_uuid
@@ -163,5 +163,5 @@ Alternatively, the initialiser for the Grid class can be called directly with so
 
 .. code-block:: python
 
-    grid_root = model.root(obj_type = 'IjkGridRepresentation', multiple_handling = 'newest')
-    grid = grr.Grid(model, grid_root = grid_root)
+    grid_uuid = model.uuid(obj_type = 'IjkGridRepresentation', multiple_handling = 'newest')
+    grid = grr.Grid(model, uuid = grid_uuid)
