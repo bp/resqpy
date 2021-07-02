@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '29th June 2021'
+version = '2nd July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -130,6 +130,8 @@ class Grid(BaseResqpy):
 
       super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
                        extra_metadata = extra_metadata, root_node = grid_root)
+
+      if not self.title: self.title = 'ROOT'
 
       if (uuid is not None or grid_root is not None):
          if geometry_required: assert self.geometry_root is not None, 'grid geometry not present in xml'
@@ -4607,7 +4609,8 @@ class RegularGrid(Grid):
 
    def __init__(self, parent_model, extent_kji = None, dxyz = None, dxyz_dkji = None, origin = (0.0, 0.0, 0.0),
                 crs_uuid = None, use_vertical = False, mesh = None, mesh_dz_dk = 1.0, uuid = None,
-                set_points_cached = False, find_properties = True):
+                set_points_cached = False, find_properties = True,
+                title = None, originator = None, extra_metadata = {}):
       """Creates a regular grid object based on dxyz, or derived from a Mesh object.
 
       arguments:
@@ -4636,6 +4639,11 @@ class RegularGrid(Grid):
             in the form of the cached points array
          find_properties (boolean, default True): if True and grid_root is not None, a grid property collection is
             instantiated as an attribute, holding properties for which this grid is the supporting representation
+         title (str, optional): citation title for new grid; ignored if loading from xml
+         originator (str, optional): name of person creating the grid; defaults to login id;
+            ignored if loading from xml
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+            ignored if loading from xml
 
       returns:
          a newly created RegularGrid object with inheritance from the Grid class
@@ -4672,8 +4680,8 @@ class RegularGrid(Grid):
          self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype = bool)
       else:
          assert is_regular_grid(parent_model.root_for_uuid(uuid))
-         super().__init__(parent_model, uuid = uuid,
-                          find_properties = find_properties, geometry_required = False)
+         super().__init__(parent_model, uuid = uuid, find_properties = find_properties, geometry_required = False,
+                          title = title, originator = originator, extra_metadata = extra_metadata)
          self.grid_representation = 'IjkBlockGrid'
          if dxyz is None and dxyz_dkji is None:
             # find cell length properties and populate dxyz from those values

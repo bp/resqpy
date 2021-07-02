@@ -654,9 +654,9 @@ class Trajectory(BaseResqpy):
             be computed from the control points
          hdf5_source_model (model.Model, optional): if present this model is used to determine the hdf5 file
             name from which to load the trajectory's array data; if None, the parent_model is used as usual
-         originator (str, optional): the name of the person creating the datum, defaults to login id;
+         originator (str, optional): the name of the person creating the trajectory, defaults to login id;
             ignored if uuid or trajectory_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the trajectory;
             ignored if uuid or trajectory_root is not None
 
       returns:
@@ -1362,11 +1362,11 @@ class WellboreFrame(BaseResqpy):
             will constitute the frame; ignored if frame_root is not None
          represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
             interpretation object which this frame relates to; ignored if frame_root is not None
-         title (str, optional): the citation title to use for a new datum;
+         title (str, optional): the citation title to use for a new wellbore frame;
             ignored if uuid or frame_root is not None
-         originator (str, optional): the name of the person creating the datum, defaults to login id;
+         originator (str, optional): the name of the person creating the wellbore frame, defaults to login id;
             ignored if uuid or frame_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore frame;
             ignored if uuid or frame_root is not None
 
       returns:
@@ -1593,9 +1593,9 @@ class BlockedWell(BaseResqpy):
             the centre of the cell; only relevant when loading from wellspec
          represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
             interpretation object which this frame relates to; ignored if blocked_well_root is not None
-         originator (str, optional): the name of the person creating the datum, defaults to login id;
+         originator (str, optional): the name of the person creating the blocked well, defaults to login id;
             ignored if uuid or blocked_well_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the blocked well;
             ignored if uuid or blocked_well_root is not None
 
       returns:
@@ -3220,11 +3220,11 @@ class WellboreMarkerFrame(BaseResqpy):
          wellbore_marker_root (DEPRECATED): the root node of an xml tree representing the wellbore marker;
          trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
             not used if wellbore_marker_root is not None;
-         title (str, optional): the citation title to use for a new datum;
+         title (str, optional): the citation title to use for a new wellbore marker frame;
             ignored if uuid or wellbore_marker_frame_root is not None
-         originator (str, optional): the name of the person creating the datum, defaults to login id;
+         originator (str, optional): the name of the person creating the wellbore marker frame, defaults to login id;
             ignored if uuid or wellbore_marker_frame_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore marker frame;
             ignored if uuid or wellbore_marker_frame_root is not None
 
       returns:
