@@ -51,8 +51,8 @@ Step 3 occurs when the application code instantiates a resqpy object for one of 
 .. code-block:: python
 
     import resqpy.grid as grr
-    xml_root_node = model.root(obj_type = 'IjkGridRepresentation', title = 'FAULTED GRID')
-    faulted_grid = grr.Grid(model, grid_root = xml_root_node)
+    faulted_grid_uuid = model.uuid(obj_type = 'IjkGridRepresentation', title = 'FAULTED GRID')
+    faulted_grid = grr.Grid(model, uuid = faulted_grid_uuid)
 
 Step 4 only pertains to classes with large amounts of array data. To minimize memory and time usage, these arrays are not loaded until application code requests them using specific methods in the class. The names of these methods usually contain terms like *cached* and/or *array_ref*. There is often another method allowing for the uncaching of such arrays, which has the effect of deleting the associated attribute from the resqpy object. The following example loads a numpy boolean array from the hdf5 file (unless it has already been cached), indicating which cells in a resqpy Grid object have geometry defined; the array is stored as an attribute of the object (cached) and also returned by the method:
 
@@ -80,8 +80,8 @@ Step 1 in this sequence is achieved by calling the initialization method of the 
 .. code-block:: python
 
     import resqpy.well as rqw
-    existing_md_root = model.root(obj_type = 'obj_MdDatum')  # we happen to know there is only one MdDatum object
-    existing_md_datum = rqw.MdDatum(model, md_datum_root = existing_md_root)
+    existing_md_uuid = model.uuid(obj_type = 'obj_MdDatum')  # we happen to know there is only one MdDatum object
+    existing_md_datum = rqw.MdDatum(model, uuid = existing_md_uuid)
     x, y, z = existing_md_datum.location
     x += 5.0
     new_md_datum = rqw.MdDatum(model,

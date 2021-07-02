@@ -62,23 +62,7 @@ Having found the uuid, we can instantiate a resqpy Crs object:
 A similar approach is used to instantiate objects for all the resqpy classes, when reading an existing dataset.
 
 Older releases of resqpy used the xml root instead of the uuid, when instantiating resqpy objects for existing RESQML
-objects. Some resqpy classes have not yet been updated to the uuid way of working. The older approach required an extra step to find the xml root as shown here:
-
-.. code-block:: python
-
-    crs_root = model.root(uuid = crs_uuid)
-
-Alternatively, we could in this case have skipped the uuid stage altogether with:
-
-.. code-block:: python
-
-    crs_root = model.root(obj_type = 'LocalDepth3dCrs')
-
-And then the Crs object is instantiated from the root node:
-
-.. code-block:: python
-
-    crs = rqc.Crs(model, crs_root = crs_root)
+objects. This is now deprecated (from v0.3.0). 
 
 Inspecting the resqpy Crs object
 --------------------------------
@@ -129,8 +113,8 @@ Along with some other simple resqpy classes, Crs includes a definition for __eq_
 
 The Crs class includes other methods but those mentioned above are the most commonly used ones.
 
-RESQML Units of Measure
------------------------
+RESQML Units of Measure (uom)
+-----------------------------
 The RESQML standard includes a comprehensive set of data for handling physical units, which is shared with the sister standards PRODML and WITSML. Some components of this data include:
 
 * a comprehensive list of quantity classes, such as volume flow rate
@@ -142,4 +126,4 @@ The RESQML standard includes a comprehensive set of data for handling physical u
 
 There is also a list of standard *property kinds* of relevance to reservoir modelling, such as *porosity*.
 
-The resqpy library does not yet make full use of the RESQML units data. So, for example, the Crs conversion methods currently only recognize the following length units: m, ft, ft[US]
+The resqpy library does not yet make full use of the RESQML units data. So, for example, the Crs conversion methods currently only recognize the following length units: m, ft, ft[US]. However, a release coming soon will include support for the full RESQML uom system.
