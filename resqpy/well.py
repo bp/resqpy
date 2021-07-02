@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '1st July 2021'
+version = '2nd July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -80,33 +80,33 @@ class MdDatum(BaseResqpy):
                 title = None, originator = None, extra_metadata = None):
       """Initialises a new MdDatum object.
 
-         arguments:
-            parent_model (model.Model object): the model which the new md datum belongs to
-            uuid: If not None, load from existing object. Else, create new.
-            md_datum_root (optional): DEPRECATED: the root node of the xml tree representing the md datum;
-               if not None, the new md datum object is initialised based on data in the tree;
-               if None, the new object is initialised from the remaining arguments
-            crs_root: the root node of the coordinate reference system xml tree; ignored if
-               uuid or md_datum_root is not None
-            location: (triple float): the x, y, z location of the new measured depth datum;
-               ignored if uuid or md_datum_root is not None
-            md_reference (string): human readable resqml standard string indicating the real
-               world nature of the datum, eg. 'kelly bushing'; the full list of options is
-               available as the global variable valid_md_reference_list in this module;
-               ignored if uuid or md_datum_root is not None
-            title (str, optional): the citation title to use for a new datum;
-               ignored if uuid or md_datum_root is not None
-            originator (str, optional): the name of the person creating the datum, defaults to login id;
-               ignored if uuid or md_datum_root is not None
-            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
-               ignored if uuid or md_datum_root is not None
+      arguments:
+         parent_model (model.Model object): the model which the new md datum belongs to
+         uuid: If not None, load from existing object. Else, create new.
+         md_datum_root (optional): DEPRECATED: the root node of the xml tree representing the md datum;
+            if not None, the new md datum object is initialised based on data in the tree;
+            if None, the new object is initialised from the remaining arguments
+         crs_root: the root node of the coordinate reference system xml tree; ignored if
+            uuid or md_datum_root is not None
+         location: (triple float): the x, y, z location of the new measured depth datum;
+            ignored if uuid or md_datum_root is not None
+         md_reference (string): human readable resqml standard string indicating the real
+            world nature of the datum, eg. 'kelly bushing'; the full list of options is
+            available as the global variable valid_md_reference_list in this module;
+            ignored if uuid or md_datum_root is not None
+         title (str, optional): the citation title to use for a new datum;
+            ignored if uuid or md_datum_root is not None
+         originator (str, optional): the name of the person creating the datum, defaults to login id;
+            ignored if uuid or md_datum_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+            ignored if uuid or md_datum_root is not None
 
-         returns:
-            the newly instantiated measured depth datum object
+      returns:
+         the newly instantiated measured depth datum object
 
-         note:
-            this function does not create an xml node for the md datum; call the create_xml() method afterwards
-            if initialising from data other than an existing RESQML object
+      note:
+         this function does not create an xml node for the md datum; call the create_xml() method afterwards
+         if initialising from data other than an existing RESQML object
       """
 
       self.location = location
@@ -649,11 +649,15 @@ class Trajectory(BaseResqpy):
             deviation data; ignored if uuid or trajectory_root is not None
          represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
             interpretation object which this trajectory relates to; ignored if uuid or trajectory_root is not None
-         well_name (string, optional)
+         well_name (string, optional): used as citation title
          set_tangent_vectors (boolean, default False): if True and tangent vectors are not loaded then they will
             be computed from the control points
          hdf5_source_model (model.Model, optional): if present this model is used to determine the hdf5 file
             name from which to load the trajectory's array data; if None, the parent_model is used as usual
+         originator (str, optional): the name of the person creating the datum, defaults to login id;
+            ignored if uuid or trajectory_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+            ignored if uuid or trajectory_root is not None
 
       returns:
          the newly created wellbore trajectory object
@@ -1358,6 +1362,12 @@ class WellboreFrame(BaseResqpy):
             will constitute the frame; ignored if frame_root is not None
          represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
             interpretation object which this frame relates to; ignored if frame_root is not None
+         title (str, optional): the citation title to use for a new datum;
+            ignored if uuid or frame_root is not None
+         originator (str, optional): the name of the person creating the datum, defaults to login id;
+            ignored if uuid or frame_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+            ignored if uuid or frame_root is not None
 
       returns:
          the newly created wellbore frame object
@@ -1583,6 +1593,10 @@ class BlockedWell(BaseResqpy):
             the centre of the cell; only relevant when loading from wellspec
          represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
             interpretation object which this frame relates to; ignored if blocked_well_root is not None
+         originator (str, optional): the name of the person creating the datum, defaults to login id;
+            ignored if uuid or blocked_well_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+            ignored if uuid or blocked_well_root is not None
 
       returns:
          the newly created blocked well object
@@ -3206,6 +3220,12 @@ class WellboreMarkerFrame(BaseResqpy):
          wellbore_marker_root (DEPRECATED): the root node of an xml tree representing the wellbore marker;
          trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
             not used if wellbore_marker_root is not None;
+         title (str, optional): the citation title to use for a new datum;
+            ignored if uuid or wellbore_marker_frame_root is not None
+         originator (str, optional): the name of the person creating the datum, defaults to login id;
+            ignored if uuid or wellbore_marker_frame_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+            ignored if uuid or wellbore_marker_frame_root is not None
 
       returns:
          the newly created wellbore framework marker object
