@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation."""
 
-version = '25th June 2021'
+version = '2nd July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -34,7 +34,8 @@ class GridConnectionSet(BaseResqpy):
    def __init__(self, parent_model, uuid = None, connection_set_root = None, grid = None,
                 ascii_load_format = None, ascii_file = None,
                 k_faces = None, j_faces = None, i_faces = None, feature_name = None,
-                create_organizing_objects_where_needed = False, title = None, originator = None):
+                create_organizing_objects_where_needed = False,
+                title = None, originator = None, extra_metadata = None):
       """Initializes a new GridConnectionSet and optionally loads it from xml or a list of simulator format ascii files.
 
       arguments:
@@ -57,6 +58,12 @@ class GridConnectionSet(BaseResqpy):
                face masks, a fault interpretation object and tectonic boundary feature object will be created
                for any named fault for which such objects do not exist; if False, missing organizational objects
                will cause an error to be logged; ignored when loading from xml
+         title (str, optional): the citation title to use for a new grid connection set;
+            ignored if uuid or connection_set_root is not None
+         originator (str, optional): the name of the person creating the new grid connection set, defaults to login id;
+            ignored if uuid or connection_set_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the grid connection set
+            ignored if uuid or connection_set_root is not None
 
       returns:
          a new GridConnectionSet object, initialised from xml or ascii file, or left empty
@@ -103,7 +110,8 @@ class GridConnectionSet(BaseResqpy):
       # note: the rework_face_pairs() method, below, overwrites the face indices based on I, J cell indices
       if not title: title = feature_name
 
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = connection_set_root)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = connection_set_root)
 
       if self.root is None:
          log.debug('setting grid for new connection set to default (ROOT)')

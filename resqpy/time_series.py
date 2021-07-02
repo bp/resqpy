@@ -1,6 +1,6 @@
 """time_series.py: RESQML time series class."""
 
-version = '1st July 2021'
+version = '2nd July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -73,7 +73,7 @@ class TimeSeries(BaseResqpy):
 
    def __init__(self, parent_model, uuid = None, time_series_root = None,
                 first_timestamp = None, daily = None, monthly = None, quarterly = None, yearly = None,
-                title = None, originator = None):
+                title = None, originator = None, extra_metadata = None):
       """Create a TimeSeries object, either from a time series node in parent model, or from given data.
 
       arguments:
@@ -89,6 +89,12 @@ class TimeSeries(BaseResqpy):
             monthly timesteps
          yearly (non-negative int, optional): the number of 365 day interval timesteps to follow the
             quarterly timesteps
+         title (str, optional): the citation title to use for a new time series;
+            ignored if uuid or time_series_root is not None
+         originator (str, optional): the name of the person creating the time series, defaults to login id;
+            ignored if uuid or time_series_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the time series;
+            ignored if uuid or time_series_root is not None
 
       returns:
          newly instantiated TimeSeries object
@@ -111,7 +117,8 @@ class TimeSeries(BaseResqpy):
             for _ in range(quarterly): self.extend_by_days(90)   # could use 91
          if yearly is not None:
             for _ in range(yearly): self.extend_by_days(365)  # could use 360
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = time_series_root)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = time_series_root)
 
 
    def _load_from_xml(self):

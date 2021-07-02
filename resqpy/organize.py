@@ -1,6 +1,6 @@
 """organize.py: RESQML Feature and Interpretation classes."""
 
-version = '1st July 2021'
+version = '2nd July 2021'
 
 # For now, fault features and interpretations, plus stubs for horizons
 
@@ -89,12 +89,13 @@ class OrganizationFeature(BaseResqpy):
    resqml_type = "OrganizationFeature"
    feature_name = _alias_for_attribute("title")
 
-   def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None,
-                organization_kind=None, originator=None):
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None,
+                organization_kind = None, originator = None, extra_metadata = None):
       """Initialises an organization feature object."""
 
       self.organization_kind = organization_kind
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, originator=originator, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name, originator = originator,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -135,10 +136,11 @@ class GeobodyFeature(BaseResqpy):
    resqml_type = "GeobodyFeature"
    feature_name = _alias_for_attribute("title")
 
-   def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
       """Initialises a geobody feature object."""
 
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -161,10 +163,11 @@ class BoundaryFeature(BaseResqpy):
    resqml_type = "BoundaryFeature"
    feature_name = _alias_for_attribute("title")
 
-   def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
       """Initialises a boundary feature organisational object."""
 
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -186,10 +189,11 @@ class FrontierFeature(BaseResqpy):
    resqml_type = "FrontierFeature"
    feature_name = _alias_for_attribute("title")
 
-   def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
       """Initialises a frontier feature organisational object."""
 
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -211,10 +215,11 @@ class GeologicUnitFeature(BaseResqpy):
    resqml_type = "GeologicUnitFeature"
    feature_name = _alias_for_attribute("title")
 
-   def __init__(self, parent_model, root_node=None, uuid=None, feature_name=None):
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
       """Initialises a geologic unit feature organisational object."""
 
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -237,11 +242,13 @@ class FluidBoundaryFeature(BaseResqpy):
    feature_name = _alias_for_attribute("title")
    valid_kinds = ('free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact')
 
-   def __init__(self, parent_model, root_node=None, uuid=None, kind=None, feature_name=None):
+   def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None,
+                extra_metadata = None):
       """Initialises a fluid boundary feature (contact) organisational object."""
 
       self.kind = kind
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -282,15 +289,16 @@ class RockFluidUnitFeature(BaseResqpy):
    feature_name = _alias_for_attribute("title")
    valid_phases = ('aquifer', 'gas cap', 'oil column', 'seal')
 
-   def __init__(self, parent_model, root_node=None, uuid=None, phase=None, feature_name=None,
-                top_boundary_feature=None, base_boundary_feature=None):
+   def __init__(self, parent_model, root_node = None, uuid = None, phase = None, feature_name = None,
+                top_boundary_feature = None, base_boundary_feature = None, extra_metadata = None):
       """Initialises a rock fluid unit feature organisational object."""
 
       self.phase = phase
       self.top_boundary_feature = top_boundary_feature
       self.base_boundary_feature = base_boundary_feature
 
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -369,10 +377,12 @@ class TectonicBoundaryFeature(BaseResqpy):
    feature_name = _alias_for_attribute("title")
    valid_kinds = ('fault', 'fracture')
 
-   def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None):
+   def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None,
+                extra_metadata = None):
       """Initialises a tectonic boundary feature (fault or fracture) organisational object."""
       self.kind = kind
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def _load_from_xml(self):
       self.kind = rqet.find_tag_text(self.root, 'TectonicBoundaryKind')
@@ -411,11 +421,13 @@ class GeneticBoundaryFeature(BaseResqpy):
    feature_name = _alias_for_attribute("title")
    valid_kinds = ('horizon', 'geobody boundary')
 
-   def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None):
+   def __init__(self, parent_model, root_node = None, uuid = None, kind = None, feature_name = None,
+                extra_metadata = None):
       """Initialises a genetic boundary feature (horizon or geobody boundary) organisational object."""
       self.kind = kind
       self.absolute_age = None   # (timestamp, year offset) pair, or None; todo: support setting from args
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def _load_from_xml(self):
       self.kind = rqet.find_tag_text(self.root, 'GeneticBoundaryKind')
@@ -471,9 +483,10 @@ class WellboreFeature(BaseResqpy):
    resqml_type = "WellboreFeature"
    feature_name = _alias_for_attribute("title")
 
-   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None):
+   def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
       """Initialises a wellbore feature organisational object."""
-      super().__init__(model=parent_model, uuid=uuid, title=feature_name, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = feature_name,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -508,7 +521,7 @@ class FaultInterpretation(BaseResqpy):
                 tectonic_boundary_feature = None, domain = 'depth',
                 is_normal = None, is_listric = None,
                 maximum_throw = None, mean_azimuth = None,
-                mean_dip = None):
+                mean_dip = None, extra_metadata = None):
       """Initialises a Fault interpretation organisational object."""
 
       # note: will create a paired TectonicBoundaryFeature object when loading from xml
@@ -532,7 +545,8 @@ class FaultInterpretation(BaseResqpy):
       self.mean_dip = mean_dip
       self.throw_interpretation_list = None  # list of (list of throw kind, (base chrono uuid, top chrono uuid)))
 
-      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    @property
    def feature_uuid(self):
@@ -684,14 +698,15 @@ class EarthModelInterpretation(BaseResqpy):
    valid_domains = ('depth', 'time', 'mixed')
 
    def __init__(self, parent_model, root_node = None, uuid = None, title = None,
-                organization_feature = None, domain = 'depth'):
+                organization_feature = None, domain = 'depth', extra_metadata = None):
       """Initialises an earth model interpretation organisational object."""
       self.domain = domain
       self.organization_feature = organization_feature  # InterpretedFeature RESQML field
       self.feature_root = None if self.organization_feature is None else self.organization_feature.root
       self.has_occurred_during = (None, None)
       if (not title) and organization_feature is not None: title = organization_feature.feature_name
-      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def _load_from_xml(self):
       self.domain = rqet.find_tag_text(self.root, 'Domain')
@@ -771,7 +786,8 @@ class HorizonInterpretation(BaseResqpy):
    def __init__(self, parent_model, root_node = None, uuid = None, title = None,
                 genetic_boundary_feature = None, domain = 'depth',
                 boundary_relation_list = None,
-                sequence_stratigraphy_surface = None):
+                sequence_stratigraphy_surface = None,
+                extra_metadata = None):
       """Initialises a horizon interpretation organisational object."""
 
       # note: will create a paired GeneticBoundaryFeature object when loading from xml (and possibly a Surface object)
@@ -783,7 +799,8 @@ class HorizonInterpretation(BaseResqpy):
       self.has_occurred_during = (None, None)
       self.boundary_relation_list = None if not boundary_relation_list else boundary_relation_list.copy()
       self.sequence_stratigraphy_surface = sequence_stratigraphy_surface
-      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def _load_from_xml(self):
       self.domain = rqet.find_tag_text(self.root, 'Domain')
@@ -884,7 +901,7 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
 
    def __init__(self, parent_model, root_node = None, uuid = None, title = None,
                 genetic_boundary_feature = None, domain = 'depth',
-                boundary_relation_list = None):
+                boundary_relation_list = None, extra_metadata = None):
 
       self.domain = domain
       self.boundary_relation_list = None if not boundary_relation_list else boundary_relation_list.copy()
@@ -892,7 +909,8 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
       self.feature_root = None if self.genetic_boundary_feature is None else self.genetic_boundary_feature.root
       if (not title) and self.genetic_boundary_feature is not None: title = self.genetic_boundary_feature.feature_name
       self.has_occurred_during = (None, None)
-      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def _load_from_xml(self):
       self.domain = rqet.find_tag_text(self.root, 'Domain')
@@ -995,7 +1013,8 @@ class GeobodyInterpretation(BaseResqpy):
 
    def __init__(self, parent_model, root_node = None, uuid = None, title = None,
                 geobody_feature = None, domain = 'depth',
-                composition = None, material_implacement = None, geobody_shape = None):
+                composition = None, material_implacement = None, geobody_shape = None,
+                extra_metadata = None):
       """Initialise a new geobody interpretation object, either from xml or explicitly."""
 
       self.domain = domain
@@ -1005,7 +1024,8 @@ class GeobodyInterpretation(BaseResqpy):
       self.composition = composition
       self.implacement = material_implacement
       self.geobody_shape = geobody_shape
-      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def _load_from_xml(self):
       interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
@@ -1122,7 +1142,7 @@ class WellboreInterpretation(BaseResqpy):
    valid_domains = ('depth', 'time', 'mixed')
 
    def __init__(self, parent_model, root_node = None, uuid = None, title = None, is_drilled = None,
-                wellbore_feature = None, domain = 'depth'):
+                wellbore_feature = None, domain = 'depth', extra_metadata = None):
       """Initialises a wellbore interpretation organisational object."""
 
       # note: will create a paired WellboreFeature object when loading from xml
@@ -1132,7 +1152,8 @@ class WellboreInterpretation(BaseResqpy):
       self.feature_root = None if self.wellbore_feature is None else self.wellbore_feature.root
       if (not title) and self.wellbore_feature is not None: title = self.wellbore_feature.feature_name
       self.domain = domain
-      super().__init__(model=parent_model, uuid=uuid, title=title, root_node=root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
    def _load_from_xml(self):
       root_node = self.root

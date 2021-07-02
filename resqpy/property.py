@@ -3071,7 +3071,8 @@ class Property(BaseResqpy):
          title (str, optional): the citation title to use for the property; ignored if uuid is present
          support_uuid (uuid.UUID, optional): identifies the supporting representation for the property;
             ignored if uuid is present
-         extra_metadata (dict, optional): if present, the dictionary items are added as extra metadata
+         extra_metadata (dict, optional): if present, the dictionary items are added as extra metadata;
+            ignored if uuid is present
 
       returns:
          new resqpy Property object

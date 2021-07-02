@@ -85,6 +85,20 @@ class Polyline(_BasePolyline):
                 if None, wait for further improvements
             uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineRepresentation from which
                 to initialise the resqpy Polyline
+            set_bool (boolean, optional): if True, a new polyline created from coordinates is flagged as
+                a closed polyline (polygon); ignored if uuid or poly_root is not None
+            set_coord (numpy array of shape (..., 3), optional): an ordered set of xyz values used to define
+                a new polyline; ignored if uuid or poly_root is not None
+            set_crs (uuid.UUID, optional): the uuid of a crs to be used when initialising from coordinates;
+                ignored if uuid or poly_root is not None
+            set_crsroot (DEPRECATED): the xml root node for the crs; ignored
+            title (str, optional): the citation title to use for a new polyline;
+                ignored if uuid or poly_root is not None
+            rep_int_root
+            originator (str, optional): the name of the person creating the polyline, defaults to login id;
+                ignored if uuid or poly_root is not None
+            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the polyline;
+                ignored if uuid or poly_root is not None
 
         returns:
             the newly instantiated Polyline object
@@ -96,14 +110,14 @@ class Polyline(_BasePolyline):
         self.isclosed = set_bool
         self.nodepatch = None
         self.crs_uuid = set_crs
-        self.crs_root = set_crsroot
+        self.crs_root = None if set_crs is None else parent_model.root_for_uuid(set_crs)
         self.coordinates = None
         self.centre = None
         self.rep_int_root = rep_int_root # Optional
         super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = poly_root,
                          extra_metadata = extra_metadata)
 
-        if self.root is None and all(i is not None for i in [set_bool, set_coord, set_crs, set_crsroot, title]):
+        if self.root is None and all(i is not None for i in [set_bool, set_coord, set_crs, title]):
             # Using data from a polyline set
             assert set_coord.ndim > 1 and 2 <= set_coord.shape[-1] <= 3
             if rep_int_root is not None:
@@ -456,7 +470,7 @@ class Polyline(_BasePolyline):
         if rep_int_root is None: rep_int_root = self.rep_int_root  # todo: check whether it is legal to have 2 representations for 1 interpretation
 
         return Polyline(self.model, set_bool = self.isclosed, set_coord = spline_coords,
-                        set_crs = self.crs_uuid, set_crsroot = self.crs_root,
+                        set_crs = self.crs_uuid,
                         title = title, rep_int_root = rep_int_root)
 
 
@@ -574,6 +588,14 @@ class PolylineSet(_BasePolyline):
             uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineSetRepresentation object from
                 which to initialise this resqpy PolylineSet
             polylines (optional): list of polyline objects from which to build the polylineset
+            irap_file (str, optional): the name of a file in irap format from which to import the polyline set
+            charisma_file (str, optional): the name of a file in charisma format from which to import the polyline set
+            title (str, optional): the citation title to use for a new polyline set;
+                ignored if uuid or set_root is not None
+            originator (str, optional): the name of the person creating the polyline set, defaults to login id;
+                ignored if uuid or set_root is not None
+            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the polyline set;
+                ignored if uuid or set_root is not None
 
         returns:
             the newly instantiated PolylineSet object
@@ -908,8 +930,8 @@ class PolylineSet(_BasePolyline):
             closed_array: array containing a bool for each polygon in if it is open (False) or closed (True)
             count_perpol: array containing a list of polygon "lengths" for each polygon
             coordinates: array containing coordinates for all the polygons
-            crs_root: root for crs in polylineset
             crs_uuid: crs_uuid for polylineset
+            crs_root: DEPRECATED; ignored
             rep_int_root: represented interpretation root (optional)
 
         returns:
@@ -925,7 +947,6 @@ class PolylineSet(_BasePolyline):
            if closed_node is not None: closed_array[:] = self.get_bool_array(closed_node)
         if coordinates is None: coordinates = self.coordinates
         if crs_uuid is None: crs_uuid = self.crs_uuid
-        if crs_root is None: crs_root = self.crs_root
         if rep_int_root is None: rep_int_root = self.rep_int_root
         polys = []
         count = 0
@@ -941,7 +962,7 @@ class PolylineSet(_BasePolyline):
             count += int(count_perpol[i])
             subtitle = f"{self.title} {i+1}"
             polys.append(Polyline(self.model, poly_root = None, set_bool = isclosed, set_coord = subset,
-                                  set_crs = crs_uuid, set_crsroot = crs_root, title = subtitle,
+                                  set_crs = crs_uuid, title = subtitle,
                                   rep_int_root = rep_int_root))
 
         return polys

@@ -1,6 +1,6 @@
 """surface.py: surface class based on resqml standard."""
 
-version = '25th June 2021'
+version = '2nd July 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -556,7 +556,8 @@ class Surface(_BaseSurface):
       self.boundaries = None       # todo: read up on what this is for and look out for examples
       self.represented_interpretation_root = None
       self.title = title
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator=originator, root_node = surface_root)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = surface_root)
       if self.root is not None:
          pass
       elif point_set is not None:
@@ -1115,7 +1116,7 @@ class PointSet(_BaseSurface):
    def __init__(self, parent_model, point_set_root = None, uuid = None, load_hdf5 = False,
                 points_array = None, crs_uuid = None, polyset = None, polyline = None,
                 random_point_count = None, charisma_file = None, irap_file = None,
-                title = None, originator = None):
+                title = None, originator = None, extra_metadata = None):
       """Creates an empty Point Set object and optionally populates from xml or other source.
 
       arguments:
@@ -1138,7 +1139,13 @@ class PointSet(_BaseSurface):
          random_point_count (int, optional): if present and polyline is present then the number of random
             points to generate within the (closed) polyline in the xy plane, with z set to 0.0
          charisma_file (optional): if present, creates a pointset from a charisma 3d interpretation file
-         irap_file (optional): if present, creates a pointset from an IRAP classicp points format file
+         irap_file (optional): if present, creates a pointset from an IRAP classic points format file
+         title (str, optional): the citation title to use for a new point set;
+            ignored if uuid or point_set_root is not None
+         originator (str, optional): the name of the person creating the point set, defaults to login id;
+            ignored if uuid or point_set_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the point set;
+            ignored if uuid or point_set_root is not None
 
       returns:
          newly created PointSet object
@@ -1483,7 +1490,7 @@ class Mesh(_BaseSurface):
                 origin = None, dxyz_dij = None,
                 z_values = None, z_supporting_mesh_uuid = None,
                 surface_role = 'map', crs_uuid = None,
-                title = None, originator = None):
+                title = None, originator = None, extra_metadata = None):
       """Initialises a Mesh object from xml, or a regular mesh from arguments.
 
       arguments:
@@ -1512,6 +1519,12 @@ class Mesh(_BaseSurface):
             ref&z or reg&z flavour mesh; z_values must also be supplied
          surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
          crs_uuid (uuid.Uuid or string, optional): required if generating a regular mesh, the uuid of the crs
+         title (str, optional): the citation title to use for a new mesh;
+            ignored if uuid or root_node is not None
+         originator (str, optional): the name of the person creating the mesh, defaults to login id;
+            ignored if uuid or root_node is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the mesh;
+            ignored if uuid or root_node is not None
 
       returns:
          the newly created Mesh object
@@ -1549,7 +1562,8 @@ class Mesh(_BaseSurface):
       self.crs_uuid = crs_uuid
       self.represented_interpretation_root = None
 
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = root_node)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = root_node)
 
       self.crs_root = None if self.crs_uuid is None else self.model.root_for_uuid(self.crs_uuid)
 

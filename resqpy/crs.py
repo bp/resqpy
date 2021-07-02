@@ -1,6 +1,6 @@
 """crs.py: RESQML coordinate reference system module."""
 
-version = '1st July 2021'
+version = '2nd July 2021'
 
 import logging
 log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class Crs(BaseResqpy):
                 rotation = 0.0, xy_units = 'm', z_units = 'm',
                 z_inc_down = True, axis_order = 'easting northing',
                 time_units = None, epsg_code = None,
-                title = None, originator = None):
+                title = None, originator = None, extra_metadata = None):
       """Create a new coordinate reference system object.
 
       arguments:
@@ -54,6 +54,12 @@ class Crs(BaseResqpy):
          time_units (str, optional): if present, the time units of the z values (for seismic datasets), in which case the
             z_units argument is irrelevant
          epsg_code (str, optional): if present, the EPSG code of the implicit parent crs
+         title (str, optional): the citation title to use for a new crs;
+            ignored if uuid or crs_root is not None
+         originator (str, optional): the name of the person creating the crs, defaults to login id;
+            ignored if uuid or crs_root is not None
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs;
+            ignored if uuid or crs_root is not None
 
       returns:
          a new resqpy Crs object
@@ -85,7 +91,8 @@ class Crs(BaseResqpy):
       self.rotation_matrix = None
       self.reverse_rotation_matrix = None
 
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator, root_node = crs_root)
+      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
+                       extra_metadata = extra_metadata, root_node = crs_root)
 
       assert self.axis_order in self.valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
 
