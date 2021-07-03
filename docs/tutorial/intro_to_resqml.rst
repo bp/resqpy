@@ -14,11 +14,11 @@ The RESQML standard aims to be:
 
 RESQML is *the* standard for subsurface modelling, gradually being adopted across the industry.
 
-Energistics also defines two other, related, standards: PRODML covers production data and WITSML handles well data.
+Energistics also defines two other, related, standards: PRODML, which covers production data and WITSML, which handles well data.
 
 Current Version
 ^^^^^^^^^^^^^^^
-The current recommended version (as of March 2021) of the RESQML standard is 2.0.1. Version 2 marked a major developmentfrom earlier versions.
+The current recommended version (as of March 2021) of the RESQML standard is 2.0.1. Version 2 marked a major development from earlier versions.
 
 The Structure of a RESQML Model
 -------------------------------
