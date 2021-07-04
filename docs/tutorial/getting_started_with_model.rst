@@ -9,7 +9,7 @@ You will need to have resqpy installed in your python environment, along with it
 
 You will also need an example RESQML dataset (some are available within the resqpy repository). The RESQML dataset will consist of two files, one with extension .epc and the other .h5. This pair of files should have the same name prior to the extension and be located in the same directory (folder). You can use any dataset for this exercise – the detailed output from each step will vary depending on the data.
 
-Note: Example file names shown here and in other resqpy tutorials are for a unix environment. If you are working in a Windows environment, the file paths would be in the corresponding format.
+Note: Example file names shown here and in other resqpy tutorials are for a Unix environment. If you are working in a Windows environment, the file paths would be in the corresponding format.
 
 Importing the **model** module
 ------------------------------
@@ -58,7 +58,7 @@ The ``Model`` class contains four similar methods each of which returns a list o
 * :meth:`resqpy.model.Model.roots`
 * :meth:`resqpy.model.Model.titles`
 
-If applied to a ``Model`` object without any arguments, a full list is returned, ie. with one item per high level object.
+If applied to a ``Model`` object without any arguments, a full list is returned, i.e. with one item per high level object.
 
 Selectively listing high level objects
 --------------------------------------
@@ -75,7 +75,7 @@ The four methods mentioned above have similar lists of optional arguments, some 
 
         model.roots(uuid = '27e11404-231b-11ea-8971-80e650222718')
 
-* ``related_uuid`` (UUID object or string): the list will only contain those high level objects which have a relationship with the object identified by this uuid, eg.:
+* ``related_uuid`` (UUID object or string): the list will only contain those high level objects which have a relationship with the object identified by this uuid, e.g.:
     .. code-block:: python
 
         model.parts(related_uuid = '27e11404-231b-11ea-8971-80e650222718')
@@ -86,7 +86,7 @@ The four methods mentioned above have similar lists of optional arguments, some 
         model.roots(obj_type = 'WellboreTrajectoryRepresentation',
                     extra = {'development_phase': 2, 'planned_use': 'injection'})
 
-* ``title`` (string): the list will only contain high level objects whose citation title matches this string, eg.:
+* ``title`` (string): the list will only contain high level objects whose citation title matches this string, e.g.:
     .. code-block:: python
 
         model.uuids(title = 'WELL_A')
