@@ -7,12 +7,12 @@ material so far in place should be usable.
 This page contains tutorials for programmers wanting to use the
 **resqpy** RESQML application programming interface (API).
 RESQML is the standard format for storing subsurface models. The
-resqpy API is a python library providing classes and functions
+resqpy API is a Python library providing classes and functions
 allowing application code to work with RESQML datasets at a
 high level.
 
 Whilst reading through a tutorial, it is recommended
-that you have a python interpreter (or Jupyter notebook) open
+that you have a Python interpreter (or Jupyter notebook) open
 in another window, so that code snippets can be cut, pasted and
 executed whilst progressing through the material.
 

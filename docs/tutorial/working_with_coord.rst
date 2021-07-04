@@ -51,7 +51,7 @@ or, of course, we could pick a single item out of the list, for example with:
 
 Instantiating a resqpy Crs object
 ---------------------------------
-Many of the RESQML object classes have corresponding resqpy python classes available, and that includes the CRS classes. Note that there is not always a one-to-one correspondence between RESQML and resqpy classes though. (The next tutorial discusses this in more detail.) The resqpy Crs class caters for both the RESQML CRS classes: ``LocalTime3dCrs`` and ``LocalDepth3dCrs``
+Many of the RESQML object classes have corresponding resqpy Python classes available, and that includes the CRS classes. Note that there is not always a one-to-one correspondence between RESQML and resqpy classes though. (The next tutorial discusses this in more detail.) The resqpy Crs class caters for both the RESQML CRS classes: ``LocalTime3dCrs`` and ``LocalDepth3dCrs``
 
 Having found the uuid, we can instantiate a resqpy Crs object:
 
@@ -97,7 +97,7 @@ The S-bend dataset only has one CRS. If it had more, the following Crs methods c
     crs.convert_to(another_crs, xyz)  # returns a new tuple for a single xyz point
     crs.convert_array_to(another_crs, xyz_array)  # converts in situ a numpy float array of shape (..., 3)
 
-The two conversion methods above assume that the xyz data is starting in the space of this ``crs`` and being converted to ``another_crs``. There are an equivalent pair of methods for converting from the other crs (ie. the one passed as an argument), so the following two lines would have exactly the same affect as the two above:
+The two conversion methods above assume that the xyz data is starting in the space of this ``crs`` and being converted to ``another_crs``. There are an equivalent pair of methods for converting from the other crs (ie. the one passed as an argument), so the following two lines would have exactly the same effect as the two above:
 
 .. code-block:: python
 
@@ -118,10 +118,10 @@ RESQML Units of Measure (uom)
 The RESQML standard includes a comprehensive set of data for handling physical units, which is shared with the sister standards PRODML and WITSML. Some components of this data include:
 
 * a comprehensive list of quantity classes, such as volume flow rate
-* the physical dimensionality of each quanitiy class (in terms of Mass, Length, Time etc.), eg. L3/T
-* a reference unit of measure for each quantity class (called the base unit), eg. m3/s
+* the physical dimensionality of each quantity class (in terms of Mass, Length, Time etc.), e.g. L3/T
+* a reference unit of measure for each quantity class (called the base unit), e.g. m3/s
 * a comprehensive list of units of measure
-* unit prefixes, eg. *nano*
+* unit prefixes, e.g. *nano*
 * conversion factors for compatible units of measure to and from the base unit, and for the prefixes
 
 There is also a list of standard *property kinds* of relevance to reservoir modelling, such as *porosity*.

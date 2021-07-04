@@ -51,7 +51,7 @@ Where a RESQML dataset has been constructed from Nexus data using the resqpy imp
 
 Note that arrays are not actually loaded into memory until they are requested with methods such as the one shown above.
 
-Grid property arrays with one value per cell have the shape (nk, nj, ni) – **note the order of the indexing: [k, j, i]**. Also note that the indices for these numpy arrays begin at zero (the python way), rather than 1 which is used by simulators such as Nexus (and is the default in Fortran). So, for an index of a cell in simulator format: (sim_i, sim_j, sim_k), the property value for that cell is found with:
+Grid property arrays with one value per cell have the shape (nk, nj, ni) – **note the order of the indexing: [k, j, i]**. Also note that the indices for these numpy arrays begin at zero (the Python way), rather than 1 which is used by simulators such as Nexus (and is the default in Fortran). So, for an index of a cell in simulator format: (sim_i, sim_j, sim_k), the property value for that cell is found with:
 
 .. code-block:: python
 
@@ -111,7 +111,7 @@ or facet = 'I'  or facet = 'J'  for 'horizontal' permeability arrays.
 
 Here are the facet types and facet values currently used by resqpy:
 
-* facet_type = 'direction': facet = 'I', 'J', 'K', 'IJ', or 'IJK', used for 'permeability rock', 'transmissibility', 'propery multiplier' for transmissibility
+* facet_type = 'direction': facet = 'I', 'J', 'K', 'IJ', or 'IJK', used for 'permeability rock', 'transmissibility', 'property multiplier' for transmissibility
 * facet_type = 'netgross': facet = 'net' or 'gross', sometimes used for property kinds 'rock volume' and 'thickness'
 * facet_type = 'what': facet = 'oil', 'water' or 'gas', used for saturations
 
@@ -146,7 +146,7 @@ Continuous, discrete and categorical properties
 The RESQML standard distinguishes between three classes of property, depending on the type of an individual datum:
 
 * **continuous**: for real (floating point) data
-* **categorical**: for integer data where the set of possible values is limited and a value can be used as an index into a lookup table (eg. facies)
+* **categorical**: for integer data where the set of possible values is limited and a value can be used as an index into a lookup table (e.g. facies)
 * **discrete**: for other integer or boolean data
 
 Both categorical and discrete make use of a numpy array of integers. In terms of the data structures, the difference is that a categorical property also has a reference to a string lookup table. The following example shows how to get at the lookup table. (Note that at present the resqpy code for converting from Nexus vdb to RESQML does not create any lookup tables, so the datasets only contain continuous and discrete properties, not categorical.)
@@ -161,7 +161,7 @@ The lookup table is an object of resqpy class StringLookup (equivalent to RESQML
 .. code-block:: python
     facies_name = lookup_table.get_string(2)
 
-To go in the opposite direction, ie. discover the integer value for a given string, use:
+To go in the opposite direction, i.e. discover the integer value for a given string, use:
 
 .. code-block:: python
     facies_int_for_mouthbar = lookup_table.get_index_for_string('MOUTHBAR')
@@ -173,7 +173,7 @@ If you are not sure what class a property is, the property collection has some m
     pc.continuous_for_part(facies_part)  # returns True if the property is continuous, False for categorical or discrete
     pc.part_is_categorical(facies_part)  # returns True it the property is categorical, False otherwise
 
-Note that the resqpy code tends to treat categorical as a special case of discrete, so some methods have a boolean argument to distinguish between continuous and discrete – in which case the argument should be set to the value for discete data when handling a categorical property.
+Note that the resqpy code tends to treat categorical as a special case of discrete, so some methods have a boolean argument to distinguish between continuous and discrete – in which case the argument should be set to the value for discrete data when handling a categorical property.
 
 Units of measure
 ----------------
@@ -194,7 +194,7 @@ The RESQML standard includes a full (very long) list of allowable units. Here ar
 * pressure: 'kPa', 'bar', 'psi'
 * unitless: 'Euc' (but preferable to use ratio units where they exist, for dimensionless ratios such as the volume ratios above)
 
-The RESQML units definition is shared with the other Energistic standards: PRODML & WITSML. It is very thorough and well thought out. Here we only touch on it in the most minimal way. The full list of units of measure is to be found in the RESQML common schema defition file QuantityClass.xsd, and is also available in json format in the resqpy repository file: resqml/olio/data/properties.json
+The RESQML units definition is shared with the other Energistic standards: PRODML & WITSML. It is very thorough and well thought out. Here we only touch on it in the most minimal way. The full list of units of measure is to be found in the RESQML common schema definition file QuantityClass.xsd, and is also available in json format in the resqpy repository file: resqml/olio/data/properties.json
 
 Discrete and categorical properties do not have a unit of measure.
 
@@ -243,7 +243,7 @@ These UUIDs are not very human-friendly, so the examples don't tend to focus on 
 
 Working with recurrent properties
 ---------------------------------
-The examples above will only uniquely identify a property array if it is a static property and the grid only has property data for a single realisation. To handle recurrent properties (ie. properties that vary over time) or multiple realisations, more is needed...
+The examples above will only uniquely identify a property array if it is a static property and the grid only has property data for a single realisation. To handle recurrent properties (i.e. properties that vary over time) or multiple realisations, more is needed...
 
 Within the property collection, each instance of a recurrent property has a time index associated with it, along with a reference to a time series object which can be used to look up an actual date for a given time index value. If the property collection has come from the import of a single Nexus case, all the time indices will relate to the same time series. The model may additionally contain other time series objects. In particular, when importing from Nexus output, the resqpy code attempts to create 2 time series: one with all the Nexus timesteps and the other limited to the steps where recurrent properties were output which will usually be the one referred to by the property collection.
 
@@ -438,7 +438,7 @@ Beyond these 4D arrays, we could combine some of these higher dimensions to prod
 
 Creating new grid property objects
 ----------------------------------
-The discussion so far has focussed on accessing property arrays from a RESQML dataset – making them available to application code as numpy arrays. At some point though, we might want to store a new property array in the dataset. The resqml.derived_model module has a function for this. Note that all the functions in the derived model module work from and to datasets stored on disc. After calling such a function it is necessary to re-instantiate a Model object in order to pick up on the changes.
+The discussion so far has focused on accessing property arrays from a RESQML dataset – making them available to application code as numpy arrays. At some point though, we might want to store a new property array in the dataset. The resqml.derived_model module has a function for this. Note that all the functions in the derived model module work from and to datasets stored on disc. After calling such a function it is necessary to re-instantiate a Model object in order to pick up on the changes.
 
 To add a property, first create the data as a numpy array. Here, for example, we compute pressure change:
 
@@ -552,7 +552,7 @@ Set this to the realization number if the property is applicable to one realizat
 
 **local_property_kind_uuid**
 
-If the property kind of the array is a 'local' property kind (ie. not specified in the RESQML standard) then the property kind must already have been added (or exist) in the model and this argument is set to its UUID.
+If the property kind of the array is a 'local' property kind (i.e. not specified in the RESQML standard) then the property kind must already have been added (or exist) in the model and this argument is set to its UUID.
 
 **count_per_element**
 

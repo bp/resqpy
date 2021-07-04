@@ -84,12 +84,12 @@ Code Style
 ----------
 
 Please try to write code according to the
-`PEP8 python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
+`PEP8 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
 defines conventions such as variable naming and capitalisation. A consistent
 style makes it much easier for other developers to read and understand your
 code.
 
-Note the existing code base differs from PEP8 in using 3 spaces for indenation
+Note the existing code base differs from PEP8 in using 3 spaces for indentation
 rather than the usual 4. When editing these modules, it is preferable that new
 code has indentation that is consistent with the rest of the module.
 
@@ -106,7 +106,7 @@ is absolutely key to maintaining quality: for example, automated tests enable
 maintainers to check whether anything breaks when new versions of 3rd party
 libraries are released.
 
-As a rule of thumb: if you want your code to still work in 6 month's time,
+As a rule of thumb: if you want your code to still work in 6 months' time,
 ensure it has some unit tests!
 
 Writing tests
@@ -197,7 +197,7 @@ above:
 
 The autoclasstoc extension is used to group some of the most commonly-used methods
 together at the top of the class summary tables. To make a method appear in this list,
-add `:meta common:` to the botton of the method docstring.
+add `:meta common:` to the bottom of the method docstring.
 
 Get in touch
 ------------
