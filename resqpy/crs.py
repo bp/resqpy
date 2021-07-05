@@ -14,7 +14,7 @@ import uuid
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
-from resqpy.model import Model
+import resqpy.model as rq
 from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
@@ -36,7 +36,7 @@ class Crs(BaseResqpy):
                         "southing westing", "northing westing", "westing northing")
 
    def __init__(self,
-                parent_model: 'Model',
+                parent_model: 'rq.Model',
                 crs_root = None,  # deprecated
                 uuid: Optional[uuid.UUID] = None,
                 x_offset: Optional[float] = 0.0,
