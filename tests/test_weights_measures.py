@@ -40,6 +40,12 @@ def test_uom_aliases():
       assert uom in wam.valid_uoms(), f"Bad uom {uom}"
 
 
+def test_aliases_are_unique():
+   n_aliases = sum(map(len, wam.UOM_ALIASES.values()))
+   all_aliases = set.union(*wam.UOM_ALIASES.values())
+   assert n_aliases == len(all_aliases)
+
+
 # ------- Test parsing uoms -------
 
 
