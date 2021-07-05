@@ -7,13 +7,14 @@ log = logging.getLogger(__name__)
 log.debug('crs.py version ' + version)
 
 import warnings
-from typing import Union, Optional
+from typing import Union, Optional, Tuple, List, Dict
 import math as maths
 import numpy as np
 import uuid
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
+import resqpy.model as rq
 from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
@@ -22,7 +23,7 @@ import resqpy.olio.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
-PointType = Union[tuple[float, float, float], list[float, float, float], np.ndarray]
+PointType = Union[Tuple[float, float, float], List[float, float, float], np.ndarray]
 
 class Crs(BaseResqpy):
    """ Coordinate reference system object """
@@ -35,7 +36,7 @@ class Crs(BaseResqpy):
                         "southing westing", "northing westing", "westing northing")
 
    def __init__(self,
-                parent_model: resqpy.model.Model,
+                parent_model: rq.Model,
                 crs_root = None,  # deprecated
                 uuid: Optional[uuid.UUID] = None,
                 x_offset: Optional[float] = 0.0,
@@ -50,7 +51,7 @@ class Crs(BaseResqpy):
                 epsg_code: Optional[str] = None,
                 title: Optional[str] = None,
                 originator: Optional[str] = None,
-                extra_metadata: Optional[dict[str, str]] = None):
+                extra_metadata: Optional[Dict[str, str]] = None):
       """Create a new coordinate reference system object.
 
       arguments:
@@ -153,7 +154,7 @@ class Crs(BaseResqpy):
       return self.axis_order in ["northing easting", "southing westing", "westing northing"] == self.z_inc_down
 
 
-   def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> tuple[float, float, float]:
+   def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
       """Convert a single xyz point from the parent coordinate reference system to this one."""
 
       x, y, z = xyz
@@ -180,7 +181,7 @@ class Crs(BaseResqpy):
          xyz[:] = a
 
 
-   def local_to_global(self, xyz: PointType, global_z_inc_down: bool = True) -> tuple[float, float, float]:
+   def local_to_global(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
       """Convert a single xyz point from this coordinate reference system to the parent one."""
 
       if self.rotated:
@@ -234,7 +235,7 @@ class Crs(BaseResqpy):
       return False
 
 
-   def convert_to(self, other_crs: Crs, xyz: PointType) -> tuple[float, float, float]:
+   def convert_to(self, other_crs: Crs, xyz: PointType) -> Tuple[float, float, float]:
       """Converts a single xyz point from this coordinate reference system to the other.
 
       :meta common:
@@ -268,7 +269,7 @@ class Crs(BaseResqpy):
       return xyz
 
 
-   def convert_from(self, other_crs: Crs, xyz: PointType) -> tuple[float, float, float]:
+   def convert_from(self, other_crs: Crs, xyz: PointType) -> Tuple[float, float, float]:
       """Converts a single xyz point from the other coordinate reference system to this one.
 
       :meta common:
