@@ -68,7 +68,7 @@ def test_volume_conversion():
 def test_flow_rate_conversion():
    assert maths.isclose(wam.convert_flow_rates(1000.0, 'm3/d', 'ft3/d'), 35314.6667, rel_tol = 1.0e-5)
    assert maths.isclose(wam.convert_flow_rates(1000.0, 'm3/d', 'bbl/d'), 1000.0 / 0.158987, rel_tol = 1.0e-4)
-   units = ('m3/d', 'ft3/s', 'bbl/d', 'stb/hr', 'm3/ms', '1000 bbl/d', '1E6 ft3/d')
+   units = ('m3/d', 'ft3/s', 'bbl/d', 'stb/hr', '1000 bbl/d', '1E6 ft3/d')
    for rate in (2100.0, 0.0, -312.45):
       for from_units in units:
          for to_units in units:
