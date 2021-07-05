@@ -47,7 +47,7 @@ class Crs(BaseResqpy):
                 time_units: Optional[str] = None,
                 epsg_code: Optional[str] = None,
                 title: Optional[str] = None,
-                originator; Optional[str] = None,
+                originator: Optional[str] = None,
                 extra_metadata: Optional[dict] = None):
       """Create a new coordinate reference system object.
 
