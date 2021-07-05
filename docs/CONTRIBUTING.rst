@@ -2,7 +2,7 @@ Contributing to resqpy
 ======================
 
 Resqpy is an open source project released under the MIT license. Contributions
-of all forms are most welcomed!
+of all forms are most welcome!
 
 Resqpy was created by Andy Beer.
 
