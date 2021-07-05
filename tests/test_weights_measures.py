@@ -84,6 +84,12 @@ def test_quantities():
    ("ft", "m", 1, 0.3048),
    ("ft", "ft[US]", 1, 0.999998),
 
+   # Fractional units with aliases
+   ("bbl/d", "stb/day", 1, 1),
+   ("mmstb/day", "1E6 bbl/d", 1, 1),
+   ("mmscf/day", "1E6 ft3/d", 1, 1),
+   ("scf/stb", "ft3/bbl", 1, 1),
+
    # Aliases of common units
    ("metres", "m", 1, 1),
    ("meters", "m", 1, 1),

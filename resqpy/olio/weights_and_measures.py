@@ -22,6 +22,7 @@ d_to_s = float(24 * 60 * 60)
 s_to_d = 1.0 / d_to_s
 
 # Mapping from uom to set of common (non-resqml) case-insensitive aliases
+# Nb. No need to write out fractional combinations
 UOM_ALIASES = {
    # Lengths
    'm': {'m', 'metre', 'metres', 'meter', 'meters'},
@@ -50,26 +51,11 @@ UOM_ALIASES = {
    'm3': {'m3', 'sm3'},
    'ft3': {'ft3', 'scf'},
 
-   # Rates
-   # TODO: apply aliases on both parts of a fraction separately
-
-   'bbl/d': {'bbl/d', 'stb/d', 'bbl/day', 'stb/day'},
-   'bbl/h': {'bbl/h', 'stb/h', 'stb/hr'},
-   '1000 bbl/d': {'1000 bbl/d', 'mstb/day', 'mbbl/day', 'mstb/d', 'mbbl/d'},
-   '1E6 bbl/d': {'1E6 bbl/d', 'mmstb/day', 'mmbbl/day', 'mmstb/d', 'mmbbl/d'},
-   '1000 ft3/d': {'1000 ft3/d', 'mscf/day', 'mscf/d'},
-   'ft3/d': {'ft3/d', 'scf/day', 'scf/d'},
-   '1E6 ft3/d': {'1E6 ft3/d', 'mmscf/day', 'mmscf/d'},
-   'm3/d': {'m3/d', 'm3/day', 'sm3/d', 'sm3/day'},
-   '1000 m3/d': {'1000 m3/d', '1000 m3/day'},
-   '1E6 m3/d': {'1E6 m3/d', '1E6 m3/day'},
-
    # Other
-   'ft3/bbl': {'ft3/bbl', 'scf/bbl', 'ft3/stb', 'scf/stb'},
-   '1000 ft3/bbl': {'1000 ft3/bbl', 'mscf/bbl', 'mscf/stb'},
    'gAPI': {'gapi'},
    'psi': {'psi', 'psia'},
    'Euc': {'count'},
+
 }
 # Mapping from alias to valid uom
 UOM_ALIAS_MAP = {alias.casefold(): uom for uom, aliases in UOM_ALIASES.items() for alias in aliases}
@@ -96,18 +82,16 @@ def rq_uom(units, quantity=None):
    if not units:
       raise InvalidUnitError("Must provide non-empty unit")
    
-   uom_list = valid_uoms()
-   ul = units.casefold()
+   uom = _try_parse_unit(units)
 
-   if units in uom_list:
-      uom = units
-   elif ul in CASE_INSENSITIVE_UOMS:
-      uom = ul
-   elif ul in UOM_ALIAS_MAP:
-      uom = UOM_ALIAS_MAP[ul]
-   elif ul in uom_list:
-      uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
-   else:
+   # May be a fraction: match each part against known aliases
+   if uom is None and '/' in units:
+      parts = units.split('/')
+      newpart0 = _try_parse_unit(parts[0])
+      newpart1 = _try_parse_unit(parts[1])
+      uom = _try_parse_unit(f"{newpart0}/{newpart1}")
+
+   if uom is None:
       raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
    
    if quantity is not None:
@@ -368,4 +352,20 @@ def _properties_data():
    return data
 
 
+def _try_parse_unit(units):
+   """Try to match unit against known uoms and aliases, else return None"""
 
+   uom_list = valid_uoms()
+   ul = units.casefold()
+
+   if units in uom_list:
+      uom = units
+   elif ul in CASE_INSENSITIVE_UOMS:
+      uom = ul
+   elif ul in UOM_ALIAS_MAP:
+      uom = UOM_ALIAS_MAP[ul]
+   elif ul in uom_list:
+      uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
+   else:
+      uom = None
+   return uom
