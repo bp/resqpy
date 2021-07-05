@@ -7,8 +7,10 @@ log = logging.getLogger(__name__)
 log.debug('crs.py version ' + version)
 
 import warnings
+from typing import Union, Optional
 import math as maths
 import numpy as np
+import uuid
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
@@ -20,7 +22,7 @@ import resqpy.olio.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
-PointType = Union[tuple[float, float, float], list[float, float, float], numpy.ndarray]
+PointType = Union[tuple[float, float, float], list[float, float, float], np.ndarray]
 
 class Crs(BaseResqpy):
    """ Coordinate reference system object """
@@ -48,7 +50,7 @@ class Crs(BaseResqpy):
                 epsg_code: Optional[str] = None,
                 title: Optional[str] = None,
                 originator: Optional[str] = None,
-                extra_metadata: Optional[dict] = None):
+                extra_metadata: Optional[dict[str, str]] = None):
       """Create a new coordinate reference system object.
 
       arguments:
@@ -151,7 +153,7 @@ class Crs(BaseResqpy):
       return self.axis_order in ["northing easting", "southing westing", "westing northing"] == self.z_inc_down
 
 
-   def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
+   def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> tuple[float, float, float]:
       """Convert a single xyz point from the parent coordinate reference system to this one."""
 
       x, y, z = xyz
@@ -164,7 +166,7 @@ class Crs(BaseResqpy):
       return (x, y, z)
 
 
-   def global_to_local_array(self, xyz: numpy.ndarray, global_z_inc_down: bool = True):
+   def global_to_local_array(self, xyz: np.ndarray, global_z_inc_down: bool = True):
       """Convert in situ a numpy array of xyz points from the parent coordinate reference system to this one."""
 
       if self.x_offset != 0.0: xyz[..., 0] -= self.x_offset
@@ -178,7 +180,7 @@ class Crs(BaseResqpy):
          xyz[:] = a
 
 
-   def local_to_global(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
+   def local_to_global(self, xyz: PointType, global_z_inc_down: bool = True) -> tuple[float, float, float]:
       """Convert a single xyz point from this coordinate reference system to the parent one."""
 
       if self.rotated:
@@ -192,7 +194,7 @@ class Crs(BaseResqpy):
       return (x, y, z)
 
 
-   def local_to_global_array(self, xyz: numpy.ndarray, global_z_inc_down: bool = True):
+   def local_to_global_array(self, xyz: np.ndarray, global_z_inc_down: bool = True):
       """Convert in situ a numpy array of xyz points from this coordinate reference system to the parent one."""
 
       if self.rotated:
@@ -232,7 +234,7 @@ class Crs(BaseResqpy):
       return False
 
 
-   def convert_to(self, other_crs: Crs, xyz: PointType) -> Tuple[float, float, float]:
+   def convert_to(self, other_crs: Crs, xyz: PointType) -> tuple[float, float, float]:
       """Converts a single xyz point from this coordinate reference system to the other.
 
       :meta common:
@@ -248,7 +250,7 @@ class Crs(BaseResqpy):
       return tuple(xyz)
 
 
-   def convert_array_to(self, other_crs: Crs, xyz: numpy.ndarray):
+   def convert_array_to(self, other_crs: Crs, xyz: np.ndarray):
       """Converts in situ a numpy array of xyz points from this coordinate reference system to the other.
 
       :meta common:
@@ -266,7 +268,7 @@ class Crs(BaseResqpy):
       return xyz
 
 
-   def convert_from(self, other_crs: Crs, xyz: PointType) -> Tuple[float, float, float]:
+   def convert_from(self, other_crs: Crs, xyz: PointType) -> tuple[float, float, float]:
       """Converts a single xyz point from the other coordinate reference system to this one.
 
       :meta common:
@@ -282,7 +284,7 @@ class Crs(BaseResqpy):
       return tuple(xyz)
 
 
-   def convert_array_from(self, other_crs: Crs, xyz: numpy.ndarray):
+   def convert_array_from(self, other_crs: Crs, xyz: np.ndarray):
       """Converts in situ a numpy array of xyz points from the other coordinate reference system to this one.
 
       :meta common:
