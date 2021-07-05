@@ -109,7 +109,7 @@ The return list will not be in any particular order unless a further argument is
 
 Finding a single high level object
 ----------------------------------
-Each of the above four methods have a corresponding method which can be used if it is expected that at most one high level object will meet the criteria:
+Each of the above four methods has a corresponding method which can be used if it is expected that at most one high level object will meet the criteria:
 
 * :meth:`resqpy.model.Model.uuid`
 * :meth:`resqpy.model.Model.part`
