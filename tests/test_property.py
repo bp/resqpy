@@ -89,32 +89,31 @@ def test_uom_aliases():
    for uom, aliases in bwam.ALIASES.items():
       assert uom in bwam.valid_uoms(), f"Bad uom {uom}"
       for alias in aliases:
-         assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
+         if alias != uom:
+            assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
 
    for alias, uom in bwam.ALIAS_MAP.items():
       assert uom in bwam.valid_uoms(), f"Bad uom {uom}"
-      assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
+      if alias != uom:
+         assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
 
-@pytest.mark.parametrize("case_sensitive, input_uom, expected_uom", [
-   (False, 'gapi', 'gAPI'),
-   (True, 'gapi', 'Euc'),
-   (False, 'm', 'm'),
-   (False, 'M', 'm'),
-   (True, 'foobar', 'Euc'),
-   (True, '', 'Euc'),
-   (False, 'gal[UK]/mi', 'gal[UK]/mi'),
-   (False, 'GAL[UK]/MI', 'gal[UK]/mi'),
-   (False, None, 'Euc'),
-   (True, "0.001 gal[US]/gal[US]", "0.001 gal[US]/gal[US]"),
+
+@pytest.mark.parametrize("input_uom, expected_uom", [
+   ('gapi', 'gAPI'),
+   ('m', 'm'),
+   ('M', 'm'),
+   ('gal[UK]/mi', 'gal[UK]/mi'),
+   ("0.001 gal[US]/gal[US]", "0.001 gal[US]/gal[US]"),
 ])
-def test_uom_from_string(case_sensitive, input_uom, expected_uom):
-   validated_uom = rqp.validate_uom_from_string(input_uom, case_sensitive=case_sensitive)
+def test_uom_from_string(input_uom, expected_uom):
+   validated_uom = bwam.rq_uom(input_uom)
    assert expected_uom == validated_uom
 
 
 # ---- Test property conversions -------
 
 @pytest.mark.parametrize("unit_from, unit_to, value, expected", [
+   # Straightforward conversions
    ("m", "m", 1, 1),
    ("m", "km", 1, 0.001),
    ("ft", "m", 1, 0.3048),
@@ -130,11 +129,12 @@ def test_uom_from_string(case_sensitive, input_uom, expected_uom):
    ("%", "v/v", 1, 0.01),
    ("pu", "v/v", 1, 0.01),
    ("m3/m3", "%", 1, 100),
+   ("D", "ft2", 10, 1.062315e-10),
 ])
 @pytest.mark.filterwarnings("ignore:Assuming base units")
 def test_unit_conversion(unit_from, unit_to, value, expected):
    result = bwam.convert(value, unit_from, unit_to)
-   assert maths.isclose(result, expected)
+   assert maths.isclose(result, expected, rel_tol=1e-4)
 
 
 def test_convert_array():

@@ -21,29 +21,40 @@ kPa_to_psi = 1.0 / psi_to_kPa
 d_to_s = float(24 * 60 * 60)
 s_to_d = 1.0 / d_to_s
 
-# Mapping from uom to set of common (non-resqml) aliases
+# Mapping from uom to set of common (non-resqml) case-insensitive aliases
 ALIASES = {
-   'm': {'metre', 'metres', 'meter', 'meters'},
-   'ft': {'foot', 'feet', 'FT'},
+   'm': {'m', 'metre', 'metres', 'meter', 'meters'},
+   'ft': {'ft', 'foot', 'feet'},
    'd': {'day', 'days'},
-   '%': {'pu', 'p.u.'},
-   'm3/m3': {'v/v', 'V/V'},
-   'g/cm3': {'g/cc'},
+   '%': {'%', 'pu', 'p.u.'},
+   'm3/m3': {'m3/m3', 'v/v'},
+   'g/cm3': {'g/cm3', 'g/cc'},
+   'gAPI': {'gapi'},
 }
-# Mapping from invalid alias to valid uom
-ALIAS_MAP = {alias: uom for uom, aliases in ALIASES.items() for alias in aliases}
+# Mapping from alias to valid uom
+ALIAS_MAP = {alias.casefold(): uom for uom, aliases in ALIASES.items() for alias in aliases}
 
 
 @lru_cache(None)
 def rq_uom(units):
-   """Returns RESQML uom string equivalent to units, or 'Euc' if not determined."""
+   """Returns RESQML uom string equivalent to units
+   
+   Args:
+      units (str): unit to coerce
+
+   Returns:
+      str: unit of measure
+
+   Raises:
+      InvalidUnitError: if units cannot be coerced into RESQML units
+   """
 
    # Valid uoms
    uom_list = valid_uoms()
    if units in uom_list: return units
 
    # Common alises
-   if units in ALIAS_MAP: return ALIAS_MAP[units]
+   if units.casefold() in ALIAS_MAP: return ALIAS_MAP[units.casefold()]
 
    # Other special cases
    if not isinstance(units, str): return 'Euc'
@@ -79,8 +90,7 @@ def rq_uom(units):
    if ul == 'count': return 'Euc'
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
 
-   # TODO: raise an InvalidUnitError
-   return 'Euc'
+   raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
 
 
 def convert(x, unit_from, unit_to):
@@ -134,13 +144,6 @@ def valid_uoms():
    """Return set of valid uoms"""
 
    return set(_properties_data()['units'].keys())
-
-
-@lru_cache(None)
-def valid_uoms_caseless_mapping():
-   """Return dict mapping from caseless uom to actual uom"""
-
-   return {u.casefold(): u for u in valid_uoms()}
 
 
 @lru_cache(None)
