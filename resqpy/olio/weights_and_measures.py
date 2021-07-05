@@ -212,24 +212,10 @@ def rq_time_unit(units):
 def convert_times(a, from_units, to_units, invert = False):
    """Converts values in numpy array (or a scalar) from one time unit to another, in situ if array."""
 
-   # TODO: check RESQML standard definition of length of day, week, year
-   valid_units = ('d', 's', 'h', 'ms', 'min')
-   from_units = rq_time_unit(from_units)
-   to_units = rq_time_unit(to_units)
-   if from_units == to_units: return a
-   assert from_units in valid_units and to_units in valid_units
-   factor = 1.0
-   if from_units == 's': factor = s_to_d
-   elif from_units == 'h': factor = 1.0 / 24.0
-   elif from_units == 'ms': factor = 0.001 * s_to_d
-   elif from_units == 'min': factor = 60.0 * s_to_d
-   if to_units == 's': factor *= d_to_s
-   elif to_units == 'h': factor *= 24.0
-   elif to_units == 'ms': factor *= 1000.0 * d_to_s
-   elif to_units == 'min': factor *= d_to_s / 60.0
-   if invert: factor = 1.0 / factor
-   a *= factor
-   return a
+   if invert:
+      from_units, to_units = to_units, from_units
+
+   return convert(a, from_units, to_units, quantity='time', inplace=True)
 
 
 def convert_lengths(a, from_units, to_units):
