@@ -62,6 +62,18 @@ def test_bad_unit_raises_error(input_uom):
       wam.rq_uom(input_uom)
 
 
+# ----- Test quantities -------
+
+def test_quantities():
+   
+   quantities = wam.valid_quantities()
+   assert len(quantities) > 10
+   for q in quantities:
+      uoms = wam.valid_uoms(quantity=q)
+      assert len(uoms) > 0
+      for uom in uoms:
+         assert uom in wam.valid_uoms(), f"Bad uom {uom}"
+
 
 # ---- Test unit conversions -------
 
