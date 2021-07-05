@@ -119,12 +119,19 @@ def test_uom_from_string(case_sensitive, input_uom, expected_uom):
    ("m", "km", 1, 0.001),
    ("ft", "m", 1, 0.3048),
    ("ft", "ft[US]", 1, 0.999998),
-   ("pu", "v/v", 1, 0.01),
-   ("%", "v/v", 1, 0.01),
+
+   # Aliases of common units
+   ("metres", "m", 1, 1),
+   ("meters", "m", 1, 1),
    ("pu", "%", 1, 1),
    ("p.u.", "%", 1, 1),
+
+   # Different base units!
+   ("%", "v/v", 1, 0.01),
+   ("pu", "v/v", 1, 0.01),
+   ("m3/m3", "%", 1, 100),
 ])
-@pytest.mark.filterwarnings("ignore:Converting between units with same dimension but different base units")
+@pytest.mark.filterwarnings("ignore:Assuming base units")
 def test_unit_conversion(unit_from, unit_to, value, expected):
    result = bwam.convert(value, unit_from, unit_to)
    assert maths.isclose(result, expected)

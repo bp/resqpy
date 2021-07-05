@@ -120,7 +120,7 @@ def convert(x, unit_from, unit_to):
          )
       else:
          warnings.warn(
-            f"Converting between units with same dimension but different base units:"
+            f"Assuming base units {base1} and {base2} are equivalent as they have the same dimensions:"
             f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
             f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'."
          )
