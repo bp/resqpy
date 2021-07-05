@@ -4215,7 +4215,7 @@ class WellLogCollection(PropertyCollection):
 
       super().__init__(support=frame, property_set_root=property_set_root, realization=realization)
 
-   def add_log(self, title, data, unit, discrete=False, case_sensitive_units=False, realization=None, write=True):
+   def add_log(self, title, data, unit, discrete=False, realization=None, write=True):
       """Add a well log to the collection, and optionally save to HDF / XML
       
       Note:
@@ -4230,7 +4230,6 @@ class WellLogCollection(PropertyCollection):
          data (array-like): log data to write. Must have same length as frame MDs
          unit (str): Unit of measure
          discrete (bool): by default False, i.e. continuous
-         case_sensitive_units (bool): If True, consider case when parsing units.
          realization (int): If given, assign data to a realisation.
          write (bool): If True, write XML and HDF5.
 
@@ -4248,7 +4247,7 @@ class WellLogCollection(PropertyCollection):
 
       # Infer valid RESQML properties
       # TODO: Store orginal unit somewhere if it's not a valid RESQML unit
-      uom = validate_uom_from_string(unit, case_sensitive=case_sensitive_units)
+      uom = bwam.rq_uom(unit)
       property_kind, facet_type, facet = infer_property_kind(title, uom)
 
       # Add to the "import list"
@@ -4867,42 +4866,12 @@ def property_kind_and_facet_from_keyword(keyword):
    return (property_kind, facet_type, facet)
 
 
-@lru_cache(maxsize=32)
-def validate_uom_from_string(input_unit, case_sensitive=True):
-   """Returns a valid RESQML unit from a string
-
-   If no matching valid uom is found, return 'Euc'.
-   """
-   default = 'Euc'
-   if not input_unit:
-      return default
-
-   # Get set of all valid uoms
-   valid_uoms = set(bwam.properties_data()['uoms'])
-
-   if case_sensitive:
-      if input_unit in valid_uoms:
-         return input_unit
-      else:
-         return default
-
-   else:
-      # Dict mapping from lowercase unit to real unit
-      unit_dict = {u.casefold(): u for u in valid_uoms}
-      input_unit_lowercase = input_unit.casefold()
-
-      if input_unit_lowercase in unit_dict.keys():
-         return unit_dict[input_unit_lowercase]
-      else:
-         return default
-
-
 def infer_property_kind(name, unit):
    """ Guess a valid property kind """
 
    # Currently unit is ignored
 
-   valid_kinds = bwam.properties_data()['property_kinds']
+   valid_kinds = bwam.valid_property_kinds()
 
    if name in valid_kinds:
       kind = name

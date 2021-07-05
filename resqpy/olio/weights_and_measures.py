@@ -2,11 +2,10 @@
 
 from pathlib import Path
 import json
+import warnings
 from functools import lru_cache
+from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
-# Bifrost weights and measures module
-# Temporary version based on pagoda code
-# todo: Replace with RESQML uom based version at a later date
 
 version = '17th June 2021'
 
@@ -22,11 +21,42 @@ kPa_to_psi = 1.0 / psi_to_kPa
 d_to_s = float(24 * 60 * 60)
 s_to_d = 1.0 / d_to_s
 
+# Mapping from uom to set of common (non-resqml) case-insensitive aliases
+ALIASES = {
+   'm': {'m', 'metre', 'metres', 'meter', 'meters'},
+   'ft': {'ft', 'foot', 'feet'},
+   'd': {'day', 'days'},
+   '%': {'%', 'pu', 'p.u.'},
+   'm3/m3': {'m3/m3', 'v/v'},
+   'g/cm3': {'g/cm3', 'g/cc'},
+   'gAPI': {'gapi'},
+}
+# Mapping from alias to valid uom
+ALIAS_MAP = {alias.casefold(): uom for uom, aliases in ALIASES.items() for alias in aliases}
 
 
+@lru_cache(None)
 def rq_uom(units):
-   """Returns RESQML uom string equivalent to units, or 'Euc' if not determined."""
+   """Returns RESQML uom string equivalent to units
+   
+   Args:
+      units (str): unit to coerce
 
+   Returns:
+      str: unit of measure
+
+   Raises:
+      InvalidUnitError: if units cannot be coerced into RESQML units
+   """
+
+   # Valid uoms
+   uom_list = valid_uoms()
+   if units in uom_list: return units
+
+   # Common alises
+   if units.casefold() in ALIAS_MAP: return ALIAS_MAP[units.casefold()]
+
+   # Other special cases
    if not isinstance(units, str): return 'Euc'
    if units == '' or units == 'Euc': return 'Euc'
    ul = units.lower()
@@ -58,27 +88,75 @@ def rq_uom(units):
    if ul in ['1E6 m3/d', '1E6 m3/day']: return '1E6 m3/d'
    if units in ['mD.m', 'mD.ft']: return units
    if ul == 'count': return 'Euc'
-   uom_list = properties_data()['uoms']
-   if units in uom_list: return units
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
-   return 'Euc'
+
+   raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
+
+
+def convert(x, unit_from, unit_to):
+   """Convert value between two compatible units
+   
+   Args:
+      x (numeric or np.array): value(s) to convert
+      unit_from (str): resqml uom
+      unit_to (str): resqml uom
+
+   Returns:
+      Converted value(s)
+
+   Raises:
+      InvalidUnitError: if units cannot be coerced into RESQML units
+      IncompatibleUnitsError: if units do not have compatible base units
+   """
+   # TODO: robust handling of errors. At present, bad units are treated as "EUC", and will fail silently.
+
+   # conversion data assume the formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
+   # Backwards formula: x=(A-Cy)/(Dy-B)
+   # All current units have D==0
+
+   uom1, uom2 = rq_uom(unit_from), rq_uom(unit_to)
+   if uom1 == uom2:
+      return x
+   
+   base1, dim1, (A1, B1, C1, D1) = get_conversion_factors(uom1)
+   base2, dim2, (A2, B2, C2, D2) = get_conversion_factors(uom2)
+
+   if base1 != base2:
+      if dim1 != dim2:
+         raise IncompatibleUnitsError(
+            f"Cannot convert from '{unit_from}' to '{unit_to}':"
+            f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+            f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'."
+         )
+      else:
+         warnings.warn(
+            f"Assuming base units {base1} and {base2} are equivalent as they have the same dimensions:"
+            f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+            f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'."
+         )
+
+   y = (A1 + (B1*x)) / (C1 + (D1*x))
+   return (A2 - (C2*y)) / ((D2*y) - B2)
+
+
+@lru_cache(None)
+def valid_uoms():
+   """Return set of valid uoms"""
+
+   return set(_properties_data()['units'].keys())
+
+
+@lru_cache(None)
+def valid_property_kinds():
+   """Return set of valid property kinds"""
+   
+   return set(_properties_data()['property_kinds'].keys())
 
 
 def rq_uom_list(units_list):
    """Returns a list of RESQML uom equivalents for units in list."""
 
-   rq_list = []
-   for u in units_list: rq_list.append(rq_uom(u))
-   return rq_list
-
-
-def p_length_unit(units):
-   """Returns length units string as expected by pagoda weights and measures module."""
-
-   # NB: other length units are supported by resqml
-   if units.lower() in ['m', 'metre', 'metres']: return 'metres'
-   if units.lower() in ['ft', 'foot', 'feet', 'ft[us]']: return 'feet'
-   assert(False)  # unrecognised length units
+   return [rq_uom(u) for u in units_list]
 
 
 def rq_length_unit(units):
@@ -88,20 +166,6 @@ def rq_length_unit(units):
    if units.lower() in ['m', 'metre', 'metres']: return 'm'
    if units.lower() in ['ft', 'foot', 'feet', 'ft[us]']: return 'ft'  # NB. treating different foot sizes as identical
    raise ValueError(f'unrecognised length units {units}')
-
-
-def p_time_unit(units):
-   """Returns human readable version of time units string."""
-
-   #  NB: other time units are supported by resqml
-   if units.lower() in ['d', 'day', 'days']: return 'days'
-   if units.lower() in ['s', 'sec', 'secs', 'second', 'seconds']: return 'seconds'
-   if units.lower() in ['ms', 'msec', 'millisecs', 'millisecond', 'milliseconds']: return 'milliseconds'
-   if units.lower() in ['min', 'mins', 'minute', 'minutes']: return 'minutes'
-   if units.lower() in ['h', 'hr', 'hour', 'hours']: return 'hours'
-   if units.lower() in ['wk', 'week', 'weeks']: return 'weeks'
-   if units.lower() in ['a', 'yr', 'year', 'years']: return 'years'
-   assert(False)  # unrecognised time units
 
 
 def rq_time_unit(units):
@@ -275,16 +339,56 @@ def convert_flow_rates(a, from_units, to_units):
    return a
 
 
+@lru_cache(None)
+def get_conversion_factors(uom):
+   """Return base unit and conversion factors (A, B, C, D) for a given uom.
+   
+   The formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
 
-@lru_cache(maxsize=None)
-def properties_data():
-   """ Return valid resqml uoms and property kinds.
+   Returns:
+      3-tuple of (base_unit, dimension, factors). Factors is a 4-tuple of conversion factors
 
-   Returns a dict with keys:
-   - "uoms" : list of valid units of measure
-   - "property_kinds" : dict mapping valid property kinds to their description
+   Raises:
+      ValueError if either uom is not a valid resqml uom
+   """
+   if uom not in valid_uoms():
+      raise ValueError(f"{uom} is not a valid uom")
+   uoms_data = _properties_data()["units"][uom]
+
+   dimension = uoms_data["dimension"]
+   try:
+      a, b, c, d = uoms_data["A"], uoms_data["B"], uoms_data["C"], uoms_data["D"]
+      base_unit = uoms_data["baseUnit"]
+   except KeyError:  # Base units do not have factors defined
+      a, b, c, d = 0, 1, 1, 0
+      base_unit = uom
+   return base_unit, dimension, (a, b, c, d)
+
+
+# Private functions
+
+
+@lru_cache(None)
+def _properties_data():
+   """ Return a data structure that represents resqml unit system.
+
+   The dict is loaded directly from a JSON file which is bundled with resqpy.
+   The unit system is represented as a dict with the following keys:
+
+   - dimensions
+   - quantities
+   - units
+   - prefixes
+   - property_kinds
+
+   Returns:
+      dict: resqml unit system
+      
    """
    json_path = Path(__file__).parent / 'data' / 'properties.json'
    with open(json_path) as f:
       data = json.load(f)
    return data
+
+
+
