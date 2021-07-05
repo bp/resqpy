@@ -3,8 +3,6 @@ Grid Properties
 
 This tutorial is about working with RESQML grid property arrays. However, much of what is presented here is also applicable to property data attached to other classes of objects, for example well logs. Some of the notes refer to the Nexus simulator as resqpy includes import and export functions for working with Nexus. Similar considerations would apply to other simulators, though the import and export functions would need to be developed separately.
 
-The material in this tutorial is closely based on a Bifröst Labs developers' notebook: notebooks_dev/tutorials/resqml_property_snippets.ipynb
-
 You should edit the file paths in the examples to point to your own resqml dataset.
 
 Quick start for getting at property arrays in a RESQML dataset
@@ -15,7 +13,7 @@ The first step is always to open the dataset as a resqpy Model object:
 
 .. code-block:: python
 
-    epc_path = '/tccsun/scratch/beaiwd/sdaq_2/sdaq_2.epc'  # an existing RESQML dataset
+    epc_path = '/sd/sdaq_2.epc'  # an existing RESQML dataset
     import resqpy.model as rq
     model = rq.Model(epc_path)
 
@@ -438,7 +436,7 @@ Beyond these 4D arrays, we could combine some of these higher dimensions to prod
 
 Creating new grid property objects
 ----------------------------------
-The discussion so far has focused on accessing property arrays from a RESQML dataset – making them available to application code as numpy arrays. At some point though, we might want to store a new property array in the dataset. The resqml.derived_model module has a function for this. Note that all the functions in the derived model module work from and to datasets stored on disc. After calling such a function it is necessary to re-instantiate a Model object in order to pick up on the changes.
+The discussion so far has focussed on accessing property arrays from a RESQML dataset – making them available to application code as numpy arrays. At some point though, we might want to store a new property array in the dataset. The resqml.derived_model module has a function for this. Note that all the functions in the derived model module work from and to datasets stored on disc. After calling such a function it is necessary to re-instantiate a Model object in order to pick up on the changes.
 
 To add a property, first create the data as a numpy array. Here, for example, we compute pressure change:
 

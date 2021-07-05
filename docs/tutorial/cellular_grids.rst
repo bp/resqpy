@@ -1,8 +1,6 @@
 Cellular Grid Basics
 ====================
 
-This page is under construction
-
 This tutorial page introduces some basic concepts and methods for working with cellular grids in resqpy. Cellular grids are the most complex of the RESQML object classes and further material will be presented in later tutorials. This page does not cover RESQML 2D grids, for which resqpy uses the term mesh.
 
 RESQML cellular grid classes
@@ -43,7 +41,7 @@ The RESQML schema definition uses abstract classes to allow some conceptual obje
 
 Note that the implication of the IJK grid concept is that cells, for the most part, share faces with their logical neighbours in the three logical dimensions of I, J & K even in the case of an explicitly defined geometry. For this reason, the storage of corner point locations is such that there is no duplication of data where a corner point is shared between multiple cells. When faces and corner points are not shared, for example due to faulting, data structures in the RESQML schema can represent this and these situations are discussed in later paragraphs.
 
-At present, resqpy only handles explicitly defined grid geometries. The resqpy RegularGrid class can be used to construct grids with regular geometry but at present this generates an explicit corner point representation for persistent storage.
+The resqpy Grid class handles explicitly defined grid geometries. The RegularGrid class can be used to construct unfaulted grids with regular geometry, to be stored either in a compact form or expanded to an explicit corner point representation for persistent storage.
 
 Radial or cartesian geometry
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -130,14 +128,14 @@ Of the many methods provided by the Grid class, the following are the most commo
 
 A couple more methods are needed when writing a Grid object:
 
-* write_hdf5_from_caches()
+* write_hdf5()
 * create_xml()
 
 There are several other methods in the Grid class, and many of those above can be used in more than one way. The olio.grid_functions module contains some higher level functions for specialist grid operations and the derived_model module contains many functions for modifying grid geometries.
 
 Reading a Grid object
 ---------------------
-In this tutorial the examples refer to the S-bend dataset and assume that the .epc and .h5 files have already been generated (see earlier tutorial).
+In this tutorial the examples refer to the S-bend dataset.
 
 First open a Model object in the usual way:
 
@@ -165,3 +163,42 @@ Alternatively, the initialiser for the Grid class can be called directly with so
 
     grid_uuid = model.uuid(obj_type = 'IjkGridRepresentation', multiple_handling = 'newest')
     grid = grr.Grid(model, uuid = grid_uuid)
+
+Working with Regular Grids
+--------------------------
+The resqpy RegularGrid class inherits from the Grid class and can be used to create an unfaulted regular block grid. Such a regular grid can either be treated as a full grid or stored in a compact form and re-opened as a RegularGrid object. Note that opening an existing RegularGrid object will only work if the object was created using resqpy, as it relies on an item of extra metadata. Grids from other sources should be read using the Grid class directly.
+
+To create a new regular grid where the IJK axes align with the xyz axes, use the following form:
+
+.. code-block:: python
+
+    new_grid = grr.RegularGrid(model, extent_kji = (10, 20, 25), dxyz = (100.0, 125.0, 10.0), 
+                               crs_uuid = model.uuid(obj_type = 'Local3dDepthCrs'), title = 'BLOCK GRID')
+
+If you intend to treat the new grid as a standard grid, then use the optional *set_points_cached* argument. This causes an explicit geometry to be generated for the grid:
+
+.. code-block:: python
+
+    new_grid = grr.RegularGrid(model, extent_kji = (10, 20, 25), dxyz = (100.0, 125.0, 10.0), 
+                               crs_uuid = model.uuid(obj_type = 'LocalDepth3dCrs'), title = 'BLOCK GRID',
+                               set_points_cached = True)
+
+The same effect can be achieved after instantiation by calling the *make_regular_points_cached()* method.
+
+The RegularGrid class includes redefinitions of several of the Grid methods, such as *volume()*, where the regularity leads to significant speed increases compared with the general case code.
+
+When converting a resqpy RegularGrid object to a RESQ	ML object, it can be stored with or without an explicit grid. If storing without an explicit grid, skip the usual call to write_hdf5(), and use the default argument settings for the create_xml() method:
+
+.. code-block:: python
+
+    new_grid.create_xml()
+
+If, on the other hand, you want to treat the new grid as a standard Grid object, make sure that the geometry has been set up (if in doubt call the *make_regular_points_cached()* method), then call the write_hdf5() method as usual, and modify some of the arguments to create_xml():
+
+.. code-block:: python
+
+    new_grid.make_regular_points_cached()
+    new_grid.write_hdf5()
+    new_grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+
+If you want the constant cell length property arrays to be generated anyway, leave the *add_cell_length_properties* argument at its default value of True.

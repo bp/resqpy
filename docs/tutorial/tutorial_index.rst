@@ -26,4 +26,5 @@ executed whilst progressing through the material.
    high_level_objects
    cellular_grids
    grid_properties
+   single_property
    creating_test
