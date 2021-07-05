@@ -30,6 +30,10 @@ ALIASES = {
    'm3/m3': {'m3/m3', 'v/v'},
    'g/cm3': {'g/cm3', 'g/cc'},
    'gAPI': {'gapi'},
+   '1E6 m3/d': {'1E6 m3/d', '1E6 m3/day'},
+   'psi': {'psi', 'psia'},
+   'bbl': {'bbl', 'stb'},
+   'Euc': {'count'},
 }
 # Mapping from alias to valid uom
 ALIAS_MAP = {alias.casefold(): uom for uom, aliases in ALIASES.items() for alias in aliases}
@@ -48,7 +52,9 @@ def rq_uom(units):
    Raises:
       InvalidUnitError: if units cannot be coerced into RESQML units
    """
-
+   if not units:
+      raise InvalidUnitError("Must provide non-empty unit")
+   
    # Valid uoms
    uom_list = valid_uoms()
    if units in uom_list: return units
@@ -57,17 +63,9 @@ def rq_uom(units):
    if units.casefold() in ALIAS_MAP: return ALIAS_MAP[units.casefold()]
 
    # Other special cases
-   if not isinstance(units, str): return 'Euc'
-   if units == '' or units == 'Euc': return 'Euc'
    ul = units.lower()
    if ul in ['m', 'ft', 'm3', 'ft3', 'm3/m3', 'ft3/ft3', 'bbl', 'bar', 'psi', 'm3/d', 'bbl/d']: return ul
-   if ul in ['m', 'metre', 'metres', 'meter']: return 'm'
-   if ul in ['ft', 'foot', 'feet', 'ft[us]']: return 'ft'  # NB. treating different foot sizes as identical
-   if units == 'd' or ul in ['days', 'day']: return 'd'
-   if units in ['kPa', 'Pa', 'mD']: return units
-   if ul in ['psi', 'psia']: return 'psi'
    if ul in ['1000 bbl', 'mstb', 'mbbl']: return '1000 bbl'
-   if ul in ['bbl', 'stb']: return 'bbl'
    if ul in ['1E6 bbl', 'mmstb', 'mmbbl']: return '1E6 bbl'
    if ul in ['1E6 ft3', 'mmscf']: return '1E6 ft3'
    if ul in ['1000 ft3', 'mscf']: return '1000 ft3'
@@ -82,12 +80,9 @@ def rq_uom(units):
    if ul in ['1000 ft3/bbl', 'mscf/bbl', 'mscf/stb']: return '1000 ft3/bbl'
    if ul in ['m3', 'sm3']: return 'm3'
    if ul in ['m3/d', 'm3/day', 'sm3/d', 'sm3/day']: return 'm3/d'
-   if ul == '1000 m3': return '1000 m3'
    if ul in ['1000 m3/d', '1000 m3/day']: return '1000 m3/d'
-   if ul == '1E6 m3': return '1E6 m3'
    if ul in ['1E6 m3/d', '1E6 m3/day']: return '1E6 m3/d'
-   if units in ['mD.m', 'mD.ft']: return units
-   if ul == 'count': return 'Euc'
+
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
 
    raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
