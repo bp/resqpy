@@ -2,7 +2,7 @@ Contributing to resqpy
 ======================
 
 Resqpy is an open source project released under the MIT license. Contributions
-of all forms are most welcome!
+of all forms are most welcomed!
 
 Resqpy was created by Andy Beer.
 
@@ -37,9 +37,9 @@ Development environment setup
       git clone <url from GitHub>
       cd resqpy
 
-2. Set up a python environment
+2. Set up a Python environment
 
-   It is recommended that you set up an isolated python environment, using conda or virtualenv. 
+   It is recommended that you set up an isolated Python environment, using conda or virtualenv. 
 
    .. code-block:: bash
 
@@ -55,7 +55,7 @@ Development environment setup
       pip install --editable .[tests,docs]
 
    Be sure to execute the above command from the top level of the repository.
-   The full stop ``.`` instructs pip to find the python package in the current
+   The full stop ``.`` instructs pip to find the Python package in the current
    working directory.
     
 3. Make a Pull Request
@@ -84,12 +84,12 @@ Code Style
 ----------
 
 Please try to write code according to the
-`PEP8 python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
+`PEP8 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
 defines conventions such as variable naming and capitalisation. A consistent
 style makes it much easier for other developers to read and understand your
 code.
 
-Note the existing code base differs from PEP8 in using 3 spaces for indenation
+Note the existing code base differs from PEP8 in using 3 spaces for indentation
 rather than the usual 4. When editing these modules, it is preferable that new
 code has indentation that is consistent with the rest of the module.
 
@@ -106,17 +106,17 @@ is absolutely key to maintaining quality: for example, automated tests enable
 maintainers to check whether anything breaks when new versions of 3rd party
 libraries are released.
 
-As a rule of thumb: If you want your code to still work in 6 month's time,
+As a rule of thumb: if you want your code to still work in 6 months' time,
 ensure it has some unit tests!
 
 Writing tests
 ^^^^^^^^^^^^^
 
-pytest is a framework for running automated tests in python. It is a high-level
+pytest is a framework for running automated tests in Python. It is a high-level
 framework, so very little code is required to write a test.
 
 Tests are written in the form of functions with the prefix `test_`. Look in the
-tests directory for examples of existing tests.  A typical pattern is
+tests directory for examples of existing tests. A typical pattern is
 “Arrange-Act-Assert”:
 
 .. code:: python
@@ -138,7 +138,7 @@ Running tests
 ^^^^^^^^^^^^^
 
 The easiest way to run the tests is simply to open a Pull Request on GitHub.
-This automatically triggers the unit tests, run in several different python
+This automatically triggers the unit tests, run in several different Python
 environments. Note that if your MR references an outside fork of the repo, then
 a maintainer may need to manually approve the CI suite to run.
 
@@ -161,7 +161,7 @@ Static analysis
 
 We use `flake8 <https://flake8.pycqa.org/en/latest/user/invocation.html>`_ to
 scan for obvious code errors. This is automatically run part as part of the CI
-tests, and can also be ran locally with:
+tests, and can also be run locally with:
 
 .. code:: bash
 
@@ -197,7 +197,7 @@ above:
 
 The autoclasstoc extension is used to group some of the most commonly-used methods
 together at the top of the class summary tables. To make a method appear in this list,
-add `:meta common:` to the botton of the method docstring.
+add `:meta common:` to the bottom of the method docstring.
 
 Get in touch
 ------------

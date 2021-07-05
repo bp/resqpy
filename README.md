@@ -10,7 +10,7 @@
 
 ## Introduction
 
-resqpy is a pure python package which provides a programming interface (API) for
+resqpy is a pure Python package which provides a programming interface (API) for
 reading, writing, and modifying reservoir models in the RESQML format. It gives
 you the ability to work with reservoir models programmatically, without having
 to know the details of the RESQML standard.
@@ -47,15 +47,15 @@ Modification functionality at the moment focuses on changes to grid geometry.
 
 Resqpy can be installed with pip:
 
-```bash
-pip install resqpy
-```
+.. code-block:: bash
+
+    $ pip install resqpy
 
 Alternatively, to install your working copy of the code in "editable" mode:
 
-```bash
-pip install -e /path/to/repo/
-```
+.. code-block:: bash
+
+    $ pip install -e /path/to/working/copy
 
 ## Contributing
 

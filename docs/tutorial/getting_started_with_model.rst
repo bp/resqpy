@@ -5,11 +5,11 @@ This tutorial covers opening an existing RESQML dataset and identifying the high
 
 Prerequisites
 -------------
-You will need to have resqpy installed in your python environment, along with its dependencies, before proceeding.
+You will need to have resqpy installed in your Python environment, along with its dependencies, before proceeding.
 
 You will also need an example RESQML dataset (some are available within the resqpy repository). The RESQML dataset will consist of two files, one with extension .epc and the other .h5. This pair of files should have the same name prior to the extension and be located in the same directory (folder). You can use any dataset for this exercise – the detailed output from each step will vary depending on the data.
 
-Note: Example file names shown here and in other resqpy tutorials are for a unix environment. If you are working in a Windows environment, the file paths would be in the corresponding format.
+Note: Example file names shown here and in other resqpy tutorials are for a Unix environment. If you are working in a Windows environment, the file paths would be in the corresponding format.
 
 Importing the **model** module
 ------------------------------
@@ -44,9 +44,9 @@ Keys to the RESQML high level objects
 -------------------------------------
 A RESQML dataset is a collection of high level objects, also called parts. There are four primary data items that code is likely to work with when handling these parts:
 
-* A *uuid* (universally unique identifier), which is an object of class uuid.UUID. The uuid module is a standard python module. A uuid is sometimes referred to as a guid (globally unique identifier). The resqpy code base sticks with the term uuid as preferred by Energistics and the underlying ISO standard which these identifiers adhere to. As the uuids are often presented as a hexadecimal string, the resqpy code generally allows uuids to be passed around either as UUID objects or as strings.
+* A *uuid* (universally unique identifier), which is an object of class uuid.UUID. The uuid module is a standard Python module. A uuid is sometimes referred to as a guid (globally unique identifier). The resqpy code base sticks with the term uuid as preferred by Energistics and the underlying ISO standard which these identifiers adhere to. As the uuids are often presented as a hexadecimal string, the resqpy code generally allows uuids to be passed around either as UUID objects or as strings.
 * A *part name*, which is a string representing an internal 'file name' within the epc package. A part name usually consists of a high level object class followed by a uuid (see next point) in hexadecimal form and a .xml extension. Where a resqpy argument is named part or part_name, it refers to such a part name.
-* An *xml root node*. The metadata for each part is held within the epc in xml format. The lowest level of resqpy code reads this xml into an internal tree structure using the lxml standard python module, which is compatible with elementTree. Where a resqpy argument name contains root or root_node, it is referring to the root node in the internal tree representation of the xml for the part. Such a root is an object of type lxml._Element and does not have a meaningful human readable form.
+* An *xml root node*. The metadata for each part is held within the epc in xml format. The lowest level of resqpy code reads this xml into an internal tree structure using the lxml standard Python module, which is compatible with elementTree. Where a resqpy argument name contains root or root_node, it is referring to the root node in the internal tree representation of the xml for the part. Such a root is an object of type lxml._Element and does not have a meaningful human readable form.
 * A *citation title*, which is a human readable string held within the citation block of the xml for the part. This is what a human would consider to be the name of the high level object. However, there is no requirement for the citation titles to be unique within a RESQML dataset, so they should generally not be used as a primary key. Where a resqpy argument is named citation_title, or simply title, it is referring to this item of data.
 
 Within a ``Model`` object, there is a one-to-one correspondence between a part name and a uuid, and between a part name and a root node. There are methods for moving from one of these to another and also for finding the (possibly non-unique) citation title.
@@ -58,7 +58,7 @@ The ``Model`` class contains four similar methods each of which returns a list o
 * :meth:`resqpy.model.Model.roots`
 * :meth:`resqpy.model.Model.titles`
 
-If applied to a ``Model`` object without any arguments, a full list is returned, ie. with one item per high level object.
+If applied to a ``Model`` object without any arguments, a full list is returned, i.e. with one item per high level object.
 
 Selectively listing high level objects
 --------------------------------------
@@ -75,7 +75,7 @@ The four methods mentioned above have similar lists of optional arguments, some 
 
         model.roots(uuid = '27e11404-231b-11ea-8971-80e650222718')
 
-* ``related_uuid`` (UUID object or string): the list will only contain those high level objects which have a relationship with the object identified by this uuid, eg.:
+* ``related_uuid`` (UUID object or string): the list will only contain those high level objects which have a relationship with the object identified by this uuid, e.g.:
     .. code-block:: python
 
         model.parts(related_uuid = '27e11404-231b-11ea-8971-80e650222718')
@@ -86,7 +86,7 @@ The four methods mentioned above have similar lists of optional arguments, some 
         model.roots(obj_type = 'WellboreTrajectoryRepresentation',
                     extra = {'development_phase': 2, 'planned_use': 'injection'})
 
-* ``title`` (string): the list will only contain high level objects whose citation title matches this string, eg.:
+* ``title`` (string): the list will only contain high level objects whose citation title matches this string, e.g.:
     .. code-block:: python
 
         model.uuids(title = 'WELL_A')
@@ -109,7 +109,7 @@ The return list will not be in any particular order unless a further argument is
 
 Finding a single high level object
 ----------------------------------
-Each of the above four methods has a corresponding method which can be used if it is expected that at most one high level object will meet the criteria:
+Each of the above four methods have a corresponding method which can be used if it is expected that at most one high level object will meet the criteria:
 
 * :meth:`resqpy.model.Model.uuid`
 * :meth:`resqpy.model.Model.part`

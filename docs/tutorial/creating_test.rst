@@ -26,7 +26,7 @@ If that import fails, you might need to track down the test_s_bend.py module and
 
     from test_s_bend import test_s_bend_fn
 
-Alternatively, try modifying the PYTHONPATH environment variable prior to running your python script so that one of those two formulations works.
+Alternatively, try modifying the PYTHONPATH environment variable prior to running your Python script so that one of those two formulations works.
 
 Creating the S-bend dataset
 ---------------------------
@@ -36,15 +36,15 @@ Having imported the function, the S-bend dataset can be generated with:
 
     test_s_bend('s_bend.epc')
 
-You can substitute whatever path or filename you like but you should use the extension ``.epc`` This file will be created, along with a paired hdf5 format file with the same name but extension ``.h5``
+You can substitute whatever path or filename you like, but you should use the extension ``.epc`` This file will be created, along with a paired hdf5 format file with the same name, but extension ``.h5``
 
-(The function generates a few warning messages which might appear, depending on what python log handling is active in your environment. These warnings can be ignored.)
+(The function generates a few warning messages, which might appear, depending on what Python log handling is active in your environment. These warnings can be ignored.)
 
 About the S-bend model
 ----------------------
 The S-bend model contains some Ijk Grid objects, Wellbore Trajectory Representations and Blocked Wellbore Representations, plus a few other objects. The model contains some quite extreme geometries, as its main purpose is for testing that other code can handle some of the more challenging features that can be represented in RESQML.
 
-In particular, the 3 grids have variants of a geometry which includes two recumbent folds (with an inverted section of reservoir between). They all contain a totally pinched out layer. Two of the grids include several faults in the geometry, including some with a lateral slip between split pillars. One of those two grids also contains a K Gap.
+In particular, the 3 grids have variants of a geometry which include two recumbent folds (with an inverted section of reservoir between). They all contain a totally pinched out layer. Two of the grids include several faults in the geometry, including some with a lateral slip between split pillars. One of those two grids also contains a K Gap.
 
 Three of the four wells also have rather unrealistic trajectories, designed to test well to grid intersection code.
 

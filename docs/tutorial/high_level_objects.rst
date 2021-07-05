@@ -39,7 +39,7 @@ When **reading**, the representation of an object passes through these states:
 3. In memory resqpy object instantiated; metadata in object attributes; if small array(s), array data also in memory as attributes
 4. For classes with large arrays, Individual arrays are cached as attributes on demand
 
-Step 2 in this sequence occurs with the instantiation of a Model object for an existing epc. The metadata for each part is loaded into a python lxml tree (which is compatible with elementTree). Application code does not usually interact directly with this representation, though the root node of the lxml tree for an object is sometimes used as an argument to resqpy function calls. Here is an example of code that moves all objects in the s_bend dataset into state 2:
+Step 2 in this sequence occurs with the instantiation of a Model object for an existing epc. The metadata for each part is loaded into a Python lxml tree (which is compatible with elementTree). Application code does not usually interact directly with this representation, though the root node of the lxml tree for an object is sometimes used as an argument to resqpy function calls. Here is an example of code that moves all objects in the s_bend dataset into state 2:
 
 .. code-block:: python
 
