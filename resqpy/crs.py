@@ -23,7 +23,7 @@ import resqpy.olio.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
-PointType = Union[Tuple[float, float, float], List[float, float, float], np.ndarray]
+PointType = Union[Tuple[float, float, float], List[float], np.ndarray]
 
 class Crs(BaseResqpy):
    """ Coordinate reference system object """
@@ -209,12 +209,12 @@ class Crs(BaseResqpy):
          xyz[..., 2] = z
 
 
-   def has_same_epsg_code(self, other_crs: Crs) -> bool:
+   def has_same_epsg_code(self, other_crs: 'Crs') -> bool:
       """Returns True if either of the crs'es has a null EPSG code, or if they are the same."""
       return self.epsg_code is None or other_crs.epsg_code is None or self.epsg_code == other_crs.epsg_code
 
 
-   def is_equivalent(self, other_crs: Crs) -> bool:
+   def is_equivalent(self, other_crs: 'Crs') -> bool:
       """Returns True if this crs is effectively the same as the other crs."""
 
       log.debug('testing crs equivalence')
@@ -235,7 +235,7 @@ class Crs(BaseResqpy):
       return False
 
 
-   def convert_to(self, other_crs: Crs, xyz: PointType) -> Tuple[float, float, float]:
+   def convert_to(self, other_crs: 'Crs', xyz: PointType) -> Tuple[float, float, float]:
       """Converts a single xyz point from this coordinate reference system to the other.
 
       :meta common:
@@ -251,7 +251,7 @@ class Crs(BaseResqpy):
       return tuple(xyz)
 
 
-   def convert_array_to(self, other_crs: Crs, xyz: np.ndarray):
+   def convert_array_to(self, other_crs: 'Crs', xyz: np.ndarray):
       """Converts in situ a numpy array of xyz points from this coordinate reference system to the other.
 
       :meta common:
@@ -269,7 +269,7 @@ class Crs(BaseResqpy):
       return xyz
 
 
-   def convert_from(self, other_crs: Crs, xyz: PointType) -> Tuple[float, float, float]:
+   def convert_from(self, other_crs: 'Crs', xyz: PointType) -> Tuple[float, float, float]:
       """Converts a single xyz point from the other coordinate reference system to this one.
 
       :meta common:
@@ -285,7 +285,7 @@ class Crs(BaseResqpy):
       return tuple(xyz)
 
 
-   def convert_array_from(self, other_crs: Crs, xyz: np.ndarray):
+   def convert_array_from(self, other_crs: 'Crs', xyz: np.ndarray):
       """Converts in situ a numpy array of xyz points from the other coordinate reference system to this one.
 
       :meta common:
