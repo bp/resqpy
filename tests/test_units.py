@@ -25,16 +25,19 @@ def test_valid_uoms():
 
 
 def test_uom_aliases():
-   for uom, aliases in bwam.ALIASES.items():
+   for uom, aliases in bwam.UOM_ALIASES.items():
       assert uom in bwam.valid_uoms(), f"Bad uom {uom}"
       for alias in aliases:
          if alias != uom:
             assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
 
-   for alias, uom in bwam.ALIAS_MAP.items():
+   for alias, uom in bwam.UOM_ALIAS_MAP.items():
       assert uom in bwam.valid_uoms(), f"Bad uom {uom}"
       if alias != uom:
          assert alias not in bwam.valid_uoms(), f"Bad alias {alias}"
+
+   for uom in bwam.CASE_INSENSITIVE_UOMS:
+      assert uom in bwam.valid_uoms(), f"Bad uom {uom}"
 
 
 # ------- Test parsing uoms -------

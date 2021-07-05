@@ -22,21 +22,51 @@ d_to_s = float(24 * 60 * 60)
 s_to_d = 1.0 / d_to_s
 
 # Mapping from uom to set of common (non-resqml) case-insensitive aliases
-ALIASES = {
+UOM_ALIASES = {
+   # Lengths
    'm': {'m', 'metre', 'metres', 'meter', 'meters'},
    'ft': {'ft', 'foot', 'feet'},
+
+   # Times
    'd': {'day', 'days'},
+
+   # Ratios
    '%': {'%', 'pu', 'p.u.'},
    'm3/m3': {'m3/m3', 'v/v'},
    'g/cm3': {'g/cm3', 'g/cc'},
-   'gAPI': {'gapi'},
-   '1E6 m3/d': {'1E6 m3/d', '1E6 m3/day'},
-   'psi': {'psi', 'psia'},
+
+   # Volumes
    'bbl': {'bbl', 'stb'},
+   '1000 bbl': {'1000 bbl', 'mstb', 'mbbl'},
+   '1E6 bbl': {'1E6 bbl', 'mmstb', 'mmbbl'},
+   '1E6 ft3': {'1E6 ft3', 'mmscf'},
+   '1000 ft3': {'1000 ft3', 'mscf'},
+   'm3': {'m3', 'sm3'},
+   'ft3': {'ft3', 'scf'},
+
+   # Rates
+   'bbl/d': {'bbl/d', 'stb/d', 'bbl/day', 'stb/day'},
+   '1000 bbl/d': {'1000 bbl/d', 'mstb/day', 'mbbl/day', 'mstb/d', 'mbbl/d'},
+   '1E6 bbl/d': {'1E6 bbl/d', 'mmstb/day', 'mmbbl/day', 'mmstb/d', 'mmbbl/d'},
+   '1000 ft3/d': {'1000 ft3/d', 'mscf/day', 'mscf/d'},
+   'ft3/d': {'ft3/d', 'scf/day', 'scf/d'},
+   '1E6 ft3/d': {'1E6 ft3/d', 'mmscf/day', 'mmscf/d'},
+   'm3/d': {'m3/d', 'm3/day', 'sm3/d', 'sm3/day'},
+   '1000 m3/d': {'1000 m3/d', '1000 m3/day'},
+   '1E6 m3/d': {'1E6 m3/d', '1E6 m3/day'},
+
+   # Other
+   'ft3/bbl': {'ft3/bbl', 'scf/bbl', 'ft3/stb', 'scf/stb'},
+   '1000 ft3/bbl': {'1000 ft3/bbl', 'mscf/bbl', 'mscf/stb'},
+   'gAPI': {'gapi'},
+   'psi': {'psi', 'psia'},
    'Euc': {'count'},
 }
 # Mapping from alias to valid uom
-ALIAS_MAP = {alias.casefold(): uom for uom, aliases in ALIASES.items() for alias in aliases}
+UOM_ALIAS_MAP = {alias.casefold(): uom for uom, aliases in UOM_ALIASES.items() for alias in aliases}
+
+# Set of uoms that can be safely matched case-insensitive
+CASE_INSENSITIVE_UOMS = {'m', 'ft', 'm3', 'ft3', 'm3/m3', 'ft3/ft3', 'bbl', 'bar', 'psi', 'm3/d', 'bbl/d'}
 
 
 @lru_cache(None)
@@ -60,29 +90,9 @@ def rq_uom(units):
    if units in uom_list: return units
 
    # Common alises
-   if units.casefold() in ALIAS_MAP: return ALIAS_MAP[units.casefold()]
-
-   # Other special cases
-   ul = units.lower()
-   if ul in ['m', 'ft', 'm3', 'ft3', 'm3/m3', 'ft3/ft3', 'bbl', 'bar', 'psi', 'm3/d', 'bbl/d']: return ul
-   if ul in ['1000 bbl', 'mstb', 'mbbl']: return '1000 bbl'
-   if ul in ['1E6 bbl', 'mmstb', 'mmbbl']: return '1E6 bbl'
-   if ul in ['1E6 ft3', 'mmscf']: return '1E6 ft3'
-   if ul in ['1000 ft3', 'mscf']: return '1000 ft3'
-   if ul in ['ft3', 'scf']: return 'ft3'
-   if ul in ['bbl/d', 'stb/d', 'bbl/day', 'stb/day']: return 'bbl/d'
-   if ul in ['1000 bbl/d', 'mstb/day', 'mbbl/day', 'mstb/d', 'mbbl/d']: return '1000 bbl/d'
-   if ul in ['1E6 bbl/d', 'mmstb/day', 'mmbbl/day', 'mmstb/d', 'mmbbl/d']: return '1E6 bbl/d'
-   if ul in ['1000 ft3/d', 'mscf/day', 'mscf/d']: return '1000 ft3/d'
-   if ul in ['ft3/d', 'scf/day', 'scf/d']: return 'ft3/d'
-   if ul in ['1E6 ft3/d', 'mmscf/day', 'mmscf/d']: return '1E6 ft3/d'
-   if ul in ['ft3/bbl', 'scf/bbl', 'ft3/stb', 'scf/stb']: return 'ft3/bbl'
-   if ul in ['1000 ft3/bbl', 'mscf/bbl', 'mscf/stb']: return '1000 ft3/bbl'
-   if ul in ['m3', 'sm3']: return 'm3'
-   if ul in ['m3/d', 'm3/day', 'sm3/d', 'sm3/day']: return 'm3/d'
-   if ul in ['1000 m3/d', '1000 m3/day']: return '1000 m3/d'
-   if ul in ['1E6 m3/d', '1E6 m3/day']: return '1E6 m3/d'
-
+   ul = units.casefold()
+   if ul in CASE_INSENSITIVE_UOMS: return ul
+   if ul in UOM_ALIAS_MAP: return UOM_ALIAS_MAP[ul]
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
 
    raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
