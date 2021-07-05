@@ -21,8 +21,8 @@ kPa_to_psi = 1.0 / psi_to_kPa
 d_to_s = float(24 * 60 * 60)
 s_to_d = 1.0 / d_to_s
 
-# Mapping from uom to set of common (non-resqml) case-insensitive aliases
-# Nb. No need to write out fractional combinations
+# Mapping from uom to set of common case-insensitive aliases
+# Nb. No need to write out fractional combinations such as "bbl/day"
 UOM_ALIASES = {
    # Lengths
    'm': {'m', 'metre', 'metres', 'meter', 'meters'},
@@ -86,7 +86,7 @@ def rq_uom(units, quantity=None):
 
    # May be a fraction: match each part against known aliases
    if uom is None and '/' in units:
-      parts = units.split('/')
+      parts = units.split('/', 1)
       newpart0 = _try_parse_unit(parts[0])
       newpart1 = _try_parse_unit(parts[1])
       uom = _try_parse_unit(f"{newpart0}/{newpart1}")
@@ -106,7 +106,7 @@ def rq_uom(units, quantity=None):
 
 def convert(x, unit_from, unit_to, quantity=None, inplace=False):
    """Convert value between two compatible units
-   
+
    Args:
       x (numeric or np.array): value(s) to convert
       unit_from (str): resqml uom
@@ -210,7 +210,11 @@ def rq_time_unit(units):
 
 
 def convert_times(a, from_units, to_units, invert = False):
-   """Converts values in numpy array (or a scalar) from one time unit to another, in situ if array."""
+   """Converts values in numpy array (or a scalar) from one time unit to another, in situ if array.
+   
+   note:
+      To see supported units, use: `valid_uoms(quantity='time')`
+   """
 
    if invert:
       from_units, to_units = to_units, from_units
@@ -221,13 +225,16 @@ def convert_times(a, from_units, to_units, invert = False):
 def convert_lengths(a, from_units, to_units):
    """Converts values in numpy array (or a scalar) from one length unit to another, in situ if array.
 
-      arguments:
-         a (numpy float array, or float): array of length values to undergo unit conversion in situ, or a scalar
-         from_units (string): 'm', 'metres', 'ft' or 'feet' being the units of the data before conversion
-         to_units (string): 'm', 'metres', 'ft' or 'feet' being the required units
+   arguments:
+      a (numpy float array, or float): array of length values to undergo unit conversion in situ, or a scalar
+      from_units (string): the units of the data before conversion
+      to_units (string): the required units
 
-      returns:
-         a after unit conversion
+   returns:
+      a after unit conversion
+
+   note:
+      To see supported units, use: `valid_uoms(quantity='length')`
    """
 
    return convert(a, from_units, to_units, quantity='length', inplace=True)
@@ -236,13 +243,16 @@ def convert_lengths(a, from_units, to_units):
 def convert_pressures(a, from_units, to_units):
    """Converts values in numpy array (or a scalar) from one pressure unit to another, in situ if array.
 
-      arguments:
-         a (numpy float array, or float): array of pressure values to undergo unit conversion in situ, or a scalar
-         from_units (string): 'kPa', 'Pa', 'bar' or 'psi' being the units of the data before conversion
-         to_units (string): 'kPa', 'Pa', 'bar' or 'psi' being the required units
+   arguments:
+      a (numpy float array, or float): array of pressure values to undergo unit conversion in situ, or a scalar
+      from_units (string): the units of the data before conversion
+      to_units (string): the required units
 
-      returns:
-         a after unit conversion
+   returns:
+      a after unit conversion
+
+   note:
+      To see supported units, use: `valid_uoms(quantity='pressure')`
    """
    return convert(a, from_units, to_units, quantity='pressure', inplace=True)
 
@@ -250,38 +260,34 @@ def convert_pressures(a, from_units, to_units):
 def convert_volumes(a, from_units, to_units):
    """Converts values in numpy array (or a scalar) from one volume unit to another, in situ if array.
 
-      arguments:
-         a (numpy float array, or float): array of volume values to undergo unit conversion in situ, or a scalar
-         from_units (string): units of the data before conversion; see note for accepted units
-         to_units (string): the required units; see note for accepted units
+   arguments:
+      a (numpy float array, or float): array of volume values to undergo unit conversion in situ, or a scalar
+      from_units (string): units of the data before conversion; see note for accepted units
+      to_units (string): the required units; see note for accepted units
 
-      returns:
-         a after unit conversion
+   returns:
+      a after unit conversion
 
-      note:
-         currently accepted units are:
-         'm3', 'ft3', 'bbl', '1000 m3', '1000 ft3', '1000 bbl', '1E6 m3', '1E6 ft3', '1E6 bbl'
+   note:
+      To see supported units, use: `valid_uoms(quantity='volume')`
+
    """
-
    return convert(a, from_units, to_units, quantity='volume', inplace=True)
    
 
 def convert_flow_rates(a, from_units, to_units):
    """Converts values in numpy array (or a scalar) from one volume flow rate unit to another, in situ if array.
 
-      arguments:
-         a (numpy float array, or float): array of volume flow rate values to undergo unit conversion in situ, or a scalar
-         from_units (string): units of the data before conversion, eg. 'm3/d'; see notes for acceptable units
-         to_units (string): required units of the data after conversion, eg. 'ft3/d'; see notes for acceptable units
+   arguments:
+      a (numpy float array, or float): array of volume flow rate values to undergo unit conversion in situ, or a scalar
+      from_units (string): units of the data before conversion, eg. 'm3/d'; see notes for acceptable units
+      to_units (string): required units of the data after conversion, eg. 'ft3/d'; see notes for acceptable units
 
-      returns:
-         a after unit conversion
+   returns:
+      a after unit conversion
 
-      note:
-         units should be in the form volume/time where valid volume units are:
-         'm3', 'ft3', 'bbl', '1000 m3', '1000 ft3', '1000 bbl', '1E6 m3', '1E6 ft3', '1E6 bbl'
-         and valid time units are:
-         'd', 's', 'h', 'ms', 'min'
+   note:
+      To see supported units, use: `valid_uoms(quantity='volume per time')`
    """
    return convert(a, from_units, to_units, quantity='volume per time', inplace=True)
 
