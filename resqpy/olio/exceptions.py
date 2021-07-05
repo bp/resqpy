@@ -2,10 +2,10 @@
 
 
 class InvalidUnitError(Exception):
-    """Raised when the input value is too small"""
+    """Raised when a unit cannot be converted into a valid RESQML unit of measure"""
     pass
 
 
 class IncompatibleUnitsError(Exception):
-    """Raised when the input value is too small"""
+    """Raised when two units do not share compatible base units and dimensions"""
     pass
