@@ -10,7 +10,7 @@ import resqpy.grid as grr
 import resqpy.property as rqp
 import resqpy.derived_model as rqdm
 import resqpy.olio.weights_and_measures as bwam
-
+from resqpy.olio.exceptions import IncompatibleUnitsError
 
 # ---- Test PropertyCollection ---
 
@@ -124,6 +124,7 @@ def test_uom_from_string(case_sensitive, input_uom, expected_uom):
    ("pu", "%", 1, 1),
    ("p.u.", "%", 1, 1),
 ])
+@pytest.mark.filterwarnings("ignore:Converting between units with same dimension but different base units")
 def test_unit_conversion(unit_from, unit_to, value, expected):
    result = bwam.convert(value, unit_from, unit_to)
    assert maths.isclose(result, expected)
@@ -139,9 +140,25 @@ def test_convert_array():
 
 def test_conversion_factors_are_numeric():
    for uom in bwam.valid_uoms():
-      factors = bwam.get_conversion_factors(uom)
+      base_unit, dimension, factors = bwam.get_conversion_factors(uom)
+      assert base_unit in bwam.valid_uoms()
+      assert len(dimension) > 0
       assert len(factors) == 4, f"Issue with {uom}"
       assert all(isinstance(f, (int, float)) for f in factors), f"Issue with {uom}"
+
+
+# Test incompatible units raise an Error
+
+@pytest.mark.parametrize("unit_from, unit_to", [
+   ("m", "gAPI"),
+   ("%", "bbl"),
+   ("%", "ft"),
+   ("m", "m3"),
+])
+def test_incompatible_units(unit_from, unit_to):
+   with pytest.raises(IncompatibleUnitsError):
+      bwam.convert(1, unit_from, unit_to)
+
 
 
 # ---- Test property kind parsing ---

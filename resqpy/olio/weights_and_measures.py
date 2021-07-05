@@ -2,7 +2,9 @@
 
 from pathlib import Path
 import json
+import warnings
 from functools import lru_cache
+from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
 
 version = '17th June 2021'
@@ -76,6 +78,8 @@ def rq_uom(units):
    if units in ['mD.m', 'mD.ft']: return units
    if ul == 'count': return 'Euc'
    if ul in uom_list: return ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
+
+   # TODO: raise an InvalidUnitError
    return 'Euc'
 
 
@@ -90,6 +94,9 @@ def convert(x, unit_from, unit_to):
    Returns:
       Converted value(s)
 
+   Raises:
+      InvalidUnitError: if units cannot be coerced into RESQML units
+      IncompatibleUnitsError: if units do not have compatible base units
    """
    # TODO: robust handling of errors. At present, bad units are treated as "EUC", and will fail silently.
 
@@ -97,8 +104,27 @@ def convert(x, unit_from, unit_to):
    # Backwards formula: x=(A-Cy)/(Dy-B)
    # All current units have D==0
 
-   A1, B1, C1, D1 = get_conversion_factors(rq_uom(unit_from))
-   A2, B2, C2, D2 = get_conversion_factors(rq_uom(unit_to))
+   uom1, uom2 = rq_uom(unit_from), rq_uom(unit_to)
+   if uom1 == uom2:
+      return x
+   
+   base1, dim1, (A1, B1, C1, D1) = get_conversion_factors(uom1)
+   base2, dim2, (A2, B2, C2, D2) = get_conversion_factors(uom2)
+
+   if base1 != base2:
+      if dim1 != dim2:
+         raise IncompatibleUnitsError(
+            f"Cannot convert from '{unit_from}' to '{unit_to}':"
+            f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+            f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'."
+         )
+      else:
+         warnings.warn(
+            f"Converting between units with same dimension but different base units:"
+            f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+            f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'."
+         )
+
    y = (A1 + (B1*x)) / (C1 + (D1*x))
    return (A2 - (C2*y)) / ((D2*y) - B2)
 
@@ -312,12 +338,12 @@ def convert_flow_rates(a, from_units, to_units):
 
 @lru_cache(None)
 def get_conversion_factors(uom):
-   """Return conversion factors (A, B, C, D) for a given uom.
+   """Return base unit and conversion factors (A, B, C, D) for a given uom.
    
    The formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
 
    Returns:
-      4-tuple of conversion factors
+      3-tuple of (base_unit, dimension, factors). Factors is a 4-tuple of conversion factors
 
    Raises:
       ValueError if either uom is not a valid resqml uom
@@ -325,11 +351,15 @@ def get_conversion_factors(uom):
    if uom not in valid_uoms():
       raise ValueError(f"{uom} is not a valid uom")
    uoms_data = _properties_data()["units"][uom]
+
+   dimension = uoms_data["dimension"]
    try:
       a, b, c, d = uoms_data["A"], uoms_data["B"], uoms_data["C"], uoms_data["D"]
+      base_unit = uoms_data["baseUnit"]
    except KeyError:  # Base units do not have factors defined
       a, b, c, d = 0, 1, 1, 0
-   return a, b, c, d
+      base_unit = uom
+   return base_unit, dimension, (a, b, c, d)
 
 
 # Private functions
