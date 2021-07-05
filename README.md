@@ -47,15 +47,15 @@ Modification functionality at the moment focuses on changes to grid geometry.
 
 Resqpy can be installed with pip:
 
-.. code-block:: bash
-
-    $ pip install resqpy
+```bash
+pip install resqpy
+```
 
 Alternatively, to install your working copy of the code in "editable" mode:
 
-.. code-block:: bash
-
-    $ pip install -e /path/to/working/copy
+```bash
+pip install -e /path/to/repo/
+```
 
 ## Contributing
 
