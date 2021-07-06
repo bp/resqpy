@@ -7,7 +7,7 @@ from functools import lru_cache
 from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
 
-version = '17th June 2021'
+version = '6th July 2021'
 
 # physical constants
 feet_to_metres = 0.3048
@@ -53,6 +53,8 @@ UOM_ALIASES = {
 
    # Other
    'gAPI': {'gapi'},
+   'S': {'mho'},
+   'mS': {'mmho'},
    'psi': {'psi', 'psia'},
    'Euc': {'count'},
 
