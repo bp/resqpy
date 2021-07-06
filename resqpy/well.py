@@ -3049,6 +3049,9 @@ class BlockedWell(BaseResqpy):
 
       if ext_uuid is None: ext_uuid = self.model.h5_uuid()
 
+      if title: self.title = title
+      if not self.title: self.title = 'blocked well'
+
       if self.feature_to_be_written:
          if self.wellbore_feature is None: self.create_feature_and_interpretation()
          self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
@@ -3058,14 +3061,16 @@ class BlockedWell(BaseResqpy):
                                                  add_relationships = add_relationships, originator = originator)
 
       if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root_node is None:
-         md_datum_root = self.trajectory.md_datum.create_xml(add_as_part = add_as_part,
-                       add_relationships = add_relationships,
-                       title = title + ' simulator md datum', originator = originator)
-         self.trajectory.root_node = self.trajectory.create_xml(ext_uuid, md_datum_root = md_datum_root,
+         md_datum_root = self.trajectory.md_datum.create_xml(
+            add_as_part = add_as_part,
+            add_relationships = add_relationships,
+            title = str(self.title) + ' simulator md datum',
+            originator = originator)
+         self.trajectory.create_xml(ext_uuid, md_datum_root = md_datum_root,
             add_as_part = add_as_part, add_relationships = add_relationships,
             title = title, originator = originator)
 
-      assert self.trajectory.root_node is not None, 'trajectory xml not established'
+      assert self.trajectory.root is not None, 'trajectory xml not established'
 
       bw_node = super().create_xml(title = title, originator = originator, add_as_part = False)
 
