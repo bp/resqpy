@@ -3514,7 +3514,7 @@ class WellboreMarkerFrame(BaseResqpy):
 
 def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization=None,
                           check_well_name=False):
-   """ Creates a WellLogCollection and WellboreFrame from a LAS file.
+   """Creates a WellLogCollection and WellboreFrame from a LAS file.
 
    Note:
       In this current implementation, the first curve in the las object must be
