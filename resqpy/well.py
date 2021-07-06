@@ -3513,7 +3513,7 @@ class WellboreMarkerFrame(BaseResqpy):
 
 
 def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization=None,
-                          check_well_name=False, case_sensitive_units=False):
+                          check_well_name=False):
    """ Creates a WellLogCollection and WellboreFrame from a LAS file.
 
    Note:
@@ -3527,7 +3527,6 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization=None,
          that this collection is for
       check_well_name (bool): if True, raise warning if LAS well name does not match
          existing wellborefeature citation title
-      case_sensitive_units (bool): if False, use caseless matching to find valid resqml units
 
    Returns:
       collection, well_frame: instances of :class:`resqpy.property.WellLogCollection`
@@ -3570,7 +3569,6 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization=None,
          title=curve.mnemonic,
          data=curve.data,
          unit=curve.unit,
-         case_sensitive_units=case_sensitive_units,
          realization=realization,
          write=False,
       )
