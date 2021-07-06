@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '2nd July 2021'
+version = '6th July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -1960,7 +1960,8 @@ class BlockedWell(BaseResqpy):
       return self.derive_from_dataframe(df, self.well_name, grid, use_face_centres = True)
 
 
-   def derive_from_wellspec(self, wellspec_file, well_name, grid, check_grid_name = False, use_face_centres = False):
+   def derive_from_wellspec(self, wellspec_file, well_name, grid, check_grid_name = False, use_face_centres = False,
+                            add_properties = True):
       """Populates empty blocked well from Nexus WELLSPEC data; creates simulation trajectory and md datum.
 
       args:
@@ -1974,6 +1975,9 @@ class BlockedWell(BaseResqpy):
             exit points when constructing the simulation trajectory; if False and ANGLA & ANGLV data are available
             then entry and exit points are constructed based on a straight line at those angles passing through
             the centre of the cell
+         add_properties (bool or list of str, default True): if True, WELLSPEC columns (other than IW, JW, L & GRID)
+            are added as property parts for the blocked well; if a list is passed, it must contain a subset of the
+            columns in the WELLSPEC data
 
       returns:
          self if successful; None otherwise
@@ -1997,7 +2001,7 @@ class BlockedWell(BaseResqpy):
 
       name_for_check = grid_name if check_grid_name else None
       return self.derive_from_dataframe(df, well_name, grid, grid_name_to_check = name_for_check,
-                                        use_face_centres = use_face_centres)
+                                        use_face_centres = use_face_centres, add_as_properties = add_properties)
 
 
    def derive_from_cell_list(self, cell_kji0_list, well_name, grid):
@@ -2011,7 +2015,8 @@ class BlockedWell(BaseResqpy):
       return self.derive_from_dataframe(df, well_name, grid, use_face_centres = True)
 
 
-   def derive_from_dataframe(self, df, well_name, grid, grid_name_to_check = None, use_face_centres = False):
+   def derive_from_dataframe(self, df, well_name, grid, grid_name_to_check = None, use_face_centres = False,
+                             add_as_properties = False):
       """Populate empty blocked well from WELLSPEC-like dataframe; first columns must be IW, JW, L (i, j, k)."""
 
       if well_name: self.well_name = well_name
@@ -2161,6 +2166,14 @@ class BlockedWell(BaseResqpy):
       self.face_pair_indices = np.array(blocked_face_pairs, dtype = int)
       self.grid_list = [grid]
 
+      if add_as_properties and len(df.columns) > 3:
+         if isinstance(add_as_properties, list):
+            for col in add_as_properties: assert col in df.columns[3:]  # could just skip missing columns
+            property_columns = add_as_properties
+         else:
+            property_columns = df.columns[3:]
+         self._add_df_properties(df, property_columns, length_uom = length_uom)
+
       return self
 
 
@@ -2294,7 +2307,7 @@ class BlockedWell(BaseResqpy):
                  anglv_ref = 'normal ij down', angla_plane_ref = None,
                  length_mode = 'MD', length_uom = None,
                  use_face_centres = False, preferential_perforation = True,
-                 add_as_properties = False):
+                 add_as_properties = False, use_properties = False):
       """Returns a pandas data frame containing WELLSPEC style data.
 
       arguments:
@@ -2380,9 +2393,12 @@ class BlockedWell(BaseResqpy):
             the perforated intervals are assumed to penetrate pay rock preferentially: an effective ntg weighting is computed
             to account for any residual non-pay perforated interval; ignored if perforation_list is None or kh values are not
             being computed
-         add_as_properties (boolean, default False): if True, each column in the extra_columns_list (excluding GRUD) is added
-            as a property with the blocked well as supporting representation and 'cells' as the indexable element; any cell
-            that is excluded from the dataframe will have corresponding entries of NaN in all the properties
+         add_as_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
+            GRID and STAT) is added as a property with the blocked well as supporting representation and 'cells' as the
+            indexable element; any cell that is excluded from the dataframe will have corresponding entries of NaN in all the
+            properties; if a list is provided it must be a subset of extra_columns_list
+         use_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
+            GRID and STAT) is populated from a property with citation title matching the column name, if it exists
 
       notes:
          units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
@@ -2395,7 +2411,10 @@ class BlockedWell(BaseResqpy):
          the saturation limits do not stop deeper intervals with qualifying saturations from being included;
          the k0_list, perforation_list and region_list arguments should be set to None to disable the corresponding functionality,
          if set to an empty list, no rows will be included in the dataframe;
-         if add_as_properties is True, the blocked well must already have been added as a part to the model
+         if add_as_properties is True, the blocked well must already have been added as a part to the model;
+         at add_as_properties and use_properties cannot both be True;
+         add_as_properties and use_properties are only currently functional for single grid blocked wells;
+         at present, unit conversion is not handled when using properties
 
       :meta common:
       """
@@ -2450,6 +2469,11 @@ class BlockedWell(BaseResqpy):
             assert extra.upper() in ['GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y',
                                      'SKIN', 'RADW', 'PPERF', 'RADB', 'WI', 'WBC']
             column_list.append(extra.upper())
+      else:
+         add_as_properties = use_properties = False
+      assert not (add_as_properties and use_properties)
+      pc = rqp.PropertyCollection(support = self) if use_properties else None
+      pc_titles = [] if pc is None else pc.titles()
       isotropic_perm = None
       if min_length is not None and min_length <= 0.0: min_length = None
       if min_kh is not None and min_kh <= 0.0: min_kh = None
@@ -2457,10 +2481,15 @@ class BlockedWell(BaseResqpy):
       if min_sato is not None and min_sato <= 0.0: min_sato = None
       if max_satg is not None and max_satg >= 1.0: max_satg = None
       doing_kh = False
-      if 'KH' in column_list or min_kh is not None or 'WBC' in column_list:
-         assert perm_i_uuid is not None, 'WBC or KH requested (or minimum specified) without I direction permeabilty being specified'
+      if ('KH' in column_list or min_kh is not None) and 'KH' not in pc_titles:
+         assert perm_i_uuid is not None, 'KH requested (or minimum specified) without I direction permeabilty being specified'
          doing_kh = True
-      do_well_inflow = 'WI' in column_list or 'WBC' in column_list or 'RADB' in column_list
+      if 'WBC' in column_list and 'WBC' not in pc_titles:
+         assert perm_i_uuid is not None, 'WBC requested without I direction permeabilty being specified'
+         doing_kh = True
+      do_well_inflow = (('WI' in column_list and 'WI' not in pc_titles) or
+                        ('WBC' in column_list and 'WBC' not in pc_titles) or
+                        ('RADB' in column_list and 'RADB' not in pc_titles))
       if do_well_inflow:
          assert perm_i_uuid is not None, 'WI, RADB or WBC requested without I direction permeabilty being specified'
       if doing_kh or do_well_inflow:
@@ -2477,7 +2506,6 @@ class BlockedWell(BaseResqpy):
       if region_list is not None: assert region_uuid is not None, 'region list specified without region property array'
       if radw is not None and 'RADW' not in column_list: column_list.append('RADW')
       if radw is None: radw = 0.25
-      assert radw > 0.0
       if skin is not None and 'SKIN' not in column_list: column_list.append('SKIN')
       if skin is None: skin = 0.0
       if stat is not None:
@@ -2500,9 +2528,12 @@ class BlockedWell(BaseResqpy):
          log.warning('no layers included for blocked well dataframe: no rows will be included')
       if perforation_list is not None and len(perforation_list) == 0:
          log.warning('empty perforation list specified for blocked well dataframe: no rows will be included')
-      doing_angles = ('ANGLA' in column_list or 'ANGLV' in column_list or doing_kh or do_well_inflow)
-      doing_xyz = ('X' in column_list or 'Y' in column_list or 'DEPTH' in column_list)
-      doing_entry_exit = doing_angles or ('LENGTH' in column_list and length_mode == 'straight')
+      doing_angles = (('ANGLA' in column_list and 'ANGLA' not in pc_titles) or
+                      ('ANGLV' in column_list and 'ANGLV' not in pc_titles) or doing_kh or do_well_inflow)
+      doing_xyz = (('X' in column_list and 'X' not in pc_titles) or
+                   ('Y' in column_list and 'Y' not in pc_titles) or
+                   ('DEPTH' in column_list and 'DEPTH' not in pc_titles))
+      doing_entry_exit = doing_angles or ('LENGTH' in column_list and 'LENGTH' not in pc_titles and length_mode == 'straight')
       grid_crs_list = []
       for grid in self.grid_list:
          grid_crs = crs.Crs(self.model, uuid = grid.crs_uuid)
@@ -2551,24 +2582,27 @@ class BlockedWell(BaseResqpy):
          if max_satw is not None and prop_array(satw_uuid, grid)[tuple_kji0] > max_satw: continue
          if min_sato is not None and prop_array(sato_uuid, grid)[tuple_kji0] < min_sato: continue
          if max_satg is not None and prop_array(satg_uuid, grid)[tuple_kji0] > max_satg: continue
-         part_perf_fraction = 1.0
-         if perforation_list is not None:
-            perf_length = 0.0
-            for perf_start, perf_end in perforation_list:
-               if perf_end <= self.node_mds[interval] or perf_start >= self.node_mds[interval + 1]: continue
-               if perf_start <= self.node_mds[interval]:
-                  if perf_end >= self.node_mds[interval + 1]:
-                     perf_length += self.node_mds[interval + 1] - self.node_mds[interval]
-                     break
+         if 'PPERF' in pc_titles:
+            part_perf_fraction = pc.single_array_ref(citation_title = 'PPERF')[ci]
+         else:
+            part_perf_fraction = 1.0
+            if perforation_list is not None:
+               perf_length = 0.0
+               for perf_start, perf_end in perforation_list:
+                  if perf_end <= self.node_mds[interval] or perf_start >= self.node_mds[interval + 1]: continue
+                  if perf_start <= self.node_mds[interval]:
+                     if perf_end >= self.node_mds[interval + 1]:
+                        perf_length += self.node_mds[interval + 1] - self.node_mds[interval]
+                        break
+                     else:
+                        perf_length += perf_end - self.node_mds[interval]
                   else:
-                     perf_length += perf_end - self.node_mds[interval]
-               else:
-                  if perf_end >= self.node_mds[interval + 1]:
-                     perf_length += self.node_mds[interval + 1] - perf_start
-                  else:
-                     perf_length += perf_end - perf_start
-            if perf_length == 0.0: continue
-            part_perf_fraction = min(1.0, perf_length / (self.node_mds[interval + 1] - self.node_mds[interval]))
+                     if perf_end >= self.node_mds[interval + 1]:
+                        perf_length += self.node_mds[interval + 1] - perf_start
+                     else:
+                        perf_length += perf_end - perf_start
+               if perf_length == 0.0: continue
+               part_perf_fraction = min(1.0, perf_length / (self.node_mds[interval + 1] - self.node_mds[interval]))
 #        log.debug('kji0: ' + str(cell_kji0))
          entry_xyz = None
          exit_xyz = None
@@ -2597,11 +2631,12 @@ class BlockedWell(BaseResqpy):
                length = bwam.convert_lengths(length, ee_crs.z_units, self.trajectory.md_uom)
          if perforation_list is not None: length *= part_perf_fraction
          if min_length is not None and length < min_length: continue
-         angla = anglv = 0.0
          sine_anglv = sine_angla = 0.0
          cosine_anglv = cosine_angla = 1.0
          xyz = (np.NaN, np.NaN, np.NaN)
          md = 0.5 * (self.node_mds[interval + 1] + self.node_mds[interval])
+         anglv = pc.single_array_ref(citation_title = 'ANGLV')[ci] if 'ANGLV' in pc_titles else None
+         angla = pc.single_array_ref(citation_title = 'ANGLA')[ci] if 'ANGLA' in pc_titles else None
          if doing_angles and not (set_k_face_intervals_vertical and
             (np.all(self.face_pair_indices[ci] == k_face_check) or np.all(self.face_pair_indices[ci] == k_face_check_end))):
             vector = vec.unit_vector(np.array(exit_xyz) - np.array(entry_xyz))  # nominal wellbore vector for interval
@@ -2611,11 +2646,15 @@ class BlockedWell(BaseResqpy):
             if angla_plane_ref == anglv_ref: a_ref_vector = v_ref_vector
             else: a_ref_vector = get_ref_vector(grid, grid_crs, cell_kji0, angla_plane_ref)
 #           log.debug('a ref vector: ' + str(a_ref_vector))
-            cosine_anglv = min(max(vec.dot_product(vector, v_ref_vector), -1.0), 1.0)
-            anglv = maths.acos(cosine_anglv)
-            sine_anglv = maths.sin(anglv)
-#            cosine_anglv = maths.cos(anglv)
-            anglv = vec.degrees_from_radians(anglv)
+            if anglv is not None:
+               anglv_rad = vec.radians_from_degrees(anglv)
+               cosine_anglv = maths.cos(anglv_rad)
+               sine_anglv = maths.sin(anglv_rad)
+            else:
+               cosine_anglv = min(max(vec.dot_product(vector, v_ref_vector), -1.0), 1.0)
+               anglv_rad = maths.acos(cosine_anglv)
+               sine_anglv = maths.sin(anglv_rad)
+               anglv = vec.degrees_from_radians(anglv_rad)
 #           log.debug('anglv: ' + str(anglv))
             if anglv != 0.0:
                # project well vector and i-axis vector onto plane defined by normal vector a_ref_vector
@@ -2624,19 +2663,26 @@ class BlockedWell(BaseResqpy):
                if a_ref_vector is not None:  # project vector and i axis onto a plane
                   vector -= vec.dot_product(vector, a_ref_vector) * a_ref_vector
                   vector = vec.unit_vector(vector)
-#                 log.debug('i axis: ' + str(i_axis))
 #                 log.debug('i axis unit vector: ' + str(i_axis))
                   i_axis -= vec.dot_product(i_axis, a_ref_vector) * a_ref_vector
                   i_axis = vec.unit_vector(i_axis)
 #                 log.debug('i axis unit vector in reference plane: ' + str(i_axis))
-               cosine_angla = min(max(vec.dot_product(vector, i_axis), -1.0), 1.0)
-               angla = maths.acos(cosine_angla)
-               # negate angla if vector is 'clockwise from' i_axis when viewed from above, projected in the xy plane
-               # todo: have discussion around angla sign under different ijk handedness (and z inc direction?)
-               if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0: angla = -angla
-               sine_angla = maths.sin(angla)
-               angla = vec.degrees_from_radians(angla)
+               if angla is not None:
+                  angla_rad = vec.radians_from_degrees(angla)
+                  cosine_angla = maths.cos(angla_rad)
+                  sine_angla = maths.sin(angla_rad)
+               else:
+                  cosine_angla = min(max(vec.dot_product(vector, i_axis), -1.0), 1.0)
+                  angla_rad = maths.acos(cosine_angla)
+                  # negate angla if vector is 'clockwise from' i_axis when viewed from above, projected in the xy plane
+                  # todo: have discussion around angla sign under different ijk handedness (and z inc direction?)
+                  if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0: angla = -angla
+                  sine_angla = maths.sin(angla_rad)
+                  angla = vec.degrees_from_radians(angla_rad)
 #              log.debug('angla: ' + str(angla))
+         else:
+            if angla is None: angla = 0.0
+            if anglv is None: anglv = 0.0
          if doing_kh or do_well_inflow:
             if ntg_uuid is None:
                ntg = 1.0
@@ -2675,8 +2721,18 @@ class BlockedWell(BaseResqpy):
                      l_p = maths.sqrt(l_i * l_i  +  l_j * l_j  +  l_k * l_k)
                      kh = k_e * l_p
             if min_kh is not None and kh < min_kh: continue
+         elif 'KH' in pc_titles:
+            kh = pc.single_array_ref(citation_title = 'KH')[ci]
          else:
             kh = None
+         if 'LENGTH' in pc_titles: length = pc.single_array_ref(citation_title = 'LENGTH')[ci]
+         if 'RADW' in pc_titles: radw = pc.single_array_ref(citation_title = 'RADW')[ci]
+         assert radw > 0.0
+         if 'SKIN' in pc_titles: skin = pc.single_array_ref(citation_title = 'SKIN')[ci]
+         radb = wi = wbc = None
+         if 'RADB' in pc_titles: radb = pc.single_array_ref(citation_title = 'RADB')[ci]
+         if 'WI' in pc_titles: wi = pc.single_array_ref(citation_title = 'WI')[ci]
+         if 'WBC' in pc_titles: wbc = pc.single_array_ref(citation_title = 'WBC')[ci]
          if do_well_inflow:
             if isotropic_perm and ntg_is_one:
                k_ei = k_ej = k_ek = k_i
@@ -2704,15 +2760,11 @@ class BlockedWell(BaseResqpy):
             rbj = r_bj * sine_anglv * sine_angla
             rbk = r_bk * cosine_anglv
             radb_e = maths.sqrt(rbi * rbi  +  rbj * rbj  +  rbk * rbk)
-            radb = radw * radb_e / radw_e
-            wi = 0.0 if radb <= 0.0 else 2.0 * maths.pi / (maths.log(radb / radw) + skin)
-            if 'WBC' in column_list:
+            if radb is None: radb = radw * radb_e / radw_e
+            if wi is None: wi = 0.0 if radb <= 0.0 else 2.0 * maths.pi / (maths.log(radb / radw) + skin)
+            if 'WBC' in column_list and wbc is None:
                conversion_constant = 8.5270171e-5 if length_uom == 'm' else 0.006328286
                wbc = conversion_constant * kh * wi  # note: pperf aleady accounted for in kh
-            else:
-               wbc = None
-         else:
-            radb = wi = wbc = None
          if doing_xyz:
             if length_mode == 'MD' and self.trajectory is not None:
                xyz = self.trajectory.xyz_for_md(md)
@@ -2724,8 +2776,13 @@ class BlockedWell(BaseResqpy):
                if length_uom is not None and length_uom != ee_crs.z_units:
                   bwam.convert_lengths(xyz, ee_crs.z_units, length_uom)
                if depth_inc_down and ee_crs.z_inc_down is False: xyz[2] = -xyz[2]
+         xyz = np.array(xyz)
+         if 'X' in pc_titles: xyz[0] = pc.single_array_ref(citation_title = 'X')[ci]
+         if 'Y' in pc_titles: xyz[1] = pc.single_array_ref(citation_title = 'Y')[ci]
+         if 'DEPTH' in pc_titles: xyz[2] = pc.single_array_ref(citation_title = 'DEPTH')[ci]
          if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
             md = bwam.convert_lengths(md, self.trajectory.md_uom, length_uom)
+         if 'MD' in pc_titles: md = pc.single_array_ref(citation_title = 'MD')[ci]
          for col_index in range(len(column_list)):
             column = column_list[col_index]
             if col_index < 3:
@@ -2769,46 +2826,64 @@ class BlockedWell(BaseResqpy):
          df = df.append(row_dict, ignore_index = True)
          row_ci_list.append(ci)
 
-      if add_as_properties and extra_columns_list and len(df) > 0:
-         if length_uom is None: length_uom = self.trajectory.md_uom
-         extra_pc = rqp.PropertyCollection()
-         extra_pc.set_support(support = self)
-         ci_map = np.array(row_ci_list, dtype = int)
-         for e in extra_columns_list:
-            extra = e.upper()
-            if extra == 'GRID': continue
-            pk = 'continuous'
-            uom = 'Euc'
-            if extra in ['ANGLA', 'ANGLV']:
-               uom = 'dega'
-               # neither azimuth nor dip are correct property kinds; todo: create local property kinds
-               pk = 'azimuth' if extra == 'ANGLA' else 'dip'
-            elif extra in ['LENGTH', 'MD', 'X', 'Y', 'DEPTH', 'RADW']:
-               if length_uom is None or length_uom == 'Euc':
-                  if extra in ['LENGTH', 'MD']: uom = self.trajectory.md_uom
-                  elif extra in ['X', 'Y', 'RADW']: uom = self.grid_list[0].xy_units()
-                  else: uom = self.grid_list[0].z_units()
-               else:
-                  uom = length_uom
-               if extra == 'DEPTH': pk = 'depth'
-               else: pk = 'length'
-            elif extra == 'KH':
-               uom = 'mD.' + length_uom
-               pk = 'permeability length'
-            elif extra == 'PPERF':
-               uom = length_uom + '/' + length_uom
-            # 'SKIN': use defaults for now; todo: create local property kind for skin
-            expanded = np.full(self.cell_count, np.NaN)
-            expanded[ci_map] = df[extra]
-            extra_pc.add_cached_array_to_imported_list(expanded, 'blocked well dataframe', extra,
-                                                       discrete = False, uom = uom,
-                                                       property_kind = pk, local_property_kind_uuid = None,
-                                                       facet_type = None, facet = None, realization = None,
-                                                       indexable_element = 'cells', count = 1)
-         extra_pc.write_hdf5_for_imported_list()
-         extra_pc.create_xml_for_imported_list_and_add_parts_to_model()
+      if add_as_properties:
+         if isinstance(add_as_properties, list):
+            for col in add_as_properties: assert col in extra_columns_list
+            property_columns = add_as_properties
+         else:
+            property_columns = extra_columns_list
+         self._add_df_properties(df, property_columns, row_ci_list = row_ci_list, length_uom = length_uom)
 
       return df
+
+
+   def _add_df_properties(self, df, columns, row_ci_list = None, length_uom = None):
+      # creates a property part for each named column, based on the dataframe values
+      # column name used as the citation title
+      # self must already exist as a part in the model
+      # currently only handles single grid situations
+      # todo: rewrite to add separate property objects for each grid references by the blocked well
+      assert len(self.grid_list) == 1
+      if not columns or len(df) == 0: return
+      if row_ci_list is None: row_ci_list = np.arange(self.cell_count)
+      assert len(row_ci_list) == len(df)
+      if length_uom is None: length_uom = self.trajectory.md_uom
+      extra_pc = rqp.PropertyCollection()
+      extra_pc.set_support(support = self)
+      ci_map = np.array(row_ci_list, dtype = int)
+      for e in columns:
+         extra = e.upper()
+         if extra in ['GRID', 'STAT']: continue
+         pk = 'continuous'
+         uom = 'Euc'
+         if extra in ['ANGLA', 'ANGLV']:
+            uom = 'dega'
+            # neither azimuth nor dip are correct property kinds; todo: create local property kinds
+            pk = 'azimuth' if extra == 'ANGLA' else 'dip'
+         elif extra in ['LENGTH', 'MD', 'X', 'Y', 'DEPTH', 'RADW']:
+            if length_uom is None or length_uom == 'Euc':
+               if extra in ['LENGTH', 'MD']: uom = self.trajectory.md_uom
+               elif extra in ['X', 'Y', 'RADW']: uom = self.grid_list[0].xy_units()
+               else: uom = self.grid_list[0].z_units()
+            else:
+               uom = length_uom
+            if extra == 'DEPTH': pk = 'depth'
+            else: pk = 'length'
+         elif extra == 'KH':
+            uom = 'mD.' + length_uom
+            pk = 'permeability length'
+         elif extra == 'PPERF':
+            uom = length_uom + '/' + length_uom
+         # 'SKIN': use defaults for now; todo: create local property kind for skin
+         expanded = np.full(self.cell_count, np.NaN)
+         expanded[ci_map] = df[extra]
+         extra_pc.add_cached_array_to_imported_list(expanded, 'blocked well dataframe', extra,
+                                                    discrete = False, uom = uom,
+                                                    property_kind = pk, local_property_kind_uuid = None,
+                                                    facet_type = None, facet = None, realization = None,
+                                                    indexable_element = 'cells', count = 1)
+      extra_pc.write_hdf5_for_imported_list()
+      extra_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
 
    def static_kh(self, ntg_uuid = None, perm_i_uuid = None, perm_j_uuid = None, perm_k_uuid = None,
