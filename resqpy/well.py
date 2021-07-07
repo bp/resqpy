@@ -1050,6 +1050,7 @@ class Trajectory(BaseResqpy):
 
       def search(md, i1, i2):
          if i2 - i1 <= 1:
+            if md == self.measured_depths[i1]: return self.control_points[i1]
             return interpolate(self.control_points[i1], self.control_points[i1 + 1],
                                (md - self.measured_depths[i1]) / (self.measured_depths[i1 + 1] - self.measured_depths[i1]))
          im = i1  +  (i2 - i1) // 2
