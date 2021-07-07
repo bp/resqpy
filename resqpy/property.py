@@ -1018,9 +1018,9 @@ class PropertyCollection():
       for _, t in self.dict.items():
          e = t[index]
          if e is not None: s = s.union({e})
-      l = list(s)
-      if sort_list: l.sort()
-      return l
+      result = list(s)
+      if sort_list: result.sort()
+      return result
 
 
    def part_str(self, part, include_citation_title = True):
@@ -1217,17 +1217,17 @@ class PropertyCollection():
    def all_continuous(self):
       """Returns True if all the parts are for continuous (real) properties."""
 
-      l = self.unique_element_list(4, sort_list = False)
-      if len(l) != 1: return False
-      return l[0]
+      unique_elements = self.unique_element_list(4, sort_list = False)
+      if len(unique_elements) != 1: return False
+      return unique_elements[0]
 
 
    def all_discrete(self):
       """Returns True if all the parts are for discrete or categorical (integer) properties."""
 
-      l = self.unique_element_list(4, sort_list = False)
-      if len(l) != 1: return False
-      return not l[0]
+      unique_elements = self.unique_element_list(4, sort_list = False)
+      if len(unique_elements) != 1: return False
+      return not unique_elements[0]
 
 
    def count_for_part(self, part):
@@ -1251,9 +1251,9 @@ class PropertyCollection():
    def all_count_one(self):
       """Returns True if the low level Count value is 1 for all the parts in the collection."""
 
-      l = self.unique_element_list(5, sort_list = False)
-      if len(l) != 1: return False
-      return l[0] == 1
+      unique_elements = self.unique_element_list(5, sort_list = False)
+      if len(unique_elements) != 1: return False
+      return unique_elements[0] == 1
 
 
    def indexable_for_part(self, part):
@@ -1578,11 +1578,10 @@ class PropertyCollection():
       """
 
       if part not in self.dict: return
-      t = self.dict[part]
-      l = list(t)
-      l[13] = min_value
-      l[14] = max_value
-      self.dict[part] = tuple(l)
+      property_part = list(self.dict[part])
+      property_part[13] = min_value
+      property_part[14] = max_value
+      self.dict[part] = tuple(property_part)
 
 
    def establish_time_set_kind(self):

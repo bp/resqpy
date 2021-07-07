@@ -94,12 +94,12 @@ def read_mesh(inputfile, dtype = np.float64, format = None):
    infile = open(inputfile, 'r')
    indata = infile.readlines()
    infile.close()
-   l = 0
+   c = 0
    f = np.zeros(no_cols * no_rows, dtype = dtype)
    n = 0
    for line in indata:
-      l += 1
-      if l <= headers:
+      c += 1
+      if c <= headers:
          continue
       else:
          for x in line.split():

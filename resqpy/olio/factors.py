@@ -6,24 +6,24 @@ version = '24th December 2019'
 def factorize(n):
    """Returns list of prime factors of positive integer n."""
    i = 2
-   l = []
+   factors = []
    while True:
       q, r = divmod(n, i)
       if r:
          i += 1
-         if i > n: return l
+         if i > n: return factors
       else:
-         l.append(i)
-         if q < i: return l
+         factors.append(i)
+         if q < i: return factors
          n = q
 
 
-def combinatorial(l):
-   """Returns a list of all possible product combinations of numbers from list l, with some duplicates."""
-   if len(l) == 0: return []
-   head = l[0]
+def combinatorial(numbers):
+   """Returns a list of all possible product combinations of numbers from list numbers, with some duplicates."""
+   if len(numbers) == 0: return []
+   head = numbers[0]
    c = [head]
-   tail = combinatorial(l[1:])
+   tail = combinatorial(numbers[1:])
    for o in tail:
       if o != head: c.append(o)
       c.append(head * o)
