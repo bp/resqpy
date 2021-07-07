@@ -55,9 +55,9 @@ def test_regular_grid_half_cell_transmission(tmp_path):
    # should not have written anything, but try clean-up just in case
    try:
       os.remove(temp_epc)
-   except:
+   except Exception:
       pass
    try:
       os.remove(temp_epc[-4] + '.h5')
-   except:
+   except Exception:
       pass

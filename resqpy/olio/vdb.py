@@ -134,7 +134,7 @@ class Header():
          unpack('=IIcBIII', block)
       try:
          self.item_type = c.decode()
-      except:
+      except Exception:
          self.item_type = 'X'      # non-ascii character!
       self.data_place = place + 22
 #      log.debug('   header previous: ' + str(self.previous))
@@ -316,7 +316,7 @@ class KP():
             if sub_place is not None: return sub_place
          except AssertionError:
             pass  # probably not a K type subsidiary
-         except:
+         except Exception:
             raise
       return None
 
@@ -412,7 +412,7 @@ class VDB():
          for case in caselist:
              self.case_list.append(str(case.attrib['Name']).strip())
          if self.use_case is None and len(self.case_list): self.use_case = self.case_list[0]
-      except:
+      except Exception:
          log.exception('failed to extract case list')
       return self.case_list
 
@@ -423,7 +423,7 @@ class VDB():
       try:
          assert case in self.cases(), 'failed to find case ' + case + ' in list of vdb cases'
          self.use_case = case
-      except:
+      except Exception:
          log.exception('failed to set use case')
 
 
@@ -469,7 +469,7 @@ class VDB():
                   log.warning(f'skipping next {head.next} outwith bounds of file of size {file_size}')
                else:
                   print_tree(fp, place = head.next, level = level, file_size = file_size)
-         except:
+         except Exception:
             print('?')
             log.exception('failed in print tree for headers')
             raise
@@ -480,7 +480,7 @@ class VDB():
          print('Header tree for: ' + path)
          with open(path, 'rb') as fp:
             print_tree(fp)
-      except:
+      except Exception:
          log.exception('failed to print header tree for relative file ' + relative_path)
 
 
@@ -519,7 +519,7 @@ class VDB():
             assert os.path.exists(path), 'failed to find vdb file ' + str(path)
             with open(path, 'rb') as fp:
                print_tree(fp)
-      except:
+      except Exception:
          log.exception('failed to print keyword tree for relative file ' + relative_path)
 
 
@@ -540,7 +540,7 @@ class VDB():
                assert fp.read(4) == b'NT32', 'first 4 characters not NT32 in file ' + path
                kp = KP(fp)
                return kp.data_for_key(keyword, search = search)
-      except:
+      except Exception:
          log.exception('failed to read keyword data from vdb binary file: ' + path)
       return None
 
@@ -572,7 +572,7 @@ class VDB():
             assert os.path.exists(path), 'failed to find vdb file ' + str(path)
             with open(path, 'rb') as fp:
                return dfkc_fp(fp, path, keyword_chain)
-      except:
+      except Exception:
          log.exception('failed to read chained keyword data from vdb binary file: ' + path)
       return None
 
@@ -669,7 +669,7 @@ class VDB():
                self.grid_extents_kji[self.use_case, grid_name] = extent_kji
          shape_7d = (extent_kji[0], extent_kji[1], extent_kji[2], 2, 2, 2, 3)
          return ap.reshape(shape_7d)
-      except:
+      except Exception:
          log.exception('failed to extract root grid corp data from vdb')
       return None
 
@@ -691,7 +691,7 @@ class VDB():
                a = null_start[un]
          a = self.grid_shaped(grid_name, coerce(a, dtype))
          return a
-      except:
+      except Exception:
          log.exception('failed to extract data from vdb for grid ' + str(grid_name))
       return None
 
@@ -718,7 +718,7 @@ class VDB():
                a = null_start[un]
          a = self.grid_shaped(grid_name, coerce(a, dtype))
          return a
-      except:
+      except Exception:
          log.exception('failed to extract grid recurrent data from vdb for keyword: ' + keyword)
       return None
 
@@ -887,7 +887,7 @@ class VDB():
          keyword_list = kp.sub_key_list('MAPDATA', filter = True)
          try:
             keyword_list.remove('LASTMOD')
-         except:
+         except Exception:
             pass
          bad_key_indices = []
          for i in range(len(keyword_list)):
@@ -911,7 +911,7 @@ class VDB():
             assert os.path.exists(path), 'failed to find vdb file ' + str(path)
             with open(path, 'rb') as fp:
                return keyword_list_from_fp(fp, path)
-      except:
+      except Exception:
          log.exception('failed to read keyword data from vdb binary file: ' + path)
       return None
 
@@ -942,7 +942,7 @@ class VDB():
             assert fp.read(4) == b'NT32', 'first 4 characters not NT32 in file ' + path
             kp = KP(fp)
             return kp.header_place_for_key(keyword, search = search)
-      except:
+      except Exception:
          log.exception('failed to read keyword data from vdb binary file: ' + path)
       return None
 

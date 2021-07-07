@@ -26,7 +26,7 @@ def load_array_from_ab_file(file_name, shape, return_64_bit = False):
    try: # expected to return null
       c = fp.read(1)
       if len(c): log.warning('binary file contains more data than expected: ' + file_name)
-   except:
+   except Exception:
       pass
    return a
 
