@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '2nd July 2021'
+version = '7th July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -1049,19 +1049,20 @@ class Trajectory(BaseResqpy):
          return f * p2  +  (1.0 - f) * p1
 
       def search(md, i1, i2):
-         if i2 - i1 == 1:
-            return interpolate(self.control_points[i1], self.control_points[i2],
-                               (md - self.measured_depths[i1]) / (self.measured_depths[i2] - self.measured_depths[i1]))
+         if i2 - i1 <= 1:
+            if md == self.measured_depths[i1]: return self.control_points[i1]
+            return interpolate(self.control_points[i1], self.control_points[i1 + 1],
+                               (md - self.measured_depths[i1]) / (self.measured_depths[i1 + 1] - self.measured_depths[i1]))
          im = i1  +  (i2 - i1) // 2
          if self.measured_depths[im] >= md:
             return search(md, i1, im)
          return search(md, im, i2)
 
-      if md < 0.0 or md > self.finish_md: return None
+      if md < 0.0 or md > self.finish_md or md > self.measured_depths[-1]: return None
       if md <= self.start_md:
          if self.start_md == 0.0: return self.md_datum.location
          return interpolate(np.array(self.md_datum.location), self.control_points[0], md / self.start_md)
-      return search(md, 0, self.knot_count)
+      return search(md, 0, self.knot_count - 1)
 
 
    def splined_trajectory(self, well_name,
