@@ -173,11 +173,11 @@ def load_array_from_file(file_name, extent = None, data_type = 'real', keyword =
             try: # expected to return null
                c = binary_file_in.read(1)
                if len(c): log.warning('binary file contains more data than expected: ' + binary_file_name)
-            except:
+            except Exception:
                pass
             log.info('Data loaded from binary file %s', binary_file_name)
             return result
-   except:
+   except Exception:
       pass
 
    # read from ascii file
@@ -189,7 +189,7 @@ def load_array_from_file(file_name, extent = None, data_type = 'real', keyword =
    # create a binary file (to be used next time)
    try:
       wd.write_pure_binary_data(binary_file_name, result)
-   except:
+   except Exception:
       log.warn('Failed to write data to binary file %s', binary_file_name)
       # todo: could delete the binary file in case a corrupt file is left for use next time
 
@@ -427,7 +427,7 @@ def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
             # todo: check that end of file has been reached, ie. not too much data in file
             log.info('Fault mask data loaded from binary file %s', binary_file_name)
             return
-      except:
+      except Exception:
          pass
 
    with open(ascii_file_name, 'r') as data_file:
@@ -481,7 +481,7 @@ def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
          with open(binary_file_name, 'wb') as binary_file_out:
             fault_mask.tofile(binary_file_out)
          log.info('Binary fault mask data file %s created', binary_file_name)
-      except:
+      except Exception:
          log.warn('Failed to write data to binary fault mask file %s', binary_file_name)
          # todo: could delete the binary file in case a corrupt file is left for use next time
 

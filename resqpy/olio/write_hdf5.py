@@ -154,7 +154,7 @@ def copy_h5(file_in, file_out, uuid_inclusion_list = None, uuid_exclusion_list =
          elif mode == 'a':
             try:
                main_group_out = fp_out['RESQML']
-            except:
+            except Exception:
                main_group_out = fp_out.create_group('RESQML')
          else: main_group_out = fp_out['RESQML']
          for group in main_group_in:

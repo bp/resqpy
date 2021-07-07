@@ -148,7 +148,7 @@ def import_nexus(resqml_file_root,                # output path and file name wi
          if use_binary and (extent_ijk is not None) and recent_binary_exists:
             try:
                cp_array = ld.load_array_from_file(cp_binary_file, cp_extent, use_binary = True)
-            except:
+            except Exception:
                cp_array = None
          if cp_array is None:
             cp_array = ld.load_corp_array_from_file(corp_file, extent_kji, corp_bin = False,
@@ -332,7 +332,7 @@ def import_nexus(resqml_file_root,                # output path and file name wi
             if case_number == 0:
                assert not case_zero_used, 'more than one case number evaluated to zero'
                case_zero_used = True
-         except:
+         except Exception:
             log.error('failed to determine case number for tail: ' + str(tail))
             continue
          for keyword in ensemble_property_dictionary.keys():

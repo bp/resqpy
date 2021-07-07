@@ -324,7 +324,7 @@ def test_s_bend_fn(tmp_path, epc = None):
       gbw.write_hdf5()
       gbw.create_xml()
       assert gbw.cell_count == 24
-   except:
+   except Exception:
       log.exception('failed to block well against k gap grid')
 
    log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_2)))
@@ -333,7 +333,7 @@ def test_s_bend_fn(tmp_path, epc = None):
       gbw_2.write_hdf5()
       gbw_2.create_xml()
       assert gbw_2.cell_count == 20
-   except:
+   except Exception:
       log.exception('failed to block well against k gap grid')
 
    log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_3)))
@@ -342,7 +342,7 @@ def test_s_bend_fn(tmp_path, epc = None):
       gbw_3.write_hdf5()
       gbw_3.create_xml()
       assert gbw_3.cell_count == 10
-   except:
+   except Exception:
       log.exception('failed to block well against k gap grid')
 
    log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_4)))
@@ -351,7 +351,7 @@ def test_s_bend_fn(tmp_path, epc = None):
       gbw_4.write_hdf5()
       gbw_4.create_xml()
       assert gbw_4.cell_count == 10
-   except:
+   except Exception:
       log.exception('failed to block well against k gap grid')
 
    # store model

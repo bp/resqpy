@@ -512,6 +512,6 @@ def time_series_from_nexus_summary(summary_file, parent_model = None):
             last_cumulative_time = entry[1]
          last_timestep += 1
       return time_series
-   except:
+   except Exception:
       log.exception('failed to create TimeSeries object from summary file: ' + summary_file)
    return None

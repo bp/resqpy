@@ -54,7 +54,7 @@ def colon_prefixed(curly_prefixed):
    pre_end = curly_prefixed.rfind('}')
    try:
       pre_colon = inv_ns[curly_prefixed[1:pre_end]]
-   except:
+   except Exception:
       return curly_prefixed, None
    return pre_colon + ':' + curly_prefixed[pre_end + 1:], pre_colon
 

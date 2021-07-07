@@ -54,7 +54,7 @@ def read_lines(filename):
                point_list = np.empty((1, 3))
                point_list[0, :] = point
                point_count = 1
-   except:
+   except Exception:
       log.exception('failed to read simple lines from ascii file: ' + filename)
       lines_list = []
    log.info(str(len(lines_list)) + ' line(s) read from file: ' + filename)

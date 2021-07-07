@@ -872,7 +872,7 @@ class Trajectory(BaseResqpy):
          self.tangent_vectors = None
          if set_tangent_vectors: self.set_tangents()
          self.md_datum = md_datum
-      except:
+      except Exception:
          log.exception('failed to load trajectory object from data frame')
 
 
@@ -935,7 +935,7 @@ class Trajectory(BaseResqpy):
       try:
          df = pd.read_csv(trajectory_file, comment = comment_character, delim_whitespace = space_separated_instead_of_csv)
          if df is None: raise Exception
-      except:
+      except Exception:
          log.error('failed to read ascii deviation survey file ' + str(trajectory_file))
          raise
       if well_col and well_col not in df.columns:
@@ -2276,7 +2276,7 @@ class BlockedWell(BaseResqpy):
             self.face_pair_indices = np.array(blocked_face_pairs)
             self.grid_list = [grid]
 
-      except:
+      except Exception:
          log.exception('failed to import info for blocked well ' + str(well_name) + ' from cell I/O file ' + str(cellio_file))
          return None
 
@@ -2950,7 +2950,7 @@ class BlockedWell(BaseResqpy):
                         fp.write(sep + form.format(int(row[col_name])))
                      else:
                         fp.write(sep + form.format(str(row[col_name])))
-               except:
+               except Exception:
                   fp.write(sep + str(row[col_name]))
             fp.write('\n')
          for _ in range(trailing_blank_lines): fp.write('\n')
@@ -3750,7 +3750,7 @@ def add_wells_from_ascii_file(model, crs_uuid, trajectory_file, comment_characte
    try:
       df = pd.read_csv(trajectory_file, comment = comment_character, delim_whitespace = space_separated_instead_of_csv)
       if df is None: raise Exception
-   except:
+   except Exception:
       log.error('failed to read ascii deviation survey file: ' + str(trajectory_file))
       raise
    if well_col and well_col not in df.columns:

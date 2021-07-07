@@ -2027,7 +2027,7 @@ class Grid(BaseResqpy):
          value = self.model.h5_array_element(h5_key_pair, index = index, cache_array = cache_array,
                                              object = self, array_attribute = 'points_cached',
                                              required_shape = required_shape)
-      except:
+      except Exception:
          log.error('hdf5 points failure for index: ' + str(index))
          raise
       if index is None: return self.points_cached
