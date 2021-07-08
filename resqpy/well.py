@@ -58,6 +58,7 @@ import resqpy.olio.keyword_files as kf
 import resqpy.olio.wellspec_keywords as wsk
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.base import BaseResqpy
+from resqpy.olio.wellspec import WellSpecLimits, WellSpecItems, WellSpecConfig
 
 
 valid_md_reference_list = ["ground level", "kelly bushing", "mean sea level", "derrick floor", "casing flange",
@@ -2283,20 +2284,19 @@ class BlockedWell(BaseResqpy):
       return self
 
 
-   def dataframe(self, i_col = 'IW', j_col = 'JW', k_col = 'L', one_based = True, extra_columns_list = [],
-                 ntg_uuid = None, perm_i_uuid = None, perm_j_uuid = None, perm_k_uuid = None,
-                 satw_uuid = None, sato_uuid = None, satg_uuid = None, region_uuid = None,
-                 radw = None, skin = None, stat = None, active_only = False,
-                 min_k0 = None, max_k0 = None, k0_list = None,
-                 min_length = None, min_kh = None, max_depth = None,
-                 max_satw = None, min_sato = None, max_satg = None,
-                 perforation_list = None, region_list = None, depth_inc_down = None,
-                 set_k_face_intervals_vertical = False,
-                 anglv_ref = 'normal ij down', angla_plane_ref = None,
-                 length_mode = 'MD', length_uom = None,
-                 use_face_centres = False, preferential_perforation = True,
+   def dataframe(self, limits: WellSpecLimits, items: WellSpecItems, config: WellSpecConfig,
                  add_as_properties = False):
       """Returns a pandas data frame containing WELLSPEC style data.
+
+      Example::
+
+         config = WellSpecConfig(length_uom="ft")
+         limits = WellSpecLimits(max_satw=0.8)
+         items = WellSpecItems(ntg_uuid = ..., perm_i_uuid=...)
+
+         bw.dataframe(limits, items, config)
+
+      # TODO: Move these docstring entries to the relevant classses
 
       arguments:
          i_col (string, default 'IW'): the column name to use for cell I index values
@@ -2401,117 +2401,37 @@ class BlockedWell(BaseResqpy):
       :meta common:
       """
 
-      def prop_array(uuid_or_dict, grid):
-         assert uuid_or_dict is not None and grid is not None
-         if isinstance(uuid_or_dict, dict):
-            prop_uuid = uuid_or_dict[grid.uuid]
-         else:
-            prop_uuid = uuid_or_dict   # uuid either in form of string or uuid.UUID
-         return grid.property_collection.single_array_ref(uuid = prop_uuid)
+      from resqpy.olio import wellspec
+      from resqpy.olio.wellspec import validate_export_settings, prop_array, get_ref_vector
+      
+      column_list, isotropic_perm, doing_entry_exit, doing_angles, doing_xyz, do_well_inflow, doing_kh = \
+         wellspec.validate_export_settings(limits, items, config)
 
-      def get_ref_vector(grid, grid_crs, cell_kji0, mode):
-         # gravity = np.array((0.0, 0.0, 1.0))
-         if mode == 'normal well i+': return None  # ANGLA only: option for no projection onto a plane
-         ref_vector = None
-         # options for anglv or angla reference: 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down'
-         cell_axial_vectors = None
-         if not mode.startswith('z'):
-            cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
-         if mode == 'z+':
-            ref_vector = np.array((0.0, 0.0, 1.0))
-         elif mode == 'z down':
-            if grid_crs.z_inc_down: ref_vector = np.array((0.0, 0.0, 1.0))
-            else: ref_vector = np.array((0.0, 0.0, -1.0))
-         elif mode in ['k+', 'k down']:
-            ref_vector = vec.unit_vector(cell_axial_vectors[0])
-            if mode == 'k down' and not grid.k_direction_is_down:
-               ref_vector = -ref_vector
-         else:  # normal to plane of ij axes
-            ref_vector = vec.unit_vector(vec.cross_product(cell_axial_vectors[1], cell_axial_vectors[2]))
-            if mode == 'normal ij down':
-               if grid_crs.z_inc_down:
-                  if ref_vector[2] < 0.0: ref_vector = -ref_vector
-               else:
-                  if ref_vector[2] > 0.0: ref_vector = -ref_vector
-         if ref_vector is None or ref_vector[2] == 0.0:
-            if grid_crs.z_inc_down: ref_vector = np.array((0.0, 0.0, 1.0))
-            else: ref_vector = np.array((0.0, 0.0, -1.0))
-         return ref_vector
+      # For now - unpack arguments into method namespace
+      # TODO: keep variables in their namespaces
+      length_mode = config.length_mode
+      length_uom = config.length_uom
+      anglv_ref = config.anglv_ref
+      angla_plane_ref = config.angla_plane_ref
+      extra_columns_list = config.extra_columns_list
+      radw = config.radw
+      skin = config.skin
+      stat = config.stat
+      depth_inc_down = config.depth_inc_down
+      set_k_face_intervals_vertical = config.set_k_face_intervals_vertical
+      use_face_centres = config.use_face_centres
+      preferential_perforation = config.preferential_perforation
 
-      assert length_mode in ['MD', 'straight']
-      assert length_uom is None or length_uom in ['m', 'ft']
-      assert anglv_ref in ['gravity', 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down']
-      if anglv_ref == 'gravity': anglv_ref = 'z down'
-      if angla_plane_ref is None: angla_plane_ref = anglv_ref
-      assert angla_plane_ref in ['gravity', 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down', 'normal well i+']
-      if angla_plane_ref == 'gravity': angla_plane_ref = 'z down'
-      column_list = [i_col, j_col, k_col]
-      if extra_columns_list:
-         for extra in extra_columns_list:
-            assert extra.upper() in ['GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y',
-                                     'SKIN', 'RADW', 'PPERF', 'RADB', 'WI', 'WBC']
-            column_list.append(extra.upper())
-      isotropic_perm = None
-      if min_length is not None and min_length <= 0.0: min_length = None
-      if min_kh is not None and min_kh <= 0.0: min_kh = None
-      if max_satw is not None and max_satw >= 1.0: max_satw = None
-      if min_sato is not None and min_sato <= 0.0: min_sato = None
-      if max_satg is not None and max_satg >= 1.0: max_satg = None
-      doing_kh = False
-      if 'KH' in column_list or min_kh is not None or 'WBC' in column_list:
-         assert perm_i_uuid is not None, 'WBC or KH requested (or minimum specified) without I direction permeabilty being specified'
-         doing_kh = True
-      do_well_inflow = 'WI' in column_list or 'WBC' in column_list or 'RADB' in column_list
-      if do_well_inflow:
-         assert perm_i_uuid is not None, 'WI, RADB or WBC requested without I direction permeabilty being specified'
-      if doing_kh or do_well_inflow:
-         if perm_j_uuid is None and perm_k_uuid is None:
-            isotropic_perm = True
-         else:
-            if perm_j_uuid is None: perm_j_uuid = perm_i_uuid
-            if perm_k_uuid is None: perm_k_uuid = perm_i_uuid
-            # following line assumes arguments are passed in same form; if not, some unnecessary maths might be done
-            isotropic_perm = (bu.matching_uuids(perm_i_uuid, perm_j_uuid) and bu.matching_uuids(perm_i_uuid, perm_k_uuid))
-      if max_satw is not None: assert satw_uuid is not None, 'water saturation limit specified without saturation property array'
-      if min_sato is not None: assert sato_uuid is not None, 'oil saturation limit specified without saturation property array'
-      if max_satg is not None: assert satg_uuid is not None, 'gas saturation limit specified without saturation property array'
-      if region_list is not None: assert region_uuid is not None, 'region list specified without region property array'
-      if radw is not None and 'RADW' not in column_list: column_list.append('RADW')
-      if radw is None: radw = 0.25
-      assert radw > 0.0
-      if skin is not None and 'SKIN' not in column_list: column_list.append('SKIN')
-      if skin is None: skin = 0.0
-      if stat is not None:
-         assert str(stat).upper() in ['ON', 'OFF']
-         stat = str(stat).upper()
-         if 'STAT' not in column_list: column_list.append('STAT')
-      else:
-         stat = 'ON'
-      if 'GRID' not in column_list and self.number_of_grids() > 1:
-         log.error('creating blocked well dataframe without GRID column for well that intersects more than one grid')
-      if 'LENGTH' in column_list and 'PPERF' in column_list and 'KH' not in column_list and perforation_list is not None:
-         log.warning('both LENGTH and PPERF will include effects of partial perforation; only one should be used in WELLSPEC')
-      elif (perforation_list is not None and 'LENGTH' not in column_list and 'PPERF' not in column_list and
-            'KH' not in column_list and 'WBC' not in column_list):
-         log.warning('perforation list supplied but no use of LENGTH, KH, PPERF nor WBC')
-      if min_k0 is None: min_k0 = 0
-      else: assert min_k0 >= 0
-      if max_k0 is not None: assert min_k0 <= max_k0
-      if k0_list is not None and len(k0_list) == 0:
-         log.warning('no layers included for blocked well dataframe: no rows will be included')
-      if perforation_list is not None and len(perforation_list) == 0:
-         log.warning('empty perforation list specified for blocked well dataframe: no rows will be included')
-      doing_angles = ('ANGLA' in column_list or 'ANGLV' in column_list or doing_kh or do_well_inflow)
-      doing_xyz = ('X' in column_list or 'Y' in column_list or 'DEPTH' in column_list)
-      doing_entry_exit = doing_angles or ('LENGTH' in column_list and length_mode == 'straight')
+
+
       grid_crs_list = []
       for grid in self.grid_list:
          grid_crs = crs.Crs(self.model, uuid = grid.crs_uuid)
          grid_crs_list.append(grid_crs)
          if grid_crs.z_units != grid_crs.xy_units and (len(column_list) > 1 or
-                                                       (len(column_list) == 1 and column_list[0] != 'GRID')) is not None:
+                                                      (len(column_list) == 1 and column_list[0] != 'GRID')) is not None:
             log.error('grid ' + str(rqet.citation_title_for_node(grid.root_node)) +
-                      ' has z units different to xy units: some WELLSPEC data likely to be wrong')
+                     ' has z units different to xy units: some WELLSPEC data likely to be wrong')
       k_face_check = np.zeros((2, 2), dtype = int)
       k_face_check[1, 1] = 1    # now represents entry, exit of K-, K+
       k_face_check_end = k_face_check.copy()
@@ -2525,7 +2445,7 @@ class BlockedWell(BaseResqpy):
          traj_z_inc_down = traj_crs.z_inc_down
 
       df = pd.DataFrame(columns = column_list)
-      df = df.astype({i_col: int, j_col:int, k_col:int})
+      df = df.astype({config.i_col: int, config.j_col:int, config.k_col:int})
 
       ci = -1
       row_ci_list = []
@@ -2541,21 +2461,14 @@ class BlockedWell(BaseResqpy):
          natural_cell = self.cell_indices[ci]
          cell_kji0 = grid.denaturalized_cell_index(natural_cell)
          tuple_kji0 = tuple(cell_kji0)
-         if max_depth is not None:
-            cell_depth = grid.centre_point(cell_kji0)[2]
-            if not grid_crs.z_inc_down: cell_depth = -cell_depth
-            if cell_depth > max_depth: continue
-         if active_only and grid.inactive is not None and grid.inactive[tuple_kji0]: continue
-         if (min_k0 is not None and cell_kji0[0] < min_k0) or (max_k0 is not None and cell_kji0[0] > max_k0): continue
-         if k0_list is not None and cell_kji0[0] not in k0_list: continue
-         if region_list is not None and prop_array(region_uuid, grid)[tuple_kji0] not in region_list: continue
-         if max_satw is not None and prop_array(satw_uuid, grid)[tuple_kji0] > max_satw: continue
-         if min_sato is not None and prop_array(sato_uuid, grid)[tuple_kji0] < min_sato: continue
-         if max_satg is not None and prop_array(satg_uuid, grid)[tuple_kji0] > max_satg: continue
+
+         if not limits.interval_matches(items, grid, grid_crs, cell_kji0, tuple_kji0):
+            continue
+         
          part_perf_fraction = 1.0
-         if perforation_list is not None:
+         if limits.perforation_list is not None:
             perf_length = 0.0
-            for perf_start, perf_end in perforation_list:
+            for perf_start, perf_end in limits.perforation_list:
                if perf_end <= self.node_mds[interval] or perf_start >= self.node_mds[interval + 1]: continue
                if perf_start <= self.node_mds[interval]:
                   if perf_end >= self.node_mds[interval + 1]:
@@ -2596,8 +2509,8 @@ class BlockedWell(BaseResqpy):
                length = bwam.convert_lengths(length, ee_crs.z_units, length_uom)
             elif self.trajectory is not None:
                length = bwam.convert_lengths(length, ee_crs.z_units, self.trajectory.md_uom)
-         if perforation_list is not None: length *= part_perf_fraction
-         if min_length is not None and length < min_length: continue
+         if limits.perforation_list is not None: length *= part_perf_fraction
+         if limits.min_length is not None and length < limits.min_length: continue
          angla = anglv = 0.0
          sine_anglv = sine_angla = 0.0
          cosine_anglv = cosine_angla = 1.0
@@ -2639,25 +2552,25 @@ class BlockedWell(BaseResqpy):
                angla = vec.degrees_from_radians(angla)
 #              log.debug('angla: ' + str(angla))
          if doing_kh or do_well_inflow:
-            if ntg_uuid is None:
+            if items.ntg_uuid is None:
                ntg = 1.0
                ntg_is_one = True
             else:
-               ntg = prop_array(ntg_uuid, grid)[tuple_kji0]
+               ntg = prop_array(items.ntg_uuid, grid)[tuple_kji0]
                ntg_is_one = maths.isclose(ntg, 1.0, rel_tol = 0.001)
             if isotropic_perm and ntg_is_one:
-               k_i = k_j = k_k = prop_array(perm_i_uuid, grid)[tuple_kji0]
+               k_i = k_j = k_k = prop_array(items.perm_i_uuid, grid)[tuple_kji0]
             else:
                if preferential_perforation and not ntg_is_one:
                   if part_perf_fraction <= ntg: ntg = 1.0  # effective ntg when perforated intervals are in pay
                   else: ntg /= part_perf_fraction         # adjusted ntg when some perforations in non-pay
                # todo: check netgross facet type in property perm i & j parts: if set to gross then don't multiply by ntg below
-               k_i = prop_array(perm_i_uuid, grid)[tuple_kji0] * ntg
-               k_j = prop_array(perm_j_uuid, grid)[tuple_kji0] * ntg
-               k_k = prop_array(perm_k_uuid, grid)[tuple_kji0]
+               k_i = prop_array(items.perm_i_uuid, grid)[tuple_kji0] * ntg
+               k_j = prop_array(items.perm_j_uuid, grid)[tuple_kji0] * ntg
+               k_k = prop_array(items.perm_k_uuid, grid)[tuple_kji0]
          if doing_kh:
             if isotropic_perm and ntg_is_one:
-               kh = length * prop_array(perm_i_uuid, grid)[tuple_kji0]
+               kh = length * prop_array(items.perm_i_uuid, grid)[tuple_kji0]
             else:
                if np.isnan(k_i) or np.isnan(k_j):
                   kh = 0.0
@@ -2675,7 +2588,7 @@ class BlockedWell(BaseResqpy):
                      l_k = length * maths.sqrt(k_e / k_k) * cosine_anglv
                      l_p = maths.sqrt(l_i * l_i  +  l_j * l_j  +  l_k * l_k)
                      kh = k_e * l_p
-            if min_kh is not None and kh < min_kh: continue
+            if limits.min_kh is not None and kh < limits.min_kh: continue
          else:
             kh = None
          if do_well_inflow:
@@ -2730,7 +2643,7 @@ class BlockedWell(BaseResqpy):
          for col_index in range(len(column_list)):
             column = column_list[col_index]
             if col_index < 3:
-               if one_based:
+               if config.one_based:
                   row_dict[column] = cell_kji0[2 - col_index] + 1
                else:
                   row_dict[column] = cell_kji0[2 - col_index]
@@ -3205,6 +3118,8 @@ class BlockedWell(BaseResqpy):
       h5_reg.register_dataset(self.uuid, 'LocalFacePairPerCellIndices', raw_face_indices)  # could use uint8?
 
       h5_reg.write(file = file_name, mode = mode)
+
+
 
 
 
