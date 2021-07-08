@@ -1,5 +1,5 @@
-Working with the RESQML unit system
-===================================
+The Units of Measure system
+===========================
 
 Resqpy implements the full RESQML units of measure system,
 making it easy for you to track the of the units in your reservoir model rigorously.
@@ -48,7 +48,7 @@ To see details about each quantity, such as the list of supported units of measu
      'volume': ...
     }
 
-Units of measure
+Units of Measure
 ----------------
 
 A RESQML unit of measure (or "uom") is a unit symbol, such as "m" or "bbl".
