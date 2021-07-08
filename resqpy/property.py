@@ -28,7 +28,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.box_utilities as bxu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-import resqpy.olio.weights_and_measures as bwam
+import resqpy.weights_and_measures as bwam
 
 import resqpy.time_series as rts
 

@@ -6,11 +6,11 @@ making it easy for you to track the of the units in your reservoir model rigorou
 
 Resqpy also has some helper functions for coercing invalid units, and for converting values between any compatible units.
 
-Resqpy's unit systems module is :mod:`resqpy.olio.weights_and_measures`, and is typically imported as:
+Resqpy's unit systems module is :mod:`resqpy.weights_and_measures`, and is typically imported as:
 
 .. code-block:: python
 
-    import resqpy.olio.weights_and_measures as wam
+    import resqpy.weights_and_measures as wam
 
 The Energistics Unit of Measure Standard
 ----------------------------------------
@@ -28,7 +28,7 @@ Quantities
 
 A Quantity represents a set of units with the same dimension and same underlying measurement concept.
 
-To get a set of all possible quantities, use :func:`~resqpy.olio.weights_and_measures.valid_quantities`:
+To get a set of all possible quantities, use :func:`~resqpy.weights_and_measures.valid_quantities`:
 
 .. code-block:: python
 
@@ -55,7 +55,7 @@ A RESQML unit of measure (or "uom") is a unit symbol, such as "m" or "bbl".
 
 Each uom has an associated dimension, and may be compatible with multiple quantities.
 
-Resqpy can try to coerce an input string into a valid RESQML unit of measure. :func:`~resqpy.olio.weights_and_measures.rq_uom` understands some common aliases:
+Resqpy can try to coerce an input string into a valid RESQML unit of measure. :func:`~resqpy.weights_and_measures.rq_uom` understands some common aliases:
 
 .. code-block:: python
 
@@ -66,7 +66,7 @@ Resqpy can try to coerce an input string into a valid RESQML unit of measure. :f
     >>> wam.rq_uom("p.u.")
     "%"
 
-To see the valid set of units of measure, use :func:`~resqpy.olio.weights_and_measures.valid_uoms`:
+To see the valid set of units of measure, use :func:`~resqpy.weights_and_measures.valid_uoms`:
 
 .. code-block:: python
 
@@ -115,7 +115,7 @@ A value `x` can be converted into the base unit with the formula:
 
 where `y` represents a value in the base unit.
 
-Use :func:`~resqpy.olio.weights_and_measures.convert` to convert values between any compatible units of measure:
+Use :func:`~resqpy.weights_and_measures.convert` to convert values between any compatible units of measure:
 
 .. code-block:: python
 

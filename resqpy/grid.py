@@ -26,7 +26,7 @@ import resqpy.olio.write_data as wd
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.volume as vol
 import resqpy.olio.uuid as bu
-import resqpy.olio.weights_and_measures as bwam
+import resqpy.weights_and_measures as bwam
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.trademark as tm
