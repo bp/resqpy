@@ -166,25 +166,46 @@ def convert(x, unit_from, unit_to, quantity=None, inplace=False):
 
 
 @lru_cache(None)
-def valid_uoms(quantity=None):
-   """Return set of valid uoms
+def valid_uoms(quantity=None, return_attributes=False):
+   """Return set of valid RESQML units of measure
    
    Args:
       quantity (str): If given, filter to uoms supported by this quanitity.
+      return_attributes (bool): If True, return a dict of all uoms and their
+         attributes, such as the full name and dimension. Else, simply return
+         the set of valid uoms.
+
+   Returns
+      set or dict
    """
-   if not quantity:
-      return set(_properties_data()['units'].keys())
-   else:
+   uoms = _properties_data()['units']
+   if quantity:
       all_quantities = _properties_data()['quantities']
       supported_members = all_quantities[quantity]['members']
-      return supported_members
+      uoms = {k: v for k, v in uoms.items() if k in supported_members}
+   if return_attributes:
+      return uoms
+   else:
+      return set(uoms.keys())
 
 
 @lru_cache(None)
-def valid_quantities():
-   """Return set of valid quantities"""
-
-   return set(_properties_data()['quantities'].keys())
+def valid_quantities(return_attributes=False):
+   """Return set of valid RESQML quantities
+   
+   Args:
+      return_attributes (bool): If True, return a dict of all quantities and their
+         attributes, such as the supported units of measure. Else, simply return
+         the set of valid properties.
+   
+   Returns
+      set or dict
+   """
+   quantities = _properties_data()['quantities']
+   if return_attributes:
+      return quantities
+   else:
+      return set(quantities.keys())
 
 
 def valid_property_kinds():
