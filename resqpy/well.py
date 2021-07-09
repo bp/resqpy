@@ -1996,7 +1996,7 @@ class BlockedWell(BaseResqpy):
 
       if add_properties:
          if isinstance(add_properties, list):
-            col_list = ['IW', 'JW', 'L'] + [col.upper() for col in col_list if col not in ['IW', 'JW', 'L']]
+            col_list = ['IW', 'JW', 'L'] + [col.upper() for col in add_properties if col not in ['IW', 'JW', 'L']]
          else:
             col_list = []
       else:

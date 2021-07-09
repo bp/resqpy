@@ -2,6 +2,7 @@ from pathlib import Path
 from resqpy.organize import WellboreFeature
 
 import pytest
+import os
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_almost_equal
@@ -251,7 +252,7 @@ def test_wellspec_properties(example_model_and_crs):
    assert_array_almost_equal(skin_prop.array_ref(), [0.0, 2.5, 1.0, -0.5])
    model.store_epc()
    # re-open model from persistent storage
-   model = Model(epc)
+   model = Model(model.epc_file)
    bw2_uuid = model.uuid(obj_type = 'BlockedWellboreRepresentation', title = 'DOGLEG')
    assert bw2_uuid is not None
    bw2 = resqpy.well.BlockedWell(model, uuid = bw2_uuid)
