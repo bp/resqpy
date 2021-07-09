@@ -7,7 +7,7 @@ import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.property as rqp
 import resqpy.derived_model as rqdm
-import resqpy.olio.weights_and_measures as bwam
+import resqpy.weights_and_measures as bwam
 
 
 # ---- Test PropertyCollection ---

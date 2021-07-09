@@ -13,7 +13,6 @@ import os
 from lxml.etree import parse, ElementTree, Element, SubElement, _Element  # noqa
 
 import resqpy.olio.uuid as bu
-# import resqpy.olio.weights_and_measures as bwam
 
 from resqpy.olio.xml_namespaces import namespace as ns, inverse_namespace as inv_ns, curly_namespace as cns
 

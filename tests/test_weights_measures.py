@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-import resqpy.olio.weights_and_measures as wam
+import resqpy.weights_and_measures as wam
 from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
 
@@ -22,6 +22,13 @@ def test_valid_uoms():
    assert "foo barr" not in wam.valid_uoms()
    assert "" not in wam.valid_uoms()
    assert None not in wam.valid_uoms()
+
+   # With attributes, optionally with subset
+   for quantity in [None, "length"]:
+      uom_dict = wam.valid_uoms(quantity=quantity, return_attributes=True)
+      assert "m" in uom_dict.keys()
+      assert uom_dict["m"]["name"] == "metre"
+      assert uom_dict["m"]["dimension"] == "L"
 
 
 def test_uom_aliases():
@@ -72,7 +79,9 @@ def test_bad_unit_raises_error(input_uom):
 
 def test_quantities():
    
+   # Set of all quantities
    quantities = wam.valid_quantities()
+   assert "length" in quantities
    assert len(quantities) > 10
    for q in quantities:
       uoms = wam.valid_uoms(quantity=q)
@@ -80,6 +89,11 @@ def test_quantities():
       for uom in uoms:
          assert uom in wam.valid_uoms(), f"Bad uom {uom}"
 
+   # With attributes
+   quantities_dict = wam.valid_quantities(return_attributes=True)
+   assert "length" in quantities_dict.keys()
+   assert quantities_dict["length"]["dimension"] == "L"
+   assert "m" in quantities_dict["length"]["members"]
 
 # ---- Test unit conversions -------
 

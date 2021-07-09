@@ -46,12 +46,12 @@ import resqpy.crs as crs
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.lines as rql
+import resqpy.weights_and_measures as bwam
 
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.intersection as intersect
 import resqpy.olio.uuid as bu
-import resqpy.olio.weights_and_measures as bwam
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.keyword_files as kf
