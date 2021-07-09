@@ -39,14 +39,14 @@ class Crs(BaseResqpy):
                 parent_model: 'rq.Model',
                 crs_root = None,  # deprecated
                 uuid: Optional[uuid.UUID] = None,
-                x_offset: Optional[float] = 0.0,
-                y_offset: Optional[float] = 0.0,
-                z_offset: Optional[float] = 0.0,
-                rotation: Optional[float] = 0.0,
-                xy_units: Optional[str] = 'm',
-                z_units: Optional[str] = 'm',
-                z_inc_down: Optional[bool] = True,
-                axis_order: Optional[str] = 'easting northing',
+                x_offset: float = 0.0,
+                y_offset: float = 0.0,
+                z_offset: float = 0.0,
+                rotation: float = 0.0,
+                xy_units: str = 'm',
+                z_units: str = 'm',
+                z_inc_down: bool = True,
+                axis_order: str = 'easting northing',
                 time_units: Optional[str] = None,
                 epsg_code: Optional[str] = None,
                 title: Optional[str] = None,
@@ -337,7 +337,7 @@ class Crs(BaseResqpy):
 
       if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
 
-      crs = super().create_xml(add_as_part = False, originator = originator)
+      crs = super().create_xml(add_as_part = False, title=title, originator = originator)
 
       xoffset = rqet.SubElement(crs, ns['resqml2'] + 'XOffset')
       xoffset.set(ns['xsi'] + 'type', ns['xsd'] + 'double')

@@ -128,8 +128,7 @@ class BaseResqpy(metaclass=ABCMeta):
             is added as a part to the model.
 
         Args:
-            title (string): used as the citation Title text; should usually refer to the well name in a
-                human readable way
+            title (string): used as the citation Title text
             originator (string, optional): the name of the human being who created the deviation survey part;
                 default is to use the login name
             extra_metadata (dict, optional): extra metadata items to be added
