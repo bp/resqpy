@@ -96,7 +96,7 @@ def write_array_to_ascii_file(file_name, extent_kji, a, headers = True, keyword 
 
          log.info('Ascii data file %s created', file_name)
 
-      except:
+      except Exception:
          log.error('Failed to write data to ascii file %s', file_name)
          # could abort at this point, or raise
 
@@ -112,7 +112,7 @@ def write_array_to_ascii_file(file_name, extent_kji, a, headers = True, keyword 
          with open(binary_file_name, 'wb') as binary_file_out:
             ap.tofile(binary_file_out)
          log.info('Binary data file %s created', binary_file_name)
-      except:
+      except Exception:
          log.warn('Failed to write data to binary file %s', binary_file_name)
          # todo: could delete the binary file in case a corrupt file is left for use next time
 

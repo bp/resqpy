@@ -26,7 +26,7 @@ import resqpy.olio.write_data as wd
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.volume as vol
 import resqpy.olio.uuid as bu
-import resqpy.olio.weights_and_measures as bwam
+import resqpy.weights_and_measures as bwam
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.trademark as tm
@@ -2027,7 +2027,7 @@ class Grid(BaseResqpy):
          value = self.model.h5_array_element(h5_key_pair, index = index, cache_array = cache_array,
                                              object = self, array_attribute = 'points_cached',
                                              required_shape = required_shape)
-      except:
+      except Exception:
          log.error('hdf5 points failure for index: ' + str(index))
          raise
       if index is None: return self.points_cached

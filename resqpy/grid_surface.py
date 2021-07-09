@@ -833,10 +833,10 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
    centre_points = grid.centre_point()
 #   log.debug('computing inter cell centre vectors and boxes')
    if grid.nk > 1:
-      l = centre_points[:-1, :, :]
+      v = centre_points[:-1, :, :]
       u = centre_points[1:, :, :]
-      k_vectors = u - l
-      combo = np.stack((l, u))
+      k_vectors = u - v
+      combo = np.stack((v, u))
       k_vector_boxes = np.empty((grid.nk - 1, grid.nj, grid.ni, 2, 3))
       k_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
       k_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
@@ -850,10 +850,10 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
       column_k_vector_boxes = None
       k_faces = None
    if grid.nj > 1:
-      l = centre_points[:, :-1, :]
+      v = centre_points[:, :-1, :]
       u = centre_points[:, 1:, :]
-      j_vectors = u - l
-      combo = np.stack((l, u))
+      j_vectors = u - v
+      combo = np.stack((v, u))
       j_vector_boxes = np.empty((grid.nk, grid.nj - 1, grid.ni, 2, 3))
       j_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
       j_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
@@ -868,10 +868,10 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
       j_faces = None
    if grid.ni > 1:
       i_vectors = centre_points[:, :, 1:] - centre_points[:, :, :-1]
-      l = centre_points[:, :, :-1]
+      v = centre_points[:, :, :-1]
       u = centre_points[:, :, 1:]
-      i_vectors = u - l
-      combo = np.stack((l, u))
+      i_vectors = u - v
+      combo = np.stack((v, u))
       i_vector_boxes = np.empty((grid.nk, grid.nj, grid.ni - 1, 2, 3))
       i_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
       i_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)

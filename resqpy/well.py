@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '6th July 2021'
+version = '7th July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -46,12 +46,12 @@ import resqpy.crs as crs
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.lines as rql
+import resqpy.weights_and_measures as bwam
 
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.intersection as intersect
 import resqpy.olio.uuid as bu
-import resqpy.olio.weights_and_measures as bwam
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.keyword_files as kf
@@ -872,7 +872,7 @@ class Trajectory(BaseResqpy):
          self.tangent_vectors = None
          if set_tangent_vectors: self.set_tangents()
          self.md_datum = md_datum
-      except:
+      except Exception:
          log.exception('failed to load trajectory object from data frame')
 
 
@@ -935,7 +935,7 @@ class Trajectory(BaseResqpy):
       try:
          df = pd.read_csv(trajectory_file, comment = comment_character, delim_whitespace = space_separated_instead_of_csv)
          if df is None: raise Exception
-      except:
+      except Exception:
          log.error('failed to read ascii deviation survey file ' + str(trajectory_file))
          raise
       if well_col and well_col not in df.columns:
@@ -1049,19 +1049,20 @@ class Trajectory(BaseResqpy):
          return f * p2  +  (1.0 - f) * p1
 
       def search(md, i1, i2):
-         if i2 - i1 == 1:
-            return interpolate(self.control_points[i1], self.control_points[i2],
-                               (md - self.measured_depths[i1]) / (self.measured_depths[i2] - self.measured_depths[i1]))
+         if i2 - i1 <= 1:
+            if md == self.measured_depths[i1]: return self.control_points[i1]
+            return interpolate(self.control_points[i1], self.control_points[i1 + 1],
+                               (md - self.measured_depths[i1]) / (self.measured_depths[i1 + 1] - self.measured_depths[i1]))
          im = i1  +  (i2 - i1) // 2
          if self.measured_depths[im] >= md:
             return search(md, i1, im)
          return search(md, im, i2)
 
-      if md < 0.0 or md > self.finish_md: return None
+      if md < 0.0 or md > self.finish_md or md > self.measured_depths[-1]: return None
       if md <= self.start_md:
          if self.start_md == 0.0: return self.md_datum.location
          return interpolate(np.array(self.md_datum.location), self.control_points[0], md / self.start_md)
-      return search(md, 0, self.knot_count)
+      return search(md, 0, self.knot_count - 1)
 
 
    def splined_trajectory(self, well_name,
@@ -2319,7 +2320,7 @@ class BlockedWell(BaseResqpy):
             self.face_pair_indices = np.array(blocked_face_pairs)
             self.grid_list = [grid]
 
-      except:
+      except Exception:
          log.exception('failed to import info for blocked well ' + str(well_name) + ' from cell I/O file ' + str(cellio_file))
          return None
 
@@ -3060,7 +3061,7 @@ class BlockedWell(BaseResqpy):
                         fp.write(sep + form.format(int(row[col_name])))
                      else:
                         fp.write(sep + form.format(str(row[col_name])))
-               except:
+               except Exception:
                   fp.write(sep + str(row[col_name]))
             fp.write('\n')
          for _ in range(trailing_blank_lines): fp.write('\n')
@@ -3861,7 +3862,7 @@ def add_wells_from_ascii_file(model, crs_uuid, trajectory_file, comment_characte
    try:
       df = pd.read_csv(trajectory_file, comment = comment_character, delim_whitespace = space_separated_instead_of_csv)
       if df is None: raise Exception
-   except:
+   except Exception:
       log.error('failed to read ascii deviation survey file: ' + str(trajectory_file))
       raise
    if well_col and well_col not in df.columns:

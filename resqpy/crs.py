@@ -12,11 +12,11 @@ import numpy as np
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
+import resqpy.weights_and_measures as wam
 from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.vector_utilities as vec
-import resqpy.olio.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 

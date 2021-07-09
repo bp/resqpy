@@ -104,7 +104,7 @@ def points_in_polygon(x, y, polygon_file, poly_unit_multiplier = None):
       if poly_unit_multiplier is not None: polygon[:] *= poly_unit_multiplier
       points = np.stack((x, y), axis = -1)
       return pip_array_cn(points, polygon)
-   except:
+   except Exception:
       log.exception('failed to determine points in polygon')
 
    return None

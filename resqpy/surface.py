@@ -129,7 +129,7 @@ class TriangulatedPatch():
       try:
          self.model.h5_array_element(h5_key_pair, cache_array = True, object = self,
                                      array_attribute = 'points', dtype = 'float')
-      except:
+      except Exception:
          log.error('hdf5 points failure for triangle patch ' + str(self.patch_index))
          raise
       triangles_node = rqet.find_tag(self.node, 'Triangles')
@@ -140,7 +140,7 @@ class TriangulatedPatch():
       try:
          self.model.h5_array_element(h5_key_pair, cache_array = True, object = self,
                                      array_attribute = 'triangles', dtype = 'int')
-      except:
+      except Exception:
          log.error('hdf5 triangles failure for triangle patch ' + str(self.patch_index))
          raise
       return (self.triangles, self.points)
@@ -1284,7 +1284,7 @@ class PointSet(_BaseSurface):
       try:
          self.model.h5_array_element(h5_key_pair, cache_array = True, object = self,
                                      array_attribute = 'temp_points', dtype = 'float')
-      except:
+      except Exception:
          log.exception('hdf5 points failure for point set patch ' + str(patch_index))
       assert self.temp_points.ndim == 2 and self.temp_points.shape[1] == 3, 'unsupported dimensionality to points array'
       self.patch_array_list[patch_index] = self.temp_points.copy()
@@ -1788,7 +1788,7 @@ class Mesh(_BaseSurface):
             self.model.h5_array_element(self.explicit_h5_key_pair, cache_array = True, object = self,
                                         array_attribute = 'full_array', dtype = 'float')
             # todo: could extend with z values of zero if only xy present?
-         except:
+         except Exception:
             log.exception('hdf5 points failure for mesh')
 
       elif self.flavour in ['regular', 'reg&z']:
@@ -1805,7 +1805,7 @@ class Mesh(_BaseSurface):
             try:
                self.model.h5_array_element(self.ref_z_h5_key_pair, cache_array = True, object = self,
                                            array_attribute = 'temp_z', dtype = 'float')
-            except:
+            except Exception:
                log.exception('hdf5 failure for mesh z values')
             self.full_array[..., 2] = self.temp_z
             delattr(self, 'temp_z')
@@ -1820,7 +1820,7 @@ class Mesh(_BaseSurface):
          try:
             self.model.h5_array_element(self.ref_z_h5_key_pair, cache_array = True, object = self,
                                         array_attribute = 'temp_z', dtype = 'float')
-         except:
+         except Exception:
             log.exception('hdf5 failure for mesh z values')
          self.full_array[..., 2] = self.temp_z
 #        if np.any(np.isnan(self.temp_z)): log.warning('z values include some NaNs')
