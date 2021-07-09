@@ -241,14 +241,14 @@ class Crs(BaseResqpy):
       :meta common:
       """
 
-      if self is other_crs: return tuple(xyz)
+      if self is other_crs: return _as_xyz_tuple(xyz)
       assert self.has_same_epsg_code(other_crs)
       xyz = self.local_to_global(xyz)
       xyz = (wam.convert_lengths(xyz[0], self.xy_units, other_crs.xy_units),
              wam.convert_lengths(xyz[1], self.xy_units, other_crs.xy_units),
              wam.convert_lengths(xyz[2], self.z_units, other_crs.z_units))
       xyz = other_crs.global_to_local(xyz)
-      return tuple(xyz)
+      return _as_xyz_tuple(xyz)
 
 
    def convert_array_to(self, other_crs: 'Crs', xyz: np.ndarray):
@@ -275,14 +275,14 @@ class Crs(BaseResqpy):
       :meta common:
       """
 
-      if self is other_crs: return tuple(xyz)
+      if self is other_crs: return _as_xyz_tuple(xyz)
       assert self.has_same_epsg_code(other_crs)
       xyz = other_crs.local_to_global(xyz)
       xyz = (wam.convert_lengths(xyz[0], other_crs.xy_units, self.xy_units),
              wam.convert_lengths(xyz[1], other_crs.xy_units, self.xy_units),
              wam.convert_lengths(xyz[2], other_crs.z_units, self.z_units))
       xyz = self.global_to_local(xyz)
-      return tuple(xyz)
+      return _as_xyz_tuple(xyz)
 
 
    def convert_array_from(self, other_crs: 'Crs', xyz: np.ndarray):
@@ -413,3 +413,8 @@ class Crs(BaseResqpy):
       """DEPRECATED. Alias for root"""
       warnings.warn("Attribute 'crs_root' is deprecated. Use 'root'", DeprecationWarning)
       return self.root
+
+def _as_xyz_tuple(xyz):
+   """Coerce into 3-tuple of floats"""
+   
+   return tuple(float(xyz[0]), float(xyz[1]), float(xyz[2]))
