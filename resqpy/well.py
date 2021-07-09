@@ -3058,14 +3058,14 @@ class BlockedWell(BaseResqpy):
          self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
       if self.interpretation_to_be_written:
          if self.wellbore_interpretation is None: self.create_feature_and_interpretation()
-         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, title_suffix = 'blocked well',
+         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, title_suffix = None,
                                                  add_relationships = add_relationships, originator = originator)
 
       if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root_node is None:
          md_datum_root = self.trajectory.md_datum.create_xml(
             add_as_part = add_as_part,
             add_relationships = add_relationships,
-            title = str(self.title) + ' simulator md datum',
+            title = str(self.title),
             originator = originator)
          self.trajectory.create_xml(ext_uuid, md_datum_root = md_datum_root,
             add_as_part = add_as_part, add_relationships = add_relationships,
