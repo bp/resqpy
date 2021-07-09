@@ -2030,7 +2030,7 @@ class BlockedWell(BaseResqpy):
       return self.derive_from_dataframe(df, well_name, grid, use_face_centres = True)
 
 
-   def derive_from_dataframe(self, df, well_name, grid, grid_name_to_check = None, use_face_centres = False,
+   def derive_from_dataframe(self, df, well_name, grid, grid_name_to_check = None, use_face_centres = True,
                              add_as_properties = False):
       """Populate empty blocked well from WELLSPEC-like dataframe; first columns must be IW, JW, L (i, j, k).
 
@@ -2038,6 +2038,14 @@ class BlockedWell(BaseResqpy):
          if add_as_properties is True or present as a list of wellspec column names, both the blocked well and
          the properties will have their hdf5 data written, xml created and be added as parts to the model
       """
+
+      def cell_kji0_from_df(df, df_row):
+         row = df.iloc[df_row]
+         if pd.isna(row[0]) or pd.isna(row[1]) or pd.isna(row[2]): return None
+         cell_kji0 = np.empty((3,), dtype = int)
+         cell_kji0[:] = row[2], row[1], row[0]
+         cell_kji0[:] -= 1
+         return cell_kji0
 
       if well_name: self.well_name = well_name
       else: well_name = self.well_name
@@ -2061,19 +2069,21 @@ class BlockedWell(BaseResqpy):
       angles_present = ('ANGLV' in df.columns and 'ANGLA' in df.columns and
                         not pd.isnull(df.iloc[0]['ANGLV']) and not pd.isnull(df.iloc[0]['ANGLA']))
 
+      # TODO: remove these temporary overrides
+      angles_present = False
+      use_face_centres = True
+
       if not angles_present and not use_face_centres:
          log.warning(f'ANGLV and/or ANGLA data unavailable for well {well_name}: using face centres')
          use_face_centres = True
 
       for i in range(len(df)):  # for each row in the dataframe for this well
 
-         row = df.iloc[i]
-         if pd.isna(row[0]) or pd.isna(row[1]) or pd.isna(row[2]):
+         cell_kji0 = cell_kji0_from_df(df, i)
+         if cell_kji0 is None:
             log.error('missing cell index in wellspec data for well ' + str(well_name) + ' row ' + str(i + 1))
             continue
-         cell_kji0 = np.empty((3,), dtype = int)
-         cell_kji0[:] = row[2], row[1], row[0]
-         cell_kji0[:] -= 1
+
          if grid_name_to_check and pd.notna(row['GRID']) and grid_name_to_check != str(row['GRID']).upper():
             other_grid = str(row['GRID'])
             if skipped_warning_grid != other_grid:
@@ -2082,53 +2092,47 @@ class BlockedWell(BaseResqpy):
             continue
          cp = grid.corner_points(cell_kji0 = cell_kji0, cache_resqml_array = False)
          assert not np.any(np.isnan(cp)), 'missing geometry for perforation cell for well ' + str(well_name)
-         use_k = (pd.isna(row[3]) or pd.isna(row[4]))   # angla or anglv missing in wellspecs; could treat as vertical instead?
 
-         if use_k:
-#            log.debug('row ' + str(i) + ': using k face centres')
-            entry_axis = exit_axis = 0
-            entry_polarity = 0
-            exit_polarity = 1
-            entry_xyz = np.mean(cp[0], axis = (0, 1))
-            exit_xyz = np.mean(cp[1], axis = (0, 1))
-
-         else:
-#            log.debug('row ' + str(i) + ': using angles')
-            if angles_present:
-               angla = row['ANGLA']
-               inclination = row['ANGLV']
-               if inclination < 0.1:
-                  azimuth = 0.0
-               else:
-                  i_vector = np.sum(cp[:, :, 1] - cp[:, :, 0], axis = (0, 1))
-                  azimuth = vec.azimuth(i_vector) - angla     # see Nexus keyword reference doc
-               well_vector = vec.unit_vector_from_azimuth_and_inclination(azimuth, inclination) * 10000.0
-               (entry_axis, entry_polarity, entry_xyz,
-                exit_axis, exit_polarity, exit_xyz) = find_entry_and_exit(cp, -well_vector, well_vector, well_name)
+         if angles_present:
+            log.debug('row ' + str(i) + ': using angles')
+            angla = row['ANGLA']
+            inclination = row['ANGLV']
+            if inclination < 0.1:
+               azimuth = 0.0
             else:
-               # fabricate entry and exit axes and polarities based on indices alone
-               # note: could use geometry but here a cheap rough-and-ready approach is used
-               if i == 0:
-                  entry_axis, entry_polarity = 0, 0  # K-
-               else:
-                  entry_move = cell_kji0 - blocked_cells_kji0[-1]
-                  if entry_move[1] == 0 and entry_move[2] == 0:  # K move
-                     entry_axis = 0
-                     entry_polarity = 0 if entry_move[0] >= 0 else 1
-                  elif abs(entry_move[1]) > abs(entry_move[2]):  # J dominant move
-                     entry_axis = 1
-                     entry_polarity = 0 if entry_move[1] >= 0 else 1
-                  else:  # I dominant move
-                     entry_axis = 2
-                     entry_polarity = 0 if entry_move[2] >= 0 else 1
-               if i == len(df) - 1:
+               i_vector = np.sum(cp[:, :, 1] - cp[:, :, 0], axis = (0, 1))
+               azimuth = vec.azimuth(i_vector) - angla     # see Nexus keyword reference doc
+            well_vector = vec.unit_vector_from_azimuth_and_inclination(azimuth, inclination) * 10000.0
+            # todo: the following might be producing NaN's when vector passes precisely through an edge
+            (entry_axis, entry_polarity, entry_xyz,
+             exit_axis, exit_polarity, exit_xyz) = find_entry_and_exit(cp, -well_vector, well_vector, well_name)
+         else:
+            # fabricate entry and exit axes and polarities based on indices alone
+            # note: could use geometry but here a cheap rough-and-ready approach is used
+            log.debug('row ' + str(i) + ': using cell moves')
+            if i == 0:
+               entry_axis, entry_polarity = 0, 0  # K-
+            else:
+               entry_move = cell_kji0 - blocked_cells_kji0[-1]
+               log.debug(f'entry move: {entry_move}')
+               if entry_move[1] == 0 and entry_move[2] == 0:  # K move
+                  entry_axis = 0
+                  entry_polarity = 0 if entry_move[0] >= 0 else 1
+               elif abs(entry_move[1]) > abs(entry_move[2]):  # J dominant move
+                  entry_axis = 1
+                  entry_polarity = 0 if entry_move[1] >= 0 else 1
+               else:  # I dominant move
+                  entry_axis = 2
+                  entry_polarity = 0 if entry_move[2] >= 0 else 1
+            if i == len(df) - 1:
+               exit_axis, exit_polarity = entry_axis, 1 - entry_polarity
+            else:
+               next_cell_kji0 = cell_kji0_from_df(df, i + 1)
+               if next_cell_kji0 is None:
                   exit_axis, exit_polarity = entry_axis, 1 - entry_polarity
                else:
-                  next_row = df.iloc(i + 1)
-                  next_cell_kji0 = np.empty((3,), dtype = int)
-                  next_cell_kji0[:] = next_row[2], next_row[1], next_row[0]
-                  next_cell_kji0[:] -= 1
                   exit_move = next_cell_kji0 - cell_kji0
+                  log.debug(f'exit move: {exit_move}')
                   if exit_move[1] == 0 and exit_move[2] == 0:  # K move
                      exit_axis = 0
                      exit_polarity = 1 if exit_move[0] >= 0 else 0
@@ -2139,13 +2143,15 @@ class BlockedWell(BaseResqpy):
                      exit_axis = 2
                      exit_polarity = 1 if exit_move[2] >= 0 else 0
 
-            if use_face_centres:  # override the vector based xyz entry and exit points with face centres
-               if entry_axis == 0: entry_xyz = np.mean(cp[entry_polarity, :, :], axis = (0, 1))
-               elif entry_axis == 1: entry_xyz = np.mean(cp[:, entry_polarity, :], axis = (0, 1))
-               else: entry_xyz = np.mean(cp[:, :, entry_polarity], axis = (0, 1))  # entry_axis == 2, ie. I
-               if exit_axis == 0: exit_xyz = np.mean(cp[exit_polarity, :, :], axis = (0, 1))
-               elif exit_axis == 1: exit_xyz = np.mean(cp[:, exit_polarity, :], axis = (0, 1))
-               else: exit_xyz = np.mean(cp[:, :, exit_polarity], axis = (0, 1))  # exit_axis == 2, ie. I
+         if use_face_centres:  # override the vector based xyz entry and exit points with face centres
+            if entry_axis == 0: entry_xyz = np.mean(cp[entry_polarity, :, :], axis = (0, 1))
+            elif entry_axis == 1: entry_xyz = np.mean(cp[:, entry_polarity, :], axis = (0, 1))
+            else: entry_xyz = np.mean(cp[:, :, entry_polarity], axis = (0, 1))  # entry_axis == 2, ie. I
+            if exit_axis == 0: exit_xyz = np.mean(cp[exit_polarity, :, :], axis = (0, 1))
+            elif exit_axis == 1: exit_xyz = np.mean(cp[:, exit_polarity, :], axis = (0, 1))
+            else: exit_xyz = np.mean(cp[:, :, exit_polarity], axis = (0, 1))  # exit_axis == 2, ie. I
+
+         log.debug(f'cell: {cell_kji0}; entry axis: {entry_axis}; polarity {entry_polarity}; exit axis: {exit_axis}; polarity {exit_polarity}')
 
          if previous_xyz is None:   # first entry
             log.debug('adding mean sea level trajectory start')
