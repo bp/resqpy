@@ -308,6 +308,7 @@ class Crs(BaseResqpy):
                   root = None,  # deprecated
                   title: Optional[str] = None,
                   originator: Optional[str] = None,
+                  extra_metadata: Optional[Dict[str, str]] = None,
                   reuse: bool = True):
       """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
@@ -319,6 +320,7 @@ class Crs(BaseResqpy):
          title (string, optional): used as the Title text in the citation node
          originator (string, optional): the name of the human being who created the crs object;
             default is to use the login name
+         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs
          reuse (boolean, default True): if True and an equivalent crs already exists in the model then
             the uuid for this Crs is modified to match that of the existing object and the existing
             xml node is returned without anything new being added
@@ -337,7 +339,7 @@ class Crs(BaseResqpy):
 
       if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
 
-      crs = super().create_xml(add_as_part = False, title=title, originator = originator)
+      crs = super().create_xml(add_as_part = False, title = title, originator = originator, extra_metadata = extra_metadata)
 
       xoffset = rqet.SubElement(crs, ns['resqml2'] + 'XOffset')
       xoffset.set(ns['xsi'] + 'type', ns['xsd'] + 'double')
