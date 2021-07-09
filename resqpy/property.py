@@ -28,7 +28,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.box_utilities as bxu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-import resqpy.olio.weights_and_measures as bwam
+import resqpy.weights_and_measures as bwam
 
 import resqpy.time_series as rts
 
@@ -120,7 +120,7 @@ class PropertyCollection():
       """
 
       assert property_set_root is None or support is not None,  \
-         'support (grid or wellbore frame) must be specified when populating property collection from property set'
+         'support (grid, wellbore frame, blocked well, mesh, or grid connection set) must be specified when populating property collection from property set'
 
       self.dict = {}   # main dictionary of model property parts which are members of the collection
       # above is mapping from part_name to:
@@ -171,7 +171,7 @@ class PropertyCollection():
 
       Arguments:
          support_uuid: the uuid of the supporting representation which the properties in this collection are for
-         support: a grid.Grid, well.WellboreFrame, well.BlockedWell, surface.Mesg, or fault.GridConnectionSet object
+         support: a grid.Grid, well.WellboreFrame, well.BlockedWell, surface.Mesh, or fault.GridConnectionSet object
             which the properties in this collection are for
          model (model.Model object, optional): if present, the model associated with this collection is set to this;
             otherwise the model is assigned from the supporting object
@@ -792,6 +792,7 @@ class PropertyCollection():
 
       return list(self.dict.keys())
 
+
    def uuids(self):
       """Return list of uuids in this collection.
 
@@ -801,6 +802,7 @@ class PropertyCollection():
       :meta common:
       """
       return [self.model.uuid_for_part(p) for p in self.dict.keys()]
+
 
    def selective_parts_list(self,
                             realization = None,
@@ -1018,9 +1020,9 @@ class PropertyCollection():
       for _, t in self.dict.items():
          e = t[index]
          if e is not None: s = s.union({e})
-      l = list(s)
-      if sort_list: l.sort()
-      return l
+      result = list(s)
+      if sort_list: result.sort()
+      return result
 
 
    def part_str(self, part, include_citation_title = True):
@@ -1170,7 +1172,7 @@ class PropertyCollection():
       """
       try:
          meta = self.element_for_part(part, 18)
-      except:
+      except Exception:
          pass
          meta = {}
       return meta
@@ -1217,17 +1219,17 @@ class PropertyCollection():
    def all_continuous(self):
       """Returns True if all the parts are for continuous (real) properties."""
 
-      l = self.unique_element_list(4, sort_list = False)
-      if len(l) != 1: return False
-      return l[0]
+      unique_elements = self.unique_element_list(4, sort_list = False)
+      if len(unique_elements) != 1: return False
+      return unique_elements[0]
 
 
    def all_discrete(self):
       """Returns True if all the parts are for discrete or categorical (integer) properties."""
 
-      l = self.unique_element_list(4, sort_list = False)
-      if len(l) != 1: return False
-      return not l[0]
+      unique_elements = self.unique_element_list(4, sort_list = False)
+      if len(unique_elements) != 1: return False
+      return not unique_elements[0]
 
 
    def count_for_part(self, part):
@@ -1251,9 +1253,9 @@ class PropertyCollection():
    def all_count_one(self):
       """Returns True if the low level Count value is 1 for all the parts in the collection."""
 
-      l = self.unique_element_list(5, sort_list = False)
-      if len(l) != 1: return False
-      return l[0] == 1
+      unique_elements = self.unique_element_list(5, sort_list = False)
+      if len(unique_elements) != 1: return False
+      return unique_elements[0] == 1
 
 
    def indexable_for_part(self, part):
@@ -1379,6 +1381,18 @@ class PropertyCollection():
       """
 
       return self.element_for_part(part, 10)
+
+
+   def title_for_part(self, part):
+      """Synonymous with citation_title_for_part()."""
+
+      return self.citation_title_for_part(part)
+
+
+   def titles(self):
+      """Returns a list of citation titles for the parts in the collection."""
+
+      return [self.citation_title_for_part(p) for p in self.parts()]
 
 
    def time_series_uuid_for_part(self, part):
@@ -1578,11 +1592,10 @@ class PropertyCollection():
       """
 
       if part not in self.dict: return
-      t = self.dict[part]
-      l = list(t)
-      l[13] = min_value
-      l[14] = max_value
-      self.dict[part] = tuple(l)
+      property_part = list(self.dict[part])
+      property_part[13] = min_value
+      property_part[14] = max_value
+      self.dict[part] = tuple(property_part)
 
 
    def establish_time_set_kind(self):
@@ -2732,13 +2745,13 @@ class PropertyCollection():
                if min_value is None:
                   try:
                      min_value = int(property_array.min())
-                  except:
+                  except Exception:
                      min_value = None
                      log.warning('no xml minimum value set for discrete property')
                if max_value is None:
                   try:
                      max_value = int(property_array.max())
-                  except:
+                  except Exception:
                      max_value = None
                      log.warning('no xml maximum value set for discrete property')
             else:
@@ -2890,12 +2903,12 @@ class PropertyCollection():
       ntg_part = poro_part = perm_i_part = perm_j_part = perm_k_part = None
       try:
          ntg_part = self.singleton(realization = realization, property_kind = 'net to gross ratio')
-      except:
+      except Exception:
          log.error('problem with net to gross ratio data (more than one array present?)')
          ntg_part = None
       try:
          poro_part = self.singleton(realization = realization, property_kind = 'porosity')
-      except:
+      except Exception:
          log.error('problem with porosity data (more than one array present?)')
          poro_part = None
       perms = selective_version_of_collection(self, realization = realization, property_kind = 'permeability rock')
@@ -2929,7 +2942,7 @@ class PropertyCollection():
                if not perm_i_part: perm_i_part = perms.singleton(citation_title = 'PERMX')
                if not perm_i_part:
                   log.error('unable to discern which rock permeability to use for I direction')
-            except:
+            except Exception:
                log.error('problem with permeability data (more than one I direction array present?)')
                perm_i_part = None
             try:
@@ -2940,7 +2953,7 @@ class PropertyCollection():
                if not perm_j_part: perm_j_part = perms.singleton(citation_title = 'PERMJ')
                if not perm_j_part: perm_j_part = perms.singleton(citation_title = 'KY')
                if not perm_j_part: perm_j_part = perms.singleton(citation_title = 'PERMY')
-            except:
+            except Exception:
                log.error('problem with permeability data (more than one J direction array present?)')
                perm_j_part = None
             if perm_j_part is None and share_perm_parts: perm_j_part = perm_i_part
@@ -2952,7 +2965,7 @@ class PropertyCollection():
                if not perm_k_part: perm_k_part = perms.singleton(citation_title = 'PERMK')
                if not perm_k_part: perm_k_part = perms.singleton(citation_title = 'KZ')
                if not perm_k_part: perm_k_part = perms.singleton(citation_title = 'PERMZ')
-            except:
+            except Exception:
                log.error('problem with permeability data (more than one K direction array present?)')
                perm_k_part = None
             if perm_k_part is None:
@@ -3745,7 +3758,7 @@ class GridPropertyCollection(PropertyCollection):
       try:
          import_array = ld.load_array_from_file(file_name, extent_kji, data_type = data_type, comment_char = '!',
                                                 data_free_of_comments = False, use_binary = use_binary)
-      except:
+      except Exception:
          log.exception('failed to import {} arrau from file {}'.format(keyword, file_name))
          return None
 
@@ -3794,7 +3807,7 @@ class GridPropertyCollection(PropertyCollection):
             discrete = False
          import_array = vdbase.grid_static_property(grid_name, keyword, dtype = dtype)
          assert import_array is not None
-      except:
+      except Exception:
          log.exception(f'failed to import static property {keyword} from vdb')
          return None
 
@@ -3835,7 +3848,7 @@ class GridPropertyCollection(PropertyCollection):
       try:
          import_array = vdbase.grid_recurrent_property_for_timestep(grid_name, keyword, timestep, dtype = 'float')
          assert import_array is not None
-      except:
+      except Exception:
          # could raise an exception (as for static properties)
          log.error(f'failed to import recurrent property {keyword} from vdb for timestep {timestep}')
          return None
@@ -3884,7 +3897,7 @@ class GridPropertyCollection(PropertyCollection):
       else: assert discrete == (file_name[-3:] in ['.ib', '.lb', '.bb']), 'discrete argument is not consistent with file extension for: ' + file_name
       try:
          import_array = abt.load_array_from_ab_file(file_name, extent_kji, return_64_bit = False)  # todo: RESQML indicates 64 bit for everything
-      except:
+      except Exception:
          log.exception('failed to import property from pure binary file: ' + file_name)
          return None
 
@@ -4527,7 +4540,7 @@ class StringLookup(BaseResqpy):
          try:
             index = self.str_list.index(string)
             return index
-         except:
+         except Exception:
             return None
       if string not in self.str_dict.values(): return None
       for k, v in self.str_dict.items():

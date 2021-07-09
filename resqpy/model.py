@@ -111,12 +111,12 @@ class Model():
                h5_file = epc_file[:-4] + '.h5'
                os.remove(h5_file)
                log.info('old hdf5 file deleted: ' + str(h5_file))
-            except:
+            except Exception:
                pass
             try:
                os.remove(epc_file)
                log.info('old epc file deleted: ' + str(epc_file))
-            except:
+            except Exception:
                pass
          if epc_file:
             self.set_epc_file_and_directory(epc_file)
@@ -554,7 +554,7 @@ class Model():
 
          return True
 
-      except:
+      except Exception:
 
          log.exception('(okay to continue?) failed to load part: ' + part_name)
          return False
@@ -588,19 +588,19 @@ class Model():
 
       try:
          self._del_uuid_to_part(part_name)
-      except:
+      except Exception:
          pass
       try:
          del self.parts_forest[part_name]
-      except:
+      except Exception:
          pass
       try:
          del self.rels_forest[part_name]
-      except:
+      except Exception:
          pass
       try:
          del self.other_forest[part_name]
-      except:
+      except Exception:
          pass
 
 
@@ -1220,7 +1220,7 @@ class Model():
             if old_uuid is None or uuid_node.text == old_uuid_str:
                uuid_node.text = new_uuid_str
                count += 1
-         except:
+         except Exception:
             pass
       if count == 1: log.debug('one hdf5 reference modified')
       else: log.debug(str(count) + ' hdf5 references modified')
@@ -1254,7 +1254,7 @@ class Model():
             log.debug('path in hdf update from: ' + ref_node.text + ' to: ' + new_path_in_hdf)
             ref_node.text = new_path_in_hdf
             count += 1
-         except:
+         except Exception:
             pass
       if count == 1: log.debug('one hdf5 reference modified')
       else: log.debug(str(count) + ' hdf5 references modified')
@@ -1582,7 +1582,7 @@ class Model():
             try:
                grid_root = self.resolve_grid_root()
                if grid_root is not None: uuid_list = self.h5_uuid_list(grid_root)
-            except:
+            except Exception:
                uuid_list = None
             if uuid_list is None or len(uuid_list) == 0:
                for part, (_, _, tree) in self.parts_forest.items():
@@ -2233,7 +2233,7 @@ class Model():
       if originator is None:
          try:
             originator = str(os.getlogin())
-         except:
+         except Exception:
             originator = 'unknown'
       creator = rqet.SubElement(dp, ns['dc'] + 'creator')
       creator.text = originator
@@ -3092,7 +3092,7 @@ class Model():
       uuid = rqet.uuid_in_part_name(part_name)
       try:
          del self.uuid_part_dict[bu.uuid_as_int(uuid)]
-      except:
+      except Exception:
          pass
 
 

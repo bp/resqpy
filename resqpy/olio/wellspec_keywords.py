@@ -163,7 +163,7 @@ def check_value(keyword, value):
          return True
       else:
          return True
-   except:
+   except Exception:
       return False
 
 def required_out_list():
@@ -263,5 +263,7 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
             well_dict[well] = df
             break   # NB. if more than one table for a well, this function returns first, Nexus uses last
          well_dict[well_name] = df
+
+#   log.debug(f'load-wellspecs returning:\n{well_dict}')
 
    return well_dict
