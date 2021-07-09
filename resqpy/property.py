@@ -120,7 +120,7 @@ class PropertyCollection():
       """
 
       assert property_set_root is None or support is not None,  \
-         'support (grid or wellbore frame) must be specified when populating property collection from property set'
+         'support (grid, wellbore frame, blocked well, mesh, or grid connection set) must be specified when populating property collection from property set'
 
       self.dict = {}   # main dictionary of model property parts which are members of the collection
       # above is mapping from part_name to:
@@ -171,7 +171,7 @@ class PropertyCollection():
 
       Arguments:
          support_uuid: the uuid of the supporting representation which the properties in this collection are for
-         support: a grid.Grid, well.WellboreFrame, well.BlockedWell, surface.Mesg, or fault.GridConnectionSet object
+         support: a grid.Grid, well.WellboreFrame, well.BlockedWell, surface.Mesh, or fault.GridConnectionSet object
             which the properties in this collection are for
          model (model.Model object, optional): if present, the model associated with this collection is set to this;
             otherwise the model is assigned from the supporting object
@@ -792,6 +792,7 @@ class PropertyCollection():
 
       return list(self.dict.keys())
 
+
    def uuids(self):
       """Return list of uuids in this collection.
 
@@ -801,6 +802,7 @@ class PropertyCollection():
       :meta common:
       """
       return [self.model.uuid_for_part(p) for p in self.dict.keys()]
+
 
    def selective_parts_list(self,
                             realization = None,
@@ -1379,6 +1381,18 @@ class PropertyCollection():
       """
 
       return self.element_for_part(part, 10)
+
+
+   def title_for_part(self, part):
+      """Synonymous with citation_title_for_part()."""
+
+      return self.citation_title_for_part(part)
+
+
+   def titles(self):
+      """Returns a list of citation titles for the parts in the collection."""
+
+      return [self.citation_title_for_part(p) for p in self.parts()]
 
 
    def time_series_uuid_for_part(self, part):
