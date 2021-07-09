@@ -419,6 +419,7 @@ def node_int(node):
 
    if node is None: return None
    text = node.text.strip()
+   if text.lower() == 'none': return None
    if len(text): return int(text)
    return None
 
@@ -428,6 +429,7 @@ def node_float(node):
 
    if node is None: return None
    text = node.text.strip()
+   if text.lower() == 'none': return None
    if len(text): return float(text)
    return None
 

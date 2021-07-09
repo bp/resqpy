@@ -1563,7 +1563,7 @@ class BlockedWell(BaseResqpy):
    def __init__(self, parent_model, blocked_well_root = None, uuid = None, grid = None, trajectory = None,
                 wellspec_file = None, cellio_file = None, column_ji0 = None, well_name = None,
                 check_grid_name = False, use_face_centres = False,  represented_interp = None,
-                originator = None, extra_metadata = None):
+                originator = None, extra_metadata = None, add_wellspec_properties = False):
       """Creates a new blocked well object and optionally loads it from xml, or trajectory, or Nexus wellspec file.
 
       arguments:
@@ -1597,6 +1597,10 @@ class BlockedWell(BaseResqpy):
             ignored if uuid or blocked_well_root is not None
          extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the blocked well;
             ignored if uuid or blocked_well_root is not None
+         add_wellspec_properties (boolean or list of str, default False): if not False, and initialising from
+            a wellspec file, the blocked well has its hdf5 data written and xml created and properties are
+            fully created; if a list is provided the elements must be numerical wellspec column names;
+            if True, all numerical columns other than the cell indices are added as properties
 
       returns:
          the newly created blocked well object
@@ -1648,7 +1652,7 @@ class BlockedWell(BaseResqpy):
       super().__init__(model = parent_model, uuid = uuid, title = well_name, originator = originator, extra_metadata = extra_metadata,
                        root_node = blocked_well_root)
 
-      if blocked_well_root is None:
+      if self.root is None:
          self.wellbore_interpretation = represented_interp
          if grid is None: grid = self.model.grid()
          if self.trajectory is not None:
@@ -1656,7 +1660,8 @@ class BlockedWell(BaseResqpy):
          elif wellspec_file is not None:
             okay = self.derive_from_wellspec(wellspec_file, well_name, grid,
                                              check_grid_name = check_grid_name,
-                                             use_face_centres = use_face_centres)
+                                             use_face_centres = use_face_centres,
+                                             add_properties = add_wellspec_properties)
          elif cellio_file is not None:
             okay = self.import_from_rms_cellio(cellio_file, well_name, grid)
             if not okay: self.node_count = 0
@@ -1677,8 +1682,7 @@ class BlockedWell(BaseResqpy):
       trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
       assert trajectory_uuid is not None, 'blocked well trajectory reference not found in xml'
       if self.trajectory is None:
-         trajectory_part = 'obj_WellboreTrajectoryRepresentation_' + str(trajectory_uuid) + '.xml'
-         self.trajectory = Trajectory(self.model, trajectory_root = self.model.root_for_part(trajectory_part, is_rels = False))
+         self.trajectory = Trajectory(self.model, uuid = trajectory_uuid)
       else:
          assert bu.matching_uuids(self.trajectory.uuid, trajectory_uuid), 'blocked well trajectory uuid mismatch'
 
@@ -1981,12 +1985,22 @@ class BlockedWell(BaseResqpy):
 
       returns:
          self if successful; None otherwise
+
+      note:
+         if add_properties is True or present as a list, this method will write the hdf5, create the xml and add
+         parts to the model for this blocked well and the properties
       """
 
       if well_name: self.well_name = well_name
       else: well_name = self.well_name
 
-      col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
+      if add_properties:
+         if isinstance(add_properties, list):
+            col_list = ['IW', 'JW', 'L'] + [col.upper() for col in col_list if col not in ['IW', 'JW', 'L']]
+         else:
+            col_list = []
+      else:
+         col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
       if check_grid_name:
          grid_name = rqet.citation_title_for_node(grid.root).upper()
          if not grid_name: check_grid_name = False
@@ -2017,7 +2031,12 @@ class BlockedWell(BaseResqpy):
 
    def derive_from_dataframe(self, df, well_name, grid, grid_name_to_check = None, use_face_centres = False,
                              add_as_properties = False):
-      """Populate empty blocked well from WELLSPEC-like dataframe; first columns must be IW, JW, L (i, j, k)."""
+      """Populate empty blocked well from WELLSPEC-like dataframe; first columns must be IW, JW, L (i, j, k).
+
+      note:
+         if add_as_properties is True or present as a list of wellspec column names, both the blocked well and
+         the properties will have their hdf5 data written, xml created and be added as parts to the model
+      """
 
       if well_name: self.well_name = well_name
       else: well_name = self.well_name
@@ -2156,8 +2175,6 @@ class BlockedWell(BaseResqpy):
       else:
          log.info(str(blocked_count) + ' interval' + _pl(blocked_count) + ' blocked for well ' + str(well_name))
 
-      self.create_md_datum_and_trajectory(grid, trajectory_mds, trajectory_points, length_uom, well_name)
-
       self.node_count = len(trajectory_mds)
       self.node_mds = np.array(trajectory_mds)
       self.cell_count = len(blocked_cells_kji0)
@@ -2166,7 +2183,21 @@ class BlockedWell(BaseResqpy):
       self.face_pair_indices = np.array(blocked_face_pairs, dtype = int)
       self.grid_list = [grid]
 
+      # if last segment terminates at bottom face in bottom layer, add a tail to trajectory
+      if blocked_count > 0 and exit_axis == 0 and exit_polarity == 1 and cell_kji0[0] == grid.nk - 1 and grid.k_direction_is_down:
+         tail_length = 10.0  # metres or feet
+         tail_xyz = trajectory_points[-1].copy()
+         tail_xyz[2] += tail_length * (1.0 if grid.z_inc_down() else -1.0)
+         trajectory_points.append(tail_xyz)
+         new_md = trajectory_mds[-1] + tail_length
+         trajectory_mds.append(new_md)
+
+      self.create_md_datum_and_trajectory(grid, trajectory_mds, trajectory_points, length_uom, well_name)
+
       if add_as_properties and len(df.columns) > 3:
+         # NB: atypical writing of hdf5 data and xml creation in order to support related properties
+         self.write_hdf5()
+         self.create_xml()
          if isinstance(add_as_properties, list):
             for col in add_as_properties: assert col in df.columns[3:]  # could just skip missing columns
             property_columns = add_as_properties
@@ -2843,8 +2874,11 @@ class BlockedWell(BaseResqpy):
       # self must already exist as a part in the model
       # currently only handles single grid situations
       # todo: rewrite to add separate property objects for each grid references by the blocked well
+      log.debug('_add_df_props: df:')
+      log.debug(f'\n{df}')
+      log.debug(f'columns: {columns}')
       assert len(self.grid_list) == 1
-      if not columns or len(df) == 0: return
+      if columns is None or len(columns) == 0 or len(df) == 0: return
       if row_ci_list is None: row_ci_list = np.arange(self.cell_count)
       assert len(row_ci_list) == len(df)
       if length_uom is None: length_uom = self.trajectory.md_uom
@@ -2853,13 +2887,13 @@ class BlockedWell(BaseResqpy):
       ci_map = np.array(row_ci_list, dtype = int)
       for e in columns:
          extra = e.upper()
-         if extra in ['GRID', 'STAT']: continue
+         if extra in ['GRID', 'STAT']: continue  # todo: other non-numeric columns may need to be added to this list
          pk = 'continuous'
          uom = 'Euc'
          if extra in ['ANGLA', 'ANGLV']:
             uom = 'dega'
             # neither azimuth nor dip are correct property kinds; todo: create local property kinds
-            pk = 'azimuth' if extra == 'ANGLA' else 'dip'
+            pk = 'azimuth' if extra == 'ANGLA' else 'inclination'
          elif extra in ['LENGTH', 'MD', 'X', 'Y', 'DEPTH', 'RADW']:
             if length_uom is None or length_uom == 'Euc':
                if extra in ['LENGTH', 'MD']: uom = self.trajectory.md_uom
@@ -2874,6 +2908,8 @@ class BlockedWell(BaseResqpy):
             pk = 'permeability length'
          elif extra == 'PPERF':
             uom = length_uom + '/' + length_uom
+         else:
+            uom = 'Euc'
          # 'SKIN': use defaults for now; todo: create local property kind for skin
          expanded = np.full(self.cell_count, np.NaN)
          expanded[ci_map] = df[extra]
@@ -3081,7 +3117,8 @@ class BlockedWell(BaseResqpy):
          self.interpretation_to_be_written = True
 
 
-   def create_md_datum_and_trajectory(self, grid, trajectory_mds, trajectory_points, length_uom, well_name, set_depth_zero = False, set_tangent_vectors=False, create_feature_and_interp=True):
+   def create_md_datum_and_trajectory(self, grid, trajectory_mds, trajectory_points, length_uom, well_name,
+                                      set_depth_zero = False, set_tangent_vectors=False, create_feature_and_interp=True):
       """Creates an Md Datum object and a (simulation) Trajectory object for this blocked well.
 
       note:
@@ -3132,14 +3169,14 @@ class BlockedWell(BaseResqpy):
          self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
       if self.interpretation_to_be_written:
          if self.wellbore_interpretation is None: self.create_feature_and_interpretation()
-         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, title_suffix = 'blocked well',
+         self.wellbore_interpretation.create_xml(add_as_part = add_as_part, title_suffix = None,
                                                  add_relationships = add_relationships, originator = originator)
 
       if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root_node is None:
          md_datum_root = self.trajectory.md_datum.create_xml(
             add_as_part = add_as_part,
             add_relationships = add_relationships,
-            title = str(self.title) + ' simulator md datum',
+            title = str(self.title),
             originator = originator)
          self.trajectory.create_xml(ext_uuid, md_datum_root = md_datum_root,
             add_as_part = add_as_part, add_relationships = add_relationships,
