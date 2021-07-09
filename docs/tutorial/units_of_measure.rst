@@ -136,6 +136,6 @@ This will also work with numpy arrays, pandas dataframes or even distributed das
 You can also convert arrays in-place:
 
     >>> z = np.array([1,2,3])
-    >>> wam.convert(x, unit_from="km", unit_to="m", inplace=True)
+    >>> wam.convert(z, unit_from="km", unit_to="m", inplace=True)
     >>> z
     np.array([1000, 2000, 3000])
