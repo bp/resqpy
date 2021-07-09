@@ -163,7 +163,7 @@ def check_value(keyword, value):
          return True
       else:
          return True
-   except:
+   except Exception:
       return False
 
 def required_out_list():

@@ -27,4 +27,5 @@ executed whilst progressing through the material.
    cellular_grids
    grid_properties
    single_property
+   units_of_measure
    creating_test

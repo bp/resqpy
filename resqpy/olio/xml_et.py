@@ -13,7 +13,6 @@ import os
 from lxml.etree import parse, ElementTree, Element, SubElement, _Element  # noqa
 
 import resqpy.olio.uuid as bu
-# import resqpy.olio.weights_and_measures as bwam
 
 from resqpy.olio.xml_namespaces import namespace as ns, inverse_namespace as inv_ns, curly_namespace as cns
 
@@ -54,7 +53,7 @@ def colon_prefixed(curly_prefixed):
    pre_end = curly_prefixed.rfind('}')
    try:
       pre_colon = inv_ns[curly_prefixed[1:pre_end]]
-   except:
+   except Exception:
       return curly_prefixed, None
    return pre_colon + ':' + curly_prefixed[pre_end + 1:], pre_colon
 

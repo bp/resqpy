@@ -31,7 +31,7 @@ def substring(shorter, longer):
    try:
       longer.index(shorter)
       return True
-   except:
+   except Exception:
       return False
 
 
@@ -104,7 +104,7 @@ def split_trailing_comment(line, comment_char = '!'):
       pling = local_line.index(comment_char)
       if pling < len(local_line) - 2: comment = local_line[pling+1:]
       return (local_line[:pling], comment)
-   except:
+   except Exception:
       return (local_line, '')
 
 
@@ -167,7 +167,7 @@ def find_number(ascii_file):
       if len(words) > 0:
          try:
             float(words[0])
-         except:                     # todo: should only catch a particular exception (type conversion)
+         except Exception:                     # todo: should only catch a particular exception (type conversion)
             continue
          else:
             ascii_file.seek(file_pos)
@@ -205,7 +205,7 @@ def number_next(ascii_file, skip_blank_lines = True, comment_char = '!'):
       ascii_file.seek(file_pos)                            # restore file position whether or not number found
       try:
          float(words[0])
-      except:                           # todo: should only catch a particular exception (type conversion)
+      except Exception:                           # todo: should only catch a particular exception (type conversion)
          return False
       else:
          return True

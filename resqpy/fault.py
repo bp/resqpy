@@ -438,11 +438,22 @@ class GridConnectionSet(BaseResqpy):
       return singleton
 
 
-   def filtered_by_layer_range(self, min_k0 = None, max_k0 = None):
+   def filtered_by_layer_range(self, min_k0 = None, max_k0 = None, pare_down = True):
       """Returns a new GridConnectionSet, being a copy with cell faces whittled down to a layer range.
 
-      note:
-         cells in layer max_k0 are included in the filtered set (not pythonesque)
+      arguments:
+         min_k0 (int, optional): if present, the minimum layer number to be included (zero based)
+         max_k0 (int, optional): if present, the maximum layer number to be included (zero based)
+         pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
+            and the feature indices adjusted appropriately; if False, unused features will be left in the list for
+            the new connection set, meaning that the feature indices will be compatible with those for self
+
+      returns:
+         a new GridConnectionSet
+
+      notes:
+         cells in layer max_k0 are included in the filtered set (not pythonesque);
+         currently only works for single grid connection sets
       """
 
       self.cache_arrays()
@@ -461,11 +472,26 @@ class GridConnectionSet(BaseResqpy):
          mask[min_k0:, :, :] = True
       else:
          mask[:max_k0 + 1, :, :] = True
-      return self.filtered_by_cell_mask(mask)
+      return self.filtered_by_cell_mask(mask, pare_down = pare_down)
 
 
-   def filtered_by_cell_mask(self, mask, both_cells_required = True):
-      """Returns a new GridConnectionSet, being a copy with cell faces whittled down by a boolean mask array."""
+   def filtered_by_cell_mask(self, mask, both_cells_required = True, pare_down = True):
+      """Returns a new GridConnectionSet, being a copy with cell faces whittled down by a boolean mask array.
+
+      arguments:
+         mask (numpy bool array of shape grid.extent_kji): connections will be kept for cells where this mask is True
+         both_cells_required (bool, default True): if True, both cells involved in a connection must have a mask value
+            of True to be included; if False, any connection where either cell has a True mask value will be included
+         pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
+            and the feature indices adjusted appropriately; if False, unused features will be left in the list for
+            the new connection set, meaning that the feature indices will be compatible with those for self
+
+      returns:
+         a new GridConnectionSet
+
+      note:
+         currently only works for single grid connection sets
+      """
 
       assert len(self.grid_list) == 1, 'attempt to filter multi-grid connection set by cell mask'
       grid = self.grid_list[0]
@@ -487,7 +513,7 @@ class GridConnectionSet(BaseResqpy):
       masked_gcs.face_index_pairs = self.face_index_pairs[indices, :]
       masked_gcs.feature_indices = self.feature_indices[indices]
       masked_gcs.feature_list = self.feature_list.copy()
-      masked_gcs.clean_feature_list()
+      if pare_down: masked_gcs.clean_feature_list()
       return masked_gcs
 
 
@@ -1055,7 +1081,7 @@ class GridConnectionSet(BaseResqpy):
                   write_row(self, fp, feature_name, i, j, k, k2, axis, polarity)
 
 
-   def get_column_edge_list_for_feature(self,feature,gridindex=0,min_k=0,max_k=0):
+   def get_column_edge_list_for_feature(self, feature, gridindex = 0, min_k = 0, max_k = 0):
       """Extracts a list of cell faces for a given feature index, over a given range of layers in the grid
 
       Args:
@@ -1066,7 +1092,7 @@ class GridConnectionSet(BaseResqpy):
       Returns:
          list of cell faces for the feature (j_col, i_col, face_axis, face_polarity)
       """
-      subgcs = self.filtered_by_layer_range(min_k0=min_k, max_k0=max_k)
+      subgcs = self.filtered_by_layer_range(min_k0 = min_k, max_k0 = max_k, pare_down = False)
 
       cell_face_details = subgcs.list_of_cell_face_pairs_for_feature_index(feature)
 
@@ -1091,7 +1117,7 @@ class GridConnectionSet(BaseResqpy):
       return ij_faces_np
 
 
-   def get_column_edge_bool_array_for_feature(self,feature,gridindex=0,min_k=0,max_k=0):
+   def get_column_edge_bool_array_for_feature(self, feature, gridindex = 0, min_k = 0, max_k = 0):
       """Generate a boolean aray defining which column edges are present for a given feature and k-layer range
 
       Args:
@@ -1108,10 +1134,10 @@ class GridConnectionSet(BaseResqpy):
 
          so [[True,False],[False,True]] indicates the -j and +i edges of the column are present
       """
-      cell_face_list = self.get_column_edge_list_for_feature(feature,gridindex,min_k,max_k)
+      cell_face_list = self.get_column_edge_list_for_feature(feature, gridindex, min_k, max_k)
 
-      fault_by_column_edge_mask = np.zeros((self.grid_list[gridindex].nj,self.grid_list[gridindex].ni,2,2),dtype=bool)
-      for i in cell_face_list:  fault_by_column_edge_mask[tuple(i)] = True
+      fault_by_column_edge_mask = np.zeros((self.grid_list[gridindex].nj, self.grid_list[gridindex].ni, 2, 2), dtype = bool)
+      for i in cell_face_list: fault_by_column_edge_mask[tuple(i)] = True
 
       return fault_by_column_edge_mask
 
@@ -1163,8 +1189,8 @@ class GridConnectionSet(BaseResqpy):
       return property_value_by_column_edge
 
 
-   def get_combined_fault_mask_index_value_arrays(self,gridindex=0,min_k=0,max_k=0,
-                                                  property_name='Transmissibility multiplier',feature_list=None):
+   def get_combined_fault_mask_index_value_arrays(self, gridindex = 0, min_k = 0, max_k = 0,
+                                                  property_name = 'Transmissibility multiplier', feature_list = None):
       """Generate a combined mask, index and value arrays for all column edges across a k-layer range, for a defined feature_list
 
       Args:
@@ -1180,18 +1206,19 @@ class GridConnectionSet(BaseResqpy):
       """
       self.cache_arrays()
 #     if feature_list is None: feature_list = np.unique(self.feature_indices)
-      if feature_list is None: feature_list = range(len(self.feature_list))
+      if feature_list is None: feature_list = np.arange(len(self.feature_list))
       sum_unmasked = None
 
       for i, feature in enumerate(feature_list):
-         fault_by_column_edge_mask = self.get_column_edge_bool_array_for_feature(feature,gridindex,min_k=min_k,max_k=max_k)
-         property_value_by_column_edge = self.get_column_edge_float_array_for_feature(feature, fault_by_column_edge_mask, property_name=property_name)
+         fault_by_column_edge_mask = self.get_column_edge_bool_array_for_feature(feature, gridindex, min_k = min_k, max_k = max_k)
+         property_value_by_column_edge = self.get_column_edge_float_array_for_feature(feature, fault_by_column_edge_mask,
+                                                                                      property_name = property_name)
          if i == 0:
             combined_mask = fault_by_column_edge_mask.copy()
             if property_value_by_column_edge is not None:
                combined_values = property_value_by_column_edge.copy()
             else: combined_values = None
-            combined_index = np.full((fault_by_column_edge_mask.shape),-1,dtype=int)
+            combined_index = np.full((fault_by_column_edge_mask.shape), -1, dtype = int)
             combined_index = np.where(fault_by_column_edge_mask, feature, combined_index)
             sum_unmasked = np.sum(fault_by_column_edge_mask)
          else:

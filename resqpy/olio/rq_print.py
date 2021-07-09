@@ -580,7 +580,7 @@ def print_WellboreTrajectoryRepresentation(model, node, detail_level = 0):
          print('    x        y       z')
          for (x, y, z) in trajectory.control_points:
             print(f' {x:8.1f} {y:8.1f} {z:7.1f}')
-      except:
+      except Exception:
          print('(problem displaying control points)')
          log.exception('trajectory issue')
 
