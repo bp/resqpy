@@ -2084,6 +2084,8 @@ class BlockedWell(BaseResqpy):
             log.error('missing cell index in wellspec data for well ' + str(well_name) + ' row ' + str(i + 1))
             continue
 
+         row = df.iloc[i]
+
          if grid_name_to_check and pd.notna(row['GRID']) and grid_name_to_check != str(row['GRID']).upper():
             other_grid = str(row['GRID'])
             if skipped_warning_grid != other_grid:
