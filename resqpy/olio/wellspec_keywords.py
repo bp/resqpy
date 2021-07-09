@@ -5,6 +5,7 @@ version = '29th April 2021'
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
+from typing import Dict, Tuple, Any, Type
 log = logging.getLogger(__name__)
 log.debug('wellspec_keywords.py version %s', version)
 
@@ -30,7 +31,7 @@ wk_okay = 0
 wk_preferred = 1
 wk_required = 2
 
-wellspec_dict = { }  # mapping wellspec column key to:
+wellspec_dict : Dict[str, Tuple[int, int, int, Any, bool]]= { }  # mapping wellspec column key to:
 #     (warn count, required in, required out, default, length units boolean, )
 
 # NB: changing entries in this list will usually require other code change elsewhere
@@ -77,7 +78,7 @@ wellspec_dict['D']        = (0, wk_preferably_not, wk_okay, 'NA',   False)  # no
 wellspec_dict['ND']       = (0, wk_preferably_not, wk_okay, 'NA',   False)  # non D'Arcy flow
 wellspec_dict['DZ']       = (0, wk_preferably_not, wk_okay, None,   True)   # non D'Arcy flow; use LENGTH value? or DZ
 
-wellspec_dtype = { }  # mapping wellspec column key to expected data type
+wellspec_dtype: Dict[str, Type] = { }  # mapping wellspec column key to expected data type
 
 wellspec_dtype['IW']       = int
 wellspec_dtype['JW']       = int
