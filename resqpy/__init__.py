@@ -18,7 +18,9 @@
     rq_import
     surface
     time_series
+    tomography
     well
+    weights_and_measures
     olio
 
 """
