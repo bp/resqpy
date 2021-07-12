@@ -262,3 +262,6 @@ def test_wellspec_properties(example_model_and_crs):
    assert len(df2.columns) == 8
    for col in ['ANGLV', 'ANGLA', 'SKIN', 'RADW']:
       assert_array_almost_equal(np.array(source_df[col]), np.array(df2[col]))
+   df3 = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'LENGTH', 'SKIN', 'RADW'], use_properties = ['SKIN', 'RADW'])
+   for col in ['SKIN', 'RADW']:
+      assert_array_almost_equal(np.array(source_df[col]), np.array(df3[col]))
