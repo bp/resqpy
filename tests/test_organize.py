@@ -155,3 +155,19 @@ def test_GeobodyBoundary(tmp_model):
    gb.create_xml()
    gb2 = rqo.GeobodyBoundaryInterpretation(tmp_model, uuid = gb.uuid)
    assert gb == gb2
+
+
+def test_wellbore_interp_title(tmp_model):
+   # Create a feature and interp objects
+   feature_name = 'well A'
+   well_feature = rqo.WellboreFeature(tmp_model, feature_name = feature_name)
+   well_feature.create_xml()
+   well_interp_1 = rqo.WellboreInterpretation(tmp_model, wellbore_feature = well_feature, is_drilled = True)
+   well_interp_1.create_xml()
+
+   # Create a duplicate object, loading from XML
+   well_interp_2 = rqo.WellboreInterpretation(tmp_model, uuid = well_interp_1.uuid)
+
+   # Check feature name is present
+   assert well_interp_1.title == feature_name
+   assert well_interp_2.title == feature_name
