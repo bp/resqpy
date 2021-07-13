@@ -45,7 +45,7 @@ jobs:
         run: flake8 .
 
       - name: Code formatting
-        run: yapf --diff -r .
+        run: yapf --diff -r -p .
 
   unit-tests:
     name: Unit tests (Python ${{ matrix.python-version }})
