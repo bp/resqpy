@@ -1,6 +1,6 @@
 # box_utilities module
 
-version = '10th December 2020'
+version = '13th July 2021'
 
 import logging
 
@@ -159,7 +159,7 @@ def valid_box(box, host_extent):
       box: numpy int array of shape (2, 3)
          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
          in python protocol of zero base, kji (normally) or ijk ordering same as for host_extent
-      host_extent: numpy int array of shape (3)
+      host_extent: triple int
          the extent (shape) of a 3D cartesian grid
 
    returns: boolean
@@ -168,7 +168,7 @@ def valid_box(box, host_extent):
 
    if box.ndim != 2 or box.shape != (2, 3) or box.dtype != 'int':
       return False
-   if host_extent.ndim != 1 or host_extent.size != 3:
+   if len(host_extent) != 3:
       return False
    for d in range(3):
       if box[0, d] < 0 or box[0, d] > box[1, d] or box[1, d] >= host_extent[d]:
