@@ -23,8 +23,8 @@ def test_box_utilities():
       assert np.all(bx.central_cell(b) == c)
 
    assert bx.string_iijjkk1_for_box_kji0(b2) == '[2:5, 2:4, 2:3]'
-   assert bx.spaced_string_iijjkk1_for_box_kji0(b1) = '1 6  1 5  1 4'
-   assert bx.spaced_string_iijjkk1_for_box_kji0(b3, colon_separator = '-') = '3-6  4-6  6-6'
+   assert bx.spaced_string_iijjkk1_for_box_kji0(b1) == '1 6  1 5  1 4'
+   assert bx.spaced_string_iijjkk1_for_box_kji0(b3, colon_separator = '-') == '3-6  4-6  6-6'
    assert np.all(b4 == bx.box_kji0_from_words_iijjkk1(bx.spaced_string_iijjkk1_for_box_kji0(b4).split()))
 
    assert bx.cell_in_box(np.array([0, 0, 0], dtype = int), b1)
@@ -33,10 +33,10 @@ def test_box_utilities():
    assert not bx.cell_in_box(np.array([1, 5, 3], dtype = int), b1)
    assert not bx.cell_in_box(np.array([0, 0, 0], dtype = int), b2)
 
-   assert valid_box(b1, e1)
-   assert valid_box(b3, np.array([7, 8, 9], dtype = int))
-   assert valid_box(b3, np.array([6, 6, 6], dtype = int))
-   assert not valid_box(b2, np.array([5, 3, 7], dtype = int))
+   assert bx.valid_box(b1, e1)
+   assert bx.valid_box(b3, np.array([7, 8, 9], dtype = int))
+   assert bx.valid_box(b3, np.array([6, 6, 6], dtype = int))
+   assert not bx.valid_box(b2, np.array([5, 3, 7], dtype = int))
 
    assert np.all(bx.single_cell_box(np.array([8, 0, 10], dtype = int)) == np.array([[8, 0, 10], [8, 0, 10]], dtype = int))
 
