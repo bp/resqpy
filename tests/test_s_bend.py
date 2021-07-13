@@ -5,6 +5,7 @@ version = '29th April 2021'
 import pytest
 
 import logging
+
 log = logging.getLogger(__name__)
 
 import os
@@ -53,39 +54,40 @@ def test_s_bend_fn(tmp_path, epc = None):
    bend_theta_di = maths.pi / float(ni_bend)
    outer_radius = 2.0 * total_thickness
 
-   bend_a_centre_xz = (flat_dx_di * float(ni_tail), top_depth  +  outer_radius)
-   bend_b_centre_xz = (flat_dx_di * float(ni_tail - 2.0 * ni_half_mid), top_depth  +  3.0 * outer_radius  -  total_thickness)
+   bend_a_centre_xz = (flat_dx_di * float(ni_tail), top_depth + outer_radius)
+   bend_b_centre_xz = (flat_dx_di * float(ni_tail - 2.0 * ni_half_mid),
+                       top_depth + 3.0 * outer_radius - total_thickness)
 
    points = np.empty((nk + 1, nj + 1, ni + 1, 3))
 
    for k in range(nk + 1):
-      if k == nk // 2  +  1:
+      if k == nk // 2 + 1:
          points[k] = points[k - 1]  # pinched out layer
       else:
          for i in range(ni + 1):
-            if i < ni_tail  +  1:
+            if i < ni_tail + 1:
                x = flat_dx_di * float(i)
-               z = top_depth  +  float(k) * layer_thickness  # will introduce a thick layer after pinchout
-            elif i < ni_tail  +  ni_bend:
+               z = top_depth + float(k) * layer_thickness  # will introduce a thick layer after pinchout
+            elif i < ni_tail + ni_bend:
                theta = (i - ni_tail) * bend_theta_di
-               radius = outer_radius  -  float(k) * layer_thickness
-               x = bend_a_centre_xz[0]  +  radius * maths.sin(theta)
-               z = bend_a_centre_xz[1]  -  radius * maths.cos(theta)
-            elif i < ni_tail  +  ni_bend  +  2 * ni_half_mid  +  1:
+               radius = outer_radius - float(k) * layer_thickness
+               x = bend_a_centre_xz[0] + radius * maths.sin(theta)
+               z = bend_a_centre_xz[1] - radius * maths.cos(theta)
+            elif i < ni_tail + ni_bend + 2 * ni_half_mid + 1:
                x = flat_dx_di * float(ni_tail - (i - (ni_tail + ni_bend)))
-               z = top_depth  +  2.0 * outer_radius  -  float(k) * layer_thickness
-            elif i < ni_tail  +  2 * ni_bend  +  2 * ni_half_mid:
-               theta = (i  -  (ni_tail  +  ni_bend  +  2 * ni_half_mid))  *  bend_theta_di
-               radius = outer_radius  -  float(nk - k) * layer_thickness
-               x = bend_b_centre_xz[0]  -  radius * maths.sin(theta)
-               z = bend_b_centre_xz[1]  -  radius * maths.cos(theta)
+               z = top_depth + 2.0 * outer_radius - float(k) * layer_thickness
+            elif i < ni_tail + 2 * ni_bend + 2 * ni_half_mid:
+               theta = (i - (ni_tail + ni_bend + 2 * ni_half_mid)) * bend_theta_di
+               radius = outer_radius - float(nk - k) * layer_thickness
+               x = bend_b_centre_xz[0] - radius * maths.sin(theta)
+               z = bend_b_centre_xz[1] - radius * maths.cos(theta)
             else:
-               x = flat_dx_di * float((i  -  (ni - ni_tail))  +  ni_tail  -  2 * ni_half_mid)
+               x = flat_dx_di * float((i - (ni - ni_tail)) + ni_tail - 2 * ni_half_mid)
                if i == ni - 1 or i == ni - 4:
                   x += horst_dx_dk * float(k)
                elif i == ni - 2 or i == ni - 3:
                   x -= horst_dx_dk * float(k)
-               z = top_depth  +  4.0 * outer_radius  +  float(k) * layer_thickness  -  2.0 * total_thickness
+               z = top_depth + 4.0 * outer_radius + float(k) * layer_thickness - 2.0 * total_thickness
             points[k, :, i] = (x, 0.0, z)
 
    for j in range(nj + 1):
@@ -97,7 +99,8 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    crs = rqc.Crs(model)
    crs_node = crs.create_xml()
-   if model.crs_root is None: model.crs_root = crs_node
+   if model.crs_root is None:
+      model.crs_root = crs_node
 
    grid.grid_representation = 'IjkGrid'
    grid.extent_kji = np.array((nk, nj, ni), dtype = 'int')
@@ -133,10 +136,13 @@ def test_s_bend_fn(tmp_path, epc = None):
       df.Z = z
       return df
 
-   x = np.array([0.0,  flat_dx_di * float(ni_tail) + outer_radius,  flat_dx_di * (float(ni_tail) - 0.5),  0.0,  -outer_radius])
-   y = np.array([0.0,  dy_dj * 0.5,  dy_dj * float(nj) / 2.0,  dy_dj * (float(nj) - 0.5),  dy_dj * float(nj)])
-   z = np.array([0.0,  top_depth - total_thickness,  top_depth + 2.0 * outer_radius - total_thickness / 2.0,
-                 top_depth + 3.0 * outer_radius - total_thickness,  top_depth + 4.0 * outer_radius])
+   x = np.array(
+      [0.0, flat_dx_di * float(ni_tail) + outer_radius, flat_dx_di * (float(ni_tail) - 0.5), 0.0, -outer_radius])
+   y = np.array([0.0, dy_dj * 0.5, dy_dj * float(nj) / 2.0, dy_dj * (float(nj) - 0.5), dy_dj * float(nj)])
+   z = np.array([
+      0.0, top_depth - total_thickness, top_depth + 2.0 * outer_radius - total_thickness / 2.0,
+      top_depth + 3.0 * outer_radius - total_thickness, top_depth + 4.0 * outer_radius
+   ])
 
    df = df_trajectory(x, y, z)
 
@@ -145,17 +151,20 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    trajectory = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
 
-   rqc.Crs(model, uuid=rqet.uuid_for_part_root(trajectory.crs_root)).uuid == crs.uuid
+   rqc.Crs(model, uuid = rqet.uuid_for_part_root(trajectory.crs_root)).uuid == crs.uuid
 
    trajectory.write_hdf5()
    trajectory.create_xml()
 
    # add more wells
 
-   x = np.array([0.0,  flat_dx_di * float(ni_tail),  flat_dx_di * 2.0 * float(ni_tail - ni_half_mid) + outer_radius,   -outer_radius])
-   y = np.array([0.0,  dy_dj * float(nj) * 0.59,  dy_dj * 0.67,  dy_dj * 0.5])
-   z = np.array([0.0,  top_depth - total_thickness,  top_depth + 4.0 * outer_radius - 1.7 * total_thickness,
-                 top_depth + 4.0 * outer_radius - 1.7 * total_thickness])
+   x = np.array(
+      [0.0, flat_dx_di * float(ni_tail), flat_dx_di * 2.0 * float(ni_tail - ni_half_mid) + outer_radius, -outer_radius])
+   y = np.array([0.0, dy_dj * float(nj) * 0.59, dy_dj * 0.67, dy_dj * 0.5])
+   z = np.array([
+      0.0, top_depth - total_thickness, top_depth + 4.0 * outer_radius - 1.7 * total_thickness,
+      top_depth + 4.0 * outer_radius - 1.7 * total_thickness
+   ])
 
    df = df_trajectory(x, y, z)
 
@@ -164,9 +173,9 @@ def test_s_bend_fn(tmp_path, epc = None):
    traj_2.create_xml()
    traj_2.control_points
 
-   x = np.array([0.0,  0.0,  0.0])
-   y = np.array([0.0,  dy_dj * float(nj) * 0.53,  dy_dj * float(nj) * 0.53])
-   z = np.array([0.0,  top_depth - total_thickness,  top_depth + 4.0 * outer_radius])
+   x = np.array([0.0, 0.0, 0.0])
+   y = np.array([0.0, dy_dj * float(nj) * 0.53, dy_dj * float(nj) * 0.53])
+   z = np.array([0.0, top_depth - total_thickness, top_depth + 4.0 * outer_radius])
 
    df = df_trajectory(x, y, z)
 
@@ -179,10 +188,14 @@ def test_s_bend_fn(tmp_path, epc = None):
    n_y = dy_dj * float(nj) / 9.1
    o_y = -dy_dj * 0.45
    nd_x = n_y / 3.0
-   x = np.array([0.0, n_x, n_x, n_x + nd_x, n_x + 2.0 * nd_x, n_x + 3.0 * nd_x, n_x + 4.0 * nd_x, n_x + 5.0 * nd_x,
-                 n_x + 6.0 * nd_x, n_x + 7.0 * nd_x, n_x + 8.0 * nd_x, n_x + 8.0 * nd_x])
-   y = np.array([0.0, o_y, o_y + n_y, o_y + 2.0 * n_y, o_y + 3.0 * n_y, o_y + 4.0 * n_y, o_y + 5.0 * n_y, o_y + 6.0 * n_y,
-                 o_y + 7.0 * n_y, o_y + 8.0 * n_y, o_y + 9.0 * n_y, o_y + 10.0 * n_y])
+   x = np.array([
+      0.0, n_x, n_x, n_x + nd_x, n_x + 2.0 * nd_x, n_x + 3.0 * nd_x, n_x + 4.0 * nd_x, n_x + 5.0 * nd_x,
+      n_x + 6.0 * nd_x, n_x + 7.0 * nd_x, n_x + 8.0 * nd_x, n_x + 8.0 * nd_x
+   ])
+   y = np.array([
+      0.0, o_y, o_y + n_y, o_y + 2.0 * n_y, o_y + 3.0 * n_y, o_y + 4.0 * n_y, o_y + 5.0 * n_y, o_y + 6.0 * n_y,
+      o_y + 7.0 * n_y, o_y + 8.0 * n_y, o_y + 9.0 * n_y, o_y + 10.0 * n_y
+   ])
    n_z1 = top_depth + total_thickness * 0.82
    n_z2 = top_depth - total_thickness * 0.17
    z = np.array([0.0, n_z1, n_z1, n_z2, n_z2, n_z1, n_z1, n_z2, n_z2, n_z1, n_z1, n_z2])
@@ -230,14 +243,15 @@ def test_s_bend_fn(tmp_path, epc = None):
    cp[:, 8:, :, :, :, :, :] += (flat_dx_di * 0.3, 0.0, layer_thickness * 0.6)
 
    # JK plane faults
-   cp[:, :, ni_tail + ni_bend // 2:, :, :, :, 0] -= flat_dx_di * 0.57                # horizontal break mid top bend
+   cp[:, :, ni_tail + ni_bend // 2:, :, :, :, 0] -= flat_dx_di * 0.57  # horizontal break mid top bend
    cp[:, :, ni_tail + ni_bend + ni_half_mid:, :, :, :, 2] += layer_thickness * 1.27  # vertical break in mid section
 
    # zig-zag fault
    j_step = nj // (ni_tail - 2)
    for i in range(ni_tail - 1):
       j_start = i * j_step
-      if j_start >= nj: break
+      if j_start >= nj:
+         break
       cp[:, j_start:, i, :, :, :, 2] += 1.1 * total_thickness
 
    # JK horst blocks
@@ -248,11 +262,18 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    # JK horst block mid lower bend
    bend_horst_dz = horst_dz * maths.tan(bend_theta_di)
-   cp[:, :, ni - (ni_tail + ni_bend // 2 + 1) : ni - (ni_tail + ni_bend // 2 - 1), :, :, :, :] -= (horst_dz, 0.0, bend_horst_dz)
+   cp[:, :,
+      ni - (ni_tail + ni_bend // 2 + 1):ni - (ni_tail + ni_bend // 2 - 1), :, :, :, :] -= (horst_dz, 0.0, bend_horst_dz)
    cp[:, :, ni - (ni_tail + ni_bend // 2 - 1):, :, :, :, 2] -= 2.0 * bend_horst_dz
 
-   faulted_grid = rqi.grid_from_cp(model, cp, crs.uuid, max_z_void = 0.01, split_pillars = True, split_tolerance = 0.01,
-                                   ijk_handedness = 'right' if grid.grid_is_right_handed else 'left', known_to_be_straight = True)
+   faulted_grid = rqi.grid_from_cp(model,
+                                   cp,
+                                   crs.uuid,
+                                   max_z_void = 0.01,
+                                   split_pillars = True,
+                                   split_tolerance = 0.01,
+                                   ijk_handedness = 'right' if grid.grid_is_right_handed else 'left',
+                                   known_to_be_straight = True)
 
    faulted_grid.write_hdf5_from_caches()
    faulted_grid.create_xml()
@@ -285,8 +306,14 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    # create a version of the faulted grid with a k gap
 
-   k_gap_grid = rqi.grid_from_cp(model, cp, crs.uuid, max_z_void = 0.01, split_pillars = True, split_tolerance = 0.01,
-                                 ijk_handedness = 'right' if grid.grid_is_right_handed else 'left', known_to_be_straight = True)
+   k_gap_grid = rqi.grid_from_cp(model,
+                                 cp,
+                                 crs.uuid,
+                                 max_z_void = 0.01,
+                                 split_pillars = True,
+                                 split_tolerance = 0.01,
+                                 ijk_handedness = 'right' if grid.grid_is_right_handed else 'left',
+                                 known_to_be_straight = True)
 
    # convert second layer to a K gap
    k_gap_grid.nk_plus_k_gaps = k_gap_grid.nk
@@ -303,7 +330,8 @@ def test_s_bend_fn(tmp_path, epc = None):
    k_gap_grid.pinchout = None
    k_gap_grid.inactive = None
    k_gap_grid.grid_skin = None
-   if hasattr(k_gap_grid, 'array_thickness'): delattr(k_gap_grid, 'array_thickness')
+   if hasattr(k_gap_grid, 'array_thickness'):
+      delattr(k_gap_grid, 'array_thickness')
 
    k_gap_grid.write_hdf5_from_caches()
    k_gap_grid.create_xml()
@@ -361,7 +389,7 @@ def test_s_bend_fn(tmp_path, epc = None):
    assert k_gap_grid.k_gaps
    assert len(k_gap_grid.k_raw_index_array) == k_gap_grid.nk
    assert len(k_gap_grid.k_gap_after_array) == k_gap_grid.nk - 1
-   assert k_gap_grid.pinched_out((1,0,2))
+   assert k_gap_grid.pinched_out((1, 0, 2))
 
    # clean up
    model.h5_release()

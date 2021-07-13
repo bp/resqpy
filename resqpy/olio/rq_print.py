@@ -3,6 +3,7 @@
 version = '1st July 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('rq_print.py version ' + version)
 
@@ -23,34 +24,42 @@ import resqpy.well as rqw
 
 
 def pl(n, use_e = False):
-   if n == 1: return ''
-   if use_e: return 'es'
+   if n == 1:
+      return ''
+   if use_e:
+      return 'es'
    return 's'
 
 
 def required(value):
-   if value is None: return '(missing)'
+   if value is None:
+      return '(missing)'
    text = str(value)
-   if len(text): return text
+   if len(text):
+      return text
    return '(empty)'
 
 
 def optional(value):
-   if value is None: return '(not present)'
+   if value is None:
+      return '(not present)'
    text = str(value)
-   if len(text): return text
+   if len(text):
+      return text
    return '(empty)'
 
 
 def format_xyz(xyz):
    x, y, z = xyz
-   if x is None or y is None or z is None: return '(invalid)'
+   if x is None or y is None or z is None:
+      return '(invalid)'
    return '(x: {0:5.3f}, y: {1:5.3f}, z: {2:5.3f})'.format(x, y, z)
 
 
 def point_3d(node, flavour):
    p3d_node = rqet.find_tag(node, flavour)
-   if p3d_node is None: return '(missing)'
+   if p3d_node is None:
+      return '(missing)'
    x = rqet.find_tag_float(p3d_node, 'Coordinate1')
    y = rqet.find_tag_float(p3d_node, 'Coordinate2')
    z = rqet.find_tag_float(p3d_node, 'Coordinate3')
@@ -60,16 +69,19 @@ def point_3d(node, flavour):
 def print_citation(node):
    """Prints information from a citation xml tree."""
 
-   if node is None: return
+   if node is None:
+      return
    c_node = rqet.find_tag(node, 'Citation')
-   if c_node is None: return
+   if c_node is None:
+      return
    print('citation:')
    print('   title:   ' + str(rqet.node_text(rqet.find_tag(c_node, 'Title'))))
    print('   user:    ' + str(rqet.node_text(rqet.find_tag(c_node, 'Originator'))))
    print('   created: ' + str(rqet.node_text(rqet.find_tag(c_node, 'Creation'))))
    print('   format:  ' + str(rqet.node_text(rqet.find_tag(c_node, 'Format'))))
    description = rqet.find_tag_text(c_node, 'Description')
-   if description: print('   description: ' + str(description))
+   if description:
+      print('   description: ' + str(description))
 
 
 def print_LocalDepth3dCrs(model, node, z_is_time = False):
@@ -79,10 +91,14 @@ def print_LocalDepth3dCrs(model, node, z_is_time = False):
    print('units z:  ' + str(rqet.length_units_from_node(rqet.find_tag(node, 'VerticalUom'))))  # applicable to time?
    xy_axes = rqet.node_text(rqet.find_tag(node, 'ProjectedAxisOrder'))
    print('x y axes: ' + str(xy_axes))
-   z_inc_down = rqet.bool_from_text(rqet.node_text(rqet.find_tag(node, 'ZIncreasingDownward'))) # todo: check applicability to Time3dCrs?
-   if z_inc_down is None: z_dir = 'unknown'
-   elif z_inc_down: z_dir = 'downwards'
-   else: z_dir = 'upwards'
+   z_inc_down = rqet.bool_from_text(rqet.node_text(rqet.find_tag(
+      node, 'ZIncreasingDownward')))  # todo: check applicability to Time3dCrs?
+   if z_inc_down is None:
+      z_dir = 'unknown'
+   elif z_inc_down:
+      z_dir = 'downwards'
+   else:
+      z_dir = 'upwards'
    print('z increases: ' + str(z_dir))
    print('(xyz handedness: ' + str(rqet.xyz_handedness(xy_axes, z_inc_down) + ')'))
    print('x offset: ' + str(rqet.node_text(rqet.find_tag(node, 'XOffset'))))
@@ -95,7 +111,7 @@ def print_LocalDepth3dCrs(model, node, z_is_time = False):
       print('parent xy crs: EPSG code ' + str(rqet.node_text(rqet.find_tag(parent_xy_crs_node, 'EpsgCode'))))
    elif parent_xy_crs_node_type == 'ProjectedUnknownCrs':
       print('parent xy crs: unknown')
-   parent_z_crs_node = rqet.find_tag(node, 'VerticalCrs')    # todo: check applicability to Time3dCrs?
+   parent_z_crs_node = rqet.find_tag(node, 'VerticalCrs')  # todo: check applicability to Time3dCrs?
    parent_z_crs_node_type = rqet.node_type(parent_z_crs_node)
    if parent_z_crs_node_type == 'VerticalCrsEpsgCode':
       print('parent z crs: EPSG code ' + str(rqet.node_text(rqet.find_tag(parent_z_crs_node, 'EpsgCode'))))
@@ -130,15 +146,19 @@ def print_IjkGridRepresentation(model, node, detail_level = 0, grid = None):
       print('parent window present (grid is a local grid); parent uuid: ' + str(parent_uuid))
    geom_node = rqet.find_tag(node, 'Geometry')
    if geom_node is None:
-      if pw_node is not None: print('geometry is not present (to be derived from parent grid)')
-      else: print('geometry is missing!')
+      if pw_node is not None:
+         print('geometry is not present (to be derived from parent grid)')
+      else:
+         print('geometry is missing!')
       return
    print('k increases: ' + str(rqet.find_tag_text(geom_node, 'KDirection')))
    print('ijk handedness: ' + str(rqet.ijk_handedness(geom_node)))
    print('pillar shape: ' + str(rqet.find_tag_text(geom_node, 'PillarShape')))
-   if not detail_level: return
+   if not detail_level:
+      return
    # create a Grid object and interrogate for extra details
-   if grid is None: grid = grr.Grid(model, grid_root = node)
+   if grid is None:
+      grid = grr.Grid(model, grid_root = node)
    cell_count = grid.cell_count()
    print('(number of cells: ' + str(cell_count) + ')')
    if grid.has_split_coordinate_lines:
@@ -190,8 +210,8 @@ def print_IjkGridRepresentation(model, node, detail_level = 0, grid = None):
             if grid.geometry_defined_for_all_cells_cached is None or not grid.geometry_defined_for_all_cells_cached:
                assert cell_is_def_array is not None
                cells_defined = np.count_nonzero(cell_is_def_array)
-               print('geometry is defined for {0:1d} cells ({1:4.2f}%)'
-                     .format(cells_defined, 100.0 * float(cells_defined) / float(cell_count)))
+               print('geometry is defined for {0:1d} cells ({1:4.2f}%)'.format(
+                  cells_defined, 100.0 * float(cells_defined) / float(cell_count)))
                cells_all_defined = (cells_defined == cell_count)
             else:
                cells_all_defined = True
@@ -200,22 +220,28 @@ def print_IjkGridRepresentation(model, node, detail_level = 0, grid = None):
    points_root = grid.resolve_geometry_child('Points')
    if points_root is None:
       print('grid does not include (corner) points data!')
+
+
 #   elif cells_all_defined:
    else:
       laziness = (detail_level < 2)
       for local in [True, False]:
          xyz_box = grid.xyz_box(points_root = points_root, lazy = laziness, local = local)
-         if local: local_str = 'local'
-         else: local_str = 'global'
-         if laziness: laziness_str = 'lazy'
-         else: laziness_str = 'thorough'
+         if local:
+            local_str = 'local'
+         else:
+            local_str = 'global'
+         if laziness:
+            laziness_str = 'lazy'
+         else:
+            laziness_str = 'thorough'
          print(local_str + ' bounding values of geometry min, max (' + laziness_str + '):')
          for xyz in range(3):
             print(' {0}: {1:12.3f} {2:12.3f}'.format('xyz'[xyz], xyz_box[0, xyz], xyz_box[1, xyz]))
    # todo: check whether all HDF5 refs are to same file
 
-
 hdf5_dataset_count = 0
+
 
 def print_hdf5_line(name, group_or_dataset):
    """Prints information about one dataset (array) in an hdf5 file.
@@ -224,7 +250,8 @@ def print_hdf5_line(name, group_or_dataset):
    """
 
    global hdf5_dataset_count
-   if isinstance(group_or_dataset, h5py.Group): return None
+   if isinstance(group_or_dataset, h5py.Group):
+      return None
    print(name + '  ' + str(group_or_dataset.shape) + '  ' + str(group_or_dataset.dtype))
    hdf5_dataset_count += 1
    return None
@@ -235,7 +262,8 @@ def print_EpcExternalPartReference(model, node, detail_level = 0):
 
    global hdf5_dataset_count
    print('mime type: ' + str(rqet.node_text(rqet.find_tag(node, 'MimeType'))))
-   if not detail_level or 'uuid' not in node.attrib.keys(): return
+   if not detail_level or 'uuid' not in node.attrib.keys():
+      return
    uuid = bu.uuid_from_string(node.attrib['uuid'])
    file_name = model.h5_file_name(uuid)
    print('hdf5 file: ' + str(file_name))
@@ -251,13 +279,16 @@ def print_EpcExternalPartReference(model, node, detail_level = 0):
 def print_TimeSeries(model, node, detail_level = 0):
    """Prints information form a time series xml tree."""
 
-   if node is None: return
+   if node is None:
+      return
    print('number of timestamps: ' + str(rqet.count_tag(node, 'Time')))
-   if not detail_level: return
+   if not detail_level:
+      return
    time_series = rts.TimeSeries(model, uuid = node.attrib['uuid'])
    for index in range(time_series.number_of_timestamps()):
       if index:
-         print('{0:>5d}  {1} {2:>5d}'.format(index, rts.simplified_timestamp(time_series.timestamp(index)), time_series.step_days(index)))
+         print('{0:>5d}  {1} {2:>5d}'.format(index, rts.simplified_timestamp(time_series.timestamp(index)),
+                                             time_series.step_days(index)))
       else:
          print('{0:>5d}  {1}  step (days)'.format(0, rts.simplified_timestamp(time_series.timestamp(0))))
 
@@ -270,14 +301,18 @@ def print_StringTableLookup(model, node, detail_level = 0):
       print('no entries in lookup table')
       return
    print(str(len(entries_node_list)) + ' entries in lookup table:')
-   if not detail_level: return
+   if not detail_level:
+      return
    entries_pair_list = []
    for entry_node in entries_node_list:
       key_node = rqet.find_tag(entry_node, 'Key')
-      if key_node is None: continue
+      if key_node is None:
+         continue
       key_type = rqet.node_type(key_node)
-      if key_type == 'integer': key = int(key_node.text)
-      else: key = key_node.text
+      if key_type == 'integer':
+         key = int(key_node.text)
+      else:
+         key = key_node.text
       value = rqet.node_text(rqet.find_tag(entry_node, 'Value'))
       entries_pair_list.append((key, value))
    entries_pair_list.sort()
@@ -297,11 +332,15 @@ def print_reference_node_and_return_referenced_part(node, heading):
    print(str(heading) + ':')
    print('   title: ' + str(rqet.node_text(rqet.find_tag(node, 'Title'))))
    content_type = rqet.content_type(rqet.node_text(rqet.find_tag(node, 'ContentType')))
-   if content_type is not None: print('   type:  ' + str(rcd.readable_class(content_type)))
+   if content_type is not None:
+      print('   type:  ' + str(rcd.readable_class(content_type)))
    uuid_str = rqet.node_text(rqet.find_tag(node, 'UUID'))
-   if uuid_str is not None: print('   uuid:  ' + str(uuid_str))
-   if content_type is None or content_type[:4] != 'obj_' or uuid_str is None: return None
-   if uuid_str[0] == '_': uuid_str = uuid_str[1:]   # tolerate fesapi quirk
+   if uuid_str is not None:
+      print('   uuid:  ' + str(uuid_str))
+   if content_type is None or content_type[:4] != 'obj_' or uuid_str is None:
+      return None
+   if uuid_str[0] == '_':
+      uuid_str = uuid_str[1:]  # tolerate fesapi quirk
    return content_type + '_' + uuid_str + '.xml'
 
 
@@ -328,18 +367,23 @@ def print_Property(model, node, detail_level = 0):
    facet_node_list = rqet.list_of_tag(node, 'Facet')
    if facet_node_list is not None:
       for facet_node in facet_node_list:
-         print('facet: ' + str(rqet.node_text(rqet.find_tag(facet_node, 'Facet'))) +
-               ': ' + str(rqet.find_tag_text(facet_node, 'Value')))
-         if not facet_type:   # arbitrarily pick up first facet in list to use in helping to guess uom, if needed
+         print('facet: ' + str(rqet.node_text(rqet.find_tag(facet_node, 'Facet'))) + ': ' +
+               str(rqet.find_tag_text(facet_node, 'Value')))
+         if not facet_type:  # arbitrarily pick up first facet in list to use in helping to guess uom, if needed
             facet_type = rqet.node_text(rqet.find_tag(facet_node, 'Facet'))
             facet = rqet.node_text(rqet.find_tag(facet_node, 'Value'))
    citation_title = rqet.node_text(rqet.find_tag(rqet.find_tag(node, 'Citation'), 'Title'))
    if citation_title is not None:
-      (derived_property_kind, derived_facet_type, derived_facet) = rprop.property_kind_and_facet_from_keyword(citation_title)
+      (derived_property_kind, derived_facet_type,
+       derived_facet) = rprop.property_kind_and_facet_from_keyword(citation_title)
       if derived_property_kind is not None:
-         if property_kind is None: property_kind = derived_property_kind
-         if derived_facet_type is None: print('(derived kind: ' + derived_property_kind + ')')
-         else: print('(derived kind: ' + str(derived_property_kind) + '; facet: ' + str(derived_facet_type) + ': ' + str(derived_facet) + ')')
+         if property_kind is None:
+            property_kind = derived_property_kind
+         if derived_facet_type is None:
+            print('(derived kind: ' + derived_property_kind + ')')
+         else:
+            print('(derived kind: ' + str(derived_property_kind) + '; facet: ' + str(derived_facet_type) + ': ' +
+                  str(derived_facet) + ')')
    print('realization: ' + optional(rqet.find_tag_int(node, 'RealizationIndex')))
    grid = None
    time_series = time_series_uuid = time_series_part = None
@@ -349,8 +393,10 @@ def print_Property(model, node, detail_level = 0):
    else:
       index_node = rqet.find_tag(time_index_node, 'Index')
       print('time index: ' + str(rqet.node_text(index_node)))
-      if index_node is None: time_index = None
-      else: time_index = int(index_node.text)
+      if index_node is None:
+         time_index = None
+      else:
+         time_index = int(index_node.text)
       time_series_ref_node = rqet.find_tag(time_index_node, 'TimeSeries')
       time_series_part = print_reference_node_and_return_referenced_part(time_series_ref_node, 'time series')
       if detail_level > 0:
@@ -381,11 +427,13 @@ def print_Property(model, node, detail_level = 0):
       print('patch of values is missing!')
       return
    print('patch of values is present in xml')
-   if detail_level < 2 or grid is None: return
+   if detail_level < 2 or grid is None:
+      return
    single_prop_collection = rprop.GridPropertyCollection()
    single_prop_collection.set_grid(grid)
    part_name = rqet.part_name_for_part_root(node)
-   single_prop_collection.add_part_to_dict(part_name, trust_uom = units is not None and units not in ['', 'unknown', 'Euc'])
+   single_prop_collection.add_part_to_dict(part_name,
+                                           trust_uom = units is not None and units not in ['', 'unknown', 'Euc'])
    cached_array = single_prop_collection.cached_part_array_ref(part_name)
    if cached_array is None:
       print('failed to cache array for part ' + str(part_name))
@@ -398,7 +446,7 @@ def print_Property(model, node, detail_level = 0):
    print('minimum (data, all cells): ' + str(np.nanmin(cached_array)))
    print('maximum (data, all cells): ' + str(np.nanmax(cached_array)))
    if cached_array.dtype == 'float':
-      average = np.mean(cached_array)          # todo: handle NaN and Inf in a better way
+      average = np.mean(cached_array)  # todo: handle NaN and Inf in a better way
       print('mean value (all cells): ' + str(average))
       if property_kind in ['rock volume', 'pore volume']:
          print('sum of values (all cells): ' + str(np.sum(cached_array)))
@@ -410,7 +458,7 @@ def print_Property(model, node, detail_level = 0):
       print('minimum (data, active cells): ' + str(np.nanmin(masked_array)))
       print('maximum (data, active cells): ' + str(np.nanmax(masked_array)))
       if cached_array.dtype == 'float':
-         average = np.mean(masked_array)       # todo: handle NaN and Inf in a better way
+         average = np.mean(masked_array)  # todo: handle NaN and Inf in a better way
          print('mean value (active cells): ' + str(average))
          if property_kind in ['rock volume', 'pore volume']:
             print('sum of values (active cells): ' + str(np.nansum(masked_array)))
@@ -422,8 +470,10 @@ def print_CategoricalProperty(model, node, detail_level = 0):
 
    print_Property(model, node, detail_level = detail_level)
    lookup_node = rqet.find_tag(node, 'Lookup')
-   if lookup_node is None: print('no lookup table referenced')
-   else: print_reference_node_and_return_referenced_part(lookup_node, 'lookup table reference')
+   if lookup_node is None:
+      print('no lookup table referenced')
+   else:
+      print_reference_node_and_return_referenced_part(lookup_node, 'lookup table reference')
 
 
 def print_ContinuousProperty(model, node, detail_level = 0):
@@ -464,7 +514,8 @@ def print_PointSetRepresentation(model, node, detail_level = 0):
          print('   patch index: ' + required(rqet.find_tag_int(patch, 'PatchIndex')))
          point_count = rqet.find_tag_int(patch, 'Count')
          print('   point count: ' + required(point_count))
-         if point_count: total_count += point_count
+         if point_count:
+            total_count += point_count
       print('(total point count: {})'.format(total_count))
 
 
@@ -537,34 +588,44 @@ def print_BlockedWellboreRepresentation(model, node, detail_level = 0):
 def print_WellboreTrajectoryRepresentation(model, node, detail_level = 0):
    """Prints information about a wellbore trajectory representation, from the xml tree."""
 
-   lk_dict = {-1: 'null - no line',
-               0: 'vertical)',
-               1: 'linear spline',
-               2: 'natural cubic spline',
-               3: 'cubic spline',
-               4: 'z linear cubic spline',
-               5: 'minimum-curvature spline'}
+   lk_dict = {
+      -1: 'null - no line',
+      0: 'vertical)',
+      1: 'linear spline',
+      2: 'natural cubic spline',
+      3: 'cubic spline',
+      4: 'z linear cubic spline',
+      5: 'minimum-curvature spline'
+   }
    unit_str = rqet.find_tag_text(node, 'MdUom')
-   if unit_str is None: unit_str = '(missing units)'
+   if unit_str is None:
+      unit_str = '(missing units)'
    print('start md:  ' + required(rqet.find_tag_float(node, 'StartMd')) + ' ' + unit_str)
    print('finish md: ' + required(rqet.find_tag_float(node, 'FinishMd')) + ' ' + unit_str)
    print('md units:  ' + unit_str)
    md_ref_node = rqet.find_tag(node, 'MdDatum')
-   if md_ref_node is None: print('(missing measured depth datum reference)')
-   else: print_reference_node_and_return_referenced_part(md_ref_node, 'measured depth datum reference')
+   if md_ref_node is None:
+      print('(missing measured depth datum reference)')
+   else:
+      print_reference_node_and_return_referenced_part(md_ref_node, 'measured depth datum reference')
    geom_node = rqet.find_tag(node, 'Geometry')
    if geom_node is None:
       print('(presumed vertical - no geometry)')
       return
    line_kind = rqet.find_tag_int(geom_node, 'LineKindIndex')
-   if line_kind is None: lk_str = '(missing)'
-   elif line_kind >= -1 and line_kind <= 5: lk_str = str(line_kind) + ' (' + lk_dict[line_kind] + ')'
-   else: lk_str = str(line_kind) + ' (invalid value)'
+   if line_kind is None:
+      lk_str = '(missing)'
+   elif line_kind >= -1 and line_kind <= 5:
+      lk_str = str(line_kind) + ' (' + lk_dict[line_kind] + ')'
+   else:
+      lk_str = str(line_kind) + ' (invalid value)'
    print('line kind:  ' + lk_str)
    print('knot count: ' + required(rqet.find_tag_int(geom_node, 'KnotCount')))
    tv_node = rqet.find_tag(geom_node, 'TangentVectors')
-   if tv_node: print('(tangent vectors are present)')
-   else: print('(optional tangent vectors are not present)')
+   if tv_node:
+      print('(tangent vectors are present)')
+   else:
+      print('(optional tangent vectors are not present)')
    print('domain:     ' + optional(rqet.find_tag_text(node, 'MdDomain')))
    ds_ref_node = rqet.find_tag(node, 'DeviationSurvey')
    if detail_level > 0:
@@ -583,6 +644,7 @@ def print_WellboreTrajectoryRepresentation(model, node, detail_level = 0):
       except Exception:
          print('(problem displaying control points)')
          log.exception('trajectory issue')
+
 
 def print_TectonicBoundaryFeature(model, node, detail_level = 0):
    """Prints information about a tectonic boundary feature (fault or fracture), from the xml tree."""
@@ -618,7 +680,8 @@ def print_FaultInterpretation(model, node, detail_level = 0):
    print('mean azimuth:  ' + optional(rqet.find_tag_float(node, 'MeanAzimuth')))
    print('mean dip:      ' + optional(rqet.find_tag_float(node, 'MeanDip')))
    throw_understanding = rqet.find_tag_text(node, 'ThrowInterpretation')
-   if not throw_understanding: throw_understanding = '(presumed normal)'
+   if not throw_understanding:
+      throw_understanding = '(presumed normal)'
    print('throw interpretation: ' + throw_understanding)
 
 
@@ -655,51 +718,86 @@ def print_EarthModelInterpretation(model, node, detail_level = 0):
 def print_node(model, node, detail_level = 0):
    """Prints information about an object from an xml node."""
 
-   if node is None: return
+   if node is None:
+      return
    title = rqet.citation_title_for_node(node)
-   if title: print('title: ' + str(title))
+   if title:
+      print('title: ' + str(title))
    obj_type = rqet.node_type(node)
-   if obj_type is None: return
+   if obj_type is None:
+      return
    print('object type: ' + str(rcd.readable_class(obj_type)))
-   if 'uuid' in node.attrib.keys(): print('uuid: ' + str(node.attrib['uuid']))
+   if 'uuid' in node.attrib.keys():
+      print('uuid: ' + str(node.attrib['uuid']))
    if obj_type.endswith('Property'):
       support_node = rqet.find_tag(node, 'SupportingRepresentation')
-      if support_node is None: print('no supporting representation referenced')
-      else: print_reference_node_and_return_referenced_part(support_node, 'supporting representation reference')
+      if support_node is None:
+         print('no supporting representation referenced')
+      else:
+         print_reference_node_and_return_referenced_part(support_node, 'supporting representation reference')
    elif obj_type.endswith('Representation'):
       interp_node = rqet.find_tag(node, 'RepresentedInterpretation')
-      if interp_node is None: print('no represented interpretation referenced')
-      else: print_reference_node_and_return_referenced_part(interp_node, 'represented interpretation reference')
+      if interp_node is None:
+         print('no represented interpretation referenced')
+      else:
+         print_reference_node_and_return_referenced_part(interp_node, 'represented interpretation reference')
    elif obj_type.endswith('Interpretation'):
       feature_node = rqet.find_tag(node, 'InterpretedFeature')
-      if feature_node is None: print('no interpreted feature referenced')
-      else: print_reference_node_and_return_referenced_part(feature_node, 'interpreted feature reference')
-   if obj_type == 'obj_LocalDepth3dCrs': print_LocalDepth3dCrs(model, node)
-   elif obj_type == 'obj_LocalTime3dCrs': print_LocalTime3dCrs(model, node)
-   elif obj_type == 'obj_IjkGridRepresentation': print_IjkGridRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_EpcExternalPartReference': print_EpcExternalPartReference(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_TimeSeries': print_TimeSeries(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_StringTableLookup': print_StringTableLookup(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_ContinuousProperty': print_ContinuousProperty(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_DiscreteProperty': print_DiscreteProperty(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_CategoricalProperty': print_CategoricalProperty(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_TriangulatedSetRepresentation': print_TriangulatedSetRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_PointSetRepresentation': print_PointSetRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_GridConnectionSetRepresentation': print_GridConnectionSetRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_MdDatum': print_MdDatum(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_WellboreFrameRepresentation': print_WellboreFrameRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_WellboreMarkerFrameRepresentation': print_WellboreMarkerFrameRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_BlockedWellboreRepresentation': print_BlockedWellboreRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_WellboreTrajectoryRepresentation': print_WellboreTrajectoryRepresentation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_TectonicBoundaryFeature': print_TectonicBoundaryFeature(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_GeneticBoundaryFeature': print_GeneticBoundaryFeature(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_WellboreFeature': print_WellboreFeature(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_FaultInterpretation': print_FaultInterpretation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_HorizonInterpretation': print_HorizonInterpretation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_WellboreInterpretation': print_WellboreInterpretation(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_OrganizationFeature': print_OrganizationFeature(model, node, detail_level = detail_level)
-   elif obj_type == 'obj_EarthModelInterpretation': print_EarthModelInterpretation(model, node, detail_level = detail_level)
-   # todo: other object types
+      if feature_node is None:
+         print('no interpreted feature referenced')
+      else:
+         print_reference_node_and_return_referenced_part(feature_node, 'interpreted feature reference')
+   if obj_type == 'obj_LocalDepth3dCrs':
+      print_LocalDepth3dCrs(model, node)
+   elif obj_type == 'obj_LocalTime3dCrs':
+      print_LocalTime3dCrs(model, node)
+   elif obj_type == 'obj_IjkGridRepresentation':
+      print_IjkGridRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_EpcExternalPartReference':
+      print_EpcExternalPartReference(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_TimeSeries':
+      print_TimeSeries(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_StringTableLookup':
+      print_StringTableLookup(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_ContinuousProperty':
+      print_ContinuousProperty(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_DiscreteProperty':
+      print_DiscreteProperty(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_CategoricalProperty':
+      print_CategoricalProperty(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_TriangulatedSetRepresentation':
+      print_TriangulatedSetRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_PointSetRepresentation':
+      print_PointSetRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_GridConnectionSetRepresentation':
+      print_GridConnectionSetRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_MdDatum':
+      print_MdDatum(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_WellboreFrameRepresentation':
+      print_WellboreFrameRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_WellboreMarkerFrameRepresentation':
+      print_WellboreMarkerFrameRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_BlockedWellboreRepresentation':
+      print_BlockedWellboreRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_WellboreTrajectoryRepresentation':
+      print_WellboreTrajectoryRepresentation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_TectonicBoundaryFeature':
+      print_TectonicBoundaryFeature(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_GeneticBoundaryFeature':
+      print_GeneticBoundaryFeature(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_WellboreFeature':
+      print_WellboreFeature(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_FaultInterpretation':
+      print_FaultInterpretation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_HorizonInterpretation':
+      print_HorizonInterpretation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_WellboreInterpretation':
+      print_WellboreInterpretation(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_OrganizationFeature':
+      print_OrganizationFeature(model, node, detail_level = detail_level)
+   elif obj_type == 'obj_EarthModelInterpretation':
+      print_EarthModelInterpretation(model, node, detail_level = detail_level)
+      # todo: other object types
    else:
       print('(details unavailable for this type of object)')
    print_citation(node)

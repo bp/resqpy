@@ -5,6 +5,7 @@ version = '29th April 2021'
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('write_faults.py version ' + version)
 
@@ -30,11 +31,11 @@ def write_faults_nexus(filename, df, grid_name = 'ROOT'):
          log.warning('exported fault name longer than Nexus limit of 256 characters: ' + fault_name)
          tm.log_nexus_tm('warning')
 
-
    def write_rows(fp, df):
       for row in range(len(df)):
-         fp.write('\t{0:1d}\t{1:1d}\t{2:1d}\t{3:1d}\t{4:1d}\t{5:1d}\t1.0\n'.format(
-            df.iloc[row, 1], df.iloc[row, 2], df.iloc[row, 3], df.iloc[row, 4], df.iloc[row, 5], df.iloc[row, 6]))
+         fp.write('\t{0:1d}\t{1:1d}\t{2:1d}\t{3:1d}\t{4:1d}\t{5:1d}\t1.0\n'.format(df.iloc[row, 1], df.iloc[row, 2],
+                                                                                   df.iloc[row, 3], df.iloc[row, 4],
+                                                                                   df.iloc[row, 5], df.iloc[row, 6]))
 
    log.info('writing FNAME data in Nexus format to file: ' + filename)
    tm.log_nexus_tm('info')

@@ -26,17 +26,15 @@ def main():
    properties_xsd_root = etree.parse(str(properties_xsd_path)).getroot()
 
    # Parse into memory
-   data = dict(
-      dimensions=parse_dimensions(uom_dict_root),
-      quantities=parse_quantities(uom_dict_root),
-      units=parse_units(uom_dict_root),
-      prefixes=parse_prefixes(uom_dict_root),
-      property_kinds=parse_property_kinds(properties_xsd_root)
-   )
+   data = dict(dimensions = parse_dimensions(uom_dict_root),
+               quantities = parse_quantities(uom_dict_root),
+               units = parse_units(uom_dict_root),
+               prefixes = parse_prefixes(uom_dict_root),
+               property_kinds = parse_property_kinds(properties_xsd_root))
 
    # Save to JSON
-   with open(json_path, 'w', encoding='utf-8') as f:
-      json.dump(data, f, ensure_ascii=False, indent=2)
+   with open(json_path, 'w', encoding = 'utf-8') as f:
+      json.dump(data, f, ensure_ascii = False, indent = 2)
 
 
 def parse_dimensions(root):
@@ -47,8 +45,8 @@ def parse_dimensions(root):
       dimension = node.find('{*}dimension').text
       dims[dimension] = dict(
          name = node.find('{*}name').text,
-         baseForConversion=node.find('{*}baseForConversion').text,
-         canonicalUnit=node.find('{*}canonicalUnit').text,
+         baseForConversion = node.find('{*}baseForConversion').text,
+         canonicalUnit = node.find('{*}canonicalUnit').text,
       )
    return dims
 
@@ -59,8 +57,8 @@ def parse_quantities(root):
    for node in root.find("{*}quantityClassSet"):
       name = node.find('{*}name').text
       quantities[name] = dict(
-         dimension=node.find('{*}dimension').text,
-         baseForConversion=node.find('{*}baseForConversion').text,
+         dimension = node.find('{*}dimension').text,
+         baseForConversion = node.find('{*}baseForConversion').text,
       )
       alt = node.find('{*}alternativeBase')
       if alt is not None:
@@ -71,11 +69,11 @@ def parse_quantities(root):
          members.append(member.text)
       if members:
          quantities[name]["members"] = members
-      
+
    return quantities
 
 
-def parse_units(root):   
+def parse_units(root):
 
    units = {}
    for node in root.find("{*}unitSet"):
@@ -96,12 +94,12 @@ def parse_units(root):
          ('conversionRef', str),
          ('description', str),
       ]:
-         prop = node.find("{*}"+key)
+         prop = node.find("{*}" + key)
          if prop is not None:
             unit_dict[key] = typ(prop.text)
-      
+
       units[symbol] = unit_dict
-      
+
    return units
 
 
@@ -110,13 +108,13 @@ def parse_prefixes(root):
    for node in root.find("{*}prefixSet"):
       name = node.find('{*}name').text
       prefixes[name] = dict(
-         symbol=node.find('{*}symbol').text,
-         multiplier=node.find('{*}multiplier').text,
+         symbol = node.find('{*}symbol').text,
+         multiplier = node.find('{*}multiplier').text,
       )
       common_name = node.find('{*}commonName')
       if common_name is not None:
          prefixes[name]['common_name'] = common_name.text
-      
+
    return prefixes
 
 
@@ -126,7 +124,7 @@ def parse_property_kinds(root):
    Dict keys are the valid property kinds, e.g. 'angle per time'
    Dict values are the description, which may be None
    """
-   
+
    kind_list = get_nodes_with_name(root, 'ResqmlPropertyKind')[1]
    kind_dict = {}
    for child in kind_list:

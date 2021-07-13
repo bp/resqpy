@@ -66,7 +66,7 @@ def new_uuid():
       test_latest_int += 1
       return uuid.UUID(bytes = test_latest_int.to_bytes(16, byte_order = 'big'))
    else:
-      return uuid.uuid1()   # time to 100ns & MAC address
+      return uuid.uuid1()  # time to 100ns & MAC address
 
 
 def string_from_uuid(uuid_obj):
@@ -97,10 +97,13 @@ def uuid_from_string(uuid_str):
          if the string starts with an underscore, it is skipped (to cater for a fesapi quirk)
    """
 
-   if uuid_str is None: return None
-   if isinstance(uuid_str, uuid.UUID): return uuid_str    # resilience to accidentally passing a uuid object
-   if len(uuid_str) < 36: return None
-   if uuid_str[0] == '_':    # tolerate one of the fesapi quirks
+   if uuid_str is None:
+      return None
+   if isinstance(uuid_str, uuid.UUID):
+      return uuid_str  # resilience to accidentally passing a uuid object
+   if len(uuid_str) < 36:
+      return None
+   if uuid_str[0] == '_':  # tolerate one of the fesapi quirks
       return uuid.UUID(uuid_str[1:])
    else:
       return uuid.UUID(uuid_str)
@@ -116,8 +119,10 @@ def uuid_as_bytes(uuid_obj):
          bytes (16 bytes long)
    """
 
-   if uuid_obj is None: return None
-   if isinstance(uuid_obj, str): uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+   if uuid_obj is None:
+      return None
+   if isinstance(uuid_obj, str):
+      uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
    return uuid_obj.bytes
 
 
@@ -131,8 +136,10 @@ def uuid_as_int(uuid_obj):
          bytes (16 bytes long)
    """
 
-   if uuid_obj is None: return None
-   if isinstance(uuid_obj, str): uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+   if uuid_obj is None:
+      return None
+   if isinstance(uuid_obj, str):
+      uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
    return uuid_obj.int
 
 
@@ -149,9 +156,12 @@ def matching_uuids(uuid_a, uuid_b):
          this function is resilient to uuids being passed in hexadecimal string format
    """
 
-   if isinstance(uuid_a, str): uuid_a = uuid_from_string(uuid_a)  # resilience to accidental string arg
-   if isinstance(uuid_b, str): uuid_b = uuid_from_string(uuid_b)
-   if uuid_a is None or uuid_b is None: return False
+   if isinstance(uuid_a, str):
+      uuid_a = uuid_from_string(uuid_a)  # resilience to accidental string arg
+   if isinstance(uuid_b, str):
+      uuid_b = uuid_from_string(uuid_b)
+   if uuid_a is None or uuid_b is None:
+      return False
    return uuid_a.int == uuid_b.int
 
 
@@ -171,7 +181,8 @@ def version_string(uuid_obj):
          (when the Gregorian calendar was adopted), as a 60 bit integer
    """
 
-   if isinstance(uuid_obj, str): uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+   if isinstance(uuid_obj, str):
+      uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
    v_str = str(uuid_obj.time)
    if len(v_str) > max_version_string_length:
       v_str = v_str[:max_version_string_length]

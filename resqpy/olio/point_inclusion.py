@@ -3,6 +3,7 @@
 version = '29th April 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('point_inclusion.py version ' + version)
 
@@ -25,12 +26,15 @@ def pip_cn(p, poly):
 
    for edge in range(vertex_count):
       v1 = poly[edge]
-      if edge == vertex_count - 1: v2 = poly[0]
-      else: v2 = poly[edge + 1]
-      if ((v1[0] > p[0] or v2[0] > p[0]) and
-          ((v1[1] <= p[1] and v2[1] > p[1]) or (v1[1] > p[1] and v2[1] <= p[1]))):
-         if v1[0] > p[0] and v2[0] > p[0]: crossings += 1
-         elif p[0] < v1[0] + (v2[0] - v1[0]) * (p[1] - v1[1]) / (v2[1] - v1[1]): crossings += 1
+      if edge == vertex_count - 1:
+         v2 = poly[0]
+      else:
+         v2 = poly[edge + 1]
+      if ((v1[0] > p[0] or v2[0] > p[0]) and ((v1[1] <= p[1] and v2[1] > p[1]) or (v1[1] > p[1] and v2[1] <= p[1]))):
+         if v1[0] > p[0] and v2[0] > p[0]:
+            crossings += 1
+         elif p[0] < v1[0] + (v2[0] - v1[0]) * (p[1] - v1[1]) / (v2[1] - v1[1]):
+            crossings += 1
 
    return bool(crossings & 1)
 
@@ -43,15 +47,22 @@ def pip_wn(p, poly):
 
    for edge in range(vertex_count):
       v1 = poly[edge]
-      if edge == vertex_count - 1: v2 = poly[0]
-      else: v2 = poly[edge + 1]
-      if v1[0] <= p[0] and v2[0] <= p[0]: continue
+      if edge == vertex_count - 1:
+         v2 = poly[0]
+      else:
+         v2 = poly[edge + 1]
+      if v1[0] <= p[0] and v2[0] <= p[0]:
+         continue
       if v1[1] <= p[1] and v2[1] > p[1]:
-         if v1[0] > p[0] and v2[0] > p[0]: winding += 1
-         elif p[0] < v1[0] + (v2[0] - v1[0]) * (p[1] - v1[1]) / (v2[1] - v1[1]): winding += 1
+         if v1[0] > p[0] and v2[0] > p[0]:
+            winding += 1
+         elif p[0] < v1[0] + (v2[0] - v1[0]) * (p[1] - v1[1]) / (v2[1] - v1[1]):
+            winding += 1
       elif v1[1] > p[1] and v2[1] <= p[1]:
-         if v1[0] > p[0] and v2[0] > p[0]: winding -= 1
-         elif p[0] < v1[0] + (v2[0] - v1[0]) * (p[1] - v1[1]) / (v2[1] - v1[1]): winding -= 1
+         if v1[0] > p[0] and v2[0] > p[0]:
+            winding -= 1
+         elif p[0] < v1[0] + (v2[0] - v1[0]) * (p[1] - v1[1]) / (v2[1] - v1[1]):
+            winding -= 1
 
    return bool(winding)
 
@@ -75,16 +86,22 @@ def pip_array_cn(p_a, poly):
    np.seterr(divide = 'ignore', invalid = 'ignore')
    for edge in range(vertex_count):
       v1 = poly[edge]
-      if edge == vertex_count - 1: v2 = poly[0]
-      else: v2 = poly[edge + 1]
-      crossings += np.where(np.logical_and(np.logical_and(np.logical_or(v1[0] > p[:, 0], v2[0] > p[:, 0]),
-                                                          np.logical_or(np.logical_and(v1[1] <= p[:, 1], v2[1] > p[:, 1]),
-                                                                        np.logical_and(v1[1] > p[:, 1], v2[1] <= p[:, 1]))),
-                                           np.logical_or(np.logical_and(v1[0] > p[:, 0], v2[0] > p[:, 0]),
-                                                         (p[:, 0] < (v1[0] + (v2[0] - v1[0]) * (p[:, 1] - v1[1]) / (v2[1] - v1[1]))))),
-                            1, 0)
-   if 'divide' in np_err_dict: np.seterr(divide = np_err_dict['divide'])
-   if 'invalid' in np_err_dict: np.seterr(invalid = np_err_dict['invalid'])
+      if edge == vertex_count - 1:
+         v2 = poly[0]
+      else:
+         v2 = poly[edge + 1]
+      crossings += np.where(
+         np.logical_and(
+            np.logical_and(
+               np.logical_or(v1[0] > p[:, 0], v2[0] > p[:, 0]),
+               np.logical_or(np.logical_and(v1[1] <= p[:, 1], v2[1] > p[:, 1]),
+                             np.logical_and(v1[1] > p[:, 1], v2[1] <= p[:, 1]))),
+            np.logical_or(np.logical_and(v1[0] > p[:, 0], v2[0] > p[:, 0]),
+                          (p[:, 0] < (v1[0] + (v2[0] - v1[0]) * (p[:, 1] - v1[1]) / (v2[1] - v1[1]))))), 1, 0)
+   if 'divide' in np_err_dict:
+      np.seterr(divide = np_err_dict['divide'])
+   if 'invalid' in np_err_dict:
+      np.seterr(invalid = np_err_dict['invalid'])
 
    return np.array(np.bitwise_and(crossings, 1), dtype = bool).reshape(list(p_a.shape)[:-1])
 
@@ -94,14 +111,16 @@ def points_in_polygon(x, y, polygon_file, poly_unit_multiplier = None):
 
    assert x.shape == y.shape, 'x and y arrays have differing shapes or are not numpy arrays'
    assert polygon_file and os.path.exists(polygon_file), 'polygon file is missing'
-   if poly_unit_multiplier is not None: assert poly_unit_multiplier != 0.0, 'zero multiplier for polygon units not allowed'
+   if poly_unit_multiplier is not None:
+      assert poly_unit_multiplier != 0.0, 'zero multiplier for polygon units not allowed'
 
    try:
       polygon_list = sl.read_lines(polygon_file)
       assert len(polygon_list) > 0, 'unable to read polygon from file ' + polygon_file
       assert len(polygon_list) == 1, 'more than one polygon in file ' + polygon_file
       polygon = polygon_list[0]
-      if poly_unit_multiplier is not None: polygon[:] *= poly_unit_multiplier
+      if poly_unit_multiplier is not None:
+         polygon[:] *= poly_unit_multiplier
       points = np.stack((x, y), axis = -1)
       return pip_array_cn(points, polygon)
    except Exception:
@@ -119,21 +138,28 @@ def scan(origin, ncol, nrow, dx, dy, poly):
 
    for row in range(nrow):
       ix[:] = 0.0
-      y = origin[1]  +  dy * row
+      y = origin[1] + dy * row
       ic = 0
       for edge in range(vertex_count):
          v1 = poly[edge]
-         if edge == vertex_count - 1: v2 = poly[0]
-         else: v2 = poly[edge + 1]
-         if (v1[1] > y and v2[1] > y) or (v1[1] <= y and v2[1] <= y): continue
-         ix[ic] = v1[0]  +  (v2[0] - v1[0]) * (y - v1[1]) / (v2[1] - v1[1])
+         if edge == vertex_count - 1:
+            v2 = poly[0]
+         else:
+            v2 = poly[edge + 1]
+         if (v1[1] > y and v2[1] > y) or (v1[1] <= y and v2[1] <= y):
+            continue
+         ix[ic] = v1[0] + (v2[0] - v1[0]) * (y - v1[1]) / (v2[1] - v1[1])
          ic += 1
-         if ic == 2: break
-      if ic < 2: continue
-      if ix[1] < ix[0]: sx, ex = ix[1], ix[0]
-      else: sx, ex = ix[0], ix[1]
+         if ic == 2:
+            break
+      if ic < 2:
+         continue
+      if ix[1] < ix[0]:
+         sx, ex = ix[1], ix[0]
+      else:
+         sx, ex = ix[0], ix[1]
       scol = maths.ceil((sx - origin[0]) / dx)
       ecol = int((ex - origin[0]) / dx)
-      inside[row, scol:ecol+1] = True
+      inside[row, scol:ecol + 1] = True
 
    return inside

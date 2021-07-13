@@ -5,6 +5,7 @@ version = '18th June 2021'
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('rq_import.py version ' + version)
 
@@ -33,51 +34,53 @@ import resqpy.organize as rqo
 import resqpy.weights_and_measures as bwam
 
 
-def import_nexus(resqml_file_root,                # output path and file name without .epc or .h5 extension
-                 extent_ijk = None,               # 3 element numpy vector
-                 vdb_file = None,                 # vdb input file: either this or corp_file should be not None
-                 vdb_case = None,                 # if None, first case in vdb is used (usually a vdb only holds one case)
-                 corp_file = None,                # corp ascii input file: nexus corp data without keyword
-                 corp_bin_file = None,            # corp binary file: nexus corp data in bespoke binary format
-                 corp_xy_units = 'm',
-                 corp_z_units = 'm',
-                 corp_z_inc_down = True,
-                 ijk_handedness = 'right',
-                 corp_eight_mode = False,
-                 geometry_defined_everywhere = True,
-                 treat_as_nan = None,
-                 active_mask_file = None,
-                 use_binary = False,              # this refers to pure binary arrays, not corp bin format
-                 resqml_xy_units = 'm',
-                 resqml_z_units = 'm',
-                 resqml_z_inc_down = True,
-                 shift_to_local = False,
-                 local_origin_place = 'centre',   # 'centre' or 'minimum'
-                 max_z_void = 0.1,                # vertical gaps greater than this will introduce k gaps intp resqml grid
-                 split_pillars = True,
-                 split_tolerance = 0.01,          # applies to each of x, y, z differences
-                 property_array_files = None,     # actually, list of (filename, keyword, uom, time_index, null_value, discrete)
-                 summary_file = None,             # used to extract timestep dates when loading recurrent data from vdb
-                 vdb_static_properties = True,    # if True, static vdb properties are imported (only relevant if vdb_file is not None)
-                 vdb_recurrent_properties = False,
-                 timestep_selection = 'all',      # 'first', 'last', 'first and last', 'all', or list of ints being reporting timestep numbers
-                 use_compressed_time_series = True,
-                 decoarsen = True,                # where ICOARSE is present, redistribute data to uncoarse cells
-                 ab_property_list = None, # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
-                 create_property_set = False,
-                 ensemble_case_dirs_root = None,      # path upto but excluding realisation number
-                 ensemble_property_dictionary = None, # dictionary mapping title (or keyword) to (filename, property_kind, facet_type, facet,
-                                                      #                                           uom, time_index, null_value, discrete)
-                 ensemble_size_limit = None,
-                 grid_title = 'ROOT',
-                 mode = 'w',
-                 progress_fn = None):
+def import_nexus(
+      resqml_file_root,  # output path and file name without .epc or .h5 extension
+      extent_ijk = None,  # 3 element numpy vector
+      vdb_file = None,  # vdb input file: either this or corp_file should be not None
+      vdb_case = None,  # if None, first case in vdb is used (usually a vdb only holds one case)
+      corp_file = None,  # corp ascii input file: nexus corp data without keyword
+      corp_bin_file = None,  # corp binary file: nexus corp data in bespoke binary format
+      corp_xy_units = 'm',
+      corp_z_units = 'm',
+      corp_z_inc_down = True,
+      ijk_handedness = 'right',
+      corp_eight_mode = False,
+      geometry_defined_everywhere = True,
+      treat_as_nan = None,
+      active_mask_file = None,
+      use_binary = False,  # this refers to pure binary arrays, not corp bin format
+      resqml_xy_units = 'm',
+      resqml_z_units = 'm',
+      resqml_z_inc_down = True,
+      shift_to_local = False,
+      local_origin_place = 'centre',  # 'centre' or 'minimum'
+      max_z_void = 0.1,  # vertical gaps greater than this will introduce k gaps intp resqml grid
+      split_pillars = True,
+      split_tolerance = 0.01,  # applies to each of x, y, z differences
+      property_array_files = None,  # actually, list of (filename, keyword, uom, time_index, null_value, discrete)
+      summary_file = None,  # used to extract timestep dates when loading recurrent data from vdb
+      vdb_static_properties = True,  # if True, static vdb properties are imported (only relevant if vdb_file is not None)
+      vdb_recurrent_properties = False,
+      timestep_selection = 'all',  # 'first', 'last', 'first and last', 'all', or list of ints being reporting timestep numbers
+      use_compressed_time_series = True,
+      decoarsen = True,  # where ICOARSE is present, redistribute data to uncoarse cells
+      ab_property_list = None,  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
+      create_property_set = False,
+      ensemble_case_dirs_root = None,  # path upto but excluding realisation number
+      ensemble_property_dictionary = None,  # dictionary mapping title (or keyword) to (filename, property_kind, facet_type, facet,
+      #                                           uom, time_index, null_value, discrete)
+   ensemble_size_limit = None,
+      grid_title = 'ROOT',
+      mode = 'w',
+      progress_fn = None):
    """Read a simulation grid geometry and optionally grid properties and return a resqml model in memory & written to disc.
 
       Input may be from nexus ascii input files, or nexus vdb output.
    """
 
-   if resqml_file_root.endswith('.epc'): resqml_file_root = resqml_file_root[:-4]
+   if resqml_file_root.endswith('.epc'):
+      resqml_file_root = resqml_file_root[:-4]
    assert mode in ['w', 'a']
 
    if vdb_file:
@@ -116,33 +119,39 @@ def import_nexus(resqml_file_root,                # output path and file name wi
          assert extent_ijk is not None, 'failed to determine extent of grid from corp data'
          (ni, nj, nk) = extent_ijk
          assert cp_extent_kji[2] == ni * nj * nk, 'number of cells in grid corp does not match extent'
-         cp_extent = (nk, nj, ni, 2, 2, 2, 3)   # (nk, nj, ni, kp, jp, ip, xyz)
+         cp_extent = (nk, nj, ni, 2, 2, 2, 3)  # (nk, nj, ni, kp, jp, ip, xyz)
          cp_array = cp_array.reshape(cp_extent)
       elif extent_ijk is not None:
          for axis in range(3):
-            assert cp_extent_kji[axis] == extent_ijk[2 - axis], 'extent of grid corp data from vdb does not match that supplied'
+            assert cp_extent_kji[axis] == extent_ijk[
+               2 - axis], 'extent of grid corp data from vdb does not match that supplied'
 
    elif corp_file or corp_bin_file:
-      if corp_bin_file: corp_file = None
+      if corp_bin_file:
+         corp_file = None
       using_vdb = False
-#     geometry_defined_everywhere = (active_mask_file is None)
+      #     geometry_defined_everywhere = (active_mask_file is None)
       log.info('starting import of Nexus corp file ' + str(corp_file if corp_file else corp_bin_file))
       tm.log_nexus_tm('info')
-      if extent_ijk is None:   # auto detect extent
+      if extent_ijk is None:  # auto detect extent
          extent_kji = None
          cp_extent = None
       else:
          (ni, nj, nk) = extent_ijk
          extent_kji = np.array((nk, nj, ni), dtype = 'int')
-         cp_extent = (nk, nj, ni, 2, 2, 2, 3)   # (nk, nj, ni, kp, jp, ip, xyz)
+         cp_extent = (nk, nj, ni, 2, 2, 2, 3)  # (nk, nj, ni, kp, jp, ip, xyz)
       log.debug('reading and resequencing corp data')
       if corp_bin_file:  # bespoke nexus corp bin format, not to be confused with pure binary files used below
-         cp_array = ld.load_corp_array_from_file(corp_bin_file, extent_kji, corp_bin = True,
-                                                 comment_char = None,  # comment char will be detected automatically
-                                                 data_free_of_comments = False,
-                                                 use_binary = use_binary)
+         cp_array = ld.load_corp_array_from_file(
+            corp_bin_file,
+            extent_kji,
+            corp_bin = True,
+            comment_char = None,  # comment char will be detected automatically
+            data_free_of_comments = False,
+            use_binary = use_binary)
       else:
-         cp_binary_file = abt.cp_binary_filename(corp_file, nexus_ordering = False)   # pure binary, not bespoke corp bin used above
+         cp_binary_file = abt.cp_binary_filename(corp_file,
+                                                 nexus_ordering = False)  # pure binary, not bespoke corp bin used above
          recent_binary_exists = ld.file_exists(cp_binary_file, must_be_more_recent_than_file = corp_file)
          cp_array = None
          if use_binary and (extent_ijk is not None) and recent_binary_exists:
@@ -151,12 +160,16 @@ def import_nexus(resqml_file_root,                # output path and file name wi
             except Exception:
                cp_array = None
          if cp_array is None:
-            cp_array = ld.load_corp_array_from_file(corp_file, extent_kji, corp_bin = False,
-                                                    comment_char = None,  # comment char will be detected automatically
-                                                    data_free_of_comments = False,
-                                                    use_binary = use_binary)
+            cp_array = ld.load_corp_array_from_file(
+               corp_file,
+               extent_kji,
+               corp_bin = False,
+               comment_char = None,  # comment char will be detected automatically
+               data_free_of_comments = False,
+               use_binary = use_binary)
             if use_binary:
-               wd.write_pure_binary_data(cp_binary_file, cp_array)  # NB: this binary file is resequenced, not in nexus ordering!
+               wd.write_pure_binary_data(cp_binary_file,
+                                         cp_array)  # NB: this binary file is resequenced, not in nexus ordering!
 
    else:
       raise ValueError('vdb_file and corp_file are both None in import_nexus() call')
@@ -219,7 +232,7 @@ def import_nexus(resqml_file_root,                # output path and file name wi
       elif local_origin_place == 'minimum':
          local_origin = np.nanmin(cp_array, axis = (0, 1, 2, 3, 4, 5)) - 1.0  # The -1 ensures all coords are >0
       else:
-         assert(False)
+         assert (False)
       cp_array -= local_origin
 
    # create empty resqml model
@@ -237,22 +250,33 @@ def import_nexus(resqml_file_root,                # output path and file name wi
    crs_uuids = model.uuids(obj_type = 'LocalDepth3dCrs')
    if mode == 'w' or len(crs_uuids) == 0:
       crs_node = model.create_crs(add_as_part = True,
-                                  x_offset = local_origin[0], y_offset = local_origin[1], z_offset = local_origin[2],
-                                  xy_units = resqml_xy_units, z_units = resqml_z_units,
+                                  x_offset = local_origin[0],
+                                  y_offset = local_origin[1],
+                                  z_offset = local_origin[2],
+                                  xy_units = resqml_xy_units,
+                                  z_units = resqml_z_units,
                                   z_inc_down = resqml_z_inc_down)
       crs_uuid = bu.uuid_from_string(crs_node.attrib['uuid'])
    else:
-      new_crs = rqc.Crs(model, x_offset = local_origin[0], y_offset = local_origin[1], z_offset = local_origin[2],
-                        xy_units = resqml_xy_units, z_units = resqml_z_units, z_inc_down = resqml_z_inc_down)
+      new_crs = rqc.Crs(model,
+                        x_offset = local_origin[0],
+                        y_offset = local_origin[1],
+                        z_offset = local_origin[2],
+                        xy_units = resqml_xy_units,
+                        z_units = resqml_z_units,
+                        z_inc_down = resqml_z_inc_down)
       new_crs.create_xml(reuse = True)
       crs_uuid = new_crs.uuid
 
-   grid = grid_from_cp(model, cp_array, crs_uuid,
+   grid = grid_from_cp(model,
+                       cp_array,
+                       crs_uuid,
                        active_mask = active_mask,
                        geometry_defined_everywhere = geometry_defined_everywhere,
                        treat_as_nan = treat_as_nan,
                        max_z_void = max_z_void,
-                       split_pillars = split_pillars, split_tolerance = split_tolerance,
+                       split_pillars = split_pillars,
+                       split_tolerance = split_tolerance,
                        ijk_handedness = ijk_handedness,
                        known_to_be_straight = False)
 
@@ -271,7 +295,8 @@ def import_nexus(resqml_file_root,                # output path and file name wi
    ts_node = None
    ts_uuid = None
 
-   if active_mask is None and grid.inactive is not None: active_mask = np.logical_not(grid.inactive)
+   if active_mask is None and grid.inactive is not None:
+      active_mask = np.logical_not(grid.inactive)
 
    if using_vdb:
       prop_import_collection = rp.GridPropertyCollection()
@@ -290,28 +315,40 @@ def import_nexus(resqml_file_root,                # output path and file name wi
       prop_import_collection = rp.GridPropertyCollection()
       prop_import_collection.set_grid(grid)
       for (p_filename, p_keyword, p_uom, p_time_index, p_null_value, p_discrete) in property_array_files:
-         prop_import_collection.import_nexus_property_to_cache(p_filename, p_keyword, grid.extent_kji, discrete = p_discrete,
-                                                               uom = p_uom, time_index = p_time_index,
-                                                               null_value = p_null_value, use_binary = use_binary)
+         prop_import_collection.import_nexus_property_to_cache(p_filename,
+                                                               p_keyword,
+                                                               grid.extent_kji,
+                                                               discrete = p_discrete,
+                                                               uom = p_uom,
+                                                               time_index = p_time_index,
+                                                               null_value = p_null_value,
+                                                               use_binary = use_binary)
 #      if active_mask is not None:
 #         prop_import_collection.add_cached_array_to_imported_list(active_mask, active_mask_file, 'ACTIVE', property_kind = 'active',
 #                                                                  discrete = True, uom = None, time_index = None, null_value = None)
 
-   #  ab_property_list: list of (filename, keyword, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
+#  ab_property_list: list of (filename, keyword, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
    elif ab_property_list is not None and len(ab_property_list) > 0:
       prop_import_collection = rp.GridPropertyCollection()
       prop_import_collection.set_grid(grid)
-      for (p_filename, p_keyword, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index, p_null_value, p_discrete) in ab_property_list:
-         prop_import_collection.import_ab_property_to_cache(p_filename, p_keyword, grid.extent_kji, discrete = p_discrete,
-                                                            property_kind = p_property_kind, facet_type = p_facet_type, facet = p_facet,
-                                                            uom = p_uom, time_index = p_time_index,
+      for (p_filename, p_keyword, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index, p_null_value,
+           p_discrete) in ab_property_list:
+         prop_import_collection.import_ab_property_to_cache(p_filename,
+                                                            p_keyword,
+                                                            grid.extent_kji,
+                                                            discrete = p_discrete,
+                                                            property_kind = p_property_kind,
+                                                            facet_type = p_facet_type,
+                                                            facet = p_facet,
+                                                            uom = p_uom,
+                                                            time_index = p_time_index,
                                                             null_value = p_null_value)
 #      if active_mask is not None:
 #         prop_import_collection.add_cached_array_to_imported_list(active_mask, active_mask_file, 'ACTIVE', property_kind = 'active',
 #                                                                  discrete = True, uom = None, time_index = None, null_value = None)
 
-   # ensemble_property_dictionary: mapping title (or keyword) to
-   #    (filename, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
+# ensemble_property_dictionary: mapping title (or keyword) to
+#    (filename, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
    elif ensemble_case_dirs_root and ensemble_property_dictionary:
       case_path_list = glob.glob(ensemble_case_dirs_root + '*')
       assert len(case_path_list) > 0, 'no case directories found with path starting: ' + str(ensemble_case_dirs_root)
@@ -336,25 +373,40 @@ def import_nexus(resqml_file_root,                # output path and file name wi
             log.error('failed to determine case number for tail: ' + str(tail))
             continue
          for keyword in ensemble_property_dictionary.keys():
-            (filename, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index, p_null_value, p_discrete) = ensemble_property_dictionary[keyword]
+            (filename, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index, p_null_value,
+             p_discrete) = ensemble_property_dictionary[keyword]
             p_filename = os.path.join(case_path, filename)
             if not os.path.exists(p_filename):
                log.error('missing property file: ' + p_filename)
                continue
-            prop_import_collection.import_nexus_property_to_cache(p_filename, keyword, grid.extent_kji, discrete = p_discrete,
-                                                                  uom = p_uom, time_index = p_time_index, null_value = p_null_value,
-                                                                  property_kind = p_property_kind, facet_type = p_facet_type, facet = p_facet,
-                                                                  realization = case_number, use_binary = False)
+            prop_import_collection.import_nexus_property_to_cache(p_filename,
+                                                                  keyword,
+                                                                  grid.extent_kji,
+                                                                  discrete = p_discrete,
+                                                                  uom = p_uom,
+                                                                  time_index = p_time_index,
+                                                                  null_value = p_null_value,
+                                                                  property_kind = p_property_kind,
+                                                                  facet_type = p_facet_type,
+                                                                  facet = p_facet,
+                                                                  realization = case_number,
+                                                                  use_binary = False)
          if len(prop_import_collection.imported_list) > 0:
             # create hdf5 file using arrays cached in grid above
             log.info('writing properties to hdf5 file ' + str(resqml_file_root) + '.h5 for case: ' + str(case_number))
-            grid.write_hdf5_from_caches(resqml_file_root + '.h5', geometry = False, imported_properties = prop_import_collection, write_active = False)
+            grid.write_hdf5_from_caches(resqml_file_root + '.h5',
+                                        geometry = False,
+                                        imported_properties = prop_import_collection,
+                                        write_active = False)
             # add imported properties parts to model, building property parts list
-            prop_import_collection.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid, time_series_uuid = ts_uuid)
+            prop_import_collection.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid,
+                                                                                       time_series_uuid = ts_uuid)
             if create_property_set:
                prop_import_collection.create_property_set_xml('realisation ' + str(case_number))
             case_count += 1
          # remove cached static property arrays from memory
+
+
 #         prop_import_collection.remove_all_cached_arrays()
          del prop_import_collection
          prop_import_collection = None
@@ -367,14 +419,23 @@ def import_nexus(resqml_file_root,                # output path and file name wi
          decoarsen_array = prop_import_collection.decoarsen_imported_list()
          if decoarsen_array is not None:
             log.info('static properties decoarsened')
-            prop_import_collection.add_cached_array_to_imported_list(decoarsen_array, 'decoarsen', 'DECOARSEN', discrete = True,
-                                             uom = None, time_index = None, null_value = -1,
-                                             property_kind = 'discrete')
-      log.info('writing ' + str(len(prop_import_collection.imported_list)) + ' properties to hdf5 file ' + resqml_file_root + '.h5')
+            prop_import_collection.add_cached_array_to_imported_list(decoarsen_array,
+                                                                     'decoarsen',
+                                                                     'DECOARSEN',
+                                                                     discrete = True,
+                                                                     uom = None,
+                                                                     time_index = None,
+                                                                     null_value = -1,
+                                                                     property_kind = 'discrete')
+      log.info('writing ' + str(len(prop_import_collection.imported_list)) + ' properties to hdf5 file ' +
+               resqml_file_root + '.h5')
    elif not ensemble_case_dirs_root:
       log.info('no static grid properties to import')
       prop_import_collection = None
-   grid.write_hdf5_from_caches(resqml_file_root + '.h5', geometry = False, imported_properties = prop_import_collection, write_active = True)
+   grid.write_hdf5_from_caches(resqml_file_root + '.h5',
+                               geometry = False,
+                               imported_properties = prop_import_collection,
+                               write_active = True)
    # remove cached static property arrays from memory
    if prop_import_collection is not None:
       prop_import_collection.remove_all_cached_arrays()
@@ -392,56 +453,71 @@ def import_nexus(resqml_file_root,                # output path and file name wi
          tm.log_nexus_tm('error')
       else:
          full_time_series.set_model(model)
-         timestep_list = vdbase.grid_list_of_timesteps(grid_title)  # get list of timesteps for which recurrent files exist
+         timestep_list = vdbase.grid_list_of_timesteps(
+            grid_title)  # get list of timesteps for which recurrent files exist
          recur_time_series = None
          for timestep_number in timestep_list:
             if isinstance(timestep_selection, list):
-               if timestep_number not in timestep_selection: continue
+               if timestep_number not in timestep_selection:
+                  continue
             else:
                if timestep_selection == 'first':
-                  if timestep_number != timestep_list[0]: break
+                  if timestep_number != timestep_list[0]:
+                     break
                elif timestep_selection == 'last':
-                  if timestep_number != timestep_list[-1]: continue
+                  if timestep_number != timestep_list[-1]:
+                     continue
                elif timestep_selection == 'first and last':
-                  if timestep_number != timestep_list[0] and timestep_number != timestep_list[-1]: continue
+                  if timestep_number != timestep_list[0] and timestep_number != timestep_list[-1]:
+                     continue
                # default to importing all timesteps
             stamp = full_time_series.timestamp(timestep_number)
             if stamp is None:
-               log.error('timestamp number for which recurrent data exists was not found in summary file: ' + str(timestep_number))
+               log.error('timestamp number for which recurrent data exists was not found in summary file: ' +
+                         str(timestep_number))
                continue
             recur_prop_list = vdbase.grid_list_of_recurrent_properties(grid_title, timestep_number)
             common_recur_prop_set = set()
             if recur_time_series is None:
                recur_time_series = rts.TimeSeries(model, first_timestamp = stamp)
-               if recur_prop_list is not None: common_recur_prop_set = set(recur_prop_list)
+               if recur_prop_list is not None:
+                  common_recur_prop_set = set(recur_prop_list)
             else:
                recur_time_series.add_timestamp(stamp)
-               if recur_prop_list is not None: common_recur_prop_set = common_recur_prop_set.intersection(set(recur_prop_list))
+               if recur_prop_list is not None:
+                  common_recur_prop_set = common_recur_prop_set.intersection(set(recur_prop_list))
             step_import_collection = rp.GridPropertyCollection()
             step_import_collection.set_grid(grid)
             # for each property for this timestep, cache array and add to recur prop import collection for this time step
             if recur_prop_list:
                for keyword in recur_prop_list:
-                  if not keyword or not keyword.isalnum(): continue
-                  step_import_collection.import_vdb_recurrent_property_to_cache(vdbase, timestep_number, keyword, grid_name = grid_title)
+                  if not keyword or not keyword.isalnum():
+                     continue
+                  step_import_collection.import_vdb_recurrent_property_to_cache(vdbase,
+                                                                                timestep_number,
+                                                                                keyword,
+                                                                                grid_name = grid_title)
             # extend hdf5 with cached arrays for this timestep
-            log.info('number of recurrent grid property arrays for timestep: ' + str(timestep_number) +
-                     ' is: ' + str(step_import_collection.number_of_imports()))
+            log.info('number of recurrent grid property arrays for timestep: ' + str(timestep_number) + ' is: ' +
+                     str(step_import_collection.number_of_imports()))
             if decoarsen_array is not None:
                log.info('decoarsening recurrent properties for timestep: ' + str(timestep_number))
                step_import_collection.decoarsen_imported_list(decoarsen_array = decoarsen_array)
             log.info('extending hdf5 file with recurrent properties for timestep: ' + str(timestep_number))
-            grid.write_hdf5_from_caches(resqml_file_root + '.h5', mode = 'a', geometry = False,
-                                        imported_properties = step_import_collection, write_active = False)
+            grid.write_hdf5_from_caches(resqml_file_root + '.h5',
+                                        mode = 'a',
+                                        geometry = False,
+                                        imported_properties = step_import_collection,
+                                        write_active = False)
             # add imported list for this timestep to full imported list
             prop_import_collection.inherit_imported_list_from_other_collection(step_import_collection)
-            log.debug('total number of property arrays after timestep: ' + str(timestep_number) +
-                      ' is: ' + str(prop_import_collection.number_of_imports()))
+            log.debug('total number of property arrays after timestep: ' + str(timestep_number) + ' is: ' +
+                      str(prop_import_collection.number_of_imports()))
             # remove cached copies of arrays
             step_import_collection.remove_all_cached_arrays()
 
          ts_node = full_time_series.create_xml(title = 'simulator full timestep series')
-         model.time_series = ts_node   # save as the primary time series for the model
+         model.time_series = ts_node  # save as the primary time series for the model
          ts_uuid = rqet.uuid_for_part_root(ts_node)
          # create xml for recur_time_series (as well as for full_time_series) and add as part; not needed?
          if recur_time_series is not None:
@@ -452,9 +528,9 @@ def import_nexus(resqml_file_root,                # output path and file name wi
 
    # add imported properties parts to model, building property parts list
    if prop_import_collection is not None and prop_import_collection.imported_list is not None:
-      prop_import_collection.set_grid(grid)   # update to pick up on recently created xml root node for grid
-      prop_import_collection.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid, time_series_uuid = ts_uuid,
-                                                                                 selected_time_indices_list = ts_selection)
+      prop_import_collection.set_grid(grid)  # update to pick up on recently created xml root node for grid
+      prop_import_collection.create_xml_for_imported_list_and_add_parts_to_model(
+         ext_uuid, time_series_uuid = ts_uuid, selected_time_indices_list = ts_selection)
       if create_property_set:
          prop_import_collection.create_property_set_xml('property set for import for grid ' + str(grid_title))
 
@@ -469,30 +545,30 @@ def import_nexus(resqml_file_root,                # output path and file name wi
    return model
 
 
-
-def import_vdb_all_grids(resqml_file_root,        # output path and file name without .epc or .h5 extension
-                 extent_ijk = None,               # 3 element numpy vector applicable to ROOT
-                 vdb_file = None,
-                 vdb_case = None,                 # if None, first case in vdb is used (usually a vdb only holds one case)
-                 corp_xy_units = 'm',
-                 corp_z_units = 'm',
-                 corp_z_inc_down = True,
-                 ijk_handedness = 'right',
-                 geometry_defined_everywhere = True,
-                 treat_as_nan = None,
-                 resqml_xy_units = 'm',
-                 resqml_z_units = 'm',
-                 resqml_z_inc_down = True,
-                 shift_to_local = False,
-                 local_origin_place = 'centre',   # 'centre' or 'minimum'
-                 max_z_void = 0.1,                # vertical gaps greater than this will introduce k gaps intp resqml grid
-                 split_pillars = True,
-                 split_tolerance = 0.01,          # applies to each of x, y, z differences
-                 vdb_static_properties = True,    # if True, static vdb properties are imported (only relevant if vdb_file is not None)
-                 vdb_recurrent_properties = False,
-                 decoarsen = True,
-                 timestep_selection = 'all',      # 'first', 'last', 'first and last', 'all', or list of ints being reporting timestep numbers
-                 create_property_set = False):
+def import_vdb_all_grids(
+   resqml_file_root,  # output path and file name without .epc or .h5 extension
+   extent_ijk = None,  # 3 element numpy vector applicable to ROOT
+   vdb_file = None,
+   vdb_case = None,  # if None, first case in vdb is used (usually a vdb only holds one case)
+   corp_xy_units = 'm',
+   corp_z_units = 'm',
+   corp_z_inc_down = True,
+   ijk_handedness = 'right',
+   geometry_defined_everywhere = True,
+   treat_as_nan = None,
+   resqml_xy_units = 'm',
+   resqml_z_units = 'm',
+   resqml_z_inc_down = True,
+   shift_to_local = False,
+   local_origin_place = 'centre',  # 'centre' or 'minimum'
+   max_z_void = 0.1,  # vertical gaps greater than this will introduce k gaps intp resqml grid
+   split_pillars = True,
+   split_tolerance = 0.01,  # applies to each of x, y, z differences
+   vdb_static_properties = True,  # if True, static vdb properties are imported (only relevant if vdb_file is not None)
+   vdb_recurrent_properties = False,
+   decoarsen = True,
+   timestep_selection = 'all',  # 'first', 'last', 'first and last', 'all', or list of ints being reporting timestep numbers
+   create_property_set = False):
    """Creates a RESQML dataset containing grids and grid properties, including LGRs, for a single realisation."""
 
    vdbase = vdb.VDB(vdb_file)
@@ -510,64 +586,65 @@ def import_vdb_all_grids(resqml_file_root,        # output path and file name wi
          log.warning('vdb import skipping small grids')
          continue
       log.debug('importing vdb data for grid ' + str(grid_name))
-      import_nexus(resqml_file_root,
-                   extent_ijk = extent_ijk if grid_name == 'ROOT' else None,  # 3 element numpy vector applicable to ROOT
-                   vdb_file = vdb_file,
-                   vdb_case = vdb_case,                 # if None, first case in vdb is used (usually a vdb only holds one case)
-                   corp_xy_units = corp_xy_units,
-                   corp_z_units = corp_z_units,
-                   corp_z_inc_down = corp_z_inc_down,
-                   ijk_handedness = ijk_handedness,
-                   geometry_defined_everywhere = geometry_defined_everywhere,
-                   treat_as_nan = treat_as_nan,
-                   resqml_xy_units = resqml_xy_units,
-                   resqml_z_units = resqml_z_units,
-                   resqml_z_inc_down = resqml_z_inc_down,
-                   shift_to_local = shift_to_local,
-                   local_origin_place = local_origin_place,   # 'centre' or 'minimum'
-                   max_z_void = max_z_void,             # vertical gaps greater than this will introduce k gaps intp resqml grid
-                   split_pillars = split_pillars,       # NB: some LGRs may be unsplit even if ROOT is split
-                   split_tolerance = split_tolerance,   # applies to each of x, y, z differences
-                   vdb_static_properties = vdb_static_properties,  # if True, static vdb properties are imported
-                   vdb_recurrent_properties = vdb_recurrent_properties,
-                   decoarsen = decoarsen,
-                   timestep_selection = timestep_selection,
-                   create_property_set = create_property_set,
-                   grid_title = grid_name,
-                   mode = 'w' if index == 0 else 'a')
+      import_nexus(
+         resqml_file_root,
+         extent_ijk = extent_ijk if grid_name == 'ROOT' else None,  # 3 element numpy vector applicable to ROOT
+         vdb_file = vdb_file,
+         vdb_case = vdb_case,  # if None, first case in vdb is used (usually a vdb only holds one case)
+         corp_xy_units = corp_xy_units,
+         corp_z_units = corp_z_units,
+         corp_z_inc_down = corp_z_inc_down,
+         ijk_handedness = ijk_handedness,
+         geometry_defined_everywhere = geometry_defined_everywhere,
+         treat_as_nan = treat_as_nan,
+         resqml_xy_units = resqml_xy_units,
+         resqml_z_units = resqml_z_units,
+         resqml_z_inc_down = resqml_z_inc_down,
+         shift_to_local = shift_to_local,
+         local_origin_place = local_origin_place,  # 'centre' or 'minimum'
+         max_z_void = max_z_void,  # vertical gaps greater than this will introduce k gaps intp resqml grid
+         split_pillars = split_pillars,  # NB: some LGRs may be unsplit even if ROOT is split
+         split_tolerance = split_tolerance,  # applies to each of x, y, z differences
+         vdb_static_properties = vdb_static_properties,  # if True, static vdb properties are imported
+         vdb_recurrent_properties = vdb_recurrent_properties,
+         decoarsen = decoarsen,
+         timestep_selection = timestep_selection,
+         create_property_set = create_property_set,
+         grid_title = grid_name,
+         mode = 'w' if index == 0 else 'a')
       index += 1
 
 
-
-def import_vdb_ensemble(epc_file,
-                        ensemble_run_dir,
-                        existing_epc = False,
-                        keyword_list = None,
-                        property_kind_list = None,
-                        vdb_static_properties = True,    # if True, static vdb properties are imported
-                        vdb_recurrent_properties = True,
-                        decoarsen = True,
-                        timestep_selection = 'all',
-                        create_property_set_per_realization = True,
-                        create_property_set_per_timestep = True,
-                        create_complete_property_set = False,
-                        # remaining arguments only used if existing_epc is False
-                        extent_ijk = None,               # 3 element numpy vector
-                        corp_xy_units = 'metres',
-                        corp_z_units = 'metres',
-                        corp_z_inc_down = True,
-                        ijk_handedness = 'right',
-                        geometry_defined_everywhere = True,
-                        treat_as_nan = None,
-                        resqml_xy_units = 'metres',
-                        resqml_z_units = 'metres',
-                        resqml_z_inc_down = True,
-                        shift_to_local = True,
-                        local_origin_place = 'centre',   # 'centre' or 'minimum'
-                        max_z_void = 0.1,                # import will fail if vertical void greater than this is encountered
-                        split_pillars = True,
-                        split_tolerance = 0.01,          # applies to each of x, y, z differences
-                        progress_fn = None):
+def import_vdb_ensemble(
+      epc_file,
+      ensemble_run_dir,
+      existing_epc = False,
+      keyword_list = None,
+      property_kind_list = None,
+      vdb_static_properties = True,  # if True, static vdb properties are imported
+      vdb_recurrent_properties = True,
+      decoarsen = True,
+      timestep_selection = 'all',
+      create_property_set_per_realization = True,
+      create_property_set_per_timestep = True,
+      create_complete_property_set = False,
+      # remaining arguments only used if existing_epc is False
+      extent_ijk = None,  # 3 element numpy vector
+      corp_xy_units = 'metres',
+      corp_z_units = 'metres',
+      corp_z_inc_down = True,
+      ijk_handedness = 'right',
+      geometry_defined_everywhere = True,
+      treat_as_nan = None,
+      resqml_xy_units = 'metres',
+      resqml_z_units = 'metres',
+      resqml_z_inc_down = True,
+      shift_to_local = True,
+      local_origin_place = 'centre',  # 'centre' or 'minimum'
+      max_z_void = 0.1,  # import will fail if vertical void greater than this is encountered
+      split_pillars = True,
+      split_tolerance = 0.01,  # applies to each of x, y, z differences
+      progress_fn = None):
    """Adds properties from all vdb's within an ensemble directory tree to a single RESQML dataset, referencing a shared grid.
 
    args:
@@ -637,7 +714,8 @@ def import_vdb_ensemble(epc_file,
    assert epc_file.endswith('.epc')
    assert vdb_static_properties or vdb_recurrent_properties, 'no properties selected for ensemble import'
 
-   if progress_fn is not None: progress_fn(0.0)
+   if progress_fn is not None:
+      progress_fn(0.0)
 
    # fetch a sorted list of the vdb paths found in the run directory tree
    ensemble_list = vdb.ensemble_vdb_list(ensemble_run_dir)
@@ -646,28 +724,30 @@ def import_vdb_ensemble(epc_file,
       return None
 
    if not existing_epc:
-      model = import_nexus(epc_file[:-4],                # output path and file name without .epc or .h5 extension
-                           extent_ijk = extent_ijk,      # 3 element numpy vector, in case extent is not automatically determined
-                           vdb_file = ensemble_list[0],  # vdb input file
-                           corp_xy_units = corp_xy_units,
-                           corp_z_units = corp_z_units,
-                           corp_z_inc_down = corp_z_inc_down,
-                           ijk_handedness = ijk_handedness,
-                           geometry_defined_everywhere = geometry_defined_everywhere,
-                           treat_as_nan = treat_as_nan,
-                           resqml_xy_units = resqml_xy_units,
-                           resqml_z_units = resqml_z_units,
-                           resqml_z_inc_down = resqml_z_inc_down,
-                           shift_to_local = shift_to_local,
-                           local_origin_place = local_origin_place,   # 'centre' or 'minimum'
-                           max_z_void = max_z_void,                # import will fail if vertical void greater than this is encountered
-                           split_pillars = split_pillars,
-                           split_tolerance = split_tolerance,      # applies to each of x, y, z differences
-                           vdb_static_properties = False,
-                           vdb_recurrent_properties = False,
-                           create_property_set = False)
+      model = import_nexus(
+         epc_file[:-4],  # output path and file name without .epc or .h5 extension
+         extent_ijk = extent_ijk,  # 3 element numpy vector, in case extent is not automatically determined
+         vdb_file = ensemble_list[0],  # vdb input file
+         corp_xy_units = corp_xy_units,
+         corp_z_units = corp_z_units,
+         corp_z_inc_down = corp_z_inc_down,
+         ijk_handedness = ijk_handedness,
+         geometry_defined_everywhere = geometry_defined_everywhere,
+         treat_as_nan = treat_as_nan,
+         resqml_xy_units = resqml_xy_units,
+         resqml_z_units = resqml_z_units,
+         resqml_z_inc_down = resqml_z_inc_down,
+         shift_to_local = shift_to_local,
+         local_origin_place = local_origin_place,  # 'centre' or 'minimum'
+         max_z_void = max_z_void,  # import will fail if vertical void greater than this is encountered
+         split_pillars = split_pillars,
+         split_tolerance = split_tolerance,  # applies to each of x, y, z differences
+         vdb_static_properties = False,
+         vdb_recurrent_properties = False,
+         create_property_set = False)
 
-   model = rq.Model(epc_file = epc_file)  # shouldn't be necessary if just created but it feels safer to re-open the model
+   model = rq.Model(
+      epc_file = epc_file)  # shouldn't be necessary if just created but it feels safer to re-open the model
    assert model is not None, 'failed to instantiate model'
    grid = model.grid()
    assert grid is not None, 'grid not found'
@@ -680,7 +760,7 @@ def import_vdb_ensemble(epc_file,
    recur_ts_uuid = None
    timestep_list = None
    if vdb_recurrent_properties:
-      summary_file = ensemble_list[0][:-4] + '.sum'   # TODO: check timestep summary file extension, .tssum?
+      summary_file = ensemble_list[0][:-4] + '.sum'  # TODO: check timestep summary file extension, .tssum?
       full_time_series = rts.time_series_from_nexus_summary(summary_file)
       if full_time_series is None:
          log.error('failed to extract info from timestep summary file; disabling recurrent property import')
@@ -692,22 +772,29 @@ def import_vdb_ensemble(epc_file,
          log.warning('no ROOT recurrent data found in vdb for first realisation; disabling recurrent property import')
          vdb_recurrent_properties = False
    if vdb_recurrent_properties:
-      if timestep_selection == 'all' or ('first' in timestep_selection): fs_index = 0
-      else: fs_index = -1
+      if timestep_selection == 'all' or ('first' in timestep_selection):
+         fs_index = 0
+      else:
+         fs_index = -1
       first_stamp = full_time_series.timestamp(timestep_list[fs_index])
       if first_stamp is None:
-         log.error('first timestamp number selected for import was not found in summary file: ' + str(timestep_list[fs_index]))
+         log.error('first timestamp number selected for import was not found in summary file: ' +
+                   str(timestep_list[fs_index]))
          log.error('disabling recurrent property import')
          vdb_recurrent_properties = False
    if vdb_recurrent_properties:
       recur_time_series = rts.TimeSeries(model, first_timestamp = first_stamp)
-      if timestep_selection == 'all': remaining_list = timestep_list[1:]
-      elif timestep_selection == 'first and last': remaining_list = [timestep_list[-1]]
-      else: remaining_list = []
+      if timestep_selection == 'all':
+         remaining_list = timestep_list[1:]
+      elif timestep_selection == 'first and last':
+         remaining_list = [timestep_list[-1]]
+      else:
+         remaining_list = []
       for timestep_number in remaining_list:
          stamp = full_time_series.timestamp(timestep_number)
          if stamp is None:
-            log.error('timestamp number for which recurrent data exists was not found in summary file: ' + str(timestep_number))
+            log.error('timestamp number for which recurrent data exists was not found in summary file: ' +
+                      str(timestep_number))
             log.error('disabling recurrent property import')
             vdb_recurrent_properties = False
             recur_time_series = None
@@ -716,7 +803,7 @@ def import_vdb_ensemble(epc_file,
    if recur_time_series is not None:
       recur_ts_node = recur_time_series.create_xml(title = 'simulator recurrent array timestep series')
       recur_ts_uuid = rqet.uuid_for_part_root(recur_ts_node)
-      model.time_series = recur_ts_node   # save as the primary time series for the model
+      model.time_series = recur_ts_node  # save as the primary time series for the model
 
    if create_complete_property_set or create_property_set_per_timestep:
       complete_collection = rp.GridPropertyCollection()
@@ -728,16 +815,17 @@ def import_vdb_ensemble(epc_file,
 
    for realisation in range(len(ensemble_list)):
 
-      if progress_fn is not None: progress_fn(float(1 + realisation) / float(1 + len(ensemble_list)))
+      if progress_fn is not None:
+         progress_fn(float(1 + realisation) / float(1 + len(ensemble_list)))
 
       vdb_file = ensemble_list[realisation]
       log.info('processing realisation ' + str(realisation) + ' from: ' + str(vdb_file))
       vdbase = vdb.VDB(vdb_file)
-#      case_list = vdbase.cases()
-#      assert len(case_list) > 0, 'no cases found in vdb: ' + str(vdb_file)
-#      if len(case_list) > 1: log.warning('more than one case found in vdb (using first): ' + str(vdb_file))
-#      vdb_case = case_list[0]
-#      vdbase.set_use_case(vdb_case)
+      #      case_list = vdbase.cases()
+      #      assert len(case_list) > 0, 'no cases found in vdb: ' + str(vdb_file)
+      #      if len(case_list) > 1: log.warning('more than one case found in vdb (using first): ' + str(vdb_file))
+      #      vdb_case = case_list[0]
+      #      vdbase.set_use_case(vdb_case)
       vdbase.set_extent_kji(grid.extent_kji)
 
       prop_import_collection = rp.GridPropertyCollection(realization = realisation)
@@ -748,23 +836,30 @@ def import_vdb_ensemble(epc_file,
          props = vdbase.list_of_static_properties()
          if len(props) > 0:
             for keyword in props:
-               if keyword_list is not None and keyword not in keyword_list: continue
+               if keyword_list is not None and keyword not in keyword_list:
+                  continue
                if property_kind_list is not None:
                   prop_kind, _, _ = rp.property_kind_and_facet_from_keyword(keyword)
-                  if prop_kind not in property_kind_list and prop_kind not in ['active', 'region initialization']: continue
+                  if prop_kind not in property_kind_list and prop_kind not in ['active', 'region initialization']:
+                     continue
                prop_import_collection.import_vdb_static_property_to_cache(vdbase, keyword, realization = realisation)
             if decoarsen:
                decoarsen_array = prop_import_collection.decoarsen_imported_list()
-               if decoarsen_array is not None: log.debug('static properties decoarsened for realisation ' + str(realisation))
-            grid.write_hdf5_from_caches(hdf5_file, mode = 'a', geometry = False,
-                                        imported_properties = prop_import_collection, write_active = False)
+               if decoarsen_array is not None:
+                  log.debug('static properties decoarsened for realisation ' + str(realisation))
+            grid.write_hdf5_from_caches(hdf5_file,
+                                        mode = 'a',
+                                        geometry = False,
+                                        imported_properties = prop_import_collection,
+                                        write_active = False)
             prop_import_collection.remove_all_cached_arrays()
 
       if vdb_recurrent_properties:
 
          r_timestep_list = vdbase.list_of_timesteps()  # get list of timesteps for which recurrent files exist
          if len(r_timestep_list) < recur_time_series.number_of_timestamps():
-            log.error('insufficient number of reporting timesteps; skipping recurrent data for realisation ' + str(realisation))
+            log.error('insufficient number of reporting timesteps; skipping recurrent data for realisation ' +
+                      str(realisation))
          else:
             common_recur_prop_set = None
             for tni in range(recur_time_series.number_of_timestamps()):
@@ -779,33 +874,44 @@ def import_vdb_ensemble(epc_file,
                   r_timestep_number = r_timestep_list[0]
                stamp = full_time_series.timestamp(timestep_number)
                recur_prop_list = vdbase.list_of_recurrent_properties(r_timestep_number)
-               if common_recur_prop_set is None: common_recur_prop_set = set(recur_prop_list)
-               elif recur_prop_list is not None: common_recur_prop_set = common_recur_prop_set.intersection(set(recur_prop_list))
+               if common_recur_prop_set is None:
+                  common_recur_prop_set = set(recur_prop_list)
+               elif recur_prop_list is not None:
+                  common_recur_prop_set = common_recur_prop_set.intersection(set(recur_prop_list))
                step_import_collection = rp.GridPropertyCollection()
                step_import_collection.set_grid(grid)
                # for each property for this timestep, cache array and add to recur prop import collection for this time step
                if recur_prop_list:
                   for keyword in recur_prop_list:
-                     if not keyword or not keyword.isalnum(): continue
-                     if keyword_list is not None and keyword not in keyword_list: continue
+                     if not keyword or not keyword.isalnum():
+                        continue
+                     if keyword_list is not None and keyword not in keyword_list:
+                        continue
                      if property_kind_list is not None:
                         prop_kind, _, _ = rp.property_kind_and_facet_from_keyword(keyword)
-                        if prop_kind not in property_kind_list: continue
-                     step_import_collection.import_vdb_recurrent_property_to_cache(vdbase, r_timestep_number, keyword,
-                                                                                   time_index = tni,  # index into recur_time_series
-                                                                                   realization = realisation)
+                        if prop_kind not in property_kind_list:
+                           continue
+                     step_import_collection.import_vdb_recurrent_property_to_cache(
+                        vdbase,
+                        r_timestep_number,
+                        keyword,
+                        time_index = tni,  # index into recur_time_series
+                        realization = realisation)
                if decoarsen_array is not None:
                   step_import_collection.decoarsen_imported_list(decoarsen_array = decoarsen_array)
                # extend hdf5 with cached arrays for this timestep
       #         log.info('number of recurrent grid property arrays for timestep: ' + str(timestep_number) +
       #                  ' is: ' + str(step_import_collection.number_of_imports()))
       #         log.info('extending hdf5 file with recurrent properties for timestep: ' + str(timestep_number))
-               grid.write_hdf5_from_caches(hdf5_file, mode = 'a', geometry = False,
-                                           imported_properties = step_import_collection, write_active = False)
+               grid.write_hdf5_from_caches(hdf5_file,
+                                           mode = 'a',
+                                           geometry = False,
+                                           imported_properties = step_import_collection,
+                                           write_active = False)
                # add imported list for this timestep to full imported list
                prop_import_collection.inherit_imported_list_from_other_collection(step_import_collection)
-      #         log.debug('total number of property arrays after timestep: ' + str(timestep_number) +
-      #                   ' is: ' + str(prop_import_collection.number_of_imports()))
+               #         log.debug('total number of property arrays after timestep: ' + str(timestep_number) +
+               #                   ' is: ' + str(prop_import_collection.number_of_imports()))
                # remove cached copies of arrays
                step_import_collection.remove_all_cached_arrays()
 
@@ -813,7 +919,8 @@ def import_vdb_ensemble(epc_file,
          log.warning('no properties imported for realisation ' + str(realisation))
          continue
 
-      prop_import_collection.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid, time_series_uuid = recur_ts_uuid)
+      prop_import_collection.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid,
+                                                                                 time_series_uuid = recur_ts_uuid)
 
       if create_property_set_per_realization:
          prop_import_collection.create_property_set_xml('property set for realization ' + str(realisation))
@@ -837,42 +944,51 @@ def import_vdb_ensemble(epc_file,
    log.info('storing updated model in epc file ' + epc_file)
    model.store_epc(epc_file)
 
-   if progress_fn is not None: progress_fn(1.0)
+   if progress_fn is not None:
+      progress_fn(1.0)
 
    # return updated resqml model
    return model
 
 
-
-def add_ab_properties(epc_file,                  # existing resqml model
-                      grid_uuid = None,          # optional grid uuid, required if more than one grid in model; todo: handle list of grids?
-                      ext_uuid = None,           # if None, hdf5 file holding grid geometry will be used
-                      ab_property_list = None):  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value,
-                                                 #          discrete, realization)
+def add_ab_properties(
+   epc_file,  # existing resqml model
+   grid_uuid = None,  # optional grid uuid, required if more than one grid in model; todo: handle list of grids?
+   ext_uuid = None,  # if None, hdf5 file holding grid geometry will be used
+   ab_property_list = None
+):  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value,
+   #          discrete, realization)
    """Process a list of pure binary property array files, adding as parts of model, related to grid (hdf5 file is appended to)."""
 
    assert ab_property_list, 'property list is empty or missing'
 
    model = rq.Model(epc_file = epc_file)
    if grid_uuid is None:
-      grid_node = model.root_for_ijk_grid()    # will raise an exception if Model has more than 1 grid
+      grid_node = model.root_for_ijk_grid()  # will raise an exception if Model has more than 1 grid
       assert grid_node is not None, 'grid not found in model'
       grid_uuid = rqet.uuid_for_part_root(grid_node)
    grid = grr.any_grid(parent_model = model, uuid = grid_uuid, find_properties = False)
 
    if ext_uuid is None:
       ext_node = rqet.find_nested_tags(grid.geometry_root, ['Points', 'Coordinates', 'HdfProxy', 'UUID'])
-      if ext_node is not None: ext_uuid = bu.uuid_from_string(ext_node.text.strip())
+      if ext_node is not None:
+         ext_uuid = bu.uuid_from_string(ext_node.text.strip())
 
    #  ab_property_list: list of (filename, keyword, property_kind, facet_type, facet, uom, time_index, null_value, discrete, realization)
    prop_import_collection = rp.GridPropertyCollection()
    prop_import_collection.set_grid(grid)
-   for (p_filename, p_keyword, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index,
-        p_null_value, p_discrete, p_realization) in ab_property_list:
-      prop_import_collection.import_ab_property_to_cache(p_filename, p_keyword, grid.extent_kji, discrete = p_discrete,
-                                                         uom = p_uom, time_index = p_time_index,
+   for (p_filename, p_keyword, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index, p_null_value, p_discrete,
+        p_realization) in ab_property_list:
+      prop_import_collection.import_ab_property_to_cache(p_filename,
+                                                         p_keyword,
+                                                         grid.extent_kji,
+                                                         discrete = p_discrete,
+                                                         uom = p_uom,
+                                                         time_index = p_time_index,
                                                          null_value = p_null_value,
-                                                         property_kind = p_property_kind, facet_type = p_facet_type, facet = p_facet,
+                                                         property_kind = p_property_kind,
+                                                         facet_type = p_facet_type,
+                                                         facet = p_facet,
                                                          realization = p_realization)
       # todo: property_kind, facet_type & facet are not currently getting passed through the imported_list tuple in resqml_property
 
@@ -884,7 +1000,11 @@ def add_ab_properties(epc_file,                  # existing resqml model
    # append to hdf5 file using arrays cached in grid property collection above
    hdf5_file = model.h5_file_name()
    log.debug('appending to hdf5 file: ' + hdf5_file)
-   grid.write_hdf5_from_caches(hdf5_file, mode = 'a', geometry = False, imported_properties = prop_import_collection, write_active = False)
+   grid.write_hdf5_from_caches(hdf5_file,
+                               mode = 'a',
+                               geometry = False,
+                               imported_properties = prop_import_collection,
+                               write_active = False)
    # remove cached static property arrays from memory
    if prop_import_collection is not None:
       prop_import_collection.remove_all_cached_arrays()
@@ -903,22 +1023,25 @@ def add_ab_properties(epc_file,                  # existing resqml model
    return model
 
 
-
-def add_surfaces(epc_file,                       # existing resqml model
-                 crs_uuid = None,                # optional crs uuid, defaults to crs associated with model (usually main grid crs)
-                 ext_uuid = None,                # if None, uuid for hdf5 file holding main grid geometry will be used
-                 surface_file_format = 'zmap',   # zmap, rms (roxar) or GOCAD-Tsurf only formats currently supported
-                 rq_class = 'surface',           # 'surface' or 'mesh': the class of object to be created
-                 surface_role = 'map',           # 'map' or 'pick'
-                 quad_triangles = False,         # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
-                 surface_file_list = None,       # list of full file names (paths), each holding one surface
-                 make_horizon_interpretations_and_features = True):  # if True, feature and interpretation objects are created
+def add_surfaces(
+   epc_file,  # existing resqml model
+   crs_uuid = None,  # optional crs uuid, defaults to crs associated with model (usually main grid crs)
+   ext_uuid = None,  # if None, uuid for hdf5 file holding main grid geometry will be used
+   surface_file_format = 'zmap',  # zmap, rms (roxar) or GOCAD-Tsurf only formats currently supported
+   rq_class = 'surface',  # 'surface' or 'mesh': the class of object to be created
+   surface_role = 'map',  # 'map' or 'pick'
+   quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
+   surface_file_list = None,  # list of full file names (paths), each holding one surface
+   make_horizon_interpretations_and_features = True):  # if True, feature and interpretation objects are created
    """Process a list of surface files, adding each surface as a new part in the resqml model."""
 
    assert surface_file_list, 'surface file list is empty or missing'
-   assert surface_file_format in ['zmap', 'rms', 'roxar', 'GOCAD-Tsurf'], 'unsupported surface file format: ' + str(surface_file_format)
-   if 'TriangulatedSet' in rq_class: rq_class = 'surface'
-   elif 'Grid2d' in rq_class: rq_class = 'mesh'
+   assert surface_file_format in ['zmap', 'rms', 'roxar',
+                                  'GOCAD-Tsurf'], 'unsupported surface file format: ' + str(surface_file_format)
+   if 'TriangulatedSet' in rq_class:
+      rq_class = 'surface'
+   elif 'Grid2d' in rq_class:
+      rq_class = 'mesh'
    assert rq_class in ['surface', 'mesh']
 
    log.info('accessing existing resqml model from: ' + epc_file)
@@ -931,7 +1054,8 @@ def add_surfaces(epc_file,                       # existing resqml model
       assert crs_uuid is not None
    crs_root = model.root_for_uuid(crs_uuid)
 
-   if ext_uuid is None: ext_uuid = model.h5_uuid()
+   if ext_uuid is None:
+      ext_uuid = model.h5_uuid()
    if ext_uuid is None:  # no pre-existing hdf5 part or references in model
       hdf5_file = epc_file[:-4] + '.h5'
       ext_node = model.create_hdf5_ext(file_name = hdf5_file)
@@ -950,7 +1074,8 @@ def add_surfaces(epc_file,                       # existing resqml model
 
       _, short_name = os.path.split(surf_file)
       dot = short_name.rfind('.')
-      if dot > 0: short_name = short_name[:dot]
+      if dot > 0:
+         short_name = short_name[:dot]
 
       log.info('surface ' + short_name + ' processing file: ' + surf_file + ' using format: ' + surface_file_format)
       if rq_class == 'surface':
@@ -961,16 +1086,19 @@ def add_surfaces(epc_file,                       # existing resqml model
                                   quad_triangles = quad_triangles)
          else:
             surface = rqs.Surface(model,
-                                  mesh_file = surf_file, mesh_format = surface_file_format,
+                                  mesh_file = surf_file,
+                                  mesh_format = surface_file_format,
                                   surface_role = surface_role,
                                   quad_triangles = quad_triangles)
       elif rq_class == 'mesh':
-        if surface_file_format == 'GOCAD-Tsurf':
-           log.info(f"Cannot convert a GOCAD-Tsurf to mesh, only to TriangulatedSurface - skipping file {surf_file}")
-           break
-        else:
-           surface = rqs.Mesh(model,
-                               mesh_file = surf_file, mesh_format = surface_file_format, mesh_flavour = 'reg&z',
+         if surface_file_format == 'GOCAD-Tsurf':
+            log.info(f"Cannot convert a GOCAD-Tsurf to mesh, only to TriangulatedSurface - skipping file {surf_file}")
+            break
+         else:
+            surface = rqs.Mesh(model,
+                               mesh_file = surf_file,
+                               mesh_format = surface_file_format,
+                               mesh_flavour = 'reg&z',
                                surface_role = surface_role,
                                crs_uuid = crs_uuid)
       else:
@@ -987,7 +1115,9 @@ def add_surfaces(epc_file,                       # existing resqml model
          interp_root = interp.create_xml()
          surface.set_represented_interpretation_root(interp_root)
 
-      surface.create_xml(ext_uuid, add_as_part = True, add_relationships = True,
+      surface.create_xml(ext_uuid,
+                         add_as_part = True,
+                         add_relationships = True,
                          crs_uuid = rqet.uuid_for_part_root(crs_root),
                          title = short_name + ' sourced from ' + surf_file,
                          originator = None)
@@ -1002,13 +1132,18 @@ def add_surfaces(epc_file,                       # existing resqml model
    return model
 
 
-
-def grid_from_cp(model, cp_array, crs_uuid,
+def grid_from_cp(model,
+                 cp_array,
+                 crs_uuid,
                  active_mask = None,
-                 geometry_defined_everywhere = True, treat_as_nan = None,
-                 dot_tolerance = 1.0, morse_tolerance = 5.0,
+                 geometry_defined_everywhere = True,
+                 treat_as_nan = None,
+                 dot_tolerance = 1.0,
+                 morse_tolerance = 5.0,
                  max_z_void = 0.1,
-                 split_pillars = True, split_tolerance = 0.01, ijk_handedness = 'right',
+                 split_pillars = True,
+                 split_tolerance = 0.01,
+                 ijk_handedness = 'right',
                  known_to_be_straight = False):
    """Create a resqpy.grid.Grid object from a 7D corner point array.
 
@@ -1018,10 +1153,12 @@ def grid_from_cp(model, cp_array, crs_uuid,
    """
 
    if treat_as_nan is None:
-      if not geometry_defined_everywhere: treat_as_nan = 'morse'
+      if not geometry_defined_everywhere:
+         treat_as_nan = 'morse'
    else:
       assert treat_as_nan in ['none', 'dots', 'ij_dots', 'morse', 'inactive']
-      if treat_as_nan == 'none': treat_as_nan = None
+      if treat_as_nan == 'none':
+         treat_as_nan = None
    geometry_defined_everywhere = (treat_as_nan is None)
 
    assert cp_array.ndim == 7
@@ -1050,18 +1187,25 @@ def grid_from_cp(model, cp_array, crs_uuid,
             if treat_as_nan == 'dots':
                # for speed, only check primary diagonal of cells
                log.debug('geometry for cells with no length to primary cell diagonal being set to NaN')
-               dot_mask = np.all(np.abs(cp_array[:, :, :, 1, 1, 1] - cp_array[:, :, :, 0, 0, 0]) < dot_tolerance, axis = -1)
+               dot_mask = np.all(np.abs(cp_array[:, :, :, 1, 1, 1] - cp_array[:, :, :, 0, 0, 0]) < dot_tolerance,
+                                 axis = -1)
             elif treat_as_nan in ['ij_dots', 'morse']:
                # check one diagonal of each I & J face
-               log.debug('geometry being set to NaN for inactive cells with no length to primary face diagonal for any I or J face')
+               log.debug(
+                  'geometry being set to NaN for inactive cells with no length to primary face diagonal for any I or J face'
+               )
                dot_mask = np.zeros((nk, nj, ni), dtype = bool)
-#              k_face_vecs = cp_array[:, :, :, :, 1, 1] - cp_array[:, :, :, :, 0, 0]
+               #              k_face_vecs = cp_array[:, :, :, :, 1, 1] - cp_array[:, :, :, :, 0, 0]
                j_face_vecs = cp_array[:, :, :, 1, :, 1] - cp_array[:, :, :, 0, :, 0]
                i_face_vecs = cp_array[:, :, :, 1, 1, :] - cp_array[:, :, :, 0, 0, :]
-               dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True, dot_mask)
-               dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True, dot_mask)
-               dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True, dot_mask)
-               dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True, dot_mask)
+               dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True,
+                                      dot_mask)
+               dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True,
+                                      dot_mask)
+               dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True,
+                                      dot_mask)
+               dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True,
+                                      dot_mask)
                log.debug(f'dot mask set for {np.count_nonzero(dot_mask)} cells')
                if treat_as_nan == 'morse':
                   morse_tol_sqr = morse_tolerance * morse_tolerance
@@ -1069,18 +1213,23 @@ def grid_from_cp(model, cp_array, crs_uuid,
                   len_j_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * j_face_vecs[..., :2], axis = -1)
                   len_i_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * i_face_vecs[..., :2], axis = -1)
                   dead_mask = inactive_mask.reshape(nk, nj, ni, 1).repeat(2, -1)
-#                  mean_len_active_j_face_vecs_sqr = np.mean(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
-#                  mean_len_active_i_face_vecs_sqr = np.mean(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
+                  #                  mean_len_active_j_face_vecs_sqr = np.mean(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
+                  #                  mean_len_active_i_face_vecs_sqr = np.mean(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
                   max_len_active_j_face_vecs_sqr = np.max(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
                   max_len_active_i_face_vecs_sqr = np.max(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
-                  dot_mask = np.where(np.any(len_j_face_vecs_sqr > morse_tol_sqr * max_len_active_j_face_vecs_sqr, axis = -1), True, dot_mask)
-                  dot_mask = np.where(np.any(len_i_face_vecs_sqr > morse_tol_sqr * max_len_active_i_face_vecs_sqr, axis = -1), True, dot_mask)
+                  dot_mask = np.where(
+                     np.any(len_j_face_vecs_sqr > morse_tol_sqr * max_len_active_j_face_vecs_sqr, axis = -1), True,
+                     dot_mask)
+                  dot_mask = np.where(
+                     np.any(len_i_face_vecs_sqr > morse_tol_sqr * max_len_active_i_face_vecs_sqr, axis = -1), True,
+                     dot_mask)
                   log.debug(f'morse mask set for {np.count_nonzero(dot_mask)} cells')
             else:
                raise Exception('code broken')
             cp_nan_mask = np.logical_or(cp_nan_mask, np.logical_and(inactive_mask, dot_mask))
       geometry_defined_everywhere = not np.any(cp_nan_mask)
-      if geometry_defined_everywhere: cp_nan_mask = None
+      if geometry_defined_everywhere:
+         cp_nan_mask = None
 
    if cp_nan_mask is not None:
       inactive_mask = np.logical_or(inactive_mask, cp_nan_mask)
@@ -1106,14 +1255,14 @@ def grid_from_cp(model, cp_array, crs_uuid,
       # check for (vertical) voids, or un-pillar-like anomalies, which will require k gaps in the resqml ijk grid
       log.debug('checking for voids')
       gap = masked_cp_array[1:, :, :, 0, :, :, :] - masked_cp_array[:-1, :, :, 1, :, :, :]
-      max_gap_by_layer_and_xyz = np.max(np.abs(gap), axis = (1,2,3,4))
+      max_gap_by_layer_and_xyz = np.max(np.abs(gap), axis = (1, 2, 3, 4))
       max_gap = np.max(max_gap_by_layer_and_xyz)
       log.debug('maximum void distance: {0:.3f}'.format(max_gap))
       if max_gap > max_z_void:
          log.warning('maximum void distance exceeds limit, grid will include k gaps')
          k_gaps = 0
-         k_gap_after_layer = np.zeros((nk - 1, ), dtype = bool)
-         k_gap_raw_index = np.empty((nk, ), dtype = int)
+         k_gap_after_layer = np.zeros((nk - 1,), dtype = bool)
+         k_gap_raw_index = np.empty((nk,), dtype = int)
          k_gap_raw_index[0] = 0
          for k in range(nk - 1):
             max_layer_gap = np.max(max_gap_by_layer_and_xyz[k])
@@ -1136,8 +1285,10 @@ def grid_from_cp(model, cp_array, crs_uuid,
          masked_cp_array[1:, :, :, 0, :, :, :] -= gap_unmasked
          masked_cp_array[:-1, :, :, 1, :, :, :] += gap_unmasked
 
-   if k_gaps: nk_plus_1 += k_gaps
-   if k_gap_raw_index is None: k_gap_raw_index = np.arange(nk, dtype = int)
+   if k_gaps:
+      nk_plus_1 += k_gaps
+   if k_gap_raw_index is None:
+      k_gap_raw_index = np.arange(nk, dtype = int)
 
    # reduce cp array extent in k
    log.debug('reducing k extent of corner point array (sharing points vertically)')
@@ -1174,20 +1325,24 @@ def grid_from_cp(model, cp_array, crs_uuid,
    primary_pillar_jip[:, -1, 1] = 1
    for j in range(nj_plus_1):
       for i in range(ni_plus_1):
-         if active_mask_2D[j - primary_pillar_jip[j, i, 0], i - primary_pillar_jip[j, i, 1]]: continue
+         if active_mask_2D[j - primary_pillar_jip[j, i, 0], i - primary_pillar_jip[j, i, 1]]:
+            continue
          if i > 0 and primary_pillar_jip[j, i, 1] == 0 and active_mask_2D[j - primary_pillar_jip[j, i, 0], i - 1]:
             primary_pillar_jip[j, i, 1] = 1
             continue
          if j > 0 and primary_pillar_jip[j, i, 0] == 0 and active_mask_2D[j - 1, i - primary_pillar_jip[j, i, 1]]:
             primary_pillar_jip[j, i, 0] = 1
             continue
-         if i > 0 and j > 0 and primary_pillar_jip[j, i, 0] == 0 and primary_pillar_jip[j, i, 1] == 0 and active_mask_2D[j - 1, i - 1]:
+         if i > 0 and j > 0 and primary_pillar_jip[j, i,
+                                                   0] == 0 and primary_pillar_jip[j, i,
+                                                                                  1] == 0 and active_mask_2D[j - 1,
+                                                                                                             i - 1]:
             primary_pillar_jip[j, i, :] = 1
 
    # build extra pillar references for split pillars
    extras_count = np.zeros((nj_plus_1, ni_plus_1), dtype = 'int')  # count (0 to 3) of extras for pillar
    extras_list_index = np.zeros((nj_plus_1, ni_plus_1), dtype = 'int')  # index in list of 1st extra for pillar
-   extras_list = []   # list of (jp, ip)
+   extras_list = []  # list of (jp, ip)
    extras_use = np.negative(np.ones((nj, ni, 2, 2), dtype = 'int'))  # (j, i, jp, ip); -1 means use primary
    if split_pillars:
       log.debug('building extra pillar references for split pillars')
@@ -1201,21 +1356,27 @@ def grid_from_cp(model, cp_array, crs_uuid,
             # loop over 4 columns surrounding this pillar
             for jp in range(2):
                col_j = j - jp
-               if col_j < 0 or col_j >= nj: continue  # no column this side of pillar in j
+               if col_j < 0 or col_j >= nj:
+                  continue  # no column this side of pillar in j
                for ip in range(2):
                   col_i = i - ip
-                  if col_i < 0 or col_i >= ni: continue  # no column this side of pillar in i
-                  if jp == primary_jp and ip == primary_ip: continue  # this column is the primary for this pillar
-                  discrepancy = np.max(np.abs(k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
-                                              k_reduced_cp_array[:, p_col_j, p_col_i, primary_jp, primary_ip, :]))
+                  if col_i < 0 or col_i >= ni:
+                     continue  # no column this side of pillar in i
+                  if jp == primary_jp and ip == primary_ip:
+                     continue  # this column is the primary for this pillar
+                  discrepancy = np.max(
+                     np.abs(k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
+                            k_reduced_cp_array[:, p_col_j, p_col_i, primary_jp, primary_ip, :]))
                   if discrepancy <= split_tolerance:
                      continue  # data for this column's corner aligns with primary
                   for e in range(extras_count[j, i]):
                      eli = extras_list_index[j, i] + e
                      pillar_j_extra = j - extras_list[eli][0]
                      pillar_i_extra = i - extras_list[eli][1]
-                     discrepancy = np.max(np.abs(k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
-                                                 k_reduced_cp_array[:, pillar_j_extra, pillar_i_extra, extras_list[eli][0], extras_list[eli][1], :]))
+                     discrepancy = np.max(
+                        np.abs(k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
+                               k_reduced_cp_array[:, pillar_j_extra, pillar_i_extra, extras_list[eli][0],
+                                                  extras_list[eli][1], :]))
                      if discrepancy <= split_tolerance:  # data for this corner aligns with existing extra
                         extras_use[col_j, col_i, jp, ip] = e
                         break
@@ -1227,20 +1388,22 @@ def grid_from_cp(model, cp_array, crs_uuid,
                   extras_list.append((jp, ip))
                   extras_use[col_j, col_i, jp, ip] = extras_count[j, i]
                   extras_count[j, i] += 1
-      if len(extras_list) == 0: split_pillars = False
+      if len(extras_list) == 0:
+         split_pillars = False
       log.debug('number of extra pillars: ' + str(len(extras_list)))
 
    # create points array as used in resqml
    log.debug('creating points array as used in resqml format')
    if split_pillars:
-      points_array = np.zeros((nk_plus_1, (nj_plus_1 * ni_plus_1) + len(extras_list), 3))  # note: nk_plus_1 might include k_gaps
+      points_array = np.zeros(
+         (nk_plus_1, (nj_plus_1 * ni_plus_1) + len(extras_list), 3))  # note: nk_plus_1 might include k_gaps
       index = 0
       # primary pillars
       for pillar_j in range(nj_plus_1):
          for pillar_i in range(ni_plus_1):
             (jp, ip) = primary_pillar_jip[pillar_j, pillar_i]
             slice = k_reduced_cp_array[:, pillar_j - jp, pillar_i - ip, jp, ip, :]
-            points_array[:, index, :] = np.where(slice.mask, np.nan, slice)   # NaN indicates undefined/invalid geometry
+            points_array[:, index, :] = np.where(slice.mask, np.nan, slice)  # NaN indicates undefined/invalid geometry
             index += 1
       # add extras for split pillars
       for pillar_j in range(nj_plus_1):
@@ -1251,16 +1414,17 @@ def grid_from_cp(model, cp_array, crs_uuid,
                pillar_j_extra = pillar_j - jp
                pillar_i_extra = pillar_i - ip
                slice = k_reduced_cp_array[:, pillar_j_extra, pillar_i_extra, jp, ip, :]
-               points_array[:, index, :] = np.where(slice.mask, np.nan, slice)   # NaN indicates unedefined/invalid geometry
+               points_array[:, index, :] = np.where(slice.mask, np.nan,
+                                                    slice)  # NaN indicates unedefined/invalid geometry
                index += 1
-      assert(index == (nj_plus_1 * ni_plus_1) + len(extras_list))
+      assert (index == (nj_plus_1 * ni_plus_1) + len(extras_list))
    else:  # unsplit pillars
       points_array = np.zeros((nk_plus_1, nj_plus_1, ni_plus_1, 3))
       for j in range(nj_plus_1):
          for i in range(ni_plus_1):
             (jp, ip) = primary_pillar_jip[j, i]
             slice = k_reduced_cp_array[:, j - jp, i - ip, jp, ip, :]
-            points_array[:, j, i, :] = np.where(slice.mask, np.nan, slice)   # NaN indicates undefined/invalid geometry
+            points_array[:, j, i, :] = np.where(slice.mask, np.nan, slice)  # NaN indicates undefined/invalid geometry
 
    # create an empty grid object and fill in some basic info
    log.debug('initialising grid object')
@@ -1300,24 +1464,26 @@ def grid_from_cp(model, cp_array, crs_uuid,
                use_count = 0
                for jp in range(2):
                   j = pillar_j - jp
-                  if j < 0 or j >= nj: continue
+                  if j < 0 or j >= nj:
+                     continue
                   for ip in range(2):
                      i = pillar_i - ip
-                     if i < 0 or i >= ni: continue
+                     if i < 0 or i >= ni:
+                        continue
                      if extras_use[j, i, jp, ip] == e:
                         use_count += 1
                         cols_for_extra_pillar_list.append((j * ni) + i)
-               assert(use_count > 0)
+               assert (use_count > 0)
                cumulative_length += use_count
                cumulative_length_list.append(cumulative_length)
       log.debug('number of extra pillars: ' + str(len(split_pillar_indices_list)))
-      assert(len(cumulative_length_list) == len(split_pillar_indices_list))
+      assert (len(cumulative_length_list) == len(split_pillar_indices_list))
       grid.split_pillar_indices_cached = np.array(split_pillar_indices_list, dtype = 'int')
       log.debug('number of uses of extra pillars: ' + str(len(cols_for_extra_pillar_list)))
-      assert(len(cols_for_extra_pillar_list) == np.count_nonzero(extras_use + 1))
-      assert(len(cols_for_extra_pillar_list) == cumulative_length)
+      assert (len(cols_for_extra_pillar_list) == np.count_nonzero(extras_use + 1))
+      assert (len(cols_for_extra_pillar_list) == cumulative_length)
       grid.cols_for_split_pillars = np.array(cols_for_extra_pillar_list, dtype = 'int')
-      assert(len(cumulative_length_list) == len(extras_list))
+      assert (len(cumulative_length_list) == len(extras_list))
       grid.cols_for_split_pillars_cl = np.array(cumulative_length_list, dtype = 'int')
       grid.split_pillars_count = len(extras_list)
 
@@ -1330,7 +1496,7 @@ def grid_from_cp(model, cp_array, crs_uuid,
          for jp in range(2):
             for ip in range(2):
                if not split_pillars or extras_use[j, i, jp, ip] < 0:  # use primary pillar
-                  pillar_index = (j + jp) * ni_plus_1  +  i + ip
+                  pillar_index = (j + jp) * ni_plus_1 + i + ip
                else:
                   eli = extras_list_index[j + jp, i + ip] + extras_use[j, i, jp, ip]
                   pillar_index = base_pillar_count + eli
@@ -1360,13 +1526,16 @@ def grid_from_cp(model, cp_array, crs_uuid,
       # work out handedness from sample cell / column axes directions and handedness of crs
       sample_kji0 = tuple(np.array(grid.extent_kji) // 2)
       if not geometry_defined_everywhere and not grid.array_cell_geometry_is_defined[sample_kji0]:
-         where_defined = np.where(np.logical_and(grid.array_cell_geometry_is_defined, np.logical_not(grid.pinched_out())))
+         where_defined = np.where(
+            np.logical_and(grid.array_cell_geometry_is_defined, np.logical_not(grid.pinched_out())))
          assert len(where_defined) == 3 and len(where_defined[0]) > 0, 'no extant cell geometries'
          sample_kji0 = (where_defined[0][0], where_defined[1][0], where_defined[2][0])
       sample_cp = cp_array[sample_kji0]
       cell_ijk_lefthanded = (vec.clockwise(sample_cp[0, 0, 0], sample_cp[0, 1, 0], sample_cp[0, 0, 1]) >= 0.0)
-      if not grid.k_direction_is_down: cell_ijk_lefthanded = not cell_ijk_lefthanded
-      if crs.is_right_handed_xyz(): cell_ijk_lefthanded = not cell_ijk_lefthanded
+      if not grid.k_direction_is_down:
+         cell_ijk_lefthanded = not cell_ijk_lefthanded
+      if crs.is_right_handed_xyz():
+         cell_ijk_lefthanded = not cell_ijk_lefthanded
       grid.grid_is_right_handed = not cell_ijk_lefthanded
    else:
       assert ijk_handedness in ['left', 'right']

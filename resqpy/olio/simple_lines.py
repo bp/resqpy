@@ -5,6 +5,7 @@ version = '19th January 2021'
 # line is represented as 2D numpy array of shape (NP, 3): [point index, xyz]
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('simple_lines.py version ' + version)
 
@@ -39,10 +40,12 @@ def read_lines(filename):
                assert point_count == 0, 'unterminated list of line points at end of file'
                break
             words = line.split()
-            if len(words) == 0: continue # blank line
+            if len(words) == 0:
+               continue  # blank line
             assert len(words) == 3, 'badly formed line (expecting 3 reals)'
             point = np.empty(3)
-            for p in range(3): point[p] = float(words[p])
+            for p in range(3):
+               point[p] = float(words[p])
             if np.all(np.isclose(point, end_of_line)):
                if point_count:
                   lines_list.append(point_list)
@@ -76,11 +79,14 @@ def polygon_line(line, tolerance = 0.001):
    """
 
    last = len(line) - 1
-   if last < 1: return line
+   if last < 1:
+      return line
    dims = len(line[0])
    manhattan = 0.0
-   for d in range(dims): manhattan += abs(line[0][d] - line[last][d])
-   if manhattan > tolerance: return line
+   for d in range(dims):
+      manhattan += abs(line[0][d] - line[last][d])
+   if manhattan > tolerance:
+      return line
    return line[:-1]
 
 
@@ -103,18 +109,21 @@ def duplicate_vertices_removed(line, tolerance = 0.001):
    """
 
    assert line.ndim == 2
-   if len(line) < 3: return line
+   if len(line) < 3:
+      return line
    dims = line.shape[1]
    whittled = np.zeros(line.shape)
    whittled[0] = line[0]
    c_i = 0
    for i in range(1, len(line)):
       manhattan = 0.0
-      for d in range(dims): manhattan += abs(line[i, d] - whittled[c_i, d])
+      for d in range(dims):
+         manhattan += abs(line[i, d] - whittled[c_i, d])
       if manhattan > tolerance:
          c_i += 1
          whittled[c_i] = line[i]
-   if c_i == len(line) - 1: return line
+   if c_i == len(line) - 1:
+      return line
    whittled[c_i] = line[-1]
    return whittled[:c_i + 1]
 
@@ -233,9 +242,15 @@ def drape_lines(line_list, pillar_list_list, grid, ref_k = 0, ref_kp = 0, offset
    return draped_list
 
 
-def drape_lines_to_rods(line_list, rod_list_list, projection,
-                        grid, axis, ref_slice0 = 0, plus_face = False,
-                        offset = -1.0, snap = False):
+def drape_lines_to_rods(line_list,
+                        rod_list_list,
+                        projection,
+                        grid,
+                        axis,
+                        ref_slice0 = 0,
+                        plus_face = False,
+                        offset = -1.0,
+                        snap = False):
    """Roughly drapes lines near grid cross section; draped lines are suitable for 3D visualisation.
 
       arguments:

@@ -6,6 +6,7 @@ version = '29th April 2021'
 
 import logging
 from typing import Dict, Tuple, Any, Type
+
 log = logging.getLogger(__name__)
 log.debug('wellspec_keywords.py version %s', version)
 
@@ -31,11 +32,12 @@ wk_okay = 0
 wk_preferred = 1
 wk_required = 2
 
-wellspec_dict : Dict[str, Tuple[int, int, int, Any, bool]]= { }  # mapping wellspec column key to:
+wellspec_dict: Dict[str, Tuple[int, int, int, Any, bool]] = {}  # mapping wellspec column key to:
 #     (warn count, required in, required out, default, length units boolean, )
 
 # NB: changing entries in this list will usually require other code change elsewhere
 # second element of tuple should be >= first element
+# yapf: disable
 wellspec_dict['IW']       = (0, wk_required,  wk_required,  None,   False)
 wellspec_dict['JW']       = (0, wk_required,  wk_required,  None,   False)
 wellspec_dict['L']        = (0, wk_required,  wk_required,  None,   False)
@@ -121,44 +123,59 @@ wellspec_dtype['IPTN']     = int
 wellspec_dtype['D']        = float
 wellspec_dtype['ND']       = str
 wellspec_dtype['DZ']       = float
+# yapf: enable
 
 
 def increment_complaints(keyword):
    global wellspec_dict
-   assert(keyword.upper() in wellspec_dict.keys())
+   assert (keyword.upper() in wellspec_dict.keys())
    old_entry = wellspec_dict[keyword.upper()]
    wellspec_dict[keyword.upper()] = (old_entry[0] + 1, old_entry[1], old_entry[2], old_entry[3], old_entry[4])
+
 
 def known_keyword(keyword):
    return keyword.upper() in wellspec_dict.keys()
 
+
 def add_unknown_keyword(keyword):
    global wellspec_dict
-   assert(not known_keyword(keyword))
+   assert (not known_keyword(keyword))
    wellspec_dict[keyword.upper()] = (1, wk_unknown, wk_banned, None, False)  # assumes warning or error already given
 
+
 def default_value(keyword):
-   assert(known_keyword(keyword))
+   assert (known_keyword(keyword))
    return wellspec_dict[keyword][3]
 
+
 def complaints(keyword):
-   assert(known_keyword(keyword))
+   assert (known_keyword(keyword))
    return wellspec_dict[keyword][0]
+
 
 def check_value(keyword, value):
    try:
       key = keyword.upper()
-      if not known_keyword(key): return False
+      if not known_keyword(key):
+         return False
       if key in ['IW', 'JW', 'L', 'LAYER', 'IRELPM', 'CELL', 'SECT', 'FLOWSECT', 'ZONE', 'IPTN']:
          return int(value) > 0
-      elif key == 'GRID': return len(str(value)) > 0
-      elif key == 'STAT': return (str(value)).upper() in ['ON', 'OFF']
-      elif key == 'ANGLA': return -360.0 <= float(value) and float(value) <= 360.0
-      elif key == 'ANGLV': return 0.0 <= float(value) and float(value) <= 180.0
-      elif key in ['RADW', 'RADB', 'RADWP', 'RADBP']: return float(value) > 0.0
-      elif key in ['WI', 'LENGTH', 'KH', 'KHMULT', 'K', 'DZ']: return float(value) >= 0.0
-      elif key == 'PPERF': return 0.0 <= float(value) and float(value) <= 1.0
-      elif key == 'ANGLE': return 0.0 <= float(value) and float(value) <= 360.0
+      elif key == 'GRID':
+         return len(str(value)) > 0
+      elif key == 'STAT':
+         return (str(value)).upper() in ['ON', 'OFF']
+      elif key == 'ANGLA':
+         return -360.0 <= float(value) and float(value) <= 360.0
+      elif key == 'ANGLV':
+         return 0.0 <= float(value) and float(value) <= 180.0
+      elif key in ['RADW', 'RADB', 'RADWP', 'RADBP']:
+         return float(value) > 0.0
+      elif key in ['WI', 'LENGTH', 'KH', 'KHMULT', 'K', 'DZ']:
+         return float(value) >= 0.0
+      elif key == 'PPERF':
+         return 0.0 <= float(value) and float(value) <= 1.0
+      elif key == 'ANGLE':
+         return 0.0 <= float(value) and float(value) <= 360.0
       elif key in ['SKIN', 'DEPTH', 'X', 'Y', 'TEMP']:
          float(value)
          return True
@@ -167,15 +184,19 @@ def check_value(keyword, value):
    except Exception:
       return False
 
+
 def required_out_list():
    list = []
    for key in wellspec_dict.keys():
-      if wellspec_dict[key][2] == wk_required: list.append(key)
+      if wellspec_dict[key][2] == wk_required:
+         list.append(key)
    return list
 
+
 def length_unit_conversion_applicable(keyword):
-   assert(known_keyword(keyword))
+   assert (known_keyword(keyword))
    return wellspec_dict[keyword][4]
+
 
 def load_wellspecs(wellspec_file, well = None, column_list = []):
    """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
@@ -202,17 +223,19 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
          assert column.upper() in wellspec_dict, 'unrecognized wellspec column name ' + str(column)
    selecting = bool(column_list)
 
-   well_dict = {}   # maps from well name to pandas data frame with column_list as columns
+   well_dict = {}  # maps from well name to pandas data frame with column_list as columns
 
    with open(wellspec_file, 'r') as fp:
       while True:
          found = kf.find_keyword(fp, 'WELLSPEC')
-         if not found: break
+         if not found:
+            break
          line = fp.readline()
          words = line.split()
          assert len(words) >= 2, 'missing well name after WELLSPEC keyword'
          well_name = words[1]
-         if well and well_name.upper() != well.upper(): continue
+         if well and well_name.upper() != well.upper():
+            continue
          if column_list is None:
             well_dict[well_name] = None
             continue
@@ -230,8 +253,10 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
             df = pd.DataFrame(columns = columns_present)
          while True:
             kf.skip_comments(fp)
-            if kf.blank_line(fp): break      # unclear from Nexus doc what marks end of table
-            if kf.specific_keyword_next(fp, 'WELLSPEC') or kf.specific_keyword_next(fp, 'WELLMOD'): break
+            if kf.blank_line(fp):
+               break  # unclear from Nexus doc what marks end of table
+            if kf.specific_keyword_next(fp, 'WELLSPEC') or kf.specific_keyword_next(fp, 'WELLMOD'):
+               break
             line = kf.strip_trailing_comment(fp.readline())
             words = line.split()
             assert len(words) >= len(columns_present), f'insufficient data in line of wellspec table {well} [{line}]'
@@ -240,8 +265,10 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                for col_index in range(len(column_list)):
                   column = column_list[col_index]
                   if column_map[col_index] < 0:
-                     if column_list[col_index].upper() == 'GRID': row_dict[column] = 'ROOT'
-                     else: row_dict[column] = np.NaN
+                     if column_list[col_index].upper() == 'GRID':
+                        row_dict[column] = 'ROOT'
+                     else:
+                        row_dict[column] = np.NaN
                   else:
                      v = words[column_map[col_index]]
                      if v == 'NA':
@@ -262,8 +289,9 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
 
          if well:
             well_dict[well] = df
-            break   # NB. if more than one table for a well, this function returns first, Nexus uses last
+            break  # NB. if more than one table for a well, this function returns first, Nexus uses last
          well_dict[well_name] = df
+
 
 #   log.debug(f'load-wellspecs returning:\n{well_dict}')
 
