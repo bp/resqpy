@@ -59,10 +59,10 @@ class BaseResqpy(metaclass=ABCMeta):
 
         if uuid is None:
             self.uuid = bu.new_uuid()  #: Unique identifier
-            logger.debug(f"created new uuid for object {self}")
+#            logger.debug(f"created new uuid for object {self}")
         else:
             self.uuid = uuid
-            logger.debug(f"loading existing object {self}")
+#            logger.debug(f"loading existing object {self}")
             citation_node = rqet.find_tag(self.root, 'Citation')
             if citation_node is not None:
                 self.title = rqet.find_tag_text(citation_node, 'Title')

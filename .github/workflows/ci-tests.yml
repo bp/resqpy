@@ -48,6 +48,9 @@ jobs:
           flake8 .
           mypy resqpy
 
+      - name: Code formatting
+        run: yapf --diff -r .
+
   unit-tests:
     name: Unit tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
