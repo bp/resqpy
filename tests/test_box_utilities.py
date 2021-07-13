@@ -5,11 +5,16 @@ import numpy as np
 
 import resqpy.olio.box_utilities as bx
 
+
 def test_box_utilities():
-   b1 = np.array([[0, 0, 0], [3, 4, 5]], dtype = int); e1 = np.array([4, 5, 6], dtype = int)
-   b2 = np.array([[1, 1, 1], [2, 3, 4]], dtype = int); e2 = np.array([2, 3, 4], dtype = int)
-   b3 = np.array([[5, 3, 2], [5, 5, 5]], dtype = int); e3 = np.array([1, 3, 4], dtype = int)
-   b4 = np.array([[3, 3, 3], [4, 4, 4]], dtype = int); e4 = np.array([2, 2, 2], dtype = int)
+   b1 = np.array([[0, 0, 0], [3, 4, 5]], dtype = int)
+   e1 = np.array([4, 5, 6], dtype = int)
+   b2 = np.array([[1, 1, 1], [2, 3, 4]], dtype = int)
+   e2 = np.array([2, 3, 4], dtype = int)
+   b3 = np.array([[5, 3, 2], [5, 5, 5]], dtype = int)
+   e3 = np.array([1, 3, 4], dtype = int)
+   b4 = np.array([[3, 3, 3], [4, 4, 4]], dtype = int)
+   e4 = np.array([2, 2, 2], dtype = int)
 
    for b, e in zip((b1, b2, b3, b4), (e1, e2, e3, e4)):
       assert np.all(bx.extent_of_box(b) == e)
@@ -38,7 +43,8 @@ def test_box_utilities():
    assert bx.valid_box(b3, np.array([6, 6, 6], dtype = int))
    assert not bx.valid_box(b2, np.array([5, 3, 7], dtype = int))
 
-   assert np.all(bx.single_cell_box(np.array([8, 0, 10], dtype = int)) == np.array([[8, 0, 10], [8, 0, 10]], dtype = int))
+   assert np.all(
+      bx.single_cell_box(np.array([8, 0, 10], dtype = int)) == np.array([[8, 0, 10], [8, 0, 10]], dtype = int))
 
    assert np.all(bx.full_extent_box0(e1) == b1)
    assert np.all(bx.full_extent_box0(np.array([7, 5, 3], dtype = int)) == np.array([[0, 0, 0], [6, 4, 2]], dtype = int))

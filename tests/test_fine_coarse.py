@@ -6,6 +6,7 @@ from numpy.testing import assert_array_almost_equal
 
 import resqpy.olio.fine_coarse as rqfc
 
+
 def test_fine_coarse():
 
    fc1 = rqfc.FineCoarse((3, 4, 5), (3, 4, 5))
@@ -41,19 +42,19 @@ def test_fine_coarse_functions():
    assert rqfc.letter_for_axis(0) == 'K'
    assert rqfc.letter_for_axis(2) == 'I'
 
-   fct = rqfc.tartan_refinement(
-      coarse_extent_kji = (5, 7, 7),
-      coarse_fovea_box = np.array([[0, 2, 2], [1, 4, 4]], dtype = int),
-      fovea_ratios_kji = (3, 3, 4),
-      decay_rates_kji = (1, 1, 1),
-      decay_mode = 'linear')
+   fct = rqfc.tartan_refinement(coarse_extent_kji = (5, 7, 7),
+                                coarse_fovea_box = np.array([[0, 2, 2], [1, 4, 4]], dtype = int),
+                                fovea_ratios_kji = (3, 3, 4),
+                                decay_rates_kji = (1, 1, 1),
+                                decay_mode = 'linear')
    assert fct is not None
    fct.assert_valid()
 
    assert fct.coarse_extent_kji == (5, 7, 7)
    assert fct.fine_extent_kji == (10, 15, 22)
    assert np.all(fct.coarse_for_fine_axial_vector(0) == (0, 0, 0, 1, 1, 1, 2, 2, 3, 4))
-   for const in fct.contant_ratios: assert const is None
+   for const in fct.contant_ratios:
+      assert const is None
    assert np.all(fct.vector_ratios[1] == (1, 2, 3, 3, 3, 2, 1))
    assert np.all(fct.vector_ratios[2] == (2, 3, 4, 4, 4, 3, 2))
 

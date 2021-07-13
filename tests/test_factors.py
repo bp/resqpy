@@ -4,6 +4,7 @@ import pytest
 
 import resqpy.olio.factors as f
 
+
 def test_factors():
    assert f.factorize(20) == [2, 2, 5]
    assert f.factorize(29) == [29]
@@ -14,4 +15,3 @@ def test_factors():
    assert f6 == [1, 2, 3, 6]
    f.remove_subset(f60, f6)
    assert f60 == [4, 5, 10, 12, 15, 20, 30, 60]
-
