@@ -18,6 +18,7 @@
     rq_import
     surface
     time_series
+    weights_and_measures
     well
     olio
 
