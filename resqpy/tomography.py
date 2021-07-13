@@ -5,6 +5,7 @@
 version = '29th April 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('tomography.py version ' + version)
 
@@ -18,8 +19,16 @@ import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 
 
-def make_pixel_map(grid, width, height, origin = None, dx = None, dy = None, border = 0.0,
-                   k0 = 0, vertical_ref = 'top', trim = True):
+def make_pixel_map(grid,
+                   width,
+                   height,
+                   origin = None,
+                   dx = None,
+                   dy = None,
+                   border = 0.0,
+                   k0 = 0,
+                   vertical_ref = 'top',
+                   trim = True):
    """Generate a regular mesh and related pixel map property, writing to hdf5 and adding as parts.
 
    arguments:
@@ -58,17 +67,20 @@ def make_pixel_map(grid, width, height, origin = None, dx = None, dy = None, bor
 
    if origin is None or (dx is None and dy is None):
       grid_xyz_box = grid.xyz_box(lazy = False, local = True)
-      if origin is None: origin = tuple(grid_xyz_box[0, :2] - border)
+      if origin is None:
+         origin = tuple(grid_xyz_box[0, :2] - border)
       if dx is None and dy is None:
          max_x, max_y = grid_xyz_box[1, :2] + border
          dx = (max_x - origin[0]) / float(width)
          dy = (max_y - origin[1]) / float(height)
          if dx > dy:
             dy = dx
-            if trim: height = int((max_y - origin[1]) / dy)
+            if trim:
+               height = int((max_y - origin[1]) / dy)
          else:
             dx = dy
-            if trim: width = int((max_x - origin[0]) / dx)
+            if trim:
+               width = int((max_x - origin[0]) / dx)
       elif dx is None:
          dx = dy
       elif dy is None:
@@ -81,8 +93,11 @@ def make_pixel_map(grid, width, height, origin = None, dx = None, dy = None, bor
 
    source_str = 'pixel map for grid ' + rqet.citation_title_for_node(grid.root)
 
-   p_mesh = rqs.Mesh(parent_model = model, nj = height + 1, ni = width + 1,
-                     origin = origin_xyz, dxyz_dij = np.array([[dx, 0.0, 0.0], [0.0, dy, 0.0]]),
+   p_mesh = rqs.Mesh(parent_model = model,
+                     nj = height + 1,
+                     ni = width + 1,
+                     origin = origin_xyz,
+                     dxyz_dij = np.array([[dx, 0.0, 0.0], [0.0, dy, 0.0]]),
                      crs_uuid = grid.crs_uuid)
 
    p_mesh.create_xml(title = 'pixel map frame')
@@ -90,13 +105,16 @@ def make_pixel_map(grid, width, height, origin = None, dx = None, dy = None, bor
    property_collection = rqp.PropertyCollection()
    property_collection.set_support(support = p_mesh)
 
-   p_uuid = property_collection.add_cached_array_to_imported_list(
-      p_map,
-      source_str,
-      keyword = 'pixel map',
-      discrete = True, null_value = -1,
-      property_kind = 'index', facet_type = 'what', facet = 'pixel map',
-      indexable_element = 'cells', count = 2)
+   p_uuid = property_collection.add_cached_array_to_imported_list(p_map,
+                                                                  source_str,
+                                                                  keyword = 'pixel map',
+                                                                  discrete = True,
+                                                                  null_value = -1,
+                                                                  property_kind = 'index',
+                                                                  facet_type = 'what',
+                                                                  facet = 'pixel map',
+                                                                  indexable_element = 'cells',
+                                                                  count = 2)
 
    property_collection.write_hdf5_for_imported_list()
    property_collection.create_xml_for_imported_list_and_add_parts_to_model()
@@ -159,23 +177,31 @@ def find_pixel_maps(grid, min_width = None, max_width = None, min_height = None,
       filtered_parts_list = []
       for part in pm_collection.parts():
          support_uuid = model.supporting_representation_for_part(part)
-         if support_uuid is None: continue
+         if support_uuid is None:
+            continue
          if pixel_map_mesh_uuid is None or not bu.matching_uuids(support_uuid, pixel_map_mesh_uuid):
             pixel_map_mesh_root = model.root_for_uuid(support_uuid)
             pixel_map_extent_ji = np.ones(2, dtype = 'int')
-            pixel_map_extent_ji[0] = rqet.find_nested_tags_int(pixel_map_mesh_root, ['Grid2dPatch', 'SlowestAxisCount']) - 1
-            pixel_map_extent_ji[1] = rqet.find_nested_tags_int(pixel_map_mesh_root, ['Grid2dPatch', 'FastestAxisCount']) - 1
+            pixel_map_extent_ji[0] = rqet.find_nested_tags_int(pixel_map_mesh_root,
+                                                               ['Grid2dPatch', 'SlowestAxisCount']) - 1
+            pixel_map_extent_ji[1] = rqet.find_nested_tags_int(pixel_map_mesh_root,
+                                                               ['Grid2dPatch', 'FastestAxisCount']) - 1
             pixel_map_mesh_uuid = support_uuid
-         if min_width is not None and (pixel_map_extent_ji[1] < min_width): continue
-         if max_width is not None and (pixel_map_extent_ji[1] > max_width): continue
-         if min_height is not None and (pixel_map_extent_ji[0] < min_height): continue
-         if max_height is not None and (pixel_map_extent_ji[0] > max_height): continue
+         if min_width is not None and (pixel_map_extent_ji[1] < min_width):
+            continue
+         if max_width is not None and (pixel_map_extent_ji[1] > max_width):
+            continue
+         if min_height is not None and (pixel_map_extent_ji[0] < min_height):
+            continue
+         if max_height is not None and (pixel_map_extent_ji[0] > max_height):
+            continue
          filtered_parts_list.append(part)
       pm_collection = rqp.PropertyCollection()
       pm_collection.model = model
       pm_collection.add_parts_list_to_dict(filtered_parts_list)
 
-   if pm_collection.number_of_parts() == 0: pm_collection = None
+   if pm_collection.number_of_parts() == 0:
+      pm_collection = None
 
    if pm_collection:
       log.debug('found ' + str(pm_collection.number_of_parts()) + ' pixel maps')
@@ -185,10 +211,21 @@ def find_pixel_maps(grid, min_width = None, max_width = None, min_height = None,
    return pm_collection
 
 
-def find_or_make_pixel_map(grid, width, height, exact_resolution = False,
-                           min_width = None, max_width = None, min_height = None, max_height = None,
-                           origin = None, dx = None, dy = None, border = 0.0,
-                           k0 = 0, vertical_ref = 'top', trim = True):
+def find_or_make_pixel_map(grid,
+                           width,
+                           height,
+                           exact_resolution = False,
+                           min_width = None,
+                           max_width = None,
+                           min_height = None,
+                           max_height = None,
+                           origin = None,
+                           dx = None,
+                           dy = None,
+                           border = 0.0,
+                           k0 = 0,
+                           vertical_ref = 'top',
+                           trim = True):
    """Looks for pixel map(s) for grid and returns if found; otherwise makes one.
 
    arguments:
@@ -229,21 +266,44 @@ def find_or_make_pixel_map(grid, width, height, exact_resolution = False,
       min_width = max_width = width
       min_height = max_height = height
 
-   pm_collection = find_pixel_maps(grid, min_width = min_width, max_width = max_width,
-                                   min_height = min_height, max_height = max_height)
+   pm_collection = find_pixel_maps(grid,
+                                   min_width = min_width,
+                                   max_width = max_width,
+                                   min_height = min_height,
+                                   max_height = max_height)
 
-   if pm_collection is not None and pm_collection.number_of_parts() > 0: return pm_collection
+   if pm_collection is not None and pm_collection.number_of_parts() > 0:
+      return pm_collection
 
-   _, pm_collection = make_pixel_map(grid, width, height, origin = origin, dx = dx, dy = dy, border = border,
-                                     k0 = k0, vertical_ref = vertical_ref, trim = trim)
+   _, pm_collection = make_pixel_map(grid,
+                                     width,
+                                     height,
+                                     origin = origin,
+                                     dx = dx,
+                                     dy = dy,
+                                     border = border,
+                                     k0 = k0,
+                                     vertical_ref = vertical_ref,
+                                     trim = trim)
 
    return pm_collection
 
 
-def get_pixel_map(grid, width, height, exact_resolution = False,
-                  min_width = None, max_width = None, min_height = None, max_height = None,
-                  origin = None, dx = None, dy = None, border = 0.0,
-                  k0 = None, vertical_ref = 'top', trim = True):
+def get_pixel_map(grid,
+                  width,
+                  height,
+                  exact_resolution = False,
+                  min_width = None,
+                  max_width = None,
+                  min_height = None,
+                  max_height = None,
+                  origin = None,
+                  dx = None,
+                  dy = None,
+                  border = 0.0,
+                  k0 = None,
+                  vertical_ref = 'top',
+                  trim = True):
    """Finds or makes a suitable pixel map and returns numpy int array holding map.
 
    arguments:
@@ -281,11 +341,21 @@ def get_pixel_map(grid, width, height, exact_resolution = False,
 
    log.debug(f'getting pixel map with width, height: {width}, {height}')
 
-   pm_collection = find_or_make_pixel_map(grid, width, height, exact_resolution = exact_resolution,
-                                          min_width = min_width, max_width = max_width,
-                                          min_height = min_height, max_height = max_height,
-                                          origin = origin, dx = dx, dy = dy, border = border,
-                                          k0 = k0, vertical_ref = vertical_ref, trim = trim)
+   pm_collection = find_or_make_pixel_map(grid,
+                                          width,
+                                          height,
+                                          exact_resolution = exact_resolution,
+                                          min_width = min_width,
+                                          max_width = max_width,
+                                          min_height = min_height,
+                                          max_height = max_height,
+                                          origin = origin,
+                                          dx = dx,
+                                          dy = dy,
+                                          border = border,
+                                          k0 = k0,
+                                          vertical_ref = vertical_ref,
+                                          trim = trim)
 
    pm_count = pm_collection.number_of_parts()
    assert pm_collection is not None and pm_count > 0
@@ -321,8 +391,15 @@ def colour_array(norm_prop, colour_map):
    return (255.0 * (colour_map(norm_prop)[..., :3] + 0.00392)).astype(np.uint8)
 
 
-def map_image(pixel_map, c_array, k0 = 0, image_file = None, background = 'lightgrey', file_only = False,
-              title = None, title_location = (10, 10), title_colour = 'black'):
+def map_image(pixel_map,
+              c_array,
+              k0 = 0,
+              image_file = None,
+              background = 'lightgrey',
+              file_only = False,
+              title = None,
+              title_location = (10, 10),
+              title_colour = 'black'):
    """Produce a map image, written to file in PNG format and returned in a form to be assigned to an Image widget.
 
    arguments:
@@ -346,9 +423,10 @@ def map_image(pixel_map, c_array, k0 = 0, image_file = None, background = 'light
    assert pixel_map.ndim == 3 and pixel_map.shape[-1] == 2
    assert image_file or not file_only
    assert c_array.ndim == 4 or (c_array.ndim == 3 and k0 == 0)
-   assert c_array.shape[-1] == 3   # todo: could allow for alpha channel?
+   assert c_array.shape[-1] == 3  # todo: could allow for alpha channel?
 
-   if c_array.ndim == 3: c_array = c_array.reshape(tuple([1] + list(c_array.shape)))
+   if c_array.ndim == 3:
+      c_array = c_array.reshape(tuple([1] + list(c_array.shape)))
    assert 0 <= k0 < c_array.shape[0]
 
    remove_file = False
@@ -366,12 +444,13 @@ def map_image(pixel_map, c_array, k0 = 0, image_file = None, background = 'light
 
    # each pixel has to be set individually!
    for row in range(height):
-      pix_row = height - row - 1   # image starts at top left, whilst our pixel has origin bottom left
+      pix_row = height - row - 1  # image starts at top left, whilst our pixel has origin bottom left
       for col in range(width):
-          cell = pixel_map[row, col]
-          if cell[0] < 0: continue  # pixel does not map to any IJ column, leave as background
-          # colour-in pixel: RGB values must be presented as a tuple of 3 ints
-          pixels[col, pix_row] = tuple(c_array[k0, cell[0], cell[1], :])
+         cell = pixel_map[row, col]
+         if cell[0] < 0:
+            continue  # pixel does not map to any IJ column, leave as background
+         # colour-in pixel: RGB values must be presented as a tuple of 3 ints
+         pixels[col, pix_row] = tuple(c_array[k0, cell[0], cell[1], :])
 
    if title:
       _add_text(im, title_location, title, title_colour)
@@ -385,13 +464,14 @@ def map_image(pixel_map, c_array, k0 = 0, image_file = None, background = 'light
       with open(image_file, "rb") as fh:
          png_image = fh.read()
 
-   if remove_file: os.remove(image_file)
+   if remove_file:
+      os.remove(image_file)
 
    return png_image
 
 
 def _add_text(im, location, message, colour):
-    """Add message text to image."""
+   """Add message text to image."""
 
-    dim = ImageDraw.Draw(im)
-    dim.text(location, message, fill = colour)
+   dim = ImageDraw.Draw(im)
+   dim.text(location, message, fill = colour)

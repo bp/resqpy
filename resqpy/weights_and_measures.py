@@ -6,7 +6,6 @@ import warnings
 from functools import lru_cache
 from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
-
 version = '6th July 2021'
 
 # physical constants
@@ -57,7 +56,6 @@ UOM_ALIASES = {
    'mS': {'mmho'},
    'psi': {'psi', 'psia'},
    'Euc': {'count'},
-
 }
 # Mapping from alias to valid uom
 UOM_ALIAS_MAP = {alias.casefold(): uom for uom, aliases in UOM_ALIASES.items() for alias in aliases}
@@ -67,7 +65,7 @@ CASE_INSENSITIVE_UOMS = {'m', 'ft', 'm3', 'ft3', 'm3/m3', 'ft3/ft3', 'bbl', 'bar
 
 
 @lru_cache(None)
-def rq_uom(units, quantity=None):
+def rq_uom(units, quantity = None):
    """Returns RESQML uom string equivalent to units
    
    Args:
@@ -83,7 +81,7 @@ def rq_uom(units, quantity=None):
    """
    if not units:
       raise InvalidUnitError("Must provide non-empty unit")
-   
+
    uom = _try_parse_unit(units)
 
    # May be a fraction: match each part against known aliases
@@ -95,18 +93,16 @@ def rq_uom(units, quantity=None):
 
    if uom is None:
       raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
-   
+
    if quantity is not None:
-      supported_uoms = valid_uoms(quantity=quantity)
+      supported_uoms = valid_uoms(quantity = quantity)
       if uom not in supported_uoms:
-         raise InvalidUnitError(
-            f"Unit {uom} is not supported for quantity {quantity}.\n"
-            f"Supported units:\n{supported_uoms}"
-         )
+         raise InvalidUnitError(f"Unit {uom} is not supported for quantity {quantity}.\n"
+                                f"Supported units:\n{supported_uoms}")
    return uom
 
 
-def convert(x, unit_from, unit_to, quantity=None, inplace=False):
+def convert(x, unit_from, unit_to, quantity = None, inplace = False):
    """Convert value between two compatible units
 
    Args:
@@ -129,44 +125,40 @@ def convert(x, unit_from, unit_to, quantity=None, inplace=False):
    # Backwards formula: x=(A-Cy)/(Dy-B)
    # All current units have D==0
 
-   uom1 = rq_uom(unit_from, quantity=quantity)
-   uom2 = rq_uom(unit_to, quantity=quantity)
+   uom1 = rq_uom(unit_from, quantity = quantity)
+   uom2 = rq_uom(unit_to, quantity = quantity)
 
    if uom1 == uom2:
       return x
-   
+
    base1, dim1, (A1, B1, C1, D1) = get_conversion_factors(uom1)
    base2, dim2, (A2, B2, C2, D2) = get_conversion_factors(uom2)
 
    if base1 != base2:
       if dim1 != dim2:
-         raise IncompatibleUnitsError(
-            f"Cannot convert from '{unit_from}' to '{unit_to}':"
-            f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
-            f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'."
-         )
+         raise IncompatibleUnitsError(f"Cannot convert from '{unit_from}' to '{unit_to}':"
+                                      f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+                                      f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'.")
       else:
-         warnings.warn(
-            f"Assuming base units {base1} and {base2} are equivalent as they have the same dimensions:"
-            f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
-            f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'."
-         )
+         warnings.warn(f"Assuming base units {base1} and {base2} are equivalent as they have the same dimensions:"
+                       f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+                       f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'.")
 
    if not inplace:
-      y = (A1 + (B1*x)) / (C1 + (D1*x))
-      return (A2 - (C2*y)) / ((D2*y) - B2)
+      y = (A1 + (B1 * x)) / (C1 + (D1 * x))
+      return (A2 - (C2 * y)) / ((D2 * y) - B2)
 
    else:
       if any(f != 0 for f in [A1, A2, D1, D2]):
          raise NotImplementedError("In-place conversion not yet implemented for non-trivial conversions")
-      
-      factor = (B1*C2) / (C1*B2)
+
+      factor = (B1 * C2) / (C1 * B2)
       x *= factor
       return x
 
 
 @lru_cache(None)
-def valid_uoms(quantity=None, return_attributes=False):
+def valid_uoms(quantity = None, return_attributes = False):
    """Return set of valid RESQML units of measure
    
    Args:
@@ -190,7 +182,7 @@ def valid_uoms(quantity=None, return_attributes=False):
 
 
 @lru_cache(None)
-def valid_quantities(return_attributes=False):
+def valid_quantities(return_attributes = False):
    """Return set of valid RESQML quantities
    
    Args:
@@ -210,7 +202,7 @@ def valid_quantities(return_attributes=False):
 
 def valid_property_kinds():
    """Return set of valid property kinds"""
-   
+
    return set(_properties_data()['property_kinds'].keys())
 
 
@@ -223,13 +215,13 @@ def rq_uom_list(units_list):
 def rq_length_unit(units):
    """Returns length units string as expected by resqml."""
 
-   return rq_uom(units, quantity='length')
+   return rq_uom(units, quantity = 'length')
 
 
 def rq_time_unit(units):
    """Returns time units string as expected by resqml."""
 
-   return rq_uom(units, quantity='time')
+   return rq_uom(units, quantity = 'time')
 
 
 def convert_times(a, from_units, to_units, invert = False):
@@ -242,7 +234,7 @@ def convert_times(a, from_units, to_units, invert = False):
    if invert:
       from_units, to_units = to_units, from_units
 
-   return convert(a, from_units, to_units, quantity='time', inplace=True)
+   return convert(a, from_units, to_units, quantity = 'time', inplace = True)
 
 
 def convert_lengths(a, from_units, to_units):
@@ -260,7 +252,7 @@ def convert_lengths(a, from_units, to_units):
       To see supported units, use: `valid_uoms(quantity='length')`
    """
 
-   return convert(a, from_units, to_units, quantity='length', inplace=True)
+   return convert(a, from_units, to_units, quantity = 'length', inplace = True)
 
 
 def convert_pressures(a, from_units, to_units):
@@ -277,7 +269,7 @@ def convert_pressures(a, from_units, to_units):
    note:
       To see supported units, use: `valid_uoms(quantity='pressure')`
    """
-   return convert(a, from_units, to_units, quantity='pressure', inplace=True)
+   return convert(a, from_units, to_units, quantity = 'pressure', inplace = True)
 
 
 def convert_volumes(a, from_units, to_units):
@@ -295,8 +287,8 @@ def convert_volumes(a, from_units, to_units):
       To see supported units, use: `valid_uoms(quantity='volume')`
 
    """
-   return convert(a, from_units, to_units, quantity='volume', inplace=True)
-   
+   return convert(a, from_units, to_units, quantity = 'volume', inplace = True)
+
 
 def convert_flow_rates(a, from_units, to_units):
    """Converts values in numpy array (or a scalar) from one volume flow rate unit to another, in situ if array.
@@ -312,7 +304,7 @@ def convert_flow_rates(a, from_units, to_units):
    note:
       To see supported units, use: `valid_uoms(quantity='volume per time')`
    """
-   return convert(a, from_units, to_units, quantity='volume per time', inplace=True)
+   return convert(a, from_units, to_units, quantity = 'volume per time', inplace = True)
 
 
 @lru_cache(None)

@@ -3,6 +3,7 @@
 version = '2nd July 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('crs.py version ' + version)
 
@@ -27,15 +28,26 @@ class Crs(BaseResqpy):
    def resqml_type(self):
       return 'LocalTime3dCrs' if hasattr(self, 'time_units') and self.time_units else 'LocalDepth3dCrs'
 
-   valid_axis_orders = ("easting northing", "northing easting", "westing southing",
-                        "southing westing", "northing westing", "westing northing")
+   valid_axis_orders = ("easting northing", "northing easting", "westing southing", "southing westing",
+                        "northing westing", "westing northing")
 
-   def __init__(self, parent_model, crs_root = None, uuid = None,
-                x_offset = 0.0, y_offset = 0.0, z_offset = 0.0,
-                rotation = 0.0, xy_units = 'm', z_units = 'm',
-                z_inc_down = True, axis_order = 'easting northing',
-                time_units = None, epsg_code = None,
-                title = None, originator = None, extra_metadata = None):
+   def __init__(self,
+                parent_model,
+                crs_root = None,
+                uuid = None,
+                x_offset = 0.0,
+                y_offset = 0.0,
+                z_offset = 0.0,
+                rotation = 0.0,
+                xy_units = 'm',
+                z_units = 'm',
+                z_inc_down = True,
+                axis_order = 'easting northing',
+                time_units = None,
+                epsg_code = None,
+                title = None,
+                originator = None,
+                extra_metadata = None):
       """Create a new coordinate reference system object.
 
       arguments:
@@ -78,12 +90,12 @@ class Crs(BaseResqpy):
 
       self.xy_units = xy_units
       self.z_units = z_units
-      self.time_units = time_units   # if None, z values are depth; if not None, z values are time (from seismic)
+      self.time_units = time_units  # if None, z values are depth; if not None, z values are time (from seismic)
       self.z_inc_down = z_inc_down
       self.x_offset = x_offset
       self.y_offset = y_offset
       self.z_offset = z_offset
-      self.rotation = rotation    # radians
+      self.rotation = rotation  # radians
       self.axis_order = axis_order
       self.epsg_code = epsg_code
       # following are derived attributes, set below
@@ -91,8 +103,12 @@ class Crs(BaseResqpy):
       self.rotation_matrix = None
       self.reverse_rotation_matrix = None
 
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
-                       extra_metadata = extra_metadata, root_node = crs_root)
+      super().__init__(model = parent_model,
+                       uuid = uuid,
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata,
+                       root_node = crs_root)
 
       assert self.axis_order in self.valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
 
@@ -104,9 +120,7 @@ class Crs(BaseResqpy):
 
       self.null_transform = (maths.isclose(self.x_offset, 0.0, abs_tol = 1e-8) and
                              maths.isclose(self.y_offset, 0.0, abs_tol = 1e-8) and
-                             maths.isclose(self.z_offset, 0.0, abs_tol = 1e-8) and
-                             not self.rotated)
-
+                             maths.isclose(self.z_offset, 0.0, abs_tol = 1e-8) and not self.rotated)
 
    def _load_from_xml(self):
       root_node = self.root
@@ -127,43 +141,46 @@ class Crs(BaseResqpy):
       self.rotation = rqet.find_tag_float(root_node, 'ArealRotation')  # todo: extract uom attribute from this node
       parent_xy_crs = rqet.find_tag(root_node, 'ProjectedCrs')
       if parent_xy_crs is not None and rqet.node_type(parent_xy_crs) == 'ProjectedCrsEpsgCode':
-         self.epsg_code = rqet.find_tag_text(parent_xy_crs, 'EpsgCode')    # should be an integer?
+         self.epsg_code = rqet.find_tag_text(parent_xy_crs, 'EpsgCode')  # should be an integer?
       else:
          self.epsg_code = None
-
 
    def is_right_handed_xyz(self):
       """Returns True if the xyz axes are right handed; False if left handed."""
 
       return self.axis_order in ["northing easting", "southing westing", "westing northing"] == self.z_inc_down
 
-
    def global_to_local(self, xyz, global_z_inc_down = True):
       """Convert a single xyz point from the parent coordinate reference system to this one."""
 
       x, y, z = xyz
-      if self.x_offset != 0.0: x -= self.x_offset
-      if self.y_offset != 0.0: y -= self.y_offset
-      if global_z_inc_down != self.z_inc_down: z = -z
-      if self.z_offset != 0.0: z -= self.z_offset
+      if self.x_offset != 0.0:
+         x -= self.x_offset
+      if self.y_offset != 0.0:
+         y -= self.y_offset
+      if global_z_inc_down != self.z_inc_down:
+         z = -z
+      if self.z_offset != 0.0:
+         z -= self.z_offset
       if self.rotated:
          (x, y, z) = vec.rotate_vector(self.rotation_matrix, np.array((x, y, z)))
       return (x, y, z)
 
-
    def global_to_local_array(self, xyz, global_z_inc_down = True):
       """Convert in situ a numpy array of xyz points from the parent coordinate reference system to this one."""
 
-      if self.x_offset != 0.0: xyz[..., 0] -= self.x_offset
-      if self.y_offset != 0.0: xyz[..., 1] -= self.y_offset
+      if self.x_offset != 0.0:
+         xyz[..., 0] -= self.x_offset
+      if self.y_offset != 0.0:
+         xyz[..., 1] -= self.y_offset
       if global_z_inc_down != self.z_inc_down:
          z = np.negative(xyz[..., 2])
          xyz[..., 2] = z
-      if self.z_offset != 0.0: xyz[..., 2] -= self.z_offset
+      if self.z_offset != 0.0:
+         xyz[..., 2] -= self.z_offset
       if self.rotated:
          a = vec.rotate_array(self.rotation_matrix, xyz)
          xyz[:] = a
-
 
    def local_to_global(self, xyz, global_z_inc_down = True):
       """Convert a single xyz point from this coordinate reference system to the parent one."""
@@ -172,12 +189,15 @@ class Crs(BaseResqpy):
          (x, y, z) = vec.rotate_vector(self.reverse_rotation_matrix, np.array(xyz))
       else:
          (x, y, z) = xyz
-      if self.x_offset != 0.0: x += self.x_offset
-      if self.y_offset != 0.0: y += self.y_offset
-      if self.z_offset != 0.0: z += self.z_offset
-      if global_z_inc_down != self.z_inc_down: z = -z
+      if self.x_offset != 0.0:
+         x += self.x_offset
+      if self.y_offset != 0.0:
+         y += self.y_offset
+      if self.z_offset != 0.0:
+         z += self.z_offset
+      if global_z_inc_down != self.z_inc_down:
+         z = -z
       return (x, y, z)
-
 
    def local_to_global_array(self, xyz, global_z_inc_down = True):
       """Convert in situ a numpy array of xyz points from this coordinate reference system to the parent one."""
@@ -185,39 +205,47 @@ class Crs(BaseResqpy):
       if self.rotated:
          a = vec.rotate_array(self.reverse_rotation_matrix, xyz)
          xyz[:] = a
-      if self.x_offset != 0.0: xyz[..., 0] += self.x_offset
-      if self.y_offset != 0.0: xyz[..., 1] += self.y_offset
-      if self.z_offset != 0.0: xyz[..., 2] += self.z_offset
+      if self.x_offset != 0.0:
+         xyz[..., 0] += self.x_offset
+      if self.y_offset != 0.0:
+         xyz[..., 1] += self.y_offset
+      if self.z_offset != 0.0:
+         xyz[..., 2] += self.z_offset
       if global_z_inc_down != self.z_inc_down:
          z = np.negative(xyz[..., 2])
          xyz[..., 2] = z
-
 
    def has_same_epsg_code(self, other_crs):
       """Returns True if either of the crs'es has a null EPSG code, or if they are the same."""
       return self.epsg_code is None or other_crs.epsg_code is None or self.epsg_code == other_crs.epsg_code
 
-
    def is_equivalent(self, other_crs):
       """Returns True if this crs is effectively the same as the other crs."""
 
       log.debug('testing crs equivalence')
-      if other_crs is None: return False
-      if self is other_crs: return True
-      if bu.matching_uuids(self.uuid, other_crs.uuid): return True
-      if self.xy_units != other_crs.xy_units or self.z_units != other_crs.z_units: return False
-      if self.z_inc_down != other_crs.z_inc_down: return False
+      if other_crs is None:
+         return False
+      if self is other_crs:
+         return True
+      if bu.matching_uuids(self.uuid, other_crs.uuid):
+         return True
+      if self.xy_units != other_crs.xy_units or self.z_units != other_crs.z_units:
+         return False
+      if self.z_inc_down != other_crs.z_inc_down:
+         return False
       if (self.time_units is not None or other_crs.time_units is not None) and self.time_units != other_crs.time_units:
          return False
-      if not self.has_same_epsg_code(other_crs): return False
-      if self.null_transform and other_crs.null_transform: return True
+      if not self.has_same_epsg_code(other_crs):
+         return False
+      if self.null_transform and other_crs.null_transform:
+         return True
       if (maths.isclose(self.x_offset, other_crs.x_offset, abs_tol = 1e-4) and
           maths.isclose(self.y_offset, other_crs.y_offset, abs_tol = 1e-4) and
           maths.isclose(self.z_offset, other_crs.z_offset, abs_tol = 1e-4) and
-          maths.isclose(self.rotation, other_crs.rotation, abs_tol = 1e-4)): return True
-          # todo: handle and check rotation units; modularly equivalent rotations
+          maths.isclose(self.rotation, other_crs.rotation, abs_tol = 1e-4)):
+         return True
+      # todo: handle and check rotation units; modularly equivalent rotations
       return False
-
 
    def convert_to(self, other_crs, xyz):
       """Converts a single xyz point from this coordinate reference system to the other.
@@ -225,15 +253,15 @@ class Crs(BaseResqpy):
       :meta common:
       """
 
-      if self is other_crs: return tuple(xyz)
+      if self is other_crs:
+         return tuple(xyz)
       assert self.has_same_epsg_code(other_crs)
       xyz = self.local_to_global(xyz)
-      xyz = (wam.convert_lengths(xyz[0], self.xy_units, other_crs.xy_units),
-             wam.convert_lengths(xyz[1], self.xy_units, other_crs.xy_units),
+      xyz = (wam.convert_lengths(xyz[0], self.xy_units,
+                                 other_crs.xy_units), wam.convert_lengths(xyz[1], self.xy_units, other_crs.xy_units),
              wam.convert_lengths(xyz[2], self.z_units, other_crs.z_units))
       xyz = other_crs.global_to_local(xyz)
       return tuple(xyz)
-
 
    def convert_array_to(self, other_crs, xyz):
       """Converts in situ a numpy array of xyz points from this coordinate reference system to the other.
@@ -241,7 +269,8 @@ class Crs(BaseResqpy):
       :meta common:
       """
 
-      if self.is_equivalent(other_crs): return
+      if self.is_equivalent(other_crs):
+         return
       assert self.has_same_epsg_code(other_crs)
       self.local_to_global_array(xyz)
       if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
@@ -252,22 +281,21 @@ class Crs(BaseResqpy):
       other_crs.global_to_local_array(xyz)
       return xyz
 
-
    def convert_from(self, other_crs, xyz):
       """Converts a single xyz point from the other coordinate reference system to this one.
 
       :meta common:
       """
 
-      if self is other_crs: return tuple(xyz)
+      if self is other_crs:
+         return tuple(xyz)
       assert self.has_same_epsg_code(other_crs)
       xyz = other_crs.local_to_global(xyz)
-      xyz = (wam.convert_lengths(xyz[0], other_crs.xy_units, self.xy_units),
-             wam.convert_lengths(xyz[1], other_crs.xy_units, self.xy_units),
+      xyz = (wam.convert_lengths(xyz[0], other_crs.xy_units,
+                                 self.xy_units), wam.convert_lengths(xyz[1], other_crs.xy_units, self.xy_units),
              wam.convert_lengths(xyz[2], other_crs.z_units, self.z_units))
       xyz = self.global_to_local(xyz)
       return tuple(xyz)
-
 
    def convert_array_from(self, other_crs, xyz):
       """Converts in situ a numpy array of xyz points from the other coordinate reference system to this one.
@@ -275,7 +303,8 @@ class Crs(BaseResqpy):
       :meta common:
       """
 
-      if self.is_equivalent(other_crs): return
+      if self.is_equivalent(other_crs):
+         return
       assert self.has_same_epsg_code(other_crs)
       other_crs.local_to_global_array(xyz)
       if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
@@ -285,7 +314,6 @@ class Crs(BaseResqpy):
          wam.convert_lengths(xyz[..., 2], other_crs.z_units, self.z_units)
       self.global_to_local_array(xyz)
       return xyz
-
 
    def create_xml(self, add_as_part = True, root = None, title = None, originator = None, reuse = True):
       """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
@@ -314,7 +342,8 @@ class Crs(BaseResqpy):
       :meta common:
       """
 
-      if reuse and self.try_reuse(): return self.node  # check for reusable (equivalent) object
+      if reuse and self.try_reuse():
+         return self.node  # check for reusable (equivalent) object
 
       crs = super().create_xml(add_as_part = False, originator = originator)
 
@@ -335,8 +364,10 @@ class Crs(BaseResqpy):
       rotation.set(ns['xsi'] + 'type', ns['eml'] + 'PlaneAngleMeasure')
       rotation.text = '{0:8.6f}'.format(self.rotation)
 
-      if self.axis_order is None: axes = 'easting northing'
-      else: axes = self.axis_order.lower()
+      if self.axis_order is None:
+         axes = 'easting northing'
+      else:
+         axes = self.axis_order.lower()
       axis_order = rqet.SubElement(crs, ns['resqml2'] + 'ProjectedAxisOrder')
       axis_order.set(ns['xsi'] + 'type', ns['eml'] + 'AxisOrder2d')
       axis_order.text = axes
@@ -374,18 +405,20 @@ class Crs(BaseResqpy):
          z_crs.set(ns['xsi'] + 'type', ns['eml'] + 'VerticalUnknownCrs')
          z_crs.text = rqet.null_xml_text
          self.model.create_unknown(root = z_crs)
-      else:   # not sure if this is appropriate for the vertical crs
+      else:  # not sure if this is appropriate for the vertical crs
          z_crs.set(ns['xsi'] + 'type', ns['eml'] + 'VerticalCrsEpsgCode')
          epsg_node = rqet.SubElement(xy_crs, ns['resqml2'] + 'EpsgCode')
          epsg_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
          epsg_node.text = str(self.epsg_code)
 
-      if root is not None: root.append(crs)
-      if add_as_part: self.model.add_part('obj_' + self.resqml_type, bu.uuid_from_string(crs.attrib['uuid']), crs)
-      if self.model.crs_root is None: self.model.crs_root = crs  # mark's as 'main' (ie. first) crs for model
+      if root is not None:
+         root.append(crs)
+      if add_as_part:
+         self.model.add_part('obj_' + self.resqml_type, bu.uuid_from_string(crs.attrib['uuid']), crs)
+      if self.model.crs_root is None:
+         self.model.crs_root = crs  # mark's as 'main' (ie. first) crs for model
 
       return crs
-
 
    @property
    def crs_root(self):

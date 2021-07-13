@@ -4,6 +4,7 @@ version = '9th April 2020'
 
 import datetime as dt
 
+
 def now(use_utc = False):
    """Returns an iso format string representation of the current time, to the nearest second.
 

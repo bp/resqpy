@@ -5,6 +5,7 @@ version = '15th January 2021'
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
+
 log = logging.getLogger(__name__)
 
 import os
@@ -12,7 +13,6 @@ import re
 import unicodedata
 import numpy as np
 import pandas as pd
-
 
 ######################################################################################################
 # load_nexus_fault_mult_table():
@@ -22,8 +22,8 @@ import pandas as pd
 # note: actual multiplier value is discarded as this is usually set to one in the mult data
 # this version written by Qiang
 
-def load_nexus_fault_mult_table(file_name):
 
+def load_nexus_fault_mult_table(file_name):
    """Reads a Nexus (!) format file containing one or more MULT keywords and returns a dataframe with the MULT rows."""
 
    def is_number(s):
@@ -58,7 +58,7 @@ def load_nexus_fault_mult_table(file_name):
       with open(file_name) as f:
          for line in f:
             if len(line.strip()):
-               if (not line.strip()[0] == '!') & (not line.strip()[0] == 'C') :
+               if (not line.strip()[0] == '!') & (not line.strip()[0] == 'C'):
                   line = line.partition('!')[0]  # removing trailing comments
                   # line = line.partition('C')[0]  # removing trailing comments
                   tokens = line.split()
@@ -72,14 +72,14 @@ def load_nexus_fault_mult_table(file_name):
                         # fill empty elements with zero
                         lens = np.array([len(i) for i in d_elems])
                         # Mask of valid places in each row
-                        mask = np.arange(lens.max()) < lens[:,None]
+                        mask = np.arange(lens.max()) < lens[:, None]
                         # Setup output array and put elements from data into masked positions
-                        outdata = np.zeros(mask.shape, dtype=d_elems.dtype)
+                        outdata = np.zeros(mask.shape, dtype = d_elems.dtype)
                         outdata[mask] = np.concatenate(d_elems)
                         df = pd.DataFrame(outdata)
                         for column in df.columns:
-                           df[column] = pd.to_numeric(df[column], errors='ignore')
-                        df.columns = ['i1','i2','j1','j2','k1','k2','mult']
+                           df[column] = pd.to_numeric(df[column], errors = 'ignore')
+                        df.columns = ['i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult']
                         grids.append(grid)
                         names.append(name)
                         faces.append(face)
@@ -92,9 +92,11 @@ def load_nexus_fault_mult_table(file_name):
 
                   if ISTABLE:
                      if re.match("(.*)GRID(.*)", tokens[0]):
-                        if len(tokens) > 0: grid = tokens[1]
+                        if len(tokens) > 0:
+                           grid = tokens[1]
                      elif re.match("(.*)FNAME(.*)", tokens[0]):
-                        if len(tokens) > 0: name = tokens[1]
+                        if len(tokens) > 0:
+                           name = tokens[1]
                      else:
                         if re.match(r"^MULT$", tokens[0]):
                            ISTABLE = False
@@ -104,9 +106,11 @@ def load_nexus_fault_mult_table(file_name):
                            chunks.append(line.strip())
 
                   if re.match(r"^MULT$", tokens[0]):
-                     if len(tokens) > 0: face = face_dict[tokens[1]]
-                     if 'MINUS' in tokens: face += '-'  # indicates data apply to 'negative' faces of specified cells
-                     grid = 'ROOT'                    # nexus default
+                     if len(tokens) > 0:
+                        face = face_dict[tokens[1]]
+                     if 'MINUS' in tokens:
+                        face += '-'  # indicates data apply to 'negative' faces of specified cells
+                     grid = 'ROOT'  # nexus default
                      name = 'NONE'
                      ISTABLE = True
 
@@ -118,14 +122,14 @@ def load_nexus_fault_mult_table(file_name):
                   # fill empty elements with zero
                   lens = np.array([len(i) for i in d_elems])
                   # Mask of valid places in each row
-                  mask = np.arange(lens.max()) < lens[:,None]
+                  mask = np.arange(lens.max()) < lens[:, None]
                   # Setup output array and put elements from data into masked positions
-                  outdata = np.zeros(mask.shape, dtype=d_elems.dtype)
+                  outdata = np.zeros(mask.shape, dtype = d_elems.dtype)
                   outdata[mask] = np.concatenate(d_elems)
                   df = pd.DataFrame(outdata)
                   for column in df.columns:
-                     df[column] = pd.to_numeric(df[column], errors='ignore')
-                  df.columns = ['i1','i2','j1','j2','k1','k2','mult']
+                     df[column] = pd.to_numeric(df[column], errors = 'ignore')
+                  df.columns = ['i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult']
 
                   grids.append(grid)
                   names.append(name)

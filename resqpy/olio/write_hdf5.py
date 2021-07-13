@@ -8,6 +8,7 @@ version = '14th May 2021'
 # approach is to register the datasets (arrays) to be written; then write everything in a separate, single function call
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('write_hdf5.py version ' + version)
 
@@ -22,7 +23,6 @@ write_bool_as_int8 = True  # Nexus read fails if bool used as hdf5 element dtype
 write_int_as_int32 = True  # only applies if registered dtype is None
 
 
-
 class H5Register():
    """Class for registering arrays and then writing to an hdf5 file."""
 
@@ -31,7 +31,6 @@ class H5Register():
 
       self.dataset_dict = {}  # dictionary mapping from (object_uuid, group_tail) to (numpy_array, dtype)
       self.model = model
-
 
    def register_dataset(self, object_uuid, group_tail, a, dtype = None):
       """Register an array to be included as a dataset in the hdf5 file.
@@ -50,16 +49,17 @@ class H5Register():
             several arrays might belong to the same object
       """
 
-#     print('registering dataset with uuid ' + str(object_uuid) + ' and group tail ' + group_tail)
-      assert(len(group_tail) > 0)
+      #     print('registering dataset with uuid ' + str(object_uuid) + ' and group tail ' + group_tail)
+      assert (len(group_tail) > 0)
       assert a is not None
       assert isinstance(a, np.ndarray)
-      if group_tail[0] == '/': group_tail = group_tail[1:]
-      if group_tail[-1] == '/': group_tail = group_tail[:-1]
+      if group_tail[0] == '/':
+         group_tail = group_tail[1:]
+      if group_tail[-1] == '/':
+         group_tail = group_tail[:-1]
       if (object_uuid, group_tail) in self.dataset_dict.keys():
          pass  # todo: warn of re-registration?
       self.dataset_dict[(object_uuid, group_tail)] = (a, dtype)
-
 
    def write_fp(self, fp):
       """Write or append to an hdf5 file, writing the pre-registered datasets (arrays).
@@ -76,17 +76,18 @@ class H5Register():
 
       # note: in resqml, an established hdf5 file has a uuid and should therefore be immutable
       #       this function allows appending to any hdf5 file; calling code should set a new uuid when needed
-      assert(fp is not None)
+      assert (fp is not None)
       for (object_uuid, group_tail) in self.dataset_dict.keys():
          hdf5_path = resqml_path_head + str(object_uuid) + '/' + group_tail
          (a, dtype) = self.dataset_dict[(object_uuid, group_tail)]
          if dtype is None:
             dtype = a.dtype
-            if write_int_as_int32 and str(dtype) == 'int64': dtype = 'int32'
-         if write_bool_as_int8 and str(dtype).lower().startswith('bool'): dtype = 'int8'
+            if write_int_as_int32 and str(dtype) == 'int64':
+               dtype = 'int32'
+         if write_bool_as_int8 and str(dtype).lower().startswith('bool'):
+            dtype = 'int8'
          log.debug('Writing hdf5 dataset ' + hdf5_path + ' of size ' + str(a.size) + ' type ' + str(dtype))
          fp.create_dataset(hdf5_path, data = a, dtype = dtype)
-
 
    def write(self, file = None, mode = 'w', release_after = True):
       """Create or append to an hdf5 file, writing the pre-registered datasets (arrays).
@@ -105,15 +106,18 @@ class H5Register():
       # note: in resqml, an established hdf5 file has a uuid and should therefore be immutable
       #       this function allows appending to any hdf5 file;
       #       strictly, calling code should set a new uuid when needed, in practice not essential
-      if len(self.dataset_dict) == 0: return
+      if len(self.dataset_dict) == 0:
+         return
       if file is None:
          file = self.model.h5_access(mode = mode)
       elif isinstance(file, str):
          file = self.model.h5_access(mode = mode, file_path = file)
-      if mode == 'a' and isinstance(file, str) and not os.path.exists(file): mode = 'w'
+      if mode == 'a' and isinstance(file, str) and not os.path.exists(file):
+         mode = 'w'
       assert isinstance(file, h5py._hl.files.File)
       self.write_fp(file)
-      if release_after: self.model.h5_release()
+      if release_after:
+         self.model.h5_release()
 
 
 def copy_h5(file_in, file_out, uuid_inclusion_list = None, uuid_exclusion_list = None, mode = 'w'):
@@ -150,28 +154,31 @@ def copy_h5(file_in, file_out, uuid_inclusion_list = None, uuid_exclusion_list =
          assert fp_in is not None, 'failed to open input hdf5 file: ' + file_in
          main_group_in = fp_in['RESQML']
          assert main_group_in is not None, 'failed to find RESQML group in hdf5 file: ' + file_in
-         if mode == 'w': main_group_out = fp_out.create_group('RESQML')
+         if mode == 'w':
+            main_group_out = fp_out.create_group('RESQML')
          elif mode == 'a':
             try:
                main_group_out = fp_out['RESQML']
             except Exception:
                main_group_out = fp_out.create_group('RESQML')
-         else: main_group_out = fp_out['RESQML']
+         else:
+            main_group_out = fp_out['RESQML']
          for group in main_group_in:
             uuid = bu.uuid_from_string(group)
             if uuid is None:
                log.warning('RESQML group name in hdf5 file is not a uuid, skipping: ' + str(group))
                continue
             if uuid_inclusion_list is not None:
-               if uuid not in uuid_inclusion_list: continue
+               if uuid not in uuid_inclusion_list:
+                  continue
             elif uuid_exclusion_list is not None:
-               if uuid in uuid_exclusion_list: continue
+               if uuid in uuid_exclusion_list:
+                  continue
             if group in main_group_out:
                log.warning('not copying hdf5 data due to pre-existence for: ' + str(group))
                continue
             log.debug('copying hdf5 data for uuid: ' + group)
-            main_group_in.copy(group, main_group_out,
-                               expand_soft = True, expand_external = True, expand_refs = True)
+            main_group_in.copy(group, main_group_out, expand_soft = True, expand_external = True, expand_refs = True)
             copy_count += 1
    return copy_count
 
