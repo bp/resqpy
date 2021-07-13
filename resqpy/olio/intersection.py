@@ -3,11 +3,11 @@
 version = '5th November 2020'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('point_inclusion.py version ' + version)
 
 import numpy as np
-
 
 
 def line_plane_intersect(line_p, line_v, triangle):
@@ -26,12 +26,12 @@ def line_plane_intersect(line_p, line_v, triangle):
    p01 = triangle[1] - triangle[0]
    p02 = triangle[2] - triangle[0]
 
-   norm = np.cross(p01, p02)     # normal to plane
+   norm = np.cross(p01, p02)  # normal to plane
    denom = np.dot(np.negative(line_v), norm)
-   if denom == 0.0: return None  # line is parallel to plane
+   if denom == 0.0:
+      return None  # line is parallel to plane
    t = np.dot(norm, line_p - triangle[0]) / denom
-   return line_p  +  t * line_v
-
+   return line_p + t * line_v
 
 
 def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
@@ -52,20 +52,23 @@ def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
    p01 = triangle[1] - triangle[0]
    p02 = triangle[2] - triangle[0]
 
-   norm = np.cross(p01, p02)     # normal to plane
+   norm = np.cross(p01, p02)  # normal to plane
    line_rv = np.negative(line_v)
    denom = np.dot(line_rv, norm)
-   if denom == 0.0: return None  # line is parallel to plane
+   if denom == 0.0:
+      return None  # line is parallel to plane
    lp_t0 = line_p - triangle[0]
    t = np.dot(norm, lp_t0) / denom
-   if line_segment and (t < 0.0 or t > 1.0): return None
+   if line_segment and (t < 0.0 or t > 1.0):
+      return None
    u = np.dot(np.cross(p02, line_rv), lp_t0) / denom
-   if u < 0.0 or u > 1.0: return None
+   if u < 0.0 or u > 1.0:
+      return None
    v = np.dot(np.cross(line_rv, p01), lp_t0) / denom
-   if v < 0.0 or u + v > 1.0: return None
+   if v < 0.0 or u + v > 1.0:
+      return None
 
-   return line_p  +  t * line_v
-
+   return line_p + t * line_v
 
 
 def line_triangles_intersects(line_p, line_v, triangles, line_segment = False):
@@ -84,15 +87,15 @@ def line_triangles_intersects(line_p, line_v, triangles, line_segment = False):
          outside the triangle (or beyond the ends of the segment if applicable)
    """
 
-   n = triangles.shape[0]   # number of triangles
+   n = triangles.shape[0]  # number of triangles
 
-   p01s = triangles[:, 1, :] - triangles[:, 0, :]   # p01s has shape (n, 3)
-   p02s = triangles[:, 2, :] - triangles[:, 0, :]   # p02s has shape (n, 3)
+   p01s = triangles[:, 1, :] - triangles[:, 0, :]  # p01s has shape (n, 3)
+   p02s = triangles[:, 2, :] - triangles[:, 0, :]  # p02s has shape (n, 3)
 
-   norms = np.cross(p01s, p02s)       # normals to planes, shape (n, 3)
+   norms = np.cross(p01s, p02s)  # normals to planes, shape (n, 3)
    line_rv = np.negative(line_v)
-   denoms = np.dot(norms, line_rv)    # shape (n)
-#  if denom == 0.0: return None  # line is parallel to plane
+   denoms = np.dot(norms, line_rv)  # shape (n)
+   #  if denom == 0.0: return None  # line is parallel to plane
    lp_t0s = line_p - triangles[:, 0]  # shape (n, 3)
    ts = np.empty(n)
    ts.fill(np.nan)
@@ -103,24 +106,23 @@ def line_triangles_intersects(line_p, line_v, triangles, line_segment = False):
    np.seterr(divide = 'ignore')
    np.divide(np.sum(norms * lp_t0s, axis = 1), denoms, out = ts, where = nz)
    np.seterr(invalid = 'ignore')
-   if line_segment: ts[:] = np.where(np.logical_or(ts < 0.0, ts > 1.0), np.nan, ts)
+   if line_segment:
+      ts[:] = np.where(np.logical_or(ts < 0.0, ts > 1.0), np.nan, ts)
    np.divide(np.sum(np.cross(p02s, line_rv) * lp_t0s, axis = 1), denoms, out = us, where = nz)
    np.divide(np.sum(np.cross(line_rv, p01s) * lp_t0s, axis = 1), denoms, out = vs, where = nz)
-   ts[:] = np.where(np.logical_or(np.logical_or(us < 0.0, us > 1.0),
-                                  np.logical_or(vs < 0.0, us + vs > 1.0)), np.nan, ts)
+   ts[:] = np.where(np.logical_or(np.logical_or(us < 0.0, us > 1.0), np.logical_or(vs < 0.0, us + vs > 1.0)), np.nan,
+                    ts)
 
    intersects = np.empty((n, 3))
-   intersects[:] = line_v  *  np.repeat(ts, 3).reshape((n, 3))   +   line_p
+   intersects[:] = line_v * np.repeat(ts, 3).reshape((n, 3)) + line_p
    np.seterr(all = 'warn')
    return intersects
-
 
 
 def intersects_indices(single_line_intersects):
    """Returns a list of the (triangle) indices where a valid intersection has been found for a single line."""
 
    return list(np.where(np.logical_not(np.isnan(single_line_intersects[..., 0])))[0])
-
 
 
 def line_set_triangles_intersects(line_ps, line_vs, triangles, line_segment = False):
@@ -142,39 +144,39 @@ def line_set_triangles_intersects(line_ps, line_vs, triangles, line_segment = Fa
          this function is computationally and memory intensive; it could benefit from parallelisation
    """
 
-   c = line_ps.shape[0]     # number of lines
-   n = triangles.shape[0]   # number of triangles
+   c = line_ps.shape[0]  # number of lines
+   n = triangles.shape[0]  # number of triangles
 
-   p01s = triangles[:, 1, :] - triangles[:, 0, :]   # p01s has shape (n, 3)
-   p02s = triangles[:, 2, :] - triangles[:, 0, :]   # p02s has shape (n, 3)
+   p01s = triangles[:, 1, :] - triangles[:, 0, :]  # p01s has shape (n, 3)
+   p02s = triangles[:, 2, :] - triangles[:, 0, :]  # p02s has shape (n, 3)
 
-   norms = np.cross(p01s, p02s)         # normals to planes, shape (n, 3)
-   line_rvs = np.negative(line_vs)      # shape (c, 3)
-   denoms = np.dot(line_rvs, norms.T)   # shape (c, n)  where denoms == 0.0 line is parallel to plane of triangle
+   norms = np.cross(p01s, p02s)  # normals to planes, shape (n, 3)
+   line_rvs = np.negative(line_vs)  # shape (c, 3)
+   denoms = np.dot(line_rvs, norms.T)  # shape (c, n)  where denoms == 0.0 line is parallel to plane of triangle
    lps_t0s = line_ps.reshape((c, 1, 3)) - triangles[:, 0, :].reshape((1, n, 3))  # shape (c, n, 3)
    ts = np.empty((c, n))  # shape (c, n)
    ts.fill(np.nan)
-   us = ts.copy()         # shape (c, n)
-   vs = ts.copy()         # shape (c, n)
-   nz = (denoms != 0.0)   # shape (c, n)
+   us = ts.copy()  # shape (c, n)
+   vs = ts.copy()  # shape (c, n)
+   nz = (denoms != 0.0)  # shape (c, n)
    # the np.sum() clause implememts a dot product over the xyz axis
    np.seterr(divide = 'ignore')
    np.divide(np.sum(norms.reshape((1, n, 3)) * lps_t0s, axis = 2), denoms, out = ts, where = nz)  # shape (c, n)
    np.seterr(invalid = 'ignore')
-   if line_segment: ts[:] = np.where(np.logical_or(ts < 0.0, ts > 1.0), np.nan, ts)
-   cp02s = p02s.reshape((1, n, 3)).repeat(c, axis = 0)        # shape (c, n, 3)
-   cl_rvs = line_rvs.reshape((c, 1, 3)).repeat(n, axis = 1)   # shape (c, n, 3)
+   if line_segment:
+      ts[:] = np.where(np.logical_or(ts < 0.0, ts > 1.0), np.nan, ts)
+   cp02s = p02s.reshape((1, n, 3)).repeat(c, axis = 0)  # shape (c, n, 3)
+   cl_rvs = line_rvs.reshape((c, 1, 3)).repeat(n, axis = 1)  # shape (c, n, 3)
    np.divide(np.sum(np.cross(cp02s, cl_rvs) * lps_t0s, axis = 2), denoms, out = us, where = nz)  # shape (c, n)
-   cp01s = p01s.reshape((1, n, 3)).repeat(c, axis = 0)        # shape (c, n, 3)
+   cp01s = p01s.reshape((1, n, 3)).repeat(c, axis = 0)  # shape (c, n, 3)
    np.divide(np.sum(np.cross(cl_rvs, cp01s) * lps_t0s, axis = 2), denoms, out = vs, where = nz)
-   ts[:] = np.where(np.logical_or(np.logical_or(us < 0.0, us > 1.0),
-                                  np.logical_or(vs < 0.0, us + vs > 1.0)), np.nan, ts)
+   ts[:] = np.where(np.logical_or(np.logical_or(us < 0.0, us > 1.0), np.logical_or(vs < 0.0, us + vs > 1.0)), np.nan,
+                    ts)
 
    intersects = np.empty((c, n, 3))
-   intersects[:] = line_vs.reshape((c, 1, 3))  *  np.repeat(ts, 3).reshape((c, n, 3))   +   line_ps.reshape((c, 1, 3))
+   intersects[:] = line_vs.reshape((c, 1, 3)) * np.repeat(ts, 3).reshape((c, n, 3)) + line_ps.reshape((c, 1, 3))
    np.seterr(all = 'warn')
    return intersects
-
 
 
 def poly_line_triangles_intersects(line_ps, triangles):
@@ -196,7 +198,6 @@ def poly_line_triangles_intersects(line_ps, triangles):
    return line_set_triangles_intersects(line_ps[:-1], line_ps[1:] - line_ps[:-1], triangles, line_segment = True)
 
 
-
 def distilled_intersects(line_set_intersections):
    """Returns lists of line and triangle indices, and corresponding intersection points.
 
@@ -214,7 +215,6 @@ def distilled_intersects(line_set_intersections):
 
    lines, triangles = np.where(np.logical_not(np.isnan(line_set_intersections[:, :, 0])))
    return lines, triangles, line_set_intersections[lines, triangles, :]
-
 
 
 def last_intersects(line_set_intersections):
@@ -296,7 +296,6 @@ def lines_for_triangle(line_set_intersections, triangle_index):
    return lines, line_set_intersections[lines, triangle_index, :]
 
 
-
 def poly_line_triangles_first_intersect(line_ps, triangles, start = 0):
    """Finds the first intersection of a segment of an open poly-line with any of a set of triangles in 3D space.
 
@@ -316,11 +315,11 @@ def poly_line_triangles_first_intersect(line_ps, triangles, start = 0):
 
    for c in range(start, len(line_ps) - 1):
       points = line_triangles_intersects(line_ps[c], line_ps[c + 1] - line_ps[c], triangles, line_segment = True)
-      if np.all(np.isnan(points)): continue   # no intersection found
-      xyz = last_intersects(points.reshape((1, -1, 3))).reshape((3, ))
+      if np.all(np.isnan(points)):
+         continue  # no intersection found
+      xyz = last_intersects(points.reshape((1, -1, 3))).reshape((3,))
       return c, xyz
    return (None, None)
-
 
 
 def line_line_intersect(x1, y1, x2, y2, x3, y3, x4, y4, line_segment = False, half_segment = False):
@@ -342,21 +341,24 @@ def line_line_intersect(x1, y1, x2, y2, x3, y3, x4, y4, line_segment = False, ha
       in the case of bounded line segments, both end points are 'included' in the segment
    """
 
-   divisor = (x1 - x2) * (y3 - y4)  -  (y1 - y2) * (x3 - x4)
-   if divisor == 0.0: return None, None  # parallel or coincident lines
+   divisor = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+   if divisor == 0.0:
+      return None, None  # parallel or coincident lines
 
    if line_segment:
-      t = ((x1 - x3) * (y3 - y4)  -  (y1 - y3) * (x3 - x4))  /  divisor
-      if t < 0.0 or (not half_segment and t > 1.0): return None, None
-      u = -((x1 - x2) * (y1 - y3)  -  (y1 - y2) * (x1 - x3))  /  divisor
-      if not (0.0 <= u <= 1.0): return None, None
-      x = x1  +  t * (x2 - x1)
-      y = y1  +  t * (y2 - y1)
+      t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / divisor
+      if t < 0.0 or (not half_segment and t > 1.0):
+         return None, None
+      u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / divisor
+      if not (0.0 <= u <= 1.0):
+         return None, None
+      x = x1 + t * (x2 - x1)
+      y = y1 + t * (y2 - y1)
 
    else:
-      a = x1 * y2  -  y1 * x2
-      b = x3 * y4  -  y3 * x4
-      x = (a * (x3 - x4)  -  (x1 - x2) * b)  /  divisor
-      y = (a * (y3 - y4)  -  (y1 - y2) * b)  /  divisor
+      a = x1 * y2 - y1 * x2
+      b = x3 * y4 - y3 * x4
+      x = (a * (x3 - x4) - (x1 - x2) * b) / divisor
+      y = (a * (y3 - y4) - (y1 - y2) * b) / divisor
 
    return x, y

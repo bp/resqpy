@@ -5,6 +5,7 @@ version = '25th June 2021'
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('transmission.py version ' + version)
 
@@ -16,8 +17,14 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 
 
-def half_cell_t(grid, perm_k = None, perm_j = None, perm_i = None, ntg = None,
-                realization = None, darcy_constant = None, tolerance = 1.0e-6):
+def half_cell_t(grid,
+                perm_k = None,
+                perm_j = None,
+                perm_i = None,
+                ntg = None,
+                realization = None,
+                darcy_constant = None,
+                tolerance = 1.0e-6):
    """Creates a half cell transmissibilty property array.
 
    arguments:
@@ -58,22 +65,34 @@ def half_cell_t(grid, perm_k = None, perm_j = None, perm_i = None, ntg = None,
    if perm_k is None or perm_j is None or perm_i is None or ntg is None:
       pc = grid.extract_property_collection()
       basic_5_parts = pc.basic_static_property_parts(realization = realization, share_perm_parts = True)
-      if ntg is None and basic_5_parts[0] is not None: ntg = pc.cached_part_array_ref(basic_5_parts[0])
-      if perm_k is None and basic_5_parts[4] is not None: perm_k = pc.cached_part_array_ref(basic_5_parts[4])
-      if perm_j is None and basic_5_parts[3] is not None: perm_j = pc.cached_part_array_ref(basic_5_parts[3])
-      if perm_i is None and basic_5_parts[2] is not None: perm_i = pc.cached_part_array_ref(basic_5_parts[2])
+      if ntg is None and basic_5_parts[0] is not None:
+         ntg = pc.cached_part_array_ref(basic_5_parts[0])
+      if perm_k is None and basic_5_parts[4] is not None:
+         perm_k = pc.cached_part_array_ref(basic_5_parts[4])
+      if perm_j is None and basic_5_parts[3] is not None:
+         perm_j = pc.cached_part_array_ref(basic_5_parts[3])
+      if perm_i is None and basic_5_parts[2] is not None:
+         perm_i = pc.cached_part_array_ref(basic_5_parts[2])
 
    assert perm_k is not None and perm_j is not None and perm_i is not None
 
    if isinstance(grid, grr.RegularGrid):
-      return half_cell_t_regular(grid, perm_k = perm_k, perm_j = perm_j, perm_i = perm_i, ntg = ntg,
+      return half_cell_t_regular(grid,
+                                 perm_k = perm_k,
+                                 perm_j = perm_j,
+                                 perm_i = perm_i,
+                                 ntg = ntg,
                                  darcy_constant = darcy_constant)
    elif isinstance(grid, grr.Grid):
-      return half_cell_t_irregular(grid, perm_k = perm_k, perm_j = perm_j, perm_i = perm_i, ntg = ntg,
-                                   darcy_constant = darcy_constant, tolerance = tolerance)
+      return half_cell_t_irregular(grid,
+                                   perm_k = perm_k,
+                                   perm_j = perm_j,
+                                   perm_i = perm_i,
+                                   ntg = ntg,
+                                   darcy_constant = darcy_constant,
+                                   tolerance = tolerance)
    else:
       raise ValueError(f'grid {type(grid)} is neither RegularGrid nor Grid object in call to half_cell_t()')
-
 
 
 def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg = None, darcy_constant = None):
@@ -107,12 +126,12 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
    """
 
    assert perm_k is not None and perm_j is not None and perm_i is not None
-   if ntg is None: ntg = 1.0
+   if ntg is None:
+      ntg = 1.0
 
    axis_lengths = vec.naive_lengths(grid.block_dxyz_dkji)
-   face_areas = np.array((axis_lengths[1] * axis_lengths[2],
-                          axis_lengths[2] * axis_lengths[0],
-                          axis_lengths[0] * axis_lengths[1]))
+   face_areas = np.array(
+      (axis_lengths[1] * axis_lengths[2], axis_lengths[2] * axis_lengths[0], axis_lengths[0] * axis_lengths[1]))
 
    half_t = np.empty((grid.nk, grid.nj, grid.ni, 3))  # 3 is K,J,I
    half_t[..., 0] = perm_k * face_areas[0] / (0.5 * axis_lengths[0])
@@ -122,9 +141,13 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
    return darcy_constant * half_t
 
 
-
-def half_cell_t_irregular(grid, perm_k = None, perm_j = None, perm_i = None, ntg = None,
-                          darcy_constant = None, tolerance = 1.0e-6):
+def half_cell_t_irregular(grid,
+                          perm_k = None,
+                          perm_j = None,
+                          perm_i = None,
+                          ntg = None,
+                          darcy_constant = None,
+                          tolerance = 1.0e-6):
    """Creates a half cell transmissibilty property array.
 
    arguments:
@@ -179,12 +202,18 @@ def half_cell_t_irregular(grid, perm_k = None, perm_j = None, perm_i = None, ntg
       pfc = grid.create_column_pillar_mapping()
       if grid.k_gaps:
          edge_vectors.append(p[kp][:, pfc] - p[km][:, pfc])  # k edge vectors, shape (nk, nj, ni, 2, 2, 3)
-         edge_vectors.append(p[:, pfc[:, :, 1, :]] - p[:, pfc[:, :, 0, :]])  # j edge vectors, shape (nk + k_gaps + 1, nj, ni, 2, 3) with jp removed
-         edge_vectors.append(p[:, pfc[:, :, :, 1]] - p[:, pfc[:, :, :, 0]])  # i edge vectors, shape (nk + k_gaps + 1, nj, ni, 2, 3) with ip removed
+         edge_vectors.append(
+            p[:, pfc[:, :, 1, :]] -
+            p[:, pfc[:, :, 0, :]])  # j edge vectors, shape (nk + k_gaps + 1, nj, ni, 2, 3) with jp removed
+         edge_vectors.append(
+            p[:, pfc[:, :, :, 1]] -
+            p[:, pfc[:, :, :, 0]])  # i edge vectors, shape (nk + k_gaps + 1, nj, ni, 2, 3) with ip removed
       else:
          edge_vectors.append(p[1:, pfc] - p[:-1, pfc])  # k edge vectors, shape (nk, nj, ni, 2, 2, 3)
-         edge_vectors.append(p[:, pfc[:, :, 1, :]] - p[:, pfc[:, :, 0, :]])  # j edge vectors, shape (nk + 1, nj, ni, 2, 3) with jp removed
-         edge_vectors.append(p[:, pfc[:, :, :, 1]] - p[:, pfc[:, :, :, 0]])  # i edge vectors, shape (nk + 1, nj, ni, 2, 3) with ip removed
+         edge_vectors.append(p[:, pfc[:, :, 1, :]] -
+                             p[:, pfc[:, :, 0, :]])  # j edge vectors, shape (nk + 1, nj, ni, 2, 3) with jp removed
+         edge_vectors.append(p[:, pfc[:, :, :, 1]] -
+                             p[:, pfc[:, :, :, 0]])  # i edge vectors, shape (nk + 1, nj, ni, 2, 3) with ip removed
    else:
       if grid.k_gaps:
          edge_vectors.append(p[kp] - p[km])  # k edge vectors, shape (nk, nj + 1, ni + 1, 3)
@@ -204,114 +233,114 @@ def half_cell_t_irregular(grid, perm_k = None, perm_j = None, perm_i = None, ntg
 
       if axis == 0:  # k
          if grid.has_split_coordinate_lines:
-            half_axis_vectors = 0.125 * np.abs(np.sum(edge_vectors[0], axis = (3, 4)))  # shape (nk, nj, ni, 3) with 3 being xyz length components of vector
+            half_axis_vectors = 0.125 * np.abs(np.sum(
+               edge_vectors[0], axis = (3, 4)))  # shape (nk, nj, ni, 3) with 3 being xyz length components of vector
             face_areas = (projected_tri_area(p[:, pfc[:, :, 0, 0]], p[:, pfc[:, :, 0, 1]], p[:, pfc[:, :, 1, 1]]) +
-                          projected_tri_area(p[:, pfc[:, :, 0, 0]], p[:, pfc[:, :, 1, 1]], p[:, pfc[:, :, 1, 0]]))  # shape (nk + k_gaps + 1, nj, ni, 3)
+                          projected_tri_area(p[:, pfc[:, :, 0, 0]], p[:, pfc[:, :, 1, 1]], p[:, pfc[:, :, 1, 0]])
+                         )  # shape (nk + k_gaps + 1, nj, ni, 3)
          else:
-            half_axis_vectors = 0.125 * np.abs(edge_vectors[0][:, 1:, 1:] +
-                                               edge_vectors[0][:, 1:, :-1] +
-                                               edge_vectors[0][:, :-1, 1:] +
-                                               edge_vectors[0][:, :-1, :-1])
+            half_axis_vectors = 0.125 * np.abs(edge_vectors[0][:, 1:, 1:] + edge_vectors[0][:, 1:, :-1] +
+                                               edge_vectors[0][:, :-1, 1:] + edge_vectors[0][:, :-1, :-1])
             face_areas = (projected_tri_area(p[:, :-1, :-1], p[:, :-1, 1:], p[:, 1:, 1:]) +
-                          projected_tri_area(p[:, :-1, :-1], p[:, 1:, 1:], p[:, 1:, :-1]))  # shape (nk + k_gaps + 1, nj, ni, 3) where 3 is xyz projection axis
+                          projected_tri_area(p[:, :-1, :-1], p[:, 1:, 1:], p[:, 1:, :-1])
+                         )  # shape (nk + k_gaps + 1, nj, ni, 3) where 3 is xyz projection axis
          if grid.k_gaps:
-            minus_face_areas = face_areas[km]  # shape (nk, nj, ni, 3) where 3 is xyz projection axis (ie. yz plane, xz plane, xy plane)
+            minus_face_areas = face_areas[
+               km]  # shape (nk, nj, ni, 3) where 3 is xyz projection axis (ie. yz plane, xz plane, xy plane)
             plus_face_areas = face_areas[kp]
          else:
             minus_face_areas = face_areas[:-1]
             plus_face_areas = face_areas[1:]
          half_axis_length_sqr = np.sum(half_axis_vectors * half_axis_vectors, axis = -1)  # shape (nk, nj, ni)
-         zero_length_mask = np.logical_or(np.any(np.isnan(half_axis_vectors), axis = -1), half_axis_length_sqr < tolerance_sqr)
-         minus_face_t = np.where(zero_length_mask, np.NaN,
-                                 perm_k * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
-         plus_face_t =  np.where(zero_length_mask, np.NaN,
-                                 perm_k * np.sum(half_axis_vectors * plus_face_areas,  axis = -1) / half_axis_length_sqr)
+         zero_length_mask = np.logical_or(np.any(np.isnan(half_axis_vectors), axis = -1),
+                                          half_axis_length_sqr < tolerance_sqr)
+         minus_face_t = np.where(
+            zero_length_mask, np.NaN,
+            perm_k * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
+         plus_face_t = np.where(zero_length_mask, np.NaN,
+                                perm_k * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
 #         log.debug(f'cell 0 K: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
 
       elif axis == 1:  # j
          if grid.has_split_coordinate_lines:
             if grid.k_gaps:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][kp][:, :, :, 1] +
-                                                  edge_vectors[1][kp][:, :, :, 0] +
-                                                  edge_vectors[1][km][:, :, :, 1] +
-                                                  edge_vectors[1][km][:, :, :, 0])
-               face_areas = (projected_tri_area(p[km][:, pfc[:, :, :, 0]], p[km][:, pfc[:, :, :, 1]], p[kp][:, pfc[:, :, :, 1]]) +
-                             projected_tri_area(p[km][:, pfc[:, :, :, 0]], p[kp][:, pfc[:, :, :, 1]], p[kp][:, pfc[:, :, :, 0]]))  # shape (nk, nj, ni, 2) where 2 is jp
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][kp][:, :, :, 1] + edge_vectors[1][kp][:, :, :, 0] +
+                                                  edge_vectors[1][km][:, :, :, 1] + edge_vectors[1][km][:, :, :, 0])
+               face_areas = (
+                  projected_tri_area(p[km][:, pfc[:, :, :, 0]], p[km][:, pfc[:, :, :, 1]], p[kp][:, pfc[:, :, :, 1]]) +
+                  projected_tri_area(p[km][:, pfc[:, :, :, 0]], p[kp][:, pfc[:, :, :, 1]], p[kp][:, pfc[:, :, :, 0]])
+               )  # shape (nk, nj, ni, 2) where 2 is jp
             else:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][1:, :, :, 1] +
-                                                  edge_vectors[1][1:, :, :, 0] +
-                                                  edge_vectors[1][:-1, :, :, 1] +
-                                                  edge_vectors[1][:-1, :, :, 0])
-               face_areas = (projected_tri_area(p[:-1, pfc[:, :, :, 0]], p[:-1, pfc[:, :, :, 1]], p[1:, pfc[:, :, :, 1]]) +
-                             projected_tri_area(p[:-1, pfc[:, :, :, 0]], p[1:, pfc[:, :, :, 1]], p[1:, pfc[:, :, :, 0]]))  # shape (nk, nj, ni, 2) where 2 is jp
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][1:, :, :, 1] + edge_vectors[1][1:, :, :, 0] +
+                                                  edge_vectors[1][:-1, :, :, 1] + edge_vectors[1][:-1, :, :, 0])
+               face_areas = (
+                  projected_tri_area(p[:-1, pfc[:, :, :, 0]], p[:-1, pfc[:, :, :, 1]], p[1:, pfc[:, :, :, 1]]) +
+                  projected_tri_area(p[:-1, pfc[:, :, :, 0]], p[1:, pfc[:, :, :, 1]], p[1:, pfc[:, :, :, 0]])
+               )  # shape (nk, nj, ni, 2) where 2 is jp
             minus_face_areas = face_areas[:, :, :, 0]
             plus_face_areas = face_areas[:, :, :, 1]
          else:
             if grid.k_gaps:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][kp][:, :, 1:] +
-                                                  edge_vectors[1][kp][:, :, :-1] +
-                                                  edge_vectors[1][km][:, :, 1:] +
-                                                  edge_vectors[1][km][:, :, :-1])
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][kp][:, :, 1:] + edge_vectors[1][kp][:, :, :-1] +
+                                                  edge_vectors[1][km][:, :, 1:] + edge_vectors[1][km][:, :, :-1])
                face_areas = (projected_tri_area(p[km][:, :-1], p[km][:, :, 1:], p[kp][:, :, 1:]) +
                              projected_tri_area(p[km][:, :-1], p[kp][:, :, 1:], p[kp][:, :, :-1]))
             else:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][1:, :, 1:] +
-                                                  edge_vectors[1][1:, :, :-1] +
-                                                  edge_vectors[1][:-1, :, 1:] +
-                                                  edge_vectors[1][:-1, :, :-1])
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[1][1:, :, 1:] + edge_vectors[1][1:, :, :-1] +
+                                                  edge_vectors[1][:-1, :, 1:] + edge_vectors[1][:-1, :, :-1])
                face_areas = (projected_tri_area(p[:-1, :, :-1], p[:-1, :, 1:], p[1:, :, 1:]) +
                              projected_tri_area(p[:-1, :, :-1], p[1:, :, 1:], p[1:, :, :-1]))  # shape (nk, nj + 1, ni)
             minus_face_areas = face_areas[:, :-1]
             plus_face_areas = face_areas[:, 1:]
          half_axis_length_sqr = np.sum(half_axis_vectors * half_axis_vectors, axis = -1)
          zero_length_mask = (half_axis_length_sqr < tolerance_sqr)
-         minus_face_t = np.where(zero_length_mask, np.NaN,
-                                 perm_j * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
-         plus_face_t =  np.where(zero_length_mask, np.NaN,
-                                 perm_j * np.sum(half_axis_vectors * plus_face_areas,  axis = -1) / half_axis_length_sqr)
+         minus_face_t = np.where(
+            zero_length_mask, np.NaN,
+            perm_j * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
+         plus_face_t = np.where(zero_length_mask, np.NaN,
+                                perm_j * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
 #         log.debug(f'cell 0 J: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
 
       else:  # i
          if grid.has_split_coordinate_lines:
             if grid.k_gaps:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][kp][:, :, :, 1] +
-                                                  edge_vectors[2][kp][:, :, :, 0] +
-                                                  edge_vectors[2][km][:, :, :, 1] +
-                                                  edge_vectors[2][km][:, :, :, 0])
-               face_areas = (projected_tri_area(p[km][:, pfc[:, :, 0, :]], p[km][:, pfc[:, :, 1, :]], p[kp][:, pfc[:, :, 1, :]]) +
-                             projected_tri_area(p[km][:, pfc[:, :, 0, :]], p[kp][:, pfc[:, :, 1, :]], p[kp][:, pfc[:, :, 0, :]]))  # shape (nk, nj, ni, 2) where 2 is ip
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][kp][:, :, :, 1] + edge_vectors[2][kp][:, :, :, 0] +
+                                                  edge_vectors[2][km][:, :, :, 1] + edge_vectors[2][km][:, :, :, 0])
+               face_areas = (
+                  projected_tri_area(p[km][:, pfc[:, :, 0, :]], p[km][:, pfc[:, :, 1, :]], p[kp][:, pfc[:, :, 1, :]]) +
+                  projected_tri_area(p[km][:, pfc[:, :, 0, :]], p[kp][:, pfc[:, :, 1, :]], p[kp][:, pfc[:, :, 0, :]])
+               )  # shape (nk, nj, ni, 2) where 2 is ip
             else:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][1:, :, :, 1] +
-                                                  edge_vectors[2][1:, :, :, 0] +
-                                                  edge_vectors[2][:-1, :, :, 1] +
-                                                  edge_vectors[2][:-1, :, :, 0])
-               face_areas = (projected_tri_area(p[:-1, pfc[:, :, 0, :]], p[:-1, pfc[:, :, 1, :]], p[1:, pfc[:, :, 1, :]]) +
-                             projected_tri_area(p[:-1, pfc[:, :, 0, :]], p[1:, pfc[:, :, 1, :]], p[1:, pfc[:, :, 0, :]]))  # shape (nk, nj, ni, 2) where 2 is ip
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][1:, :, :, 1] + edge_vectors[2][1:, :, :, 0] +
+                                                  edge_vectors[2][:-1, :, :, 1] + edge_vectors[2][:-1, :, :, 0])
+               face_areas = (
+                  projected_tri_area(p[:-1, pfc[:, :, 0, :]], p[:-1, pfc[:, :, 1, :]], p[1:, pfc[:, :, 1, :]]) +
+                  projected_tri_area(p[:-1, pfc[:, :, 0, :]], p[1:, pfc[:, :, 1, :]], p[1:, pfc[:, :, 0, :]])
+               )  # shape (nk, nj, ni, 2) where 2 is ip
             minus_face_areas = face_areas[:, :, :, 0]
             plus_face_areas = face_areas[:, :, :, 1]
          else:
             if grid.k_gaps:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][kp][:, 1:, :] +
-                                                  edge_vectors[2][kp][:, :-1, :] +
-                                                  edge_vectors[2][km][:, 1:, :] +
-                                                  edge_vectors[2][km][:, :-1, :])
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][kp][:, 1:, :] + edge_vectors[2][kp][:, :-1, :] +
+                                                  edge_vectors[2][km][:, 1:, :] + edge_vectors[2][km][:, :-1, :])
                face_areas = (projected_tri_area(p[km][:, :-1, :], p[km][:, 1:, :], p[kp][:, 1:, :]) +
                              projected_tri_area(p[km][:, :-1, :], p[kp][:, 1:, :], p[kp][:, :-1, :]))
             else:
-               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][1:, 1:, :] +
-                                                  edge_vectors[2][1:, :-1, :] +
-                                                  edge_vectors[2][:-1, 1:, :] +
-                                                  edge_vectors[2][:-1, :-1, :])
+               half_axis_vectors = 0.125 * np.abs(edge_vectors[2][1:, 1:, :] + edge_vectors[2][1:, :-1, :] +
+                                                  edge_vectors[2][:-1, 1:, :] + edge_vectors[2][:-1, :-1, :])
                face_areas = (projected_tri_area(p[:-1, :-1, :], p[:-1, 1:, :], p[1:, 1:, :]) +
                              projected_tri_area(p[:-1, :-1, :], p[1:, 1:, :], p[1:, :-1, :]))
             minus_face_areas = face_areas[:, :, :-1]
             plus_face_areas = face_areas[:, :, 1:]
          half_axis_length_sqr = np.sum(half_axis_vectors * half_axis_vectors, axis = -1)
          zero_length_mask = (half_axis_length_sqr < tolerance_sqr)
-         minus_face_t = np.where(zero_length_mask, np.NaN,
-                                 perm_i * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
-         plus_face_t =  np.where(zero_length_mask, np.NaN,
-                                 perm_i * np.sum(half_axis_vectors * plus_face_areas,  axis = -1) / half_axis_length_sqr)
+         minus_face_t = np.where(
+            zero_length_mask, np.NaN,
+            perm_i * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
+         plus_face_t = np.where(zero_length_mask, np.NaN,
+                                perm_i * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
+
+
 #         log.debug(f'cell 0 I: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
 
       if axis != 0 and ntg is not None:
@@ -324,7 +353,6 @@ def half_cell_t_irregular(grid, perm_k = None, perm_j = None, perm_i = None, ntg
    np.seterr(divide = 'warn', invalid = 'warn')
 
    return np.abs(darcy_constant * half_t)
-
 
 
 def fault_connection_set(grid, skip_inactive = False):
@@ -363,44 +391,49 @@ def fault_connection_set(grid, skip_inactive = False):
          # 4: both p within m
          # 5: p top within m, p bot below m bot
          # 6: both p below m
-         if ppl_top >= pml_top - tol and ppl_bot <= pml_bot + tol: return 4  # tolerance bias towards simplest flavour
-         if ppl_bot <= pml_top + tol: return 1
-         if ppl_top >= pml_bot - tol: return 6
+         if ppl_top >= pml_top - tol and ppl_bot <= pml_bot + tol:
+            return 4  # tolerance bias towards simplest flavour
+         if ppl_bot <= pml_top + tol:
+            return 1
+         if ppl_top >= pml_bot - tol:
+            return 6
          if ppl_top <= pml_top + tol:
-            if ppl_bot <= pml_bot + tol: return 2
+            if ppl_bot <= pml_bot + tol:
+               return 2
             return 3
          return 5
 
       def basic_fr(g, h, ea, eb, tol):
          # returns fractional area for simple patters (2 sides of overlap quadrilateral lie on pillars)
-#         if ea < tol:
-#            if eb < tol: return 0.0  # pinchout
-#            return 0.5 * (1.0 + h / eb)
-#         if eb < tol: return 0.5 * (g / ea + 1.0)
-#         return 0.5 * (g / ea  +  h / eb)
-         if ea + eb < tol: return 0.0
+         #         if ea < tol:
+         #            if eb < tol: return 0.0  # pinchout
+         #            return 0.5 * (1.0 + h / eb)
+         #         if eb < tol: return 0.5 * (g / ea + 1.0)
+         #         return 0.5 * (g / ea  +  h / eb)
+         if ea + eb < tol:
+            return 0.0
          return (g + h) / (ea + eb)
 
       def fractional_area(paml_top, paml_bot, papl_top, papl_bot, pbml_top, pbml_bot, pbpl_top, pbpl_bot, tol = 0.001):
          # calculate fractional area of overlap, from m perspective (calling code swaps m & p for other perspective)
-#         log.debug(f'paml_top: {paml_top}; paml_bot: {paml_bot}; papl_top: {papl_top}; papl_bot: {papl_bot}')
-#         log.debug(f'pbml_top: {pbml_top}; pbml_bot: {pbml_bot}; pbpl_top: {pbpl_top}; pbpl_bot: {pbpl_bot}')
+         #         log.debug(f'paml_top: {paml_top}; paml_bot: {paml_bot}; papl_top: {papl_top}; papl_bot: {papl_bot}')
+         #         log.debug(f'pbml_top: {pbml_top}; pbml_bot: {pbml_bot}; pbpl_top: {pbpl_top}; pbpl_bot: {pbpl_bot}')
          fla = pillar_flavour(paml_top, paml_bot, papl_top, papl_bot, tol = tol)
          flb = pillar_flavour(pbml_top, pbml_bot, pbpl_top, pbpl_bot, tol = tol)
          if (fla, flb) == (4, 4):  # diagram 1
-#            log.debug('(4, 4) diagram 1')
+            #            log.debug('(4, 4) diagram 1')
             return basic_fr(papl_bot - papl_top, pbpl_bot - pbpl_top, paml_bot - paml_top, pbml_bot - pbml_top, tol)
          elif (fla, flb) == (3, 3):  # diagram 1 (reverse perspective); diagram 3
-#            log.debug('(3, 3) diagram 1r')
+            #            log.debug('(3, 3) diagram 1r')
             return 1.0
          elif (fla, flb) == (5, 5):  # diagram 2
-#            log.debug('(5, 5) diagram 2')
+            #            log.debug('(5, 5) diagram 2')
             return basic_fr(paml_bot - papl_top, pbml_bot - pbpl_top, paml_bot - paml_top, pbml_bot - pbml_top, tol)
          elif (fla, flb) == (2, 2):  # diagram 2 (reverse perspective)
-#            log.debug('(2, 2) diagram 2r')
+            #            log.debug('(2, 2) diagram 2r')
             return basic_fr(papl_bot - paml_top, pbpl_bot - pbml_top, paml_bot - paml_top, pbml_bot - pbml_top, tol)
          elif (fla, flb) == (5, 4):  # diagram 5 (diagram 4 is a special case of 5 and 2)
-#            log.debug('(5, 4) diagram 5')
+            #            log.debug('(5, 4) diagram 5')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_bot
@@ -409,9 +442,10 @@ def fault_connection_set(grid, skip_inactive = False):
             else:
                v = papl_bot - paml_bot
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
-            return basic_fr(paml_bot - papl_top, pbml_bot - pbpl_top, paml_bot - paml_top, pbml_bot - pbml_top, tol) - sub
+            return basic_fr(paml_bot - papl_top, pbml_bot - pbpl_top, paml_bot - paml_top, pbml_bot - pbml_top,
+                            tol) - sub
          elif (fla, flb) == (4, 5):  # diagram 5 mirror (diagram 4 is a special case of 5)
-#            log.debug('(4, 5) diagram 5m')
+            #            log.debug('(4, 5) diagram 5m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_bot
@@ -420,25 +454,28 @@ def fault_connection_set(grid, skip_inactive = False):
             else:
                v = pbpl_bot - pbml_bot
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
-            return basic_fr(pbml_bot - pbpl_top, paml_bot - papl_top, pbml_bot - pbml_top, paml_bot - paml_top, tol) - sub
+            return basic_fr(pbml_bot - pbpl_top, paml_bot - papl_top, pbml_bot - pbml_top, paml_bot - paml_top,
+                            tol) - sub
          elif (fla, flb) == (2, 3):  # diagram 5 (reverse perspective), similar to 1.0 - diagram 10
-#            log.debug('(2, 3) diagram 5r')
+            #            log.debug('(2, 3) diagram 5r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_bot
-            if ea < tol or g < tol: return 1.0
+            if ea < tol or g < tol:
+               return 1.0
             v = pbpl_bot - pbml_bot
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (3, 2):  # diagram 5 mirror (reverse perspective)
-#            log.debug('(3, 2) diagram 5mr')
+            #            log.debug('(3, 2) diagram 5mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_bot
-            if eb < tol or g < tol: return 1.0
+            if eb < tol or g < tol:
+               return 1.0
             v = papl_bot - paml_bot
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (5, 2):  # diagram 6
-#            log.debug('(5, 2) diagram 6')
+            #            log.debug('(5, 2) diagram 6')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
@@ -454,10 +491,10 @@ def fault_connection_set(grid, skip_inactive = False):
                v = papl_bot - paml_bot
                subb = (g / (ea + eb)) * (1.0 - v / (v + g))
             sub = suba + subb
-#            log.debug(f'diagram 6: suba: {suba}; subb: {subb}')
+            #            log.debug(f'diagram 6: suba: {suba}; subb: {subb}')
             return 1.0 - sub
          elif (fla, flb) == (2, 5):  # diagram 6 mirror
-#            log.debug('(2, 5) diagram 6m')
+            #            log.debug('(2, 5) diagram 6m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
@@ -473,42 +510,46 @@ def fault_connection_set(grid, skip_inactive = False):
                v = pbpl_bot - pbml_bot
                suba = (g / (ea + eb)) * (1.0 - v / (v + g))
             sub = suba + subb
-#            log.debug(f'diagram 6m: suba: {suba}; subb: {subb}')
+            #            log.debug(f'diagram 6m: suba: {suba}; subb: {subb}')
             return 1.0 - sub
          elif (fla, flb) == (2, 1):  # diagram 10
-#            log.debug('(2, 1) diagram 10')
+            #            log.debug('(2, 1) diagram 10')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_bot - paml_top
-            if ea < tol or g < tol: return 0.0
+            if ea < tol or g < tol:
+               return 0.0
             v = pbml_top - pbpl_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (1, 2):  # diagram 10 mirror
-#            log.debug('(1, 2) diagram 10m')
+            #            log.debug('(1, 2) diagram 10m')
             eb = pbml_bot - pbml_top
             ea = paml_bot - paml_top
             g = pbpl_bot - pbml_top
-            if eb < tol or g < tol: return 0.0
+            if eb < tol or g < tol:
+               return 0.0
             v = paml_top - papl_bot
             return (g / (eb + ea)) * (1.0 - v / (v + g))
          elif (fla, flb) == (5, 6):  # diagram 10 (reverse perspective)
-#            log.debug('(5, 6) diagram 10r')
+            #            log.debug('(5, 6) diagram 10r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_top
-            if ea < tol or g < tol: return 0.0
+            if ea < tol or g < tol:
+               return 0.0
             v = pbpl_top - pbml_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (6, 5):  # diagram 10 mirror (reverse perspective)
-#            log.debug('(6, 5) diagram 10mr')
+            #            log.debug('(6, 5) diagram 10mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_top
-            if eb < tol or g < tol: return 0.0
+            if eb < tol or g < tol:
+               return 0.0
             v = papl_top - paml_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (2, 4):  # diagram 11
-#            log.debug('(2, 4) diagram 11')
+            #            log.debug('(2, 4) diagram 11')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
@@ -517,9 +558,10 @@ def fault_connection_set(grid, skip_inactive = False):
             else:
                v = paml_top - papl_top
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
-            return basic_fr(papl_bot - paml_top, pbpl_bot - pbml_top, paml_bot - paml_top, pbml_bot - pbml_top, tol) - sub
+            return basic_fr(papl_bot - paml_top, pbpl_bot - pbml_top, paml_bot - paml_top, pbml_bot - pbml_top,
+                            tol) - sub
          elif (fla, flb) == (4, 2):  # diagram 11 mirror
-#            log.debug('(4, 2) diagram 11m')
+            #            log.debug('(4, 2) diagram 11m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
@@ -528,47 +570,56 @@ def fault_connection_set(grid, skip_inactive = False):
             else:
                v = pbml_top - pbpl_top
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
-            return basic_fr(pbpl_bot - pbml_top, papl_bot - paml_top, pbml_bot - pbml_top, paml_bot - paml_top, tol) - sub
+            return basic_fr(pbpl_bot - pbml_top, papl_bot - paml_top, pbml_bot - pbml_top, paml_bot - paml_top,
+                            tol) - sub
          elif (fla, flb) == (5, 3):  # diagram 11 (reverse perspective) similar to 1.0 - diagram 10
-#            log.debug('(5, 3) diagram 11r')
+            #            log.debug('(5, 3) diagram 11r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
-            if ea < tol or g < tol: return 1.0
+            if ea < tol or g < tol:
+               return 1.0
             v = pbml_top - pbpl_top
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (3, 5):  # diagram 11 mirror (reverse perspective)
-#            log.debug('(3, 5) diagram 11mr')
+            #            log.debug('(3, 5) diagram 11mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
-            if eb < tol or g < tol: return 1.0
+            if eb < tol or g < tol:
+               return 1.0
             v = paml_top - papl_top
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (3, 1):  # diagram 7 (only accurate if pillars parallel and layer constant thickness?)
-#            log.debug('(3, 1) diagram 7')
+            #            log.debug('(3, 1) diagram 7')
             s = papl_bot - paml_bot
             ea = paml_bot - paml_top
-            if s + ea <= tol: return 0.0
+            if s + ea <= tol:
+               return 0.0
             t = pbml_bot - pbpl_bot
             v = pbml_top - pbpl_bot
-            if t + v <= tol: return 1.0
-            return 0.5 * (s / (s + t)  +  1.0 - v / (v + ea + s))
-         elif (fla, flb) == (1, 3):  # diagram 7 mirror (only accurate if pillars parallel and layer constant thickness?)
-#            log.debug('(1, 3) diagram 7m')
+            if t + v <= tol:
+               return 1.0
+            return 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s))
+         elif (fla, flb) == (1,
+                             3):  # diagram 7 mirror (only accurate if pillars parallel and layer constant thickness?)
+            #            log.debug('(1, 3) diagram 7m')
             s = pbpl_bot - pbml_bot
             eb = pbml_bot - pbml_top
-            if s + eb <= tol: return 0.0
+            if s + eb <= tol:
+               return 0.0
             t = paml_bot - papl_bot
             v = paml_top - papl_bot
-            if t + v <= tol: return 1.0
-            return 0.5 * (s / (s + t)  +  1.0 - v / (v + eb + s))
+            if t + v <= tol:
+               return 1.0
+            return 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s))
          elif (fla, flb) == (4, 6):  # diagram 7 (reverse perspective)
-#            log.debug('(4, 6) diagram 7r')
+            #            log.debug('(4, 6) diagram 7r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_top
-            if ea < tol or g < tol: return 0.0
+            if ea < tol or g < tol:
+               return 0.0
             v = pbpl_top - pbml_bot
             gs = paml_bot - papl_bot
             if gs < tol:
@@ -578,11 +629,12 @@ def fault_connection_set(grid, skip_inactive = False):
                sub = (gs / (ea + eb)) * (1.0 - vs / (vs + gs))
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (6, 4):  # diagram 7 mirror (reverse perspective)
-#            log.debug('(6, 4) diagram 7mr')
+            #            log.debug('(6, 4) diagram 7mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_top
-            if eb < tol or g < tol: return 0.0
+            if eb < tol or g < tol:
+               return 0.0
             v = papl_top - paml_bot
             gs = pbml_bot - pbpl_bot
             if gs < tol:
@@ -592,11 +644,12 @@ def fault_connection_set(grid, skip_inactive = False):
                sub = (gs / (ea + eb)) * (1.0 - vs / (vs + gs))
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (4, 1):  # diagram 12
-#            log.debug('(4, 1) diagram 12')
+            #            log.debug('(4, 1) diagram 12')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_bot - paml_top
-            if ea < tol or g < tol: return 0.0
+            if ea < tol or g < tol:
+               return 0.0
             gs = papl_top - paml_top
             if gs < tol:
                sub = 0.0
@@ -606,11 +659,12 @@ def fault_connection_set(grid, skip_inactive = False):
             v = pbml_top - pbpl_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (1, 4):  # diagram 12 mirror
-#            log.debug('(1, 4) diagram 12m')
+            #            log.debug('(1, 4) diagram 12m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_bot - pbml_top
-            if eb < tol or g < tol: return 0.0
+            if eb < tol or g < tol:
+               return 0.0
             gs = pbpl_top - pbml_top
             if gs < tol:
                sub = 0.0
@@ -620,25 +674,29 @@ def fault_connection_set(grid, skip_inactive = False):
             v = paml_top - papl_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (3, 6):  # diagram 12 (reverse perspective)
-#            log.debug('(3, 6) diagram 12m')
+            #            log.debug('(3, 6) diagram 12m')
             s = pbpl_top - pbml_bot
             eb = pbml_bot - pbml_top
-            if s + eb <= tol: return 1.0
+            if s + eb <= tol:
+               return 1.0
             t = paml_bot - papl_top
             v = paml_top - papl_top
-            if t + v <= tol: return 0.0
-            return 1.0  -  (0.5 * (s / (s + t)  +  1.0 - v / (v + eb + s)))
+            if t + v <= tol:
+               return 0.0
+            return 1.0 - (0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)))
          elif (fla, flb) == (6, 3):  # diagram 12 mirror (reverse perspective)
-#            log.debug('(6, 3) diagram 12mr')
+            #            log.debug('(6, 3) diagram 12mr')
             s = papl_top - paml_bot
             ea = paml_bot - paml_top
-            if s + ea <= tol: return 1.0
+            if s + ea <= tol:
+               return 1.0
             t = pbml_bot - pbpl_top
             v = pbml_top - pbpl_top
-            if t + v <= tol: return 0.0
-            return 1.0  -  (0.5 * (s / (s + t)  +  1.0 - v / (v + ea + s)))
+            if t + v <= tol:
+               return 0.0
+            return 1.0 - (0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)))
          elif (fla, flb) == (5, 1):  # diagram 9 (only accurate if pillars parallel and layer constant thickness?)
-#            log.debug('(5, 1) diagram 9')
+            #            log.debug('(5, 1) diagram 9')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
@@ -648,13 +706,15 @@ def fault_connection_set(grid, skip_inactive = False):
                v = pbml_top - pbpl_top
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
             s = papl_bot - paml_bot
-            if s + ea <= tol: return 0.0
+            if s + ea <= tol:
+               return 0.0
             t = pbml_bot - pbpl_bot
             v = pbml_top - pbpl_bot
-            if t + v <= tol: return 1.0 - sub
-            return 0.5 * (s / (s + t)  +  1.0 - v / (v + ea + s)) - sub
+            if t + v <= tol:
+               return 1.0 - sub
+            return 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)) - sub
          elif (fla, flb) == (1, 5):  # diagram 9 mirror
-#            log.debug('(1, 5) diagram 9m')
+            #            log.debug('(1, 5) diagram 9m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
@@ -664,13 +724,15 @@ def fault_connection_set(grid, skip_inactive = False):
                v = paml_top - papl_top
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
             s = pbpl_bot - pbml_bot
-            if s + eb <= tol: return 0.0
+            if s + eb <= tol:
+               return 0.0
             t = paml_bot - papl_bot
             v = paml_top - papl_bot
-            if t + v <= tol: return 1.0 - sub
-            return 0.5 * (s / (s + t)  +  1.0 - v / (v + eb + s)) - sub
+            if t + v <= tol:
+               return 1.0 - sub
+            return 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)) - sub
          elif (fla, flb) == (2, 6):  # diagram 9 (reverse perspective)
-#            log.debug('(2, 6) diagram 9r')
+            #            log.debug('(2, 6) diagram 9r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_bot
@@ -680,13 +742,15 @@ def fault_connection_set(grid, skip_inactive = False):
                v = pbpl_bot - pbml_bot
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
             s = paml_top - papl_top
-            if s + ea <= tol: return 0.0
+            if s + ea <= tol:
+               return 0.0
             t = pbpl_top - pbml_top
             v = pbpl_top - pbml_bot
-            if t + v <= tol: return 1.0 - sub
-            return 0.5 * (s / (s + t)  +  1.0 - v / (v + ea + s)) - sub
+            if t + v <= tol:
+               return 1.0 - sub
+            return 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)) - sub
          elif (fla, flb) == (6, 2):  # diagram 9 mirror (reverse perspective)
-#            log.debug('(6, 2) diagram 9mr')
+            #            log.debug('(6, 2) diagram 9mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_bot
@@ -696,13 +760,15 @@ def fault_connection_set(grid, skip_inactive = False):
                v = papl_bot - paml_bot
                sub = (g / (ea + eb)) * (1.0 - v / (v + g))
             s = pbml_top - pbpl_top
-            if s + eb <= tol: return 0.0
+            if s + eb <= tol:
+               return 0.0
             t = papl_top - paml_top
             v = papl_top - paml_bot
-            if t + v <= tol: return 1.0 - sub
-            return 0.5 * (s / (s + t)  +  1.0 - v / (v + eb + s)) - sub
+            if t + v <= tol:
+               return 1.0 - sub
+            return 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)) - sub
          elif (fla, flb) == (6, 1):  # diagram 8; solution only accurate if pillars are parallel
-#            log.debug('(6, 1) diagram 8 or 8mr')
+            #            log.debug('(6, 1) diagram 8 or 8mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             s = papl_top - paml_bot
@@ -711,18 +777,18 @@ def fault_connection_set(grid, skip_inactive = False):
             else:
                t = pbml_bot - pbpl_top
                v = pbml_top - pbpl_top
-               suba = 0.5 * (s / (s + t)  +  1.0 - v / (v + ea + s)) if t + v > tol else 1.0
+               suba = 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)) if t + v > tol else 1.0
             s = pbml_top - pbpl_bot
             if s + eb <= tol:
                subb = 0.0
             else:
                t = papl_bot - paml_top
                v = papl_bot - paml_bot
-               subb = 0.5 * (s / (s + t)  +  1.0 - v / (v + eb + s)) if t + v > tol else 1.0
+               subb = 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)) if t + v > tol else 1.0
             sub = suba + subb
             return max(1.0 - sub, 0.0)
          elif (fla, flb) == (1, 6):  # diagram 8 mirror or reverse perspective
-#            log.debug('(1, 6) diagram 8m or 8r')
+            #            log.debug('(1, 6) diagram 8m or 8r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             s = pbpl_top - pbml_bot
@@ -731,21 +797,22 @@ def fault_connection_set(grid, skip_inactive = False):
             else:
                t = paml_bot - papl_top
                v = paml_top - papl_top
-               subb = 0.5 * (s / (s + t)  +  1.0 - v / (v + eb + s)) if t + v > tol else 1.0
+               subb = 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)) if t + v > tol else 1.0
             s = paml_top - papl_bot
             if s + ea <= tol:
                suba = 0.0
             else:
                t = pbpl_bot - pbml_top
                v = pbpl_bot - pbml_bot
-               suba = 0.5 * (s / (s + t)  +  1.0 - v / (v + ea + s)) if t + v > tol else 1.0
+               suba = 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)) if t + v > tol else 1.0
             sub = suba + subb
             return max(1.0 - sub, 0.0)
          elif (fla, flb) == (4, 3):  # diagram 13
-#            log.debug('(4, 3) diagram 13 or 13mr')
+            #            log.debug('(4, 3) diagram 13 or 13mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
-            if ea < tol: return 1.0
+            if ea < tol:
+               return 1.0
             g = papl_top - paml_top
             if g < tol:
                sub1 = 0.0
@@ -760,10 +827,11 @@ def fault_connection_set(grid, skip_inactive = False):
                sub2 = (g / (ea + eb)) * (1.0 - v / (v + g))
             return 1.0 - (sub1 + sub2)
          elif (fla, flb) == (3, 4):  # diagram 13 mirror or reverse perspective
-#            log.debug('(3, 4) diagram 13m or 13r')
+            #            log.debug('(3, 4) diagram 13m or 13r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
-            if eb < tol: return 1.0
+            if eb < tol:
+               return 1.0
             g = pbpl_top - pbml_top
             if g < tol:
                sub1 = 0.0
@@ -790,7 +858,8 @@ def fault_connection_set(grid, skip_inactive = False):
       papl = p[:, pap, :] - oe
       pbml = p[:, pbm, :] - oe
       pbpl = p[:, pbp, :] - oe
-      pamln = np.empty(paml.shape[0])  # pillar points normalised to scalar distances on mean pillar vector, arbitrary origin
+      pamln = np.empty(
+         paml.shape[0])  # pillar points normalised to scalar distances on mean pillar vector, arbitrary origin
       for i in range(pamln.size):
          pamln[i] = np.dot(paml[i], pav)
       papln = np.empty(papl.shape[0])
@@ -802,6 +871,8 @@ def fault_connection_set(grid, skip_inactive = False):
       pbpln = np.empty(pbpl.shape[0])
       for i in range(pbpln.size):
          pbpln[i] = np.dot(pbpl[i], pbv)
+
+
 #      log.debug(f'pamln:\n{pamln}')
 #      log.debug(f'papln:\n{papln}')
 #      log.debug(f'pbmln:\n{pbmln}')
@@ -813,31 +884,54 @@ def fault_connection_set(grid, skip_inactive = False):
       for km in range(grid.nk):  # for each layer on -ve side of fault
          km_top = grid.k_raw_index_array[km] if grid.k_gaps else km  # index of top points on -ve side of fault
          km_bot = km_top + 1
-         paml_top = pamln[km_top]  # point distances in local vector space; note local vector is different for pillars a and b
+         paml_top = pamln[
+            km_top]  # point distances in local vector space; note local vector is different for pillars a and b
          paml_bot = pamln[km_bot]
          pbml_top = pbmln[km_top]
          pbml_bot = pbmln[km_bot]
-         if np.any(np.isnan((paml_top, paml_bot, pbml_top, pbml_bot))): continue
+         if np.any(np.isnan((paml_top, paml_bot, pbml_top, pbml_bot))):
+            continue
          # scan layers on +ve side of fault looking for juxtaposition
          kp = -1
          km_start_index = len(juxta_list)
          fa_m_total = 0.0
          while True:
             kp += 1
-            if kp >= grid.nk: break
+            if kp >= grid.nk:
+               break
             kp_top = grid.k_raw_index_array[kp] if grid.k_gaps else kp  # index of top points on +ve side of fault
             kp_bot = kp_top + 1
-            papl_top = papln[kp_top]  # point distances in local vector space; note local vector is different for pillars a and b
+            papl_top = papln[
+               kp_top]  # point distances in local vector space; note local vector is different for pillars a and b
             papl_bot = papln[kp_bot]
             pbpl_top = pbpln[kp_top]
             pbpl_bot = pbpln[kp_bot]
-            if np.any(np.isnan((papl_top, papl_bot, pbpl_top, pbpl_bot))): continue
+            if np.any(np.isnan((papl_top, papl_bot, pbpl_top, pbpl_bot))):
+               continue
             # in following comments, 'shallower' means less distance in local vector, which is a K direction vector of sorts
-            if (paml_top >= papl_bot - tol) and (pbml_top >= pbpl_bot - tol): continue  # p fully shallower than m
-            if (paml_bot <= papl_top + tol) and (pbml_bot <= pbpl_top + tol): continue  # p fully deeper than m
+            if (paml_top >= papl_bot - tol) and (pbml_top >= pbpl_bot - tol):
+               continue  # p fully shallower than m
+            if (paml_bot <= papl_top + tol) and (pbml_bot <= pbpl_top + tol):
+               continue  # p fully deeper than m
             # juxtaposition established, now determine fractional overlap area from perspectives of both sides of fault
-            fa_m = fractional_area(paml_top, paml_bot, papl_top, papl_bot, pbml_top, pbml_bot, pbpl_top, pbpl_bot, tol = tol)
-            fa_p = fractional_area(papl_top, papl_bot, paml_top, paml_bot, pbpl_top, pbpl_bot, pbml_top, pbml_bot, tol = tol)
+            fa_m = fractional_area(paml_top,
+                                   paml_bot,
+                                   papl_top,
+                                   papl_bot,
+                                   pbml_top,
+                                   pbml_bot,
+                                   pbpl_top,
+                                   pbpl_bot,
+                                   tol = tol)
+            fa_p = fractional_area(papl_top,
+                                   papl_bot,
+                                   paml_top,
+                                   paml_bot,
+                                   pbpl_top,
+                                   pbpl_bot,
+                                   pbml_top,
+                                   pbml_bot,
+                                   tol = tol)
             log.debug(f'K {km} {fa_m}  <->  {fa_p} {kp}')
             fa_m = min(max(fa_m, 0.0), 1.0)
             fa_p = min(max(fa_p, 0.0), 1.0)
@@ -847,8 +941,9 @@ def fault_connection_set(grid, skip_inactive = False):
          # find sum of fractional areas by layer (separately for both perspectives); normalise to max of 1.0
          if fa_m_total > 1.0:
             fa_m_downscaling_count += 1
-            if fa_m_total > fa_m_worst_scaling: fa_m_worst_scaling = fa_m_total
-#            log.warning(f'downscaling fractional areas on minus side of fault by factor of {fa_m_total} in layer {km}')
+            if fa_m_total > fa_m_worst_scaling:
+               fa_m_worst_scaling = fa_m_total
+            #            log.warning(f'downscaling fractional areas on minus side of fault by factor of {fa_m_total} in layer {km}')
             for i in range(km_start_index, len(juxta_list)):
                (km, kp, fa_m, fa_p) = juxta_list[i]
                juxta_list[i] = (km, kp, fa_m / fa_m_total, fa_p)
@@ -858,7 +953,7 @@ def fault_connection_set(grid, skip_inactive = False):
       for kp in range(grid.nk):
          if fa_p_totals[kp] > 1.0:
             fa_p_downscaling_count += 1
-#            log.warning(f'downscaling fractional areas on plus side of fault by factor of {fa_p_totals[kp]} in layer {kp}')
+            #            log.warning(f'downscaling fractional areas on plus side of fault by factor of {fa_p_totals[kp]} in layer {kp}')
             any_p_scaling = True
       if any_p_scaling:
          for i in range(len(juxta_list)):
@@ -867,7 +962,8 @@ def fault_connection_set(grid, skip_inactive = False):
                juxta_list[i] = (km, kp, fa_m, fa_p / fa_p_totals[kp])
       return juxta_list, (fa_m_downscaling_count, fa_p_downscaling_count, fa_m_worst_scaling, fa_p_worst_scaling)
 
-   if not grid.has_split_coordinate_lines: return None, None
+   if not grid.has_split_coordinate_lines:
+      return None, None
    skip_inactive = skip_inactive and hasattr(grid, 'inactive') and grid.inactive is not None
 
    p = grid.points_ref(masked = False)  # shape (nk + k_gaps + 1, np, 3)
@@ -880,46 +976,53 @@ def fault_connection_set(grid, skip_inactive = False):
    warning_count = 0
    for (j, i) in j_ji:
       log.debug(f'J, I  {j}, {i}')
-      pam = pfc[j, i, 1, 0]     # pillar index for -I edge of J face, for col on -J side of fault
-      pap = pfc[j + 1, i, 0, 0] # pillar index for -I edge of J face, for col on +J side of fault
-      pbm = pfc[j, i, 1, 1]     # pillar index for +I edge of J face, for col on -J side of fault
-      pbp = pfc[j + 1, i, 0, 1] # pillar index for +I edge of J face, for col on +J side of fault
-#      log.debug(f'pam: {pam}\n{p[:, pam, :]}')
-#      log.debug(f'pap: {pap}\n{p[:, pap, :]}')
-#      log.debug(f'pbm: {pbm}\n{p[:, pbm, :]}')
-#      log.debug(f'pbp: {pbp}\n{p[:, pbp, :]}')
+      pam = pfc[j, i, 1, 0]  # pillar index for -I edge of J face, for col on -J side of fault
+      pap = pfc[j + 1, i, 0, 0]  # pillar index for -I edge of J face, for col on +J side of fault
+      pbm = pfc[j, i, 1, 1]  # pillar index for +I edge of J face, for col on -J side of fault
+      pbp = pfc[j + 1, i, 0, 1]  # pillar index for +I edge of J face, for col on +J side of fault
+      #      log.debug(f'pam: {pam}\n{p[:, pam, :]}')
+      #      log.debug(f'pap: {pap}\n{p[:, pap, :]}')
+      #      log.debug(f'pbm: {pbm}\n{p[:, pbm, :]}')
+      #      log.debug(f'pbp: {pbp}\n{p[:, pbp, :]}')
       ji_list, scaling_info = juxtapose(grid, p, pv, pam, pap, pbm, pbp)
       if scaling_info[2] > 1.2 or scaling_info[3] > 1.2:
          if warning_count < 20:
-            log.warning(f'severe downscaling for I+ face in column ({j}, {i}); worst m {scaling_info[2]}; worst p {scaling_info[3]}')
+            log.warning(
+               f'severe downscaling for I+ face in column ({j}, {i}); worst m {scaling_info[2]}; worst p {scaling_info[3]}'
+            )
          elif warning_count == 20:
             log.warning('other similar I face warnings suppressed')
          warning_count += 1
       for (km, kp, fa_m, fa_p) in ji_list:
-         if skip_inactive and (grid.inactive[km, j, i] or grid.inactive[kp, j + 1, i]): continue
+         if skip_inactive and (grid.inactive[km, j, i] or grid.inactive[kp, j + 1, i]):
+            continue
          juxtaposed_j_list.append(((km, j, i), (kp, j + 1, i), fa_m, fa_p))
    juxtaposed_i_list = []
    i_ji = np.stack(np.where(col_i_split)).T  # ji0 columns where +I face is split; shape (nc, 2)
    warning_count = 0
    for (j, i) in i_ji:
-      pam = pfc[j, i, 0, 1]     # pillar index for -J edge of I face, for col on -I side of fault
-      pap = pfc[j, i + 1, 0, 0] # pillar index for -J edge of I face, for col on +I side of fault
-      pbm = pfc[j, i, 1, 1]     # pillar index for +J edge of I face, for col on -I side of fault
-      pbp = pfc[j, i + 1, 1, 0] # pillar index for +J edge of I face, for col on +I side of fault
+      pam = pfc[j, i, 0, 1]  # pillar index for -J edge of I face, for col on -I side of fault
+      pap = pfc[j, i + 1, 0, 0]  # pillar index for -J edge of I face, for col on +I side of fault
+      pbm = pfc[j, i, 1, 1]  # pillar index for +J edge of I face, for col on -I side of fault
+      pbp = pfc[j, i + 1, 1, 0]  # pillar index for +J edge of I face, for col on +I side of fault
       ji_list, scaling_info = juxtapose(grid, p, pv, pam, pap, pbm, pbp)
       if scaling_info[2] > 1.2 or scaling_info[3] > 1.2:
          if warning_count < 20:
-            log.warning(f'severe downscaling for J+ face in column ({j}, {i}); worst m {scaling_info[2]}; worst p {scaling_info[3]}')
+            log.warning(
+               f'severe downscaling for J+ face in column ({j}, {i}); worst m {scaling_info[2]}; worst p {scaling_info[3]}'
+            )
          elif warning_count == 20:
             log.warning('other similar J face warnings suppressed')
          warning_count += 1
       for (km, kp, fa_m, fa_p) in ji_list:
-         if skip_inactive and (grid.inactive[km, j, i] or grid.inactive[kp, j, i + 1]): continue
+         if skip_inactive and (grid.inactive[km, j, i] or grid.inactive[kp, j, i + 1]):
+            continue
          juxtaposed_i_list.append(((km, j, i), (kp, j, i + 1), fa_m, fa_p))
 
    combo_list = juxtaposed_j_list + juxtaposed_i_list
    count = len(combo_list)
-   if count == 0: return None, None
+   if count == 0:
+      return None, None
 
    # build connection set
    fcs = rqf.GridConnectionSet(grid.model, grid = grid)
@@ -927,8 +1030,10 @@ def fault_connection_set(grid, skip_inactive = False):
    fcs.count = count
    fcs.grid_index_pairs = np.zeros((count, 2), dtype = int)
    fcs.cell_index_pairs = np.zeros((count, 2), dtype = int)
-   fcs.cell_index_pairs[:] = np.array([grid.natural_cell_indices(np.array([[k, j, i] for ((k, j, i), _, _, _) in combo_list])),
-                                       grid.natural_cell_indices(np.array([[k, j, i] for (_, (k, j, i),  _, _) in combo_list]))]).T
+   fcs.cell_index_pairs[:] = np.array([
+      grid.natural_cell_indices(np.array([[k, j, i] for ((k, j, i), _, _, _) in combo_list])),
+      grid.natural_cell_indices(np.array([[k, j, i] for (_, (k, j, i), _, _) in combo_list]))
+   ]).T
    fcs.face_index_pairs = np.zeros((count, 2), dtype = int)
    fcs.face_index_pairs[:len(juxtaposed_j_list), 0] = fcs.face_index_map[1, 1]  # J+
    fcs.face_index_pairs[:len(juxtaposed_j_list), 1] = fcs.face_index_map[1, 0]  # J-
@@ -948,7 +1053,6 @@ def fault_connection_set(grid, skip_inactive = False):
    fa = np.array([[fa_m, fa_p] for (_, _, fa_m, fa_p) in combo_list])
 
    return fcs, fa
-
 
 
 def projected_tri_area(pa, pb, pc):

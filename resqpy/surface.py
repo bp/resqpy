@@ -6,6 +6,7 @@ version = '2nd July 2021'
 
 import logging
 import warnings
+
 log = logging.getLogger(__name__)
 log.debug('surface.py version ' + version)
 
@@ -30,12 +31,17 @@ import resqpy.organize as rqo
 class _BaseSurface(BaseResqpy):
    """Base class to implement shared methods for other classes in this module"""
 
-   def create_interpretation_and_feature(self, kind = 'horizon', name = None, interp_title_suffix = None, is_normal = True):
+   def create_interpretation_and_feature(self,
+                                         kind = 'horizon',
+                                         name = None,
+                                         interp_title_suffix = None,
+                                         is_normal = True):
       """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
 
       assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
       assert name or self.title, 'title missing'
-      if not name: name = self.title
+      if not name:
+         name = self.title
 
       if self.represented_interpretation_root is not None:
          log.debug(f'represented interpretation already exisrs for surface {self.title}')
@@ -50,8 +56,10 @@ class _BaseSurface(BaseResqpy):
       elif kind in ['fault', 'fracture']:
          feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, feature_name = name)
          feature.create_xml()
-         interp = rqo.FaultInterpretation(self.model, is_normal = is_normal,
-                                          tectonic_boundary_feature = feature, domain = 'depth')  # might need more arguments
+         interp = rqo.FaultInterpretation(self.model,
+                                          is_normal = is_normal,
+                                          tectonic_boundary_feature = feature,
+                                          domain = 'depth')  # might need more arguments
       else:
          log.critical('code failure')
       interp_root = interp.create_xml(title_suffix = interp_title_suffix)
@@ -70,12 +78,12 @@ class TriangulatedPatch():
 
       self.model = parent_model
       self.node = patch_node
-      self.patch_index = patch_index   # if not None and extracting from xml, patch_index must match xml
+      self.patch_index = patch_index  # if not None and extracting from xml, patch_index must match xml
       self.triangle_count = 0
       self.node_count = 0
       self.triangles = None
       self.quad_triangles = None
-      self.ni = None    # used to convert a triangle index back into a (j, i) pair when freshly built from mesh
+      self.ni = None  # used to convert a triangle index back into a (j, i) pair when freshly built from mesh
       self.points = None
       self.crs_uuid = crs_uuid
       self.crs_root = None
@@ -92,18 +100,17 @@ class TriangulatedPatch():
          assert self.node_count is not None
          self.extract_crs_root_and_uuid()
 
-
    def extract_crs_root_and_uuid(self):
       """Caches root and uuid for coordinate reference system, as stored in geometry xml sub-tree."""
 
-      if self.crs_root is not None and self.crs_uuid is not None: return self.crs_root, self.crs_uuid
+      if self.crs_root is not None and self.crs_uuid is not None:
+         return self.crs_root, self.crs_uuid
       self.crs_root = rqet.find_nested_tags(self.node, ['Geometry', 'LocalCrs'])
       if self.crs_root is None:
          self.crs_uuid = None
       else:
          self.crs_uuid = bu.uuid_from_string(rqet.find_tag_text(self.crs_root, 'UUID'))
       return self.crs_root, self.crs_uuid
-
 
    def triangles_and_points(self):
       """Returns arrays representing the patch.
@@ -116,7 +123,8 @@ class TriangulatedPatch():
          * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
 
       """
-      if self.triangles is not None: return (self.triangles, self.points)
+      if self.triangles is not None:
+         return (self.triangles, self.points)
       assert self.triangle_count is not None and self.node_count is not None
 
       geometry_node = rqet.find_tag(self.node, 'Geometry')
@@ -125,10 +133,14 @@ class TriangulatedPatch():
       assert p_root is not None, 'Points xml node not found for triangle patch'
       assert rqet.node_type(p_root) == 'Point3dHdf5Array'
       h5_key_pair = self.model.h5_uuid_and_path_for_node(p_root, tag = 'Coordinates')
-      if h5_key_pair is None: return (None, None)
+      if h5_key_pair is None:
+         return (None, None)
       try:
-         self.model.h5_array_element(h5_key_pair, cache_array = True, object = self,
-                                     array_attribute = 'points', dtype = 'float')
+         self.model.h5_array_element(h5_key_pair,
+                                     cache_array = True,
+                                     object = self,
+                                     array_attribute = 'points',
+                                     dtype = 'float')
       except Exception:
          log.error('hdf5 points failure for triangle patch ' + str(self.patch_index))
          raise
@@ -138,13 +150,15 @@ class TriangulatedPatch():
          log.warning('No Triangles found in xml for patch index: ' + str(self.patch_index))
          return (None, None)
       try:
-         self.model.h5_array_element(h5_key_pair, cache_array = True, object = self,
-                                     array_attribute = 'triangles', dtype = 'int')
+         self.model.h5_array_element(h5_key_pair,
+                                     cache_array = True,
+                                     object = self,
+                                     array_attribute = 'triangles',
+                                     dtype = 'int')
       except Exception:
          log.error('hdf5 triangles failure for triangle patch ' + str(self.patch_index))
          raise
       return (self.triangles, self.points)
-
 
    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
       """Populate this (empty) patch with two triangles defining a flat, horizontal plane at a given depth.
@@ -173,7 +187,6 @@ class TriangulatedPatch():
       self.triangle_count = 2
       self.triangles = np.array([[0, 1, 2], [0, 3, 1]], dtype = int)
 
-
    def set_to_triangle(self, corners):
       """Populate this (empty) patch with a single triangle."""
 
@@ -182,7 +195,6 @@ class TriangulatedPatch():
       self.points = corners.copy()
       self.triangle_count = 1
       self.triangles = np.array([[0, 1, 2]], dtype = int)
-
 
    def set_from_triangles_and_points(self, triangles, points):
       """Populate this (empty) patch from triangle node indices and points from elsewhere."""
@@ -195,13 +207,12 @@ class TriangulatedPatch():
       self.triangle_count = triangles.shape[0]
       self.triangles = triangles.copy()
 
-
    def set_to_sail(self, n, centre, radius, azimuth, delta_theta):
       """Populate this (empty) patch with triangles for a big triangle wrapped on a sphere."""
 
       def sail_point(centre, radius, a, d):
-#        m = vec.rotation_3d_matrix((d, 0.0, 90.0 - a))
-#        m = vec.tilt_3d_matrix(a, d)
+         #        m = vec.rotation_3d_matrix((d, 0.0, 90.0 - a))
+         #        m = vec.tilt_3d_matrix(a, d)
          v = np.array((0.0, radius, 0.0))
          m = vec.rotation_matrix_3d_axial(0, d)
          v = vec.rotate_vector(m, v)
@@ -225,6 +236,8 @@ class TriangulatedPatch():
             p += 1
             self.points[p] = sail_point(centre, radius, az, dip).copy()
             az += delta_theta
+
+
 #           log.debug('p: ' + str(p) + '; dip: {0:3.1f}; az: {1:3.1f}'.format(dip, az))
          p1 = row * (row + 1) // 2
          p2 = (row + 1) * (row + 2) // 2
@@ -239,10 +252,8 @@ class TriangulatedPatch():
             t += 1
       log.debug('sail point zero: ' + str(self.points[0]))
       log.debug('sail xyz box: {0:4.2f}:{1:4.2f}  {2:4.2f}:{3:4.2f}  {4:4.2f}:{5:4.2f}'.format(
-                np.min(self.points[:, 0]), np.max(self.points[:, 0]),
-                np.min(self.points[:, 1]), np.max(self.points[:, 1]),
-                np.min(self.points[:, 2]), np.max(self.points[:, 2])))
-
+         np.min(self.points[:, 0]), np.max(self.points[:, 0]), np.min(self.points[:, 1]), np.max(self.points[:, 1]),
+         np.min(self.points[:, 2]), np.max(self.points[:, 2])))
 
    def set_from_irregular_mesh(self, mesh_xyz, quad_triangles = False):
       """Populate this (empty) patch from an untorn mesh array of shape (N, M, 3)."""
@@ -253,38 +264,37 @@ class TriangulatedPatch():
       if quad_triangles:
          # generate centre points:
          quad_centres = np.empty(((mesh_shape[0] - 1) * (mesh_shape[1] - 1), 3))
-         quad_centres[:, :] = 0.25 * (mesh_xyz[:-1, :-1, :] + mesh_xyz[:-1, 1:, :] +
-                                      mesh_xyz[1:, :-1, :] + mesh_xyz[1:, 1:, :]).reshape((-1, 3))
+         quad_centres[:, :] = 0.25 * (mesh_xyz[:-1, :-1, :] + mesh_xyz[:-1, 1:, :] + mesh_xyz[1:, :-1, :] +
+                                      mesh_xyz[1:, 1:, :]).reshape((-1, 3))
          self.points = np.concatenate((mesh_xyz.copy().reshape((-1, 3)), quad_centres))
          mesh_size = mesh_xyz.size // 3
          self.node_count = self.points.size // 3
          self.triangle_count = 4 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1)
          self.quad_triangles = True
-         triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 4, 3), dtype = int)   # flatten later
+         triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 4, 3), dtype = int)  # flatten later
          nic = ni - 1
          for j in range(mesh_shape[0] - 1):
             for i in range(nic):
-               triangles[j, i, :, 0] = mesh_size  +  j * nic  +  i   # quad centre
-               triangles[j, i, 0, 1] = j * ni  +  i
-               triangles[j, i, 0, 2] = triangles[j, i, 1, 1] = j * ni  +  i + 1
-               triangles[j, i, 1, 2] = triangles[j, i, 2, 1] = (j + 1) * ni  +  i + 1
-               triangles[j, i, 2, 2] = triangles[j, i, 3, 1] = (j + 1) * ni  +  i
-               triangles[j, i, 3, 2] = j * ni  +  i
+               triangles[j, i, :, 0] = mesh_size + j * nic + i  # quad centre
+               triangles[j, i, 0, 1] = j * ni + i
+               triangles[j, i, 0, 2] = triangles[j, i, 1, 1] = j * ni + i + 1
+               triangles[j, i, 1, 2] = triangles[j, i, 2, 1] = (j + 1) * ni + i + 1
+               triangles[j, i, 2, 2] = triangles[j, i, 3, 1] = (j + 1) * ni + i
+               triangles[j, i, 3, 2] = j * ni + i
       else:
          self.points = mesh_xyz.copy().reshape((-1, 3))
          self.node_count = mesh_shape[0] * mesh_shape[1]
          self.triangle_count = 2 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1)
          self.quad_triangles = False
-         triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 2, 3), dtype = int)   # flatten later
+         triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 2, 3), dtype = int)  # flatten later
          for j in range(mesh_shape[0] - 1):
             for i in range(mesh_shape[1] - 1):
-               triangles[j, i, 0, 0] = j * ni  +  i
-               triangles[j, i, :, 1] = j * ni  +  i + 1
-               triangles[j, i, :, 2] = (j + 1) * ni  +  i
-               triangles[j, i, 1, 0] = (j + 1) * ni  +  i + 1
+               triangles[j, i, 0, 0] = j * ni + i
+               triangles[j, i, :, 1] = j * ni + i + 1
+               triangles[j, i, :, 2] = (j + 1) * ni + i
+               triangles[j, i, 1, 0] = (j + 1) * ni + i + 1
       self.ni = ni - 1
       self.triangles = triangles.reshape((-1, 3))
-
 
    def set_from_sparse_mesh(self, mesh_xyz):
       """Populate this (empty) patch from a mesh array of shape (N, M, 3), with some NaNs in z."""
@@ -305,16 +315,17 @@ class TriangulatedPatch():
                n_p += 1
       self.points = points[:n_p, :]
       self.node_count = n_p
-      triangles = np.zeros((2 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1), 3), dtype = int)   # truncate later
+      triangles = np.zeros((2 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1), 3), dtype = int)  # truncate later
       nt = 0
       for j in range(mesh_shape[0] - 1):
          for i in range(mesh_shape[1] - 1):
-            nan_nodes = np.count_nonzero(np.isnan(mesh_xyz[j:j+2, i:i+2, 2]))
-            if nan_nodes > 1: continue
+            nan_nodes = np.count_nonzero(np.isnan(mesh_xyz[j:j + 2, i:i + 2, 2]))
+            if nan_nodes > 1:
+               continue
             if nan_nodes == 0:
                triangles[nt, 0] = indices[j, i]
-               triangles[nt : nt + 2, 1] = indices[j, i + 1]
-               triangles[nt : nt + 2, 2] = indices[j + 1, i]
+               triangles[nt:nt + 2, 1] = indices[j, i + 1]
+               triangles[nt:nt + 2, 2] = indices[j + 1, i]
                triangles[nt + 1, 0] = indices[j + 1, i + 1]
                nt += 2
             elif indices[j, i] < 0:
@@ -343,7 +354,6 @@ class TriangulatedPatch():
       self.triangles = triangles[:nt, :]
       self.triangle_count = nt
 
-
    def set_from_torn_mesh(self, mesh_xyz, quad_triangles = False):
       """Populate this (empty) patch from a torn mesh array of shape (nj, ni, 2, 2, 3)."""
 
@@ -360,11 +370,11 @@ class TriangulatedPatch():
          self.node_count = 5 * nj * ni
          self.triangle_count = 4 * nj * ni
          self.quad_triangles = True
-         triangles = np.empty((nj, ni, 4, 3), dtype = int)   # flatten later
+         triangles = np.empty((nj, ni, 4, 3), dtype = int)  # flatten later
          for j in range(nj):
             for i in range(ni):
-               base_p = 4 * (j * ni  +  i)
-               triangles[j, i, :, 0] = mesh_size  +  j * ni  +  i   # quad centre
+               base_p = 4 * (j * ni + i)
+               triangles[j, i, :, 0] = mesh_size + j * ni + i  # quad centre
                triangles[j, i, 0, 1] = base_p
                triangles[j, i, 0, 2] = triangles[j, i, 1, 1] = base_p + 1
                triangles[j, i, 1, 2] = triangles[j, i, 2, 1] = base_p + 3
@@ -375,17 +385,16 @@ class TriangulatedPatch():
          self.node_count = 4 * nj * ni
          self.triangle_count = 2 * nj * ni
          self.quad_triangles = False
-         triangles = np.empty((nj, ni, 2, 3), dtype = int)   # flatten later
+         triangles = np.empty((nj, ni, 2, 3), dtype = int)  # flatten later
          for j in range(nj):
             for i in range(ni):
-               base_p = 4 * (j * ni  +  i)
+               base_p = 4 * (j * ni + i)
                triangles[j, i, 0, 0] = base_p
                triangles[j, i, :, 1] = base_p + 1
                triangles[j, i, :, 2] = base_p + 2
                triangles[j, i, 1, 0] = base_p + 3
       self.ni = ni
       self.triangles = triangles.reshape((-1, 3))
-
 
    def column_from_triangle_index(self, triangle_index):
       """For patch freshly built from fully defined mesh, returns (j, i) for given triangle index.
@@ -404,16 +413,21 @@ class TriangulatedPatch():
          if triangle_index is a numpy int array, a pair of similarly shaped numpy arrays is returned
       """
 
-      if self.quad_triangles is None or self.ni is None: return (None, None)
+      if self.quad_triangles is None or self.ni is None:
+         return (None, None)
       if isinstance(triangle_index, int):
-         if triangle_index >= self.triangle_count: return (None, None)
+         if triangle_index >= self.triangle_count:
+            return (None, None)
       else:
-         if np.any(triangle_index >= self.triangle_count): return (None, None)
-      if self.quad_triangles: face = triangle_index // 4
-      else: face = triangle_index // 2
-      if isinstance(face, int): return divmod(face, self.ni)
+         if np.any(triangle_index >= self.triangle_count):
+            return (None, None)
+      if self.quad_triangles:
+         face = triangle_index // 4
+      else:
+         face = triangle_index // 2
+      if isinstance(face, int):
+         return divmod(face, self.ni)
       return np.divmod(face, self.ni)
-
 
    def set_to_cell_faces_from_corner_points(self, cp, quad_triangles = True):
       """Populates this (empty) patch to represent faces of a cell, from corner points of shape (2, 2, 2, 3)."""
@@ -431,16 +445,19 @@ class TriangulatedPatch():
          quad_centres[2, 1, :] = 0.25 * np.sum(cp[:, :, 1, :], axis = (0, 1))  # I+
          self.node_count = 14
          self.points = np.concatenate((cp.copy().reshape((-1, 3)), quad_centres.reshape((-1, 3))))
-         triangles = np.empty((3, 2, 4, 3), dtype = int)   # flatten later
+         triangles = np.empty((3, 2, 4, 3), dtype = int)  # flatten later
          for axis in range(3):
-            if axis == 0: ip1, ip2 = 2, 1
-            elif axis == 1: ip1, ip2 = 4, 1
-            else: ip1, ip2 = 4, 2
+            if axis == 0:
+               ip1, ip2 = 2, 1
+            elif axis == 1:
+               ip1, ip2 = 4, 1
+            else:
+               ip1, ip2 = 4, 2
             for ip in range(2):
-               centre_p = 8  +  2 * axis  +  ip
-               ips = -2 * ip  +  1   # +1 for -ve face; -1 for +ve face!
+               centre_p = 8 + 2 * axis + ip
+               ips = -2 * ip + 1  # +1 for -ve face; -1 for +ve face!
                base_p = 7 * ip
-               triangles[axis, ip, :, 0] = centre_p   # quad centre
+               triangles[axis, ip, :, 0] = centre_p  # quad centre
                triangles[axis, ip, 0, 1] = base_p
                triangles[axis, ip, 0, 2] = triangles[axis, ip, 1, 1] = base_p + ips * (ip2)
                triangles[axis, ip, 1, 2] = triangles[axis, ip, 2, 1] = base_p + ips * (ip1 + ip2)
@@ -450,20 +467,22 @@ class TriangulatedPatch():
          self.triangle_count = 12
          self.node_count = 8
          self.points = cp.copy().reshape((-1, 3))
-         triangles = np.empty((3, 2, 2, 3), dtype = int)   # flatten later
+         triangles = np.empty((3, 2, 2, 3), dtype = int)  # flatten later
          for axis in range(3):
-            if axis == 0: ip1, ip2 = 2, 1
-            elif axis == 1: ip1, ip2 = 4, 1
-            else: ip1, ip2 = 4, 2
+            if axis == 0:
+               ip1, ip2 = 2, 1
+            elif axis == 1:
+               ip1, ip2 = 4, 1
+            else:
+               ip1, ip2 = 4, 2
             for ip in range(2):
-               ips = -2 * ip  +  1   # +1 for -ve face; -1 for +ve face!
+               ips = -2 * ip + 1  # +1 for -ve face; -1 for +ve face!
                base_p = 7 * ip
                triangles[axis, ip, :, 0] = base_p
                triangles[axis, ip, :, 1] = base_p + ips * (ip1 + ip2)
                triangles[axis, ip, 0, 2] = base_p + ips * (ip2)
                triangles[axis, ip, 1, 2] = base_p + ips * (ip1)
       self.triangles = triangles.reshape((-1, 3))
-
 
    def face_from_triangle_index(self, triangle_index):
       """For patch freshly built for cell faces, returns (axis, polarity) for given triangle index."""
@@ -479,14 +498,12 @@ class TriangulatedPatch():
       axis, polarity = divmod(face, 2)
       return axis, polarity
 
-
    def vertical_rescale_points(self, ref_depth, scaling_factor):
       """Modify the z values of points for this patch by stretching the distance from reference depth by scaling factor."""
 
-      _, _ = self.triangles_and_points()   # ensure points are loaded
+      _, _ = self.triangles_and_points()  # ensure points are loaded
       z_values = self.points[:, 2].copy()
-      self.points[:, 2] = ref_depth  +  scaling_factor * (z_values - ref_depth)
-
+      self.points[:, 2] = ref_depth + scaling_factor * (z_values - ref_depth)
 
 
 class Surface(_BaseSurface):
@@ -494,9 +511,21 @@ class Surface(_BaseSurface):
 
    resqml_type = 'TriangulatedSetRepresentation'
 
-   def __init__(self, parent_model, uuid = None, surface_root = None, point_set = None,
-                mesh = None, mesh_file = None, mesh_format = None, tsurf_file = None, quad_triangles = False,
-                title = None, surface_role = 'map', crs_uuid = None, originator = None, extra_metadata = {}):
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                surface_root = None,
+                point_set = None,
+                mesh = None,
+                mesh_file = None,
+                mesh_format = None,
+                tsurf_file = None,
+                quad_triangles = False,
+                title = None,
+                surface_role = 'map',
+                crs_uuid = None,
+                originator = None,
+                extra_metadata = {}):
       """Create an empty Surface object (RESQML TriangulatedSetRepresentation) and optionally populates from xml, point set or mesh.
 
       arguments:
@@ -549,15 +578,19 @@ class Surface(_BaseSurface):
       assert surface_role in ['map', 'pick']
 
       self.surface_role = surface_role
-      self.patch_list = []         # ordered list of patches
+      self.patch_list = []  # ordered list of patches
       self.crs_uuid = crs_uuid
-      self.triangles = None        # composite triangles (all patches)
-      self.points = None           # composite points (all patches)
-      self.boundaries = None       # todo: read up on what this is for and look out for examples
+      self.triangles = None  # composite triangles (all patches)
+      self.points = None  # composite points (all patches)
+      self.boundaries = None  # todo: read up on what this is for and look out for examples
       self.represented_interpretation_root = None
       self.title = title
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
-                       extra_metadata = extra_metadata, root_node = surface_root)
+      super().__init__(model = parent_model,
+                       uuid = uuid,
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata,
+                       root_node = surface_root)
       if self.root is not None:
          pass
       elif point_set is not None:
@@ -569,7 +602,6 @@ class Surface(_BaseSurface):
       elif tsurf_file is not None:
          self.set_from_tsurf_file(tsurf_file)
 
-
    def _load_from_xml(self):
       root_node = self.root
       assert root_node is not None
@@ -579,27 +611,26 @@ class Surface(_BaseSurface):
          interp_root = self.model.referenced_node(ref_node)
          self.set_represented_interpretation_root(interp_root)
 
-
    @property
    def represented_interpretation_uuid(self):
       return rqet.uuid_for_part_root(self.represented_interpretation_root)
-
 
    def set_represented_interpretation_root(self, interp_root):
       """Makes a note of the xml root of the represented interpretation."""
 
       self.represented_interpretation_root = interp_root
 
-
    def extract_patches(self, surface_root):
       """Scan surface root for triangle patches, create TriangulatedPatch objects and build up patch_list."""
 
-      if len(self.patch_list): return
+      if len(self.patch_list):
+         return
       assert surface_root is not None
       paired_list = []
       self.patch_list = []
       for child in surface_root:
-         if rqet.stripped_of_prefix(child.tag) != 'TrianglePatch': continue
+         if rqet.stripped_of_prefix(child.tag) != 'TrianglePatch':
+            continue
          patch_index = rqet.find_tag_int(child, 'PatchIndex')
          assert patch_index is not None
          triangulated_patch = TriangulatedPatch(self.model, patch_index = patch_index, patch_node = child)
@@ -615,12 +646,10 @@ class Surface(_BaseSurface):
       for _, patch in paired_list:
          self.patch_list.append(patch)
 
-
    def set_model(self, parent_model):
       """Associate the surface with a resqml model (does not create xml or write hdf5 data)."""
 
       self.model = parent_model
-
 
    def triangles_and_points(self):
       """Returns arrays representing combination of all the patches in the surface.
@@ -635,7 +664,8 @@ class Surface(_BaseSurface):
       :meta common:
       """
 
-      if self.triangles is not None: return (self.triangles, self.points)
+      if self.triangles is not None:
+         return (self.triangles, self.points)
       self.extract_patches(self.root)
       points_offset = 0
       for triangulated_patch in self.patch_list:
@@ -649,7 +679,6 @@ class Surface(_BaseSurface):
          points_offset += p.shape[0]
       return (self.triangles, self.points)
 
-
    def set_from_triangles_and_points(self, triangles, points):
       """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
 
@@ -657,7 +686,6 @@ class Surface(_BaseSurface):
       tri_patch.set_from_triangles_and_points(triangles, points)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
-
 
    def set_from_point_set(self, point_set):
       """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object."""
@@ -668,7 +696,6 @@ class Surface(_BaseSurface):
       log.debug('number of triangles: ' + str(len(t)))
       self.crs_uuid = point_set.crs_uuid
       self.set_from_triangles_and_points(t, p)
-
 
    def set_from_irregular_mesh(self, mesh_xyz, quad_triangles = False):
       """Populate this (empty) Surface object from an untorn mesh array of shape (N, M, 3).
@@ -688,7 +715,6 @@ class Surface(_BaseSurface):
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
 
-
    def set_from_sparse_mesh(self, mesh_xyz):
       """Populate this (empty) Surface object from a mesh array of shape (N, M, 3) with NaNs.
 
@@ -703,7 +729,6 @@ class Surface(_BaseSurface):
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
 
-
    def set_from_mesh_object(self, mesh, quad_triangles = False):
       """Populate the (empty) Surface object from a Mesh object."""
 
@@ -712,7 +737,6 @@ class Surface(_BaseSurface):
          self.set_from_sparse_mesh(xyz)
       else:
          self.set_from_irregular_mesh(xyz, quad_triangles = quad_triangles)
-
 
    def set_from_torn_mesh(self, mesh_xyz, quad_triangles = False):
       """Populate this (empty) Surface object from a torn mesh array of shape (nj, ni, 2, 2, 3).
@@ -731,7 +755,6 @@ class Surface(_BaseSurface):
       tri_patch.set_from_torn_mesh(mesh_xyz, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
-
 
    def column_from_triangle_index(self, triangle_index):
       """For surface freshly built from fully defined mesh, returns (j, i) for given triangle index.
@@ -756,7 +779,6 @@ class Surface(_BaseSurface):
       assert len(self.patch_list) == 1
       return self.patch_list[0].column_from_triangle_index(triangle_index)
 
-
    def set_to_single_cell_faces_from_corner_points(self, cp, quad_triangles = True):
       """Populates this (empty) surface to represent faces of a cell, from corner points of shape (2, 2, 2, 3)."""
 
@@ -765,7 +787,6 @@ class Surface(_BaseSurface):
       tri_patch.set_to_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
-
 
    def set_to_multi_cell_faces_from_corner_points(self, cp, quad_triangles = True):
       """Populates this (empty) surface to represent faces of a set of cells, from corner points of shape (N, 2, 2, 2, 3)."""
@@ -780,7 +801,6 @@ class Surface(_BaseSurface):
          self.patch_list.append(tri_patch)
          p_index += 1
       self.uuid = bu.new_uuid()
-
 
    def cell_axis_and_polarity_from_triangle_index(self, triangle_index):
       """For surface freshly built for cell faces, returns (cell_number, face_axis, polarity) for given triangle index.
@@ -802,7 +822,6 @@ class Surface(_BaseSurface):
       axis, polarity = divmod(remainder, 2)
       return cell_number, axis, polarity
 
-
    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
       """Populate this (empty) surface with a patch of two triangles defining a flat, horizontal plane at a given depth.
 
@@ -819,7 +838,6 @@ class Surface(_BaseSurface):
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
 
-
    def set_to_triangle(self, corners):
       """Populate this (empty) surface with a patch of one triangle."""
 
@@ -828,7 +846,6 @@ class Surface(_BaseSurface):
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
 
-
    def set_to_sail(self, n, centre, radius, azimuth, delta_theta):
       """Populate this (empty) surface with a patch representing a triangle wrapped on a sphere."""
 
@@ -836,7 +853,6 @@ class Surface(_BaseSurface):
       tri_patch.set_to_sail(n, centre, radius, azimuth, delta_theta)
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
-
 
    def set_from_mesh_file(self, filename, format, quad_triangles = False):
       """Populate this (empty) surface from a zmap or RMS text mesh file."""
@@ -853,52 +869,50 @@ class Surface(_BaseSurface):
       else:
          self.set_from_irregular_mesh(xyz_mesh, quad_triangles = quad_triangles)
 
-
    def set_from_tsurf_file(self, filename):
       """Populate this (empty) surface from a GOCAD tsurf file."""
-      triangles, vertices = [],[]
-      with open(filename,'r') as fl:
+      triangles, vertices = [], []
+      with open(filename, 'r') as fl:
          lines = fl.readlines()
          for line in lines:
-            if "VRTX" in line: vertices.append(line.rstrip().split(" ")[2:])
-            elif "TRGL" in line: triangles.append(line.rstrip().split(" ")[1:])
-      triangles = np.array(triangles,dtype=int)
-      vertices = np.array(vertices,dtype=float)
-      self.set_from_triangles_and_points(triangles=triangles,points=vertices)
-
+            if "VRTX" in line:
+               vertices.append(line.rstrip().split(" ")[2:])
+            elif "TRGL" in line:
+               triangles.append(line.rstrip().split(" ")[1:])
+      triangles = np.array(triangles, dtype = int)
+      vertices = np.array(vertices, dtype = float)
+      self.set_from_triangles_and_points(triangles = triangles, points = vertices)
 
    def set_from_zmap_file(self, filename, quad_triangles = False):
       """Populate this (empty) surface from a zmap mesh file."""
 
       self.set_from_mesh_file(filename, 'zmap', quad_triangles = quad_triangles)
 
-
    def set_from_roxar_file(self, filename, quad_triangles = False):
       """Populate this (empty) surface from an RMS text mesh file."""
 
       self.set_from_mesh_file(filename, 'rms', quad_triangles = quad_triangles)
-
 
    def set_from_rms_file(self, filename, quad_triangles = False):
       """Populate this (empty) surface from an RMS text mesh file."""
 
       self.set_from_mesh_file(filename, 'rms', quad_triangles = quad_triangles)
 
-
    def vertical_rescale_points(self, ref_depth = None, scaling_factor = 1.0):
       """Modify the z values of points for this surface by stretching the distance from reference depth by scaling factor."""
 
-      if scaling_factor == 1.0: return
+      if scaling_factor == 1.0:
+         return
       if ref_depth is None:
          for patch in self.patch_list:
             patch_min = np.min(patch.points[:, 2])
-            if ref_depth is None or patch_min < ref_depth: ref_depth = patch_min
+            if ref_depth is None or patch_min < ref_depth:
+               ref_depth = patch_min
       assert ref_depth is not None, 'no z values found for vertical rescaling of surface'
       self.triangles = None  # invalidate any cached triangles & points in surface object
       self.points = None
       for patch in self.patch_list:
          patch.vertical_rescale_points(ref_depth, scaling_factor)
-
 
    def write_hdf5(self, file_name = None, mode = 'a'):
       """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
@@ -906,7 +920,8 @@ class Surface(_BaseSurface):
       :meta common:
       """
 
-      if self.uuid is None: self.uuid = bu.new_uuid()
+      if self.uuid is None:
+         self.uuid = bu.new_uuid()
       # NB: patch arrays must all have been set up prior to calling this function
       h5_reg = rwh5.H5Register(self.model)
       # todo: sort patches by patch index and check sequence
@@ -916,10 +931,13 @@ class Surface(_BaseSurface):
          h5_reg.register_dataset(self.uuid, 'triangles_patch{}'.format(triangulated_patch.patch_index), t)
       h5_reg.write(file_name, mode = mode)
 
-
-   def create_xml(self, ext_uuid = None,
-                  add_as_part = True, add_relationships = True, crs_uuid = None,
-                  title = None, originator = None):
+   def create_xml(self,
+                  ext_uuid = None,
+                  add_as_part = True,
+                  add_relationships = True,
+                  crs_uuid = None,
+                  title = None,
+                  originator = None):
       """Creates a triangulated surface xml node from this surface object and optionally adds as part of model.
 
          arguments:
@@ -940,14 +958,16 @@ class Surface(_BaseSurface):
       :meta common:
       """
 
-      if ext_uuid is None: ext_uuid = self.model.h5_uuid()
-      if not self.title: self.title = 'surface'
+      if ext_uuid is None:
+         ext_uuid = self.model.h5_uuid()
+      if not self.title:
+         self.title = 'surface'
 
       tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       # todo: if crs_root is None, attempt to derive from surface patch crs uuid (within patch loop, below)
       if crs_uuid is None:
-         crs_root = self.model.crs_root     # maverick use of model's default crs
+         crs_root = self.model.crs_root  # maverick use of model's default crs
          crs_uuid = rqet.uuid_for_part_root(crs_root)
       else:
          crs_root = self.model.root_for_uuid(crs_uuid)
@@ -960,8 +980,10 @@ class Surface(_BaseSurface):
          self.model.create_ref_node('RepresentedInterpretation',
                                     interp_title,
                                     interp_uuid,
-                                    content_type = self.model.type_of_part(interp_part), root = tri_rep)
-         if interp_title and not title: title = interp_title
+                                    content_type = self.model.type_of_part(interp_part),
+                                    root = tri_rep)
+         if interp_title and not title:
+            title = interp_title
 
       # if not title: title = 'surface'
       # self.model.create_citation(root = tri_rep, title = title, originator = originator)
@@ -1001,9 +1023,10 @@ class Surface(_BaseSurface):
          triangles_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
          triangles_values.text = '\n'
 
-         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid,
-                                      'triangles_patch{}'.format(patch.patch_index),
-                                      root = triangles_values)
+         self.model.create_hdf5_dataset_ref(ext_uuid,
+                                            self.uuid,
+                                            'triangles_patch{}'.format(patch.patch_index),
+                                            root = triangles_values)
 
          geom = rqet.SubElement(p_node, ns['resqml2'] + 'Geometry')
          geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
@@ -1019,7 +1042,8 @@ class Surface(_BaseSurface):
          coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
          coords.text = '\n'
 
-         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid,
+         self.model.create_hdf5_dataset_ref(ext_uuid,
+                                            self.uuid,
                                             'points_patch{}'.format(patch.patch_index),
                                             root = coords)
 
@@ -1036,10 +1060,10 @@ class Surface(_BaseSurface):
 
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
-            self.model.create_reciprocal_relationship(tri_rep, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
+            self.model.create_reciprocal_relationship(tri_rep, 'mlToExternalPartProxy', ext_node,
+                                                      'externalPartProxyToMl')
 
       return tri_rep
-
 
 
 class CombinedSurface:
@@ -1061,7 +1085,8 @@ class CombinedSurface:
       assert len(surface_list) > 0
       self.surface_list = surface_list
       self.crs_uuid = crs_uuid
-      if self.crs_uuid is None: self.crs_uuid = surface_list[0].crs_uuid
+      if self.crs_uuid is None:
+         self.crs_uuid = surface_list[0].crs_uuid
       self.patch_count_list = []
       self.triangle_count_list = []
       self.points_count_list = []
@@ -1079,15 +1104,14 @@ class CombinedSurface:
          self.triangle_count_list.append(len(t))
          self.points_count_list.append(len(p))
 
-
    def surface_index_for_triangle_index(self, tri_index):
       """For a triangle index in the combined surface, returns the index of the surface containing rhe triangle and local triangle index."""
 
       for s_i in range(len(self.surface_list)):
-         if tri_index < self.triangle_count_list[s_i]: return s_i, tri_index
+         if tri_index < self.triangle_count_list[s_i]:
+            return s_i, tri_index
          tri_index -= self.triangle_count_list[s_i]
       return None
-
 
    def triangles_and_points(self):
       """Returns the composite triangles and points for the combined surface."""
@@ -1107,16 +1131,26 @@ class CombinedSurface:
       return self.triangles, self.points
 
 
-
 class PointSet(_BaseSurface):
-   """Class for RESQML Point Set Representation within resqpy model object."""   # TODO: Work in Progress
+   """Class for RESQML Point Set Representation within resqpy model object."""  # TODO: Work in Progress
 
    resqml_type = 'PointSetRepresentation'
 
-   def __init__(self, parent_model, point_set_root = None, uuid = None, load_hdf5 = False,
-                points_array = None, crs_uuid = None, polyset = None, polyline = None,
-                random_point_count = None, charisma_file = None, irap_file = None,
-                title = None, originator = None, extra_metadata = None):
+   def __init__(self,
+                parent_model,
+                point_set_root = None,
+                uuid = None,
+                load_hdf5 = False,
+                points_array = None,
+                crs_uuid = None,
+                polyset = None,
+                polyline = None,
+                random_point_count = None,
+                charisma_file = None,
+                irap_file = None,
+                title = None,
+                originator = None,
+                extra_metadata = None):
       """Creates an empty Point Set object and optionally populates from xml or other source.
 
       arguments:
@@ -1155,21 +1189,26 @@ class PointSet(_BaseSurface):
 
       self.crs_uuid = crs_uuid
       self.patch_count = None
-      self.patch_ref_list = []      # ordered list of (patch hdf5 ext uuid, path in hdf5, point count)
-      self.patch_array_list = []    # ordered list of numpy float arrays (or None before loading), each of shape (N, 3)
+      self.patch_ref_list = []  # ordered list of (patch hdf5 ext uuid, path in hdf5, point count)
+      self.patch_array_list = []  # ordered list of numpy float arrays (or None before loading), each of shape (N, 3)
       self.full_array = None
-      self.points = None            # composite points (all patches)
+      self.points = None  # composite points (all patches)
       self.represented_interpretation_root = None
-      super().__init__(model = parent_model, uuid = uuid, titl = title, originator = originator, root_node = point_set_root)
+      super().__init__(model = parent_model,
+                       uuid = uuid,
+                       titl = title,
+                       originator = originator,
+                       root_node = point_set_root)
 
       if self.root is not None:
-         if load_hdf5: self.load_all_patches()
+         if load_hdf5:
+            self.load_all_patches()
 
       elif points_array is not None:
          assert self.crs_uuid is not None, 'missing crs uuid when establishing point set from array'
          self.add_patch(points_array)
 
-      elif polyline is not None: # Points from or within polyline
+      elif polyline is not None:  # Points from or within polyline
          if random_point_count:
             assert polyline.is_convex()
             points = np.zeros((random_point_count, 3))
@@ -1181,16 +1220,19 @@ class PointSet(_BaseSurface):
             self.add_patch(polyline.coordinates)
             if polyline.rep_int_root is not None:
                self.set_represented_interpretation_root(polyline.rep_int_root)
-         if self.crs_uuid is None: self.crs_uuid = polyline.crs_uuid
-         else: assert bu.matching_uuids(self.crs_uuid, polyline.crs_uuid), 'mismatched crs uuids'
-         if not self.title: self.title = polyline.title
+         if self.crs_uuid is None:
+            self.crs_uuid = polyline.crs_uuid
+         else:
+            assert bu.matching_uuids(self.crs_uuid, polyline.crs_uuid), 'mismatched crs uuids'
+         if not self.title:
+            self.title = polyline.title
 
-      elif polyset is not None: # Points from polylineSet
+      elif polyset is not None:  # Points from polylineSet
          for poly in polyset.polys:
             if poly == polyset.polys[0]:
                master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
                self.crs_root = poly.crs_root
-               if poly.isclosed and vec.isclose(poly.coordinates[0],poly.coordinates[-1]):
+               if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
                   poly_coords = poly.coordinates[:-1].copy()
                else:
                   poly_coords = poly.coordinates.copy()
@@ -1198,24 +1240,27 @@ class PointSet(_BaseSurface):
                curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
                if not curr_crs.is_equivalent(master_crs):
                   shifted = curr_crs.convert_array_to(master_crs, poly.coordinates)
-                  if poly.isclosed and vec.isclose(shifted[0],shifted[-1]):
-                     poly_coords = np.concatenate((poly_coords,shifted[:-1]))
+                  if poly.isclosed and vec.isclose(shifted[0], shifted[-1]):
+                     poly_coords = np.concatenate((poly_coords, shifted[:-1]))
                   else:
-                     poly_coords = np.concatenate((poly_coords,shifted))
+                     poly_coords = np.concatenate((poly_coords, shifted))
                else:
-                  if poly.isclosed and vec.isclose(poly.coordinates[0],poly.coordinates[-1]):
-                     poly_coords = np.concatenate((poly_coords,poly.coordinates[:-1]))
+                  if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
+                     poly_coords = np.concatenate((poly_coords, poly.coordinates[:-1]))
                   else:
-                     poly_coords = np.concatenate((poly_coords,poly.coordinates))
+                     poly_coords = np.concatenate((poly_coords, poly.coordinates))
          self.add_patch(poly_coords)
          if polyset.rep_int_root is not None:
             self.set_represented_interpretation_root(polyset.rep_int_root)
-         if self.crs_uuid is None: self.crs_uuid = polyset.polys[0].crs_uuid
-         else: assert bu.matching_uuids(self.crs_uuid, polyset.polys[0].crs_uuid), 'mismatched crs uuids'
-         if not self.title: self.title = polyset.title
+         if self.crs_uuid is None:
+            self.crs_uuid = polyset.polys[0].crs_uuid
+         else:
+            assert bu.matching_uuids(self.crs_uuid, polyset.polys[0].crs_uuid), 'mismatched crs uuids'
+         if not self.title:
+            self.title = polyset.title
 
-      elif charisma_file is not None: # Points from Charisma 3D interpretation lines
-         with open(charisma_file,'r') as surf:
+      elif charisma_file is not None:  # Points from Charisma 3D interpretation lines
+         with open(charisma_file, 'r') as surf:
             for i, line in enumerate(surf.readlines()):
                if i == 0:
                   cpoints = np.array([[float(x) for x in line.split()[6:]]])
@@ -1224,11 +1269,12 @@ class PointSet(_BaseSurface):
                   cpoints = np.concatenate((cpoints, curr))
          self.add_patch(cpoints)
          assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from charisma file'
-         if not self.title: self.title = charisma_file
+         if not self.title:
+            self.title = charisma_file
 
-      elif irap_file is not None: # Points from IRAP simple points
-         with open(irap_file,'r') as points:
-            for i,line in enumerate(points.readlines()):
+      elif irap_file is not None:  # Points from IRAP simple points
+         with open(irap_file, 'r') as points:
+            for i, line in enumerate(points.readlines()):
                if i == 0:
                   cpoints = np.array([[float(x) for x in line.split(" ")]])
                else:
@@ -1236,10 +1282,11 @@ class PointSet(_BaseSurface):
                   cpoints = np.concatenate((cpoints, curr))
          self.add_patch(cpoints)
          assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from irap file'
-         if not self.title: self.title = irap_file
+         if not self.title:
+            self.title = irap_file
 
-      if not self.title: self.title = 'point set'
-
+      if not self.title:
+         self.title = 'point set'
 
    def _load_from_xml(self):
       root_node = self.root
@@ -1254,8 +1301,10 @@ class PointSet(_BaseSurface):
          assert geom_node, 'geometry missing in xml for point set patch'
          crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
          assert crs_uuid, 'crs uuid missing in geometry xml for point set patch'
-         if self.crs_uuid is None: self.crs_uuid = crs_uuid
-         else: assert bu.matching_uuids(crs_uuid, self.crs_uuid), 'mixed coordinate reference systems in point set'
+         if self.crs_uuid is None:
+            self.crs_uuid = crs_uuid
+         else:
+            assert bu.matching_uuids(crs_uuid, self.crs_uuid), 'mixed coordinate reference systems in point set'
          ext_uuid = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'HdfProxy', 'UUID'])
          assert ext_uuid, 'missing hdf5 uuid in goemetry xml for point set patch'
          hdf5_path = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'PathInHdfFile'])
@@ -1268,22 +1317,24 @@ class PointSet(_BaseSurface):
          self.set_represented_interpretation_root(interp_root)
       # note: load of patches handled elsewhere
 
-
    def set_represented_interpretation_root(self, interp_root):
       """Makes a note of the xml root of the represented interpretation."""
 
       self.represented_interpretation_root = interp_root
 
-
    def single_patch_array_ref(self, patch_index):
       """Load numpy array for one patch of the point set from hdf5, cache and return it."""
 
       assert 0 <= patch_index < self.patch_count, 'point set patch index out of range'
-      if self.patch_array_list[patch_index] is not None: return self.patch_array_list[patch_index]
+      if self.patch_array_list[patch_index] is not None:
+         return self.patch_array_list[patch_index]
       h5_key_pair = (self.patch_ref_list[patch_index][0], self.patch_ref_list[patch_index][1])  # ext uuid, path in hdf5
       try:
-         self.model.h5_array_element(h5_key_pair, cache_array = True, object = self,
-                                     array_attribute = 'temp_points', dtype = 'float')
+         self.model.h5_array_element(h5_key_pair,
+                                     cache_array = True,
+                                     object = self,
+                                     array_attribute = 'temp_points',
+                                     dtype = 'float')
       except Exception:
          log.exception('hdf5 points failure for point set patch ' + str(patch_index))
       assert self.temp_points.ndim == 2 and self.temp_points.shape[1] == 3, 'unsupported dimensionality to points array'
@@ -1291,12 +1342,11 @@ class PointSet(_BaseSurface):
       delattr(self, 'temp_points')
       return self.patch_array_list[patch_index]
 
-
    def load_all_patches(self):
       """Load hdf5 data for all patches and cache as separate numpy arrays; not usually called directly."""
 
-      for patch_index in range(self.patch_count): self.single_patch_array_ref(patch_index)
-
+      for patch_index in range(self.patch_count):
+         self.single_patch_array_ref(patch_index)
 
    def full_array_ref(self):
       """Return a single numpy float array of shape (N, 3) containing all points from all patches.
@@ -1304,21 +1354,23 @@ class PointSet(_BaseSurface):
       :meta common:
       """
 
-      if self.full_array is not None: return self.full_array
+      if self.full_array is not None:
+         return self.full_array
       self.load_all_patches()
-      if self.patch_count == 1:   # optimisation, as usually the case
+      if self.patch_count == 1:  # optimisation, as usually the case
          self.full_array = self.patch_array_list[0]
          return self.full_array
       point_count = 0
-      for patch_index in range(self.patch_count): point_count += self.patch_ref_list[patch_index][2]
+      for patch_index in range(self.patch_count):
+         point_count += self.patch_ref_list[patch_index][2]
       self.full_array = np.empty((point_count, 3))
       full_index = 0
       for patch_index in range(self.patch_count):
-         self.full_array[full_index : full_index + self.patch_ref_list[patch_index][2]] = self.patch_array_list[patch_index]
+         self.full_array[full_index:full_index +
+                         self.patch_ref_list[patch_index][2]] = self.patch_array_list[patch_index]
          full_index += self.patch_ref_list[patch_index][2]
       assert full_index == point_count, 'point count mismatch when constructing full array for point set'
       return self.full_array
-
 
    def add_patch(self, points_array):
       """Extend the current point set with a new patch of points."""
@@ -1327,9 +1379,9 @@ class PointSet(_BaseSurface):
       self.patch_array_list.append(points_array.reshape(-1, 3).copy())
       self.patch_ref_list.append((None, None, points_array.shape[0]))
       self.full_array = None
-      if self.patch_count is None: self.patch_count = 0
+      if self.patch_count is None:
+         self.patch_count = 0
       self.patch_count += 1
-
 
    def write_hdf5(self, file_name = None, mode = 'a'):
       """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays.
@@ -1337,18 +1389,24 @@ class PointSet(_BaseSurface):
       :meta common:
       """
 
-      if not file_name: file_name = self.model.h5_file_name()
-      if self.uuid is None: self.uuid = bu.new_uuid()
+      if not file_name:
+         file_name = self.model.h5_file_name()
+      if self.uuid is None:
+         self.uuid = bu.new_uuid()
       # NB: patch arrays must all have been set up prior to calling this function
       h5_reg = rwh5.H5Register(self.model)
       for patch_index in range(self.patch_count):
          h5_reg.register_dataset(self.uuid, 'points_{}'.format(patch_index), self.patch_array_list[patch_index])
       h5_reg.write(file_name, mode = mode)
 
-
-   def create_xml(self, ext_uuid = None, crs_root = None,
-                  add_as_part = True, add_relationships = True,
-                  root = None, title = None, originator = None):
+   def create_xml(self,
+                  ext_uuid = None,
+                  crs_root = None,
+                  add_as_part = True,
+                  add_relationships = True,
+                  root = None,
+                  title = None,
+                  originator = None):
       """Creates a point set representation xml node from this point set object and optionally adds as part of model.
 
          arguments:
@@ -1369,13 +1427,14 @@ class PointSet(_BaseSurface):
       :meta common:
       """
 
-      if ext_uuid is None: ext_uuid = self.model.h5_uuid()
+      if ext_uuid is None:
+         ext_uuid = self.model.h5_uuid()
 
       ps_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
       if crs_root is None:
          if self.crs_uuid is None:
-            crs_root = self.model.crs_root     # maverick use of model's default crs
+            crs_root = self.model.crs_root  # maverick use of model's default crs
             self.crs_uuid = rqet.uuid_for_part_root(crs_root)
          else:
             crs_root = self.model.root_for_part(self.model.part_for_uuid(self.crs_uuid))
@@ -1389,7 +1448,8 @@ class PointSet(_BaseSurface):
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     interp_uuid,
-                                    content_type = self.model.type_of_part(interp_part), root = ps_node)
+                                    content_type = self.model.type_of_part(interp_part),
+                                    root = ps_node)
 
       for patch_index in range(self.patch_count):
 
@@ -1419,11 +1479,10 @@ class PointSet(_BaseSurface):
          coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
          coords.text = '\n'
 
-         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid,
-                                            'points_{}'.format(patch_index),
-                                            root = coords)
+         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points_{}'.format(patch_index), root = coords)
 
-      if root is not None: root.append(ps_node)
+      if root is not None:
+         root.append(ps_node)
       if add_as_part:
          self.model.add_part('obj_PointSetRepresentation', self.uuid, ps_node)
          if add_relationships:
@@ -1434,10 +1493,10 @@ class PointSet(_BaseSurface):
                                                          self.represented_interpretation_root, 'sourceObject')
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
-            self.model.create_reciprocal_relationship(ps_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
+            self.model.create_reciprocal_relationship(ps_node, 'mlToExternalPartProxy', ext_node,
+                                                      'externalPartProxyToMl')
 
       return ps_node
-
 
    def convert_to_charisma(self, file_name):
       """Output to Charisma 3D interepretation format from a pointset
@@ -1447,7 +1506,7 @@ class PointSet(_BaseSurface):
       args:
           file_name: output file name to save to
       """
-#      hznname = self.title.replace(" ","_")
+      #      hznname = self.title.replace(" ","_")
       lines = []
       self.load_all_patches()
       for patch in self.patch_array_list:
@@ -1457,7 +1516,6 @@ class PointSet(_BaseSurface):
          for item in lines:
             f.write(item)
 
-
    def convert_to_irap(self, file_name):
       """Output to IRAP simple points format from a pointset
 
@@ -1466,7 +1524,7 @@ class PointSet(_BaseSurface):
       args:
           file_name: output file name to save to
       """
-#      hznname = self.title.replace(" ","_")
+      #      hznname = self.title.replace(" ","_")
       lines = []
       self.load_all_patches()
       for patch in self.patch_array_list:
@@ -1477,20 +1535,30 @@ class PointSet(_BaseSurface):
             f.write(item)
 
 
-
 class Mesh(_BaseSurface):
    """Class covering meshes (lattices: surfaces where points form a 2D grid; RESQML obj_Grid2dRepresentation)."""
 
    resqml_type = 'Grid2dRepresentation'
 
-   def __init__(self, parent_model, root_node = None, uuid = None,
-                mesh_file = None, mesh_format = None, mesh_flavour = 'explicit',
+   def __init__(self,
+                parent_model,
+                root_node = None,
+                uuid = None,
+                mesh_file = None,
+                mesh_format = None,
+                mesh_flavour = 'explicit',
                 xyz_values = None,
-                nj = None, ni = None,
-                origin = None, dxyz_dij = None,
-                z_values = None, z_supporting_mesh_uuid = None,
-                surface_role = 'map', crs_uuid = None,
-                title = None, originator = None, extra_metadata = None):
+                nj = None,
+                ni = None,
+                origin = None,
+                dxyz_dij = None,
+                z_values = None,
+                z_supporting_mesh_uuid = None,
+                surface_role = 'map',
+                crs_uuid = None,
+                title = None,
+                originator = None,
+                extra_metadata = None):
       """Initialises a Mesh object from xml, or a regular mesh from arguments.
 
       arguments:
@@ -1551,9 +1619,9 @@ class Mesh(_BaseSurface):
       self.ni = None  # NB: these are the number of nodes (points) in the mesh, unlike 3D grids
       self.nj = None
       self.flavour = None  # 'explicit', 'regular', 'ref&z' or 'reg&z'
-      self.full_array = None        # loaded on demand, shape (NJ, NI, 3 or 2) being xyz or xy points at each node
+      self.full_array = None  # loaded on demand, shape (NJ, NI, 3 or 2) being xyz or xy points at each node
       self.explicit_h5_key_pair = None
-      self.regular_origin = None    # xyz of origin of regular mesh
+      self.regular_origin = None  # xyz of origin of regular mesh
       self.regular_dxyz_dij = None  # numpy array of shape (2, 3) being xyz increment with each step in i, j
       self.ref_uuid = None
       self.ref_mesh = None
@@ -1562,8 +1630,12 @@ class Mesh(_BaseSurface):
       self.crs_uuid = crs_uuid
       self.represented_interpretation_root = None
 
-      super().__init__(model = parent_model, uuid = uuid, title = title, originator = originator,
-                       extra_metadata = extra_metadata, root_node = root_node)
+      super().__init__(model = parent_model,
+                       uuid = uuid,
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata,
+                       root_node = root_node)
 
       self.crs_root = None if self.crs_uuid is None else self.model.root_for_uuid(self.crs_uuid)
 
@@ -1585,14 +1657,19 @@ class Mesh(_BaseSurface):
             max_x = x.flatten()[-1]
             min_y = y.flatten()[0]
             max_y = y.flatten()[-1]
-            dxyz_dij = np.array([[(max_x - min_x) / (self.ni - 1), 0.0, 0.0],
-                                 [0.0, (max_y - min_y) / (self.nj - 1), 0.0]], dtype = float)
+            dxyz_dij = np.array([[(max_x - min_x) /
+                                  (self.ni - 1), 0.0, 0.0], [0.0, (max_y - min_y) / (self.nj - 1), 0.0]],
+                                dtype = float)
             if mesh_flavour in ['regular', 'reg&z']:
                self.regular_origin = (min_x, min_y, 0.0)
                self.regular_dxyz_dij = dxyz_dij
             elif mesh_flavour == 'ref&z':
-               self.ref_mesh = Mesh(self.model, ni = self.ni, nj = self.nj, origin = self.regular_origin,
-                                    dxyz_dij = dxyz_dij, crs_uuid = crs_uuid)
+               self.ref_mesh = Mesh(self.model,
+                                    ni = self.ni,
+                                    nj = self.nj,
+                                    origin = self.regular_origin,
+                                    dxyz_dij = dxyz_dij,
+                                    crs_uuid = crs_uuid)
                assert self.ref_mesh is not None
                assert self.ref_mesh.nj == nj and self.ref_mesh.ni == ni
             else:
@@ -1656,9 +1733,11 @@ class Mesh(_BaseSurface):
          self.flavour = 'reg&z'
 
       assert self.crs_uuid is not None
-      if not self.title: self.title = 'mesh'
-#     log.debug(f'new mesh has flavour {self.flavour}')
+      if not self.title:
+         self.title = 'mesh'
 
+
+#     log.debug(f'new mesh has flavour {self.flavour}')
 
    def _load_from_xml(self):
       root_node = self.root
@@ -1683,20 +1762,21 @@ class Mesh(_BaseSurface):
       if flavour == 'Point3dLatticeArray':
          self.flavour = 'regular'
          origin_node = rqet.find_tag(point_node, 'Origin')
-         self.regular_origin = (rqet.find_tag_float(origin_node, 'Coordinate1'),
-                                rqet.find_tag_float(origin_node, 'Coordinate2'),
+         self.regular_origin = (rqet.find_tag_float(origin_node,
+                                                    'Coordinate1'), rqet.find_tag_float(origin_node, 'Coordinate2'),
                                 rqet.find_tag_float(origin_node, 'Coordinate3'))
          assert self.regular_origin is not None, 'origin missing in xml for regular mesh (lattice)'
          offset_nodes = rqet.list_of_tag(point_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
          assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for regular mesh (lattice)'
          self.regular_dxyz_dij = np.empty((2, 3))
-         for j_or_i in range(2):   # 0 = J, 1 = I
+         for j_or_i in range(2):  # 0 = J, 1 = I
             axial_offset_node = rqet.find_tag(offset_nodes[j_or_i], 'Offset')
             assert axial_offset_node is not None, 'missing offset offset node in xml'
             self.regular_dxyz_dij[1 - j_or_i] = (rqet.find_tag_float(axial_offset_node, 'Coordinate1'),
                                                  rqet.find_tag_float(axial_offset_node, 'Coordinate2'),
                                                  rqet.find_tag_float(axial_offset_node, 'Coordinate3'))
-            if not maths.isclose(vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]), 1.0):
+            if not maths.isclose(vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]),
+                                 1.0):
                log.warning('non-orthogonal axes and/or scaling in xml for regular mesh (lattice)')
             spacing_node = rqet.find_tag(offset_nodes[j_or_i], 'Spacing')
             stride = rqet.find_tag_float(spacing_node, 'Value')
@@ -1724,7 +1804,7 @@ class Mesh(_BaseSurface):
             assert start_value == 0, 'only full use of supporting mesh catered for at present'
             offset_nodes = rqet.list_of_tag(niosr_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
             assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for regular mesh (lattice)'
-            for j_or_i in range(2):   # 0 = J, 1 = I
+            for j_or_i in range(2):  # 0 = J, 1 = I
                assert rqet.node_type(offset_nodes[j_or_i]) == 'IntegerConstantArray', 'variable step not catered for'
                assert rqet.find_tag_int(offset_nodes[j_or_i], 'Value') == 1, 'step other than 1 not catered for'
                count = rqet.find_tag_int(offset_nodes[j_or_i], 'Count')
@@ -1732,21 +1812,23 @@ class Mesh(_BaseSurface):
                        'unexpected value for count in xml spacing info for regular mesh (lattice)'
          elif rqet.node_type(support_geom_node) == 'Point3dLatticeArray':
             self.flavour = 'reg&z'
-            orig_node = rqet.find_tag(support_geom_node,'Origin')
-            self.regular_origin = (rqet.find_tag_float(orig_node,'Coordinate1'),
-                                   rqet.find_tag_float(orig_node,'Coordinate2'),
-                                   rqet.find_tag_float(orig_node,'Coordinate3'))
+            orig_node = rqet.find_tag(support_geom_node, 'Origin')
+            self.regular_origin = (rqet.find_tag_float(orig_node,
+                                                       'Coordinate1'), rqet.find_tag_float(orig_node, 'Coordinate2'),
+                                   rqet.find_tag_float(orig_node, 'Coordinate3'))
             assert self.regular_origin is not None, 'origin missing in xml for reg&z mesh (lattice)'
-            offset_nodes = rqet.list_of_tag(support_geom_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
+            offset_nodes = rqet.list_of_tag(support_geom_node,
+                                            'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
             assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for reg&z mesh (lattice)'
             self.regular_dxyz_dij = np.empty((2, 3))
-            for j_or_i in range(2):   # 0 = J, 1 = I
+            for j_or_i in range(2):  # 0 = J, 1 = I
                axial_offset_node = rqet.find_tag(offset_nodes[j_or_i], 'Offset')
                assert axial_offset_node is not None, 'missing offset offset node in xml'
                self.regular_dxyz_dij[1 - j_or_i] = (rqet.find_tag_float(axial_offset_node, 'Coordinate1'),
                                                     rqet.find_tag_float(axial_offset_node, 'Coordinate2'),
                                                     rqet.find_tag_float(axial_offset_node, 'Coordinate3'))
-               if not maths.isclose(vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]), 1.0):
+               if not maths.isclose(
+                     vec.dot_product(self.regular_dxyz_dij[1 - j_or_i], self.regular_dxyz_dij[1 - j_or_i]), 1.0):
                   log.warning('non-orthogonal axes and/or scaling in xml for regular mesh (lattice)')
                spacing_node = rqet.find_tag(offset_nodes[j_or_i], 'Spacing')
                stride = rqet.find_tag_float(spacing_node, 'Value')
@@ -1765,12 +1847,10 @@ class Mesh(_BaseSurface):
       else:
          raise Exception('unrecognised flavour for mesh points')
 
-
    def set_represented_interpretation_root(self, interp_root):
       """Makes a note of the xml root of the represented interpretation."""
 
       self.represented_interpretation_root = interp_root
-
 
    def full_array_ref(self):
       """Populates a full 2D(+1) numpy array of shape (nj, ni, 3) with xyz values, caches and returns.
@@ -1779,14 +1859,18 @@ class Mesh(_BaseSurface):
          z values may be zero or not applicable when using the mesh as support for properties.
       """
 
-      if self.full_array is not None: return self.full_array
+      if self.full_array is not None:
+         return self.full_array
 
       if self.flavour == 'explicit':
          # load array directly from hdf5 points reference; note: could be xyz or xy data
          assert self.explicit_h5_key_pair is not None, 'h5 key pair not established for mesh'
          try:
-            self.model.h5_array_element(self.explicit_h5_key_pair, cache_array = True, object = self,
-                                        array_attribute = 'full_array', dtype = 'float')
+            self.model.h5_array_element(self.explicit_h5_key_pair,
+                                        cache_array = True,
+                                        object = self,
+                                        array_attribute = 'full_array',
+                                        dtype = 'float')
             # todo: could extend with z values of zero if only xy present?
          except Exception:
             log.exception('hdf5 points failure for mesh')
@@ -1799,12 +1883,15 @@ class Mesh(_BaseSurface):
          x_full = np.linspace(x_i0, x_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 0], num = self.ni, axis = -1)
          y_full = np.linspace(y_i0, y_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 1], num = self.ni, axis = -1)
          z_full = np.linspace(z_i0, z_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 2], num = self.ni, axis = -1)
-         self.full_array = np.stack((x_full, y_full, z_full), axis = -1)  +  self.regular_origin
+         self.full_array = np.stack((x_full, y_full, z_full), axis = -1) + self.regular_origin
          if self.flavour == 'reg&z':  # overwrite regular z values with explicitly stored z values
             assert self.ref_z_h5_key_pair is not None, 'h5 key pair missing for mesh z values'
             try:
-               self.model.h5_array_element(self.ref_z_h5_key_pair, cache_array = True, object = self,
-                                           array_attribute = 'temp_z', dtype = 'float')
+               self.model.h5_array_element(self.ref_z_h5_key_pair,
+                                           cache_array = True,
+                                           object = self,
+                                           array_attribute = 'temp_z',
+                                           dtype = 'float')
             except Exception:
                log.exception('hdf5 failure for mesh z values')
             self.full_array[..., 2] = self.temp_z
@@ -1818,12 +1905,15 @@ class Mesh(_BaseSurface):
          self.full_array = self.ref_mesh.full_array_ref().copy()
          assert self.ref_z_h5_key_pair is not None, 'h5 key pair missing for mesh z values'
          try:
-            self.model.h5_array_element(self.ref_z_h5_key_pair, cache_array = True, object = self,
-                                        array_attribute = 'temp_z', dtype = 'float')
+            self.model.h5_array_element(self.ref_z_h5_key_pair,
+                                        cache_array = True,
+                                        object = self,
+                                        array_attribute = 'temp_z',
+                                        dtype = 'float')
          except Exception:
             log.exception('hdf5 failure for mesh z values')
          self.full_array[..., 2] = self.temp_z
-#        if np.any(np.isnan(self.temp_z)): log.warning('z values include some NaNs')
+         #        if np.any(np.isnan(self.temp_z)): log.warning('z values include some NaNs')
          delattr(self, 'temp_z')
 
       else:
@@ -1831,19 +1921,20 @@ class Mesh(_BaseSurface):
 
       return self.full_array
 
-
    def surface(self, quad_triangles = False):
       """Returns a surface object generated from this mesh."""
 
       return Surface(self.model, mesh = self, quad_triangles = quad_triangles)
 
-
    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
       """Create or append to an hdf5 file, writing datasets for the mesh depending on flavour."""
 
-      if not file_name: file_name = self.model.h5_file_name()
-      if self.uuid is None: self.uuid = bu.new_uuid()
-      if self.flavour == 'regular': return
+      if not file_name:
+         file_name = self.model.h5_file_name()
+      if self.uuid is None:
+         self.uuid = bu.new_uuid()
+      if self.flavour == 'regular':
+         return
       # NB: arrays must have been set up prior to calling this function
       h5_reg = rwh5.H5Register(self.model)
       a = self.full_array_ref()
@@ -1858,10 +1949,15 @@ class Mesh(_BaseSurface):
          log.error('bad mesh flavour when writing hdf5 array')
       h5_reg.write(file_name, mode = mode)
 
-
-   def create_xml(self, ext_uuid = None, crs_root = None, use_xy_only = False,
-                  add_as_part = True, add_relationships = True,
-                  root = None, title = None, originator = None):
+   def create_xml(self,
+                  ext_uuid = None,
+                  crs_root = None,
+                  use_xy_only = False,
+                  add_as_part = True,
+                  add_relationships = True,
+                  root = None,
+                  title = None,
+                  originator = None):
       """Creates a grid 2d representation xml node from this mesh object and optionally adds as part of model.
 
          arguments:
@@ -1884,9 +1980,11 @@ class Mesh(_BaseSurface):
             the newly created grid 2d representation (mesh) xml node
       """
 
-      if crs_root is not None: warnings.warn('crs_root argument is deprecated and ignored in Mesh.create_xml()')
+      if crs_root is not None:
+         warnings.warn('crs_root argument is deprecated and ignored in Mesh.create_xml()')
 
-      if ext_uuid is None and self.flavour != 'regular': ext_uuid = self.model.h5_uuid()
+      if ext_uuid is None and self.flavour != 'regular':
+         ext_uuid = self.model.h5_uuid()
 
       g2d_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
@@ -1897,7 +1995,8 @@ class Mesh(_BaseSurface):
          self.model.create_ref_node('RepresentedInterpretation',
                                     rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                     interp_uuid,
-                                    content_type = self.model.type_of_part(interp_part), root = g2d_node)
+                                    content_type = self.model.type_of_part(interp_part),
+                                    root = g2d_node)
 
       role_node = rqet.SubElement(g2d_node, ns['resqml2'] + 'SurfaceRole')
       role_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'SurfaceRole')
@@ -1938,27 +2037,30 @@ class Mesh(_BaseSurface):
 
          self.model.create_solitary_point3d('Origin', p_node, self.regular_origin)  # todo: check xml namespace
 
-         for j_or_i in range(2):   # 0 = J, 1 = I
+         for j_or_i in range(2):  # 0 = J, 1 = I
             dxyz = self.regular_dxyz_dij[1 - j_or_i].copy()
             log.debug('dxyz: ' + str(dxyz))
             d_value = vec.dot_product(dxyz, dxyz)
             assert d_value > 0.0
             d_value = maths.sqrt(d_value)
             dxyz /= d_value
-            o_node = rqet.SubElement(p_node, ns['resqml2'] + 'Offset')   # note: 1st Offset is for J axis , 2nd for I
+            o_node = rqet.SubElement(p_node, ns['resqml2'] + 'Offset')  # note: 1st Offset is for J axis , 2nd for I
             o_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dOffset')
             o_node.text = '\n'
             self.model.create_solitary_point3d('Offset', o_node, dxyz)
             space_node = rqet.SubElement(o_node, ns['resqml2'] + 'Spacing')
-            space_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleConstantArray')  # nothing else catered for just now
+            space_node.set(ns['xsi'] + 'type',
+                           ns['resqml2'] + 'DoubleConstantArray')  # nothing else catered for just now
             space_node.text = '\n'
             ov_node = rqet.SubElement(space_node, ns['resqml2'] + 'Value')
             ov_node.set(ns['xsi'] + 'type', ns['xsd'] + 'double')
             ov_node.text = str(d_value)
             oc_node = rqet.SubElement(space_node, ns['resqml2'] + 'Count')
             oc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-            if j_or_i: oc_node.text = str(self.ni - 1)
-            else: oc_node.text = str(self.nj - 1)
+            if j_or_i:
+               oc_node.text = str(self.ni - 1)
+            else:
+               oc_node.text = str(self.nj - 1)
 
       elif self.flavour == 'ref&z':
 
@@ -1978,25 +2080,29 @@ class Mesh(_BaseSurface):
 
          sv_node = rqet.SubElement(niosr_node, ns['resqml2'] + 'StartValue')
          sv_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-         sv_node.text = '0'   # no other possibility cater for at present
+         sv_node.text = '0'  # no other possibility cater for at present
 
-         for j_or_i in range(2):   # 0 = J, 1 = I
+         for j_or_i in range(2):  # 0 = J, 1 = I
             o_node = rqet.SubElement(niosr_node, ns['resqml2'] + 'Offset')
-            o_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerConstantArray')  # no other possibility cater for at present
+            o_node.set(ns['xsi'] + 'type',
+                       ns['resqml2'] + 'IntegerConstantArray')  # no other possibility cater for at present
             o_node.text = '\n'
             ov_node = rqet.SubElement(o_node, ns['resqml2'] + 'Value')
             ov_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-            ov_node.text = '1'   # no other possibility cater for at present
+            ov_node.text = '1'  # no other possibility cater for at present
             oc_node = rqet.SubElement(o_node, ns['resqml2'] + 'Count')
             oc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-            if j_or_i: oc_node.text = str(self.ni - 1)
-            else: oc_node.text = str(self.nj - 1)
+            if j_or_i:
+               oc_node.text = str(self.ni - 1)
+            else:
+               oc_node.text = str(self.nj - 1)
 
          ref_root = self.model.root_for_uuid(self.ref_uuid)
          self.model.create_ref_node('SupportingRepresentation',
                                     rqet.find_nested_tags_text(ref_root, ['Citation', 'Title']),
                                     self.ref_uuid,
-                                    content_type = 'Grid2dRepresentation', root = sg_node)
+                                    content_type = 'Grid2dRepresentation',
+                                    root = sg_node)
 
          zv_node = rqet.SubElement(p_node, ns['resqml2'] + 'ZValues')
          zv_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
@@ -2023,7 +2129,7 @@ class Mesh(_BaseSurface):
 
          self.model.create_solitary_point3d('Origin', sg_node, self.regular_origin)  # todo: check xml namespace
 
-         for j_or_i in range(2):   # 0 = J, 1 = I; ie. J axis info first in xml, followed by I axis
+         for j_or_i in range(2):  # 0 = J, 1 = I; ie. J axis info first in xml, followed by I axis
             dxyz = self.regular_dxyz_dij[1 - j_or_i].copy()
             log.debug('dxyz: ' + str(dxyz))
             d_value = vec.dot_product(dxyz, dxyz)
@@ -2035,15 +2141,18 @@ class Mesh(_BaseSurface):
             o_node.text = '\n'
             self.model.create_solitary_point3d('Offset', o_node, dxyz)
             space_node = rqet.SubElement(o_node, ns['resqml2'] + 'Spacing')
-            space_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleConstantArray')  # nothing else catered for just now
+            space_node.set(ns['xsi'] + 'type',
+                           ns['resqml2'] + 'DoubleConstantArray')  # nothing else catered for just now
             space_node.text = '\n'
             ov_node = rqet.SubElement(space_node, ns['resqml2'] + 'Value')
             ov_node.set(ns['xsi'] + 'type', ns['xsd'] + 'double')
             ov_node.text = str(d_value)
             oc_node = rqet.SubElement(space_node, ns['resqml2'] + 'Count')
             oc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-            if j_or_i: oc_node.text = str(self.ni - 1)
-            else: oc_node.text = str(self.nj - 1)
+            if j_or_i:
+               oc_node.text = str(self.ni - 1)
+            else:
+               oc_node.text = str(self.nj - 1)
 
          zv_node = rqet.SubElement(p_node, ns['resqml2'] + 'ZValues')
          zv_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
@@ -2074,7 +2183,8 @@ class Mesh(_BaseSurface):
          log.error('mesh has bad flavour when creating xml')
          return None
 
-      if root is not None: root.append(g2d_node)
+      if root is not None:
+         root.append(g2d_node)
       if add_as_part:
          self.model.add_part('obj_Grid2dRepresentation', self.uuid, g2d_node)
          if add_relationships:
@@ -2083,11 +2193,11 @@ class Mesh(_BaseSurface):
                self.model.create_reciprocal_relationship(g2d_node, 'destinationObject',
                                                          self.represented_interpretation_root, 'sourceObject')
             if ref_root is not None:  # used for ref&z flavour
-               self.model.create_reciprocal_relationship(g2d_node, 'destinationObject',
-                                                         ref_root, 'sourceObject')
+               self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', ref_root, 'sourceObject')
             if self.flavour == 'ref&z' or self.flavour == 'explicit' or self.flavour == 'reg&z':
-                ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
-                ext_node = self.model.root_for_part(ext_part)
-                self.model.create_reciprocal_relationship(g2d_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
+               ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
+               ext_node = self.model.root_for_part(ext_part)
+               self.model.create_reciprocal_relationship(g2d_node, 'mlToExternalPartProxy', ext_node,
+                                                         'externalPartProxyToMl')
 
       return g2d_node

@@ -25,10 +25,10 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install flake8
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8
+          pip install flake8 yapf
 
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
@@ -43,6 +43,9 @@ jobs:
       - name: Run flake8 (pure)
         if: github.event.pull_request.head.repo.full_name != github.repository
         run: flake8 .
+
+      - name: Code formatting
+        run: yapf --diff -r -p .
 
   unit-tests:
     name: Unit tests (Python ${{ matrix.python-version }})

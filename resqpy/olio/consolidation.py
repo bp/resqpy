@@ -3,6 +3,7 @@
 version = '18th June 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('consolidation.py version ' + version)
 
@@ -17,27 +18,13 @@ import resqpy.time_series as rqt
 # the following list contains those RESQML classes with equivalence methods in their resqpy class
 # it is lightly ordered with earlier classes having no dependence on classes later in the list
 
-consolidatable_list = ['OrganizationFeature',
-                       'GeobodyFeature',
-                       'BoundaryFeature',
-                       'FrontierFeature',
-                       'GeologicUnitFeature',
-                       'FluidBoundaryFeature',
-                       'RockFluidUnitFeature',
-                       'TectonicBoundaryFeature',
-                       'GeneticBoundaryFeature',
-                       'WellboreFeature',
-                       'FaultInterpretation',
-                       'EarthModelInterpretation',
-                       'HorizonInterpretation',
-                       'GeobodyBoundaryInterpretation',
-                       'GeobodyInterpretation',
-                       'WellboreInterpretation',
-                       'LocalDepth3dCrs',
-                       'LocalTime3dCrs',
-                       'TimeSeries',
-                       'StringTableLookup',
-                       'PropertyKind']
+consolidatable_list = [
+   'OrganizationFeature', 'GeobodyFeature', 'BoundaryFeature', 'FrontierFeature', 'GeologicUnitFeature',
+   'FluidBoundaryFeature', 'RockFluidUnitFeature', 'TectonicBoundaryFeature', 'GeneticBoundaryFeature',
+   'WellboreFeature', 'FaultInterpretation', 'EarthModelInterpretation', 'HorizonInterpretation',
+   'GeobodyBoundaryInterpretation', 'GeobodyInterpretation', 'WellboreInterpretation', 'LocalDepth3dCrs',
+   'LocalTime3dCrs', 'TimeSeries', 'StringTableLookup', 'PropertyKind'
+]
 
 # todo: add to this list as other classes gain an is_equivalent() method
 
@@ -51,31 +38,35 @@ class Consolidation:
       self.map = {}  # dictionary mapping immigrant uuid to primary uuid
       self.stale = True
 
-
    def equivalent_uuid_for_part(self, part, immigrant_model = None, ignore_identical_part = False):
       """Returns uuid of an equivalent part in primary model, or None if no equivalent found."""
 
-#      log.debug('Looking for equivalent uuid for: ' + str(part))
-      if not part: return None
-      if immigrant_model is None: immigrant_model = self.model
+      #      log.debug('Looking for equivalent uuid for: ' + str(part))
+      if not part:
+         return None
+      if immigrant_model is None:
+         immigrant_model = self.model
       immigrant_uuid = rqet.uuid_in_part_name(part)
-#      log.debug('   immigrant uuid: ' + str(immigrant_uuid))
+      #      log.debug('   immigrant uuid: ' + str(immigrant_uuid))
       if immigrant_uuid in self.map:
-#         log.debug('   known to be equivalent to: ' + str(self.map[immigrant_uuid]))
+         #         log.debug('   known to be equivalent to: ' + str(self.map[immigrant_uuid]))
          return self.map[immigrant_uuid]
       obj_type = immigrant_model.type_of_part(part, strip_obj = True)
-      if obj_type is None or obj_type not in consolidatable_list: return None
-#      log.debug('   object type is consolidatable')
+      if obj_type is None or obj_type not in consolidatable_list:
+         return None
+      #      log.debug('   object type is consolidatable')
       resident_uuids = self.model.uuids(obj_type = obj_type)
       if resident_uuids is None or len(resident_uuids) == 0:
-#         log.debug('   no resident parts found of type: ' + str(obj_type))
+         #         log.debug('   no resident parts found of type: ' + str(obj_type))
          return None
 #      log.debug(f'   {len(resident_uuids)} resident parts of same class')
       if not ignore_identical_part:
          for resident_uuid in resident_uuids:
             if bu.matching_uuids(resident_uuid, immigrant_uuid):
-#               log.debug('   uuid already resident: ' + str(resident_uuid))
+               #               log.debug('   uuid already resident: ' + str(resident_uuid))
                return resident_uuid
+
+
 #      log.debug('   preparing immigrant object')
       if obj_type.endswith('Interpretation') or obj_type.endswith('Feature'):
          immigrant_obj = rqo.__dict__[obj_type](immigrant_model, uuid = immigrant_uuid)
@@ -91,8 +82,9 @@ class Consolidation:
          raise Exception('code failure')
       assert immigrant_obj is not None
       for resident_uuid in resident_uuids:
-#         log.debug('   considering resident: ' + str(resident_uuid))
-         if ignore_identical_part and bu.matching_uuids(resident_uuid, immigrant_uuid): continue
+         #         log.debug('   considering resident: ' + str(resident_uuid))
+         if ignore_identical_part and bu.matching_uuids(resident_uuid, immigrant_uuid):
+            continue
          if obj_type.endswith('Interpretation') or obj_type.endswith('Feature'):
             resident_obj = rqo.__dict__[obj_type](self.model, uuid = resident_uuid)
          elif obj_type.endswith('Crs'):
@@ -106,36 +98,37 @@ class Consolidation:
          else:
             raise Exception('code failure')
          assert resident_obj is not None
-#         log.debug('   comparing with: ' + str(resident_obj.uuid))
+         #         log.debug('   comparing with: ' + str(resident_obj.uuid))
          if immigrant_obj == resident_obj:  # note: == operator overloaded with equivalence method for these classes
             while resident_uuid in self.map:
-#               log.debug('   following equivalence for: ' + str(resident_uuid))
+               #               log.debug('   following equivalence for: ' + str(resident_uuid))
                resident_uuid = self.map[resident_uuid]
             self.map[immigrant_uuid] = resident_uuid
-#            log.debug('   new equivalence found with: ' + str(resident_uuid))
+            #            log.debug('   new equivalence found with: ' + str(resident_uuid))
             return resident_uuid
       return None
-
 
    def force_uuid_equivalence(self, immigrant_uuid, resident_uuid):
       """Forces immigrant object to be treated as equivalent to (same as) resident object, identified by uuids."""
 
       assert immigrant_uuid is not None and resident_uuid is not None
-      if isinstance(immigrant_uuid, str): immigrant_uuid = bu.uuid_from_string(immigrant_uuid)
-      if isinstance(resident_uuid, str): resident_uuid = bu.uuid_from_string(resident_uuid)
-      if bu.matching_uuids(immigrant_uuid, resident_uuid): return
+      if isinstance(immigrant_uuid, str):
+         immigrant_uuid = bu.uuid_from_string(immigrant_uuid)
+      if isinstance(resident_uuid, str):
+         resident_uuid = bu.uuid_from_string(resident_uuid)
+      if bu.matching_uuids(immigrant_uuid, resident_uuid):
+         return
       assert immigrant_uuid not in self.map.values()
 
       self.map[immigrant_uuid] = resident_uuid
-
 
    def force_part_equivalence(self, immigrant_part, resident_part):
       """Forces immigrant part to be treated as equivalent to resident part."""
 
       assert immigrant_part is not None and resident_part is not None
-      if immigrant_part == resident_part: return
+      if immigrant_part == resident_part:
+         return
       self.force_uuid_equivalence(rqet.uuid_in_part_name(immigrant_part), rqet.uuid_in_part_name(resident_part))
-
 
    def check_map_integrity(self):
       """Raises assertion failure if map contains any potentially circular references."""
@@ -150,11 +143,15 @@ def sort_parts_list(model, parts_list):
    """Returns a copy of the parts list sorted into the preferred order for consolidating."""
 
    def ordering(obj_type):
-      if obj_type in consolidatable_list: return consolidatable_list.index(obj_type)
+      if obj_type in consolidatable_list:
+         return consolidatable_list.index(obj_type)
       seq = len(consolidatable_list)
-      if obj_type.endswith('Interpretation'): seq += 1
-      elif obj_type.endswith('Representation'): seq += 2
-      elif obj_type.endswith('Property'): seq += 3
+      if obj_type.endswith('Interpretation'):
+         seq += 1
+      elif obj_type.endswith('Representation'):
+         seq += 2
+      elif obj_type.endswith('Property'):
+         seq += 3
       return seq
 
    pair_list = [(ordering(model.type_of_part(part, strip_obj = True)), part) for part in parts_list]

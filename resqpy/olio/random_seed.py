@@ -19,13 +19,17 @@ def seed(seed, package = 'all'):
    known_list = ['random', 'numpy']
 
    if isinstance(package, str):
-      if package == 'all': package = known_list
-      else: package = [package]
+      if package == 'all':
+         package = known_list
+      else:
+         package = [package]
 
    assert isinstance(package, list)
 
    for pack in package:
       assert pack in known_list, 'unknown package for random number seeding: ' + str(pack)
 
-      if pack == 'random': random.seed(seed)
-      elif pack == 'numpy': numpy.random.seed(seed = seed)
+      if pack == 'random':
+         random.seed(seed)
+      elif pack == 'numpy':
+         numpy.random.seed(seed = seed)

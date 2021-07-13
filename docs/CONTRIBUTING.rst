@@ -83,6 +83,14 @@ Checklist for pull requests
 Code Style
 ----------
 
+We use the yapf auto-formatter with the style configured in the repository. 
+You should either set this formatter in your IDE settings, or run the following
+command before committing:
+
+.. code-block:: bash
+
+   yapf -i .
+
 Please try to write code according to the
 `PEP8 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
 defines conventions such as variable naming and capitalisation. A consistent
@@ -90,8 +98,7 @@ style makes it much easier for other developers to read and understand your
 code.
 
 Note the existing code base differs from PEP8 in using 3 spaces for indentation
-rather than the usual 4. When editing these modules, it is preferable that new
-code has indentation that is consistent with the rest of the module.
+rather than the usual 4.
 
 See `Static analysis`_ for how to check your code for conformance to PEP8 style.
 

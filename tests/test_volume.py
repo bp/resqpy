@@ -7,6 +7,7 @@ from numpy.testing import assert_array_almost_equal
 
 import resqpy.olio.volume as vol
 
+
 def unit_cube():
    cp = np.zeros((2, 2, 2, 3))  # pagoda style corner point array for a single cell
    # set to unit cube with xyz aligned with ijk respectively
@@ -25,10 +26,12 @@ def test_one_cell_volume():
    # stretch in y & z (J & K)
    cp[:, 1, :, 1] *= 2.0
    cp[1, :, :, 2] *= 3.0
-   assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = False), 15.0), 'regular cuboid cell volume calculation fails'
+   assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = False),
+                        15.0), 'regular cuboid cell volume calculation fails'
    # apply a shear in x & y (should not change volume)
    cp[1, :, :, :2] += 0.5
-   assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = False), 15.0), 'parallelepiped cell volume calculation fails'
+   assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = False),
+                        15.0), 'parallelepiped cell volume calculation fails'
    # translate into negative coordinate realm
    cp[:] -= 3.827
    assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = False), 15.0), 'translated cell volume calculation fails '
@@ -38,7 +41,8 @@ def test_one_cell_volume():
    # collapse to plane
    cp[:, :, :, 2] = 0.0
    assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = False), 0.0), 'planar cell volume calculation fails'
-   assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = True), 0.0), 'off hand True planar cell volume calculation fails'
+   assert maths.isclose(vol.tetra_cell_volume(cp, off_hand = True),
+                        0.0), 'off hand True planar cell volume calculation fails'
    # test wedge
    cp = unit_cube().copy()
    cp[1, 1, :, 2] = 0.0

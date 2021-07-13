@@ -5,6 +5,7 @@ version = '13th May 2021'
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('zmap_reader.py version ' + version)
 
@@ -14,11 +15,11 @@ import numpy as np
 def read_zmap_header(inputfile):
 
    # read header, read until second '@', record header lines and content
-   with open(inputfile,'r') as infile:
+   with open(inputfile, 'r') as infile:
       comments = []
       head = []
-      a = 0 # count '@'s
-      headers = 0 # count header+comment lines
+      a = 0  # count '@'s
+      headers = 0  # count header+comment lines
       while a < 2:
          line = infile.readline()
          headers += 1
@@ -33,7 +34,8 @@ def read_zmap_header(inputfile):
             log.error("Header section does not seem to be defined by 2 @s")
             return None, None, None
       line = infile.readline()
-      if line[0] == '+': headers = headers + 1   # add extra line for the + symbol..
+      if line[0] == '+':
+         headers = headers + 1  # add extra line for the + symbol..
 
    for c in comments:
       log.debug(c)
@@ -41,25 +43,28 @@ def read_zmap_header(inputfile):
    # ok now process the header
 #  nodes_per_line                          = int(head[0][2])
 #  field_w                                 = head[1][0]
-   null_value                              = head[1][1].strip()
-   null_value2                             = head[1][2].strip()
-#  dec_places                              = head[1][3]
-#  strt_c                                  = head[1][4]
-   no_rows                                 = int(head[2][0])
-   no_cols                                 = int(head[2][1])
-   minx                                    = np.float64(head[2][2])
-   maxx                                    = np.float64(head[2][3])
-   miny                                    = np.float64(head[2][4])
-   maxy                                    = np.float64(head[2][5])
+   null_value = head[1][1].strip()
+   null_value2 = head[1][2].strip()
+   #  dec_places                              = head[1][3]
+   #  strt_c                                  = head[1][4]
+   no_rows = int(head[2][0])
+   no_cols = int(head[2][1])
+   minx = np.float64(head[2][2])
+   maxx = np.float64(head[2][3])
+   miny = np.float64(head[2][4])
+   maxy = np.float64(head[2][5])
 
    # decide on the null value
-   if not null_value: null_value = null_value2
-   log.debug("Read {} header lines, we have {} rows, {} cols, and data from {} to {} and {} to {}".format(headers, no_rows, no_cols, minx, maxx, miny, maxy))
+   if not null_value:
+      null_value = null_value2
+   log.debug("Read {} header lines, we have {} rows, {} cols, and data from {} to {} and {} to {}".format(
+      headers, no_rows, no_cols, minx, maxx, miny, maxy))
 
    return headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value
 
 
 # note: the RMS text format was previously known as the Roxar format
+
 
 def read_roxar_header(inputfile):
 
@@ -120,23 +125,21 @@ def read_mesh(inputfile, dtype = np.float64, format = None):
       f = f.reshape((no_rows, no_cols))
 
    # now generate x and y coords
-   x  = np.linspace(minx, maxx, no_cols) # get x axis coords
+   x = np.linspace(minx, maxx, no_cols)  # get x axis coords
    if format == 'zmap':
-      y  = np.linspace(maxy, miny, no_rows)
+      y = np.linspace(maxy, miny, no_rows)
    else:  # format in ['rms', 'roxar']
-      y  = np.linspace(miny, maxy, no_rows)
-   x, y = np.meshgrid(x, y) # get x and y of every node
+      y = np.linspace(miny, maxy, no_rows)
+   x, y = np.meshgrid(x, y)  # get x and y of every node
    assert x.shape == y.shape == f.shape
 
    return x, y, f
-
 
 
 def read_zmapplusgrid(inputfile, dtype = np.float64):
    """Read zmapplus grid (surface mesh); returns triple (x, y, z) 2D arrays."""
 
    return read_mesh(inputfile, dtype = dtype, format = 'zmap')
-
 
 
 def read_roxar_mesh(inputfile, dtype = np.float64):
@@ -147,7 +150,6 @@ def read_roxar_mesh(inputfile, dtype = np.float64):
    """
 
    return read_mesh(inputfile, dtype = dtype, format = 'rms')
-
 
 
 def read_rms_text_mesh(inputfile, dtype = np.float64):

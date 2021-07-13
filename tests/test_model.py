@@ -8,6 +8,7 @@ import resqpy.well as rqw
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 
+
 def test_model(tmp_path):
 
    epc = os.path.join(tmp_path, 'model.epc')
@@ -39,7 +40,7 @@ def test_model(tmp_path):
 
 
 def test_model_iterators(example_model_with_well):
-   
+
    model, well_interp, datum, traj = example_model_with_well
 
    w = next(model.iter_wellbore_interpretations())
@@ -59,7 +60,7 @@ def test_model_iterate_objects(example_model_with_well):
    from resqpy.organize import WellboreFeature, WellboreInterpretation
 
    model, well_interp, _, _ = example_model_with_well
-   
+
    # Try iterating over wellbore features
 
    wells = model.iter_objs(WellboreFeature)
@@ -68,7 +69,7 @@ def test_model_iterate_objects(example_model_with_well):
    assert len(wells) == 1
    assert isinstance(wells[0], WellboreFeature)
    assert wells[0].title == "well A"
-   
+
    # Try iterating over wellbore interpretations
 
    interps = model.iter_objs(WellboreInterpretation)
@@ -79,7 +80,7 @@ def test_model_iterate_objects(example_model_with_well):
 
 
 def test_model_iter_crs(example_model_and_crs):
-   
+
    model, crs_1 = example_model_and_crs
 
    crs_list = list(model.iter_crs())
@@ -87,6 +88,7 @@ def test_model_iter_crs(example_model_and_crs):
 
    crs_2 = crs_list[0]
    assert crs_2 == crs_1
+
 
 def test_model_iter_crs_empty(tmp_model):
 
@@ -115,6 +117,6 @@ def test_model_as_graph(example_model_with_well):
    assert frozenset([str(datum.uuid), str(traj.uuid)]) in edges
 
    # Test uuid subset
-   nodes, edges = model.as_graph(uuids_subset=[datum.uuid])
+   nodes, edges = model.as_graph(uuids_subset = [datum.uuid])
    assert len(nodes.keys()) == 1
    assert len(edges) == 0

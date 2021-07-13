@@ -8,6 +8,7 @@
 version = '6th May 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug(f'dataframe.py version {version}')
 
@@ -36,8 +37,15 @@ class DataFrame:
       class if rows relate to steps in a TimeSeries
    """
 
-   def __init__(self, model, support_root = None, df = None, uom_list = None, realization = None,
-                title = 'dataframe', column_lookup_uuid = None, uom_lookup_uuid = None):
+   def __init__(self,
+                model,
+                support_root = None,
+                df = None,
+                uom_list = None,
+                realization = None,
+                title = 'dataframe',
+                column_lookup_uuid = None,
+                uom_lookup_uuid = None):
       """Create a new Dataframe object from either a previously stored property or a pandas dataframe.
 
       arguments:
@@ -94,12 +102,16 @@ class DataFrame:
          self.mesh = rqs.Mesh(self.model, root_node = support_root)
          self.title = self.mesh.title
          self.n_rows, self.n_cols = self.mesh.nj, self.mesh.ni
-         cl_uuid = self.model.uuid(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe columns')
+         cl_uuid = self.model.uuid(obj_type = 'StringTableLookup',
+                                   related_uuid = self.mesh.uuid,
+                                   title = 'dataframe columns')
          assert cl_uuid is not None, 'column name lookup table not found for dataframe'
          self.column_lookup = rqp.StringLookup(self.model, uuid = cl_uuid)
          self.column_lookup_uuid = self.column_lookup.uuid
          assert self.column_lookup.length() == self.n_cols
-         ul_uuid = self.model.uuid(obj_type = 'StringTableLookup', related_uuid = self.mesh.uuid, title = 'dataframe units')
+         ul_uuid = self.model.uuid(obj_type = 'StringTableLookup',
+                                   related_uuid = self.mesh.uuid,
+                                   title = 'dataframe units')
          if ul_uuid is not None:
             self.uom_lookup = rqp.StringLookup(self.model, uuid = ul_uuid)
             self.uom_lookup_uuid = self.uom_lookup.uuid
@@ -121,7 +133,8 @@ class DataFrame:
             self.df = pd.DataFrame(da, columns = self.column_lookup.get_list())
          else:  # both support_root and df supplied: add a new realisation
             if existing_count > 0:
-               assert existing_pc.singleton(realization = self.realization) is None, 'dataframe realization already exists'
+               assert existing_pc.singleton(
+                  realization = self.realization) is None, 'dataframe realization already exists'
             self.df = df.copy()
             assert len(self.df) == self.n_rows
             assert len(self.df.columns) == self.n_rows
@@ -147,20 +160,18 @@ class DataFrame:
          elif self.uom_lookup is not None:
             self.uom_list = self.uom_lookup.get_list()
 
-
    def dataframe(self):
       """Returns the Dataframe as a pandas DataFrame."""
 
       return self.df
 
-
    def column_uom(self, col_index):
       """Returns units of measure for the specified column, or Euc if no units present."""
 
-      if self.units_table is None: return 'Euc'
+      if self.units_table is None:
+         return 'Euc'
       assert 0 <= col_index < self.n_cols, 'column index out of range'
       return self.units_table.get_string(col_index)
-
 
    def write_hdf5_and_create_xml(self):
       """Write dataframe data to hdf5 file and create xml for RESQML objects to represent dataframe."""
@@ -168,7 +179,8 @@ class DataFrame:
       self._set_mesh_from_df()  # writes hdf5 data and creates xml for mesh (and property)
 
       if self.column_lookup is None:
-         self.column_lookup = rqp.StringLookup(self.model, int_to_str_dict = dict(enumerate(self.df.columns)),
+         self.column_lookup = rqp.StringLookup(self.model,
+                                               int_to_str_dict = dict(enumerate(self.df.columns)),
                                                title = 'dataframe columns')
          self.column_lookup_uuid = self.column_lookup.uuid
          sl_node = self.column_lookup.create_xml()
@@ -178,7 +190,8 @@ class DataFrame:
          self.model.create_reciprocal_relationship(self.mesh.root_node, 'destinationObject', sl_node, 'sourceObject')
 
       if self.uom_list and self.uom_lookup is None:
-         self.uom_lookup = rqp.StringLookup(self.model, int_to_str_dict = dict(enumerate(self.uom_list)),
+         self.uom_lookup = rqp.StringLookup(self.model,
+                                            int_to_str_dict = dict(enumerate(self.uom_list)),
                                             title = 'dataframe units')
          self.uom_lookup_uuid = self.uom_lookup.uuid
          ul_node = self.uom_lookup.create_xml()
@@ -188,7 +201,6 @@ class DataFrame:
          ul_node = None
       if ul_node is not None:
          self.model.create_reciprocal_relationship(self.mesh.root_node, 'destinationObject', ul_node, 'sourceObject')
-
 
    def _set_mesh_from_df(self):
       """Creates Mesh object; called before writing to hdf5 or creating xml."""
@@ -208,12 +220,22 @@ class DataFrame:
          else:  # use any available crs
             crs_uuid = crs_uuids[0]
          if self.realization is None:
-            self.mesh = rqs.Mesh(self.model, mesh_flavour = 'reg&z', ni = self.n_cols, nj = self.n_rows,
-                                 dxyz_dij = dxyz_dij, origin = origin,
-                                 z_values = np.array(self.df), crs_uuid = crs_uuid)
+            self.mesh = rqs.Mesh(self.model,
+                                 mesh_flavour = 'reg&z',
+                                 ni = self.n_cols,
+                                 nj = self.n_rows,
+                                 dxyz_dij = dxyz_dij,
+                                 origin = origin,
+                                 z_values = np.array(self.df),
+                                 crs_uuid = crs_uuid)
          else:
-            self.mesh = rqs.Mesh(self.model, mesh_flavour = 'regular', ni = self.n_cols, nj = self.n_rows,
-                                 dxyz_dij = dxyz_dij, origin = origin, crs_uuid = crs_uuid)
+            self.mesh = rqs.Mesh(self.model,
+                                 mesh_flavour = 'regular',
+                                 ni = self.n_cols,
+                                 nj = self.n_rows,
+                                 dxyz_dij = dxyz_dij,
+                                 origin = origin,
+                                 crs_uuid = crs_uuid)
          self.mesh.write_hdf5()
          mesh_root = self.mesh.create_xml(title = self.title)
          rqet.create_metadata_xml(mesh_root, {'dataframe': 'true'})
@@ -225,14 +247,16 @@ class DataFrame:
                dataframe_pk = rqp.PropertyKind(self.model, title = 'dataframe', example_uom = 'Euc')
                dataframe_pk.create_xml()
                dataframe_pk_uuid = dataframe_pk.uuid
-            self.pc.add_cached_array_to_imported_list(np.array(self.df), 'dataframe', self.title,
-                                                      uom = 'Euc', property_kind = 'dataframe',
+            self.pc.add_cached_array_to_imported_list(np.array(self.df),
+                                                      'dataframe',
+                                                      self.title,
+                                                      uom = 'Euc',
+                                                      property_kind = 'dataframe',
                                                       local_property_kind_uuid = dataframe_pk_uuid,
                                                       realization = self.realization,
                                                       indexable_element = 'nodes')
             self.pc.write_hdf5_for_imported_list()
             self.pc.create_xml_for_imported_list_and_add_parts_to_model()
-
 
 
 class TimeTable(DataFrame):
@@ -242,9 +266,16 @@ class TimeTable(DataFrame):
       inherits from DataFrame class
    """
 
-   def __init__(self, model, support_root = None, df = None, uom_list = None,
-                realization = None, time_series = None, title = 'timetable',
-                column_lookup_uuid = None, uom_lookup_uuid = None):
+   def __init__(self,
+                model,
+                support_root = None,
+                df = None,
+                uom_list = None,
+                realization = None,
+                time_series = None,
+                title = 'timetable',
+                column_lookup_uuid = None,
+                uom_lookup_uuid = None):
       """Create a new TimeTable object from either a previously stored property or a pandas dataframe.
 
       note:
@@ -255,9 +286,14 @@ class TimeTable(DataFrame):
 
       assert support_root is not None or (df is not None and time_series is not None)
 
-      super().__init__(model, support_root = support_root, df = df, uom_list = uom_list,
-                       realization = realization, title = title,
-                       column_lookup_uuid = column_lookup_uuid, uom_lookup_uuid = uom_lookup_uuid)
+      super().__init__(model,
+                       support_root = support_root,
+                       df = df,
+                       uom_list = uom_list,
+                       realization = realization,
+                       title = title,
+                       column_lookup_uuid = column_lookup_uuid,
+                       uom_lookup_uuid = uom_lookup_uuid)
       if support_root is not None:
          ts_root = self.model.root(obj_type = 'TimeSeries', related_uuid = self.mesh.uuid)
          assert ts_root is not None, 'no time series related to mesh holding dataframe'
@@ -267,21 +303,18 @@ class TimeTable(DataFrame):
          assert time_series.number_of_timestamps() == self.n_rows
          self.ts = time_series
 
-
    def time_series(self):
       """Returns the TimeSeries object in use by the time table."""
 
       return self.ts
-
 
    def write_hdf5_and_create_xml(self):
       """Write time table data to hdf5 file and create xml for RESQML objects to represent dataframe."""
 
       super().write_hdf5_and_create_xml()
       # note: time series xml must be created before calling this method
-      self.model.create_reciprocal_relationship(self.mesh.root_node, 'destinationObject',
-                                                self.ts.time_series_root, 'sourceObject')
-
+      self.model.create_reciprocal_relationship(self.mesh.root_node, 'destinationObject', self.ts.time_series_root,
+                                                'sourceObject')
 
 
 def dataframe_parts_in_model(model, timetables = None, title = None, related_uuid = None):
@@ -301,18 +334,20 @@ def dataframe_parts_in_model(model, timetables = None, title = None, related_uui
       support for a DataFrame object
    """
 
-   df_parts_list = model.parts(obj_type = 'Grid2dRepresentation', title = title,
-                               extra = {'dataframe': 'true'}, related_uuid = related_uuid)
+   df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
+                               title = title,
+                               extra = {'dataframe': 'true'},
+                               related_uuid = related_uuid)
 
    if timetables is not None:
       filtered_list = []
       for df_part in df_parts_list:
          is_tt = (model.part(obj_type = 'TimeSeries', related_uuid = model.uuid_for_part(df_part)) is not None)
-         if timetables == is_tt: filtered_list.append(df_part)
+         if timetables == is_tt:
+            filtered_list.append(df_part)
       df_parts_list = filtered_list
 
    return df_parts_list
-
 
 
 def timetable_parts_in_model(model, title = None, related_uuid = None):
@@ -332,21 +367,21 @@ def timetable_parts_in_model(model, title = None, related_uuid = None):
    return dataframe_parts_in_model(model, timetables = True, title = title, related_uuid = related_uuid)
 
 
-
 def dataframe_for_title(model, title, realization = None):
    """Returns a DataFrame object loaded from model, with given title (optionally for given realization)."""
 
    df_parts = dataframe_parts_in_model(model, title = title)
-   if df_parts is None or len(df_parts) == 0: return None
+   if df_parts is None or len(df_parts) == 0:
+      return None
    assert len(df_parts) == 1
    return DataFrame(model, support_root = model.root_for_part(df_parts[0]), realization = realization)
-
 
 
 def timetable_for_title(model, title, realization = None):
    """Returns a TimeTable object loaded from model, with given title (optionally for given realization)."""
 
    tt_parts = timetable_parts_in_model(model, title = title)
-   if tt_parts is None or len(tt_parts) == 0: return None
+   if tt_parts is None or len(tt_parts) == 0:
+      return None
    assert len(tt_parts) == 1
    return TimeTable(model, support_root = model.root_for_part(tt_parts[0]), realization = realization)

@@ -15,11 +15,8 @@ def test_dataframe(tmp_path):
 
    model = rq.Model(epc_file = epc, new_epc = True, create_basics = True, create_hdf5_ext = True)
 
-   np_df = np.array([[0.0, 0.0, 0.0],
-                  [1000.0, 0.0, 0.0],
-                  [1900.0, 100.0, 0.0],
-                  [2500.0, 500.0, 800.0],
-                  [3200.0, 1500.0, 1600.0]])
+   np_df = np.array([[0.0, 0.0, 0.0], [1000.0, 0.0, 0.0], [1900.0, 100.0, 0.0], [2500.0, 500.0, 800.0],
+                     [3200.0, 1500.0, 1600.0]])
    df_cols = ['COP', 'CWP', 'CWI']
    col_units = ['m3', 'ft3', 'm3']
    ts_list = ['2021-04-22', '2021-04-23', '2021-04-24', '2021-04-25', '2021-04-26']
@@ -36,12 +33,15 @@ def test_dataframe(tmp_path):
    timetable = rqdf.TimeTable(model, df = df, title = 'time table', time_series = ts)
    timetable.write_hdf5_and_create_xml()
 
-   propertied = rqdf.TimeTable(model, df = df, realization = 0, title = 'time table realisation',
-                               time_series = ts)
+   propertied = rqdf.TimeTable(model, df = df, realization = 0, title = 'time table realisation', time_series = ts)
    propertied.write_hdf5_and_create_xml()
 
-   united = rqdf.TimeTable(model, df = df, realization = 0, title = 'united realisation',
-                           uom_list = col_units, time_series = ts)
+   united = rqdf.TimeTable(model,
+                           df = df,
+                           realization = 0,
+                           title = 'united realisation',
+                           uom_list = col_units,
+                           time_series = ts)
    united.write_hdf5_and_create_xml()
 
    model.store_epc()

@@ -3,6 +3,7 @@
 version = '10th December 2020'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('box_utilities.py version %s', version)
 
@@ -35,7 +36,7 @@ log.debug('box_utilities.py version %s', version)
 import numpy as np
 
 
-def extent_of_box(box):     # returns 3 element extent of box (box can be kji or ijk, 0 or 1 based)
+def extent_of_box(box):  # returns 3 element extent of box (box can be kji or ijk, 0 or 1 based)
    """Returns a 3 integer numpy array holding the size of the box, with the same ordering as the box.
 
    input argument (unmodified):
@@ -47,7 +48,7 @@ def extent_of_box(box):     # returns 3 element extent of box (box can be kji or
    """
 
    assert box.ndim == 2 and box.shape == (2, 3)
-   return box[1] - box[0] + 1   # numpy array operation
+   return box[1] - box[0] + 1  # numpy array operation
 
 
 def volume_of_box(box):
@@ -120,14 +121,14 @@ def box_kji0_from_words_iijjkk1(words):
       NB: output indices have been decremented by 1 (for python indexing starting at zero)
    """
 
-   assert len(words) >= 6   # expecting minI maxI minJ maxJ minK maxK value
+   assert len(words) >= 6  # expecting minI maxI minJ maxJ minK maxK value
    box = np.zeros([2, 3], dtype = 'int')
-   box[0, 0] = int(words[4]) - 1   # k min
-   box[1, 0] = int(words[5]) - 1   # k max
-   box[0, 1] = int(words[2]) - 1   # j min
-   box[1, 1] = int(words[3]) - 1   # j max
-   box[0, 2] = int(words[0]) - 1   # i min
-   box[1, 2] = int(words[1]) - 1   # i max
+   box[0, 0] = int(words[4]) - 1  # k min
+   box[1, 0] = int(words[5]) - 1  # k max
+   box[0, 1] = int(words[2]) - 1  # j min
+   box[1, 1] = int(words[3]) - 1  # j max
+   box[0, 2] = int(words[0]) - 1  # i min
+   box[1, 2] = int(words[1]) - 1  # i max
    assert box[0, 0] <= box[1, 0] and box[0, 1] <= box[1, 1] and box[0, 2] <= box[1, 2]
 
    return box
@@ -147,7 +148,8 @@ def cell_in_box(cell, box):
       True if cell is within box, False otherwise
    """
 
-   return (box[0, 0] <= cell[0] <= box[1, 0]) and (box[0, 1] <= cell[1] <= box[1, 1]) and (box[0, 2] <= cell[2] <= box[1, 2])
+   return (box[0, 0] <= cell[0] <= box[1, 0]) and (box[0, 1] <= cell[1] <= box[1, 1]) and (box[0, 2] <= cell[2] <=
+                                                                                           box[1, 2])
 
 
 def valid_box(box, host_extent):
@@ -164,10 +166,13 @@ def valid_box(box, host_extent):
       True if box is a valid box within a grid of shape host_extent, False otherwise
    """
 
-   if box.ndim != 2 or box.shape != (2, 3) or box.dtype != 'int': return False
-   if host_extent.ndim != 1 or host_extent.size != 3: return False
+   if box.ndim != 2 or box.shape != (2, 3) or box.dtype != 'int':
+      return False
+   if host_extent.ndim != 1 or host_extent.size != 3:
+      return False
    for d in range(3):
-      if box[0, d] < 0 or box[0, d] > box[1, d] or box[1, d] >= host_extent[d]: return False
+      if box[0, d] < 0 or box[0, d] > box[1, d] or box[1, d] >= host_extent[d]:
+         return False
    return True
 
 
@@ -184,8 +189,8 @@ def single_cell_box(cell):
 
    assert cell.ndim == 1 and cell.size == 3
    box = np.zeros((2, 3), dtype = 'int')
-   box[0] = cell    # numpy 1D array op
-   box[1] = cell    # numpy 1D array op
+   box[0] = cell  # numpy 1D array op
+   box[1] = cell  # numpy 1D array op
    return box
 
 
@@ -202,16 +207,19 @@ def full_extent_box0(extent):
 
    assert extent.ndim == 1 and extent.size == 3
    box = np.zeros((2, 3), dtype = 'int')
-   box[1, :] = extent - 1    # numpy 1D array op
+   box[1, :] = extent - 1  # numpy 1D array op
    return box
 
 
 def union(box_1, box_2):
    """Returns the box which contains both box_1 and box_2."""
 
-   if box_1 is None and box_2 is None: return None
-   if box_1 is None: return box_2.copy()
-   if box_2 is None: return box_1.copy()
+   if box_1 is None and box_2 is None:
+      return None
+   if box_1 is None:
+      return box_2.copy()
+   if box_2 is None:
+      return box_1.copy()
    result = np.zeros((2, 3), dtype = 'int')
    for dir in range(3):
       result[0][dir] = min(box_1[0][dir], box_2[0][dir])
@@ -239,7 +247,7 @@ def parent_cell_from_local_box_cell(box, box_cell, based_0_or_1 = 0):
 
    assert box.ndim == 2 and box.shape == (2, 3)
    assert box_cell.ndim == 1 and box_cell.size == 3
-   return box[0] + box_cell - based_0_or_1            # numpy 1D array op
+   return box[0] + box_cell - based_0_or_1  # numpy 1D array op
 
 
 def local_box_cell_from_parent_cell(box, parent_cell, based_0_or_1 = 0):
@@ -262,8 +270,8 @@ def local_box_cell_from_parent_cell(box, parent_cell, based_0_or_1 = 0):
 
    assert box.ndim == 2 and box.shape == (2, 3)
    assert parent_cell.ndim == 1 and parent_cell.size == 3
-   if np.all(box[0] <= parent_cell) and np.all(parent_cell <= box[1]):    # numpy 1D array ops
-      return parent_cell - box[0] + based_0_or_1                          # numpy 1D array op
+   if np.all(box[0] <= parent_cell) and np.all(parent_cell <= box[1]):  # numpy 1D array ops
+      return parent_cell - box[0] + based_0_or_1  # numpy 1D array op
    else:
       return None
 
@@ -283,9 +291,8 @@ def boxes_overlap(box_a, box_b):
       True if box_a and box_b overlap, False otherwise
    """
 
-   return not ((box_a[1, 0] < box_b[0, 0]) or (box_a[0, 0] > box_b[1, 0]) or
-               (box_a[1, 1] < box_b[0, 1]) or (box_a[0, 1] > box_b[1, 1]) or
-               (box_a[1, 2] < box_b[0, 2]) or (box_a[0, 2] > box_b[1, 2]))
+   return not ((box_a[1, 0] < box_b[0, 0]) or (box_a[0, 0] > box_b[1, 0]) or (box_a[1, 1] < box_b[0, 1]) or
+               (box_a[0, 1] > box_b[1, 1]) or (box_a[1, 2] < box_b[0, 2]) or (box_a[0, 2] > box_b[1, 2]))
 
 
 def overlapping_boxes(established_box, new_box, trim_box):
@@ -319,9 +326,11 @@ def overlapping_boxes(established_box, new_box, trim_box):
    assert new_box.ndim == 2 and new_box.shape == (2, 3) and new_box.dtype == 'int'
    assert trim_box.ndim == 2 and trim_box.shape == (2, 3) and trim_box.dtype == 'int'
    trim_box[:, :] = 0
-   if not boxes_overlap(established_box, new_box): return False
+   if not boxes_overlap(established_box, new_box):
+      return False
    # determine trim direction based on minimizing number of cells to be trimmed
-   new_box_area = np.zeros(3, dtype = 'int')  # compute number of cells in a 2D slice of new_box, taken in k, j or i directions
+   new_box_area = np.zeros(
+      3, dtype = 'int')  # compute number of cells in a 2D slice of new_box, taken in k, j or i directions
    # note: '_area' is a cell count, not an area in xyz space
    new_box_area[0] = (new_box[1, 1] - new_box[0, 1] + 1) * (new_box[1, 2] - new_box[0, 2] + 1)  # k slice
    new_box_area[1] = (new_box[1, 0] - new_box[0, 0] + 1) * (new_box[1, 2] - new_box[0, 2] + 1)  # j slice
@@ -329,8 +338,8 @@ def overlapping_boxes(established_box, new_box, trim_box):
    # find the actual box of overlap and 'cost' of trimming in each dimension and minimize over k,j,i
    trim_cost = np.zeros(3, dtype = 'int')
    trim_direction = -1
-   min_trim_cost = volume_of_box(new_box) + 1      # anything will be better than this
-   overlap_box = np.zeros((2, 3), dtype='int')
+   min_trim_cost = volume_of_box(new_box) + 1  # anything will be better than this
+   overlap_box = np.zeros((2, 3), dtype = 'int')
    for dir in range(3):
       overlap_box[0, dir] = max(established_box[0, dir], new_box[0, dir])
       overlap_box[1, dir] = min(established_box[1, dir], new_box[1, dir])
@@ -376,40 +385,39 @@ def trim_box_by_box_returning_new_mask(box_to_be_trimmed, trim_box, mask_kji0):
 
    local_box = np.zeros((2, 3), dtype = 'int')
    local_box[1] = extent_of_box(box_to_be_trimmed) - 1
-   if np.all(trim_box[0] == box_to_be_trimmed[0]):          # shift box_to_be_trimmed [0] (minumum) up (in logical space)
-      if trim_box[1, 0] != box_to_be_trimmed[1, 0]:         # trim in k direction
+   if np.all(trim_box[0] == box_to_be_trimmed[0]):  # shift box_to_be_trimmed [0] (minumum) up (in logical space)
+      if trim_box[1, 0] != box_to_be_trimmed[1, 0]:  # trim in k direction
          assert (trim_box[1, 1] == box_to_be_trimmed[1, 1]) and (trim_box[1, 2] == box_to_be_trimmed[1, 2])
          local_box[0, 0] = trim_box[1, 0] - box_to_be_trimmed[0, 0] + 1
          box_to_be_trimmed[0, 0] = trim_box[1, 0] + 1
-      elif trim_box[1, 1] != box_to_be_trimmed[1, 1]:       # trim in j direction
+      elif trim_box[1, 1] != box_to_be_trimmed[1, 1]:  # trim in j direction
          assert (trim_box[1, 2] == box_to_be_trimmed[1, 2])
          local_box[0, 1] = trim_box[1, 1] - box_to_be_trimmed[0, 1] + 1
          box_to_be_trimmed[0, 1] = trim_box[1, 1] + 1
-      else:                                                 # trim in i direction
+      else:  # trim in i direction
          assert trim_box[1, 2] != box_to_be_trimmed[1, 2]
          local_box[0, 2] = trim_box[1, 2] - box_to_be_trimmed[0, 2] + 1
          box_to_be_trimmed[0, 2] = trim_box[1, 2] + 1
-   elif np.all(trim_box[1] == box_to_be_trimmed[1]):        # shift box_to_be_trimmed [1] (maxumum) down (in logical space)
-      if trim_box[0, 0] != box_to_be_trimmed[0, 0]:         # trim in k direction
+   elif np.all(trim_box[1] == box_to_be_trimmed[1]):  # shift box_to_be_trimmed [1] (maxumum) down (in logical space)
+      if trim_box[0, 0] != box_to_be_trimmed[0, 0]:  # trim in k direction
          assert (trim_box[0, 1] == box_to_be_trimmed[0, 1]) and (trim_box[0, 2] == box_to_be_trimmed[0, 2])
          local_box[1, 0] -= box_to_be_trimmed[1, 0] - trim_box[0, 0] + 1
          box_to_be_trimmed[1, 0] = trim_box[0, 0] - 1
-      elif trim_box[0, 1] != box_to_be_trimmed[0, 1]:       # trim in j direction
+      elif trim_box[0, 1] != box_to_be_trimmed[0, 1]:  # trim in j direction
          assert (trim_box[0, 2] == box_to_be_trimmed[0, 2])
          local_box[1, 1] -= box_to_be_trimmed[1, 1] - trim_box[0, 1] + 1
          box_to_be_trimmed[1, 1] = trim_box[0, 1] - 1
-      else:                                                 # trim in i direction
+      else:  # trim in i direction
          assert trim_box[0, 2] != box_to_be_trimmed[0, 2]
          local_box[1, 2] -= box_to_be_trimmed[1, 2] - trim_box[0, 2] + 1
          box_to_be_trimmed[1, 2] = trim_box[0, 2] - 1
-   else:    # shouldn't happen
+   else:  # shouldn't happen
       log.critical('Trim box code failure: box to be trimmed is %s', string_iijjkk1_for_box_kji0(box_to_be_trimmed))
       log.critical('Trim box code failure:          trim box is %s', string_iijjkk1_for_box_kji0(trim_box))
       assert False
    assert np.all(box_to_be_trimmed[0] <= box_to_be_trimmed[1])
-   return (mask_kji0[local_box[0, 0] : local_box[1, 0] + 1,
-                     local_box[0, 1] : local_box[1, 1] + 1,
-                     local_box[0, 2] : local_box[1, 2] + 1]).copy()
+   return (mask_kji0[local_box[0, 0]:local_box[1, 0] + 1, local_box[0, 1]:local_box[1, 1] + 1,
+                     local_box[0, 2]:local_box[1, 2] + 1]).copy()
 
 
 def trim_box_to_mask_returning_new_mask(bounding_box_kji0, mask_kji0):
@@ -429,23 +437,26 @@ def trim_box_to_mask_returning_new_mask(bounding_box_kji0, mask_kji0):
    for k in range(box_extent[0]):
       if np.any(mask_kji0[k, :, :]):
          local_box[1, 0] = k
-         if local_box[0, 0] == box_extent[0]: local_box[0, 0] = k
+         if local_box[0, 0] == box_extent[0]:
+            local_box[0, 0] = k
    for j in range(box_extent[1]):
       if np.any(mask_kji0[:, j, :]):
          local_box[1, 1] = j
-         if local_box[0, 1] == box_extent[1]: local_box[0, 1] = j
+         if local_box[0, 1] == box_extent[1]:
+            local_box[0, 1] = j
    for i in range(box_extent[2]):
       if np.any(mask_kji0[:, :, i]):
          local_box[1, 2] = i
-         if local_box[0, 2] == box_extent[2]: local_box[0, 2] = i
+         if local_box[0, 2] == box_extent[2]:
+            local_box[0, 2] = i
    assert np.all(local_box >= 0)
    assert np.all(local_box[1] >= local_box[0])
    assert np.all(local_box[1] < box_extent)
    bounding_box_kji0[0] += local_box[0]
    bounding_box_kji0[1] -= (box_extent - local_box[1] - 1)
    assert np.all(bounding_box_kji0[0] <= bounding_box_kji0[1])
-   return (mask_kji0[local_box[0, 0] : local_box[1, 0] + 1,
-                     local_box[0, 1] : local_box[1, 1] + 1,
-                     local_box[0, 2] : local_box[1, 2] + 1]).copy()
+   return (mask_kji0[local_box[0, 0]:local_box[1, 0] + 1, local_box[0, 1]:local_box[1, 1] + 1,
+                     local_box[0, 2]:local_box[1, 2] + 1]).copy()
+
 
 # end of box_utilities module
