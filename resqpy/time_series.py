@@ -150,7 +150,7 @@ class TimeSeries(BaseResqpy):
    def _load_from_xml(self):
       time_series_root = self.root
       assert time_series_root is not None
-      for child in self.time_series_root:
+      for child in time_series_root:
          if rqet.stripped_of_prefix(child.tag) != 'Time':
             continue
          dt_node = rqet.find_tag(child, 'DateTime')
@@ -477,7 +477,7 @@ def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
       timeseriesroot = model.root(uuid = timeseries_uuid)
       assert (rqet.node_type(timeseriesroot) == 'obj_TimeSeries')
 
-      singlets = TimeSeries(model, time_series_root = timeseriesroot)
+      singlets = TimeSeries(model, uuid = timeseries_uuid)
       timeserieslist.append(singlets)
       #alltimestamps.update( set(singlets.timestamps) )
       alltimestamps.update(set(singlets.datetimes()))
