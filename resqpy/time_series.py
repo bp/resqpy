@@ -124,7 +124,7 @@ class TimeSeries(BaseResqpy):
    def _load_from_xml(self):
       time_series_root = self.root
       assert time_series_root is not None
-      for child in self.time_series_root:
+      for child in time_series_root:
          if rqet.stripped_of_prefix(child.tag) != 'Time': continue
          dt_node = rqet.find_tag(child, 'DateTime')
          if dt_node is None: continue          # could raise an exception here
@@ -434,7 +434,7 @@ def time_series_from_list(timestamp_list, parent_model = None):
 
 def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
    """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). The new timeseries is sorted in ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
-   
+
    reverse=False 
 
    alltimestamps=set({})
@@ -442,14 +442,14 @@ def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
    for timeseries_uuid in timeseries_uuid_iter:
        timeseriesroot=model.root(uuid=timeseries_uuid)
        assert(rqet.node_type(timeseriesroot) == 'obj_TimeSeries')
-       
-       singlets=TimeSeries(model, time_series_root=timeseriesroot)
+
+       singlets=TimeSeries(model, uuid=timeseries_uuid)
        timeserieslist.append(singlets)
        #alltimestamps.update( set(singlets.timestamps) )
        alltimestamps.update( set(singlets.datetimes()) )
-   
+
    sortedtimestamps=sorted(list(alltimestamps), reverse=reverse)
-    
+
    new_time_series=time_series_from_list(sortedtimestamps, parent_model=model)
    new_time_series_uuid=new_time_series.uuid
    return (new_time_series, new_time_series_uuid, timeserieslist)

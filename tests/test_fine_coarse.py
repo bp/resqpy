@@ -19,7 +19,7 @@ def test_fine_coarse():
    fc2.set_all_ratios_constant()
    fc2.set_all_proprtions_equal()
    fc2.assert_valid()
-   assert fc2.ratios(2, 2, 2) == (3, 4, 2)
+   assert fc2.ratios((2, 2, 2)) == (3, 4, 2)
 
    assert fc2.coarse_for_fine_kji0((5, 5, 5)) == (1, 1, 2)
    assert fc2.coarse_for_fine_axial(1, 13) == 3
