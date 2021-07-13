@@ -157,11 +157,13 @@ Both categorical and discrete make use of a numpy array of integers. In terms of
 The lookup table is an object of resqpy class StringLookup (equivalent to RESQML class StringTableLookup). It maps integer values to strings. Given an integer, the string can be looked up with:
 
 .. code-block:: python
+
     facies_name = lookup_table.get_string(2)
 
 To go in the opposite direction, i.e. discover the integer value for a given string, use:
 
 .. code-block:: python
+
     facies_int_for_mouthbar = lookup_table.get_index_for_string('MOUTHBAR')
 
 If you are not sure what class a property is, the property collection has some methods to help:
@@ -178,6 +180,7 @@ Units of measure
 The RESQML standard includes a comprehensive handling of units of measure – uom. Any continuous property must have an associated uom which can be accessed, for example, with:
 
 .. code-block:: python
+
     pv_part = pc.singleton(property_kind = 'pore volume')
     pv_uom = pc.uom_for_part(pv_part)  # for volumes, the uom will be 'm3' or 'ft3' for our datasets
 
@@ -192,9 +195,11 @@ The RESQML standard includes a full (very long) list of allowable units. Here ar
 * pressure: 'kPa', 'bar', 'psi'
 * unitless: 'Euc' (but preferable to use ratio units where they exist, for dimensionless ratios such as the volume ratios above)
 
-The RESQML units definition is shared with the other Energistic standards: PRODML & WITSML. It is very thorough and well thought out. Here we only touch on it in the most minimal way. The full list of units of measure is to be found in the RESQML common schema definition file QuantityClass.xsd, and is also available in json format in the resqpy repository file: resqml/olio/data/properties.json
+The RESQML units definition is shared with the other Energistic standards: PRODML & WITSML. It is very thorough and well thought out. Here we only touch on it in the most minimal way. The full list of units of measure is to be found in the RESQML common schema definition file QuantityClass.xsd, and is also available in json format in the resqpy repository file: resqml/olio/data/properties.json. The resqpy *weights_and_measures* module also has functions for retrieving such information.
 
 Discrete and categorical properties do not have a unit of measure.
+
+Resqpy includes support for the full Energistics uom system, including a general unit conversion capability: See *The Units of Measure system* tutorial.
 
 Null values and masked arrays
 -----------------------------
@@ -232,11 +237,13 @@ Behind the scenes, a UUID is a 128 bit integer, but it is usually presented in a
 As every part of a RESQML model has a UUID, and as the name suggests it is unique, this can be thought of as a primary key for the objects or parts in the dataset. Many of the resqpy methods work with UUIDs as a way of identifying a part. Here is an example of the single_array_ref() method we saw earlier, but now using the UUID for a particular property array:
 
 .. code-block:: python
+
     ntg_array = pc.single_array_ref(uuid = 'fa52e6a2-dbbb-11ea-b158-248a07af10b2')
 
 These UUIDs are not very human-friendly, so the examples don't tend to focus on them. However, for scripts running as part of automated jobs, their use is to be encouraged. The basic static property parts method we saw earlier is also available in a version that returns UUIDs instead of part names:
 
 .. code-block:: python
+
     ntg_uuid, porosity_uuid, perm_i_uuid, perm_j_uuid, perm_k_uuid = pc.basic_static_property_uuids(share_perm_parts = True)
 
 Working with recurrent properties
@@ -248,6 +255,7 @@ Within the property collection, each instance of a recurrent property has a time
 To find the UUID of the time series in use in the property collection, use:
 
 .. code-block:: python
+
     ts_uuid_list = pc.time_series_uuid_list()
     assert len(ts_uuid_list) == 1
     ts_uuid = ts_uuid_list[0]
@@ -270,6 +278,7 @@ The TimeSeries class includes various methods, for example:
 The time indices relevant to a time series are in the range zero to number_of_timestamps() - 1. The list of indices at use in a property collection can be found with:
 
 .. code-block:: python
+
     time_indices_list = pc.time_index_list()
 
 Note that not all the recurrent properties will necessarily exist for all the time indices. Furthermore, the time indices are not generally the same as Nexus timestep numbers, because they usually refer to the reduced time series rather than the full Nexus time series.
@@ -287,6 +296,7 @@ TheTimeSeries.timestamp() method, shown in the for loop above, returns an ascii 
 Given a time index, we can use it as a criterion when identifying an individual array for a recurrent property. For example:
 
 .. code-block:: python
+
     final_time_index = time_series.number_of_timestamps() - 1  # time indices count up starting at zero
     final_water_saturation_array = pc.single_array_ref(citation_title = 'SW', time_index = final_time_index)
 

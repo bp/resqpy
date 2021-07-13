@@ -59,42 +59,6 @@ pip install -e /path/to/repo/
 
 ## Contributing
 
-Contributions of all forms are welcome and encouraged! See the [Contributing
-Guide](docs/CONTRIBUTING.rst) for guidance on how you can contribute, including
-bug reports, features requests and pull requests.
-
-### Repository structure
-
-- `resqpy`: high level modules providing classes for main RESQML object types
-  and high level modification functions
-- `resqpy/olio`: low level modules, not often imported directly by calling code
-- `tests`: unit tests
-- `example_data`: small example datasets
-
-### Unit tests
-
-Run the test suite locally with:
-
-```bash
-pytest tests/
-```
-
-### Making a release
-
-To make a release at a given commit, simply make a git tag:
-
-```bash
-# Make a tag
-git tag -a v0.0.1 -m "Incremental release with some bugfixes"
-
-# Push tag to github
-git push origin v0.0.1
-```
-
-The tag must have the prefix `v` and have the form `MAJOR.MINOR.PATCH`.
-
-Following [semantic versioning](https://semver.org/), increment the:
-
-- MAJOR version when you make incompatible API changes,
-- MINOR version when you add functionality in a backwards compatible manner, and
-- PATCH version when you make backwards compatible bug fixes.
+Contributions of all forms are welcome and encouraged! Please feel free to open
+issues on the GitHub issue tracker, or submit Pull Requests. Please read the
+[Contributing Guide](docs/CONTRIBUTING.rst) before submitting patches.
