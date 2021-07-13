@@ -53,7 +53,7 @@ def test_fine_coarse_functions():
    assert fct.coarse_extent_kji == (5, 7, 7)
    assert fct.fine_extent_kji == (10, 15, 22)
    assert np.all(fct.coarse_for_fine_axial_vector(0) == (0, 0, 0, 1, 1, 1, 2, 2, 3, 4))
-   for const in fct.contant_ratios:
+   for const in fct.constant_ratios:
       assert const is None
    assert np.all(fct.vector_ratios[1] == (1, 2, 3, 3, 3, 2, 1))
    assert np.all(fct.vector_ratios[2] == (2, 3, 4, 4, 4, 3, 2))
