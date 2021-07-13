@@ -166,7 +166,7 @@ def test_wellbore_interp_title(tmp_model):
    well_interp_1.create_xml()
 
    # Create a duplicate object, loading from XML
-   well_interp_2 = rqo.WellboreInterpretation(model, uuid = well_interp_1.uuid)
+   well_interp_2 = rqo.WellboreInterpretation(tmp_model, uuid = well_interp_1.uuid)
 
    # Check feature name is present
    assert well_interp_1.title == feature_name
