@@ -3,6 +3,7 @@
 version = '28th June 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 log.debug('model.py version ' + version)
 
@@ -53,8 +54,14 @@ class Model():
    
    """
 
-   def __init__(self, epc_file = None, full_load = True, epc_subdir = None,
-                new_epc = False, create_basics = None, create_hdf5_ext = None, copy_from = None):
+   def __init__(self,
+                epc_file = None,
+                full_load = True,
+                epc_subdir = None,
+                new_epc = False,
+                create_basics = None,
+                create_hdf5_ext = None,
+                copy_from = None):
       """Create an empty model; load it from epc_file if given.
 
       Note:
@@ -97,11 +104,16 @@ class Model():
       :meta common:
       """
 
-      if epc_file and not epc_file.endswith('.epc'): epc_file += '.epc'
-      if copy_from and not copy_from.endswith('.epc'): copy_from += '.epc'
-      if copy_from == epc_file: copy_from = None
-      if create_basics is None: create_basics = new_epc and not copy_from
-      if create_hdf5_ext is None: create_hdf5_ext = new_epc and not copy_from
+      if epc_file and not epc_file.endswith('.epc'):
+         epc_file += '.epc'
+      if copy_from and not copy_from.endswith('.epc'):
+         copy_from += '.epc'
+      if copy_from == epc_file:
+         copy_from = None
+      if create_basics is None:
+         create_basics = new_epc and not copy_from
+      if create_hdf5_ext is None:
+         create_hdf5_ext = new_epc and not copy_from
       self.initialize()
       if epc_file and (copy_from or not new_epc):
          self.load_epc(epc_file, full_load = full_load, epc_subdir = epc_subdir, copy_from = copy_from)
@@ -131,7 +143,6 @@ class Model():
                with h5py.File(h5_file, 'w') as _:
                   pass
 
-
    def initialize(self):
       """Set model contents to empty.
 
@@ -142,33 +153,40 @@ class Model():
       self.epc_file = None
       self.epc_directory = None
       # hdf5 stuff
-      self.h5_dict = {}          # dictionary keyed on hdf5 uuid.bytes; mapping to hdf5 file name (full path)
+      self.h5_dict = {}  # dictionary keyed on hdf5 uuid.bytes; mapping to hdf5 file name (full path)
       self.h5_currently_open_path = None
       self.h5_currently_open_root = None  # h5 file handle for open hdf5 file
       self.h5_currently_open_mode = None
-      self.main_h5_uuid = None   # uuid of main hdf5 file
+      self.main_h5_uuid = None  # uuid of main hdf5 file
       # xml stuff
       self.main_tree = None
       self.main_root = None
-      self.crs_root = None       # primary coordinate reference system for model
-      self.grid_root = None      # extracted from tree as speed optimization (useful for single grid models), for 'main' grid
-      self.time_series = None    # extracted as speed optimization (single time series only for now)
-      self.parts_forest = {}     # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
-      self.uuid_part_dict = {}   # dictionary keyed on uuid.int; mapping to part_name
+      self.crs_root = None  # primary coordinate reference system for model
+      self.grid_root = None  # extracted from tree as speed optimization (useful for single grid models), for 'main' grid
+      self.time_series = None  # extracted as speed optimization (single time series only for now)
+      self.parts_forest = {}  # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
+      self.uuid_part_dict = {}  # dictionary keyed on uuid.int; mapping to part_name
       self.rels_present = False
-      self.rels_forest = {}      # dictionary keyed on part_name; mapping to (uuid, xml_tree)
-      self.other_forest = {}     # dictionary keyed on part_name; mapping to (content_type, xml_tree); used for docProps
+      self.rels_forest = {}  # dictionary keyed on part_name; mapping to (uuid, xml_tree)
+      self.other_forest = {}  # dictionary keyed on part_name; mapping to (content_type, xml_tree); used for docProps
       # grid(s): single grid models only for now
-      self.grid_list = []        # list of grid.Grid objects
-      self.main_grid = None      # grid.Grid object for the 'main' grid
-      self.reservoir_dict = []   # todo: mapping from reservoir name (citation title) to list of grids for that reservoir
+      self.grid_list = []  # list of grid.Grid objects
+      self.main_grid = None  # grid.Grid object for the 'main' grid
+      self.reservoir_dict = []  # todo: mapping from reservoir name (citation title) to list of grids for that reservoir
       self.consolidation = None  # Consolidation object for mapping equivalent uuids
       self.modified = False
 
-
-   def parts(self, parts_list = None, obj_type = None, uuid = None,
-             title = None, title_mode = 'is', title_case_sensitive = False,
-             extra = {}, related_uuid = None, epc_subdir = None, sort_by = None):
+   def parts(self,
+             parts_list = None,
+             obj_type = None,
+             uuid = None,
+             title = None,
+             title_mode = 'is',
+             title_case_sensitive = False,
+             extra = {},
+             related_uuid = None,
+             epc_subdir = None,
+             sort_by = None):
       """Returns a list of parts matching all of the arguments passed.
 
       Arguments:
@@ -214,79 +232,108 @@ class Model():
       :meta common:
       """
 
-      if not parts_list: parts_list = self.list_of_parts()
+      if not parts_list:
+         parts_list = self.list_of_parts()
       if uuid is not None:
          part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
-         if part_name is None or part_name not in parts_list: return []
+         if part_name is None or part_name not in parts_list:
+            return []
          parts_list = [part_name]
       if epc_subdir:
-         if epc_subdir.startswith('/'): epc_subdir = epc_subdir[1:]
+         if epc_subdir.startswith('/'):
+            epc_subdir = epc_subdir[1:]
          if epc_subdir:
-            if not epc_subdir.endswith('/'): epc_subdir += '/'
+            if not epc_subdir.endswith('/'):
+               epc_subdir += '/'
             filtered_list = []
             for part in parts_list:
-               if part.startswith[epc_subdir]: filtered_list.append(part)
-            if len(filtered_list) == 0: return []
+               if part.startswith[epc_subdir]:
+                  filtered_list.append(part)
+            if len(filtered_list) == 0:
+               return []
             parts_list = filtered_list
       if obj_type:
-         if obj_type[0].isupper(): obj_type = 'obj_' + obj_type
+         if obj_type[0].isupper():
+            obj_type = 'obj_' + obj_type
          filtered_list = []
          for part in parts_list:
-            if self.parts_forest[part][0] == obj_type: filtered_list.append(part)
-         if len(filtered_list) == 0: return []
+            if self.parts_forest[part][0] == obj_type:
+               filtered_list.append(part)
+         if len(filtered_list) == 0:
+            return []
          parts_list = filtered_list
       if title:
-         assert title_mode in ['is', 'starts', 'ends', 'contains', 'is not', 'does not start', 'does not end', 'does not contain']
-         if not title_case_sensitive: title = title.upper()
+         assert title_mode in [
+            'is', 'starts', 'ends', 'contains', 'is not', 'does not start', 'does not end', 'does not contain'
+         ]
+         if not title_case_sensitive:
+            title = title.upper()
          filtered_list = []
          for part in parts_list:
             part_title = self.citation_title_for_part(part)
-            if not title_case_sensitive: part_title = part_title.upper()
+            if not title_case_sensitive:
+               part_title = part_title.upper()
             if title_mode == 'is':
-               if part_title == title: filtered_list.append(part)
+               if part_title == title:
+                  filtered_list.append(part)
             elif title_mode == 'starts':
-               if part_title.startswith(title): filtered_list.append(part)
+               if part_title.startswith(title):
+                  filtered_list.append(part)
             elif title_mode == 'ends':
-               if part_title.endswith(title): filtered_list.append(part)
+               if part_title.endswith(title):
+                  filtered_list.append(part)
             elif title_mode == 'contains':
-               if title in part_title: filtered_list.append(part)
+               if title in part_title:
+                  filtered_list.append(part)
             if title_mode == 'is not':
-               if part_title != title: filtered_list.append(part)
+               if part_title != title:
+                  filtered_list.append(part)
             elif title_mode == 'does not start':
-               if not part_title.startswith(title): filtered_list.append(part)
+               if not part_title.startswith(title):
+                  filtered_list.append(part)
             elif title_mode == 'does not end':
-               if not part_title.endswith(title): filtered_list.append(part)
+               if not part_title.endswith(title):
+                  filtered_list.append(part)
             elif title_mode == 'does not contain':
-               if title not in part_title: filtered_list.append(part)
-         if len(filtered_list) == 0: return []
+               if title not in part_title:
+                  filtered_list.append(part)
+         if len(filtered_list) == 0:
+            return []
          parts_list = filtered_list
       if extra:
          filtered_list = []
          for part in parts_list:
             part_extra = rqet.load_metadata_from_xml(self.root_for_part(part))
-            if not part_extra: continue
+            if not part_extra:
+               continue
             match = True
             for key, value in extra.items():
                if key not in part_extra or part_extra[key] != value:
                   match = False
                   break
-            if match: filtered_list.append(part)
-         if len(filtered_list) == 0: return []
+            if match:
+               filtered_list.append(part)
+         if len(filtered_list) == 0:
+            return []
          parts_list = filtered_list
       if related_uuid is not None:
          parts_list = self.parts_list_filtered_by_related_uuid(parts_list, related_uuid)
-      if len(parts_list) == 0: return []
+      if len(parts_list) == 0:
+         return []
       if sort_by:
          if sort_by == 'type':
             parts_list.sort()
          elif sort_by in ['newest', 'oldest']:
             parts_list = self.sort_parts_list_by_timestamp(parts_list)
-            if sort_by == 'oldest': parts_list.reverse()
+            if sort_by == 'oldest':
+               parts_list.reverse()
          elif sort_by in ['uuid', 'title']:
             sort_list = []
             for index, part in enumerate(parts_list):
-               if sort_by == 'uuid': key = str(self.uuid_for_part(part))
-               else: key = self.citation_title_for_part(part)
+               if sort_by == 'uuid':
+                  key = str(self.uuid_for_part(part))
+               else:
+                  key = self.citation_title_for_part(part)
                sort_list.append((key, index))
             sort_list.sort()
             sorted_list = []
@@ -295,10 +342,16 @@ class Model():
             parts_list = sorted_list
       return parts_list
 
-
-   def part(self, parts_list = None, obj_type = None, uuid = None,
-            title = None, title_mode = 'is', title_case_sensitive = False,
-            extra = {}, related_uuid = None, epc_subdir = None,
+   def part(self,
+            parts_list = None,
+            obj_type = None,
+            uuid = None,
+            title = None,
+            title_mode = 'is',
+            title_case_sensitive = False,
+            extra = {},
+            related_uuid = None,
+            epc_subdir = None,
             multiple_handling = 'exception'):
       """Returns the name of a part matching all of the arguments passed.
 
@@ -319,24 +372,40 @@ class Model():
       :meta common:
       """
 
-      pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
-                      title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
-                      extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir)
-      if len(pl) == 0: return None
-      if len(pl) == 1 or multiple_handling == 'first': return pl[0]
+      pl = self.parts(parts_list = parts_list,
+                      obj_type = obj_type,
+                      uuid = uuid,
+                      title = title,
+                      title_mode = title_mode,
+                      title_case_sensitive = title_case_sensitive,
+                      extra = extra,
+                      related_uuid = related_uuid,
+                      epc_subdir = epc_subdir)
+      if len(pl) == 0:
+         return None
+      if len(pl) == 1 or multiple_handling == 'first':
+         return pl[0]
       if multiple_handling == 'none':
          return None
       elif multiple_handling in ['newest', 'oldest']:
          sorted_list = self.sort_parts_list_by_timestamp(pl)
-         if multiple_handling == 'newest': return sorted_list[0]
+         if multiple_handling == 'newest':
+            return sorted_list[0]
          return sorted_list[-1]
       else:
          raise ValueError('more than one part matches criteria')
 
-
-   def uuids(self, parts_list = None, obj_type = None, uuid = None,
-             title = None, title_mode = 'is', title_case_sensitive = False,
-             extra = {}, related_uuid = None, epc_subdir = None, sort_by = None):
+   def uuids(self,
+             parts_list = None,
+             obj_type = None,
+             uuid = None,
+             title = None,
+             title_mode = 'is',
+             title_case_sensitive = False,
+             extra = {},
+             related_uuid = None,
+             epc_subdir = None,
+             sort_by = None):
       """Returns a list of uuids of parts matching all of the arguments passed.
 
       arguments:
@@ -349,21 +418,38 @@ class Model():
       """
 
       sort_by_uuid = (sort_by == 'uuid')
-      if sort_by_uuid: sort_by = None
-      pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
-                      title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
-                      extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir, sort_by = sort_by)
-      if len(pl) == 0: return []
+      if sort_by_uuid:
+         sort_by = None
+      pl = self.parts(parts_list = parts_list,
+                      obj_type = obj_type,
+                      uuid = uuid,
+                      title = title,
+                      title_mode = title_mode,
+                      title_case_sensitive = title_case_sensitive,
+                      extra = extra,
+                      related_uuid = related_uuid,
+                      epc_subdir = epc_subdir,
+                      sort_by = sort_by)
+      if len(pl) == 0:
+         return []
       uuid_list = []
       for part in pl:
          uuid_list.append(self.uuid_for_part(part))
-      if sort_by_uuid: uuid_list.sort()
+      if sort_by_uuid:
+         uuid_list.sort()
       return uuid_list
 
-
-   def uuid(self, parts_list = None, obj_type = None, uuid = None,
-            title = None, title_mode = 'is', title_case_sensitive = False,
-            extra = {}, related_uuid = None, epc_subdir = None, multiple_handling = 'exception'):
+   def uuid(self,
+            parts_list = None,
+            obj_type = None,
+            uuid = None,
+            title = None,
+            title_mode = 'is',
+            title_case_sensitive = False,
+            extra = {},
+            related_uuid = None,
+            epc_subdir = None,
+            multiple_handling = 'exception'):
       """Returns the uuid of a part matching all of the arguments passed.
 
       arguments:
@@ -375,17 +461,31 @@ class Model():
       :meta common:
       """
 
-      part = self.part(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
-                       title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
-                       extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir,
+      part = self.part(parts_list = parts_list,
+                       obj_type = obj_type,
+                       uuid = uuid,
+                       title = title,
+                       title_mode = title_mode,
+                       title_case_sensitive = title_case_sensitive,
+                       extra = extra,
+                       related_uuid = related_uuid,
+                       epc_subdir = epc_subdir,
                        multiple_handling = multiple_handling)
-      if part is None: return None
+      if part is None:
+         return None
       return rqet.uuid_in_part_name(part)
 
-
-   def roots(self, parts_list = None, obj_type = None, uuid = None,
-             title = None, title_mode = 'is', title_case_sensitive = False,
-             extra = {}, related_uuid = None, epc_subdir = None, sort_by = None):
+   def roots(self,
+             parts_list = None,
+             obj_type = None,
+             uuid = None,
+             title = None,
+             title_mode = 'is',
+             title_case_sensitive = False,
+             extra = {},
+             related_uuid = None,
+             epc_subdir = None,
+             sort_by = None):
       """Returns a list of xml root nodes of parts matching all of the arguments passed.
 
       arguments:
@@ -397,19 +497,32 @@ class Model():
       :meta common:
       """
 
-      pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
-                      title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
-                      extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir, sort_by = sort_by)
+      pl = self.parts(parts_list = parts_list,
+                      obj_type = obj_type,
+                      uuid = uuid,
+                      title = title,
+                      title_mode = title_mode,
+                      title_case_sensitive = title_case_sensitive,
+                      extra = extra,
+                      related_uuid = related_uuid,
+                      epc_subdir = epc_subdir,
+                      sort_by = sort_by)
       root_list = []
       for part in pl:
          root_list.append(self.root_for_part(part))
       return root_list
 
-
-   def root(self, parts_list = None, obj_type = None, uuid = None,
-             title = None, title_mode = 'is', title_case_sensitive = False,
-             extra = {}, related_uuid = None, epc_subdir = None,
-             multiple_handling = 'exception'):
+   def root(self,
+            parts_list = None,
+            obj_type = None,
+            uuid = None,
+            title = None,
+            title_mode = 'is',
+            title_case_sensitive = False,
+            extra = {},
+            related_uuid = None,
+            epc_subdir = None,
+            multiple_handling = 'exception'):
       """Returns the xml root node of a part matching all of the arguments passed.
 
       arguments:
@@ -421,17 +534,31 @@ class Model():
       :meta common:
       """
 
-      part = self.part(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
-                       title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
-                       extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir,
+      part = self.part(parts_list = parts_list,
+                       obj_type = obj_type,
+                       uuid = uuid,
+                       title = title,
+                       title_mode = title_mode,
+                       title_case_sensitive = title_case_sensitive,
+                       extra = extra,
+                       related_uuid = related_uuid,
+                       epc_subdir = epc_subdir,
                        multiple_handling = multiple_handling)
-      if part is None: return None
+      if part is None:
+         return None
       return self.root_for_part(part)
 
-
-   def titles(self, parts_list = None, obj_type = None, uuid = None,
-              title = None, title_mode = 'is', title_case_sensitive = False,
-              extra = {}, related_uuid = None, epc_subdir = None, sort_by = None):
+   def titles(self,
+              parts_list = None,
+              obj_type = None,
+              uuid = None,
+              title = None,
+              title_mode = 'is',
+              title_case_sensitive = False,
+              extra = {},
+              related_uuid = None,
+              epc_subdir = None,
+              sort_by = None):
       """Returns a list of citation titles of parts matching all of the arguments passed.
 
       arguments:
@@ -443,19 +570,31 @@ class Model():
       :meta common:
       """
 
-      pl = self.parts(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
-                      title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
-                      extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir,
+      pl = self.parts(parts_list = parts_list,
+                      obj_type = obj_type,
+                      uuid = uuid,
+                      title = title,
+                      title_mode = title_mode,
+                      title_case_sensitive = title_case_sensitive,
+                      extra = extra,
+                      related_uuid = related_uuid,
+                      epc_subdir = epc_subdir,
                       sort_by = sort_by)
       title_list = []
       for part in pl:
          title_list.append(self.citation_title_for_part(part))
       return title_list
 
-
-   def title(self, parts_list = None, obj_type = None, uuid = None,
-             title = None, title_mode = 'is', title_case_sensitive = False,
-             extra = {}, related_uuid = None, epc_subdir = None,
+   def title(self,
+             parts_list = None,
+             obj_type = None,
+             uuid = None,
+             title = None,
+             title_mode = 'is',
+             title_case_sensitive = False,
+             extra = {},
+             related_uuid = None,
+             epc_subdir = None,
              multiple_handling = 'exception'):
       """Returns the citation title of a part matching all of the arguments passed.
 
@@ -468,13 +607,19 @@ class Model():
       :meta common:
       """
 
-      part = self.part(parts_list = parts_list, obj_type = obj_type, uuid = uuid,
-                       title = title, title_mode = title_mode, title_case_sensitive = title_case_sensitive,
-                       extra = extra, related_uuid = related_uuid, epc_subdir = epc_subdir,
+      part = self.part(parts_list = parts_list,
+                       obj_type = obj_type,
+                       uuid = uuid,
+                       title = title,
+                       title_mode = title_mode,
+                       title_case_sensitive = title_case_sensitive,
+                       extra = extra,
+                       related_uuid = related_uuid,
+                       epc_subdir = epc_subdir,
                        multiple_handling = multiple_handling)
-      if part is None: return None
+      if part is None:
+         return None
       return self.citation_title_for_part(part)
-
 
    def set_modified(self):
       """Marks the model as having been modified and assigns a new uuid.
@@ -486,14 +631,12 @@ class Model():
 
       self.modified = True
 
-
    def create_tree_if_none(self):
       """Checks that model has an xml tree; if not, an empty tree is created; not usually called directly."""
 
       if self.main_tree is None:
          self.main_tree = rqet.ElementTree()
          self.modified = True
-
 
    def load_part(self, epc, part_name, is_rels = None):
       """Load and parse xml tree for given part name, storing info in parts forest (or rels forest).
@@ -514,12 +657,14 @@ class Model():
       """
 
       # note: epc is 'open' ZipFile handle
-      if part_name.startswith('/'): part_name = part_name[1:]
+      if part_name.startswith('/'):
+         part_name = part_name[1:]
 
       try:
 
-#        log.debug('loading part ' + part_name)
-         if is_rels is None: is_rels = part_name.endswith('.rels')
+         #        log.debug('loading part ' + part_name)
+         if is_rels is None:
+            is_rels = part_name.endswith('.rels')
          is_other = not is_rels and part_name.startswith('docProps')
 
          part_type = None
@@ -549,7 +694,7 @@ class Model():
                   assert bu.matching_uuids(part_uuid, uuid_from_tree)
                self.parts_forest[part_name] = (part_type, part_uuid, part_tree)
                self._set_uuid_to_part(part_name)
-               if self.crs_root is None and part_type == 'obj_LocalDepth3dCrs':   # randomly assign first crs as primary crs for model
+               if self.crs_root is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
                   self.crs_root = part_tree.getroot()
 
          return True
@@ -558,7 +703,6 @@ class Model():
 
          log.exception('(okay to continue?) failed to load part: ' + part_name)
          return False
-
 
    def set_epc_file_and_directory(self, epc_file):
       """Sets the full path and directory of the epc_file.
@@ -570,10 +714,10 @@ class Model():
          not usually needed to be called directly, except perhaps when creating a new dataset
       """
 
-      self.epc_file = epc_file   # full path, if provided as such
+      self.epc_file = epc_file  # full path, if provided as such
       (self.epc_directory, _) = os.path.split(epc_file)
-      if self.epc_directory is None or len(self.epc_directory) == 0: self.epc_directory = '.'
-
+      if self.epc_directory is None or len(self.epc_directory) == 0:
+         self.epc_directory = '.'
 
    def fell_part(self, part_name):
       """Removes the named part from the in-memory parts forest.
@@ -603,7 +747,6 @@ class Model():
       except Exception:
          pass
 
-
    def remove_part_from_main_tree(self, part):
       """Removes the named part from the main (Content_Types) tree.
 
@@ -614,12 +757,12 @@ class Model():
       for child in self.main_root:
          if rqet.stripped_of_prefix(child.tag) == 'Override':
             part_name = child.attrib['PartName']
-            if part_name[0] == '/': part_name = part_name[1:]
+            if part_name[0] == '/':
+               part_name = part_name[1:]
             if part_name == part:
                log.debug('removing part from main xml tree: ' + part)
                self.main_root.remove(child)
                break
-
 
    def tidy_up_forests(self, tidy_main_tree = True, tidy_others = False, remove_extended_core = True):
       """Removes any parts that do not have any related data in dictionaries.
@@ -634,7 +777,8 @@ class Model():
             deletion_list.append(part)
       for part in deletion_list:
          log.debug('removing part due to lack of xml tree etc.: ' + str(part))
-         if tidy_main_tree: self.remove_part_from_main_tree(part)
+         if tidy_main_tree:
+            self.remove_part_from_main_tree(part)
          self._del_uuid_to_part(part)
          del self.parts_forest[part]
       deletion_list = []
@@ -643,7 +787,8 @@ class Model():
             deletion_list.append(part)
       for part in deletion_list:
          log.debug('removing rels part due to lack of xml tree etc.: ' + str(part))
-         if tidy_main_tree: self.remove_part_from_main_tree(part)
+         if tidy_main_tree:
+            self.remove_part_from_main_tree(part)
          del self.rels_forest[part]
       if tidy_others:
          for part, info in self.other_forest.items():
@@ -651,13 +796,14 @@ class Model():
                deletion_list.append(part)
          for part in deletion_list:
             log.debug('removing docProps part due to lack of xml tree etc.: ' + str(part))
-            if tidy_main_tree: self.remove_part_from_main_tree(part)
+            if tidy_main_tree:
+               self.remove_part_from_main_tree(part)
             del self.other_forest[part]
       if remove_extended_core and 'docProps/extendedCore.xml' in self.other_forest:  # more trouble than it's worth
          part = 'docProps/extendedCore.xml'
-         if tidy_main_tree: self.remove_part_from_main_tree(part)
+         if tidy_main_tree:
+            self.remove_part_from_main_tree(part)
          del self.other_forest[part]
-
 
    def load_epc(self, epc_file, full_load = True, epc_subdir = None, copy_from = None):
       """Load xml parts of model from epc file (HDF5 arrays are not loaded).
@@ -682,20 +828,29 @@ class Model():
       """
 
       def exclude(name, epc_subdir):
-         if epc_subdir is None: return False
-         if '/' not in name: return False
-         if name.startswith('docProps') or name.startswith('_rels'): return False
-         if isinstance(epc_subdir, str): epc_subdir = [epc_subdir]
+         if epc_subdir is None:
+            return False
+         if '/' not in name:
+            return False
+         if name.startswith('docProps') or name.startswith('_rels'):
+            return False
+         if isinstance(epc_subdir, str):
+            epc_subdir = [epc_subdir]
          for subdir in epc_subdir:
-            if subdir.endswith('/'): head = subdir
-            else: head = subdir + '/'
-            if name.startswith(head): return False
+            if subdir.endswith('/'):
+               head = subdir
+            else:
+               head = subdir + '/'
+            if name.startswith(head):
+               return False
          return True
 
-      if not epc_file.endswith('.epc'): epc_file += '.epc'
+      if not epc_file.endswith('.epc'):
+         epc_file += '.epc'
 
       if copy_from:
-         if not copy_from.endswith('.epc'): copy_from += '.epc'
+         if not copy_from.endswith('.epc'):
+            copy_from += '.epc'
          log.info('copying ' + copy_from + ' to ' + epc_file + ' along with paired .h5 files')
          shutil.copy(copy_from, epc_file)
          shutil.copy(copy_from[:-4] + '.h5', epc_file[:-4] + '.h5')
@@ -711,7 +866,8 @@ class Model():
       with zf.ZipFile(epc_file) as epc:
          names = epc.namelist()
          for name in names:
-            if exclude(name, epc_subdir): continue
+            if exclude(name, epc_subdir):
+               continue
             if name != '[Content_Types].xml':
                if name.startswith('docProps'):
                   self.other_forest[name] = (None, None)  # used for non-uuid parts, ie. docProps
@@ -729,7 +885,8 @@ class Model():
                if rqet.stripped_of_prefix(child.tag) == 'Override':
                   attrib_dict = child.attrib
                   part_name = attrib_dict['PartName']
-                  if part_name[0] == '/': part_name = part_name[1:]
+                  if part_name[0] == '/':
+                     part_name = part_name[1:]
                   part_type = rqet.content_type(attrib_dict['ContentType'])
                   if part_name.startswith('docProps'):
                      if part_name not in self.other_forest:
@@ -745,7 +902,8 @@ class Model():
                      self.parts_forest[part_name] = (part_type, part_uuid, None)
                   if full_load:
                      load_success = self.load_part(epc, part_name)
-                     if not load_success: self.fell_part(part_name)
+                     if not load_success:
+                        self.fell_part(part_name)
                elif rqet.stripped_of_prefix(child.tag) == 'Default':
                   if 'Extension' in child.attrib.keys() and child.attrib['Extension'] == 'rels':
                      assert not self.rels_present
@@ -755,16 +913,18 @@ class Model():
                   pass
          if self.rels_present and full_load:
             for name in names:
-               if exclude(name, epc_subdir): continue
+               if exclude(name, epc_subdir):
+                  continue
                if name.startswith('_rels/'):
                   load_success = self.load_part(epc, name, is_rels = True)
-                  if not load_success: self.fell_part(part_name)
+                  if not load_success:
+                     self.fell_part(part_name)
             if copy_from:
                self.change_filename_in_hdf5_rels(os.path.split(epc_file)[1][:-4] + '.h5')
          elif not self.rels_present:
             assert len(self.rels_forest) == 0
-         if full_load: self.tidy_up_forests()
-
+         if full_load:
+            self.tidy_up_forests()
 
    def store_epc(self, epc_file = None, main_xml_name = '[Content_Types].xml', only_if_modified = False):
       """Write xml parts of model to epc file (HDF5 arrays are not written here).
@@ -788,18 +948,21 @@ class Model():
       :meta common:
       """
 
-#      for prefix, uri in ns.items():
-#         et.register_namespace(prefix, uri)
+      #      for prefix, uri in ns.items():
+      #         et.register_namespace(prefix, uri)
 
-      if not epc_file: epc_file = self.epc_file
+      if not epc_file:
+         epc_file = self.epc_file
       assert epc_file, 'no file name given or known when attempting to store epc'
 
-      if only_if_modified and not self.modified: return
+      if only_if_modified and not self.modified:
+         return
 
       log.info('storing resqml model to epc file ' + epc_file)
 
       assert self.main_tree is not None
-      if self.main_root is None: self.main_root = self.main_tree.getroot()
+      if self.main_root is None:
+         self.main_root = self.main_tree.getroot()
 
       with zf.ZipFile(epc_file, mode = 'w') as epc:
          with epc.open(main_xml_name, mode = 'w') as main_xml:
@@ -809,14 +972,16 @@ class Model():
             if part_tree is None:
                log.warning('No xml tree present to write for part: ' + part_name)
                continue
-            if part_name[0] == '/': part_name = part_name[1:]
+            if part_name[0] == '/':
+               part_name = part_name[1:]
             with epc.open(part_name, mode = 'w') as part_xml:
                rqet.write_xml(part_xml, part_tree, standalone = None)
          for part_name, (_, part_tree) in self.other_forest.items():
             if part_tree is None:
                log.warning('No xml tree present to write for other part: ' + part_name)
                continue
-            if part_name[0] == '/': part_name = part_name[1:]
+            if part_name[0] == '/':
+               part_name = part_name[1:]
             with epc.open(part_name, mode = 'w') as part_xml:
                rqet.write_xml(part_xml, part_tree, standalone = 'yes')
          if self.rels_present:
@@ -829,7 +994,6 @@ class Model():
          # todo: other parts (documentation etc.)
       self.set_epc_file_and_directory(epc_file)
       self.modified = False
-
 
    def parts_list_of_type(self, type_of_interest = None, uuid = None):
       """Returns a list of part names for parts of type of interest, optionally matching a uuid.
@@ -847,11 +1011,13 @@ class Model():
             it is equivalent to: self.parts(obj_type = type_of_interest, uuid = uuid)
       """
 
-      if type_of_interest and type_of_interest[0].isupper(): type_of_interest = 'obj_' + type_of_interest
+      if type_of_interest and type_of_interest[0].isupper():
+         type_of_interest = 'obj_' + type_of_interest
 
       if uuid is not None:
          part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
-         if part_name is None or (type_of_interest is not None and (self.parts_forest[part_name][0] != type_of_interest)):
+         if part_name is None or (type_of_interest is not None and
+                                  (self.parts_forest[part_name][0] != type_of_interest)):
             return []
          return [part_name]
 
@@ -861,25 +1027,24 @@ class Model():
             parts_list.append(part_name)
       return parts_list
 
-
    def list_of_parts(self, only_objects = True):
       """Return a complete list of parts."""
 
       pl = list(self.parts_forest.keys())
-      if not only_objects: return pl
+      if not only_objects:
+         return pl
       obj_list = []
       for part in pl:
          dir_place = part.rfind('/')
          dir_free_part = part[dir_place + 1:]
-         if dir_free_part.startswith('obj_') and not dir_free_part.startswith('obj_Epc'): obj_list.append(part)
+         if dir_free_part.startswith('obj_') and not dir_free_part.startswith('obj_Epc'):
+            obj_list.append(part)
       return obj_list
-
 
    def number_of_parts(self):
       """Retuns the number of parts in the model, including external parts such as the link to an hdf5 file."""
 
       return len(self.parts_forest)
-
 
    def part_for_uuid(self, uuid):
       """Returns the part name which has the given uuid.
@@ -895,7 +1060,6 @@ class Model():
 
       return self.uuid_part_dict.get(bu.uuid_as_int(uuid))
 
-
    def root_for_uuid(self, uuid):
       """Returns the xml root for the part which has the given uuid.
 
@@ -910,7 +1074,6 @@ class Model():
 
       return self.root_for_part(self.part_for_uuid(uuid))
 
-
    def parts_count_by_type(self, type_of_interest = None):
       """Returns a sorted list of (type, count) for parts.
 
@@ -924,14 +1087,18 @@ class Model():
       """
 
       # note: resqml classes start with 'obj_' whilst witsml classes don't!
-      if type_of_interest and type_of_interest.startswith('obj_'): type_of_interest = type_of_interest[4:]
+      if type_of_interest and type_of_interest.startswith('obj_'):
+         type_of_interest = type_of_interest[4:]
 
       type_list = []
       for part_name in self.parts_forest:
          part_type = self.parts_forest[part_name][0]
-         if part_type is None: continue
-         if part_type.startswith('obj_'): part_type = part_type[4:]
-         if type_of_interest is None or part_type == type_of_interest: type_list.append(part_type)
+         if part_type is None:
+            continue
+         if part_type.startswith('obj_'):
+            part_type = part_type[4:]
+         if type_of_interest is None or part_type == type_of_interest:
+            type_list.append(part_type)
       type_list.sort()
       type_list.append('END')  # simplifies termination of scan below
       result_list = []
@@ -939,12 +1106,12 @@ class Model():
       current_type = ''
       for index in range(len(type_list)):
          if type_list[index] != current_type:
-            if count: result_list.append((current_type, count))
+            if count:
+               result_list.append((current_type, count))
             current_type = type_list[index]
             count = 0
          count += 1
       return result_list
-
 
    def parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = None):
       """From a list of parts, returns a list of those parts which have a relationship with the given uuid.
@@ -965,7 +1132,8 @@ class Model():
          this method scans the relationship info for every present part, looking for uuid in rels
       """
 
-      if not self.rels_present or parts_list is None or uuid is None: return None
+      if not self.rels_present or parts_list is None or uuid is None:
+         return None
       filtered_list = []
       this_part = self.part_for_uuid(uuid)
 
@@ -973,44 +1141,51 @@ class Model():
          rels_part_root = self.root_for_part(rqet.rels_part_name_for_part(this_part), is_rels = True)
          if rels_part_root is not None:
             for relation_node in rels_part_root:
-               if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship': continue
+               if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
+                  continue
                target_part = relation_node.attrib['Target']
-               if target_part not in parts_list: continue
+               if target_part not in parts_list:
+                  continue
                if uuid_is_source is not None:
                   source_dest = relation_node.attrib['Type']
                   if uuid_is_source:
-                     if 'source' not in source_dest: continue
+                     if 'source' not in source_dest:
+                        continue
                   else:
-                     if 'source' in source_dest: continue
+                     if 'source' in source_dest:
+                        continue
                filtered_list.append(target_part)
 
       for part in parts_list:
-         if part in filtered_list: continue
+         if part in filtered_list:
+            continue
          rels_part_root = self.root_for_part(rqet.rels_part_name_for_part(part), is_rels = True)
-         if rels_part_root is None: continue
+         if rels_part_root is None:
+            continue
          for relation_node in rels_part_root:
-            if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship': continue
+            if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
+               continue
             target_part = relation_node.attrib['Target']
             relation_uuid = rqet.uuid_in_part_name(target_part)
             if bu.matching_uuids(uuid, relation_uuid):
                if uuid_is_source is not None:
                   source_dest = relation_node.attrib['Type']
                   if uuid_is_source:
-                     if 'source' in source_dest: continue       # relation is source, so uuid is not
+                     if 'source' in source_dest:
+                        continue  # relation is source, so uuid is not
                   else:
-                     if 'source' not in source_dest: continue   # relation is not source, so uuid is
+                     if 'source' not in source_dest:
+                        continue  # relation is not source, so uuid is
                filtered_list.append(part)
                break
 
       return filtered_list
 
-
    def supporting_representation_for_part(self, part):
       """Returns the uuid of the supporting representation for the part, if found, otherwise None."""
 
-      return bu.uuid_from_string(rqet.find_nested_tags_text(self.root_for_part(part),
-                                                            ['SupportingRepresentation', 'UUID']))
-
+      return bu.uuid_from_string(
+         rqet.find_nested_tags_text(self.root_for_part(part), ['SupportingRepresentation', 'UUID']))
 
    def parts_list_filtered_by_supporting_uuid(self, parts_list, uuid):
       """From a list of parts, returns a list of those parts which have the given uuid as supporting representation.
@@ -1027,14 +1202,16 @@ class Model():
          the part to which the given uuid applies might or might not be in the input parts list
       """
 
-      if parts_list is None or uuid is None: return None
+      if parts_list is None or uuid is None:
+         return None
       filtered_list = []
       for part in parts_list:
          support_ref_uuid = self.supporting_representation_for_part(part)
-         if support_ref_uuid is None: continue
-         if bu.matching_uuids(support_ref_uuid, uuid): filtered_list.append(part)
+         if support_ref_uuid is None:
+            continue
+         if bu.matching_uuids(support_ref_uuid, uuid):
+            filtered_list.append(part)
       return filtered_list
-
 
    def parts_list_related_to_uuid_of_type(self, uuid, type_of_interest = None):
       """Returns a list of parts of type of interest that relate to part with given uuid.
@@ -1051,7 +1228,6 @@ class Model():
       parts_list = self.parts_list_of_type(type_of_interest = type_of_interest)
       return self.parts_list_filtered_by_related_uuid(parts_list, uuid)
 
-
    def external_parts_list(self):
       """Returns a list of part names for external part references.
 
@@ -1066,7 +1242,6 @@ class Model():
       """
 
       return self.parts_list_of_type('obj_EpcExternalPartReference')
-
 
    def uuid_for_part(self, part_name, is_rels = None):
       """Returns the uuid for the named part.
@@ -1086,11 +1261,13 @@ class Model():
       :meta common:
       """
 
-      if part_name is None: return None
-      if is_rels is None: is_rels = part_name.endswith('.rels')
-      if is_rels: return self.rels_forest[part_name][0]
+      if part_name is None:
+         return None
+      if is_rels is None:
+         is_rels = part_name.endswith('.rels')
+      if is_rels:
+         return self.rels_forest[part_name][0]
       return self.parts_forest[part_name][1]
-
 
    def type_of_part(self, part_name, strip_obj = False):
       """Returns content type for the named part (does not apply to rels parts).
@@ -1107,11 +1284,12 @@ class Model():
       """
 
       part_info = self.parts_forest.get(part_name)
-      if part_info is None: return None
+      if part_info is None:
+         return None
       obj_type = part_info[0]
-      if obj_type is None or not strip_obj or not obj_type.startswith('obj_'): return obj_type
+      if obj_type is None or not strip_obj or not obj_type.startswith('obj_'):
+         return obj_type
       return obj_type[4:]
-
 
    def type_of_uuid(self, uuid, strip_obj = False):
       """Returns content type for the uuid.
@@ -1130,7 +1308,6 @@ class Model():
       part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
       return self.type_of_part(part_name, strip_obj = strip_obj)
 
-
    def tree_for_part(self, part_name, is_rels = None):
       """Returns parsed xml tree for the named part.
 
@@ -1143,37 +1320,47 @@ class Model():
          parsed xml tree (defined in lxml or ElementTree package) for the named part
       """
 
-      if not part_name: return None
-      if is_rels is None: is_rels = part_name.endswith('.rels')
+      if not part_name:
+         return None
+      if is_rels is None:
+         is_rels = part_name.endswith('.rels')
       is_other = not is_rels and part_name.startswith('docProps')
       if is_rels:
-         if part_name not in self.rels_forest: return None
+         if part_name not in self.rels_forest:
+            return None
          (_, tree) = self.rels_forest[part_name]
          if tree is None:
-            if not self.epc_file: return None
+            if not self.epc_file:
+               return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = True)
-               if not load_success: return None
+               if not load_success:
+                  return None
          return self.rels_forest[part_name][1]
       elif is_other:
-         if part_name not in self.other_forest: return None
+         if part_name not in self.other_forest:
+            return None
          (_, tree) = self.other_forest[part_name]
          if tree is None:
-            if not self.epc_file: return None
+            if not self.epc_file:
+               return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = False)
-               if not load_success: return None
+               if not load_success:
+                  return None
          return self.other_forest[part_name][1]
       else:
-         if part_name not in self.parts_forest: return None
+         if part_name not in self.parts_forest:
+            return None
          (_, _, tree) = self.parts_forest[part_name]
          if tree is None:
-            if not self.epc_file: return None
+            if not self.epc_file:
+               return None
             with zf.ZipFile(self.epc_file) as epc:
                load_success = self.load_part(epc, part_name, is_rels = False)
-               if not load_success: return None
+               if not load_success:
+                  return None
          return self.parts_forest[part_name][2]
-
 
    def root_for_part(self, part_name, is_rels = None):
       """Returns root of parsed xml tree for the named part.
@@ -1189,11 +1376,12 @@ class Model():
       :meta common:
       """
 
-      if not part_name: return None
+      if not part_name:
+         return None
       tree = self.tree_for_part(part_name, is_rels = is_rels)
-      if tree is None: return None
+      if tree is None:
+         return None
       return tree.getroot()
-
 
    def change_hdf5_uuid_in_hdf5_references(self, node, old_uuid, new_uuid):
       """Scan node for hdf5 references and set the uuid of the hdf5 file itself to new_uuid.
@@ -1222,10 +1410,12 @@ class Model():
                count += 1
          except Exception:
             pass
-      if count == 1: log.debug('one hdf5 reference modified')
-      else: log.debug(str(count) + ' hdf5 references modified')
-      if count > 0: self.set_modified()
-
+      if count == 1:
+         log.debug('one hdf5 reference modified')
+      else:
+         log.debug(str(count) + ' hdf5 references modified')
+      if count > 0:
+         self.set_modified()
 
    def change_uuid_in_hdf5_references(self, node, old_uuid, new_uuid):
       """Scan node for hdf5 references using the old_uuid and replace with the new_uuid.
@@ -1256,10 +1446,12 @@ class Model():
             count += 1
          except Exception:
             pass
-      if count == 1: log.debug('one hdf5 reference modified')
-      else: log.debug(str(count) + ' hdf5 references modified')
-      if count > 0: self.set_modified()
-
+      if count == 1:
+         log.debug('one hdf5 reference modified')
+      else:
+         log.debug(str(count) + ' hdf5 references modified')
+      if count > 0:
+         self.set_modified()
 
    def change_filename_in_hdf5_rels(self, new_hdf5_filename = None):
       """Scan relationships forest for hdf5 external parts and patch in a new filename.
@@ -1286,8 +1478,8 @@ class Model():
                child.attrib['Target'] = new_hdf5_filename
                count += 1
       log.info(str(count) + ' hdf5 filename' + _pl(count) + ' set to: ' + new_hdf5_filename)
-      if count > 0: self.set_modified()
-
+      if count > 0:
+         self.set_modified()
 
    def copy_part(self, existing_uuid, new_uuid, change_hdf5_refs = False):
       """Makes a new part as a copy of an existing part with only a new uuid set; the new part can then be modified.
@@ -1331,7 +1523,6 @@ class Model():
       self.add_part(part_type, new_uuid, new_root, add_relationship_part = False)
       return part_name
 
-
    def root_for_ijk_grid(self, uuid = None, title = None):
       """Return root for IJK Grid part.
 
@@ -1352,17 +1543,18 @@ class Model():
          failure to find a matching grid part results in an assertion exception
       """
 
-      if title is not None: title = title.strip().upper()
+      if title is not None:
+         title = title.strip().upper()
       if uuid is None and not title:
          grid_root = self.root(obj_type = 'IjkGridRepresentation', title = 'ROOT', multiple_handling = 'oldest')
-         if grid_root is None: grid_root = self.root(obj_type = 'IjkGridRepresentation')
+         if grid_root is None:
+            grid_root = self.root(obj_type = 'IjkGridRepresentation')
       else:
          grid_root = self.root(obj_type = 'IjkGridRepresentation', uuid = uuid, title = title)
 
       assert grid_root is not None, 'IJK Grid part not found'
 
       return grid_root
-
 
    def citation_title_for_part(self, part):  # duplicate functionality to title_for_part()
       """Returns the citation title for the specified part.
@@ -1371,7 +1563,6 @@ class Model():
       """
 
       return rqet.citation_title_for_node(self.root_for_part(part))
-
 
    def root_for_time_series(self, uuid = None):
       """Return root for time series part.
@@ -1389,8 +1580,10 @@ class Model():
       """
 
       time_series_list = self.parts_list_of_type('obj_TimeSeries', uuid = uuid)
-      if len(time_series_list) == 0: return None
-      if len(time_series_list) == 1: return self.root_for_part(time_series_list[0])
+      if len(time_series_list) == 0:
+         return None
+      if len(time_series_list) == 1:
+         return self.root_for_part(time_series_list[0])
       log.warning('selecting time series with earliest creation date')
       oldest_root = oldest_creation = None
       for ts in time_series_list:
@@ -1400,7 +1593,6 @@ class Model():
             oldest_creation = created
             oldest_root = node
       return oldest_root
-
 
    def resolve_grid_root(self, grid_root = None, uuid = None):
       """If grid root argument is None, returns the root for the IJK Grid part instead.
@@ -1420,13 +1612,13 @@ class Model():
       """
 
       if grid_root is not None:
-         if self.grid_root is None: self.grid_root = grid_root
+         if self.grid_root is None:
+            self.grid_root = grid_root
       else:
          if self.grid_root is None:
             self.grid_root = self.root_for_ijk_grid(uuid = uuid)
          grid_root = self.grid_root
       return grid_root
-
 
    def grid(self, title = None, uuid = None, find_properties = True):
       """Returns a shared Grid (or RegularGrid) object for this model, by default the 'main' grid.
@@ -1452,7 +1644,8 @@ class Model():
 
       if uuid is None and (title is None or title.upper() == 'ROOT'):
          if self.main_grid is not None:
-            if find_properties: self.main_grid.extract_property_collection()
+            if find_properties:
+               self.main_grid.extract_property_collection()
             return self.main_grid
          if title is None:
             grid_root = self.resolve_grid_root()
@@ -1461,17 +1654,19 @@ class Model():
       else:
          grid_root = self.root(obj_type = 'IjkGridRepresentation', uuid = uuid, title = title)
       assert grid_root is not None, 'IJK Grid part not found'
-      if uuid is None: uuid = rqet.uuid_for_part_root(grid_root)
+      if uuid is None:
+         uuid = rqet.uuid_for_part_root(grid_root)
       for grid in self.grid_list:
          if grid.root is grid_root:
-            if find_properties: grid.extract_property_collection()
+            if find_properties:
+               grid.extract_property_collection()
             return grid
       grid = grr.any_grid(self, uuid = uuid, find_properties = find_properties)
       assert grid is not None, 'failed to instantiate grid object'
-      if find_properties: grid.extract_property_collection()
+      if find_properties:
+         grid.extract_property_collection()
       self.add_grid(grid)
       return grid
-
 
    def add_grid(self, grid_object, check_for_duplicates = False):
       """Add grid object to list of shareable grids for this model.
@@ -1488,9 +1683,9 @@ class Model():
 
       if check_for_duplicates:
          for g in self.grid_list:
-            if bu.mathcing_uuids(g.uuid, grid_object.uuid): return
+            if bu.mathcing_uuids(g.uuid, grid_object.uuid):
+               return
       self.grid_list.append(grid_object)
-
 
    def grid_list_uuid_list(self):
       """Returns list of uuid's for the grid objects in the cached grid list."""
@@ -1500,14 +1695,13 @@ class Model():
          uuid_list.append(grid.uuid)
       return uuid_list
 
-
    def grid_for_uuid_from_grid_list(self, uuid):
       """Returns the cached grid object matching the given uuid, if found in the grid list, otherwise None."""
 
       for grid in self.grid_list:
-         if bu.matching_uuids(uuid, grid.uuid): return grid
+         if bu.matching_uuids(uuid, grid.uuid):
+            return grid
       return None
-
 
    def resolve_time_series_root(self, time_series_root = None):
       """If time_series_root is None, finds the root for a time series in the model.
@@ -1524,11 +1718,11 @@ class Model():
          is more than one time series part in the model
       """
 
-      if time_series_root is not None: return time_series_root
+      if time_series_root is not None:
+         return time_series_root
       if self.time_series is None:
          self.time_series = self.root_for_time_series()
       return self.time_series
-
 
    def h5_uuid_and_path_for_node(self, node, tag = 'Values'):
       """Returns a (hdf5_uuid, hdf5_internal_path) pair for an xml array node.
@@ -1548,12 +1742,12 @@ class Model():
       """
 
       child = rqet.find_tag(node, tag)
-      if child is None: return None
+      if child is None:
+         return None
       assert rqet.node_type(child) == 'Hdf5Dataset'
       h5_path = rqet.find_tag(child, 'PathInHdfFile').text
       h5_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(child, ['HdfProxy', 'UUID']))
       return (h5_uuid, h5_path)
-
 
    def h5_uuid_list(self, node):
       """Returns a list of all uuids for hdf5 external part(s) referred to in recursive tree."""
@@ -1569,7 +1763,6 @@ class Model():
 
       return list(recursive_uuid_set(node))
 
-
    def h5_uuid(self):
       """Returns the uuid of the 'main' hdf5 file."""
 
@@ -1581,16 +1774,18 @@ class Model():
          else:
             try:
                grid_root = self.resolve_grid_root()
-               if grid_root is not None: uuid_list = self.h5_uuid_list(grid_root)
+               if grid_root is not None:
+                  uuid_list = self.h5_uuid_list(grid_root)
             except Exception:
                uuid_list = None
             if uuid_list is None or len(uuid_list) == 0:
                for part, (_, _, tree) in self.parts_forest.items():
                   uuid_list = self.h5_uuid_list(tree.getroot())
-                  if uuid_list is not None and len(uuid_list) > 0: break
-            if uuid_list is not None and len(uuid_list) > 0: self.main_h5_uuid = uuid_list[0]  # arbitrary use of first hdf5 uuid
+                  if uuid_list is not None and len(uuid_list) > 0:
+                     break
+            if uuid_list is not None and len(uuid_list) > 0:
+               self.main_h5_uuid = uuid_list[0]  # arbitrary use of first hdf5 uuid
       return self.main_h5_uuid
-
 
    def h5_file_name(self, uuid = None, override = True, file_must_exist = True):
       """Returns full path for hdf5 file with given uuid.
@@ -1623,9 +1818,12 @@ class Model():
 
       if override and self.epc_file and self.epc_file.endswith('.epc'):
          h5_full_path = self.epc_file[:-4] + '.h5'
-         if not file_must_exist or os.path.exists(h5_full_path): return h5_full_path
-      if uuid is None: uuid = self.h5_uuid()
-      if uuid.bytes in self.h5_dict: return self.h5_dict[uuid.bytes]
+         if not file_must_exist or os.path.exists(h5_full_path):
+            return h5_full_path
+      if uuid is None:
+         uuid = self.h5_uuid()
+      if uuid.bytes in self.h5_dict:
+         return self.h5_dict[uuid.bytes]
       for rel_name in self.rels_forest:
          entry = self.rels_forest[rel_name]
          if bu.matching_uuids(uuid, entry[0]):
@@ -1640,15 +1838,16 @@ class Model():
                         h5_full_path = os.path.join(self.epc_directory, target_file)
                      else:
                         h5_full_path = target_path
-                     if file_must_exist and not os.path.exists(h5_full_path): h5_full_path = None
+                     if file_must_exist and not os.path.exists(h5_full_path):
+                        h5_full_path = None
                   if h5_full_path is None:
                      h5_full_path = child.attrib['Target']
-                     if file_must_exist and not os.path.exists(h5_full_path): h5_full_path = None
+                     if file_must_exist and not os.path.exists(h5_full_path):
+                        h5_full_path = None
                   if h5_full_path is not None:
                      self.h5_dict[uuid.bytes] = h5_full_path
                   return h5_full_path
       return None
-
 
    def h5_access(self, uuid = None, mode = 'r', override = True, file_path = None):
       """Returns an open h5 file handle for the hdf5 file with the given uuid.
@@ -1670,17 +1869,22 @@ class Model():
          piece of code accessing the file might cause a 'resource unavailable' exception
       """
 
-      if self.h5_currently_open_mode is not None and self.h5_currently_open_mode != mode: self.h5_release()
-      if file_path: file_name = file_path
-      else: file_name = self.h5_file_name(uuid = uuid, override = override, file_must_exist = (mode == 'r'))
-      if mode == 'a' and not os.path.exists(file_name): mode = 'w'
-      if self.h5_currently_open_path == file_name: return self.h5_currently_open_root
-      if self.h5_currently_open_root is not None: self.h5_release()
+      if self.h5_currently_open_mode is not None and self.h5_currently_open_mode != mode:
+         self.h5_release()
+      if file_path:
+         file_name = file_path
+      else:
+         file_name = self.h5_file_name(uuid = uuid, override = override, file_must_exist = (mode == 'r'))
+      if mode == 'a' and not os.path.exists(file_name):
+         mode = 'w'
+      if self.h5_currently_open_path == file_name:
+         return self.h5_currently_open_root
+      if self.h5_currently_open_root is not None:
+         self.h5_release()
       self.h5_currently_open_path = file_name
       self.h5_currently_open_mode = mode
-      self.h5_currently_open_root = h5py.File(file_name, mode)   # could use try to trap file in use errors?
+      self.h5_currently_open_root = h5py.File(file_name, mode)  # could use try to trap file in use errors?
       return self.h5_currently_open_root
-
 
    def h5_release(self):
       """Releases (closes) the currently open hdf5 file.
@@ -1697,7 +1901,6 @@ class Model():
       self.h5_currently_open_path = None
       self.h5_currently_open_mode = None
 
-
    def h5_array_shape_and_type(self, h5_key_pair):
       """Returns the shape and dtype of the array, as stored in the hdf5 file.
 
@@ -1710,14 +1913,20 @@ class Model():
       """
 
       h5_root = self.h5_access(h5_key_pair[0])
-      if h5_root is None: return (None, None)
+      if h5_root is None:
+         return (None, None)
       shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
       dtype = h5_root[h5_key_pair[1]].dtype
       return (shape_tuple, dtype)
 
-
-   def h5_array_element(self, h5_key_pair, index = None, cache_array = False, object = None, array_attribute = None,
-                        dtype = 'float', required_shape = None):
+   def h5_array_element(self,
+                        h5_key_pair,
+                        index = None,
+                        cache_array = False,
+                        object = None,
+                        array_attribute = None,
+                        dtype = 'float',
+                        required_shape = None):
       """Returns one element from an hdf5 array and/or caches the array.
 
       arguments:
@@ -1744,7 +1953,7 @@ class Model():
          a (k0, pillar_index) is needed when the grid has split pillars, whereas a (k0, j0, i0) is needed when the grid does
          not have any split pillars
       """
-      
+
       def reshaped_index(index, shape_tuple, required_shape):
          tail = len(shape_tuple) - len(index)
          if tail > 0:
@@ -1764,19 +1973,22 @@ class Model():
          r_index[-1] = natural
          return r_index
 
-      if object is None: object = self
+      if object is None:
+         object = self
 
       # Check if attribute has already be cached
       if array_attribute is not None:
          existing_value = getattr(object, array_attribute, None)
 
-         # Watch out for np.array(None): check existing_value has a valid "shape" 
+         # Watch out for np.array(None): check existing_value has a valid "shape"
          if existing_value is not None and getattr(existing_value, "shape", False):
-            if index is None: return None  # this option allows caching of array without actually referring to any element
+            if index is None:
+               return None  # this option allows caching of array without actually referring to any element
             return existing_value[tuple(index)]
 
       h5_root = self.h5_access(h5_key_pair[0])
-      if h5_root is None: return None
+      if h5_root is None:
+         return None
       if cache_array:
          shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
          if required_shape is None or shape_tuple == required_shape:
@@ -1784,12 +1996,15 @@ class Model():
             object.__dict__[array_attribute][:] = h5_root[h5_key_pair[1]]
          else:
             object.__dict__[array_attribute] = np.zeros(required_shape, dtype = dtype)
-            object.__dict__[array_attribute][:] = np.array(h5_root[h5_key_pair[1]], dtype = dtype).reshape(required_shape)
+            object.__dict__[array_attribute][:] = np.array(h5_root[h5_key_pair[1]],
+                                                           dtype = dtype).reshape(required_shape)
          self.h5_release()
-         if index is None: return None
+         if index is None:
+            return None
          return object.__dict__[array_attribute][tuple(index)]
       else:
-         if index is None: return None
+         if index is None:
+            return None
          if required_shape is None:
             result = h5_root[h5_key_pair[1]][tuple(index)]
          else:
@@ -1799,13 +2014,16 @@ class Model():
             else:
                index = reshaped_index(index, required_shape, shape_tuple)
                result = h5_root[h5_key_pair[1]][tuple(index)]
-         if dtype is None: return result
+         if dtype is None:
+            return result
          if result.size == 1:
-            if dtype is float or (isinstance(dtype, str) and dtype.startswith('float')): return float(result)
-            elif dtype is int or (isinstance(dtype, str) and dtype.startswith('int')): return int(result)
-            elif dtype is bool or (isinstance(dtype, str) and dtype.startswith('bool')): return bool(result)
+            if dtype is float or (isinstance(dtype, str) and dtype.startswith('float')):
+               return float(result)
+            elif dtype is int or (isinstance(dtype, str) and dtype.startswith('int')):
+               return int(result)
+            elif dtype is bool or (isinstance(dtype, str) and dtype.startswith('bool')):
+               return bool(result)
          return np.array(result, dtype = dtype)
-
 
    def h5_array_slice(self, h5_key_pair, slice_tuple):
       """Loads a slice of an hdf5 array.
@@ -1828,7 +2046,6 @@ class Model():
       h5_root = self.h5_access(h5_key_pair[0])
       return h5_root[h5_key_pair[1]][slice_tuple]
 
-
    def h5_overwrite_array_slice(self, h5_key_pair, slice_tuple, array_slice):
       """Overwrites (updates) a slice of an hdf5 array.
 
@@ -1848,7 +2065,6 @@ class Model():
       dset = h5_root[h5_key_pair[1]]
       dset[slice_tuple] = array_slice
 
-
    def create_root(self):
       """Initialises an empty main xml tree for model.
 
@@ -1856,11 +2072,10 @@ class Model():
          not usually called directly
       """
 
-      assert(self.main_tree is None)
-      assert(self.main_root is None)
+      assert (self.main_tree is None)
+      assert (self.main_root is None)
       self.main_root = rqet.Element(ns['content_types'] + 'Types')
       self.main_tree = rqet.ElementTree(element = self.main_root)
-
 
    def add_part(self, content_type, uuid, root, add_relationship_part = True, epc_subdir = None):
       """Adds a (recently created) node as a new part in the model's parts forest.
@@ -1884,8 +2099,10 @@ class Model():
 
       use_other = (content_type == 'docProps')
       if use_other:
-         if rqet.pretend_to_be_fesapi or rqet.use_fesapi_quirks: prefix = '/'
-         else: prefix = ''
+         if rqet.pretend_to_be_fesapi or rqet.use_fesapi_quirks:
+            prefix = '/'
+         else:
+            prefix = ''
          part_name = prefix + 'docProps/core.xml'
          ct = 'application/vnd.openxmlformats-package.core-properties+xml'
       else:
@@ -1894,13 +2111,17 @@ class Model():
             ct = 'application/x-eml+xml;version=2.0;type=' + content_type
          else:
             ct = 'application/x-resqml+xml;version=2.0;type=' + content_type
+
+
 #      log.debug('adding part: ' + part_name)
-      if isinstance(uuid, str): uuid = bu.uuid_from_string(uuid)
+      if isinstance(uuid, str):
+         uuid = bu.uuid_from_string(uuid)
       part_tree = rqet.ElementTree(element = root)
       if use_other:
          self.other_forest[part_name] = (content_type, part_tree)
       else:
-         if content_type[0].isupper(): content_type = 'obj_' + content_type
+         if content_type[0].isupper():
+            content_type = 'obj_' + content_type
          self.parts_forest[part_name] = (content_type, uuid, part_tree)
          self._set_uuid_to_part(part_name)
       main_ref = rqet.SubElement(self.main_root, ns['content_types'] + 'Override')
@@ -1917,7 +2138,6 @@ class Model():
          self.rels_forest[rels_part_name] = (uuid, rels_tree)
       self.set_modified()
 
-
    def patch_root_for_part(self, part, root):
       """Updates the xml tree for the part without changing the uuid."""
 
@@ -1925,7 +2145,6 @@ class Model():
       assert bu.matching_uuids(uuid, rqet.uuid_for_part_root(root))
       part_tree = rqet.ElementTree(element = root)
       self.parts_forest[part] = (content_type, uuid, part_tree)
-
 
    def remove_part(self, part_name, remove_relationship_part = True):
       """Removes a part from the parts forest; optionally remove corresponding rels part and other relationships."""
@@ -1936,18 +2155,20 @@ class Model():
          if 'docProps' in part_name:
             rels_part_name = '_rels/.rels'
          else:
-            related_parts = self.parts_list_filtered_by_related_uuid(self.list_of_parts(), rqet.uuid_in_part_name(part_name))
+            related_parts = self.parts_list_filtered_by_related_uuid(self.list_of_parts(),
+                                                                     rqet.uuid_in_part_name(part_name))
             for relative in related_parts:
                (rel_uuid, rel_tree) = self.rels_forest[rqet.rels_part_name_for_part(relative)]
                rel_root = rel_tree.getroot()
                for child in rel_root:
-                  if rqet.stripped_of_prefix(child.tag) != 'Relationship': continue
-                  if child.attrib['Target'] == part_name: rel_root.remove(child)
+                  if rqet.stripped_of_prefix(child.tag) != 'Relationship':
+                     continue
+                  if child.attrib['Target'] == part_name:
+                     rel_root.remove(child)
             rels_part_name = rqet.rels_part_name_for_part(part_name)
          self.rels_forest.pop(rels_part_name)
       self.remove_part_from_main_tree(part_name)
       self.set_modified()
-
 
    def new_obj_node(self, flavour, name_space = 'resqml2', is_top_lvl_obj = True):
       """Creates a new main object element and sets attributes (does not add children).
@@ -1963,7 +2184,8 @@ class Model():
          newly created root node for xml tree for flavour of object, without any children
       """
 
-      if flavour.startswith('obj_'): flavour = flavour[4:]
+      if flavour.startswith('obj_'):
+         flavour = flavour[4:]
 
       node = rqet.Element(ns[name_space] + flavour)
       node.set('schemaVersion', '2.0')
@@ -1974,20 +2196,22 @@ class Model():
 
       return node
 
-
    def referenced_node(self, ref_node, consolidate = False):
       """For a given xml reference node, returns the node for the object referred to, if present."""
 
       # note: the RESQML standard allows referenced objects to be missing from the package (model)
 
-      if ref_node is None: return None
-#      content_type = rqet.find_tag_text(ref_node, 'ContentType')
+      if ref_node is None:
+         return None
+      #      content_type = rqet.find_tag_text(ref_node, 'ContentType')
       uuid = bu.uuid_from_string(rqet.find_tag_text(ref_node, 'UUID'))
-      if uuid is None: return None
-#      return self.root_for_part(self.parts_list_of_type(type_of_interest = content_type, uuid = uuid))
+      if uuid is None:
+         return None
+      #      return self.root_for_part(self.parts_list_of_type(type_of_interest = content_type, uuid = uuid))
       if consolidate and self.consolidation is not None and uuid in self.consolidation.map:
          resident_uuid = self.consolidation.map[uuid]
-         if resident_uuid is None: return None
+         if resident_uuid is None:
+            return None
          node = self.root_for_part(self.part_for_uuid(resident_uuid))
          if node is not None:
             # patch resident uuid and title into ref node!
@@ -1996,11 +2220,11 @@ class Model():
             title_node = rqet.find_tag(ref_node, 'Title')
             if title_node is not None:
                title = rqet.citation_title_for_node(node)
-               if title: title_node.text = str(title)
+               if title:
+                  title_node.text = str(title)
       else:
          node = self.root_for_part(self.part_for_uuid(uuid))
       return node
-
 
    def create_ref_node(self, flavour, title, uuid, content_type = None, root = None):
       """Create a reference node, optionally add to root.
@@ -2021,12 +2245,14 @@ class Model():
 
       assert uuid is not None
 
-      if flavour.startswith('obj_'): flavour = flavour[4:]
+      if flavour.startswith('obj_'):
+         flavour = flavour[4:]
 
       if not content_type:
          content_type = 'obj_' + flavour
       else:
-         if content_type[0].isupper(): content_type = 'obj_' + content_type
+         if content_type[0].isupper():
+            content_type = 'obj_' + content_type
 
       prefix = ns['eml'] if flavour == 'HdfProxy' else ns['resqml2']
       ref_node = rqet.Element(prefix + flavour)
@@ -2040,7 +2266,8 @@ class Model():
       else:
          ct_node.text = 'application/x-resqml+xml;version=2.0;type=' + content_type
 
-      if not title: title = '(title unavailable)'
+      if not title:
+         title = '(title unavailable)'
       title_node = rqet.SubElement(ref_node, ns['eml'] + 'Title')
       title_node.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
       title_node.text = title
@@ -2054,10 +2281,10 @@ class Model():
          version_str.set(ns['xsi'] + 'type', ns['eml'] + 'NameString')
          version_str.text = bu.version_string(uuid)
 
-      if root is not None: root.append(ref_node)
+      if root is not None:
+         root.append(ref_node)
 
       return ref_node
-
 
    def uom_node(self, root, uom):
       """Add a generic unit of measure sub element to root.
@@ -2078,7 +2305,6 @@ class Model():
 
       return uom_node
 
-
    def create_rels_part(self):
       """Adds a relationships reference node as a new part in the model's parts forest.
 
@@ -2097,7 +2323,6 @@ class Model():
 
       return rels
 
-
    def create_citation(self, root = None, title = '', originator = None):
       """Creates a citation xml node and optionally appends as a child of root.
 
@@ -2113,7 +2338,8 @@ class Model():
          newly created citation xml node
       """
 
-      if not title: title = '(no title)'
+      if not title:
+         title = '(no title)'
 
       citation = rqet.Element(ns['eml'] + 'Citation')
       citation.set(ns['xsi'] + 'type', ns['eml'] + 'Citation')
@@ -2145,10 +2371,10 @@ class Model():
 
       # todo: add optional description field
 
-      if root is not None: root.append(citation)
+      if root is not None:
+         root.append(citation)
 
       return citation
-
 
    def title_for_root(self, root = None):
       """Returns the Title text from the Citation within the given root node.
@@ -2164,12 +2390,12 @@ class Model():
       """
 
       title = rqet.find_tag(rqet.find_tag(root, 'Citation'), 'Title')
-      if title is None: return None
+      if title is None:
+         return None
 
       return title.text
 
-
-   def title_for_part(self, part_name):   # duplicate functionality to citation_title_for_part()
+   def title_for_part(self, part_name):  # duplicate functionality to citation_title_for_part()
       """Returns the Title text from the Citation for the given main part name (not for rels).
 
       arguments:
@@ -2183,7 +2409,6 @@ class Model():
       """
 
       return self.title_for_root(self.root_for_part(part_name))
-
 
    def create_unknown(self, root = None):
       """Creates an Unknown node and optionally adds as child of root.
@@ -2201,9 +2426,9 @@ class Model():
       unknown = rqet.Element(ns['eml'] + 'Unknown')
       unknown.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
       unknown.text = 'Unknown'
-      if root is not None: root.append(unknown)
+      if root is not None:
+         root.append(unknown)
       return unknown
-
 
    def create_doc_props(self, add_as_part = True, root = None, originator = None):
       """Creates a document properties stub node and optionally adds as child of root and/or to parts forest.
@@ -2227,7 +2452,7 @@ class Model():
       dp.text = rqet.null_xml_text
 
       created = rqet.SubElement(dp, ns['dcterms'] + 'created')
-      created.set(ns['xsi'] + 'type', ns['dcterms'] + 'W3CDTF')     # not sure of namespace here
+      created.set(ns['xsi'] + 'type', ns['dcterms'] + 'W3CDTF')  # not sure of namespace here
       created.text = time.now()
 
       if originator is None:
@@ -2241,7 +2466,8 @@ class Model():
       ver = rqet.SubElement(dp, ns['cp'] + 'version')
       ver.text = '1.0'
 
-      if root is not None: root.append(dp)
+      if root is not None:
+         root.append(dp)
       if add_as_part:
          self.add_part('docProps', None, dp)
          if self.rels_present:
@@ -2252,11 +2478,19 @@ class Model():
             core_rel.set('Target', 'docProps/core.xml')
       return dp
 
-
-   def create_crs(self, add_as_part = True, root = None, title = 'cell grid local CRS',
-                  epsg_code = None, originator = None,
-                  x_offset = 0.0, y_offset = 0.0, z_offset = 0.0, areal_rotation_radians = 0.0,
-                  xy_units = 'm', z_units = 'm', z_inc_down = True):
+   def create_crs(self,
+                  add_as_part = True,
+                  root = None,
+                  title = 'cell grid local CRS',
+                  epsg_code = None,
+                  originator = None,
+                  x_offset = 0.0,
+                  y_offset = 0.0,
+                  z_offset = 0.0,
+                  areal_rotation_radians = 0.0,
+                  xy_units = 'm',
+                  z_units = 'm',
+                  z_inc_down = True):
       """DEPRECATED: Creates a Coordinate Reference System node and optionally adds as child of root and/or to parts forest.
 
       arguments:
@@ -2281,18 +2515,24 @@ class Model():
       returns:
          newly created coordinate reference system xml node
       """
-      
+
       warnings.warn("model.create_crs is Deprecated, will be removed", DeprecationWarning)
-      crs = rqc.Crs(self, x_offset = x_offset, y_offset = y_offset, z_offset = z_offset,
-                    rotation = areal_rotation_radians, xy_units = xy_units, z_units = z_units,
-                    z_inc_down = z_inc_down, epsg_code = epsg_code)
+      crs = rqc.Crs(self,
+                    x_offset = x_offset,
+                    y_offset = y_offset,
+                    z_offset = z_offset,
+                    rotation = areal_rotation_radians,
+                    xy_units = xy_units,
+                    z_units = z_units,
+                    z_inc_down = z_inc_down,
+                    epsg_code = epsg_code)
 
       crs_node = crs.create_xml(add_as_part = add_as_part, root = root, title = title, originator = originator)
 
-      if self.crs_root is None: self.crs_root = crs_node
+      if self.crs_root is None:
+         self.crs_root = crs_node
 
       return crs_node
-
 
    def create_crs_reference(self, crs_root = None, root = None, crs_uuid = None):
       """Creates a node refering to an existing crs node and optionally adds as child of root.
@@ -2314,9 +2554,11 @@ class Model():
          crs_root = self.root_for_uuid(crs_uuid)
       assert crs_root is not None
 
-      return self.create_ref_node('LocalCrs', rqet.find_nested_tags_text(crs_root, ['Citation', 'Title']),
-                                  crs_uuid, content_type = 'obj_LocalDepth3dCrs', root = root)
-
+      return self.create_ref_node('LocalCrs',
+                                  rqet.find_nested_tags_text(crs_root, ['Citation', 'Title']),
+                                  crs_uuid,
+                                  content_type = 'obj_LocalDepth3dCrs',
+                                  root = root)
 
    def create_md_datum_reference(self, md_datum_root, root = None):
       """Creates a node refering to an existing measured depth datum and optionally adds as child of root.
@@ -2330,10 +2572,11 @@ class Model():
          newly created measured depth datum reference xml node
       """
 
-      return self.create_ref_node('MdDatum', rqet.find_nested_tags_text(md_datum_root, ['Citation', 'Title']),
+      return self.create_ref_node('MdDatum',
+                                  rqet.find_nested_tags_text(md_datum_root, ['Citation', 'Title']),
                                   bu.uuid_from_string(md_datum_root.attrib['uuid']),
-                                  content_type = 'obj_MdDatum', root = root)
-
+                                  content_type = 'obj_MdDatum',
+                                  root = root)
 
    def create_hdf5_ext(self, add_as_part = True, root = None, title = 'Hdf Proxy', originator = None, file_name = None):
       """Creates an hdf5 external node and optionally adds as child of root and/or to parts forest.
@@ -2360,25 +2603,27 @@ class Model():
       mime_type.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
       mime_type.text = 'application/x-hdf5'
 
-      if root is not None: root.append(ext)
+      if root is not None:
+         root.append(ext)
       if add_as_part:
          ext_uuid = bu.uuid_from_string(ext.attrib['uuid'])
          self.add_part('obj_EpcExternalPartReference', ext_uuid, ext)
-         if not file_name: file_name = self.h5_file_name(file_must_exist = False)
+         if not file_name:
+            file_name = self.h5_file_name(file_must_exist = False)
          assert file_name
          self.h5_dict[ext_uuid] = file_name
-         if self.main_h5_uuid is None: self.main_h5_uuid = ext_uuid
+         if self.main_h5_uuid is None:
+            self.main_h5_uuid = ext_uuid
          if self.rels_present and file_name:
-            (uuid, rel_tree) = self.rels_forest[rqet.rels_part_name_for_part(rqet.part_name_for_object('obj_EpcExternalPartReference',
-                                                                             ext_uuid))]
-            assert(bu.matching_uuids(uuid, ext_uuid))
+            (uuid, rel_tree) = self.rels_forest[rqet.rels_part_name_for_part(
+               rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid))]
+            assert (bu.matching_uuids(uuid, ext_uuid))
             rel_node = rqet.SubElement(rel_tree.getroot(), ns['rels'] + 'Relationship')
             rel_node.set('Id', 'Hdf5File')
             rel_node.set('Type', ns_url['rels_ext'] + 'externalResource')
             rel_node.set('Target', rqet.strip_path(file_name))
             rel_node.set('TargetMode', 'External')
       return ext
-
 
    def create_hdf5_dataset_ref(self, hdf5_uuid, object_uuid, group_tail, root, title = 'Hdf Proxy'):
       """Creates a pair of nodes referencing an hdf5 dataset (array) and adds to root.
@@ -2399,8 +2644,10 @@ class Model():
       assert root is not None
       assert group_tail
 
-      if group_tail[0] == '/': group_tail = group_tail[1:]
-      if group_tail[-1] == '/': group_tail = group_tail[:-1]
+      if group_tail[0] == '/':
+         group_tail = group_tail[1:]
+      if group_tail[-1] == '/':
+         group_tail = group_tail[:-1]
       hdf5_path = '/RESQML/' + str(object_uuid) + '/' + group_tail
 
       path_node = rqet.Element(ns['eml'] + 'PathInHdfFile')
@@ -2408,17 +2655,18 @@ class Model():
       path_node.text = hdf5_path
       root.append(path_node)
 
-      self.create_ref_node('HdfProxy', title, hdf5_uuid,
-                           content_type = 'obj_EpcExternalPartReference', root = root)
+      self.create_ref_node('HdfProxy', title, hdf5_uuid, content_type = 'obj_EpcExternalPartReference', root = root)
 
       return path_node
 
-
    # todo: def create_property_kind():
 
-
-   def create_supporting_representation(self, grid_root = None, support_uuid = None, root = None,
-                                        title = None, content_type = 'obj_IjkGridRepresentation'):
+   def create_supporting_representation(self,
+                                        grid_root = None,
+                                        support_uuid = None,
+                                        root = None,
+                                        title = None,
+                                        content_type = 'obj_IjkGridRepresentation'):
       """Craate a supporting representation reference node refering to an IjkGrid and optionally add to root.
 
       arguments:
@@ -2449,15 +2697,19 @@ class Model():
 
       if grid_root is not None:
          uuid = rqet.uuid_for_part_root(grid_root)
-         if uuid is not None: support_uuid = uuid
-         if title is None: title = rqet.citation_title_for_node(grid_root)
+         if uuid is not None:
+            support_uuid = uuid
+         if title is None:
+            title = rqet.citation_title_for_node(grid_root)
       elif title is None:
          title = 'supporting representation'
       assert support_uuid is not None
 
-      return self.create_ref_node('SupportingRepresentation', title, support_uuid,
-                                  content_type = content_type, root = root)
-
+      return self.create_ref_node('SupportingRepresentation',
+                                  title,
+                                  support_uuid,
+                                  content_type = content_type,
+                                  root = root)
 
    def create_source(self, source, root = None):
       """Create an extra meta data node holding information on the source of the data, optionally add to root.
@@ -2482,13 +2734,20 @@ class Model():
       value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
       value_node.text = source
 
-      if root is not None: root.append(emd_node)
+      if root is not None:
+         root.append(emd_node)
       return emd_node
 
-
-   def create_patch(self, p_uuid, ext_uuid = None, root = None, patch_index = 0,
-                    hdf5_type = 'DoubleHdf5Array', xsd_type = 'double', null_value = None,
-                    const_value = None, const_count = None):
+   def create_patch(self,
+                    p_uuid,
+                    ext_uuid = None,
+                    root = None,
+                    patch_index = 0,
+                    hdf5_type = 'DoubleHdf5Array',
+                    xsd_type = 'double',
+                    null_value = None,
+                    const_value = None,
+                    const_count = None):
       """Create a node for a patch of values, including ref to hdf5 data set, optionally add to root.
 
       arguments:
@@ -2524,7 +2783,8 @@ class Model():
          assert ext_uuid is not None
       else:
          assert const_count is not None and const_count > 0
-         if hdf5_type.endswith('Hdf5Array'): hdf5_type = hdf5_type[:-9] + 'ConstantArray'
+         if hdf5_type.endswith('Hdf5Array'):
+            hdf5_type = hdf5_type[:-9] + 'ConstantArray'
 
       lxt = str(xsd_type).lower()
       discrete = ('int' in lxt) or ('bool' in lxt)
@@ -2543,8 +2803,10 @@ class Model():
 
       if discrete:
          if null_value is None:
-            if str(xsd_type).startswith('u'): null_value = 4294967295   # 2^32 - 1, used as default even for 64 bit data!
-            else: null_value = -1
+            if str(xsd_type).startswith('u'):
+               null_value = 4294967295  # 2^32 - 1, used as default even for 64 bit data!
+            else:
+               null_value = -1
          null_value_node = rqet.SubElement(outer_values_node, ns['resqml2'] + 'NullValue')
          null_value_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)
          null_value_node.text = str(null_value)
@@ -2567,10 +2829,10 @@ class Model():
          const_count_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
          const_count_node.text = str(const_count)
 
-      if root is not None: root.append(patch_node)
+      if root is not None:
+         root.append(patch_node)
 
       return patch_node
-
 
    def create_time_series_ref(self, time_series_uuid, root = None):
       """Create a reference node to a time series, optionally add to root.
@@ -2585,7 +2847,6 @@ class Model():
       """
 
       return self.create_ref_node('TimeSeries', 'time series', time_series_uuid, root = root)
-
 
    def create_solitary_point3d(self, flavour, root, xyz):
       """Creates a subelement to root for a solitary point in 3D space.
@@ -2612,7 +2873,6 @@ class Model():
 
       return p3d
 
-
    def create_reciprocal_relationship(self, node_a, rel_type_a, node_b, rel_type_b, avoid_duplicates = True):
       """Adds a node to each of a pair of trees in the rels forest, to represent a two-way relationship.
 
@@ -2636,7 +2896,7 @@ class Model():
             return stringy
          return '_' + stringy
 
-      assert(self.rels_present)
+      assert (self.rels_present)
 
       if node_a is None or node_b is None:
          log.error('attempt to create relationship with missing object')
@@ -2666,7 +2926,8 @@ class Model():
                break
       if create_a:
          rel_a = rqet.SubElement(rel_root_a, ns['rels'] + 'Relationship')
-         rel_a.set('Id', id_str(uuid_b))  # NB: fesapi prefixes uuid with _ for some rels only (where uuid starts with a digit)
+         rel_a.set(
+            'Id', id_str(uuid_b))  # NB: fesapi prefixes uuid with _ for some rels only (where uuid starts with a digit)
          rel_a.set('Type', ns_url['rels_ext'] + rel_type_a)
          rel_a.set('Target', part_name_b)
 
@@ -2680,10 +2941,10 @@ class Model():
                break
       if create_b:
          rel_b = rqet.SubElement(rel_root_b, ns['rels'] + 'Relationship')
-         rel_b.set('Id', id_str(uuid_a))  # NB: fesapi prefixes uuid with _ for some rels only (where uuid starts with a digit)
+         rel_b.set(
+            'Id', id_str(uuid_a))  # NB: fesapi prefixes uuid with _ for some rels only (where uuid starts with a digit)
          rel_b.set('Type', ns_url['rels_ext'] + rel_type_b)
          rel_b.set('Target', part_name_a)
-
 
    def duplicate_node(self, existing_node, add_as_part = True):
       """Creates a deep copy of the xml node (typically from another model) and optionally adds as part.
@@ -2713,16 +2974,22 @@ class Model():
             log.warning('rejected attempt to add a duplicated part with an existing uuid')
       return new_node
 
-
    def force_consolidation_uuid_equivalence(self, immigrant_uuid, resident_uuid):
       """Forces object identified by immigrant uuid to be teated as equivalent to that with resident uuid during consolidation."""
 
-      if self.consolidation is None: self.consolidation = cons.Consolidation(self)
+      if self.consolidation is None:
+         self.consolidation = cons.Consolidation(self)
       self.consolidation.force_uuid_equivalence(immigrant_uuid, resident_uuid)
 
-
-   def copy_part_from_other_model(self, other_model, part, realization = None, consolidate = True, force = False,
-                                  self_h5_file_name = None, h5_uuid = None, other_h5_file_name = None):
+   def copy_part_from_other_model(self,
+                                  other_model,
+                                  part,
+                                  realization = None,
+                                  consolidate = True,
+                                  force = False,
+                                  self_h5_file_name = None,
+                                  h5_uuid = None,
+                                  other_h5_file_name = None):
       """Fully copies part in from another model, with referenced parts, hdf5 data and relationships.
 
       arguments:
@@ -2749,15 +3016,21 @@ class Model():
       # todo: double check behaviour around equivalent CRSes, especially any default crs in model
 
       assert other_model is not None
-      if other_model is self: return
+      if other_model is self:
+         return
       assert part is not None
-      if realization is not None: assert isinstance(realization, int) and realization >= 0
-      if force: assert consolidate
-      if not other_h5_file_name: other_h5_file_name = other_model.h5_file_name()
-      if not self_h5_file_name: self_h5_file_name = self.h5_file_name(file_must_exist = False)
+      if realization is not None:
+         assert isinstance(realization, int) and realization >= 0
+      if force:
+         assert consolidate
+      if not other_h5_file_name:
+         other_h5_file_name = other_model.h5_file_name()
+      if not self_h5_file_name:
+         self_h5_file_name = self.h5_file_name(file_must_exist = False)
 
       # check whether already existing in this model
-      if part in self.parts_forest.keys(): return
+      if part in self.parts_forest.keys():
+         return
 
       if other_model.type_of_part(part) == 'obj_EpcExternalPartReference':
          log.debug('refusing to copy hdf5 ext part from other model')
@@ -2776,7 +3049,8 @@ class Model():
          return
 
       if consolidate and not force:
-         if self.consolidation is None: self.consolidation = cons.Consolidation(self)
+         if self.consolidation is None:
+            self.consolidation = cons.Consolidation(self)
          resident_uuid = self.consolidation.equivalent_uuid_for_part(part, immigrant_model = other_model)
       else:
          resident_uuid = None
@@ -2796,19 +3070,22 @@ class Model():
             ri_node.text = str(realization)
 
          # copy hdf5 data
-         hdf5_count = whdf5.copy_h5(other_h5_file_name, self_h5_file_name,
-                                    uuid_inclusion_list = [uuid], mode = 'a')
+         hdf5_count = whdf5.copy_h5(other_h5_file_name, self_h5_file_name, uuid_inclusion_list = [uuid], mode = 'a')
 
          # create relationship with hdf5 if needed and modify h5 file uuid in xml references
          if hdf5_count:
-            if h5_uuid is None: h5_uuid = self.h5_uuid()
+            if h5_uuid is None:
+               h5_uuid = self.h5_uuid()
             if h5_uuid is None:
                self.create_hdf5_ext()
                h5_uuid = self.h5_uuid()
             self.change_hdf5_uuid_in_hdf5_references(root_node, None, h5_uuid)
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', h5_uuid, prefixed = False)
             ext_node = self.root_for_part(ext_part)
-            self.create_reciprocal_relationship(root_node, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl',
+            self.create_reciprocal_relationship(root_node,
+                                                'mlToExternalPartProxy',
+                                                ext_node,
+                                                'externalPartProxyToMl',
                                                 avoid_duplicates = False)
 
          # recursively copy in referenced parts where they don't already exist in this model
@@ -2816,15 +3093,20 @@ class Model():
             resident_referred_node = None
             if consolidate:
                resident_referred_node = self.referenced_node(ref_node, consolidate = True)
-            if force: continue
+            if force:
+               continue
             if resident_referred_node is None:
                referred_node = other_model.referenced_node(ref_node)
                if referred_node is None:
-                  log.warning(f'referred node not found in other model for {rqet.find_tag_text(ref_node, "Title")}; uuid: {rqet.find_tag_text(ref_node, "UUID")}')
+                  log.warning(
+                     f'referred node not found in other model for {rqet.find_tag_text(ref_node, "Title")}; uuid: {rqet.find_tag_text(ref_node, "UUID")}'
+                  )
                else:
                   referred_part = rqet.part_name_for_part_root(referred_node)
-                  if other_model.type_of_part(referred_part) == 'obj_EpcExternalPartReference': continue
-                  if referred_part in self.list_of_parts(): continue
+                  if other_model.type_of_part(referred_part) == 'obj_EpcExternalPartReference':
+                     continue
+                  if referred_part in self.list_of_parts():
+                     continue
                   self.copy_part_from_other_model(other_model, referred_part, consolidate = consolidate)
 
          resident_uuid = uuid
@@ -2836,29 +3118,36 @@ class Model():
       # copy relationships where target part is present in this model – this part is source, then destination
       for source_flag in [True, False]:
          other_related_parts = other_model.parts_list_filtered_by_related_uuid(other_model.list_of_parts(),
-                                                                               resident_uuid, uuid_is_source = source_flag)
+                                                                               resident_uuid,
+                                                                               uuid_is_source = source_flag)
          for related_part in other_related_parts:
-   #         log.debug('considering relationship with: ' + str(related_part))
+            #         log.debug('considering relationship with: ' + str(related_part))
             if not force and (related_part in self.parts_forest):
                resident_related_part = related_part
             else:
-   #           log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
+               #           log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
                if consolidate:
-                  resident_related_uuid = self.consolidation.equivalent_uuid_for_part(related_part, immigrant_model = other_model)
-                  if resident_related_uuid is None: continue
-                  resident_related_part = rqet.part_name_for_object(other_model.type_of_part(related_part), resident_related_uuid)
-                  if resident_related_part is None: continue
+                  resident_related_uuid = self.consolidation.equivalent_uuid_for_part(related_part,
+                                                                                      immigrant_model = other_model)
+                  if resident_related_uuid is None:
+                     continue
+                  resident_related_part = rqet.part_name_for_object(other_model.type_of_part(related_part),
+                                                                    resident_related_uuid)
+                  if resident_related_part is None:
+                     continue
                else:
                   continue
-            if not force and resident_related_part in self.parts_list_filtered_by_related_uuid(self.list_of_parts(), resident_uuid):
+            if not force and resident_related_part in self.parts_list_filtered_by_related_uuid(
+                  self.list_of_parts(), resident_uuid):
                continue
             related_node = self.root_for_part(resident_related_part)
             assert related_node is not None
 
-            if source_flag: sd_a, sd_b = 'sourceObject', 'destinationObject'
-            else: sd_b, sd_a = 'sourceObject', 'destinationObject'
+            if source_flag:
+               sd_a, sd_b = 'sourceObject', 'destinationObject'
+            else:
+               sd_b, sd_a = 'sourceObject', 'destinationObject'
             self.create_reciprocal_relationship(root_node, sd_a, related_node, sd_b)
-
 
    def copy_all_parts_from_other_model(self, other_model, realization = None, consolidate = True):
       """Fully copies parts in from another model, with referenced parts, hdf5 data and relationships.
@@ -2890,13 +3179,16 @@ class Model():
       self_h5_uuid = self.h5_uuid()
       other_h5_file_name = other_model.h5_file_name()
       for part in other_parts_list:
-         self.copy_part_from_other_model(other_model, part, realization = realization, consolidate = consolidate,
-                                         self_h5_file_name = self_h5_file_name, h5_uuid = self_h5_uuid,
+         self.copy_part_from_other_model(other_model,
+                                         part,
+                                         realization = realization,
+                                         consolidate = consolidate,
+                                         self_h5_file_name = self_h5_file_name,
+                                         h5_uuid = self_h5_uuid,
                                          other_h5_file_name = other_h5_file_name)
 
       if consolidate and self.consolidation is not None:
          self.consolidation.check_map_integrity()
-
 
    def iter_objs(self, cls):
       """Iterate over all available objects of given resqpy class within the model
@@ -2920,10 +3212,9 @@ class Model():
       :meta common:
       """
 
-      uuids = self.uuids(obj_type=cls.resqml_type)
+      uuids = self.uuids(obj_type = cls.resqml_type)
       for uuid in uuids:
-         yield cls(self, uuid=uuid)
-
+         yield cls(self, uuid = uuid)
 
    def iter_grid_connection_sets(self):
       """Yields grid connection set objects, one for each gcs in this model."""
@@ -2931,7 +3222,6 @@ class Model():
       gcs_uuids = self.uuids(obj_type = 'GridConnectionSetRepresentation')
       for gcs_uuid in gcs_uuids:
          yield rqf.GridConnectionSet(self, uuid = gcs_uuid)
-
 
    def iter_wellbore_interpretations(self):
       """ Iterable of all WellboreInterpretations associated with the model
@@ -2943,11 +3233,10 @@ class Model():
       """
       import resqpy.organize  # Imported here for speed, module is not always needed
 
-      uuids = self.uuids(obj_type='WellboreInterpretation')
+      uuids = self.uuids(obj_type = 'WellboreInterpretation')
       if uuids:
          for uuid in uuids:
-            yield resqpy.organize.WellboreInterpretation(self, uuid=uuid)
-
+            yield resqpy.organize.WellboreInterpretation(self, uuid = uuid)
 
    def iter_trajectories(self):
       """ Iterable of all trajectories associated with the model
@@ -2962,9 +3251,8 @@ class Model():
       parts = self.parts_list_of_type('WellboreTrajectoryRepresentation')
       for part in parts:
          traj_root = self.root_for_part(part)
-         traj = resqpy.well.Trajectory(self, trajectory_root=traj_root)
+         traj = resqpy.well.Trajectory(self, trajectory_root = traj_root)
          yield traj
-
 
    def iter_md_datums(self):
       """ Iterable of all MdDatum objects associated with the model
@@ -2976,12 +3264,11 @@ class Model():
       """
       import resqpy.well  # Imported here to avoid circular imports
 
-      uuids = self.uuids(obj_type='MdDatum')
+      uuids = self.uuids(obj_type = 'MdDatum')
       if uuids:
          for uuid in uuids:
-            datum = resqpy.well.MdDatum(self, uuid=uuid)
+            datum = resqpy.well.MdDatum(self, uuid = uuid)
             yield datum
-
 
    def iter_crs(self):
       """Iterable of all CRS objects associated with the model
@@ -2993,17 +3280,18 @@ class Model():
       """
       import resqpy.crs  # Imported here for speed, module is not always needed
 
-      uuids = self.uuids(obj_type='LocalDepth3dCrs') + self.uuids(obj_type='LocalTime3dCrs')
+      uuids = self.uuids(obj_type = 'LocalDepth3dCrs') + self.uuids(obj_type = 'LocalTime3dCrs')
       if uuids:
          for uuid in uuids:
-            yield resqpy.crs.Crs(self, uuid=uuid)
-
+            yield resqpy.crs.Crs(self, uuid = uuid)
 
    def sort_parts_list_by_timestamp(self, parts_list):
       """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
 
-      if parts_list is None: return None
-      if len(parts_list) == 0: return []
+      if parts_list is None:
+         return None
+      if len(parts_list) == 0:
+         return []
       sort_list = []
       for index, part in enumerate(parts_list):
          timestamp = rqet.find_nested_tags_text(self.root_for_part(part), ['Citation', 'Creation'])
@@ -3014,8 +3302,7 @@ class Model():
          results.append(parts_list[index])
       return results
 
-
-   def as_graph(self, uuids_subset=None):
+   def as_graph(self, uuids_subset = None):
       """Return representation of model as nodes and edges, suitable for plotting in a graph
 
       Note:
@@ -3063,28 +3350,26 @@ class Model():
 
       if uuids_subset is None:
          uuids_subset = self.uuids()
-      
+
       uuids_subset = set(map(str, uuids_subset))
 
       for uuid in uuids_subset:
          part = self.part_for_uuid(uuid)
          nodes[uuid] = dict(
-            resqml_type=self.type_of_part(part, strip_obj=True),
-            title=self.citation_title_for_part(part),
+            resqml_type = self.type_of_part(part, strip_obj = True),
+            title = self.citation_title_for_part(part),
          )
-         for rel in map(str, self.uuids(related_uuid=uuid)):
+         for rel in map(str, self.uuids(related_uuid = uuid)):
             if rel in uuids_subset:
                edges.add(frozenset([uuid, rel]))
-               
-      return nodes, edges
 
+      return nodes, edges
 
    def _set_uuid_to_part(self, part_name):
       """Adds an entry to the dictionary mapping from uuid to part name."""
 
       uuid = rqet.uuid_in_part_name(part_name)
       self.uuid_part_dict[bu.uuid_as_int(uuid)] = part_name
-
 
    def _del_uuid_to_part(self, part_name):
       """Deletes an entry from the dictionary mapping from uuid to part name."""
@@ -3094,7 +3379,6 @@ class Model():
          del self.uuid_part_dict[bu.uuid_as_int(uuid)]
       except Exception:
          pass
-
 
 
 def new_model(epc_file):

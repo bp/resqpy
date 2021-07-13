@@ -35,9 +35,9 @@ def test_crs():
    ft_to_m = 0.3048
 
    a = np.empty((10, 3))
-   a[:, 0] = np.random.random(10) *  5.0e5
+   a[:, 0] = np.random.random(10) * 5.0e5
    a[:, 1] = np.random.random(10) * 10.0e5
-   a[:, 2] = np.random.random(10) *  4.0e3
+   a[:, 2] = np.random.random(10) * 4.0e3
 
    b = a.copy()
    crs_m.convert_array_from(crs_default, a)

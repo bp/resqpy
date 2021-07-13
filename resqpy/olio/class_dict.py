@@ -31,7 +31,7 @@ class_dict = {
    'obj_WellboreMarkerFrameRepresentation': 'Wellbore Marker Frame',
    'obj_DeviationSurveyRepresentation': 'Deviation Survey',
    'obj_MdDatum': 'Measured Depth Datum',
-# geo classes
+   # geo classes
    'obj_TectonicBoundaryFeature': 'Tectonic Boundary Feature (fault or fracture)',
    'obj_Grid2dRepresentation': 'Mesh (Grid 2D)',
    'obj_Grid2dSetRepresentation': 'Mesh Set (Grid 2D set)',
@@ -60,14 +60,14 @@ class_dict = {
    'obj_RockFluidOrganizationInterpretation': 'Rock Fluid Organization Interpretation',
    'obj_RockFluidUnitFeature': 'Rock Fluid Unit Feature',
    'obj_RockFluidUnitInterpretation': 'Rock Fluid Unit Interpretation',
-# stratigraphy classes
+   # stratigraphy classes
    'obj_GlobalChronostratigraphicColumn': 'Global Chronostratigraphic Column',
    'obj_StratigraphicColumn': 'Stratigraphic Column',
    'obj_StratigraphicColumnRankInterpretation': 'Stratigraphic Column Rank Interpretation',
    'obj_StratigraphicOccurrenceInterpretation': 'Stratigraphic Occurrence Interpretation',
    'obj_StratigraphicUnitFeature': 'Stratigraphic Unit Feature',
    'obj_StratigraphicUnitInterpretation': 'Stratigraphic Unit Interpretation',
-# low level classes
+   # low level classes
    'obj_SubRepresentation': 'Sub Representation',
    'obj_RepresentationSetRepresentation': 'Representation Set',
    'obj_StringTableLookup': 'String Lookup Table',
@@ -79,10 +79,10 @@ class_dict = {
    'obj_PlaneSetRepresentation': 'Plane Set',
    'obj_PointsProperty': 'Points Property',
    'obj_RedefinedGeometryRepresentation': 'Redefined Geometry Representation',
-# doc props bits
+   # doc props bits
    'application/vnd.openxmlformats-package.core-properties+xml': 'Documentation (core properties)',
    'application/x-extended-core-properties+xml': 'Documentation (extended properties)',
-# other
+   # other
    'obj_Activity': 'Activity',
    'obj_ActivityTemplate': 'Activity Template',
    'obj_CommentProperty': 'Comment Property',
@@ -103,8 +103,10 @@ def readable_class(class_name):
          a human readable version of the class name, eg. 'Grid (IJK)'
    """
 
-   if class_name in class_dict.keys(): return class_dict[class_name]
-   if class_name.startswith('obj_'): return class_name[4:]
-   elif 'obj_' + class_name in class_dict.keys(): return class_dict['obj_' + class_name]
+   if class_name in class_dict.keys():
+      return class_dict[class_name]
+   if class_name.startswith('obj_'):
+      return class_name[4:]
+   elif 'obj_' + class_name in class_dict.keys():
+      return class_dict['obj_' + class_name]
    return class_name
-
