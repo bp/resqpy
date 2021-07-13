@@ -92,7 +92,7 @@ changes:
 .. code-block:: bash
 
    # Reformat all python files in the repository
-   yapf -i .
+   yapf -ir .
 
 Please try to write code according to the
 `PEP8 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
