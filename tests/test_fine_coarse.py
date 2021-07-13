@@ -23,7 +23,7 @@ def test_fine_coarse():
 
    assert fc2.coarse_for_fine_kji0((5, 5, 5)) == (1, 1, 2)
    assert fc2.coarse_for_fine_axial(1, 13) == 3
-   assert fc2.fine_base_for_coarse_axial(0, 1) == 4
+   assert fc2.fine_base_for_coarse_axial(0, 1) == 3
    assert fc2.fine_base_for_coarse((2, 2, 2)) == (6, 8, 4)
    assert np.all(fc2.fine_box_for_coarse((1, 2, 3)) == np.array([[3, 8, 6], [5, 11, 7]], dtype = int))
 
