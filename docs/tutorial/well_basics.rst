@@ -216,7 +216,7 @@ Now we are ready to fully add the trajectory (and related objects) with:
     trajectory.write_hdf5()
     trajectory.create_xml()
 
-This is followed by writing to the epc with the following, which will include both the MdDatum and the Trajectory objects:
+This is followed by writing to the epc with the following, which will include all the new objects:
 
 .. code-block:: python
 
