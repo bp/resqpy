@@ -415,8 +415,8 @@ class Crs(BaseResqpy):
          root.append(crs)
       if add_as_part:
          self.model.add_part('obj_' + self.resqml_type, bu.uuid_from_string(crs.attrib['uuid']), crs)
-      if self.model.crs_root is None:
-         self.model.crs_root = crs  # mark's as 'main' (ie. first) crs for model
+      if self.model.crs_uuid is None:
+         self.model.crs_uuid = self.uuid  # mark's as 'main' (ie. first) crs for model
 
       return crs
 

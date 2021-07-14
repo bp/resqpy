@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '28th June 2021'
+version = '14th July 2021'
 
 import logging
 
@@ -161,7 +161,7 @@ class Model():
       # xml stuff
       self.main_tree = None
       self.main_root = None
-      self.crs_root = None  # primary coordinate reference system for model
+      self.crs_uuid = None  # primary coordinate reference system for model
       self.grid_root = None  # extracted from tree as speed optimization (useful for single grid models), for 'main' grid
       self.time_series = None  # extracted as speed optimization (single time series only for now)
       self.parts_forest = {}  # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
@@ -631,6 +631,12 @@ class Model():
 
       self.modified = True
 
+   @property
+   def crs_root(self):
+      """XML node corresponding to self.crs_uuid"""
+
+      return self.root_for_uuid(self.crs_uuid)
+
    def create_tree_if_none(self):
       """Checks that model has an xml tree; if not, an empty tree is created; not usually called directly."""
 
@@ -694,8 +700,8 @@ class Model():
                   assert bu.matching_uuids(part_uuid, uuid_from_tree)
                self.parts_forest[part_name] = (part_type, part_uuid, part_tree)
                self._set_uuid_to_part(part_name)
-               if self.crs_root is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
-                  self.crs_root = part_tree.getroot()
+               if self.crs_uuid is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
+                  self.crs_uuid = part_uuid
 
          return True
 
@@ -2529,8 +2535,8 @@ class Model():
 
       crs_node = crs.create_xml(add_as_part = add_as_part, root = root, title = title, originator = originator)
 
-      if self.crs_root is None:
-         self.crs_root = crs_node
+      if self.crs_uuid is None:
+         self.crs_uuid = crs.uuid
 
       return crs_node
 
