@@ -170,7 +170,7 @@ There is one commonly used method for finding the xyz location for a given measu
 Creating a new trajectory object
 --------------------------------
 
-In this example we will add given the following pandas dataframe (the numbers are made up and might not be realistic!):
+In this example we will add a new Trajectory given the following pandas dataframe (the numbers are made up and might not be realistic!):
 
 .. code-block:: python
 
@@ -203,7 +203,13 @@ Now we have enough to instantiate the resqpy Trajectory:
                                 length_uom = 'm',
                                 well_name = 'Wildcat 1')
 
-The trajectory now exists in memory as a resqpy object but it has not been added to the model in any persistent way. For temporary objects, this state is sometimes fine to work with. However we usually want to add the new object fully, with:
+The trajectory now exists in memory as a resqpy object but it has not been added to the model in any persistent way. For temporary objects, this state is sometimes fine to work with. However we usually want to add the new object fully. Before doing that, we can optionally call the following method to create an interpretation object and a feature for the well:
+
+.. code-block:: python
+
+    trajectory.create_feature_and_interpretation()
+
+Now we are ready to fully add the trajectory (and related objects) with:
 
 .. code-block:: python
 
@@ -215,5 +221,15 @@ This is followed by writing to the epc with the following, which will include bo
 .. code-block:: python
 
     model.store_epc()
+
+If the model contained just a Crs object before the sequence shown above, then after execution the model.parts() method will return something like:
+
+.. code-block:: python
+
+    ['obj_LocalDepth3dCrs_672bbf86-e4be-11eb-a560-80e650222718.xml',
+     'obj_MdDatum_6733ad4a-e4be-11eb-a560-80e650222718.xml',
+     'obj_WellboreFeature_67368eb6-e4be-11eb-a560-80e650222718.xml',
+     'obj_WellboreInterpretation_67369082-e4be-11eb-a560-80e650222718.xml',
+     'obj_WellboreTrajectoryRepresentation_67352698-e4be-11eb-a560-80e650222718.xml']
 
 The other well classes will be covered in later tutorials.
