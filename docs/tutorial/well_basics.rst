@@ -29,6 +29,8 @@ RESQML also has organisational classes relating to wells:
 
 There are various relationships between these classes. For example, a deviation survey or a trajectory must refer to a measured depth datum, and a blocked well must refer to a trajectory. Any of the representation objects can relate to a wellbore interpretation, which in turn must relate to a wellbore feature. The use of these optional organisational objects is encouraged and some software requires them to be present.
 
+In resqpy, the default behaviour is to use the same well name as the citation title for any of the well objects that are in use for a given well. Note that if there are multiple competing interpretations, then it is best to assign a different title to each of the interpretations (and any related representations).
+
 Most of the well related resqpy classes are contained in the `well.py` module. The feature and interpretation classes are in the `organize.py` module. Code snippets in this tutorial assume the following imports:
 
 .. code-block:: python
@@ -64,13 +66,13 @@ The MdDatum class doesn't have any exciting methods. Code accessing such an obje
 
 Creating a new measured depth datum object
 ------------------------------------------
-Most of the tutorials so far have focussed on reading existing data. As the MdDatum is such a simple object, it is a good place to start looking at how we create new objects using resqpy. In this example, we will add a new MdDatum, located five metres to the east and two metres north of the existing datum which we identified above:
+Most of the tutorials so far have focussed on reading existing data. As the MdDatum is such a simple object, it is a good place to start looking at how we create new objects using resqpy. In this example, we will add a new MdDatum, located fifteen metres to the east and two metres north of the existing datum which we identified above:
 
 .. code-block:: python
 
     # prepare whatever data we need to populate the new object
     pq13_location = np.array(pq13_md_datum.location)
-    new_location = tuple(pq13_location + (5.0, 2.0, 0.0))
+    new_location = tuple(pq13_location + (15.0, 2.0, 0.0))
 
     # instantiate the resqpy object using data
     pq14_md_datum = rqw.MdDatum(model,
@@ -94,3 +96,67 @@ Other resqpy objects can be created in a similar way. Note, however:
 * most classes are much more complex than MdDatum, so much more data needs to be prepared
 * resqpy includes import options for some classes, for reading the data from other formats
 * many classes include array data, which require an extra step writing to the hdf5 file
+* it is usual to call the model's `store_epc()` method once after a batch of objects have been added
+
+The Trajectory class
+--------------------
+The WellboreTrajectoryRepresentation class (Trajectory in resqpy) plays a central role in the modelling of wells in a RESQML dataset. Apart from a deviation survey, the other well representation classes all require a reference to a trajectory. It is the class which holds information about the path taken by a wellbore in physical space.
+
+To instantiate a resqpy Trajectory for an existing RESQML WellboreTrajectoryRepresentation use the familiar methods:
+
+.. code-block:: python
+
+    pq13b_traj_uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = 'PQ13B_SIDETRACK')
+    pq13b_trajectory = rqw.Trajectory(model, uuid = pq13b_traj_uuid)
+
+As the amount of array data is modest for a trajectory, it is all loaded into memory at the time of instantiation. The main data of interest are the list of xyz points defining the path of the wellbore (within a coordinate reference system). The xyz data is available as a numpy array of shape (N, 3) in the `control_points` attribute, e.g.:
+
+.. code-block:: python
+
+    td_z = pq13b_trajectory.control_points[-1, 2]
+
+The measured depths corresponding to the xyz control points are also available in a numpy vector of shape (N,) e.g.:
+
+.. code-block:: python
+
+    td_md = q13b_trajectory.measured_depths[-1]
+
+There are several other attributes, including:
+
+* crs_uuid
+* md_uom: the unit of measure (usually 'm' or 'ft') for the measured depths, which don't belong in any crs as such
+* md_datum: an MdDatum object
+* knot_count: an integer being the number of 'knots', or points in the arrays (i.e. the value of N above)
+* line_kind_index: an integer in the range -1..5 indicating how the control points should be interpreted (see below)
+
+It is common practice for application code to treat the trajectory as a piecewise linear spline between the control points. The `line_kind_index indicates` how the data can be interpreted more rigorously. It may have the following values:
+
+* -1: null value, there is no line!
+* 0: vertical: the trajectory follows a vertical path beneath the MdDatum location; control points need not be supplied
+* 1: linear spline: a piecewise linear spline with sudden changes in direction at control points
+* 2: natural cubic spline: a cubic spline with direction control at the two end points
+* 3: cubic spline: a cubic spline with no sudden changes in direction
+* 4: z linear cubic spline: another form of cubic spline
+* 5: minimum curvature spline: the path which has least severe rate of change of direction
+
+When converting from inclination and azimuth data, as acquired by a deviation survey, the minimum curvature interpretation is invariably applied, so the line kind index often has the value 5, even though applications often interpret the trajectory as if it had value 1. For many applications, the differences will be insignificant.
+
+A resqpy Trajectory object has other attributes – some of the optional ones are:
+
+* tangent_vectors: a numpy array of shape (N, 3) holding tangent vectors for the control points
+* deviation_survey: a DeviationSurvey object from which the trajectory has been derived
+* wellbore_interpretation: a related WellboreInterpretation object
+* wellbore_feature: a WellboreFeature object indirectly related via an interpretation object
+
+The Trajectory class offers some methods for setting up a new trajectory from other data sources. These can be triggered by use of appropriate arguments to the initialisation function:
+
+* compute_from_deviation_survey(): derives a trajectory from inclination and azimuth data on a minimum curvature basis
+* load_from_dataframe(): takes MD, X, Y & Z values from columns of a pandas dataframe
+* load_from_ascii_file(): similar to load_from_dataframe() but with the data in a tabular file
+* load_from_cell_list(): sets the control points to the cell centres, for a list of cells in a grid
+* load_from_wellspec(): similar to load_from_cell_list() but starting from a Nexus WELLSPEC file
+* splined_trajectory(): from an existing trajectory, create a new one with more control points following a cubic spline
+
+There is one commonly used method for finding the xyz location for a given measured depth:
+
+* xyz_for_md(): returns the interpolated xyz point based on a simple piecewise linear spline interpretation
