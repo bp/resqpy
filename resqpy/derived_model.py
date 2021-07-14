@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '17th June 2021'
+version = '14th July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -1568,12 +1568,12 @@ def extract_box_for_well(epc_file = None,
       assert trajectory_root is not None, 'trajectory object not found for uuid: ' + str(trajectory_uuid)
       trajectory = rqw.Trajectory(traj_model, trajectory_root = trajectory_root)
       well_name = rqw.well_name(trajectory)
-      traj_crs = rqcrs.Crs(trajectory.model, crs_root = trajectory.crs_root)
+      traj_crs = rqcrs.Crs(trajectory.model, uuid = trajectory.crs_uuid)
       grid_crs = rqcrs.Crs(source_grid.model, uuid = source_grid.crs_uuid)
       # modify in-memory trajectory data to be in the same crs as grid
       traj_crs.convert_array_to(grid_crs,
                                 trajectory.control_points)  # trajectory xyz points converted in situ to grid's crs
-      trajectory.crs_root = source_grid.crs_root  # note: tangent vectors might be messed up, if present
+      trajectory.crs_uuid = source_grid.crs_uuid  # note: tangent vectors might be messed up, if present
       traj_box = np.empty((2, 3))
       traj_box[0] = np.amin(trajectory.control_points, axis = 0)
       traj_box[1] = np.amax(trajectory.control_points, axis = 0)

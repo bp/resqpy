@@ -1,6 +1,6 @@
 """grid_surface.py: Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '29th June 2021'
+version = '14th July 2021'
 
 import logging
 
@@ -1200,8 +1200,8 @@ def trajectory_grid_overlap(trajectory, grid, lazy = False):
    traj_box[0] = np.amin(trajectory.control_points, axis = 0)
    traj_box[1] = np.amax(trajectory.control_points, axis = 0)
    grid_box = grid.xyz_box(lazy = lazy, local = True)
-   if not bu.matching_uuids(rqet.uuid_for_part_root(trajectory.crs_root), grid.crs_uuid):
-      t_crs = rqc.Crs(trajectory.model, uuid = rqet.uuid_for_part_root(trajectory.crs_root))
+   if not bu.matching_uuids(trajectory.crs_uuid, grid.crs_uuid):
+      t_crs = rqc.Crs(trajectory.model, uuid = trajectory.crs_uuid)
       g_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
       t_crs.convert_array_to(g_crs, traj_box)
    return bx.boxes_overlap(traj_box, grid_box)
