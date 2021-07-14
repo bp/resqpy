@@ -1,8 +1,6 @@
 A first look at Well Objects
 ============================
 
-**This page is under development.**
-
 This tutorial introduces the classes relating to wells and goes into more detail for some of the basic ones. Other tutorials will cover the remaining well classes in depth.
 
 The RESQML and resqpy classes for wells
@@ -54,7 +52,8 @@ When reading an existing dataset, a resqpy MdDatum object can be instantiated in
     pq13b_sidetrack_survey_uuid = model.uuid(obj_type = 'DeviationSurveyRepresentation',
                                              related_uuid = pq13b_sidetrack_interpretation_uuid)
     assert pq13b_sidetrack_survey_uuid is not None
-    pq13_md_datum_uuid = model.uuid(obj_type = 'MdDatum', related_uuid = pq13b_sidetrack_survey_uuid)
+    pq13_md_datum_uuid = model.uuid(obj_type = 'MdDatum',
+                                    related_uuid = pq13b_sidetrack_survey_uuid)
     assert pq13_md_datum_uuid is not None
     pq13_md_datum = rqw.MdDatum(model, uuid = pq13_md_datum_uuid)
 
@@ -63,6 +62,12 @@ The MdDatum class doesn't have any exciting methods. Code accessing such an obje
 * crs_uuid: the uuid of the coordinate reference system within which the datum is located
 * location: a triple float being the xyz location of the datum
 * md_reference: a human readable string from a prescribed set, such as 'mean sea level', or 'kelly bushing'
+
+The list of valid MD reference strings is defined in the RESQML schema definition and is available in the resqpy well module as:
+
+.. code-block:: python
+
+    rqw.valid_md_reference_list
 
 Creating a new measured depth datum object
 ------------------------------------------
@@ -86,7 +91,7 @@ Most of the tutorials so far have focussed on reading existing data. As the MdDa
     # create an xml tree (in memory) and add it to the model's dictionary of parts
     pq14_md_datum.create_xml()
 
-    # update the epc file on disc (more typically done after creating all the new objects)
+    # update the epc file on disc (more typically done after creating a bunch of new objects)
     model.store_epc()
 
 Note that for a real well that has been drilled, the actual location of the datum should be available from the drilling information, so the example above is rather unrealistic.
@@ -106,7 +111,8 @@ To instantiate a resqpy Trajectory for an existing RESQML WellboreTrajectoryRepr
 
 .. code-block:: python
 
-    pq13b_traj_uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = 'PQ13B_SIDETRACK')
+    pq13b_traj_uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation',
+                                 title = 'PQ13B_SIDETRACK')
     pq13b_trajectory = rqw.Trajectory(model, uuid = pq13b_traj_uuid)
 
 As the amount of array data is modest for a trajectory, it is all loaded into memory at the time of instantiation. The main data of interest are the list of xyz points defining the path of the wellbore (within a coordinate reference system). The xyz data is available as a numpy array of shape (N, 3) in the `control_points` attribute, e.g.:
@@ -129,7 +135,7 @@ There are several other attributes, including:
 * knot_count: an integer being the number of 'knots', or points in the arrays (i.e. the value of N above)
 * line_kind_index: an integer in the range -1..5 indicating how the control points should be interpreted (see below)
 
-It is common practice for application code to treat the trajectory as a piecewise linear spline between the control points. The `line_kind_index indicates` how the data can be interpreted more rigorously. It may have the following values:
+It is common practice for application code to treat the trajectory as a piecewise linear spline between the control points. The `line_kind_index` indicates how the data can be interpreted more rigorously. It may have the following values:
 
 * -1: null value, there is no line!
 * 0: vertical: the trajectory follows a vertical path beneath the MdDatum location; control points need not be supplied
@@ -148,7 +154,7 @@ A resqpy Trajectory object has other attributes – some of the optional ones ar
 * wellbore_interpretation: a related WellboreInterpretation object
 * wellbore_feature: a WellboreFeature object indirectly related via an interpretation object
 
-The Trajectory class offers some methods for setting up a new trajectory from other data sources. These can be triggered by use of appropriate arguments to the initialisation function:
+The Trajectory class offers some methods for setting up a new trajectory from other data sources. These can be triggered by use of appropriate arguments to the initialisation function. The methods are:
 
 * compute_from_deviation_survey(): derives a trajectory from inclination and azimuth data on a minimum curvature basis
 * load_from_dataframe(): takes MD, X, Y & Z values from columns of a pandas dataframe
@@ -160,3 +166,54 @@ The Trajectory class offers some methods for setting up a new trajectory from ot
 There is one commonly used method for finding the xyz location for a given measured depth:
 
 * xyz_for_md(): returns the interpolated xyz point based on a simple piecewise linear spline interpretation
+
+Creating a new trajectory object
+--------------------------------
+
+In this example we will add given the following pandas dataframe (the numbers are made up and might not be realistic!):
+
+.. code-block:: python
+
+    df = pd.DataFrame(((2170.00, 450123.45, 5013427.21, 2100.00),
+                       (2227.00, 450108.95, 5013432.77, 2150.00),
+                       (2288.00, 450081.02, 5013434.25, 2200.00),
+                       (2349.00, 450067.83, 5013433.91, 2250.00),
+                       (2399.82, 450064.05, 5013433.44, 2300.00)),
+              columns = ('MD',     'X',       'Y',       'Z'))
+
+We need to establish an MdDatum object for the well. Here we will assume that the datum is vertically above the first control point in our dataframe. We will also assume that the coordinate reference system object already exists:
+
+.. code-block:: python
+
+    datum_xyz = df['X'][0], df['Y'][0], df['Z'][0] - df['MD'][0]
+    md_datum = rqw.MdDatum(model,
+                           crs_uuid = model.crs_uuid,  # handy if all your objects use the same crs
+                           location = datum_xyz,
+                           md_reference = 'ground level',
+                           title = 'spud datum')
+    md_datum.create_xml()
+
+Now we have enough to instantiate the resqpy Trajectory:
+
+.. code-block:: python
+
+    trajectory = rqw.Trajectory(model,
+                                md_datum = md_datum,
+                                data_frame = df,
+                                length_uom = 'm',
+                                well_name = 'Wildcat 1')
+
+The trajectory now exists in memory as a resqpy object but it has not been added to the model in any persistent way. For temporary objects, this state is sometimes fine to work with. However we usually want to add the new object fully, with:
+
+.. code-block:: python
+
+    trajectory.write_hdf5()
+    trajectory.create_xml()
+
+This is followed by writing to the epc with the following, which will include both the MdDatum and the Trajectory objects:
+
+.. code-block:: python
+
+    model.store_epc()
+
+The other well classes will be covered in later tutorials.
