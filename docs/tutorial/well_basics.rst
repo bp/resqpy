@@ -200,7 +200,7 @@ Now we have enough to instantiate the resqpy Trajectory:
     trajectory = rqw.Trajectory(model,
                                 md_datum = md_datum,
                                 data_frame = df,
-                                length_uom = 'm',
+                                length_uom = 'm',  # this is the md_uom
                                 well_name = 'Wildcat 1')
 
 The trajectory now exists in memory as a resqpy object but it has not been added to the model in any persistent way. For temporary objects, this state is sometimes fine to work with. However we usually want to add the new object fully. Before doing that, we can optionally call the following method to create an interpretation object and a feature for the well:
