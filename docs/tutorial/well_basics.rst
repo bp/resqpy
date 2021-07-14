@@ -1,6 +1,8 @@
 A first look at Well Objects
 ============================
 
+**This page is under development.**
+
 This tutorial introduces the classes relating to wells and goes into more detail for some of the basic ones. Other tutorials will cover the remaining well classes in depth.
 
 The RESQML classes for wells
@@ -20,7 +22,12 @@ The resqpy WellboreFrame and BlockedWell support related properties, which can b
 * (WellLogCollection) - for managing logs, including a method for exporting in LAS format
 * (WellLog) - for simpler access to a single log
 
-There are various relationships between these classes. For example, a deviation survey or a trajectory must refer to a measured depth datum, and a blocked well must refer to a trajectory.
+RESQML also has organisational classes relating to wells:
+
+* WellboreFeature (WellboreFeature) - a named entity representing a real, planned or conceptual well
+* WellboreInterpretation (WellboreInterpretation) - one possible incarnation of a wellbore feature
+
+There are various relationships between these classes. For example, a deviation survey or a trajectory must refer to a measured depth datum, and a blocked well must refer to a trajectory. Any of the representation objects can relate to a wellbore interpretation, which in turn must relate to a wellbore feature. The use of these optional organisational objects is encouraged and some software requires them to be present.
 
 The measured depth datum class: MdDatum
 ---------------------------------------
