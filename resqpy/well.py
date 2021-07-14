@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '7th July 2021'
+version = '14th July 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -74,16 +74,18 @@ class MdDatum(BaseResqpy):
 
    resqml_type = 'MdDatum'
 
-   def __init__(self,
-                parent_model,
-                uuid = None,
-                md_datum_root = None,
-                crs_root = None,
-                location = None,
-                md_reference = 'mean sea level',
-                title = None,
-                originator = None,
-                extra_metadata = None):
+   def __init__(
+         self,
+         parent_model,
+         uuid = None,
+         md_datum_root = None,
+         crs_uuid = None,
+         crs_root = None,  # deprecated
+         location = None,
+         md_reference = 'mean sea level',
+         title = None,
+         originator = None,
+         extra_metadata = None):
       """Initialises a new MdDatum object.
 
       arguments:
@@ -92,8 +94,9 @@ class MdDatum(BaseResqpy):
          md_datum_root (optional): DEPRECATED: the root node of the xml tree representing the md datum;
             if not None, the new md datum object is initialised based on data in the tree;
             if None, the new object is initialised from the remaining arguments
-         crs_root: the root node of the coordinate reference system xml tree; ignored if
-            uuid or md_datum_root is not None
+         crs_uuid (uuid.UUID): required if initialising from values
+         crs_root: DEPRECATED, use crs_uuid instead; the root node of the coordinate reference system
+            xml tree; ignored if uuid or md_datum_root is not None or crs_uuid is not None
          location: (triple float): the x, y, z location of the new measured depth datum;
             ignored if uuid or md_datum_root is not None
          md_reference (string): human readable resqml standard string indicating the real
@@ -115,10 +118,14 @@ class MdDatum(BaseResqpy):
          if initialising from data other than an existing RESQML object
       """
 
+      if crs_root is not None:
+         warnings.warn("Attribute 'crs_root' is deprecated. Use 'crs_uuid'", DeprecationWarning)
+      # TODO: remove crs_root argument
+
       self.location = location
       self.md_reference = md_reference
-      self.crs_root = crs_root
-      self.crs_uuid = rqet.uuid_for_part_root(crs_root)
+      self.crs_uuid = crs_uuid
+
       super().__init__(model = parent_model,
                        uuid = uuid,
                        title = title,
@@ -126,6 +133,11 @@ class MdDatum(BaseResqpy):
                        extra_metadata = extra_metadata,
                        root_node = md_datum_root)
 
+      # temporary code to sort out crs reference, till crs_root arg is retired
+      if self.crs_uuid is None and crs_root is not None:
+         self.crs_uuid = rqet.uuid_for_part_root(crs_root)
+
+      assert self.crs_uuid is not None
       if self.root is None and (location is not None or md_reference):
          assert location is not None and md_reference
          assert md_reference in valid_md_reference_list
@@ -141,9 +153,14 @@ class MdDatum(BaseResqpy):
       self.md_reference = rqet.node_text(rqet.find_tag(md_datum_root, 'MdReference')).strip().lower()
       assert self.md_reference in valid_md_reference_list
       self.crs_uuid = self.extract_crs_uuid()
-      self.crs_root = self.extract_crs_root()
 
-   # todo: these two functions are almost identical to ones in the grid module: they should be made common and put in model.py
+   @property
+   def crs_root(self):
+      """XML node corresponding to self.crs_uuid"""
+
+      return self.model.root_for_uuid(self.crs_uuid)
+
+   # todo: the following function is almost identical to one in the grid module: it should be made common and put in model.py
 
    def extract_crs_uuid(self):
       """Returns uuid for coordinate reference system, as stored in reference node of this md datum's xml tree."""
@@ -158,13 +175,8 @@ class MdDatum(BaseResqpy):
    def extract_crs_root(self):
       """Returns root in parent model xml parts forest of coordinate reference system used by this md datum."""
 
-      if self.crs_root is not None:
-         return self.crs_root
-      crs_uuid = self.extract_crs_uuid()
-      if crs_uuid is None:
-         return None
-      crs_part = 'obj_LocalDepth3dCrs_' + str(crs_uuid) + '.xml'
-      self.crs_root = self.model.root_for_part(crs_part, is_rels = False)
+      if self.crs_uuid is None:
+         self.extract_crs_uuid()
       return self.crs_root
 
    def create_part(self):
@@ -199,9 +211,8 @@ class MdDatum(BaseResqpy):
       if not self.title:
          self.title = 'measured depth datum'
 
-      crs_root = self.crs_root
-      assert crs_root is not None
-      crs_uuid = rqet.uuid_for_part_root(crs_root)
+      crs_uuid = self.crs_uuid
+      assert crs_uuid is not None
 
       datum = super().create_xml(add_as_part = False, originator = originator)
 
@@ -216,7 +227,7 @@ class MdDatum(BaseResqpy):
       if add_as_part:
          self.model.add_part('obj_MdDatum', self.uuid, datum)
          if add_relationships:
-            self.model.create_reciprocal_relationship(datum, 'destinationObject', crs_root, 'sourceObject')
+            self.model.create_reciprocal_relationship(datum, 'destinationObject', self.crs_root, 'sourceObject')
 
       return datum
 
@@ -282,7 +293,7 @@ class DeviationSurvey(BaseResqpy):
          md_datum (MdDatum): the datum that the depths for this survey are measured from
          md_uom (string, default 'm'): a resqml length unit of measure applicable to the
             measured depths; should be 'm' or 'ft'
-         angle_uom (string): a resqml angle unit; should be 'dega' or 'rad'  # TODO: check this
+         angle_uom (string): a resqml angle unit; should be 'dega' or 'rad'
          measured_depths (np.array): 1d array
          azimuths (np.array): 1d array
          inclindations (np.array): 1d array
@@ -374,18 +385,16 @@ class DeviationSurvey(BaseResqpy):
 
       start = data_frame.iloc[0]
 
-      return cls(
-         parent_model = parent_model,
-         station_count = station_count,
-         md_datum = md_datum,
-         md_uom = md_uom,
-         angle_uom = angle_uom,
-         first_station = (start[x_col], start[y_col], start[z_col]),
-         measured_depths = data_frame[md_col].values,
-         azimuths = data_frame[azimuth_col].values,
-         inclinations = data_frame[inclination_col].values,
-         is_final = True  # assume this is a finalised deviation survey
-      )
+      return cls(parent_model = parent_model,
+                 station_count = station_count,
+                 md_datum = md_datum,
+                 md_uom = md_uom,
+                 angle_uom = angle_uom,
+                 first_station = (start[x_col], start[y_col], start[z_col]),
+                 measured_depths = data_frame[md_col].values,
+                 azimuths = data_frame[azimuth_col].values,
+                 inclinations = data_frame[inclination_col].values,
+                 is_final = True)  # assume this is a finalised deviation survey
 
    @classmethod
    def from_ascii_file(cls,
@@ -656,27 +665,28 @@ class Trajectory(BaseResqpy):
    resqml_type = 'WellboreTrajectoryRepresentation'
    well_name = rqo._alias_for_attribute("title")
 
-   def __init__(self,
-                parent_model,
-                trajectory_root = None,
-                uuid = None,
-                md_datum = None,
-                deviation_survey = None,
-                data_frame = None,
-                grid = None,
-                cell_kji0_list = None,
-                wellspec_file = None,
-                spline_mode = 'cube',
-                deviation_survey_file = None,
-                survey_file_space_separated = False,
-                length_uom = None,
-                md_domain = None,
-                represented_interp = None,
-                well_name = None,
-                set_tangent_vectors = False,
-                hdf5_source_model = None,
-                originator = None,
-                extra_metadata = None):
+   def __init__(
+         self,
+         parent_model,
+         trajectory_root = None,  # deprecated
+         uuid = None,
+         md_datum = None,
+         deviation_survey = None,
+         data_frame = None,
+         grid = None,
+         cell_kji0_list = None,
+         wellspec_file = None,
+         spline_mode = 'cube',
+         deviation_survey_file = None,
+         survey_file_space_separated = False,
+         length_uom = None,
+         md_domain = None,
+         represented_interp = None,
+         well_name = None,
+         set_tangent_vectors = False,
+         hdf5_source_model = None,
+         originator = None,
+         extra_metadata = None):
       """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or ascii file.
 
       arguments:
@@ -721,16 +731,18 @@ class Trajectory(BaseResqpy):
       returns:
          the newly created wellbore trajectory object
 
-      note:
+      notes:
          if starting from a deviation survey file, there are two routes: create a deviation survey object first,
          using the azimuth and inclination data, then generate a trajectory from that based on minimum curvature;
          or, create a trajectory directly using X, Y, Z data from the deviation survey file (ie. minimum
-         curvature or other algorithm already applied externally)
+         curvature or other algorithm already applied externally);
+         if not loading from xml, then the crs is set to that used by the measured depth datum, or if that is not
+         available then the default crs for the model
 
       :meta common:
       """
 
-      self.crs_root = None
+      self.crs_uuid = None
       self.title = well_name
       self.start_md = None
       self.finish_md = None
@@ -788,15 +800,24 @@ class Trajectory(BaseResqpy):
                                    title = well_name,
                                    set_tangent_vectors = set_tangent_vectors)
       # todo: create from already loaded deviation_survey node (ie. derive xyz points)
-      if self.crs_root is None:
+
+      if self.crs_uuid is None:
          if self.md_datum is not None:
-            self.crs_root = self.md_datum.crs_root
+            self.crs_uuid = self.md_datum.crs_uuid
          else:
-            self.crs_root = self.model.crs_root
+            self.crs_uuid = self.model.crs_uuid
+
       if not self.title:
          self.title = 'well trajectory'
+
       if self.md_datum is None and self.control_points is not None:
-         self.md_datum = MdDatum(self.model, crs_root = self.crs_root, location = self.control_points[0])
+         self.md_datum = MdDatum(self.model, crs_uuid = self.crs_uuid, location = self.control_points[0])
+
+   @property
+   def crs_root(self):
+      """XML node corresponding to self.crs_uuid"""
+
+      return self.model.root_for_uuid(self.crs_uuid)
 
    def iter_wellbore_frames(self):
       """ Iterable of all WellboreFrames associated with a trajectory
@@ -822,7 +843,7 @@ class Trajectory(BaseResqpy):
       self.md_uom = rqet.length_units_from_node(rqet.find_tag(node, 'MdUom'))
       self.md_domain = rqet.node_text(rqet.find_tag(node, 'MdDomain'))
       geometry_node = rqet.find_tag(node, 'Geometry')
-      self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
+      self.crs_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(geometry_node, ['LocalCrs', 'UUID']))
       self.knot_count = int(rqet.node_text(rqet.find_tag(geometry_node, 'KnotCount')).strip())
       self.line_kind_index = int(rqet.node_text(rqet.find_tag(geometry_node, 'LineKindIndex')).strip())
       mds_node = rqet.find_tag(geometry_node, 'ControlPointParameters')
@@ -1230,7 +1251,7 @@ class Trajectory(BaseResqpy):
                                length_uom = self.md_uom,
                                md_domain = self.md_domain)
       spline_traj.line_kind_index = self.line_kind_index  # not sure how we should really be setting this
-      spline_traj.crs_root = self.crs_root
+      spline_traj.crs_uuid = self.crs_uuid
       spline_traj.start_md = self.start_md
       spline_traj.deviation_survey = self.deviation_survey
 
@@ -1348,10 +1369,10 @@ class Trajectory(BaseResqpy):
 
          # note: resqml standard allows trajectory to be in different crs to md datum
          #       however, this module often uses the md datum crs, if the trajectory has been imported
-         if self.crs_root is None:
-            self.model.create_crs_reference(crs_uuid = self.md_datum.crs_uuid, root = geom)
-         else:
-            self.model.create_crs_reference(crs_uuid = rqet.uuid_for_part_root(self.crs_root), root = geom)
+         if self.crs_uuid is None:
+            self.crs_uuid = self.md_datum.crs_uuid
+         assert self.crs_uuid is not None
+         self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
          kc_node = rqet.SubElement(geom, ns['resqml2'] + 'KnotCount')
          kc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
@@ -1419,8 +1440,6 @@ class Trajectory(BaseResqpy):
          self.model.add_part('obj_WellboreTrajectoryRepresentation', self.uuid, wbt_node)
          if add_relationships:
             crs_root = self.crs_root
-            if crs_root is None:
-               crs_root = self.md_datum.crs_root
             self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', crs_root, 'sourceObject')
             self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', self.md_datum.root_node,
                                                       'sourceObject')

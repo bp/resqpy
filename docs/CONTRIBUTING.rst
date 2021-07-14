@@ -23,6 +23,16 @@ Ways of contributing
 * Documentation or test improvements
 * Publicity and support
 
+Checklist for pull requests
+---------------------------
+
+1. Changes or additions should have appropriate unit tests (see below)
+2. Follow the PEP8 style guide as far as possible (with caveats below).
+3. All public functions and classes should have
+   `Google-style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
+4. Code should be formatted with ``yapf``
+5. All GitHub checks should pass
+
 Development environment setup
 -----------------------------
 
@@ -71,25 +81,18 @@ Development environment setup
    You can then commit and push your changes as usual. Open a Pull Request on
    GitHub to submit your code to be merged into master.
 
-Checklist for pull requests
----------------------------
-
-1. All CI jobs should pass
-2. Changes or additions should have appropriate unit tests (see below)
-3. Follow the PEP8 style guide as far as possible (with caveats below).
-4. All public functions and classes should have
-   `Google-style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_ 
-
 Code Style
 ----------
 
 We use the yapf auto-formatter with the style configured in the repository. 
-You should either set this formatter in your IDE settings, or run the following
-command before committing:
+Most IDEs allow you to configure a formatter to run automatically when you save
+a file. Alternatively, you can run the following command before commiting any
+changes:
 
 .. code-block:: bash
 
-   yapf -i .
+   # Reformat all python files in the repository
+   yapf -ir .
 
 Please try to write code according to the
 `PEP8 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
@@ -156,12 +159,12 @@ from the command line:
 
     pytest
 
-There are several command line options that can be appended:
+There are several command line options that can be appended, for example:
 
 .. code:: bash
 
-    pytest -k foobar # selects just tests with "foobar" in the name
-    pytest -rA       # prints summary of all executed tests at end
+    pytest -k foobar  # selects just tests with "foobar" in the name
+    pytest -rA        # prints summary of all executed tests at end
 
 Static analysis
 ^^^^^^^^^^^^^^^
@@ -206,6 +209,28 @@ The autoclasstoc extension is used to group some of the most commonly-used metho
 together at the top of the class summary tables. To make a method appear in this list,
 add `:meta common:` to the bottom of the method docstring.
 
+Making a release
+----------------
+
+To make a release at a given commit, simply make a git tag:
+
+.. code:: bash
+
+   # Make a tag
+   git tag -a v0.0.1 -m "Incremental release with some bugfixes"
+
+   # Push tag to github
+   git push origin v0.0.1
+
+The tag must have the prefix ``v`` and have the form ``MAJOR.MINOR.PATCH``.
+
+Following [semantic versioning](https://semver.org/), increment the:
+
+* ``MAJOR`` version when you make incompatible API changes,
+* ``MINOR`` version when you add functionality in a backwards compatible manner, and
+* ``PATCH`` version when you make backwards compatible bug fixes.
+
+
 Get in touch
 ------------
 
@@ -219,7 +244,3 @@ Code of Conduct
 We abide by the Contributor-covenant standard:
 
 https://www.contributor-covenant.org/version/1/4/code-of-conduct/code_of_conduct.md
-
-
-
-

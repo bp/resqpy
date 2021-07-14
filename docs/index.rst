@@ -12,7 +12,7 @@ license as a contribution to the open-source community.
 The repository is hosted on `GitHub <https://github.com/bp/resqpy>`_.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: About
 
    installation
