@@ -243,6 +243,7 @@ def content_type(content_type_str):
 def node_type(node, is_rels = False, strip_obj = False):
    """Returns the type as held in attributes of xml node; defining authority is stripped out."""
 
+   result = None
    if node is None:
       return None
    if is_rels:
@@ -257,7 +258,7 @@ def node_type(node, is_rels = False, strip_obj = False):
             #           return type_str[type_str.rfind(':') + 1:]
             type_str = stripped_of_prefix(node.attrib[key])
             result = type_str
-   if result is not None and strip_obj and result.startswith('obj_'):
+   if result and strip_obj and result.startswith('obj_'):
       result = result[4:]
    return result
 
