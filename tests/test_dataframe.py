@@ -13,7 +13,7 @@ def test_dataframe(tmp_path):
 
    epc = os.path.join(tmp_path, 'dataframe.epc')
 
-   model = rq.Model(epc_file = epc, new_epc = True, create_basics = True, create_hdf5_ext = True)
+   model = rq.new_model(epc_file = epc)
 
    np_df = np.array([[0.0, 0.0, 0.0], [1000.0, 0.0, 0.0], [1900.0, 100.0, 0.0], [2500.0, 500.0, 800.0],
                      [3200.0, 1500.0, 1600.0]])
@@ -52,20 +52,20 @@ def test_dataframe(tmp_path):
    df_roots = model.roots(obj_type = 'Grid2dRepresentation', extra = {'dataframe': 'true'})
    assert len(df_roots) == 4
 
-   v_root = model.root(obj_type = 'Grid2dRepresentation', extra = {'dataframe': 'true'}, title = 'vanilla')
-   dataframe = rqdf.DataFrame(model, support_root = v_root)
+   v_uuid = model.uuid(obj_type = 'Grid2dRepresentation', extra = {'dataframe': 'true'}, title = 'vanilla')
+   dataframe = rqdf.DataFrame(model, uuid = v_uuid)
    assert dataframe.n_cols == 3
    assert dataframe.n_rows == 5
    assert all(dataframe.dataframe() == df)
    assert all(dataframe.dataframe().columns == df_cols)
 
-   tt_root = model.root(obj_type = 'Grid2dRepresentation', extra = {'dataframe': 'true'}, title = 'time table')
-   time_table = rqdf.TimeTable(model, support_root = tt_root)
+   tt_uuid = model.uuid(obj_type = 'Grid2dRepresentation', extra = {'dataframe': 'true'}, title = 'time table')
+   time_table = rqdf.TimeTable(model, uuid = tt_uuid)
    assert time_table.time_series().timestamps == ts_list
    assert all(time_table.dataframe() == df)
 
-   u_root = model.root(obj_type = 'Grid2dRepresentation', extra = {'dataframe': 'true'}, title = 'united realisation')
-   ur = rqdf.TimeTable(model, support_root = u_root)
+   u_uuid = model.uuid(obj_type = 'Grid2dRepresentation', extra = {'dataframe': 'true'}, title = 'united realisation')
+   ur = rqdf.TimeTable(model, uuid = u_uuid)
    assert ur.uom_list == col_units
    assert ur.time_series().timestamps == ts_list
 
