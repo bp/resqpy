@@ -29,4 +29,5 @@ executed whilst progressing through the material.
    single_property
    units_of_measure
    well_basics
+   surfaces
    creating_test
