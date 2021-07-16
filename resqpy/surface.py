@@ -1196,7 +1196,7 @@ class PointSet(_BaseSurface):
       self.represented_interpretation_root = None
       super().__init__(model = parent_model,
                        uuid = uuid,
-                       titl = title,
+                       title = title,
                        originator = originator,
                        root_node = point_set_root)
 
