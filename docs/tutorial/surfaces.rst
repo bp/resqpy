@@ -183,3 +183,26 @@ The main advantage of this way of working is that it is clear that the different
     thickness = base_reservoir_mesh.full_array_ref()[2] - top_reservoir_mesh.full_array_ref()[2]
 
 Note the use of the *ref_uuid* attribute in that snippet, to identify the mesh being referenced for the xy values.
+
+The PointSet class
+------------------
+A set of points in 3D space can be held in a RESQML object of class PointSetRepresentation and the equivalent resqpy class is PointSet. That class includes a *full_array_ref* method which returns a numpy array of shape (N, 3) holding the xyz values of the points.
+
+If a set of points is representing a surface, it is usually necessary to convert it to a Surface object using a Delaunay Triangulation, e.g.:
+
+.. code-block:: python
+
+    owc_point_set = rqs.PointSet(model, uuid = owc_contact_picks_point_set_uuid)
+    owc_surface = rqs.Surface(model, point_set = owc_point_set, title = 'oil-water contact from picks')
+
+Note that the Delaunay Triangulation can be a computationally expensive operation. It is probably worth storing the resulting surface as a persistent object:
+
+.. code-block:: python
+
+    owc_surface.write_hdf5()
+    owc_surface.create_xml()
+    model.store_epc()
+
+A non-standard use of Mesh
+--------------------------
+The resqpy library includes a DataFrame class (and some derived classes) which, behind the scenes, map a numerical pandas dataframe onto a Mesh object of flavour 'reg&z' (or 'regular' in the case of multiple realisations, in which case the values are stored as continuous property objects). The RESQML standard did not intend Grid2dRepresentation objects to be used in this way, so such dataframes will not generally be usable by RESQML enabled software that does not use the resqpy API.

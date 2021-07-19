@@ -66,7 +66,7 @@ class _BaseSurface(BaseResqpy):
       self.set_represented_interpretation_root(interp_root)
 
 
-class TriangulatedPatch():
+class TriangulatedPatch:
    """Class for RESQML TrianglePatch objects (used by Surface objects inter alia)."""
 
    def __init__(self, parent_model, patch_index = None, patch_node = None, crs_uuid = None):
