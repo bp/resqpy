@@ -403,3 +403,101 @@ def timetable_for_title(model, title, realization = None):
       return None
    assert len(tt_parts) == 1
    return TimeTable(model, uuid = model.uuid_for_part(tt_parts[0]), realization = realization)
+
+
+class RelPerm(DataFrame):
+   """Class for storing and retrieving a pandas dataframe of relative permeability data.
+
+   note:
+      inherits from DataFrame class
+   """
+
+   def __init__(
+         self,
+         model,
+         support_root = None,  # deprecated
+         uuid = None,
+         df = None,
+         uom_list = None,
+         realization = None,
+         phase_combo = None,
+         low_sal = False,
+         table_index = None,
+         title = 'relperm_table',
+         column_lookup_uuid = None,
+         uom_lookup_uuid = None):
+      """Create a new RelPerm object from either a previously stored property or a pandas dataframe.
+
+      arguments:
+         phase_combo (str, optional): the combination of phases whose relative
+         permeability behaviour is described. Options include 'water_oil', 'gas_oil' and
+         'gas_water'
+         low_sal (boolean, optional): if True, indicates that the water-oil table contains
+         the low-salinity data for relative permeability and capillary pressure
+         table_index (int, optional): the index of the relative permeability
+         table when multiple relative permeability tables are present
+
+      note:
+         see DataFrame class docstring for details of other arguments
+      """
+      
+      # check that either a uuid OR dataframe has been provided
+      assert uuid is not None or df is not None
+      
+      # check that 'phase_combo' parameter is valid
+      assert phase_combo in ['water_oil', 'gas_oil', 'gas_water', None], 'invalid phase_combo provided'
+      
+      # check that the column names are as expected
+      if (df is not None) & (phase_combo is not None):
+          if phase_combo == 'water_oil':
+              assert all(col in ['SW', 'KROW', 'KRW'] for col in df.columns), 'missing required columns in water-oil rel. perm table'
+          elif phase_combo == 'gas_oil':
+              assert all(col in ['SG', 'KROG', 'KRG'] for col in df.columns), 'missing required columns in gas-oil rel. perm table'          
+          elif phase_combo == 'gas_water':
+              assert all(col in ['SG', 'KRWG', 'KRG'] for col in df.columns), 'missing required columns in gas-water rel. perm table'  
+      elif (df is not None) & (phase_combo is None):
+          assert all(col in df.columns for col in ['SW', 'KROW', 'KRW']) or \
+                 all(col in df.columns for col in ['SG', 'KROG', 'KRG']) or \
+                 all(col in df.columns for col in ['SG', 'KRWG', 'KRG'])
+          if 'KROW' in df.columns:
+              phase_combo = 'water_oil'
+          elif 'KROG' in df.columns:
+             phase_combo = 'gas_oil'
+          elif 'KRG' in df.columns:
+              phase_combo = 'gas_water'
+             
+      # check that Sw and kr values are monotonic and within the range 0-1
+      for col in ['SW', 'SG']:
+          if col in df.columns:
+              assert df[col].is_monotonic, f'{col} is not monotonic'
+          else:
+              continue
+      for col in ['KRW', 'KRG']:
+          if col in df.columns:
+              assert df[col].is_monotonic and float(df.iloc[0][col]) == 0,  f'{col} is not monotonic'
+          else:
+              continue
+      for col in ['KROW', 'KROG', 'KRWG']:
+          if col in df.columns:
+              assert df[col].is_monotonic_decreasing and float(df.iloc[-1][col]) == 0,  f'{col} is not monotonically decreasing'
+          else:
+              continue
+          
+      # ensure that blank capillary pressure values are stored as np.nan
+      for col in ['PCWO', 'PCGO', 'PCGW']:
+          if col in df.columns:
+              df[col].fillna(np.nan, inplace=True)
+
+      super().__init__(model,
+                       uuid = uuid,
+                       support_root = support_root,
+                       df = df,
+                       uom_list = uom_list,
+                       realization = realization,
+                       title = title,
+                       column_lookup_uuid = column_lookup_uuid,
+                       uom_lookup_uuid = uom_lookup_uuid)
+      self.phase_combo = phase_combo
+      self.low_sal = low_sal
+      self.table_index = table_index
+      
