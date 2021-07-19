@@ -22,6 +22,7 @@ In this tutorial we assume the following import statements:
     import resqpy.model as rq
     import resqpy.surface as rqs
     import resqpy.organize as rqo
+    import resqpy.olio.uuid as bu
 
 Working with an existing Surface
 --------------------------------
@@ -125,11 +126,60 @@ In that example, *surface_index* is an index into the list of surfaces passed to
 
 Introducing the Mesh class
 --------------------------
-The resqpy Mesh class is equivalent to the Grid2dRepresentation RESQML class. It can be used to represent a depth map for a surface such as a horizon and is characterised by usually having a regular two-dimensional lattice of points in the xy axes. RESQML allows various options for storing the data. Which option is in use is visible as the resqpy Mesh attribute *flavour* which can have the following values:
+The resqpy Mesh class is equivalent to the Grid2dRepresentation RESQML class. It can be used to represent a depth map for a surface such as a horizon and is characterised by usually having a regular two-dimensional lattice of points in the xy plane. RESQML allows various options for storing the data. Which option is in use is visible as the resqpy Mesh attribute *flavour* which can have the following values:
 
 * 'explicit' - full xyz values are provided for every point, with an implied logical IJ orderliness in the xy space
 * 'regular' - the xy values form a perfectly regular lattice and there are no z values
 * 'reg&z' - the xy values form a perfectly regular lattice and there are explicit z values
-* 'ref&z' - the xy values are stored in a separate Mesh (typically of flavour 'regular'), there are explicit z values
+* 'ref&z' - the xy values are stored in a separate referenced Mesh (typically of flavour 'regular'), there are explicit z values
 
 The logical size of the lattice can be found with a pair of attributes: *ni* and *nj*. These hold the number of points in the I and J axes. Note that these hold a node or point count, not a 'cell' count.
+
+Reading an existing Mesh
+------------------------
+Initialising a resqpy Mesh object for an existing RESQML Grid2dRepresentation follows the familiar steps of identifying the uuid and passing that value to the __init__ method. For example:
+
+.. code-block:: python
+
+    top_reservoir_mesh_uuid = model.uuid(obj_type = '', title = 'Top Reservoir')
+    top_reservoir_mesh = rqs.Mesh(model, uuid = top_reservoir_mesh_uuid)
+
+Regardless of which flavour a mesh is, a fully expanded numpy array of xyz values can be accessed with:
+
+.. code-block:: python
+
+    xyz_array = top_reservoir_mesh.full_array_ref()
+
+Another generic method which will work for any flavour of Mesh object is *surface*, which generates a Surface object for the Mesh:
+
+.. code-block:: python
+
+    top_reservoir_surface = top_reservoir_mesh.surface(quad_triangles = True)
+
+The *quad_triangles* boolean argument causes each 'square' (more generally, each quadrilateral) to be represented by four triangles rather than two, using an extra point at the centre of the square (the mean of the four vertices). This gives a unique representation whereas the default two triangle representation yields a different surface depending upon which diagonal is used for a non-planar quadrilateral.
+
+For a mesh with a regular lattice of points, the origin and spacing can be found in the following way:
+
+.. code-block:: python
+
+    assert top_reservoir_mesh.flavour in ['regular', 'reg&z']
+    origin_xyz = top_reservoir_mesh.regular_origin
+    deltas_xyz = top_reservoir_mesh.regular_dxyz_dij
+
+Those arrays contain xyz values even though the z values are typically zero and not used. The origin is a simple triple. The regular_dxyz_dij attribute is a numpy array of shape (2, 3) which holds the xyz step size for each step in I (first index zero) and J (first index one). 
+
+Of course the geometry exists within a coordinate reference system and that can be identified with the *crs_uuid* attribute.
+
+More on the 'ref&z' flavour of Mesh
+-----------------------------------
+Where two or more meshes share a common xy lattice of points, differing only in z values, it can be useful to use the 'ref&z' flavour. The xy arrangement can be represented by a Mesh of flavour 'regular', to which the other meshes refer. Alternatively, one of the meshes can act as the master and have flavour 'reg&z', with the other meshes referring to it and having flavour 'ref&z'.
+
+The main advantage of this way of working is that it is clear that the different sets of z values 'go with' the same set of xy values. Application code can make use of this knowledge. The following snippet checks that a mesh for a base reservoir horizon references one for the top reservoir, allowing the differences in z values to be meaningfully computed.
+
+.. code-block:: python
+
+    assert base_reservoir_mesh.flavour == 'ref&z'
+    assert bu.matching_uuids(base_reservoir_mesh.ref_uuid, top_reservoir_mesh.uuid)
+    thickness = base_reservoir_mesh.full_array_ref()[2] - top_reservoir_mesh.full_array_ref()[2]
+
+Note the use of the *ref_uuid* attribute in that snippet, to identify the mesh being referenced for the xy values.
