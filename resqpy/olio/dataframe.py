@@ -35,7 +35,8 @@ class DataFrame:
       used then the indexable elements are 'nodes'; column titles are stored in a related StringLookup
       object, indexed by column number; column units are optionally treated in the same way (uom for
       the property is generally set to Euc); all values are stored as floats; use the derived TimeTable
-      class if rows relate to steps in a TimeSeries
+      class if rows relate to steps in a TimeSeries; use the derived RelPerm class if the rows relate to
+      relative permeability data
    """
 
    def __init__(
@@ -415,7 +416,6 @@ class RelPerm(DataFrame):
    def __init__(
          self,
          model,
-         support_root = None,  # deprecated
          uuid = None,
          df = None,
          uom_list = None,
@@ -430,8 +430,8 @@ class RelPerm(DataFrame):
 
       arguments:
          phase_combo (str, optional): the combination of phases whose relative
-         permeability behaviour is described. Options include 'water_oil', 'gas_oil' and
-         'gas_water'
+         permeability behaviour is described. Options include 'water-oil', 'gas-oil' and
+         'gas-water'
          low_sal (boolean, optional): if True, indicates that the water-oil table contains
          the low-salinity data for relative permeability and capillary pressure
          table_index (int, optional): the index of the relative permeability
@@ -445,52 +445,61 @@ class RelPerm(DataFrame):
       assert uuid is not None or df is not None
       
       # check that 'phase_combo' parameter is valid
-      assert phase_combo in ['water_oil', 'gas_oil', 'gas_water', None], 'invalid phase_combo provided'
+      processed_phase_combo = set([x.strip() for x in str(phase_combo).split('-')])
+      assert processed_phase_combo in [set(['water', 'oil']), set(['gas', 'oil']), set(['gas', 'water']), {'None'}], 'invalid phase_combo provided'
       
-      # check that the column names are as expected
-      if (df is not None) & (phase_combo is not None):
-          if phase_combo == 'water_oil':
-              assert all(col in ['SW', 'KROW', 'KRW'] for col in df.columns), 'missing required columns in water-oil rel. perm table'
-          elif phase_combo == 'gas_oil':
-              assert all(col in ['SG', 'KROG', 'KRG'] for col in df.columns), 'missing required columns in gas-oil rel. perm table'          
-          elif phase_combo == 'gas_water':
-              assert all(col in ['SG', 'KRWG', 'KRG'] for col in df.columns), 'missing required columns in gas-water rel. perm table'  
-      elif (df is not None) & (phase_combo is None):
-          assert all(col in df.columns for col in ['SW', 'KROW', 'KRW']) or \
-                 all(col in df.columns for col in ['SG', 'KROG', 'KRG']) or \
-                 all(col in df.columns for col in ['SG', 'KRWG', 'KRG'])
-          if 'KROW' in df.columns:
-              phase_combo = 'water_oil'
-          elif 'KROG' in df.columns:
-             phase_combo = 'gas_oil'
-          elif 'KRG' in df.columns:
-              phase_combo = 'gas_water'
-             
-      # check that Sw and kr values are monotonic and within the range 0-1
-      for col in ['SW', 'SG']:
-          if col in df.columns:
-              assert df[col].is_monotonic, f'{col} is not monotonic'
-          else:
-              continue
-      for col in ['KRW', 'KRG']:
-          if col in df.columns:
-              assert df[col].is_monotonic and float(df.iloc[0][col]) == 0,  f'{col} is not monotonic'
-          else:
-              continue
-      for col in ['KROW', 'KROG', 'KRWG']:
-          if col in df.columns:
-              assert df[col].is_monotonic_decreasing and float(df.iloc[-1][col]) == 0,  f'{col} is not monotonically decreasing'
-          else:
-              continue
+      # check that the column names and order are as expected
+      if df is not None:
+          input_cols = [x.lower() for x in df.columns]
+          df.columns = input_cols
+          if phase_combo is not None:
+              if processed_phase_combo == set(['water', 'oil']):
+                  expected_cols = set(['sw', 'so', 'krw', 'kro', 'pc'])
+                  sat_cols = set(['sw', 'so'])
+                  assert input_cols[0] in sat_cols and len(set(input_cols).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+                  assert set(input_cols).issubset(expected_cols), f'incorrect column name(s) {set(input_cols).difference(expected_cols)} in water-oil rel. perm table'
+              elif processed_phase_combo == set(['gas', 'oil']):
+                  expected_cols = set(['sg', 'so', 'krg', 'kro', 'pc'])
+                  sat_cols = set(['sg', 'so'])
+                  assert input_cols[0] in sat_cols and len(set(input_cols).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+                  assert set(input_cols).issubset(expected_cols), f'incorrect column name(s) {set(input_cols).difference(expected_cols)} in gas-oil rel. perm table'
+              elif processed_phase_combo == set(['gas', 'water']):
+                  expected_cols = set(['sg', 'sw', 'krg', 'krw', 'pc'])
+                  sat_cols = set(['sg', 'sw'])
+                  assert input_cols[0] in sat_cols and len(set(input_cols).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+                  assert set(input_cols).issubset(expected_cols), f'incorrect column name(s) {set(input_cols).difference(expected_cols)} in gas-oil rel. perm table'
+          elif phase_combo is None:
+              assert input_cols[0] in ['sw', 'sg', 'so'] and len(set(input_cols).intersection(set(['sw', 'sg', 'so']))) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+              if set(input_cols).issubset(set(['sw', 'so', 'krw', 'kro', 'pc'])) and len(df.columns) >= 3:
+                  phase_combo = 'water-oil'
+              elif set(input_cols).issubset(set(['sg', 'so', 'krg', 'kro', 'pc'])) and len(df.columns) >= 3:
+                 phase_combo = 'gas-oil'
+              elif set(input_cols).issubset(set(['sg', 'sw', 'krg', 'krw', 'pc'])) and len(df.columns) >= 3:
+                  phase_combo = 'gas-water'
+              else:
+                  raise Exception('unexpected number of columns and/or column headers')
+                  
+          # ensure that missing capillary pressure values are stored as np.nan and that no other column has missing values
+          for col in df.columns:
+              if col.lower() == 'pc':
+                  df[col].replace('None', np.nan, inplace=True)
+              elif (df[col].isnull().sum() > 0) | ('None' in list(df[col])):
+                  raise Exception(f'missing values found in {col} column')
+                  
+          # check that Sw and kr values are monotonic and within the range 0-1
+          sat_col = [x for x in df.columns if x[0] == 's'][0]
+          relp_corr_col = [x for x in df.columns if x == 'kr' + sat_col[-1]][0]
+          relp_opp_col = [x for x in df.columns if (x[0:2] == 'kr')  & (x[-1] != sat_col[-1])][0]
+          assert (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[relp_opp_col].is_monotonic_decreasing) or \
+                 (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and df[relp_opp_col].is_monotonic), f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic'
+          for col in ['krw', 'krg', 'kro']:
+              if col in df.columns:
+                  assert float(df[col].min()) == 0 and float(df[col].max()) <= 1,  f'{col} is not within the range 0-1'
           
-      # ensure that blank capillary pressure values are stored as np.nan
-      for col in ['PCWO', 'PCGO', 'PCGW']:
-          if col in df.columns:
-              df[col].fillna(np.nan, inplace=True)
 
       super().__init__(model,
                        uuid = uuid,
-                       support_root = support_root,
+                       support_root = None,
                        df = df,
                        uom_list = uom_list,
                        realization = realization,
@@ -500,4 +509,3 @@ class RelPerm(DataFrame):
       self.phase_combo = phase_combo
       self.low_sal = low_sal
       self.table_index = table_index
-      
