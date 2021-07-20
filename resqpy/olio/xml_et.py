@@ -1,6 +1,6 @@
 """xml_et.py: Resqml xml element tree utilities module."""
 
-version = '8th May 2021'
+version = '20th July 2021'
 
 import logging
 
@@ -224,6 +224,22 @@ def list_obj_references(root, skip_hdf5 = True):
    for child in root:
       results += list_obj_references(child, skip_hdf5 = skip_hdf5)
    return results
+
+
+def cut_obj_references(root, uuids_to_be_cut):
+   """Deletes any object reference nodes to uuids in given list."""
+
+   if root is None or not uuids_to_be_cut:
+      return
+   for child in root:
+      if node_type(child) == 'DataObjectReference':
+         referred_uuid = bu.uuid_from_string(find_tag_text(child, 'UUID', must_exist = True))
+         for cut_uuid in uuids_to_be_cut:
+            if bu.matching_uuids(referred_uuid, cut_uuid):
+               root.remove(child)
+               break
+      else:
+         cut_obj_references(child)
 
 
 def content_type(content_type_str):
