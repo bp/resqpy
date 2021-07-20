@@ -239,7 +239,7 @@ def cut_obj_references(root, uuids_to_be_cut):
                root.remove(child)
                break
       else:
-         cut_obj_references(child)
+         cut_obj_references(child, uuids_to_be_cut)
 
 
 def content_type(content_type_str):
