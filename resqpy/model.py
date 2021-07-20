@@ -2994,6 +2994,7 @@ class Model():
                                   consolidate = True,
                                   force = False,
                                   cut_refs_to_uuids = None,
+                                  cut_node_types = None,
                                   self_h5_file_name = None,
                                   h5_uuid = None,
                                   other_h5_file_name = None):
@@ -3010,6 +3011,8 @@ class Model():
             and all references are required to be handled by an entry in the consolidation object
          cut_refs_to_uuids (list of UUIDs, optional): if present, then xml reference nodes
             referencing any of the listed uuids are cut out in the copy; use with caution
+         cut_node_types (list of str, optional): if present, any child nodes of a type in the list
+            will be cut out in the copy; use with caution
          self_h5_file_name (string, optional): h5 file name for this model; can be passed as
             an optimisation when calling method repeatedly
          h5_uuid (uuid, optional): UUID for this model's hdf5 external part; can be passed as
@@ -3100,6 +3103,9 @@ class Model():
          # cut references to objects to be excluded
          if cut_refs_to_uuids:
             rqet.cut_obj_references(root_node, cut_refs_to_uuids)
+
+         if cut_node_types:
+            rqet.cut_nodes_of_types(root_node, cut_node_types)
 
          # recursively copy in referenced parts where they don't already exist in this model
          for ref_node in rqet.list_obj_references(root_node):

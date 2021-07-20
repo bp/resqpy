@@ -242,6 +242,18 @@ def cut_obj_references(root, uuids_to_be_cut):
          cut_obj_references(child, uuids_to_be_cut)
 
 
+def cut_nodes_of_types(root, types_to_be_cut):
+   """Deletes any nodes of a type matching one in the given list."""
+
+   if root is None or not types_to_be_cut:
+      return
+   for child in root:
+      if node_type(child) in types_to_be_cut:
+         root.remove(child)  # hope this doesn't mess up the iteration
+      else:
+         cut_nodes_of_types(child, types_to_be_cut)
+
+
 def content_type(content_type_str):
    """Returns the actual type, as embedded in an xml ContentType attribute; application and version are disregarded."""
 
