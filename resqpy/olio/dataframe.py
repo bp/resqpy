@@ -450,52 +450,57 @@ class RelPerm(DataFrame):
       
       # check that the column names and order are as expected
       if df is not None:
-          input_cols = [x.lower() for x in df.columns]
-          df.columns = input_cols
+          df.columns = [x.capitalize() for x in df.columns]
+          if 'Pc' in df.columns:
+              assert df.columns[-1] == 'Pc', 'capillary pressure data should be in the last column of the dataframe'
           if phase_combo is not None:
               if processed_phase_combo == set(['water', 'oil']):
-                  expected_cols = set(['sw', 'so', 'krw', 'kro', 'pc'])
-                  sat_cols = set(['sw', 'so'])
-                  assert input_cols[0] in sat_cols and len(set(input_cols).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-                  assert set(input_cols).issubset(expected_cols), f'incorrect column name(s) {set(input_cols).difference(expected_cols)} in water-oil rel. perm table'
+                  expected_cols = set(['Sw', 'So', 'Krw', 'Kro', 'Pc'])
+                  sat_cols = set(['Sw', 'So'])
+                  assert df.columns[0] in sat_cols and len(set(df.columns).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+                  assert set(df.columns).issubset(expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)} in water-oil rel. perm table'
               elif processed_phase_combo == set(['gas', 'oil']):
-                  expected_cols = set(['sg', 'so', 'krg', 'kro', 'pc'])
-                  sat_cols = set(['sg', 'so'])
-                  assert input_cols[0] in sat_cols and len(set(input_cols).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-                  assert set(input_cols).issubset(expected_cols), f'incorrect column name(s) {set(input_cols).difference(expected_cols)} in gas-oil rel. perm table'
+                  expected_cols = set(['Sg', 'So', 'Krg', 'Kro', 'Pc'])
+                  sat_cols = set(['Sg', 'So'])
+                  assert df.columns[0] in sat_cols and len(set(df.columns).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+                  assert set(df.columns).issubset(expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)} in gas-oil rel. perm table'
               elif processed_phase_combo == set(['gas', 'water']):
-                  expected_cols = set(['sg', 'sw', 'krg', 'krw', 'pc'])
-                  sat_cols = set(['sg', 'sw'])
-                  assert input_cols[0] in sat_cols and len(set(input_cols).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-                  assert set(input_cols).issubset(expected_cols), f'incorrect column name(s) {set(input_cols).difference(expected_cols)} in gas-oil rel. perm table'
+                  expected_cols = set(['Sg', 'Sw', 'Krg', 'Krw', 'Pc'])
+                  sat_cols = set(['Sg', 'Sw'])
+                  assert df.columns[0] in sat_cols and len(set(df.columns).intersection(sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+                  assert set(df.columns).issubset(expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)} in gas-oil rel. perm table'
           elif phase_combo is None:
-              assert input_cols[0] in ['sw', 'sg', 'so'] and len(set(input_cols).intersection(set(['sw', 'sg', 'so']))) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-              if set(input_cols).issubset(set(['sw', 'so', 'krw', 'kro', 'pc'])) and len(df.columns) >= 3:
+              assert df.columns[0] in ['Sw', 'Sg', 'So'] and len(set(df.columns).intersection(set(['Sw', 'Sg', 'So']))) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
+              if set(df.columns).issubset(set(['Sw', 'So', 'Krw', 'Kro', 'Pc'])) and len(df.columns) >= 3:
                   phase_combo = 'water-oil'
-              elif set(input_cols).issubset(set(['sg', 'so', 'krg', 'kro', 'pc'])) and len(df.columns) >= 3:
+              elif set(df.columns).issubset(set(['Sg', 'So', 'Krg', 'Kro', 'Pc'])) and len(df.columns) >= 3:
                  phase_combo = 'gas-oil'
-              elif set(input_cols).issubset(set(['sg', 'sw', 'krg', 'krw', 'pc'])) and len(df.columns) >= 3:
+              elif set(df.columns).issubset(set(['Sg', 'Sw', 'Krg', 'Krw', 'Pc'])) and len(df.columns) >= 3:
                   phase_combo = 'gas-water'
               else:
                   raise Exception('unexpected number of columns and/or column headers')
                   
           # ensure that missing capillary pressure values are stored as np.nan and that no other column has missing values
           for col in df.columns:
-              if col.lower() == 'pc':
+              if col.capitalize() == 'Pc':
                   df[col].replace('None', np.nan, inplace=True)
               elif (df[col].isnull().sum() > 0) | ('None' in list(df[col])):
                   raise Exception(f'missing values found in {col} column')
                   
-          # check that Sw and kr values are monotonic and within the range 0-1
-          sat_col = [x for x in df.columns if x[0] == 's'][0]
-          relp_corr_col = [x for x in df.columns if x == 'kr' + sat_col[-1]][0]
-          relp_opp_col = [x for x in df.columns if (x[0:2] == 'kr')  & (x[-1] != sat_col[-1])][0]
+          # convert all values in the dataframe to floats
+          df = df.apply(pd.to_numeric)
+                  
+          # check that Sw, Kr and Pc values are monotonic and that the Sw and Kr values are within the range 0-1
+          sat_col = [x for x in df.columns if x[0] == 'S'][0]
+          relp_corr_col = [x for x in df.columns if x == 'Kr' + sat_col[-1]][0]
+          relp_opp_col = [x for x in df.columns if (x[0:2] == 'Kr')  & (x[-1] != sat_col[-1])][0]
           assert (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[relp_opp_col].is_monotonic_decreasing) or \
                  (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and df[relp_opp_col].is_monotonic), f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic'
-          for col in ['krw', 'krg', 'kro']:
+          if 'Pc' in df.columns:
+              assert df['Pc'].dropna().is_monotonic or df['Pc'].dropna().is_monotonic_decreasing, 'Pc values are not monotonic'
+          for col in ['Sw', 'Sg', 'So','Krw', 'Krg', 'Kro']:
               if col in df.columns:
-                  assert float(df[col].min()) == 0 and float(df[col].max()) <= 1,  f'{col} is not within the range 0-1'
-          
+                  assert df[col].min() == 0 and df[col].max() <= 1,  f'{col} is not within the range 0-1'
 
       super().__init__(model,
                        uuid = uuid,
