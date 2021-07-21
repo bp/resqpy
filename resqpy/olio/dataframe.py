@@ -15,6 +15,8 @@ log.debug(f'dataframe.py version {version}')
 
 import numpy as np
 import pandas as pd
+from scipy import interpolate
+import matplotlib.pyplot as plt
 
 import resqpy.property as rqp
 import resqpy.surface as rqs
@@ -500,7 +502,7 @@ class RelPerm(DataFrame):
               assert df['Pc'].dropna().is_monotonic or df['Pc'].dropna().is_monotonic_decreasing, 'Pc values are not monotonic'
           for col in ['Sw', 'Sg', 'So','Krw', 'Krg', 'Kro']:
               if col in df.columns:
-                  assert df[col].min() == 0 and df[col].max() <= 1,  f'{col} is not within the range 0-1'
+                  assert df[col].min() >= 0 and df[col].max() <= 1,  f'{col} is not within the range 0-1'
 
       super().__init__(model,
                        uuid = uuid,
@@ -514,3 +516,33 @@ class RelPerm(DataFrame):
       self.phase_combo = phase_combo
       self.low_sal = low_sal
       self.table_index = table_index
+      
+   def interpolate_points(self, saturation, kr_or_pc_col):        
+       """Returns a tuple of the saturation value and the corresponding
+       interpolated relative permeability or capillary pressure value and
+       a plot of the original and interpolated points.
+          
+       arguments:
+           saturation (float): the saturation at which the relative permeability or capillary pressure will be interpolated
+           kr_or_pc_col (str): the column name of the parameter to be interpolated
+       returns:
+           tuple of float, the first element is the saturation and the second element is the interpolated value
+          """
+       df = self.df.copy()
+       assert kr_or_pc_col.capitalize() in df.columns and kr_or_pc_col.capitalize() != df.columns[0], 'incorrect column name provided for interpolation'
+       if kr_or_pc_col == 'PC':
+           df = df[df['PC'].notnull()]
+       sat_col = df.columns[0]
+       x = df[sat_col]
+       y = df[kr_or_pc_col]
+       f = interpolate.interp1d(x, y, kind = 'linear', assume_sorted = True)
+       x_new = saturation
+       assert x_new >= x.min() and x_new <= x.max(), 'saturation value is outside the interpolation range'
+       y_new = f(x_new)
+       # plt.plot(x, y, 'o')
+       # plt.plot(x_new, y_new.item(), 's', c = 'r')
+       # plt.xlabel(sat_col)
+       # plt.ylabel(kr_or_pc_col)
+       # plt.annotate(f'{(x_new, round(y_new.item(),2))}', (x_new + 0.025, y_new.item()))
+       # plt.show()
+       return (saturation, y_new.item())
