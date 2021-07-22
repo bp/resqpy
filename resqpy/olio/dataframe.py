@@ -16,7 +16,7 @@ log.debug(f'dataframe.py version {version}')
 import numpy as np
 import pandas as pd
 from scipy import interpolate
-import matplotlib.pyplot as plt
+import os
 
 import resqpy.property as rqp
 import resqpy.surface as rqs
@@ -473,25 +473,33 @@ class RelPerm(DataFrame):
                   assert set(df.columns).issubset(expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)} in gas-oil rel. perm table'
           elif phase_combo is None:
               assert df.columns[0] in ['Sw', 'Sg', 'So'] and len(set(df.columns).intersection(set(['Sw', 'Sg', 'So']))) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-              if set(df.columns).issubset(set(['Sw', 'So', 'Krw', 'Kro', 'Pc'])) and len(df.columns) >= 3:
+              if set(df.columns).issubset(set(['Sw', 'So', 'Krw', 'Kro', 'Pc'])) and len(set(df.columns)) >= 3:
                   phase_combo = 'water-oil'
-              elif set(df.columns).issubset(set(['Sg', 'So', 'Krg', 'Kro', 'Pc'])) and len(df.columns) >= 3:
+              elif set(df.columns).issubset(set(['Sg', 'So', 'Krg', 'Kro', 'Pc'])) and len(set(df.columns)) >= 3:
                  phase_combo = 'gas-oil'
-              elif set(df.columns).issubset(set(['Sg', 'Sw', 'Krg', 'Krw', 'Pc'])) and len(df.columns) >= 3:
+              elif set(df.columns).issubset(set(['Sg', 'Sw', 'Krg', 'Krw', 'Pc'])) and len(set(df.columns)) >= 3:
                   phase_combo = 'gas-water'
               else:
                   raise Exception('unexpected number of columns and/or column headers')
                   
-          # ensure that missing capillary pressure values are stored as np.nan and that no other column has missing values
+          # ensure that missing capillary pressure values are stored as np.nan
           for col in df.columns:
               if col.capitalize() == 'Pc':
                   df[col].replace('None', np.nan, inplace=True)
+                  
+          # convert all values in the dataframe to numeric type
+          try:
+              df = df.apply(pd.to_numeric)
+          except:
+              print('non-numeric values included in dataframe')
+          
+          # ensure that no other column besides Pc has missing values
+          for col in df.columns:
+              if col.capitalize != 'Pc':
+                  continue
               elif (df[col].isnull().sum() > 0) | ('None' in list(df[col])):
                   raise Exception(f'missing values found in {col} column')
-                  
-          # convert all values in the dataframe to floats
-          df = df.apply(pd.to_numeric)
-                  
+                                    
           # check that Sw, Kr and Pc values are monotonic and that the Sw and Kr values are within the range 0-1
           sat_col = [x for x in df.columns if x[0] == 'S'][0]
           relp_corr_col = [x for x in df.columns if x == 'Kr' + sat_col[-1]][0]
@@ -512,15 +520,15 @@ class RelPerm(DataFrame):
                        realization = realization,
                        title = title,
                        column_lookup_uuid = column_lookup_uuid,
-                       uom_lookup_uuid = uom_lookup_uuid)
+                       uom_lookup_uuid = uom_lookup_uuid,
+                       extra_metadata = {'relperm_table': True})
       self.phase_combo = phase_combo
       self.low_sal = low_sal
       self.table_index = table_index
       
-   def interpolate_points(self, saturation, kr_or_pc_col):        
+   def interpolate_point(self, saturation, kr_or_pc_col):        
        """Returns a tuple of the saturation value and the corresponding
-       interpolated relative permeability or capillary pressure value and
-       a plot of the original and interpolated points.
+       interpolated relative permeability or capillary pressure value.
           
        arguments:
            saturation (float): the saturation at which the relative permeability or capillary pressure will be interpolated
@@ -539,10 +547,90 @@ class RelPerm(DataFrame):
        x_new = saturation
        assert x_new >= x.min() and x_new <= x.max(), 'saturation value is outside the interpolation range'
        y_new = f(x_new)
-       # plt.plot(x, y, 'o')
-       # plt.plot(x_new, y_new.item(), 's', c = 'r')
-       # plt.xlabel(sat_col)
-       # plt.ylabel(kr_or_pc_col)
-       # plt.annotate(f'{(x_new, round(y_new.item(),2))}', (x_new + 0.025, y_new.item()))
-       # plt.show()
        return (saturation, y_new.item())
+   
+   def df_to_text(self, filepath, filename):
+       """Creates text file from a dataframe of relative permeability and capillary pressure data.
+          
+       arguments:
+           filepath (str): location where new text file is written to
+           filename (str): name of the new text file
+       returns:
+           tuple of float, the first element is the saturation and the second element is the interpolated value
+          """
+       df = self.df.copy() 
+       ascii_file = os.path.join(filepath, filename + '.dat')
+       df.columns = [x.upper() for x in df.columns]
+       if {'KRW', 'KRO'}.issubset(set(df.columns)):
+            table_name_keyword = 'WOTABLE \n'
+            df_cols_dict = {'SW': 'SW', 'KRW': 'KRW', 'KRO': 'KROW', 'PC': 'PCWO'} 
+       elif {'KRG', 'KRO'}.issubset(set(df.columns)):
+            table_name_keyword = 'GOTABLE \n'
+            df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRO': 'KROG', 'PC': 'PCGO'} 
+       elif {'KRW', 'KRW'}.issubset(set(df.columns)):
+            table_name_keyword = 'GWTABLE \n'
+            df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRW': 'KRWG', 'PC': 'PCGW'}
+       df.columns = df.columns.map(df_cols_dict)
+        
+       if filename + '.dat' not in os.listdir(filepath):
+           with open(ascii_file, 'w') as f:
+                f.write(table_name_keyword)
+                df_str = df.to_string(na_rep = '', index = False)
+                f.write(df_str)
+                f.close()
+       else:
+           with open(ascii_file, 'a') as f:
+                f.write('\n\n')
+                f.write(table_name_keyword)
+                df_str = df.to_string(na_rep = '', index = False)
+                f.write(df_str)
+                f.close()
+       print(f'Created new DAT file: {filename} at {filepath}')
+
+def text_to_relperm_dict(filepath):
+    """
+    Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and 
+    phase combinations.
+    
+    arguments:
+    filepath (str): relative or full path of the text file to be processed
+
+    returns:
+    dict, each element in the dictionary contains a dataframe, with saturation and relative permeability/capillary pressure
+    data, and the phase combination being described
+    """
+    with open(filepath) as f:
+    # create list of rows of the original ascii file with blank lines removed
+        data = list(filter(None, [list(filter(None, x.strip('\n').split(' '))) for x in f.readlines()]))
+    # remove comments and 3-phase relative permeability method specification
+        data = [x for x in data if ('!' not in x) and (len({'STONE1', 'STONE2', 'KROINT'}.intersection(set(x))) < 1)]
+
+    # get indices of start of each new relperm table based on Nexus keywords
+    table_start_positions = [i for i,l in enumerate(data) if len({'WOTABLE', 'GOTABLE', 'GWTABLE'}.intersection(set(l))) == 1]
+    df_cols_dict = {'SW': 'Sw', 'SG': 'Sg', 'KRW': 'Krw', 'KRG': 'Krg', 'KROW': 'Kro',
+                    'KROG': 'Kro', 'KRWG': 'Krw', 'PCWO': 'Pc', 'PCGO': 'Pc', 'PCGW': 'Pc'}
+    relperm_table_idx = 1
+    rel_perm_dict = {}
+    for i,l in enumerate(table_start_positions):
+        key = 'relperm_table' + str(relperm_table_idx)
+        rel_perm_dict[key] = {}
+        relperm_table_idx += 1
+        if 'WOTABLE' in data[l]:
+            phase_combo = 'water-oil'
+        elif 'GOTABLE' in data[l]:
+            phase_combo = 'gas-oil'
+        elif 'GWTABLE' in data[l]:
+            phase_combo = 'gas-water'
+        try:
+            table_end = table_start_positions[i + 1]
+        except:
+            table_end = len(data)
+        table_cols = data[l + 1]
+        table_rows = data[l + 2 : table_end]
+        df = pd.DataFrame(table_rows, columns = table_cols)
+        df.columns = df.columns.map(df_cols_dict)
+        df.replace('None', np.nan, inplace = True)
+        df = df.apply(pd.to_numeric)
+        rel_perm_dict[key]['phase_combo'] = phase_combo
+        rel_perm_dict[key]['df'] = df
+    return rel_perm_dict
