@@ -492,11 +492,8 @@ class RelPerm(DataFrame):
                   df[col].replace('None', np.nan, inplace=True)
                   
           # convert all values in the dataframe to numeric type
-          try:
-              df = df.apply(pd.to_numeric)
-          except:
-              print('non-numeric values included in dataframe')
-          
+          df = df.apply(pd.to_numeric(errors = 'coerce'))
+       
           # ensure that no other column besides Pc has missing values
           for col in df.columns:
               if col.capitalize != 'Pc':
@@ -566,7 +563,7 @@ class RelPerm(DataFrame):
        df.columns = [x.upper() for x in df.columns]
        if {'KRW', 'KRO'}.issubset(set(df.columns)):
             df_cols_dict = {'SW': 'SW', 'KRW': 'KRW', 'KRO': 'KROW', 'PC': 'PCWO'} 
-            if self.low_sal == True:
+            if self.low_sal:
                 table_name_keyword = 'WOTABLE (LOW_SAL)\n'
             else:
                 table_name_keyword = 'WOTABLE\n'
@@ -637,9 +634,9 @@ def text_to_relperm_dict(filepath):
             phase_combo = 'gas-oil'
         elif 'GWTABLE' in data[l]:
             phase_combo = 'gas-water'
-        try:
+        if i < (len(table_start_positions) - 1):
             table_end = table_start_positions[i + 1]
-        except:
+        else:
             table_end = len(data)
         table_cols = data[l + 1]
         table_rows = data[l + 2 : table_end]
