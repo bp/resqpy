@@ -450,6 +450,10 @@ class RelPerm(DataFrame):
       processed_phase_combo = set([x.strip() for x in str(phase_combo).split('-')])
       assert processed_phase_combo in [set(['water', 'oil']), set(['gas', 'oil']), set(['gas', 'water']), {'None'}], 'invalid phase_combo provided'
       
+      # check that table_index is >= 1
+      if table_index is not None:
+          assert table_index >= 1, 'table_index cannot be less than 1'
+      
       # check that the column names and order are as expected
       if df is not None:
           df.columns = [x.capitalize() for x in df.columns]
@@ -520,12 +524,11 @@ class RelPerm(DataFrame):
                        realization = realization,
                        title = title,
                        column_lookup_uuid = column_lookup_uuid,
-                       uom_lookup_uuid = uom_lookup_uuid,
-                       extra_metadata = {'relperm_table': True})
+                       uom_lookup_uuid = uom_lookup_uuid)
       self.phase_combo = phase_combo
       self.low_sal = low_sal
       self.table_index = table_index
-      
+          
    def interpolate_point(self, saturation, kr_or_pc_col):        
        """Returns a tuple of the saturation value and the corresponding
        interpolated relative permeability or capillary pressure value.
@@ -562,13 +565,16 @@ class RelPerm(DataFrame):
        ascii_file = os.path.join(filepath, filename + '.dat')
        df.columns = [x.upper() for x in df.columns]
        if {'KRW', 'KRO'}.issubset(set(df.columns)):
-            table_name_keyword = 'WOTABLE \n'
             df_cols_dict = {'SW': 'SW', 'KRW': 'KRW', 'KRO': 'KROW', 'PC': 'PCWO'} 
+            if self.low_sal == True:
+                table_name_keyword = 'WOTABLE (LOW_SAL)\n'
+            else:
+                table_name_keyword = 'WOTABLE\n'
        elif {'KRG', 'KRO'}.issubset(set(df.columns)):
-            table_name_keyword = 'GOTABLE \n'
+            table_name_keyword = 'GOTABLE\n'
             df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRO': 'KROG', 'PC': 'PCGO'} 
        elif {'KRW', 'KRW'}.issubset(set(df.columns)):
-            table_name_keyword = 'GWTABLE \n'
+            table_name_keyword = 'GWTABLE\n'
             df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRW': 'KRWG', 'PC': 'PCGW'}
        df.columns = df.columns.map(df_cols_dict)
         
@@ -578,6 +584,7 @@ class RelPerm(DataFrame):
                 df_str = df.to_string(na_rep = '', index = False)
                 f.write(df_str)
                 f.close()
+                print(f'Created new DAT file: {filename} at {filepath}')
        else:
            with open(ascii_file, 'a') as f:
                 f.write('\n\n')
@@ -585,8 +592,17 @@ class RelPerm(DataFrame):
                 df_str = df.to_string(na_rep = '', index = False)
                 f.write(df_str)
                 f.close()
-       print(f'Created new DAT file: {filename} at {filepath}')
+                print(f'Appended to DAT file: {filename} at {filepath}')
+                
+   def write_hdf5_and_create_xml(self):
+      """Write relative permeability table data to hdf5 file and create xml for RESQML objects to represent dataframe."""
 
+      super().write_hdf5_and_create_xml()
+      # note: time series xml must be created before calling this method
+      mesh_root = self.mesh.root
+      # create an xml of extra metadata to indicate that this is a relative permeability table
+      rqet.create_metadata_xml(mesh_root, {'relperm_table': 'true'})
+      
 def text_to_relperm_dict(filepath):
     """
     Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and 
@@ -602,8 +618,8 @@ def text_to_relperm_dict(filepath):
     with open(filepath) as f:
     # create list of rows of the original ascii file with blank lines removed
         data = list(filter(None, [list(filter(None, x.strip('\n').split(' '))) for x in f.readlines()]))
-    # remove comments and 3-phase relative permeability method specification
-        data = [x for x in data if ('!' not in x) and (len({'STONE1', 'STONE2', 'KROINT'}.intersection(set(x))) < 1)]
+    # remove comments
+        data = [x for x in data if ('!' not in x)]
 
     # get indices of start of each new relperm table based on Nexus keywords
     table_start_positions = [i for i,l in enumerate(data) if len({'WOTABLE', 'GOTABLE', 'GWTABLE'}.intersection(set(l))) == 1]
@@ -629,8 +645,30 @@ def text_to_relperm_dict(filepath):
         table_rows = data[l + 2 : table_end]
         df = pd.DataFrame(table_rows, columns = table_cols)
         df.columns = df.columns.map(df_cols_dict)
-        df.replace('None', np.nan, inplace = True)
-        df = df.apply(pd.to_numeric)
+        sat_col = [x for x in df.columns if 'S' in x][0]
+        df = df.apply(pd.to_numeric, errors = 'coerce')
+        df = df[df[sat_col].notnull()]
         rel_perm_dict[key]['phase_combo'] = phase_combo
         rel_perm_dict[key]['df'] = df
     return rel_perm_dict
+
+def relperm_parts_in_model(model, title = None, related_uuid = None):
+   """Returns list of part names within model that are representing RelPerm dataframe support objects.
+
+   arguments:
+      model (model.Model): the model to be inspected for dataframes
+      title (str, optional): if present, only parts with a citation title exactly matching will be
+         included
+      related_uuid (uuid, optional): if present, only parts relating to this uuid are included
+
+   returns:
+      list of str, each element in the list is a part name, within model, which is representing the
+      support for a RelPerm object
+   """
+
+   df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
+                               title = title,
+                               extra = {'relperm_table': 'true'},
+                               related_uuid = related_uuid)
+   return df_parts_list
+
