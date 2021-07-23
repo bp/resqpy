@@ -649,23 +649,23 @@ def text_to_relperm_dict(filepath):
         rel_perm_dict[key]['df'] = df
     return rel_perm_dict
 
-def relperm_parts_in_model(model, title = None, related_uuid = None):
-   """Returns list of part names within model that are representing RelPerm dataframe support objects.
+def relperm_parts_in_model(model, title = None, related_uuid = None):    
+    """Returns list of part names within model that are representing RelPerm dataframe support objects.
 
-   arguments:
+    arguments:
       model (model.Model): the model to be inspected for dataframes
       title (str, optional): if present, only parts with a citation title exactly matching will be
          included
       related_uuid (uuid, optional): if present, only parts relating to this uuid are included
 
-   returns:
+    returns:
       list of str, each element in the list is a part name, within model, which is representing the
       support for a RelPerm object
-   """
+    """
 
-   df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
+    df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
                                title = title,
                                extra = {'relperm_table': 'true'},
                                related_uuid = related_uuid)
-   return df_parts_list
+    return df_parts_list
 
