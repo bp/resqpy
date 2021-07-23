@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '14th July 2021'
+version = '20th July 2021'
 
 import logging
 
@@ -2993,6 +2993,8 @@ class Model():
                                   realization = None,
                                   consolidate = True,
                                   force = False,
+                                  cut_refs_to_uuids = None,
+                                  cut_node_types = None,
                                   self_h5_file_name = None,
                                   h5_uuid = None,
                                   other_h5_file_name = None):
@@ -3007,6 +3009,10 @@ class Model():
             this model, do not duplicate but instead note uuids as equivalent
          force (boolean, default False): if True, the part itself is copied without much checking
             and all references are required to be handled by an entry in the consolidation object
+         cut_refs_to_uuids (list of UUIDs, optional): if present, then xml reference nodes
+            referencing any of the listed uuids are cut out in the copy; use with caution
+         cut_node_types (list of str, optional): if present, any child nodes of a type in the list
+            will be cut out in the copy; use with caution
          self_h5_file_name (string, optional): h5 file name for this model; can be passed as
             an optimisation when calling method repeatedly
          h5_uuid (uuid, optional): UUID for this model's hdf5 external part; can be passed as
@@ -3094,6 +3100,13 @@ class Model():
                                                 'externalPartProxyToMl',
                                                 avoid_duplicates = False)
 
+         # cut references to objects to be excluded
+         if cut_refs_to_uuids:
+            rqet.cut_obj_references(root_node, cut_refs_to_uuids)
+
+         if cut_node_types:
+            rqet.cut_nodes_of_types(root_node, cut_node_types)
+
          # recursively copy in referenced parts where they don't already exist in this model
          for ref_node in rqet.list_obj_references(root_node):
             resident_referred_node = None
@@ -3127,11 +3140,11 @@ class Model():
                                                                                resident_uuid,
                                                                                uuid_is_source = source_flag)
          for related_part in other_related_parts:
-            #         log.debug('considering relationship with: ' + str(related_part))
+            # log.debug('considering relationship with: ' + str(related_part))
             if not force and (related_part in self.parts_forest):
                resident_related_part = related_part
             else:
-               #           log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
+               # log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
                if consolidate:
                   resident_related_uuid = self.consolidation.equivalent_uuid_for_part(related_part,
                                                                                       immigrant_model = other_model)
