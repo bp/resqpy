@@ -492,7 +492,8 @@ class RelPerm(DataFrame):
                   df[col].replace('None', np.nan, inplace=True)
                   
           # convert all values in the dataframe to numeric type
-          df = df.apply(pd.to_numeric(errors = 'coerce'))
+          df_cols = df.columns
+          df[df_cols] = df[df_cols].apply(pd.to_numeric, errors='coerce')
        
           # ensure that no other column besides Pc has missing values
           for col in df.columns:
@@ -649,23 +650,23 @@ def text_to_relperm_dict(filepath):
         rel_perm_dict[key]['df'] = df
     return rel_perm_dict
 
-def relperm_parts_in_model(model, title = None, related_uuid = None):
-   """Returns list of part names within model that are representing RelPerm dataframe support objects.
+# def relperm_parts_in_model(model, title = None, related_uuid = None):
+#    """Returns list of part names within model that are representing RelPerm dataframe support objects.
 
-   arguments:
-      model (model.Model): the model to be inspected for dataframes
-      title (str, optional): if present, only parts with a citation title exactly matching will be
-         included
-      related_uuid (uuid, optional): if present, only parts relating to this uuid are included
+#    arguments:
+#       model (model.Model): the model to be inspected for dataframes
+#       title (str, optional): if present, only parts with a citation title exactly matching will be
+#          included
+#       related_uuid (uuid, optional): if present, only parts relating to this uuid are included
 
-   returns:
-      list of str, each element in the list is a part name, within model, which is representing the
-      support for a RelPerm object
-   """
+#    returns:
+#       list of str, each element in the list is a part name, within model, which is representing the
+#       support for a RelPerm object
+#    """
 
-   df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
-                               title = title,
-                               extra = {'relperm_table': 'true'},
-                               related_uuid = related_uuid)
+#    df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
+#                                title = title,
+#                                extra = {'relperm_table': 'true'},
+#                                related_uuid = related_uuid)
 
-   return df_parts_list
+#    return df_parts_list
