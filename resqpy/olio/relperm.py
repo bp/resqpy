@@ -132,7 +132,7 @@ class RelPerm(DataFrame):
             assert (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[
                 relp_opp_col].is_monotonic_decreasing) or \
                 (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and
-                 df[relp_opp_col].is_monotonic), f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic'
+                    df[relp_opp_col].is_monotonic), f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic'
             if 'Pc' in df.columns:
                 assert df['Pc'].dropna().is_monotonic or df[
                     'Pc'].dropna().is_monotonic_decreasing, 'Pc values are not monotonic'
@@ -195,13 +195,17 @@ class RelPerm(DataFrame):
                 table_name_keyword = 'WOTABLE (LOW_SAL)\n'
             else:
                 table_name_keyword = 'WOTABLE\n'
+            df.columns = df.columns.map(df_cols_dict)
         elif {'KRG', 'KRO'}.issubset(set(df.columns)):
             table_name_keyword = 'GOTABLE\n'
             df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRO': 'KROG', 'PC': 'PCGO'}
+            df.columns = df.columns.map(df_cols_dict)
         elif {'KRW', 'KRW'}.issubset(set(df.columns)):
             table_name_keyword = 'GWTABLE\n'
             df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRW': 'KRWG', 'PC': 'PCGW'}
-        df.columns = df.columns.map(df_cols_dict)
+            df.columns = df.columns.map(df_cols_dict)
+        else:
+            raise Exception('incorrect rel. perm. column combination encountered')
 
         if filename + '.dat' not in os.listdir(filepath):
             with open(ascii_file, 'w') as f:
@@ -261,10 +265,15 @@ def text_to_relperm_dict(filepath):
         relperm_table_idx += 1
         if 'WOTABLE' in data[l]:
             phase_combo = 'water-oil'
+            rel_perm_dict[key]['phase_combo'] = phase_combo
         elif 'GOTABLE' in data[l]:
             phase_combo = 'gas-oil'
+            rel_perm_dict[key]['phase_combo'] = phase_combo
         elif 'GWTABLE' in data[l]:
             phase_combo = 'gas-water'
+            rel_perm_dict[key]['phase_combo'] = phase_combo
+        else:
+            raise Exception('incorrect table key word encountered')
         if i < (len(table_start_positions) - 1):
             table_end = table_start_positions[i + 1]
         else:
@@ -276,7 +285,6 @@ def text_to_relperm_dict(filepath):
         sat_col = [x for x in df.columns if 'S' in x][0]
         df = df.apply(pd.to_numeric, errors='coerce')
         df = df[df[sat_col].notnull()]
-        rel_perm_dict[key]['phase_combo'] = phase_combo
         rel_perm_dict[key]['df'] = df
     return rel_perm_dict
 
