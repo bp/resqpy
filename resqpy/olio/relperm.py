@@ -13,7 +13,7 @@ import logging
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.dataframe import DataFrame
 
-version = '6th May 2021'
+version = '27th July 2021'
 
 log = logging.getLogger(__name__)
 log.debug(f'dataframe.py version {version}')
@@ -48,14 +48,14 @@ class RelPerm(DataFrame):
            low_sal (boolean, optional): if True, indicates that the water-oil table contains
            the low-salinity data for relative permeability and capillary pressure
            table_index (int, optional): the index of the relative permeability
-           table when multiple relative permeability tables are present
+           table when multiple relative permeability tables are present. Note, indices should start at 1.
 
         note:
            see DataFrame class docstring for details of other arguments
         """
 
         # check that either a uuid OR dataframe has been provided
-        assert uuid is not None or df is not None
+        assert uuid is not None or df is not None, 'either a uuid or a dataframe must be provided'
 
         # check that 'phase_combo' parameter is valid
         processed_phase_combo = set([x.strip() for x in str(phase_combo).split('-')])
@@ -188,7 +188,7 @@ class RelPerm(DataFrame):
            """
         df = self.df.copy()
         ascii_file = os.path.join(filepath, filename + '.dat')
-        df.columns = [x.upper() for x in df.columns]
+        df.columns = map(str.upper, df.columns)
         if {'KRW', 'KRO'}.issubset(set(df.columns)):
             df_cols_dict = {'SW': 'SW', 'KRW': 'KRW', 'KRO': 'KROW', 'PC': 'PCWO'}
             if self.low_sal:
