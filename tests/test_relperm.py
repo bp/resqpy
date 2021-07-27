@@ -41,15 +41,18 @@ class TestRelPerm(unittest.TestCase):
 
         with self.assertRaises(AssertionError) as excval1:
             RelPerm(model=self.model, df=df1, phase_combo=phase_combo1)
-            assert str(excval1.value) == "incorrect saturation column name and/or multiple saturation columns exist"
+        self.assertTrue("incorrect saturation column name and/or multiple saturation columns exist"
+                        in str(excval1.exception))
 
         with self.assertRaises(AssertionError) as excval2:
             RelPerm(model=self.model, df=df2, phase_combo=phase_combo1)
-            assert str(excval2.value) == "incorrect column name(s) {'Krw'} in gas-oil rel. perm table"
+            print(str(excval2.exception))
+        self.assertTrue("incorrect column name(s) {'Krw'}" in str(excval2.exception))
 
         with self.assertRaises(AssertionError) as excval3:
             RelPerm(model=self.model, df=df3, phase_combo=phase_combo1)
-            assert str(excval3.value) == "capillary pressure data should be in the last column of the dataframe"
+        self.assertTrue("capillary pressure data should be in the last column of the dataframe"
+                        in str(excval3.exception))
 
         relperm_obj = RelPerm(model=self.model, df=df4, phase_combo=phase_combo2)
         self.assertTrue(relperm_obj.phase_combo == 'gas-oil')
@@ -64,8 +67,7 @@ class TestRelPerm(unittest.TestCase):
 
         with self.assertRaises(Exception) as excval:
             RelPerm(model=self.model, df=df, phase_combo=phase_combo)
-            assert str(excval.value) == "missing values found in Krg column"
-            assert str(excval.value) == "missing values found in Kro column"
+        self.assertTrue("missing values found in Krg column" in str(excval.exception))
 
     def test_monotonicity(self):
         np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan],
@@ -77,13 +79,13 @@ class TestRelPerm(unittest.TestCase):
 
         with self.assertRaises(Exception) as excval:
             RelPerm(model=self.model, df=df, phase_combo=phase_combo)
-            assert str(excval.value) == "Sg, Krg, Kro combo is not monotonic"
+        self.assertTrue("('Sg', 'Krg', 'Kro') combo is not monotonic" in str(excval.exception))
 
         df['Sg'] = [0.0, 0.04, 0.12, 0.25, 0.45, 0.74]
 
         with self.assertRaises(Exception) as excval1:
             RelPerm(model=self.model, df=df, phase_combo=phase_combo)
-            assert str(excval1.value) == "Pc values are not monotonic"
+        self.assertTrue("Pc values are not monotonic" in str(excval1.exception))
 
     def test_range(self):
         np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan],
@@ -95,8 +97,7 @@ class TestRelPerm(unittest.TestCase):
 
         with self.assertRaises(Exception) as excval:
             RelPerm(model=self.model, df=df, phase_combo=phase_combo)
-            assert str(excval.value) == "Krg is not within the range 0-1"
-            assert str(excval.value) == "Kro is not within the range 0-1"
+        self.assertTrue("Krg is not within the range 0-1" in str(excval.exception))
 
     def test_relperm(self):
         np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan],
@@ -123,7 +124,8 @@ class TestRelPerm(unittest.TestCase):
         dataframe2.write_hdf5_and_create_xml()
         assert self.model.parts(extra={'relperm_table': 'true'}) == relperm_parts_in_model(self.model)
         dataframe1.df_to_text(filepath=self.test_dir, filename='oil_water_test_table')
-        df1_reconstructed = text_to_relperm_dict(os.path.join(self.test_dir, 'oil_water_test_table.dat'))['relperm_table1']['df']
+        df1_reconstructed = text_to_relperm_dict(os.path.join(self.test_dir,
+                                                              'oil_water_test_table.dat'))['relperm_table1']['df']
         # assert df1.equals(df1_reconstructed)
         assert df1_reconstructed.iloc[3]['Kro'] == 0.350
 

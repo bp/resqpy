@@ -78,24 +78,21 @@ class RelPerm(DataFrame):
                     assert df.columns[0] in sat_cols and len(set(df.columns).intersection(
                         sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
                     assert set(df.columns).issubset(
-                        expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)} \
-                        in water-oil rel. perm table'
+                        expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)}'
                 elif processed_phase_combo == {'gas', 'oil'}:
                     expected_cols = {'Sg', 'So', 'Krg', 'Kro', 'Pc'}
                     sat_cols = {'Sg', 'So'}
                     assert df.columns[0] in sat_cols and len(set(df.columns).intersection(
                         sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
                     assert set(df.columns).issubset(
-                        expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)} \
-                         in gas-oil rel. perm table'
+                        expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)}'
                 elif processed_phase_combo == {'gas', 'water'}:
                     expected_cols = {'Sg', 'Sw', 'Krg', 'Krw', 'Pc'}
                     sat_cols = {'Sg', 'Sw'}
                     assert df.columns[0] in sat_cols and len(set(df.columns).intersection(
                         sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
                     assert set(df.columns).issubset(
-                        expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)} \
-                         in gas-oil rel. perm table'
+                        expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)}'
             elif phase_combo is None:
                 assert df.columns[0] in ['Sw', 'Sg', 'So'] and len(set(df.columns).intersection({'Sw', 'Sg',
                                                                                                  'So'})) == 1, \
@@ -119,8 +116,9 @@ class RelPerm(DataFrame):
             df[df_cols] = df[df_cols].apply(pd.to_numeric, errors='coerce')
 
             # ensure that no other column besides Pc has missing values
-            for col in df.columns:
-                if col.capitalize != 'Pc':
+            cols_no_pc = [x for x in df.columns if 'pc' != x.lower()]
+            for col in cols_no_pc:
+                if col.capitalize == 'Pc':
                     continue
                 elif (df[col].isnull().sum() > 0) | ('None' in list(df[col])):
                     raise Exception(f'missing values found in {col} column')
