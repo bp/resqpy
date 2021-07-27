@@ -195,15 +195,15 @@ class RelPerm(DataFrame):
                 table_name_keyword = 'WOTABLE (LOW_SAL)\n'
             else:
                 table_name_keyword = 'WOTABLE\n'
-            df.columns = df.columns.map(df_cols_dict)
+            df.columns = df.map(df_cols_dict)
         elif {'KRG', 'KRO'}.issubset(set(df.columns)):
             table_name_keyword = 'GOTABLE\n'
             df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRO': 'KROG', 'PC': 'PCGO'}
-            df.columns = df.columns.map(df_cols_dict)
+            df.columns = df.map(df_cols_dict)
         elif {'KRW', 'KRW'}.issubset(set(df.columns)):
             table_name_keyword = 'GWTABLE\n'
             df_cols_dict = {'SG': 'SG', 'KRG': 'KRG', 'KRW': 'KRWG', 'PC': 'PCGW'}
-            df.columns = df.columns.map(df_cols_dict)
+            df.columns = df.map(df_cols_dict)
         else:
             raise Exception('incorrect rel. perm. column combination encountered')
 
