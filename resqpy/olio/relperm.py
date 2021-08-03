@@ -4,10 +4,11 @@ data as RESQML objects.
    note that this module uses the obj_Grid2dRepresentation class in a way that was not envisaged
    when the RESQML standard was defined; software that does not use resqpy is unlikely to be
    able to do much with data stored in this way
+
+   Nexus is a registered trademark of Halliburton
 """
 import numpy as np
 import pandas as pd
-from scipy import interpolate
 import os
 import logging
 import resqpy.olio.xml_et as rqet
@@ -22,9 +23,9 @@ log.debug(f'dataframe.py version {version}')
 class RelPerm(DataFrame):
    """Class for storing and retrieving a pandas dataframe of relative permeability data.
 
-    note:
-       inherits from DataFrame class
-    """
+   note:
+      inherits from DataFrame class
+   """
 
    def __init__(self,
                 model,
@@ -38,64 +39,65 @@ class RelPerm(DataFrame):
                 title = 'relperm_table',
                 column_lookup_uuid = None,
                 uom_lookup_uuid = None):
-      """Create a new RelPerm object from either a previously stored property or a pandas dataframe.
+      """Create a new RelPerm object from either a previously stored object or a pandas dataframe.
 
-        arguments:
-           phase_combo (str, optional): the combination of phases whose relative
-           permeability behaviour is described. Options include 'water-oil', 'gas-oil' and
-           'gas-water'
-           low_sal (boolean, optional): if True, indicates that the water-oil table contains
-           the low-salinity data for relative permeability and capillary pressure
-           table_index (int, optional): the index of the relative permeability
-           table when multiple relative permeability tables are present. Note, indices should start at 1.
+      arguments:
+         phase_combo (str, optional): the combination of phases whose relative permeability behaviour is described.
+            Options include 'water-oil', 'gas-oil' and 'gas-water'
+         low_sal (boolean, optional): if True, indicates that the water-oil table contains the low-salinity data for
+            relative permeability and capillary pressure
+         table_index (int, optional): the index of the relative permeability
+         table when multiple relative permeability tables are present. Note, indices should start at 1.
 
-        note:
-           see DataFrame class docstring for details of other arguments
-        """
+      note:
+         see DataFrame class docstring for details of other arguments
+      """
 
       # check that either a uuid OR dataframe has been provided
-      assert uuid is not None or df is not None, 'either a uuid or a dataframe must be provided'
+      if df is None and uuid is None:
+         raise ValueError('either a uuid or a dataframe must be provided')
 
       # check that 'phase_combo' parameter is valid
       processed_phase_combo = set([x.strip() for x in str(phase_combo).split('-')])
-      assert processed_phase_combo in [{'water', 'oil'}, {'gas', 'oil'}, {'gas', 'water'},
-                                       {'None'}], 'invalid phase_combo provided'
+      if processed_phase_combo not in [{'water', 'oil'}, {'gas', 'oil'}, {'gas', 'water'}, {'None'}]:
+         raise ValueError('invalid phase_combo provided')
 
       # check that table_index is >= 1
       if table_index is not None:
-         assert table_index >= 1, 'table_index cannot be less than 1'
+         if table_index < 1:
+            raise ValueError('table_index cannot be less than 1')
 
       # check that the column names and order are as expected
       if df is not None:
          df.columns = [x.capitalize() for x in df.columns]
          if 'Pc' in df.columns:
-            assert df.columns[-1] == 'Pc', 'capillary pressure data should be in the last column of the dataframe'
+            if df.columns[-1] != 'Pc':
+               raise ValueError('Pc', 'capillary pressure data should be in the last column of the dataframe')
          if phase_combo is not None:
             if processed_phase_combo == {'water', 'oil'}:
                expected_cols = {'Sw', 'So', 'Krw', 'Kro', 'Pc'}
                sat_cols = {'Sw', 'So'}
-               assert df.columns[0] in sat_cols and len(set(df.columns).intersection(
-                  sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-               assert set(df.columns).issubset(
-                  expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)}'
+               if df.columns[0] not in sat_cols or len(set(df.columns).intersection(sat_cols)) != 1:
+                  raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
+               if not set(df.columns).issubset(expected_cols):
+                  raise ValueError(f'incorrect column name(s) {set(df.columns).difference(expected_cols)}')
             elif processed_phase_combo == {'gas', 'oil'}:
                expected_cols = {'Sg', 'So', 'Krg', 'Kro', 'Pc'}
                sat_cols = {'Sg', 'So'}
-               assert df.columns[0] in sat_cols and len(set(df.columns).intersection(
-                  sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-               assert set(df.columns).issubset(
-                  expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)}'
+               if df.columns[0] not in sat_cols or len(set(df.columns).intersection(sat_cols)) != 1:
+                  raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
+               if not set(df.columns).issubset(expected_cols):
+                  raise ValueError(f'incorrect column name(s) {set(df.columns).difference(expected_cols)}')
             elif processed_phase_combo == {'gas', 'water'}:
                expected_cols = {'Sg', 'Sw', 'Krg', 'Krw', 'Pc'}
                sat_cols = {'Sg', 'Sw'}
-               assert df.columns[0] in sat_cols and len(set(df.columns).intersection(
-                  sat_cols)) == 1, 'incorrect saturation column name and/or multiple saturation columns exist'
-               assert set(df.columns).issubset(
-                  expected_cols), f'incorrect column name(s) {set(df.columns).difference(expected_cols)}'
+               if df.columns[0] not in sat_cols or len(set(df.columns).intersection(sat_cols)) != 1:
+                  raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
+               if not set(df.columns).issubset(expected_cols):
+                  raise ValueError(f'incorrect column name(s) {set(df.columns).difference(expected_cols)}')
          elif phase_combo is None:
-            assert df.columns[0] in ['Sw', 'Sg', 'So'] and len(set(df.columns).intersection({'Sw', 'Sg',
-                                                                                             'So'})) == 1, \
-                'incorrect saturation column name and/or multiple saturation columns exist'
+            if df.columns[0] not in ['Sw', 'Sg', 'So'] or len(set(df.columns).intersection({'Sw', 'Sg', 'So'})) != 1:
+               raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
             if set(df.columns).issubset({'Sw', 'So', 'Krw', 'Kro', 'Pc'}) and len(set(df.columns)) >= 3:
                phase_combo = 'water-oil'
             elif set(df.columns).issubset({'Sg', 'So', 'Krg', 'Kro', 'Pc'}) and len(set(df.columns)) >= 3:
@@ -117,25 +119,27 @@ class RelPerm(DataFrame):
          # ensure that no other column besides Pc has missing values
          cols_no_pc = [x for x in df.columns if 'pc' != x.lower()]
          for col in cols_no_pc:
-            if col.capitalize == 'Pc':
-               continue
-            elif (df[col].isnull().sum() > 0) | ('None' in list(df[col])):
+            if (df[col].isnull().sum() > 0) | ('None' in list(df[col])):
                raise Exception(f'missing values found in {col} column')
 
          # check that Sw, Kr and Pc values are monotonic and that the Sw and Kr values are within the range 0-1
          sat_col = [x for x in df.columns if x[0] == 'S'][0]
          relp_corr_col = [x for x in df.columns if x == 'Kr' + sat_col[-1]][0]
          relp_opp_col = [x for x in df.columns if (x[0:2] == 'Kr') & (x[-1] != sat_col[-1])][0]
-         assert (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[
+         if (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[
              relp_opp_col].is_monotonic_decreasing) or \
              (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and
-                 df[relp_opp_col].is_monotonic), f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic'
+                 df[relp_opp_col].is_monotonic):
+            pass
+         else:
+            raise ValueError(f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic')
          if 'Pc' in df.columns:
-            assert df['Pc'].dropna().is_monotonic or df['Pc'].dropna(
-            ).is_monotonic_decreasing, 'Pc values are not monotonic'
+            if not df['Pc'].dropna().is_monotonic and not df['Pc'].dropna().is_monotonic_decreasing:
+               raise ValueError('Pc values are not monotonic')
          for col in ['Sw', 'Sg', 'So', 'Krw', 'Krg', 'Kro']:
             if col in df.columns:
-               assert df[col].min() >= 0 and df[col].max() <= 1, f'{col} is not within the range 0-1'
+               if df[col].min() < 0 or df[col].max() > 1:
+                  raise ValueError(f'{col} is not within the range 0-1')
 
       super().__init__(model,
                        uuid = uuid,
@@ -151,38 +155,48 @@ class RelPerm(DataFrame):
       self.table_index = table_index
 
    def interpolate_point(self, saturation, kr_or_pc_col):
-      """Returns a tuple of the saturation value and the corresponding
-        interpolated relative permeability or capillary pressure value.
+      """Returns a tuple of the saturation value and the corresponding interpolated rel. perm. or cap. pressure value.
 
-        arguments:
-            saturation (float): the saturation at which the relative permeability or cap. pressure will be interpolated
-            kr_or_pc_col (str): the column name of the parameter to be interpolated
-        returns:
-            tuple of float, the first element is the saturation and the second element is the interpolated value
-           """
+      arguments:
+         saturation (float): the saturation at which the relative permeability or cap. pressure will be interpolated
+         kr_or_pc_col (str): the column name of the parameter to be interpolated
+
+      returns:
+         tuple of float, the first element is the saturation and the second element is the interpolated value
+
+      note:
+         A simple linear interpolation is performed.
+      """
       df = self.df.copy()
-      assert kr_or_pc_col.capitalize(
-      ) in df.columns and kr_or_pc_col.capitalize() != df.columns[0], 'incorrect column name provided for interpolation'
+      if kr_or_pc_col.capitalize() not in df.columns or kr_or_pc_col.capitalize() == df.columns[0]:
+         raise ValueError('incorrect column name provided for interpolation')
       if kr_or_pc_col == 'PC':
          df = df[df['PC'].notnull()]
       sat_col = df.columns[0]
+      # ensure that the saturation values are monotonically increasing
+      df = df.sort_values(by = sat_col)
       x = df[sat_col]
       y = df[kr_or_pc_col]
-      f = interpolate.interp1d(x, y, kind = 'linear', assume_sorted = True)
       x_new = saturation
-      assert x.min() <= x_new <= x.max(), 'saturation value is outside the interpolation range'
-      y_new = f(x_new)
-      return saturation, y_new.item()
+      if x_new < x.min() or x_new > x.max():
+         raise ValueError('saturation value is outside the interpolation range')
+      y_new = np.interp(x_new, x, y)
+      return saturation, y_new
 
    def df_to_text(self, filepath, filename):
-      """Creates text file from a dataframe of relative permeability and capillary pressure data.
+      """Creates a text file from a dataframe of relative permeability and capillary pressure data.
 
-        arguments:
-            filepath (str): location where new text file is written to
-            filename (str): name of the new text file
-        returns:
-            tuple of float, the first element is the saturation and the second element is the interpolated value
-           """
+      arguments:
+         filepath (str): location where new text file is written to
+         filename (str): name of the new text file
+
+      returns:
+         tuple of float, the first element is the saturation and the second element is the interpolated value
+
+      note:
+         Only Nexus compatible text files are currently supported. Text files that are compatible with other reservoir
+            simulators may be supported in the future.
+      """
       df = self.df.copy()
       ascii_file = os.path.join(filepath, filename + '.dat')
       df.columns = map(str.upper, df.columns)
@@ -218,28 +232,35 @@ class RelPerm(DataFrame):
             print(f'Appended to DAT file: {filename} at {filepath}')
 
    def write_hdf5_and_create_xml(self):
-      """Write relative permeability table data to hdf5 file and create xml for RESQML
-        objects to represent dataframe."""
+      """Write relative permeability table data to hdf5 file and create xml for RESQML objects to represent dataframe.
 
+      """
       super().write_hdf5_and_create_xml()
-      # note: time series xml must be created before calling this method
       mesh_root = self.mesh.root
       # create an xml of extra metadata to indicate that this is a relative permeability table
-      rqet.create_metadata_xml(mesh_root, {'relperm_table': 'true'})
+      rqet.create_metadata_xml(
+         mesh_root, {
+            'relperm_table': 'true',
+            'phase_combo': self.phase_combo,
+            'low_sal': self.low_sal,
+            'table_index': self.table_index
+         })
 
 
 def text_to_relperm_dict(filepath):
+   """Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and phase combinations.
+
+   arguments:
+      filepath (str): relative or full path of the text file to be processed.
+
+   returns:
+      dict, each element in the dictionary contains a dataframe, with saturation and rel. permeability/capillary pressure
+      data, and the phase combination being described
+
+   note:
+      Only Nexus compatible text files are currently supported. Text files from other reservoir simulators may be
+         supported in the future.
    """
-    Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and
-    phase combinations.
-
-    arguments:
-    filepath (str): relative or full path of the text file to be processed
-
-    returns:
-    dict, each element in the dictionary contains a dataframe, with saturation and rel. permeability/capillary pressure
-    data, and the phase combination being described
-    """
    with open(filepath) as f:
       # create list of rows of the original ascii file with blank lines removed
       data = list(filter(None, [list(filter(None, x.strip('\n').split(' '))) for x in f.readlines()]))
@@ -294,23 +315,38 @@ def text_to_relperm_dict(filepath):
    return rel_perm_dict
 
 
-def relperm_parts_in_model(model, title = None, related_uuid = None):
+def relperm_parts_in_model(model,
+                           phase_combo = None,
+                           low_sal = None,
+                           table_index = None,
+                           title = None,
+                           related_uuid = None):
    """Returns list of part names within model that are representing RelPerm dataframe support objects.
 
-    arguments:
+   arguments:
       model (model.Model): the model to be inspected for dataframes
-      title (str, optional): if present, only parts with a citation title exactly matching will be
-          included
+      phase_combo (str, optional): the combination of phases whose relative permeability behaviour is described.
+         Options include 'water-oil', 'gas-oil' and 'gas-water'
+      low_sal (boolean, optional): if True, indicates that the water-oil table contains the low-salinity data for
+         relative permeability and capillary pressure
+      table_index (int, optional): the index of the relative permeability table when multiple relative permeability
+         tables are present. Note, indices should start at 1.
+      title (str, optional): if present, only parts with a citation title exactly matching will be included
       related_uuid (uuid, optional): if present, only parts relating to this uuid are included
 
-    returns:
-      list of str, each element in the list is a part name, within model, which is representing the
-      support for a RelPerm object
-    """
-
+   returns:
+      list of str, each element in the list is a part name, within model, which is representing the support for a RelPerm object
+   """
+   extra_metadata_orig = {
+      'relperm_table': 'true',
+      'phase_combo': phase_combo,
+      'low_sal': low_sal,
+      'table_index': table_index
+   }
+   extra_metadata = {k: str(v) for k, v in extra_metadata_orig.items() if v is not None}
    df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
                                title = title,
-                               extra = {'relperm_table': 'true'},
+                               extra = extra_metadata,
                                related_uuid = related_uuid)
 
    return df_parts_list
