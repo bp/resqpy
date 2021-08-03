@@ -106,6 +106,7 @@ def test_relperm(tmp_path):
                         uom_list = uom_list,
                         phase_combo = phase_combo1,
                         low_sal = True,
+                        table_index = 1,
                         title = 'table1')
    dataframe2 = RelPerm(model = model,
                         df = df2,
@@ -120,9 +121,21 @@ def test_relperm(tmp_path):
    assert round(dataframe1.interpolate_point(saturation = 0.55, kr_or_pc_col = 'Kro')[1], 3) == 0.012
    dataframe1.write_hdf5_and_create_xml()
    dataframe2.write_hdf5_and_create_xml()
-   assert model.part(extra = {'relperm_table': 'true', 'low_sal': 'True'}) == model.part(title = 'table1')
+   assert model.part(extra = {'relperm_table': 'true', 'low_sal': 'true'}) == model.part(title = 'table1')
    assert len(relperm_parts_in_model(model, low_sal = False)) == 1
    dataframe1.df_to_text(filepath = tmp_path, filename = 'oil_water_test_table')
    df1_reconstructed = text_to_relperm_dict(os.path.join(tmp_path, 'oil_water_test_table.dat'))['relperm_table1']['df']
    assert df1.equals(df1_reconstructed)
    assert df1_reconstructed.iloc[3]['Kro'] == 0.350
+   # initialize a RelPerm object from an existing uuid
+   new_wo_obj = RelPerm(model, uuid = model.uuid(title = 'table1'))
+   assert new_wo_obj.phase_combo == phase_combo1
+   assert new_wo_obj.low_sal == 'true'
+   assert new_wo_obj.table_index == '1'
+   assert new_wo_obj.extra_metadata == {
+      'dataframe': 'true',
+      'low_sal': 'true',
+      'phase_combo': 'oil-water',
+      'relperm_table': 'true',
+      'table_index': '1'
+   }

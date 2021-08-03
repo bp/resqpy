@@ -57,18 +57,24 @@ class RelPerm(DataFrame):
       if df is None and uuid is None:
          raise ValueError('either a uuid or a dataframe must be provided')
 
-      # check that 'phase_combo' parameter is valid
-      processed_phase_combo = set([x.strip() for x in str(phase_combo).split('-')])
-      if processed_phase_combo not in [{'water', 'oil'}, {'gas', 'oil'}, {'gas', 'water'}, {'None'}]:
-         raise ValueError('invalid phase_combo provided')
+      # check extra_metadata for arguments if uuid is provided
+      if uuid is not None:
+         model_root = model.root(uuid = uuid)
+         uuid_metadata_dict = rqet.load_metadata_from_xml(model_root)
+         phase_combo = uuid_metadata_dict['phase_combo']
+         low_sal = uuid_metadata_dict['low_sal']
+         table_index = uuid_metadata_dict['table_index']
 
-      # check that table_index is >= 1
-      if table_index is not None:
-         if table_index < 1:
-            raise ValueError('table_index cannot be less than 1')
-
-      # check that the column names and order are as expected
-      if df is not None:
+      elif df is not None:
+         # check that 'phase_combo' parameter is valid
+         processed_phase_combo = set([x.strip() for x in str(phase_combo).split('-')])
+         if processed_phase_combo not in [{'water', 'oil'}, {'gas', 'oil'}, {'gas', 'water'}, {'None'}]:
+            raise ValueError('invalid phase_combo provided')
+         # check that table_index is >= 1
+         if table_index is not None:
+            if table_index < 1:
+               raise ValueError('table_index cannot be less than 1')
+         # check that the column names and order are as expected
          df.columns = [x.capitalize() for x in df.columns]
          if 'Pc' in df.columns:
             if df.columns[-1] != 'Pc':
@@ -149,7 +155,13 @@ class RelPerm(DataFrame):
                        realization = realization,
                        title = title,
                        column_lookup_uuid = column_lookup_uuid,
-                       uom_lookup_uuid = uom_lookup_uuid)
+                       uom_lookup_uuid = uom_lookup_uuid,
+                       extra_metadata = {
+                          'relperm_table': 'true',
+                          'phase_combo': phase_combo,
+                          'low_sal': str(low_sal).lower(),
+                          'table_index': str(table_index)
+                       })
       self.phase_combo = phase_combo
       self.low_sal = low_sal
       self.table_index = table_index
@@ -238,13 +250,7 @@ class RelPerm(DataFrame):
       super().write_hdf5_and_create_xml()
       mesh_root = self.mesh.root
       # create an xml of extra metadata to indicate that this is a relative permeability table
-      rqet.create_metadata_xml(
-         mesh_root, {
-            'relperm_table': 'true',
-            'phase_combo': self.phase_combo,
-            'low_sal': self.low_sal,
-            'table_index': self.table_index
-         })
+      rqet.create_metadata_xml(mesh_root, self.extra_metadata)
 
 
 def text_to_relperm_dict(filepath):
@@ -326,7 +332,7 @@ def relperm_parts_in_model(model,
    arguments:
       model (model.Model): the model to be inspected for dataframes
       phase_combo (str, optional): the combination of phases whose relative permeability behaviour is described.
-         Options include 'water-oil', 'gas-oil' and 'gas-water'
+         Options include 'water-oil', 'gas-oil', 'gas-water', 'oil-water', 'oil-gas' and 'water-gas'
       low_sal (boolean, optional): if True, indicates that the water-oil table contains the low-salinity data for
          relative permeability and capillary pressure
       table_index (int, optional): the index of the relative permeability table when multiple relative permeability
@@ -343,7 +349,7 @@ def relperm_parts_in_model(model,
       'low_sal': low_sal,
       'table_index': table_index
    }
-   extra_metadata = {k: str(v) for k, v in extra_metadata_orig.items() if v is not None}
+   extra_metadata = {k: str(v).lower() for k, v in extra_metadata_orig.items() if v is not None}
    df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
                                title = title,
                                extra = extra_metadata,
