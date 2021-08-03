@@ -15,8 +15,6 @@ log.debug(f'dataframe.py version {version}')
 
 import numpy as np
 import pandas as pd
-from scipy import interpolate
-import os
 
 import resqpy.property as rqp
 import resqpy.surface as rqs
