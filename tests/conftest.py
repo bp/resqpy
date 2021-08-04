@@ -102,4 +102,4 @@ def example_model_with_logs(example_model_with_well):
 @pytest.fixture(autouse = True)
 def example_data_path():
    """Point to the example_data directory"""
-   return "example_data"
+   return os.path.join(".","example_data")
