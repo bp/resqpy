@@ -3,8 +3,11 @@
 import logging
 
 import pytest
+from pathlib import Path
+from shutil import copytree
 import numpy as np
 import pandas as pd
+import os
 
 from resqpy.model import Model, new_model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
@@ -96,3 +99,18 @@ def example_model_with_logs(example_model_with_well):
    log_collection.add_log("NPHI", [0.1, 0.1, np.NaN, np.NaN], 'v/v')
 
    return model, well_interp, datum, traj, frame, log_collection
+
+
+@pytest.fixture
+def example_data_path(tmp_path):
+   """ Return pathlib.Path pointing to temporary copy of tests/example_data
+
+   Use a fresh temporary directory for each test.
+   """
+   master_path = (Path(__file__) / '../example_data').resolve()
+   data_path = Path(tmp_path) / 'example_data'
+
+   assert master_path.exists()
+   assert not data_path.exists()
+   copytree(str(master_path), str(data_path))
+   return data_path

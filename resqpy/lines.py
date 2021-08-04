@@ -710,7 +710,6 @@ class PolylineSet(_BasePolyline):
          assert len(crs_set) == 1, 'More than one CRS found in input polylines for polyline set'
          for crs_uuid in crs_set:
             self.crs_uuid = crs_uuid
-            self.crs_root = self.model.root_for_uuid(self.crs_uuid)
             if self.crs_root is not None:
                break
          self.polys = polylines
@@ -738,8 +737,7 @@ class PolylineSet(_BasePolyline):
                   self.coordinates = np.concatenate((self.coordinates, poly))
          self.count_perpol = np.array(self.count_perpol)
          if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
-            self.crs_root = self.model.crs_root
-            self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
+            self.crs_uuid = self.model.crs_uuid
          self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
                                                 self.crs_root, self.rep_int_root)
 
@@ -771,8 +769,7 @@ class PolylineSet(_BasePolyline):
                   stick = line[7]
          self.count_perpol = np.array(self.count_perpol)
          if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
-            self.crs_root = self.model.crs_root
-            self.crs_uuid = self.crs_root.attrib['uuid']
+            self.crs_uuid = self.model.crs_uuid
          self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
                                                 self.crs_root, self.rep_int_root)
 
@@ -789,9 +786,9 @@ class PolylineSet(_BasePolyline):
          geometry_node = rqet.find_tag(patch_node, 'Geometry')
          assert geometry_node is not None  # Required field
 
-         self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
-         assert self.crs_root is not None  # Required field
-         self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
+         crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
+         assert crs_root is not None  # Required field
+         self.crs_uuid = rqet.uuid_for_part_root(crs_root)
          assert self.crs_uuid is not None  # Required field
 
          closed_node = rqet.find_tag(patch_node, 'ClosedPolylines')
