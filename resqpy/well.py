@@ -827,11 +827,9 @@ class Trajectory(BaseResqpy):
 
       :meta common:
       """
-      parts = self.model.parts_list_related_to_uuid_of_type(self.uuid, type_of_interest = 'WellboreFrameRepresentation')
-      for part in parts:
-         frame_root = self.model.root_for_part(part)
-         frame = WellboreFrame(parent_model = self.model, frame_root = frame_root)
-         yield frame
+      uuids = self.model.uuids(obj_type = "WellboreFrameRepresentation", related_uuid = self.uuid)
+      for uuid in uuids:
+         yield WellboreFrame(self.model, uuid = uuid)
 
    def _load_from_xml(self):
       """Loads the trajectory object from an xml node (and associated hdf5 data)."""
@@ -1510,7 +1508,7 @@ class WellboreFrame(BaseResqpy):
 
       arguments:
          parent_model (model.Model object): the model which the new wellbore frame belongs to
-         frame_root (optional): the root node of an xml tree representing the wellbore frame;
+         frame_root (optional): DEPRECATED. the root node of an xml tree representing the wellbore frame;
             if not None, the new wellbore frame object is initialised based on the data in the tree;
             if None, an empty wellbore frame object is returned
          trajectory (Trajectory object, optional): the trajectory of the well; required if loading from
@@ -1578,9 +1576,7 @@ class WellboreFrame(BaseResqpy):
       trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
       assert trajectory_uuid is not None, 'wellbore frame trajectory reference not found in xml'
       if self.trajectory is None:
-         trajectory_part = 'obj_WellboreTrajectoryRepresentation_' + str(trajectory_uuid) + '.xml'
-         self.trajectory = Trajectory(self.model,
-                                      trajectory_root = self.model.root_for_part(trajectory_part, is_rels = False))
+         self.trajectory = Trajectory(self.model, uuid = trajectory_uuid)
       else:
          assert bu.matching_uuids(self.trajectory.uuid, trajectory_uuid), 'wellbore frame trajectory uuid mismatch'
 
@@ -2896,7 +2892,7 @@ class BlockedWell(BaseResqpy):
          traj_crs = None
          traj_z_inc_down = None
       else:
-         traj_crs = crs.Crs(self.trajectory.model, crs_root = self.trajectory.crs_root)
+         traj_crs = crs.Crs(self.trajectory.model, uuid = self.trajectory.crs_uuid)
          assert traj_crs.xy_units == traj_crs.z_units
          traj_z_inc_down = traj_crs.z_inc_down
 
@@ -4571,7 +4567,7 @@ def well_name(well_object, model = None):
          obj_uuid = rqet.uuid_for_part_root(obj_root)
       elif isinstance(well_object, Trajectory):
          obj_type = 'WellboreTrajectoryRepresentation'
-         traj_root = well_object.root_node
+         traj_root = well_object.root
       elif isinstance(well_object, rqo.WellboreFeature):
          obj_type = 'WellboreFeature'
       elif isinstance(well_object, rqo.WellboreInterpretation):

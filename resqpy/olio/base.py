@@ -217,5 +217,5 @@ class BaseResqpy(metaclass = ABCMeta):
    @property
    def node(self):
       """DEPRECATED. Alias for root"""
-      warnings.warn("Attribute 'node' is deprecated. Sse 'root'", DeprecationWarning)
+      warnings.warn("Attribute 'node' is deprecated. Use 'root'", DeprecationWarning)
       return self.root
