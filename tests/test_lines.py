@@ -30,3 +30,38 @@ def test_lines(example_model_and_crs):
 
    # Check title matches expected title
    assert fault_feature.feature_name == title
+
+def test_lineset(example_model_and_crs):
+
+   # Set up a PolylineSet
+   title = 'Nazcas'
+   model, crs = example_model_and_crs
+   line1 = resqpy.lines.Polyline(parent_model = model,
+                                title = title,
+                                set_crs = crs.uuid,
+                                set_crsroot = crs.crs_root,
+                                set_bool = True,
+                                set_coord = np.array([[0, 0, 0], [1, 1, 1]]))
+
+   line2 = resqpy.lines.Polyline(parent_model = model,
+                                title = title,
+                                set_crs = crs.uuid,
+                                set_crsroot = crs.crs_root,
+                                set_bool = True,
+                                set_coord = np.array([[0, 0, 0], [2, 2, 2]]))
+
+   lines = reqpy.PolylineSet(parent_model = model,
+                            title = title,
+                            polylines = [line1,line2])
+   
+   lines.write_hdf5()
+   lines.create_xml()
+
+   # Check lines can be loaded in again
+   model.store_epc()
+   model = rq.Model(epc_file=model.epc_file)
+   reload = resqpy.lines.PolylineSet(parent_model = model,
+                                     uuid=lines.uuid)
+   assert len(reload.polys) == 2
+   assert reload.count_perpol == [2,2]
+

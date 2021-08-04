@@ -710,7 +710,6 @@ class PolylineSet(_BasePolyline):
          assert len(crs_set) == 1, 'More than one CRS found in input polylines for polyline set'
          for crs_uuid in crs_set:
             self.crs_uuid = crs_uuid
-            self.crs_root = self.model.root_for_uuid(self.crs_uuid)
             if self.crs_root is not None:
                break
          self.polys = polylines
@@ -789,9 +788,9 @@ class PolylineSet(_BasePolyline):
          geometry_node = rqet.find_tag(patch_node, 'Geometry')
          assert geometry_node is not None  # Required field
 
-         self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
-         assert self.crs_root is not None  # Required field
-         self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
+         crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
+         assert crs_root is not None  # Required field
+         self.crs_uuid = rqet.uuid_for_part_root(crs_root)
          assert self.crs_uuid is not None  # Required field
 
          closed_node = rqet.find_tag(patch_node, 'ClosedPolylines')
