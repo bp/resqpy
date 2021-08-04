@@ -25,7 +25,7 @@ def test_MdDatum(example_model_and_crs):
       location = (0, -99999, 3.14),
       md_reference = 'mean low water',
    )
-   datum = resqpy.well.MdDatum(parent_model = model, crs_root = crs.root, **data)
+   datum = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
    uuid = datum.uuid
 
    # Save to disk and reload
@@ -128,7 +128,7 @@ def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
    wellname = "Hullabaloo"
    model, crs = example_model_and_crs
    datum = resqpy.well.MdDatum(parent_model = model,
-                               crs_root = crs.root,
+                               crs_uuid = crs.uuid,
                                location = (0, 0, -100),
                                md_reference = 'kelly bushing')
    datum.create_xml()

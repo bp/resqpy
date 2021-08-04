@@ -3624,7 +3624,7 @@ class BlockedWell(BaseResqpy):
       datum_location = trajectory_points[0].copy()
       if set_depth_zero:
          datum_location[2] = 0.0
-      datum = MdDatum(self.model, crs_root = grid.crs_root, location = datum_location, md_reference = 'mean sea level')
+      datum = MdDatum(self.model, crs_uuid = grid.crs_uuid, location = datum_location, md_reference = 'mean sea level')
 
       # create synthetic trajectory object, using crs for grid
       trajectory_mds_array = np.array(trajectory_mds)
