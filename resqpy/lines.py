@@ -737,8 +737,7 @@ class PolylineSet(_BasePolyline):
                   self.coordinates = np.concatenate((self.coordinates, poly))
          self.count_perpol = np.array(self.count_perpol)
          if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
-            self.crs_root = self.model.crs_root
-            self.crs_uuid = rqet.uuid_for_part_root(self.crs_root)
+            self.crs_uuid = self.model.crs_uuid
          self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
                                                 self.crs_root, self.rep_int_root)
 
@@ -770,8 +769,7 @@ class PolylineSet(_BasePolyline):
                   stick = line[7]
          self.count_perpol = np.array(self.count_perpol)
          if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
-            self.crs_root = self.model.crs_root
-            self.crs_uuid = self.crs_root.attrib['uuid']
+            self.crs_uuid = self.model.crs_uuid
          self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
                                                 self.crs_root, self.rep_int_root)
 

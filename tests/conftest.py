@@ -5,6 +5,7 @@ import logging
 import pytest
 import numpy as np
 import pandas as pd
+import os
 
 from resqpy.model import Model, new_model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
@@ -96,3 +97,8 @@ def example_model_with_logs(example_model_with_well):
    log_collection.add_log("NPHI", [0.1, 0.1, np.NaN, np.NaN], 'v/v')
 
    return model, well_interp, datum, traj, frame, log_collection
+
+@pytest.fixture(autouse = True)
+def example_data_path():
+   """Point to the example_data directory"""
+   return "example_data"
