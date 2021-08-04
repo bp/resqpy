@@ -71,10 +71,10 @@ def test_lineset(example_model_and_crs):
    assert (reload.count_perpol == [2, 2]).all(), f'Expected count per polyline to be [2,2], found {reload.count_perpol}'
 
 
-def test_charisma(example_model_and_crs, example_data_path):
+def test_charisma(example_model_and_crs, test_data_path):
    # Set up a PolylineSet
    model, crs = example_model_and_crs
-   charisma_file = os.path.join(example_data_path, "Charisma_example")
+   charisma_file = test_data_path / "Charisma_example.txt"
    lines = resqpy.lines.PolylineSet(parent_model = model, charisma_file = charisma_file)
    lines.write_hdf5()
    lines.create_xml()
@@ -83,17 +83,17 @@ def test_charisma(example_model_and_crs, example_data_path):
    model = rq.Model(epc_file = model.epc_file)
    reload = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
 
-   assert reload.title == 'Charisma_example'
+   assert reload.title == 'Charisma_example.txt'
    assert (reload.count_perpol == [
       4, 5, 4, 5, 5
    ]).all(), f"Expected count per polyline to be [4,5,4,5,5], found {reload.count_perpol}"
    assert len(reload.coordinates) == 23, f"Expected length of coordinates to be 23, found {len(reload.coordinates)}"
 
 
-def test_irap(example_model_and_crs, example_data_path):
+def test_irap(example_model_and_crs, test_data_path):
    # Set up a PolylineSet
    model, crs = example_model_and_crs
-   irap_file = os.path.join(example_data_path, "IRAP_example")
+   irap_file = test_data_path / "IRAP_example.txt"
    lines = resqpy.lines.PolylineSet(parent_model = model, irap_file = irap_file)
    lines.write_hdf5()
    lines.create_xml()
@@ -102,6 +102,6 @@ def test_irap(example_model_and_crs, example_data_path):
    model = rq.Model(epc_file = model.epc_file)
    reload = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
 
-   assert reload.title == 'IRAP_example'
+   assert reload.title == 'IRAP_example.txt'
    assert (reload.count_perpol == [15]).all(), f"Expected count per polyline to be [15], found {reload.count_perpol}"
    assert len(reload.coordinates) == 15, f"Expected length of coordinates to be 15, found {len(reload.coordinates)}"

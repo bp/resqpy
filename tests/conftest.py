@@ -102,13 +102,13 @@ def example_model_with_logs(example_model_with_well):
 
 
 @pytest.fixture
-def example_data_path(tmp_path):
+def test_data_path(tmp_path):
    """ Return pathlib.Path pointing to temporary copy of tests/example_data
 
    Use a fresh temporary directory for each test.
    """
-   master_path = (Path(__file__) / '../example_data').resolve()
-   data_path = Path(tmp_path) / 'example_data'
+   master_path = (Path(__file__) / '../test_data').resolve()
+   data_path = Path(tmp_path) / 'test_data'
 
    assert master_path.exists()
    assert not data_path.exists()
