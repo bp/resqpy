@@ -323,23 +323,23 @@ class Crs(BaseResqpy):
 
    def create_xml(
          self,
-         add_as_part: bool = True,
-         root = None,  # deprecated
          title: Optional[str] = None,
          originator: Optional[str] = None,
          extra_metadata: Optional[Dict[str, str]] = None,
+         add_as_part: bool = True,
+         root = None,  # deprecated
          reuse: bool = True):
       """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
       arguments:
-         add_as_part (boolean, default True): if True the newly created crs node is added to the model
-            as a part
-         root (optional, usually None): DEPRECATED; if not None, the newly created crs node is appended
-            as a child of this node (rarely used)
          title (string, optional): used as the Title text in the citation node
          originator (string, optional): the name of the human being who created the crs object;
             default is to use the login name
          extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs
+         add_as_part (boolean, default True): if True the newly created crs node is added to the model
+            as a part
+         root (optional, usually None): DEPRECATED; if not None, the newly created crs node is appended
+            as a child of this node (rarely used)
          reuse (boolean, default True): if True and an equivalent crs already exists in the model then
             the uuid for this Crs is modified to match that of the existing object and the existing
             xml node is returned without anything new being added
