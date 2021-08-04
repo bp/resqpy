@@ -35,7 +35,8 @@ class DataFrame:
       used then the indexable elements are 'nodes'; column titles are stored in a related StringLookup
       object, indexed by column number; column units are optionally treated in the same way (uom for
       the property is generally set to Euc); all values are stored as floats; use the derived TimeTable
-      class if rows relate to steps in a TimeSeries
+      class if rows relate to steps in a TimeSeries; use the derived RelPerm class if the rows relate to
+      relative permeability data
    """
 
    def __init__(
