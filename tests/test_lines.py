@@ -83,7 +83,7 @@ def test_charisma(example_model_and_crs, test_data_path):
    model = rq.Model(epc_file = model.epc_file)
    reload = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
 
-   assert reload.title == 'Charisma_example.txt'
+   assert reload.title == 'Charisma_example'
    assert (reload.count_perpol == [
       4, 5, 4, 5, 5
    ]).all(), f"Expected count per polyline to be [4,5,4,5,5], found {reload.count_perpol}"
@@ -102,6 +102,6 @@ def test_irap(example_model_and_crs, test_data_path):
    model = rq.Model(epc_file = model.epc_file)
    reload = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
 
-   assert reload.title == 'IRAP_example.txt'
+   assert reload.title == 'IRAP_example'
    assert (reload.count_perpol == [15]).all(), f"Expected count per polyline to be [15], found {reload.count_perpol}"
    assert len(reload.coordinates) == 15, f"Expected length of coordinates to be 15, found {len(reload.coordinates)}"
