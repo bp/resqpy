@@ -98,6 +98,7 @@ def example_model_with_logs(example_model_with_well):
 
    return model, well_interp, datum, traj, frame, log_collection
 
+
 @pytest.fixture(autouse = True)
 def example_data_path():
    """Point to the example_data directory"""
