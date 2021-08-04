@@ -66,7 +66,7 @@ class _BaseSurface(BaseResqpy):
       self.set_represented_interpretation_root(interp_root)
 
 
-class TriangulatedPatch():
+class TriangulatedPatch:
    """Class for RESQML TrianglePatch objects (used by Surface objects inter alia)."""
 
    def __init__(self, parent_model, patch_index = None, patch_node = None, crs_uuid = None):
@@ -1196,7 +1196,7 @@ class PointSet(_BaseSurface):
       self.represented_interpretation_root = None
       super().__init__(model = parent_model,
                        uuid = uuid,
-                       titl = title,
+                       title = title,
                        originator = originator,
                        root_node = point_set_root)
 
@@ -1900,7 +1900,7 @@ class Mesh(_BaseSurface):
       elif self.flavour == 'ref&z':
          # load array from referenced mesh and overwrite z values
          if self.ref_mesh is None:
-            self.ref_mesh = Mesh(self.model, root_node = self.model.root_for_uuid(self.ref_uuid))
+            self.ref_mesh = Mesh(self.model, uuid = self.ref_uuid)
             assert self.ref_mesh is not None, 'failed to instantiate object for referenced mesh'
          self.full_array = self.ref_mesh.full_array_ref().copy()
          assert self.ref_z_h5_key_pair is not None, 'h5 key pair missing for mesh z values'

@@ -1,6 +1,6 @@
 """polylines.py: Resqml polylines module."""
 
-version = '1st July 2021'
+version = '14th July 2021'
 
 import logging
 
@@ -132,7 +132,6 @@ class Polyline(_BasePolyline):
       self.isclosed = set_bool
       self.nodepatch = None
       self.crs_uuid = set_crs
-      self.crs_root = None if set_crs is None else parent_model.root_for_uuid(set_crs)
       self.coordinates = None
       self.centre = None
       self.rep_int_root = rep_int_root  # Optional
@@ -181,10 +180,7 @@ class Polyline(_BasePolyline):
       geometry_node = rqet.find_tag(patch_node, 'Geometry')
       assert geometry_node is not None  # Required field
 
-      self.crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
-      assert self.crs_root is not None  # Required field
-      uuid_str = self.crs_root.attrib['uuid']
-      self.crs_uuid = bu.uuid_from_string(uuid_str)
+      self.crs_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(geometry_node, ['LocalCrs', 'UUID']))
       assert self.crs_uuid is not None  # Required field
 
       points_node = rqet.find_tag(geometry_node, 'Points')
@@ -195,6 +191,12 @@ class Polyline(_BasePolyline):
       assert not any(map(lambda x: x is None, self.nodepatch))  # Required fields - assert neither are None
 
       self.rep_int_root = self.model.referenced_node(rqet.find_tag(poly_root, 'RepresentedInterpretation'))
+
+   @property
+   def crs_root(self):
+      """XML node corresponding to self.crs_uuid"""
+
+      return self.model.root_for_uuid(self.crs_uuid)
 
    @property
    def rep_int_uuid(self):
@@ -688,7 +690,6 @@ class PolylineSet(_BasePolyline):
       self.save_polys = False
       self.boolnotconstant = None
       self.boolvalue = None
-      self.crs_root = None
       self.crs_uuid = None
 
       super().__init__(model = parent_model,
@@ -821,6 +822,12 @@ class PolylineSet(_BasePolyline):
 
          self.polys.extend(subpolys)
 
+   @property
+   def crs_root(self):
+      """XML node corresponding to self.crs_uuid"""
+
+      return self.model.root_for_uuid(self.crs_uuid)
+
    def poly_index_containing_point_in_xy(self, p, mode = 'crossing'):
       """Returns the index of the first (closed) polyline containing point p in the xy plane, or None.
 
@@ -880,7 +887,7 @@ class PolylineSet(_BasePolyline):
                                     content_type = content_type,
                                     root = polyset)
 
-      # We convert all Polylines to the CRS of the first Polyline in the set, so set this as crs_root
+      # We convert all Polylines to the CRS of the first Polyline in the set, so set this as crs_uuid
 
       patch = rqet.SubElement(polyset, ns['resqml2'] + 'LinePatch')
       patch.set(ns['xsi'] + 'type', ns['resqml2'] + 'PolylineSetPatch')
@@ -1014,13 +1021,14 @@ class PolylineSet(_BasePolyline):
          out[indices_arr] = istrue
          return out
 
-   def convert_to_polylines(self,
-                            closed_array = None,
-                            count_perpol = None,
-                            coordinates = None,
-                            crs_uuid = None,
-                            crs_root = None,
-                            rep_int_root = None):
+   def convert_to_polylines(
+         self,
+         closed_array = None,
+         count_perpol = None,
+         coordinates = None,
+         crs_uuid = None,
+         crs_root = None,  # deprecated
+         rep_int_root = None):
       """Returns a list of Polylines objects from a PolylineSet
 
         note:
@@ -1090,7 +1098,7 @@ class PolylineSet(_BasePolyline):
       for poly in polylines:
          if poly == polylines[0]:
             master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
-            self.crs_root = poly.crs_root
+            self.crs_uuid = poly.crs_uuid
             self.coordinates = poly.coordinates.copy()
          else:
             curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)

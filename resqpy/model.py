@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '28th June 2021'
+version = '20th July 2021'
 
 import logging
 
@@ -161,7 +161,7 @@ class Model():
       # xml stuff
       self.main_tree = None
       self.main_root = None
-      self.crs_root = None  # primary coordinate reference system for model
+      self.crs_uuid = None  # primary coordinate reference system for model
       self.grid_root = None  # extracted from tree as speed optimization (useful for single grid models), for 'main' grid
       self.time_series = None  # extracted as speed optimization (single time series only for now)
       self.parts_forest = {}  # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
@@ -631,6 +631,12 @@ class Model():
 
       self.modified = True
 
+   @property
+   def crs_root(self):
+      """XML node corresponding to self.crs_uuid"""
+
+      return self.root_for_uuid(self.crs_uuid)
+
    def create_tree_if_none(self):
       """Checks that model has an xml tree; if not, an empty tree is created; not usually called directly."""
 
@@ -694,8 +700,8 @@ class Model():
                   assert bu.matching_uuids(part_uuid, uuid_from_tree)
                self.parts_forest[part_name] = (part_type, part_uuid, part_tree)
                self._set_uuid_to_part(part_name)
-               if self.crs_root is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
-                  self.crs_root = part_tree.getroot()
+               if self.crs_uuid is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
+                  self.crs_uuid = part_uuid
 
          return True
 
@@ -2529,8 +2535,8 @@ class Model():
 
       crs_node = crs.create_xml(add_as_part = add_as_part, root = root, title = title, originator = originator)
 
-      if self.crs_root is None:
-         self.crs_root = crs_node
+      if self.crs_uuid is None:
+         self.crs_uuid = crs.uuid
 
       return crs_node
 
@@ -2987,6 +2993,8 @@ class Model():
                                   realization = None,
                                   consolidate = True,
                                   force = False,
+                                  cut_refs_to_uuids = None,
+                                  cut_node_types = None,
                                   self_h5_file_name = None,
                                   h5_uuid = None,
                                   other_h5_file_name = None):
@@ -3001,6 +3009,10 @@ class Model():
             this model, do not duplicate but instead note uuids as equivalent
          force (boolean, default False): if True, the part itself is copied without much checking
             and all references are required to be handled by an entry in the consolidation object
+         cut_refs_to_uuids (list of UUIDs, optional): if present, then xml reference nodes
+            referencing any of the listed uuids are cut out in the copy; use with caution
+         cut_node_types (list of str, optional): if present, any child nodes of a type in the list
+            will be cut out in the copy; use with caution
          self_h5_file_name (string, optional): h5 file name for this model; can be passed as
             an optimisation when calling method repeatedly
          h5_uuid (uuid, optional): UUID for this model's hdf5 external part; can be passed as
@@ -3088,6 +3100,13 @@ class Model():
                                                 'externalPartProxyToMl',
                                                 avoid_duplicates = False)
 
+         # cut references to objects to be excluded
+         if cut_refs_to_uuids:
+            rqet.cut_obj_references(root_node, cut_refs_to_uuids)
+
+         if cut_node_types:
+            rqet.cut_nodes_of_types(root_node, cut_node_types)
+
          # recursively copy in referenced parts where they don't already exist in this model
          for ref_node in rqet.list_obj_references(root_node):
             resident_referred_node = None
@@ -3121,11 +3140,11 @@ class Model():
                                                                                resident_uuid,
                                                                                uuid_is_source = source_flag)
          for related_part in other_related_parts:
-            #         log.debug('considering relationship with: ' + str(related_part))
+            # log.debug('considering relationship with: ' + str(related_part))
             if not force and (related_part in self.parts_forest):
                resident_related_part = related_part
             else:
-               #           log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
+               # log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
                if consolidate:
                   resident_related_uuid = self.consolidation.equivalent_uuid_for_part(related_part,
                                                                                       immigrant_model = other_model)

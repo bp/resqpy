@@ -28,4 +28,6 @@ executed whilst progressing through the material.
    grid_properties
    single_property
    units_of_measure
+   well_basics
+   surfaces
    creating_test
