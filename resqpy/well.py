@@ -167,7 +167,7 @@ class MdDatum(BaseResqpy):
 
       if self.crs_uuid is not None:
          return self.crs_uuid
-      crs_root = rqet.find_tag(self.root_node, 'LocalCrs')
+      crs_root = rqet.find_tag(self.root, 'LocalCrs')
       uuid_str = rqet.find_tag(crs_root, 'UUID').text
       self.crs_uuid = bu.uuid_from_string(uuid_str)
       return self.crs_uuid
@@ -537,10 +537,10 @@ class DeviationSurvey(BaseResqpy):
             if md_datum_xyz is None:
                raise ValueError("Must provide a MD Datum for the DeviationSurvey")
             self.md_datum = MdDatum(self.model, location = md_datum_xyz)
-         if self.md_datum.root_node is None:
+         if self.md_datum.root is None:
             md_datum_root = self.md_datum.create_xml()
          else:
-            md_datum_root = self.md_datum.root_node
+            md_datum_root = self.md_datum.root
       assert md_datum_root is not None
 
       # Create root node, write citation block
@@ -1338,10 +1338,10 @@ class Trajectory(BaseResqpy):
          if self.md_datum is None:
             assert md_datum_xyz is not None
             self.md_datum = MdDatum(self.model, location = md_datum_xyz)
-         if self.md_datum.root_node is None:
+         if self.md_datum.root is None:
             md_datum_root = self.md_datum.create_xml()
          else:
-            md_datum_root = self.md_datum.root_node
+            md_datum_root = self.md_datum.root
 
       wbt_node = super().create_xml(originator = originator, add_as_part = False)
 
@@ -1357,7 +1357,7 @@ class Trajectory(BaseResqpy):
       md_uom.set(ns['xsi'] + 'type', ns['eml'] + 'LengthUom')
       md_uom.text = bwam.rq_length_unit(self.md_uom)
 
-      self.model.create_md_datum_reference(self.md_datum.root_node, root = wbt_node)
+      self.model.create_md_datum_reference(self.md_datum.root, root = wbt_node)
 
       if self.line_kind_index != 0:  # 0 means vertical well, which doesn't need a geometry
 
@@ -1441,8 +1441,7 @@ class Trajectory(BaseResqpy):
          if add_relationships:
             crs_root = self.crs_root
             self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', crs_root, 'sourceObject')
-            self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', self.md_datum.root_node,
-                                                      'sourceObject')
+            self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', self.md_datum.root, 'sourceObject')
             if self.deviation_survey is not None:
                self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', self.deviation_survey.root_node,
                                                          'sourceObject')
@@ -1573,7 +1572,7 @@ class WellboreFrame(BaseResqpy):
 
       # NB: node is the root level xml node, not a node in the md list!
 
-      node = self.node
+      node = self.root
       assert node is not None
 
       trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
@@ -1645,7 +1644,7 @@ class WellboreFrame(BaseResqpy):
       """
 
       assert self.trajectory is not None, 'trajectory object missing'
-      assert self.trajectory.root_node is not None, 'trajectory xml not established'
+      assert self.trajectory.root is not None, 'trajectory xml not established'
 
       if self.feature_and_interpretation_to_be_written:
          if self.wellbore_interpretation is None:
@@ -1682,7 +1681,7 @@ class WellboreFrame(BaseResqpy):
 
       self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'NodeMd', root = mds_values_node)
 
-      traj_root = self.trajectory.root_node
+      traj_root = self.trajectory.root
       self.model.create_ref_node('Trajectory',
                                  rqet.find_nested_tags_text(traj_root, ['Citation', 'Title']),
                                  bu.uuid_from_string(traj_root.attrib['uuid']),
@@ -1700,7 +1699,7 @@ class WellboreFrame(BaseResqpy):
       if add_as_part:
          self.model.add_part('obj_WellboreFrameRepresentation', self.uuid, wf_node)
          if add_relationships:
-            self.model.create_reciprocal_relationship(wf_node, 'destinationObject', self.trajectory.root_node,
+            self.model.create_reciprocal_relationship(wf_node, 'destinationObject', self.trajectory.root,
                                                       'sourceObject')
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)
@@ -1749,7 +1748,7 @@ class BlockedWell(BaseResqpy):
 
       arguments:
          parent_model (model.Model object): the model which the new blocked well belongs to
-         blocked_wellbore_root (DEPRECATED): the root node of an xml tree representing the blocked well;
+         blocked_well_root (DEPRECATED): the root node of an xml tree representing the blocked well;
             if not None, the new blocked well object is initialised based on the data in the tree;
             if None, the other arguments are used
          grid (optional, grid.Grid object): required if intialising from a trajectory or wellspec file;
@@ -1950,9 +1949,7 @@ class BlockedWell(BaseResqpy):
       if interp_uuid is None:
          self.wellbore_interpretation = None
       else:
-         wellbore_interp_part = self.model.part_for_uuid(interp_uuid)
-         self.wellbore_interpretation = rqo.WellboreInterpretation(
-            self.model, root_node = self.model.root_for_part(wellbore_interp_part))
+         self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid = interp_uuid)
 
       # Create blocked well log collection of all log data
       self.logs = rqp.WellIntervalPropertyCollection(frame = self)
@@ -3468,8 +3465,8 @@ class BlockedWell(BaseResqpy):
       if not well_name:
          if self.well_name:
             well_name = self.well_name
-         elif self.root_node is not None:
-            well_name = rqet.citation_title_for_node(self.root_node)
+         elif self.root is not None:
+            well_name = rqet.citation_title_for_node(self.root)
          elif self.wellbore_interpretation is not None:
             well_name = self.wellbore_interpretation.title
          elif self.trajectory is not None:
@@ -3691,7 +3688,7 @@ class BlockedWell(BaseResqpy):
                                                  add_relationships = add_relationships,
                                                  originator = originator)
 
-      if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root_node is None:
+      if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root is None:
          md_datum_root = self.trajectory.md_datum.create_xml(add_as_part = add_as_part,
                                                              add_relationships = add_relationships,
                                                              title = str(self.title),
@@ -3723,7 +3720,7 @@ class BlockedWell(BaseResqpy):
 
       self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'NodeMd', root = mds_values_node)
 
-      traj_root = self.trajectory.root_node
+      traj_root = self.trajectory.root
       self.model.create_ref_node('Trajectory',
                                  rqet.find_nested_tags_text(traj_root, ['Citation', 'Title']),
                                  bu.uuid_from_string(traj_root.attrib['uuid']),
@@ -3799,7 +3796,7 @@ class BlockedWell(BaseResqpy):
       if add_as_part:
          self.model.add_part('obj_BlockedWellboreRepresentation', self.uuid, bw_node)
          if add_relationships:
-            self.model.create_reciprocal_relationship(bw_node, 'destinationObject', self.trajectory.root_node,
+            self.model.create_reciprocal_relationship(bw_node, 'destinationObject', self.trajectory.root,
                                                       'sourceObject')
 
             for grid in self.grid_list:
@@ -4069,7 +4066,7 @@ class WellboreMarkerFrame(BaseResqpy):
       self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'mds', root = md_values_node)
 
       if self.trajectory is not None:
-         traj_root = self.trajectory.root_node
+         traj_root = self.trajectory.root
          self.model.create_ref_node('Trajectory',
                                     rqet.find_tag(rqet.find_tag(traj_root, 'Citation'), 'Title').text,
                                     bu.uuid_from_string(traj_root.attrib['uuid']),
@@ -4110,7 +4107,7 @@ class WellboreMarkerFrame(BaseResqpy):
          self.model.add_part('obj_WellboreMarkerFrameRepresentation', self.uuid, wbm_node)
 
          if add_relationships:
-            self.model.create_reciprocal_relationship(wbm_node, 'destinationObject', self.trajectory.root_node,
+            self.model.create_reciprocal_relationship(wbm_node, 'destinationObject', self.trajectory.root,
                                                       'sourceObject')
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = self.model.root_for_part(ext_part)

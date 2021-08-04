@@ -3274,11 +3274,9 @@ class Model():
       """
       import resqpy.well  # Imported here for speed, module is not always needed
 
-      parts = self.parts_list_of_type('WellboreTrajectoryRepresentation')
-      for part in parts:
-         traj_root = self.root_for_part(part)
-         traj = resqpy.well.Trajectory(self, trajectory_root = traj_root)
-         yield traj
+      uuids = self.uuids(obj_type = "WellboreTrajectoryRepresentation")
+      for uuid in uuids:
+         yield resqpy.well.Trajectory(self, uuid = uuid)
 
    def iter_md_datums(self):
       """ Iterable of all MdDatum objects associated with the model

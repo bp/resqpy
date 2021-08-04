@@ -1456,12 +1456,9 @@ class WellboreInterpretation(BaseResqpy):
 
       import resqpy.well
 
-      parts = self.model.parts_list_related_to_uuid_of_type(self.uuid,
-                                                            type_of_interest = 'WellboreTrajectoryRepresentation')
-      for part in parts:
-         traj_root = self.model.root_for_part(part)
-         traj = resqpy.well.Trajectory(self.model, trajectory_root = traj_root)
-         yield traj
+      uuids = self.model.uuids(obj_type = "WellboreTrajectoryRepresentation", related_uuid = self.uuid)
+      for uuid in uuids:
+         yield resqpy.well.Trajectory(self.model, uuid = uuid)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
