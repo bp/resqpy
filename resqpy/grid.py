@@ -33,6 +33,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.trademark as tm
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
+import resqpy.crs as rqc
 import resqpy.property as rprop
 import resqpy.fault as rqf
 
@@ -5233,11 +5234,12 @@ class RegularGrid(Grid):
          self.make_regular_points_cached()
 
       if crs_uuid is None:
-         self.crs_root = parent_model.create_crs(add_as_part = True)
-         self.crs_uuid = bu.uuid_from_string(self.crs_root.attrib['uuid'])
+         new_crs = rqc.Crs()
+         self.crs_uuid = new_crs.uuid
+         self.crs_root = new_crs.create_xml(reuse = True)
       else:
-         self.crs_root = parent_model.root_for_uuid(crs_uuid)
          self.crs_uuid = crs_uuid
+         self.crs_root = parent_model.root_for_uuid(crs_uuid)
 
       if self.uuid is None:
          self.uuid = bu.new_uuid()
