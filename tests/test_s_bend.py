@@ -146,7 +146,7 @@ def test_s_bend_fn(tmp_path, epc = None):
 
    df = df_trajectory(x, y, z)
 
-   datum = rqw.MdDatum(model, crs_root = crs_node, location = (x[0], y[0], z[0]))
+   datum = rqw.MdDatum(model, crs_uuid = crs.uuid, location = (x[0], y[0], z[0]))
    datum.create_xml()
 
    trajectory = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
@@ -341,8 +341,7 @@ def test_s_bend_fn(tmp_path, epc = None):
    # reload k gap grid object to ensure it is properly initialised
 
    k_gap_grid = None
-   k_gap_grid_root = model.root(uuid = k_gap_grid_uuid)
-   k_gap_grid = grr.Grid(model, grid_root = k_gap_grid_root)
+   k_gap_grid = grr.Grid(model, uuid = k_gap_grid_uuid)
 
    # block wells against faulted grid with k gap
 

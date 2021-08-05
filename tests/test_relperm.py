@@ -5,6 +5,7 @@ import pytest
 
 import numpy as np
 import pandas as pd
+from pandas.testing import assert_frame_equal
 
 import resqpy.model as rq
 from resqpy.olio.relperm import RelPerm, text_to_relperm_dict, relperm_parts_in_model
@@ -116,7 +117,7 @@ def test_relperm(tmp_path):
                         title = 'table2')
    assert dataframe1.n_cols == 4
    assert dataframe1.n_rows == 6
-   assert all(dataframe1.dataframe() == df1)
+   assert_frame_equal(dataframe1.dataframe(), df1)
    assert all(dataframe1.dataframe().columns == df_cols1)
    assert round(dataframe1.interpolate_point(saturation = 0.55, kr_or_pc_col = 'Kro')[1], 3) == 0.012
    dataframe1.write_hdf5_and_create_xml()
@@ -125,7 +126,7 @@ def test_relperm(tmp_path):
    assert len(relperm_parts_in_model(model, low_sal = False)) == 1
    dataframe1.df_to_text(filepath = tmp_path, filename = 'oil_water_test_table')
    df1_reconstructed = text_to_relperm_dict(os.path.join(tmp_path, 'oil_water_test_table.dat'))['relperm_table1']['df']
-   assert df1.equals(df1_reconstructed)
+   assert_frame_equal(df1, df1_reconstructed)
    assert df1_reconstructed.iloc[3]['Kro'] == 0.350
    # initialize a RelPerm object from an existing uuid
    new_wo_obj = RelPerm(model, uuid = model.uuid(title = 'table1'))

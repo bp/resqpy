@@ -343,7 +343,7 @@ class Crs(BaseResqpy):
       """
 
       if reuse and self.try_reuse():
-         return self.node  # check for reusable (equivalent) object
+         return self.root  # check for reusable (equivalent) object
 
       crs = super().create_xml(add_as_part = False, originator = originator)
 

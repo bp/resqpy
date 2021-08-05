@@ -169,7 +169,7 @@ class Polyline(_BasePolyline):
 
       self.title = rqet.citation_title_for_node(poly_root)
 
-      self.extra_metadata = rqet.load_metadata_from_xml(self.root_node)
+      self.extra_metadata = rqet.load_metadata_from_xml(self.root)
 
       self.isclosed = rqet.bool_from_text(rqet.node_text(rqet.find_tag(poly_root, 'IsClosed')))
       assert self.isclosed is not None  # Required field
@@ -1049,7 +1049,7 @@ class PolylineSet(_BasePolyline):
          count_perpol = self.count_perpol
       if closed_array is None:
          closed_array = np.zeros(count_perpol, dtype = bool)
-         closed_node = rqet.find_nested_tag(self.root_node, ['LinePatch', 'ClosedPolylines'])
+         closed_node = rqet.find_nested_tag(self.root, ['LinePatch', 'ClosedPolylines'])
          if closed_node is not None:
             closed_array[:] = self.get_bool_array(closed_node)
       if coordinates is None:

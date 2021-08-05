@@ -366,7 +366,7 @@ class TimeSeries(BaseResqpy):
       """
 
       if reuse and self.try_reuse():
-         return self.node  # check for reusable (equivalent) object
+         return self.root  # check for reusable (equivalent) object
 
       ts_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 

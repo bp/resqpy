@@ -1230,12 +1230,7 @@ def test_add_faults(tmp_path):
 
    def make_poly(model, a, title, crs):
       return [
-         rql.Polyline(model,
-                      set_bool = False,
-                      set_coord = a,
-                      set_crs = crs.uuid,
-                      set_crsroot = crs.crs_root,
-                      title = title)
+         rql.Polyline(model, set_bool = False, set_coord = a, set_crs = crs.uuid, set_crsroot = crs.root, title = title)
       ]
 
    epc = os.path.join(tmp_path, 'tic_tac_toe.epc')
@@ -1336,11 +1331,11 @@ def test_add_faults(tmp_path):
       model = rq.Model(epc)
       grid = model.grid(title = 'ttt_f5 horst')
       assert grid is not None
-      gcs_roots = model.roots(obj_type = 'GridConnectionSetRepresentation', related_uuid = grid.uuid)
-      assert gcs_roots
+      gcs_uuids = model.uuids(obj_type = 'GridConnectionSetRepresentation', related_uuid = grid.uuid)
+      assert gcs_uuids
       scaling_dict = {'ttt_f4a': 3.0, 'ttt_f4b': 1.7}
-      for i, gcs_root in enumerate(gcs_roots):
-         gcs = rqf.GridConnectionSet(model, connection_set_root = gcs_root)
+      for i, gcs_uuid in enumerate(gcs_uuids):
+         gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
          rqdm.fault_throw_scaling(epc,
                                   source_grid = grid,
                                   scaling_factor = None,

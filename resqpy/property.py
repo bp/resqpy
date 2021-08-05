@@ -259,9 +259,9 @@ class PropertyCollection():
             if isinstance(self.support, grr.Grid):
                self.support_root = self.support.root
             elif isinstance(self.support, rqw.WellboreFrame):
-               self.support_root = self.support.root_node
+               self.support_root = self.support.root
             elif isinstance(self.support, rqw.BlockedWell):
-               self.support_root = self.support.root_node
+               self.support_root = self.support.root
             elif isinstance(self.support, rqs.Mesh):
                self.support_root = self.support.root
             elif isinstance(self.support, rqf.GridConnectionSet):
@@ -5068,7 +5068,7 @@ class StringLookup(BaseResqpy):
          self.title = title
 
       if reuse and self.try_reuse():
-         return self.node  # check for reusable (equivalent) object
+         return self.root  # check for reusable (equivalent) object
 
       sl_node = super().create_xml(add_as_part = False, originator = originator)
 
@@ -5155,7 +5155,7 @@ class PropertyKind(BaseResqpy):
       """Create xml for this bespoke property kind."""
 
       if reuse and self.try_reuse():
-         return self.node  # check for reusable (equivalent) object
+         return self.root  # check for reusable (equivalent) object
 
       pk = super().create_xml(add_as_part = False, originator = originator)
 
