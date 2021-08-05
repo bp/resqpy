@@ -1,6 +1,6 @@
 """rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
-version = '18th June 2021'
+version = '5th August 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -248,25 +248,15 @@ def import_nexus(
    # create coodinate reference system (crs) in model and set references in grid object
    log.debug('creating coordinate reference system')
    crs_uuids = model.uuids(obj_type = 'LocalDepth3dCrs')
-   if mode == 'w' or len(crs_uuids) == 0:
-      crs_node = model.create_crs(add_as_part = True,
-                                  x_offset = local_origin[0],
-                                  y_offset = local_origin[1],
-                                  z_offset = local_origin[2],
-                                  xy_units = resqml_xy_units,
-                                  z_units = resqml_z_units,
-                                  z_inc_down = resqml_z_inc_down)
-      crs_uuid = bu.uuid_from_string(crs_node.attrib['uuid'])
-   else:
-      new_crs = rqc.Crs(model,
-                        x_offset = local_origin[0],
-                        y_offset = local_origin[1],
-                        z_offset = local_origin[2],
-                        xy_units = resqml_xy_units,
-                        z_units = resqml_z_units,
-                        z_inc_down = resqml_z_inc_down)
-      new_crs.create_xml(reuse = True)
-      crs_uuid = new_crs.uuid
+   new_crs = rqc.Crs(model,
+                     x_offset = local_origin[0],
+                     y_offset = local_origin[1],
+                     z_offset = local_origin[2],
+                     xy_units = resqml_xy_units,
+                     z_units = resqml_z_units,
+                     z_inc_down = resqml_z_inc_down)
+   new_crs.create_xml(reuse = True)
+   crs_uuid = new_crs.uuid
 
    grid = grid_from_cp(model,
                        cp_array,

@@ -2493,7 +2493,6 @@ class Model():
 
    def create_crs(self,
                   add_as_part = True,
-                  root = None,
                   title = 'cell grid local CRS',
                   epsg_code = None,
                   originator = None,
@@ -2509,8 +2508,6 @@ class Model():
       arguments:
          add_as_part (boolean, default True): if True the newly created crs node is added to the model
             as a part
-         root (optional, usually None): if not None, the newly created crs node is appended as a child
-            of this node
          title (string): used as the Title text in the citation node
          epsg_code (integer): EPSG code of the parent coordinate reference system that this crs sits within;
             used for both projected and vertical frames of reference; if None then unknown settings are used
@@ -2540,7 +2537,7 @@ class Model():
                     z_inc_down = z_inc_down,
                     epsg_code = epsg_code)
 
-      crs_node = crs.create_xml(add_as_part = add_as_part, root = root, title = title, originator = originator)
+      crs_node = crs.create_xml(add_as_part = add_as_part, title = title, originator = originator)
 
       if self.crs_uuid is None:
          self.crs_uuid = crs.uuid
