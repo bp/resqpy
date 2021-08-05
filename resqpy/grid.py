@@ -5234,7 +5234,7 @@ class RegularGrid(Grid):
          self.make_regular_points_cached()
 
       if crs_uuid is None:
-         new_crs = rqc.Crs()
+         new_crs = rqc.Crs(parent_model)
          self.crs_uuid = new_crs.uuid
          self.crs_root = new_crs.create_xml(reuse = True)
       else:
