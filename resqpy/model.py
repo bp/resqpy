@@ -14,7 +14,7 @@ import pathlib
 import shutil
 import warnings
 import zipfile as zf
-from typing import Union, Optional, Iterable, TypeVar
+from typing import Union, Optional, Iterable
 
 import numpy as np
 import h5py
@@ -31,7 +31,6 @@ import resqpy.grid as grr
 import resqpy.fault as rqf
 
 use_version_string = False
-PathLike = TypeVar("PathLike", str, bytes, pathlib.Path)  # PEP 519
 
 
 def _pl(i, e = False):
@@ -58,13 +57,13 @@ class Model():
    """
 
    def __init__(self,
-                epc_file: Optional[PathLike] = None,
+                epc_file: Optional[str] = None,
                 full_load: bool = True,
                 epc_subdir: Optional[Union[str, Iterable]] = None,
                 new_epc: bool = False,
                 create_basics: Optional[bool] = None,
                 create_hdf5_ext: Optional[bool] = None,
-                copy_from: Optional[PathLike] = None):
+                copy_from: Optional[str] = None):
       """Create an empty model; load it from epc_file if given.
 
       Note:
@@ -74,7 +73,7 @@ class Model():
          immediately
 
       Arguments:
-         epc_file (path-like, optional): if present, and new_epc is False and copy_from is None, the name
+         epc_file (str, optional): if present, and new_epc is False and copy_from is None, the name
             of an existing epc file which is opened, unzipped and parsed to determine the list of parts
             and relationships comprising the model; if present, and new_epc is True or copy_from is
             specified, the name of a new file to be created - any existing file (and .h5 paired hdf5
@@ -96,7 +95,7 @@ class Model():
             and epc_file is not None, then an hdf5 external part is created, equivalent to calling the
             create_hdf5_ext() method; an empty hdf5 file is also created; if None, defaults to same
             value as new_epc
-         copy_from: (path-like, optional): if present, and epc_file is also present, then the epc file
+         copy_from: (str, optional): if present, and epc_file is also present, then the epc file
             named in copy_from, together with its paired h5 file, are copied to epc_file (overwriting
             any previous instances) before epc_file is opened; this argument is primarily to facilitate
             repeated testing of code that modifies the resqml dataset, eg. by appending new parts
@@ -106,10 +105,6 @@ class Model():
 
       :meta common:
       """
-      if epc_file:
-         epc_file = str(epc_file)
-      if copy_from:
-         copy_from = str(copy_from)
 
       if epc_file and not epc_file.endswith('.epc'):
          epc_file += '.epc'
