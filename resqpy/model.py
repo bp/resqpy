@@ -3397,7 +3397,7 @@ class Model():
          pass
 
 
-def new_model(epc_file: PathLike):
+def new_model(epc_file):
    """Returns a new, empty Model object with basics and hdf5 ext part set up."""
 
    return Model(epc_file = epc_file, new_epc = True, create_basics = True, create_hdf5_ext = True)
