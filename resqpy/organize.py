@@ -1,8 +1,9 @@
 """organize.py: RESQML Feature and Interpretation classes."""
 
-version = '2nd July 2021'
+version = '9th August 2021'
 
-# For now, fault features and interpretations, plus stubs for horizons
+# most feature and interpretation classes catered for here
+# stratigraphic classes in strata.py
 
 import logging
 
@@ -840,6 +841,8 @@ class FaultInterpretation(BaseResqpy):
 
 class EarthModelInterpretation(BaseResqpy):
    """Class for RESQML Earth Model Interpretation organizational objects."""
+
+   # TODO: add support for StratigraphicColumn reference and other optional references
 
    resqml_type = 'EarthModelInterpretation'
    valid_domains = ('depth', 'time', 'mixed')
