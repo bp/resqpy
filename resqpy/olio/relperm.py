@@ -292,7 +292,8 @@ def text_to_relperm_dict(relperm_data, is_file = True):
       'KRWG': 'Krw',
       'PCWO': 'Pc',
       'PCGO': 'Pc',
-      'PCGW': 'Pc'
+      'PCGW': 'Pc',
+      'PC': 'Pc'
    }
    relperm_table_idx = 1
    rel_perm_dict = {}
