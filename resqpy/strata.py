@@ -15,11 +15,11 @@ import resqpy.olio.uuid as bu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.base import BaseResqpy
 
-
-valid_compositions = ['intrusive clay ', 'intrusive clay', 'organic', 'intrusive mud ', 'intrusive mud',
-                      'evaporite salt', 'evaporite non salt', 'sedimentary siliclastic', 'carbonate',
-                      'magmatic intrusive granitoid', 'magmatic intrusive pyroclastic',
-                      'magmatic extrusive lava flow', 'other chemichal rock', 'sedimentary turbidite']
+valid_compositions = [
+   'intrusive clay ', 'intrusive clay', 'organic', 'intrusive mud ', 'intrusive mud', 'evaporite salt',
+   'evaporite non salt', 'sedimentary siliclastic', 'carbonate', 'magmatic intrusive granitoid',
+   'magmatic intrusive pyroclastic', 'magmatic extrusive lava flow', 'other chemichal rock', 'sedimentary turbidite'
+]
 
 valid_implacements = ['autochtonous', 'allochtonous']
 
@@ -27,15 +27,13 @@ valid_domains = ('depth', 'time', 'mixed')
 
 valid_ordering_criteria = ['age', 'apparent depth', 'measured depth']  # stratigraphic column must be ordered by age
 
-valid_contact_relationships = ['frontier feature to frontier feature',
-                               'genetic boundary to frontier feature',
-                               'genetic boundary to genetic boundary',
-                               'genetic boundary to tectonic boundary',
-                               'stratigraphic unit to frontier feature',
-                               'stratigraphic unit to stratigraphic unit',
-                               'tectonic boundary to frontier feature',
-                               'tectonic boundary to genetic boundary',
-                               'tectonic boundary to tectonic boundary']
+valid_contact_relationships = [
+   'frontier feature to frontier feature', 'genetic boundary to frontier feature',
+   'genetic boundary to genetic boundary', 'genetic boundary to tectonic boundary',
+   'stratigraphic unit to frontier feature', 'stratigraphic unit to stratigraphic unit',
+   'tectonic boundary to frontier feature', 'tectonic boundary to genetic boundary',
+   'tectonic boundary to tectonic boundary'
+]
 
 valid_contact_verbs = ['splits', 'interrupts', 'contains', 'erodes', 'stops at', 'crosses', 'includes']
 
@@ -54,15 +52,14 @@ class StratigraphicUnitFeature(BaseResqpy):
 
    resqml_type = 'StratigraphicUnitFeature'
 
-   def __init__(
-         self,
-         parent_model,
-         uuid = None,
-         top_unit_uuid = None,
-         bottom_unit_uuid = None,
-         title = None,
-         originator = None,
-         extra_metadata = None):
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                top_unit_uuid = None,
+                bottom_unit_uuid = None,
+                title = None,
+                originator = None,
+                extra_metadata = None):
       """Initialises a stratigraphic unit feature object."""
 
       # todo: clarify with Energistics whether the 2 references are to other StratigraphicUnitFeatures or what?
@@ -123,15 +120,11 @@ class StratigraphicUnitFeature(BaseResqpy):
          self.model.add_part('obj_StratigraphicUnitFeature', self.uuid, suf)
          if add_relationships:
             if self.bottom_unit_uuid is not None:
-               self.model.create_reciprocal_relationship(suf,
-                                                         'destinationObject',
-                                                         self.model.root(uuid = self.bottom_unit_uuid),
-                                                         'sourceObject')
+               self.model.create_reciprocal_relationship(suf, 'destinationObject',
+                                                         self.model.root(uuid = self.bottom_unit_uuid), 'sourceObject')
             if self.top_unit_uuid is not None and not bu.matching_uuids(self.bottom_unit_uuid, self.top_unit_uuid):
-               self.model.create_reciprocal_relationship(suf,
-                                                         'destinationObject',
-                                                         self.model.root(uuid = self.top_unit_uuid),
-                                                         'sourceObject')
+               self.model.create_reciprocal_relationship(suf, 'destinationObject',
+                                                         self.model.root(uuid = self.top_unit_uuid), 'sourceObject')
 
       return suf
 
@@ -148,15 +141,16 @@ class GeologicUnitInterpretation(BaseResqpy):
 
    resqml_type = 'GeologicUnitInterpretation'
 
-   def __init__(self,
-                parent_model,
-                uuid = None,
-                title = None,
-                domain = 'time',  # or should this be depth?
-                geologic_unit_feature = None,
-                composition = None,
-                material_implacement = None,
-                extra_metadata = None):
+   def __init__(
+         self,
+         parent_model,
+         uuid = None,
+         title = None,
+         domain = 'time',  # or should this be depth?
+         geologic_unit_feature = None,
+         composition = None,
+         material_implacement = None,
+         extra_metadata = None):
       """Initialises an geologic unit interpretation object."""
       self.domain = domain
       self.geologic_unit_feature = geologic_unit_feature  # InterpretedFeature RESQML field
@@ -165,10 +159,7 @@ class GeologicUnitInterpretation(BaseResqpy):
          title = geologic_unit_feature.feature_name
       self.composition = composition  # optional RESQML item
       self.material_implacement = material_implacement  # optional RESQML item
-      super().__init__(model = parent_model,
-                       uuid = uuid,
-                       title = title,
-                       extra_metadata = extra_metadata)
+      super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
       if self.composition:
          assert self.composition in valid_compositions,  \
             f'invalid composition {self.composition} for geological unit interpretation'
@@ -209,16 +200,11 @@ class GeologicUnitInterpretation(BaseResqpy):
          return False
       if check_extra_metadata and not rqo.equivalent_extra_metadata(self, other):
          return False
-      return (self.composition == other.composition and
-              self.material_implacement == other.material_implacement and
+      return (self.composition == other.composition and self.material_implacement == other.material_implacement and
               self.domain == other.domain and
               rqo.equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during))
 
-   def create_xml(self,
-                  add_as_part = True,
-                  add_relationships = True,
-                  originator = None,
-                  reuse = True):
+   def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
       """Creates a geologic unit interpretation xml tree."""
 
       # note: related feature xml must be created first and is referenced here
@@ -432,12 +418,7 @@ class StratigraphicColumnRank(BaseResqpy):
 class ContactInterpretation:
    """General class for contact between 2 geological entities; not a high level class but used by others."""
 
-   def __init__(index: int,
-                contact_relationship: str,
-                subject,
-                verb: str,
-                direct_object,
-                part_of = None):
+   def __init__(self, index: int, contact_relationship: str, subject, verb: str, direct_object, part_of = None):
       # index (non-negative integer, should increase with decreasing age for horizon contacts)
       # contact relationship (one of valid_contact_relationships)
       # subject (reference to e.g. stratigraphic unit interpretation)
