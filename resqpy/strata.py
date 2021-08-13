@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '9th August 2021'
+version = '13th August 2021'
 
 import logging
 
@@ -16,6 +16,30 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.base import BaseResqpy
 
 
+valid_compositions = ['intrusive clay ', 'intrusive clay', 'organic', 'intrusive mud ', 'intrusive mud',
+                      'evaporite salt', 'evaporite non salt', 'sedimentary siliclastic', 'carbonate',
+                      'magmatic intrusive granitoid', 'magmatic intrusive pyroclastic',
+                      'magmatic extrusive lava flow', 'other chemichal rock', 'sedimentary turbidite']
+
+valid_implacements = ['autochtonous', 'allochtonous']
+
+valid_domains = ('depth', 'time', 'mixed')
+
+valid_ordering_criteria = ['age', 'apparent depth', 'measured depth']  # stratigraphic column must be ordered by age
+
+valid_contact_relationships = ['frontier feature to frontier feature',
+                               'genetic boundary to frontier feature',
+                               'genetic boundary to genetic boundary',
+                               'genetic boundary to tectonic boundary',
+                               'stratigraphic unit to frontier feature',
+                               'stratigraphic unit to stratigraphic unit',
+                               'tectonic boundary to frontier feature',
+                               'tectonic boundary to genetic boundary',
+                               'tectonic boundary to tectonic boundary']
+
+valid_contact_verbs = ['splits', 'interrupts', 'contains', 'erodes', 'stops at', 'crosses', 'includes']
+
+
 class StratigraphicUnitFeature(BaseResqpy):
    """Class for RESQML Stratigraphic Unit Feature objects.
 
@@ -28,30 +52,28 @@ class StratigraphicUnitFeature(BaseResqpy):
       for example, from the International Commission on Stratigraphy (http://www.stratigraphy.org).
    """
 
-   resqml_type = "StratigraphicUnitFeature"
+   resqml_type = 'StratigraphicUnitFeature'
 
    def __init__(
          self,
          parent_model,
          uuid = None,
-         # TODO: add chrono strata top and bottom uuid optional args
+         top_unit_uuid = None,
+         bottom_unit_uuid = None,
          title = None,
          originator = None,
          extra_metadata = None):
       """Initialises a stratigraphic unit feature object."""
 
-      # the following two attributes are object references in the xsd
-      # TODO: clarify with Energistics whether the references are to other StratigraphicUnitFeatures or what?
-      self.top_unit = None
-      self.bottom_unit = None
+      # todo: clarify with Energistics whether the 2 references are to other StratigraphicUnitFeatures or what?
+      self.top_unit_uuid = top_unit_uuid
+      self.bottom_unit_uuid = bottom_unit_uuid
 
       super().__init__(model = parent_model,
                        uuid = uuid,
                        title = title,
                        originator = originator,
                        extra_metadata = extra_metadata)
-
-      # TODO: if root is None, set chrono strata top and bottom if their uuids are present
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this feature is essentially the same as the other; otherwise False."""
@@ -63,10 +85,19 @@ class StratigraphicUnitFeature(BaseResqpy):
       return (self.title == other.title and ((not check_extra_metadata) or rqo.equivalent_extra_metadata(self, other)))
 
    def _load_from_xml(self):
-      # TODO: load chrono strata top and bottom
-      pass
+      root_node = self.root
+      assert root_node is not None
+      bottom_ref_uuid = rqet.find_nested_tags_text(root_node, ['ChronostratigraphicBottom', 'UUID'])
+      top_ref_uuid = rqet.find_nested_tags_text(root_node, ['ChronostratigraphicTop', 'UUID'])
+      # todo: find out if these are meant to be references to other stratigraphic unit features or geologic unit features
+      # and if so, instantiate those objects?
+      # for now, simply note the uuids
+      if bottom_ref_uuid is not None:
+         self.bottom_unit_uuid = bu.uuid_from_string(bottom_ref_uuid)
+      if top_ref_uuid is not None:
+         self.top_unit_uuid = bu.uuid_from_string(top_ref_uuid)
 
-   def create_xml(self, add_as_part = True, originator = None, reuse = True):
+   def create_xml(self, add_as_part = True, originator = None, reuse = True, add_relationships = True):
       """Creates xml for this stratigraphic unit feature."""
 
       if reuse and self.try_reuse():
@@ -74,17 +105,207 @@ class StratigraphicUnitFeature(BaseResqpy):
       # create node with citation block
       suf = super().create_xml(add_as_part = False, originator = originator)
 
+      if self.bottom_unit_uuid is not None:
+         self.model.create_ref_node('ChronostratigraphicBottom',
+                                    self.model.title(uuid = self.bottom_unit_uuid),
+                                    self.bottom_unit_uuid,
+                                    content_type = self.model.type_of_uuid(self.bottom_unit_uuid),
+                                    root = suf)
+
+      if self.top_unit_uuid is not None:
+         self.model.create_ref_node('ChronostratigraphicTop',
+                                    self.model.title(uuid = self.top_unit_uuid),
+                                    self.top_unit_uuid,
+                                    content_type = self.model.type_of_uuid(self.top_unit_uuid),
+                                    root = suf)
+
       if add_as_part:
          self.model.add_part('obj_StratigraphicUnitFeature', self.uuid, suf)
+         if add_relationships:
+            if self.bottom_unit_uuid is not None:
+               self.model.create_reciprocal_relationship(suf,
+                                                         'destinationObject',
+                                                         self.model.root(uuid = self.bottom_unit_uuid),
+                                                         'sourceObject')
+            if self.top_unit_uuid is not None and not bu.matching_uuids(self.bottom_unit_uuid, self.top_unit_uuid):
+               self.model.create_reciprocal_relationship(suf,
+                                                         'destinationObject',
+                                                         self.model.root(uuid = self.top_unit_uuid),
+                                                         'sourceObject')
 
       return suf
 
 
-class StratigraphicUnitInterpretation(BaseResqpy):
-   """Class for RESQML Stratigraphic Unit Interpretation objects."""
+class GeologicUnitInterpretation(BaseResqpy):
+   """Class for RESQML Geologic Unit Interpretation objects.
 
-   # TODO
-   pass
+   These objects can be parts in their own right. Various more specialised classes also derive from this.
+
+   RESQML documentation:
+
+      The main class for data describing an opinion of a volume-based geologic feature or unit.
+   """
+
+   resqml_type = 'GeologicUnitInterpretation'
+
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                title = None,
+                domain = 'time',  # or should this be depth?
+                geologic_unit_feature = None,
+                composition = None,
+                material_implacement = None,
+                extra_metadata = None):
+      """Initialises an geologic unit interpretation object."""
+      self.domain = domain
+      self.geologic_unit_feature = geologic_unit_feature  # InterpretedFeature RESQML field
+      self.has_occurred_during = (None, None)  # optional RESQML item
+      if (not title) and geologic_unit_feature is not None:
+         title = geologic_unit_feature.feature_name
+      self.composition = composition  # optional RESQML item
+      self.material_implacement = material_implacement  # optional RESQML item
+      super().__init__(model = parent_model,
+                       uuid = uuid,
+                       title = title,
+                       extra_metadata = extra_metadata)
+      if self.composition:
+         assert self.composition in valid_compositions,  \
+            f'invalid composition {self.composition} for geological unit interpretation'
+      if self.material_implacement:
+         assert self.material_implacement in valid_implacements,  \
+            f'invalid material implacement {self.material_implacement} for geological unit interpretation'
+
+   def _load_from_xml(self):
+      root_node = self.root
+      assert root_node is not None
+      self.domain = rqet.find_tag_text(root_node, 'Domain')
+      # following allows derived StratigraphicUnitInterpretation to instantiate its own interpreted feature
+      if self.resqml_type == 'GeologicUnitInterpretation':
+         feature_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(root_node, ['InterpretedFeature', 'UUID']))
+         if feature_uuid is not None:
+            self.geologic_unit_feature = rqo.GeologicUnitFeature(self.model,
+                                                                 uuid = feature_uuid,
+                                                                 feature_name = self.model.title(uuid = feature_uuid))
+      self.has_occurred_during = rqo.extract_has_occurred_during(root_node)
+      self.composition = rqet.find_tag_text(root_node, 'GeologicUnitComposition')
+      self.material_implacement = rqet.find_tag_text(root_node, 'GeologicUnitMaterialImplacement')
+
+   def is_equivalent(self, other, check_extra_metadata = True):
+      """Returns True if this interpretation is essentially the same as the other; otherwise False."""
+      if other is None or not isinstance(other, type(self)):
+         return False
+      if self is other or bu.matching_uuids(self.uuid, other.uuid):
+         return True
+      if self.geologic_unit_feature is not None:
+         if not self.geologic_unit_feature.is_equivalent(other.geologic_unit_feature):
+            return False
+      elif other.geologic_unit_feature is not None:
+         return False
+      if self.root is not None and other.root is not None:
+         if rqet.citation_title_for_node(self.root) != rqet.citation_title_for_node(other.root):
+            return False
+      elif self.root is not None or other.root is not None:
+         return False
+      if check_extra_metadata and not rqo.equivalent_extra_metadata(self, other):
+         return False
+      return (self.composition == other.composition and
+              self.material_implacement == other.material_implacement and
+              self.domain == other.domain and
+              rqo.equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during))
+
+   def create_xml(self,
+                  add_as_part = True,
+                  add_relationships = True,
+                  originator = None,
+                  reuse = True):
+      """Creates a geologic unit interpretation xml tree."""
+
+      # note: related feature xml must be created first and is referenced here
+
+      if reuse and self.try_reuse():
+         return self.root
+      gu = super().create_xml(add_as_part = False, originator = originator)
+
+      assert self.geologic_unit_feature is not None
+      guf_root = self.geologic_unit_feature.root
+      assert guf_root is not None, 'interpreted feature not established for geologic unit interpretation'
+
+      assert self.domain in self.valid_domains, 'illegal domain value for geologic unit interpretation'
+      dom_node = rqet.SubElement(gu, ns['resqml2'] + 'Domain')
+      dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
+      dom_node.text = self.domain
+
+      self.model.create_ref_node('InterpretedFeature',
+                                 self.geologic_unit_feature.title,
+                                 self.geologic_unit_feature.uuid,
+                                 content_type = 'obj_GeologicUnitFeature',
+                                 root = gu)
+
+      rqo.create_xml_has_occurred_during(self.model, gu, self.has_occurred_during)
+
+      if self.composition is not None:
+         assert self.composition in valid_compositions, f'invalid composition {self.composition} for geologic unit interpretation'
+         comp_node = rqet.SubElement(gu, ns['resqml2'] + 'GeologicUnitComposition')
+         comp_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitComposition')
+         comp_node.text = self.composition
+
+      if self.material_implacement is not None:
+         assert self.material_implacement in valid_implacements,  \
+            f'invalid material implacement {self.material_implacement} for geologic unit interpretation'
+         mi_node = rqet.SubElement(gu, ns['resqml2'] + 'GeologicUnitMaterialImplacement')
+         mi_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitMaterialImplacement')
+         mi_node.text = self.material_implacement
+
+      if add_as_part:
+         self.model.add_part('obj_GeologicUnitInterpretation', self.uuid, gu)
+         if add_relationships:
+            self.model.create_reciprocal_relationship(gu, 'destinationObject', guf_root, 'sourceObject')
+
+      return gu
+
+
+class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
+   """Class for RESQML Stratigraphic Unit Interpretation objects.
+
+   RESQML documentation:
+
+      Interpretation of a stratigraphic unit which includes the knowledge of the top, the bottom,
+      the deposition mode.
+   """
+
+   resqml_type = 'StratigraphicUnitInterpretation'
+
+   deposition_mode = None
+   min_thickness = None
+   max_thickness = None
+
+   def __init__(self):
+      # TODO
+      pass
+
+   @property
+   def stratigraphic_unit_feature(self):
+      return self.geologic_unit_feature
+
+   def _load_from_xml(self):
+      super()._load_from_xml()
+      root_node = self.root
+      assert root_node is not None
+      feature_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(root_node, ['InterpretedFeature', 'UUID']))
+      if feature_uuid is not None:
+         self.geologic_unit_feature = StratigraphicUnitFeature(self.model,
+                                                               uuid = feature_uuid,
+                                                               feature_name = self.model.title(uuid = feature_uuid))
+      # TODO: load deposition mode and min & max thickness, if present
+
+   def is_equivalent(self, other, check_extra_metadata = True):
+      # TODO
+      return False
+
+   def create_xml(self):
+      # TODO
+      pass
 
 
 class StratigraphicColumn(BaseResqpy):
@@ -99,7 +320,7 @@ class StratigraphicColumn(BaseResqpy):
       must be ordered by age.
    """
 
-   resqml_type = "StratigraphicColumn"
+   resqml_type = 'StratigraphicColumn'
 
    # todo: integrate with EarthModelInterpretation class which can optionally refer to a stratigraphic column
 
@@ -193,5 +414,36 @@ class StratigraphicColumn(BaseResqpy):
 class StratigraphicColumnRank(BaseResqpy):
    """Class for RESQML StratigraphicColumnRankInterpretation objects."""
 
+   resqml_type = 'StratigraphicColumnRankInterpretation'
+
+   # list of contact interpretations (optional)
+   # list of one or more stratigraphic unit interpretations, each with a local index from oldest (0) to youngest
+
+   # interpreted feature: an earth model feature
+   # ordering criterion: must be 'age'
+   # domain
+   # index: 0 if only one rank; otherwise indicates nested rank of the column?
+   # has occured during: optional geo time period (organize.py has some relevant code)
+
    # TODO
    pass
+
+
+class ContactInterpretation:
+   """General class for contact between 2 geological entities; not a high level class but used by others."""
+
+   def __init__(index: int,
+                contact_relationship: str,
+                subject,
+                verb: str,
+                direct_object,
+                part_of = None):
+      # index (non-negative integer, should increase with decreasing age for horizon contacts)
+      # contact relationship (one of valid_contact_relationships)
+      # subject (reference to e.g. stratigraphic unit interpretation)
+      # verb (one of valid_contact_verbs)
+      # direct object (reference to e.g. stratigraphic unit interpretation)
+      # part of (reference to e.g. horizon interpretation, optional)
+
+      # TODO
+      pass
