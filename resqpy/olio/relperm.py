@@ -253,11 +253,12 @@ class RelPerm(DataFrame):
       rqet.create_metadata_xml(mesh_root, self.extra_metadata)
 
 
-def text_to_relperm_dict(filepath):
+def text_to_relperm_dict(relperm_data, is_file = True):
    """Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and phase combinations.
 
    arguments:
-      filepath (str): relative or full path of the text file to be processed.
+      relperm_data (str): relative or full path of the text file to be processed or string of relative permeability data
+      is_file (boolean): if True, indicates that a text file of relative permeability data has been provided. Default value is True
 
    returns:
       dict, each element in the dictionary contains a dataframe, with saturation and rel. permeability/capillary pressure
@@ -267,12 +268,16 @@ def text_to_relperm_dict(filepath):
       Only Nexus compatible text files are currently supported. Text files from other reservoir simulators may be
          supported in the future.
    """
-   with open(filepath) as f:
-      # create list of rows of the original ascii file with blank lines removed
-      data = list(filter(None, [list(filter(None, x.strip('\n').split(' '))) for x in f.readlines()]))
-      # remove comments
-      data = [x for x in data if ('!' not in x)]
-
+   if is_file:
+      with open(relperm_data) as f:
+         string_original = f.read()
+   else:
+      string_original = relperm_data
+   # split the string based on newlines and remove any comments or other escape characters
+   escapes = ''.join([chr(char) for char in range(1, 32)])
+   string_formatted = [x.strip(escapes).split(' ') for x in filter(None, string_original.split('\n')) if '!' not in x]
+   # remove all empty strings
+   data = [list(filter(None, x)) for x in string_formatted]
    # get indices of start of each new relperm table based on Nexus keywords
    table_start_positions = [
       i for i, l in enumerate(data) if len({'WOTABLE', 'GOTABLE', 'GWTABLE'}.intersection(set(l))) == 1
