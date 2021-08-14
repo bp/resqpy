@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '13th August 2021'
+version = '14th August 2021'
 
 import logging
 
@@ -10,6 +10,7 @@ log.debug('strata.py version ' + version)
 import warnings
 
 import resqpy.organize as rqo
+import resqpy.weights_and_measures as wam
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -24,6 +25,10 @@ valid_compositions = [
 valid_implacements = ['autochtonous', 'allochtonous']
 
 valid_domains = ('depth', 'time', 'mixed')
+
+valid_deposition_modes = [
+   'proportional between top and bottom', 'parallel to bottom', 'parallel to top', 'parallel to another boundary'
+]
 
 valid_ordering_criteria = ['age', 'apparent depth', 'measured depth']  # stratigraphic column must be ordered by age
 
@@ -262,13 +267,37 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
 
    resqml_type = 'StratigraphicUnitInterpretation'
 
-   deposition_mode = None
-   min_thickness = None
-   max_thickness = None
+   def __init__(
+         self,
+         parent_model,
+         uuid = None,
+         title = None,
+         domain = 'time',  # or should this be depth?
+         geologic_unit_feature = None,
+         composition = None,
+         material_implacement = None,
+         deposition_mode = None,
+         min_thickness = None,
+         max_thickness = None,
+         thickness_uom = None,
+         extra_metadata = None):
 
-   def __init__(self):
-      # TODO
-      pass
+      self.deposition_mode = deposition_mode
+      self.min_thickness = min_thickness
+      self.max_thickness = max_thickness
+      self.thickness_uom = thickness_uom
+      super().__init__(model = parent_model,
+                       uuid = uuid,
+                       title = title,
+                       domain = domain,
+                       geologic_unit_feature = geologic_unit_feature,
+                       composition = composition,
+                       material_implacement = material_implacement,
+                       extra_metadata = extra_metadata)
+      if self.deposition_mode is not None:
+         assert self.deposition_mode in valid_deposition_modes
+      if self.min_thickness is not None or self.max_thickness is not None:
+         assert self.thickness_uom in wam.valid_uoms(quantity = 'length')
 
    @property
    def stratigraphic_unit_feature(self):
@@ -283,7 +312,21 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
          self.geologic_unit_feature = StratigraphicUnitFeature(self.model,
                                                                uuid = feature_uuid,
                                                                feature_name = self.model.title(uuid = feature_uuid))
-      # TODO: load deposition mode and min & max thickness, if present
+      # load deposition mode and min & max thicknesses (& uom), if present
+      self.deposition_mode = rqet.find_tag_text(root_node, 'DepositionMode')
+      for min_max in ['Min', 'Max']:
+         thick_node = rqet.find_tag(root_node, min_max + 'Thickness')
+         if thick_node is not None:
+            thick = float(thick_node.text)
+            if min_max == 'Min':
+               self.min_thickness = thick
+            else:
+               self.max_thickness = thick
+            thick_uom = thick_node.attrib['uom']  # todo: check this is correct uom representation
+            if self.thickness_uom is None:
+               self.thickness_uom = thick_uom
+            else:
+               assert thick_uom == self.thickness_uom, 'inconsistent length units of measure for stratigraphic thicknesses'
 
    def is_equivalent(self, other, check_extra_metadata = True):
       # TODO
