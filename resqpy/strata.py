@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '14th August 2021'
+version = '15th August 2021'
 
 import logging
 
@@ -157,6 +157,7 @@ class GeologicUnitInterpretation(BaseResqpy):
          material_implacement = None,
          extra_metadata = None):
       """Initialises an geologic unit interpretation object."""
+
       self.domain = domain
       self.geologic_unit_feature = geologic_unit_feature  # InterpretedFeature RESQML field
       self.has_occurred_during = (None, None)  # optional RESQML item
@@ -189,6 +190,8 @@ class GeologicUnitInterpretation(BaseResqpy):
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False."""
+
+      # this method is coded to allow use by the derived StratigraphicUnitInterpretation class
       if other is None or not isinstance(other, type(self)):
          return False
       if self is other or bu.matching_uuids(self.uuid, other.uuid):
@@ -213,6 +216,7 @@ class GeologicUnitInterpretation(BaseResqpy):
       """Creates a geologic unit interpretation xml tree."""
 
       # note: related feature xml must be created first and is referenced here
+      # this method is coded to allow use by the derived StratigraphicUnitInterpretation class
 
       if reuse and self.try_reuse():
          return self.root
@@ -249,7 +253,7 @@ class GeologicUnitInterpretation(BaseResqpy):
          mi_node.text = self.material_implacement
 
       if add_as_part:
-         self.model.add_part('obj_GeologicUnitInterpretation', self.uuid, gu)
+         self.model.add_part(self.resqml_type, self.uuid, gu)
          if add_relationships:
             self.model.create_reciprocal_relationship(gu, 'destinationObject', guf_root, 'sourceObject')
 
@@ -281,6 +285,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
          max_thickness = None,
          thickness_uom = None,
          extra_metadata = None):
+      """Initialises a stratigraphic unit interpretation object."""
 
       self.deposition_mode = deposition_mode
       self.min_thickness = min_thickness
@@ -329,12 +334,47 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
                assert thick_uom == self.thickness_uom, 'inconsistent length units of measure for stratigraphic thicknesses'
 
    def is_equivalent(self, other, check_extra_metadata = True):
-      # TODO
-      return False
+      """Returns True if this interpretation is essentially the same as the other; otherwise False."""
+      if not super().is_equivalent(other):
+         return False
+      if self.deposition_mode is not None and other.deposition_mode is not None:
+         return self.deposition_mode == other.deposition_mode
+      return True
 
-   def create_xml(self):
-      # TODO
-      pass
+   def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
+      """Creates a stratigraphic unit interpretation xml tree."""
+
+      if reuse and self.try_reuse():
+         return self.root
+      sui = super().create_xml(add_as_part = add_as_part,
+                               add_relationships = add_relationships,
+                               originator = originator,
+                               reuse = False)
+      assert sui is not None
+
+      if self.deposition_mode is not None:
+         assert self.deposition_mode in valid_deposition_modes,  \
+            f'invalid deposition mode {self.deposition_mode} for stratigraphic unit interpretation'
+         dm_node = rqet.SubElement(sui, ns['resqml2'] + 'DepositionMode')
+         dm_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'DepositionMode')
+         dm_node.text = self.deposition_mode
+
+      if self.min_thickness is not None or self.max_thickness is not None:
+         assert self.thickness_uom in wam.valid_uoms(quantity = 'length')
+
+      if self.min_thickness is not None:
+         min_thick_node = rqet.SubElement(sui, ns['resqml2'] + 'MinThickness')
+         min_thick_node.set(ns['xsi'] + 'type', ns['eml'] + 'LengthMeasure')
+         min_thick_node.set('uom', self.thickness_uom)  # todo: check this
+         min_thick_node.text = str(self.min_thickness)
+
+      if self.max_thickness is not None:
+         max_thick_node = rqet.SubElement(sui, ns['resqml2'] + 'MaxThickness')
+         max_thick_node.set(ns['xsi'] + 'type', ns['eml'] + 'LengthMeasure')
+         min_thick_node.set('uom', self.thickness_uom)
+         max_thick_node.text = str(self.max_thickness)
+
+      return sui
 
 
 class StratigraphicColumn(BaseResqpy):
