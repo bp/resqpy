@@ -13,6 +13,8 @@ All contributors (alphabetical order):
 * Connor Tann
 * Duncan Hunter
 * Emma Nesbit
+* Jeremy Tillay
+* Kadija Hassanali
 * Nathan Lane
 
 Ways of contributing
