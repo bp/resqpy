@@ -674,7 +674,7 @@ class BinaryContactInterpretation:
          self,
          model,
          existing_xml_node = None,
-         index: int = None,
+         index = None,
          contact_relationship: str = None,
          verb: str = None,
          subject_uuid = None,
@@ -726,7 +726,7 @@ class BinaryContactInterpretation:
          self.direct_object_contact_mode = direct_object_contact_mode
          self.part_of_uuid = part_of_uuid
 
-   def _load_from_xml(bci_node):
+   def _load_from_xml(self, bci_node):
       """Populates this binary contact interpretation based on existing xml."""
 
       # TODO
