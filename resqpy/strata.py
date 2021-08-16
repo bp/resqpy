@@ -42,6 +42,10 @@ valid_contact_relationships = [
 
 valid_contact_verbs = ['splits', 'interrupts', 'contains', 'erodes', 'stops at', 'crosses', 'includes']
 
+valid_contact_sides = ['footwall', 'hanging wall', 'north', 'south', 'east', 'west', 'younger', 'older', 'both']
+
+valid_contact_modes = ['baselap', 'erosion', 'extended', 'proportional']
+
 
 class StratigraphicUnitFeature(BaseResqpy):
    """Class for RESQML Stratigraphic Unit Feature objects.
@@ -535,9 +539,14 @@ class StratigraphicColumn(BaseResqpy):
       """Initialises a Stratigraphic Column object.
 
       arguments:
+         parent_model (model.Model): the model with which the new stratigraphic column will be associated
+         uuid (uuid.UUID, optional): the uuid of an existing RESQML stratigraphic column from which
+            this object will be initialised
          rank_uuid_list (list of uuid, optional): if not initialising for an existing stratigraphic column,
             the ranks can be established from this list of uuids for existing stratigraphic column ranks;
-            ranks should be ordered from geologically oldest to youngest
+            ranks should be ordered from geologically oldest to youngest with increasing index values
+         title (str, optional): the citation title of the new stratigraphic column; ignored if uuid is not None
+         extra_metadata (dict, optional): extra metadata items for the new feature
       """
 
       self.ranks = []  # list of Stratigraphic Column Rank Interpretation objects
@@ -550,6 +559,7 @@ class StratigraphicColumn(BaseResqpy):
             self.add_rank(rank)
 
    def _load_from_xml(self):
+      """Loads class specific attributes from xml for an existing RESQML object; called from BaseResqpy."""
       rank_node_list = rqet.list_of_tag(self.root, 'Ranks')
       assert rank_node_list is not None, 'no stratigraphic column ranks in xml for stratigraphic column'
       for rank_node in rank_node_list:
@@ -562,20 +572,29 @@ class StratigraphicColumn(BaseResqpy):
       for rank in self.ranks:
          yield rank
 
-   def add_rank(self, rank):
+   def add_rank(self, rank_uuid):
       """Adds another stratigraphic column rank to this stratigraphic column.
 
       arguments:
-         rank (StratigraphicColumnRank): an established rank to be added to this stratigraphic column
+         rank_uuid (uuid.UUID): uuid of an established rank to be added to this stratigraphic column
 
       note:
-         ranks should be ordered from geologically oldest to youngest
+         ranks should be ordered from geologically oldest to youngest, with increasing index values
       """
-      assert rank is not None
-      self.ranks.append(StratigraphicColumnRank(self.model, uuid = rank.uuid))
+      assert rank_uuid is not None
+      self.ranks.append(StratigraphicColumnRank(self.model, uuid = rank_uuid))
 
    def is_equivalent(self, other, check_extra_metadata = True):
-      """Returns True if this interpretation is essentially the same as the other; otherwise False."""
+      """Returns True if this interpretation is essentially the same as the other; otherwise False.
+
+      arguments:
+         other (StratigraphicColumn): the other stratigraphic column to compare this one against
+         check_extra_metadata (bool, default True): if True, then extra metadata items must match for the two
+            columns to be deemed equivalent; if False, extra metadata is ignored in the comparison
+
+      returns:
+         bool: True if this stratigraphic column is essentially the same as the other; False otherwise
+      """
 
       if not isinstance(other, StratigraphicColumn):
          return False
@@ -591,7 +610,19 @@ class StratigraphicColumn(BaseResqpy):
       return True
 
    def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
-      """Creates xml tree for a stratigraphic column object."""
+      """Creates xml tree for a stratigraphic column object.
+
+      arguments:
+         add_as_part (bool, default True): if True, the stratigraphic column is added to the parent model as a high level part
+         add_relationships (bool, default True): if True and add_as_part is True, a relationship is created with each of
+            the referenced stratigraphic column rank interpretations
+         originator (str, optional): if present, is used as the originator field of the citation block
+         reuse (bool, default True): if True, the parent model is inspected for any equivalent stratigraphic column and,
+            if found, the uuid of this stratigraphic column is set to that of the equivalent part
+
+      returns:
+         lxml.etree._Element: the root node of the newly created xml tree for the stratigraphic column
+      """
 
       assert self.ranks, 'attempt to create xml for stratigraphic column without any contributing ranks'
 
@@ -636,16 +667,139 @@ class StratigraphicColumnRank(BaseResqpy):
    pass
 
 
-class ContactInterpretation:
-   """General class for contact between 2 geological entities; not a high level class but used by others."""
+class BinaryContactInterpretation:
+   """Internal class for contact between 2 geological entities; not a high level class but used by others."""
 
-   def __init__(self, index: int, contact_relationship: str, subject, verb: str, direct_object, part_of = None):
+   def __init__(
+         self,
+         model,
+         existing_xml_node = None,
+         index: int = None,
+         contact_relationship: str = None,
+         verb: str = None,
+         subject_uuid = None,
+         direct_object_uuid = None,
+         subject_contact_side = None,  # optional
+         subject_contact_mode = None,  # optional
+         direct_object_contact_side = None,  # optional
+         direct_object_contact_mode = None,  # optional
+         part_of_uuid = None):  # optional
+      """Creates a new binary contact interpretation internal object.
+
+      note:
+         if an existing xml node is present, then all the later arguments are ignored
+      """
       # index (non-negative integer, should increase with decreasing age for horizon contacts)
       # contact relationship (one of valid_contact_relationships)
       # subject (reference to e.g. stratigraphic unit interpretation)
       # verb (one of valid_contact_verbs)
       # direct object (reference to e.g. stratigraphic unit interpretation)
+      # contact sides and modes (optional)
       # part of (reference to e.g. horizon interpretation, optional)
+
+      self.model = model
+
+      if existing_xml_node is not None:
+         self._load_from_xml(existing_xml_node)
+
+      else:
+         assert index >= 0
+         assert contact_relationship in valid_contact_relationships
+         assert verb in valid_contact_verbs
+         assert subject_uuid is not None and direct_object_uuid is not None
+         if subject_contact_side is not None:
+            assert subject_contact_side in valid_contact_sides
+         if subject_contact_mode is not None:
+            assert subject_contact_mode in valid_contact_modes
+         if direct_object_contact_side is not None:
+            assert direct_object_contact_side in valid_contact_sides
+         if direct_object_contact_mode is not None:
+            assert direct_object_contact_mode in valid_contact_modes
+         self.index = index
+         self.contact_relationship = contact_relationship
+         self.verb = verb
+         self.subject_uuid = subject_uuid
+         self.direct_object_uuid = direct_object_uuid
+         self.subject_contact_side = subject_contact_side
+         self.subject_contact_mode = subject_contact_mode
+         self.direct_object_contact_side = direct_object_contact_side
+         self.direct_object_contact_mode = direct_object_contact_mode
+         self.part_of_uuid = part_of_uuid
+
+   def _load_from_xml(bci_node):
+      """Populates this binary contact interpretation based on existing xml."""
 
       # TODO
       pass
+
+   def create_xml(self, parent_node = None):
+      """Generates xml sub-tree for this contact interpretation, for inclusion as element of high level interpretation.
+
+      arguments:
+         parent_node (lxml.etree._Element, optional): if present, the created sub-tree is added as a child to this node
+
+      returns:
+         lxml.etree._Element: the root node of the newly created xml sub-tree for the contact interpretation
+      """
+
+      bci = rqet.Element(ns['resqml2'] + 'ContactInterpretation')
+      bci.set(ns['xsi'] + 'type', ns['resqml2'] + 'BinaryContactInterpretationPart')
+      bci.text = ''
+
+      cr_node = rqet.SubElement(bci, ns['resqml2'] + 'ContactRelationship')
+      cr_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactRelationship')
+      cr_node.text = self.contact_relationship
+
+      i_node = rqet.SubElement(bci, ns['resqml2'] + 'Index')
+      i_node.set(ns['xsi'] + 'type', ns['xsi'] + 'nonNegativeInteger')
+      i_node.text = str(self.index)
+
+      if self.part_of_uuid is not None:
+         self.model.create_ref_node('PartOf',
+                                    self.model.title(uuid = self.part_of_uuid),
+                                    self.part_of_uuid,
+                                    content_type = self.model.type_of_uuid(self.part_of_uuid),
+                                    root = bci)
+
+      dor_node = self.model.create_ref_node('DirectObject',
+                                            self.model.title(uuid = self.direct_object_uuid),
+                                            self.direct_object_uuid,
+                                            content_type = self.model.type_of_uuid(self.direct_object_uuid),
+                                            root = bci)
+      dor_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactElementReference')
+
+      if self.direct_object_contact_side:
+         doq_node = rqet.SubElement(dor_node, ns['resqml2'] + 'Qualifier')
+         doq_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactSide')
+         doq_node.text = self.direct_object_contact_side
+
+      if self.direct_object_contact_mode:
+         dosq_node = rqet.SubElement(dor_node, ns['resqml2'] + 'SecondaryQualifier')
+         dosq_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactMode')
+         dosq_node.text = self.direct_object_contact_mode
+
+      v_node = rqet.SubElement(bci, ns['resqml2'] + 'Verb')
+      v_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactVerb')
+      v_node.text = self.verb
+
+      sr_node = self.model.create_ref_node('Subject',
+                                           self.model.title(uuid = self.subject_uuid),
+                                           self.subject_uuid,
+                                           content_type = self.model.type_of_uuid(self.subject_uuid),
+                                           root = bci)
+      sr_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactElementReference')
+
+      if self.subject_contact_side:
+         sq_node = rqet.SubElement(sr_node, ns['resqml2'] + 'Qualifier')
+         sq_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactSide')
+         sq_node.text = self.subject_contact_side
+
+      if self.subject_contact_mode:
+         ssq_node = rqet.SubElement(sr_node, ns['resqml2'] + 'SecondaryQualifier')
+         ssq_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ContactMode')
+         ssq_node.text = self.subject_contact_mode
+
+      if parent_node is not None:
+         parent_node.append(bci)
+
+      return bci
