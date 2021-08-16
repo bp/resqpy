@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '15th August 2021'
+version = '16th August 2021'
 
 import logging
 
@@ -65,7 +65,23 @@ class StratigraphicUnitFeature(BaseResqpy):
                 title = None,
                 originator = None,
                 extra_metadata = None):
-      """Initialises a stratigraphic unit feature object."""
+      """Initialises a stratigraphic unit feature object.
+
+      arguments:
+         parent_model (model.Model): the model with which the new feature will be associated
+         uuid (uuid.UUID, optional): the uuid of an existing RESQML stratigraphic unit feature from which
+            this object will be initialised
+         top_unit_uuid (uuid.UUID, optional): the uuid of a geologic or stratigraphic unit feature which is
+            at the top of the new unit; ignored if uuid is not None
+         bottom_unit_uuid (uuid.UUID, optional): the uuid of a geologic or stratigraphic unit feature which is
+            at the bottom of the new unit; ignored if uuid is not None
+         title (str, optional): the citation title (feature name) of the new feature; ignored if uuid is not None
+         originator (str, optional): the name of the person creating the new feature; ignored if uuid is not None
+         extra_metadata (dict, optional): extra metadata items for the new feature
+
+      returns:
+         a new stratigraphic unit feature resqpy object
+      """
 
       # todo: clarify with Energistics whether the 2 references are to other StratigraphicUnitFeatures or what?
       self.top_unit_uuid = top_unit_uuid
@@ -78,7 +94,16 @@ class StratigraphicUnitFeature(BaseResqpy):
                        extra_metadata = extra_metadata)
 
    def is_equivalent(self, other, check_extra_metadata = True):
-      """Returns True if this feature is essentially the same as the other; otherwise False."""
+      """Returns True if this feature is essentially the same as the other; otherwise False.
+
+      arguments:
+         other (StratigraphicUnitFeature): the other feature to compare this one against
+         check_extra_metadata (bool, default True): if True, then extra metadata items must match for the two
+            features to be deemed equivalent; if False, extra metadata is ignored in the comparison
+
+      returns:
+         bool: True if this feature is essentially the same as the other feature; False otherwise
+      """
 
       if not isinstance(other, StratigraphicUnitFeature):
          return False
@@ -87,6 +112,7 @@ class StratigraphicUnitFeature(BaseResqpy):
       return (self.title == other.title and ((not check_extra_metadata) or rqo.equivalent_extra_metadata(self, other)))
 
    def _load_from_xml(self):
+      """Loads class specific attributes from xml for an existing RESQML object; called from BaseResqpy."""
       root_node = self.root
       assert root_node is not None
       bottom_ref_uuid = rqet.find_nested_tags_text(root_node, ['ChronostratigraphicBottom', 'UUID'])
@@ -100,7 +126,19 @@ class StratigraphicUnitFeature(BaseResqpy):
          self.top_unit_uuid = bu.uuid_from_string(top_ref_uuid)
 
    def create_xml(self, add_as_part = True, originator = None, reuse = True, add_relationships = True):
-      """Creates xml for this stratigraphic unit feature."""
+      """Creates xml for this stratigraphic unit feature.
+
+      arguments:
+         add_as_part (bool, default True): if True, the feature is added to the parent model as a high level part
+         originator (str, optional): if present, is used as the originator field of the citation block
+         reuse (bool, default True): if True, the parent model is inspected for any equivalent feature and, if found,
+            the uuid of this feature is set to that of the equivalent part
+         add_relationships (bool, default True): if True and add_as_part is True, relationships are created with
+            the referenced top and bottom units, if present
+
+      returns:
+         lxml.etree._Element: the root node of the newly created xml tree for the feature
+      """
 
       if reuse and self.try_reuse():
          return self.root  # check for reusable (equivalent) object
@@ -137,7 +175,7 @@ class StratigraphicUnitFeature(BaseResqpy):
 class GeologicUnitInterpretation(BaseResqpy):
    """Class for RESQML Geologic Unit Interpretation objects.
 
-   These objects can be parts in their own right. Various more specialised classes also derive from this.
+   These objects can be parts in their own right. NB: Various more specialised classes also derive from this.
 
    RESQML documentation:
 
@@ -156,7 +194,28 @@ class GeologicUnitInterpretation(BaseResqpy):
          composition = None,
          material_implacement = None,
          extra_metadata = None):
-      """Initialises an geologic unit interpretation object."""
+      """Initialises an geologic unit interpretation object.
+
+      arguments:
+         parent_model (model.Model): the model with which the new interpretation will be associated
+         uuid (uuid.UUID, optional): the uuid of an existing RESQML geologic unit interpretation from which
+            this object will be initialised
+         title (str, optional): the citation title (feature name) of the new interpretation;
+            ignored if uuid is not None
+         domain (str, default 'time'): 'time', 'depth' or 'mixed', being the domain of the interpretation;
+            ignored if uuid is not None
+         geologic_unit_feature (organize.GeologicUnitFeature or StratigraphicUnitFeature, optional): the feature
+            which this object is an interpretation of; ignored if uuid is not None
+         composition (str, optional): the interpreted composition of the geologic unit; if present, must be
+            in valid_compositions; ignored if uuid is not None
+         material_implacement (str, optional): the interpeted material implacement of the geologic unit;
+            if present, must be in valid_implacements, ie. 'autochtonous' or 'allochtonous';
+            ignored if uuid is not None
+         extra_metadata (dict, optional): extra metadata items for the new interpretation
+
+      returns:
+         a new geologic unit interpretation resqpy object which may be the basis of a derived class object
+      """
 
       self.domain = domain
       self.geologic_unit_feature = geologic_unit_feature  # InterpretedFeature RESQML field
@@ -174,6 +233,7 @@ class GeologicUnitInterpretation(BaseResqpy):
             f'invalid material implacement {self.material_implacement} for geological unit interpretation'
 
    def _load_from_xml(self):
+      """Loads class specific attributes from xml for an existing RESQML object; called from BaseResqpy."""
       root_node = self.root
       assert root_node is not None
       self.domain = rqet.find_tag_text(root_node, 'Domain')
@@ -189,7 +249,17 @@ class GeologicUnitInterpretation(BaseResqpy):
       self.material_implacement = rqet.find_tag_text(root_node, 'GeologicUnitMaterialImplacement')
 
    def is_equivalent(self, other, check_extra_metadata = True):
-      """Returns True if this interpretation is essentially the same as the other; otherwise False."""
+      """Returns True if this interpretation is essentially the same as the other; otherwise False.
+
+      arguments:
+         other (GeologicUnitInterpretation or StratigraphicUnitInterpretation): the other interpretation to
+            compare this one against
+         check_extra_metadata (bool, default True): if True, then extra metadata items must match for the two
+            interpretations to be deemed equivalent; if False, extra metadata is ignored in the comparison
+
+      returns:
+         bool: True if this interpretation is essentially the same as the other; False otherwise
+      """
 
       # this method is coded to allow use by the derived StratigraphicUnitInterpretation class
       if other is None or not isinstance(other, type(self)):
@@ -213,7 +283,19 @@ class GeologicUnitInterpretation(BaseResqpy):
               rqo.equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during))
 
    def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
-      """Creates a geologic unit interpretation xml tree."""
+      """Creates a geologic unit interpretation xml tree.
+
+      arguments:
+         add_as_part (bool, default True): if True, the interpretation is added to the parent model as a high level part
+         add_relationships (bool, default True): if True and add_as_part is True, a relationship is created with
+            the referenced geologic unit feature
+         originator (str, optional): if present, is used as the originator field of the citation block
+         reuse (bool, default True): if True, the parent model is inspected for any equivalent interpretation and, if found,
+            the uuid of this interpretation is set to that of the equivalent part
+
+      returns:
+         lxml.etree._Element: the root node of the newly created xml tree for the interpretation
+      """
 
       # note: related feature xml must be created first and is referenced here
       # this method is coded to allow use by the derived StratigraphicUnitInterpretation class
@@ -234,7 +316,7 @@ class GeologicUnitInterpretation(BaseResqpy):
       self.model.create_ref_node('InterpretedFeature',
                                  self.geologic_unit_feature.title,
                                  self.geologic_unit_feature.uuid,
-                                 content_type = 'obj_GeologicUnitFeature',
+                                 content_type = self.geologic_unit_feature.resqml_type,
                                  root = gu)
 
       rqo.create_xml_has_occurred_during(self.model, gu, self.has_occurred_during)
@@ -277,7 +359,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
          uuid = None,
          title = None,
          domain = 'time',  # or should this be depth?
-         geologic_unit_feature = None,
+         stratigraphic_unit_feature = None,
          composition = None,
          material_implacement = None,
          deposition_mode = None,
@@ -285,7 +367,39 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
          max_thickness = None,
          thickness_uom = None,
          extra_metadata = None):
-      """Initialises a stratigraphic unit interpretation object."""
+      """Initialises a stratigraphic unit interpretation object.
+
+      arguments:
+         parent_model (model.Model): the model with which the new interpretation will be associated
+         uuid (uuid.UUID, optional): the uuid of an existing RESQML stratigraphic unit interpretation from which
+            this object will be initialised
+         title (str, optional): the citation title (feature name) of the new interpretation;
+            ignored if uuid is not None
+         domain (str, default 'time'): 'time', 'depth' or 'mixed', being the domain of the interpretation;
+            ignored if uuid is not None
+         stratigraphic_unit_feature (StratigraphicUnitFeature, optional): the feature which this object is
+            an interpretation of; ignored if uuid is not None
+         composition (str, optional): the interpreted composition of the stratigraphic unit; if present, must be
+            in valid_compositions; ignored if uuid is not None
+         material_implacement (str, optional): the interpeted material implacement of the stratigraphic unit;
+            if present, must be in valid_implacements, ie. 'autochtonous' or 'allochtonous';
+            ignored if uuid is not None
+         deposition_mode (str, optional): indicates whether deposition within the unit is interpreted as parallel
+            to top, base or another boundary, or is proportional to thickness; if present, must be in
+            valid_deposition_modes; ignored if uuid is not None
+         min_thickness (float, optional): the minimum thickness of the unit; ignored if uuid is not None
+         max_thickness (float, optional): the maximum thickness of the unit; ignored if uuid is not None
+         thickness_uom (str, optional): the length unit of measure of the minimum and maximum thickness; required
+            if either thickness argument is provided and uuid is None; if present, must be a valid length uom
+         extra_metadata (dict, optional): extra metadata items for the new interpretation
+
+      returns:
+         a new stratigraphic unit interpretation resqpy object
+
+      note:
+         if given, the thickness_uom must be a valid RESQML length unit of measure; the set of valid uoms is
+         returned by: weights_and_measures.valid_uoms(quantity = 'length')
+      """
 
       self.deposition_mode = deposition_mode
       self.min_thickness = min_thickness
@@ -295,7 +409,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
                        uuid = uuid,
                        title = title,
                        domain = domain,
-                       geologic_unit_feature = geologic_unit_feature,
+                       geologic_unit_feature = stratigraphic_unit_feature,
                        composition = composition,
                        material_implacement = material_implacement,
                        extra_metadata = extra_metadata)
@@ -309,6 +423,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
       return self.geologic_unit_feature
 
    def _load_from_xml(self):
+      """Loads class specific attributes from xml for an existing RESQML object; called from BaseResqpy."""
       super()._load_from_xml()
       root_node = self.root
       assert root_node is not None
@@ -334,18 +449,41 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
                assert thick_uom == self.thickness_uom, 'inconsistent length units of measure for stratigraphic thicknesses'
 
    def is_equivalent(self, other, check_extra_metadata = True):
-      """Returns True if this interpretation is essentially the same as the other; otherwise False."""
+      """Returns True if this interpretation is essentially the same as the other; otherwise False.
+
+      arguments:
+         other (StratigraphicUnitInterpretation): the other interpretation to compare this one against
+         check_extra_metadata (bool, default True): if True, then extra metadata items must match for the two
+            interpretations to be deemed equivalent; if False, extra metadata is ignored in the comparison
+
+      returns:
+         bool: True if this interpretation is essentially the same as the other; False otherwise
+      """
       if not super().is_equivalent(other):
          return False
       if self.deposition_mode is not None and other.deposition_mode is not None:
          return self.deposition_mode == other.deposition_mode
+      # note: thickness range information might be lost as not deemed of significance in comparison
       return True
 
    def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
-      """Creates a stratigraphic unit interpretation xml tree."""
+      """Creates a stratigraphic unit interpretation xml tree.
+
+      arguments:
+         add_as_part (bool, default True): if True, the interpretation is added to the parent model as a high level part
+         add_relationships (bool, default True): if True and add_as_part is True, a relationship is created with
+            the referenced stratigraphic unit feature
+         originator (str, optional): if present, is used as the originator field of the citation block
+         reuse (bool, default True): if True, the parent model is inspected for any equivalent interpretation and, if found,
+            the uuid of this interpretation is set to that of the equivalent part
+
+      returns:
+         lxml.etree._Element: the root node of the newly created xml tree for the interpretation
+      """
 
       if reuse and self.try_reuse():
          return self.root
+
       sui = super().create_xml(add_as_part = add_as_part,
                                add_relationships = add_relationships,
                                originator = originator,
