@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '16th August 2021'
+version = '17th August 2021'
 
 import logging
 
@@ -727,10 +727,40 @@ class BinaryContactInterpretation:
          self.part_of_uuid = part_of_uuid
 
    def _load_from_xml(self, bci_node):
-      """Populates this binary contact interpretation based on existing xml."""
+      """Populates this binary contact interpretation based on existing xml.
 
-      # TODO
-      pass
+      arguments:
+         bci_node (lxml.etree._Element): the root xml node for the binary contact interpretation sub-tree
+      """
+
+      assert bci_node is not None
+
+      self.contact_relationship = rqet.find_tag_text(bci_node, 'ContactRelationship')
+      assert self.contact_relationship in valid_contact_relationships,  \
+         f'missing or invalid contact relationship {self.contact_relationship} in xml for binary contact interpretation'
+
+      self.index = rqet.find_tag_int(bci_node, 'Index')
+      assert self.index is not None, 'missing index in xml for binary contact interpretation'
+
+      self.part_of_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(bci_node, ['PartOf', 'UUID']))
+
+      sr_node = rqet.find_tag(bci_node, 'Subject')
+      assert sr_node is not None, 'missing subject in xml for binary contact interpretation'
+      self.subject_uuid = bu.uuid_from_string(rqet.find_tag_text(sr_node, 'UUID'))
+      assert self.subject_uuid is not None
+      self.subject_contact_side = rqet.find_tag_text(sr_node, 'Qualifier')
+      self.subject_contact_mode = rqet.find_tag_text(sr_node, 'SecondaryQualifier')
+
+      dor_node = rqet.find_tag(bci_node, 'DirectObject')
+      assert dor_node is not None, 'missing direct object in xml for binary contact interpretation'
+      self.direct_object_uuid = bu.uuid_from_string(rqet.find_tag_text(dor_node, 'UUID'))
+      assert self.direct_object_uuid is not None
+      self.direct_object_contact_side = rqet.find_tag_text(dor_node, 'Qualifier')
+      self.direct_object_contact_mode = rqet.find_tag_text(dor_node, 'SecondaryQualifier')
+
+      self.verb = rqet.find_tag_text(bci_node, 'Verb')
+      assert self.verb in valid_contact_verbs,  \
+         f'missing or invalid contact verb {self.verb} in xml for binary contact interpretation'
 
    def create_xml(self, parent_node = None):
       """Generates xml sub-tree for this contact interpretation, for inclusion as element of high level interpretation.
