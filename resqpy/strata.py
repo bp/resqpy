@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '17th August 2021'
+version = '18th August 2021'
 
 import logging
 
@@ -549,7 +549,7 @@ class StratigraphicColumn(BaseResqpy):
          extra_metadata (dict, optional): extra metadata items for the new feature
       """
 
-      self.ranks = []  # list of Stratigraphic Column Rank Interpretation objects
+      self.ranks = []  # list of Stratigraphic Column Rank Interpretation objects, maintained in rank index order
 
       super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
 
@@ -583,6 +583,11 @@ class StratigraphicColumn(BaseResqpy):
       """
       assert rank_uuid is not None
       self.ranks.append(StratigraphicColumnRank(self.model, uuid = rank_uuid))
+      self._sort_ranks()
+
+   def _sort_ranks(self):
+      """Sort the list of ranks, in situ, by their index values."""
+      self.ranks.sort(key = _index_attr)
 
    def is_equivalent(self, other, check_extra_metadata = True):
       """Returns True if this interpretation is essentially the same as the other; otherwise False.
@@ -654,28 +659,79 @@ class StratigraphicColumnRank(BaseResqpy):
 
    resqml_type = 'StratigraphicColumnRankInterpretation'
 
-   # list of contact interpretations (optional)
-   # list of one or more stratigraphic unit interpretations, each with a local index from oldest (0) to youngest
+   def __init__(
+         self,
+         parent_model,
+         uuid = None,
+         domain = 'time',  # or should this be depth?
+         rank_index = None,
+         strata_uuid_list = None,  # ordered list of stratigraphic unit interpretations
+         title = None,
+         extra_metadata = None):
+      """Initialises a Stratigraphic Column Rank resqpy object (RESQML StratigraphicColumnRankInterpretation)."""
 
-   # interpreted feature: an earth model feature
-   # ordering criterion: must be 'age'
-   # domain
-   # index: 0 if only one rank; otherwise indicates nested rank of the column?
-   # has occured during: optional geo time period (organize.py has some relevant code)
+      self.feature_uuid = None  # interpreted earth model feature uuid
+      self.domain = domain
+      self.index = rank_index
+      self.has_occurred_during = (None, None)  # optional RESQML item
+      self.units = []  # ordered list of (index, stratagraphic unit interpretation uuid)
+      self.contacts = []  # optional ordered list of binary contact interpretations
 
-   def __init__(self, parent_model, uuid):
-      # TODO
-      pass
+      super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+
+      if self.root is None and strata_uuid_list is not None:
+         self.set_units(strata_uuid_list)
 
    def _load_from_xml(self):
-      # TODO
-      pass
+      """Loads class specific attributes from xml for an existing RESQML object; called from BaseResqpy."""
+      root_node = self.root
+      assert root_node is not None
+      assert rqet.find_tag_text(root_node, 'OrderingCriteria') == 'age',  \
+         'stratigraphic column rank interpretation ordering criterion must be age'
+      self.domain = rqet.find_tag_text(root_node, 'Domain')
+      self.feature_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(root_node, ['InterpretedFeature', 'UUID']))
+      self.has_occurred_during = rqo.extract_has_occurred_during(root_node)
+      self.index = rqet.find_tag_int(root_node, 'Index')
+      self.units = []
+      for su_node in rqet.list_of_tag(root_node, 'StratigraphicUnits'):
+         index = rqet.find_tag_int(su_node, 'Index')
+         unit_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(su_node, ['Unit', 'UUID']))
+         assert index is not None and unit_uuid is not None
+         self.units.append((index, unit_uuid))
+      self._sort_units()
+      self.contacts = []
+      for contact_node in rqet.list_of_tag(root_node, 'ContactInterpretation'):
+         self.contacts.append(BinaryContactInterpretation(self.model, existing_xml_node = contact_node))
+      self._sort_contacts()
+
+   def set_units(self, strata_uuid_list):
+      """Discard any previous units and set list of units based on ordered list of uuids.
+
+      arguments:
+         strata_uuid_list (list of uuid.UUID): the uuids of the stratigraphic unit interpretations which constitute
+            this stratigraphic column, ordered from geologically oldest to youngest
+      """
+
+      self.units = []
+      for i, uuid in enumerate(strata_uuid_list):
+         self.units.append(i, StratigraphicUnitInterpretation(self.model, uuid = uuid))
+
+   def _sort_units(self):
+      """Sorts units list, in situ, into increasing order of index values."""
+      self.units.sort()
+
+   def _sort_contacts(self):
+      """Sorts contacts list, in situ, into increasing order of index values."""
+      self.contacts.sort(key = _index_attr)
 
    # TODO: iterators for binary contact interpretations, and for stratigraphic units, each ordered by respective index
+
+   # todo: implement a strict validation method checking contact exists for each neighbouring unit pair
 
    def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
       # TODO
       pass
+
 
 class BinaryContactInterpretation:
    """Internal class for contact between 2 geological entities; not a high level class but used by others."""
@@ -843,3 +899,7 @@ class BinaryContactInterpretation:
          parent_node.append(bci)
 
       return bci
+
+
+def _index_attr(obj):
+   return obj.index
