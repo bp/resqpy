@@ -29,7 +29,7 @@ Initialize an instance of a ``RelPerm`` object that is stored in a resqpy ``Mode
     model = rm.Model('/path/to/my_file.epc')
     relperm_wo = RelPerm(model = model, uuid = uuid)
 
-The dataframe of water-oil relative relperm data is then accessed using the :meth:`resqpy.olio.relperm.RelPerm.dataframe` method.
+The dataframe of water-oil relperm data is then accessed using the :meth:`resqpy.olio.relperm.RelPerm.dataframe` method.
 
 .. code-block:: python
 
