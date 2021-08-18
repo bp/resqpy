@@ -16,7 +16,7 @@ In this tutorial we will be moving water-oil relperm data between the ``RelPerm`
     from pyscal import WaterOil
     # import a plotting library for visual inspection of the data
     import matplotlib.pyplot as plt
-    # import resqpy model module to interact with a RESQML model
+    # import resqpy model module to interact with a resqpy model
     import resqpy.model as rm
 
 resqpy RelPerm.dataframe() to pyscal WaterOil.table
