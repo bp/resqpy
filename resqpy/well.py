@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '14th July 2021'
+version = '18th August 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -1835,7 +1835,8 @@ class BlockedWell(BaseResqpy):
 
       if self.root is None:
          self.wellbore_interpretation = represented_interp
-         if grid is None:
+         if grid is None and (self.trajectory is not None or wellspec_file is not None or cellio_file is not None or
+                              column_ji0 is not None):
             grid = self.model.grid()
          if self.trajectory is not None:
             self.compute_from_trajectory(self.trajectory, grid)
