@@ -663,9 +663,19 @@ class StratigraphicColumnRank(BaseResqpy):
    # index: 0 if only one rank; otherwise indicates nested rank of the column?
    # has occured during: optional geo time period (organize.py has some relevant code)
 
-   # TODO
-   pass
+   def __init__(self, parent_model, uuid):
+      # TODO
+      pass
 
+   def _load_from_xml(self):
+      # TODO
+      pass
+
+   # TODO: iterators for binary contact interpretations, and for stratigraphic units, each ordered by respective index
+
+   def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
+      # TODO
+      pass
 
 class BinaryContactInterpretation:
    """Internal class for contact between 2 geological entities; not a high level class but used by others."""
