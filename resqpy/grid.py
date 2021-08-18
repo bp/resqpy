@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '2nd July 2021'
+version = '18th August 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -138,6 +138,8 @@ class Grid(BaseResqpy):
       self.active_property_uuid = None  #: uuid of property holding active cell boolean array (used to populate inactive)
       self.pinchout = None  #: numpy bool array: pinchout mask, only set on demand (not native resqml)
       self.grid_skin = None  #: outer skin of grid as a GridSkin object, computed and cached on demand
+      self.stratigraphic_column_rank_uuid = None  #: optional reference for interpreting stratigraphic units
+      self.stratigraphic_units = None  #: optional array of unit indices (one per layer or K gap)
 
       super().__init__(model = parent_model,
                        uuid = uuid,
@@ -188,6 +190,7 @@ class Grid(BaseResqpy):
       self.extract_children()
       #        self.create_column_pillar_mapping()  # mapping now created on demand in other methods
       self.extract_inactive_mask()
+      self.extract_stratigraphy()
 
    @property
    def grid_root(self):
@@ -511,6 +514,27 @@ class Grid(BaseResqpy):
          self.k_gap_after_array = None
          self.k_raw_index_array = np.arange(self.nk, dtype = int)
       return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
+
+   def extract_stratigraphy(self):
+      """Loads stratigraphic information from xml."""
+
+      self.stratigraphic_column_rank_uuid = None
+      self.stratigraphic_units = None
+      strata_node = rqet.find_tag(self.root, 'IntervalStratigraphicUnits')
+      if strata_node is None:
+         return
+      self.stratigraphic_column_rank_uuid =  \
+         bu.uuid_from_string(rqet.find_nested_tags_text(strata_node, ['StratigraphicOrganization', 'UUID']))
+      assert self.stratigraphic_column_rank_uuid is not None
+      unit_indices_node = rqet.find_tag(strata_node, 'UnitIndices')
+      h5_key_pair = self.model.h5_uuid_and_path_for_node(unit_indices_node)
+      self.model.h5_array_element(h5_key_pair,
+                                  index = None,
+                                  cache_array = True,
+                                  object = self,
+                                  array_attribute = 'stratigraphic_units',
+                                  dtype = 'int')
+      assert len(self.stratigraphic_units) == self.nk_plus_k_gaps
 
    def extract_parent(self):
       """Loads fine:coarse mapping information between this grid and parent, if any, returning parent grid uuid."""
@@ -4324,7 +4348,8 @@ class Grid(BaseResqpy):
                               mode = 'a',
                               geometry = True,
                               imported_properties = None,
-                              write_active = None):
+                              write_active = None,
+                              stratigraphy = True):
       """Create or append to an hdf5 file, writing datasets for the grid geometry (and parent grid mapping) and properties from cached arrays."""
 
       # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
@@ -4339,6 +4364,9 @@ class Grid(BaseResqpy):
       if not file:
          file = self.model.h5_file_name()
       h5_reg = rwh5.H5Register(self.model)
+
+      if stratigraphy and self.stratigraphic_units:
+         h5_reg.register_dataset(self.uuid, 'unitIndices', self.stratigraphic_units, dtype = 'uint32')
 
       if geometry:
          if always_write_pillar_geometry_is_defined_array or not self.geometry_defined_for_all_pillars(
@@ -4431,7 +4459,11 @@ class Grid(BaseResqpy):
       :meta common:
       """
 
-      self.write_hdf5_from_caches(mode = 'a', geometry = True, imported_properties = None, write_active = True)
+      self.write_hdf5_from_caches(mode = 'a',
+                                  geometry = True,
+                                  imported_properties = None,
+                                  write_active = True,
+                                  stratigraphy = True)
 
    def off_handed(self):
       """Returns False if IJK and xyz have same handedness, True if they differ."""
@@ -4801,6 +4833,34 @@ class Grid(BaseResqpy):
 
          self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'GapAfterLayer', root = kgal_values)
 
+      if self.stratigraphic_column_rank_uuid is not None and self.stratigraphic_units:
+
+         assert self.model.type_of_uuid(self.stratigraphic_column_rank_uuid) == 'StratigraphicColumnRankInterpretation'
+
+         strata_node = rqet.SubElement(ijk, ns['resqml2'] + 'IntervalStratigraphicUnits')
+         strata_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntervalStratigraphicUnits')
+         strata_node.text = '\n'
+
+         ui_node = rqet.SubElement(strata_node, ns['resqml2'] + 'UnitIndices')
+         ui_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
+         ui_node.text = '\n'
+
+         ui_null = rqet.SubElement(ui_node, ns['resqml2'] + 'NullValue')
+         ui_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+         ui_null.text = '-1'
+
+         ui_values = rqet.SubElement(ui_node, ns['resqml2'] + 'Values')
+         ui_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+         ui_values.text = '\n'
+
+         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'unitIndices', root = ui_values)
+
+         self.model.create_ref_node('StratigraphicOrganization',
+                                    self.model.title(uuid = self.stratigraphic_column_rank_uuid),
+                                    self.stratigraphic_column_rank_uuid,
+                                    content_type = 'StratigraphicColumnRankInterpretation',
+                                    root = strata_node)
+
       if self.parent_window is not None:
 
          pw_node = rqet.SubElement(ijk, ns['resqml2'] + 'ParentWindow')
@@ -5052,6 +5112,10 @@ class Grid(BaseResqpy):
       if add_as_part:
          self.model.add_part('obj_IjkGridRepresentation', self.uuid, ijk)
          if add_relationships:
+            if self.stratigraphic_column_rank_uuid is not None and self.stratigraphic_units:
+               self.model.create_reciprocal_relationship(ijk, 'destinationObject',
+                                                         self.model.root_for_uuid(self.stratigraphic_column_rank_uuid),
+                                                         'sourceObject')
             if write_geometry:
                # create 2 way relationship between IjkGrid and Crs
                self.model.create_reciprocal_relationship(ijk, 'destinationObject', self.crs_root, 'sourceObject')
