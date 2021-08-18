@@ -79,7 +79,7 @@ We reference the same ``WaterOil`` table instance, pyscal_wo_df, from the previo
     model = rm.Model('/path/to/my_file.epc')
     all_relevant_pyscal_cols = ['SW', 'SG', 'KRW', 'KRG', 'KROW', 'KROG']
     cols = sorted(list(set(pyscal_wo_df.columns).intersection(set(all_relevant_pyscal_cols))), reverse=True)
-    if 'PC' in obj.table.columns:
+    if 'PC' in pyscal_wo_df.columns:
         cols.append('PC')
     col_remap_dict = {k: (k.capitalize() if len(k) < 4 else k.capitalize()[0:3]) for k in cols}
     pyscal_wo_df_processed = pyscal_wo_df[cols].rename(columns = col_remap_dict)
