@@ -659,7 +659,10 @@ class StratigraphicColumn(BaseResqpy):
 
 
 class StratigraphicColumnRank(BaseResqpy):
-   """Class for RESQML StratigraphicColumnRankInterpretation objects."""
+   """Class for RESQML StratigraphicColumnRankInterpretation objects.
+
+   A list of stratigraphic unit interpretations, ordered from geologically oldest to youngest.
+   """
 
    resqml_type = 'StratigraphicColumnRankInterpretation'
 
@@ -675,7 +678,24 @@ class StratigraphicColumnRank(BaseResqpy):
          strata_uuid_list = None,  # ordered list of stratigraphic unit interpretations
          title = None,
          extra_metadata = None):
-      """Initialises a Stratigraphic Column Rank resqpy object (RESQML StratigraphicColumnRankInterpretation)."""
+      """Initialises a Stratigraphic Column Rank resqpy object (RESQML StratigraphicColumnRankInterpretation).
+
+      arguments:
+         parent_model (model.Model): the model with which the new interpretation will be associated
+         uuid (uuid.UUID, optional): the uuid of an existing RESQML stratigraphic column rank interpretation
+            from which this object will be initialised
+         domain (str, default 'time'): 'time', 'depth' or 'mixed', being the domain of the interpretation;
+            ignored if uuid is not None
+         rank_index (int, optional): the rank index (RESQML index) for this rank when multiple ranks are used;
+            will default to zero if not set; ignored if uuid is not None
+         earth_model_feature_uuid (uuid.UUID, optional): the uuid of an existing organization feature of kind
+            'earth model' which this stratigraphic column is for; ignored if uuid is not None
+         strata_uuid_list (list of uuid.UUID, optional): a list of uuids of existing stratigraphic unit
+            interpretations, ordered from geologically oldest to youngest; ignored if uuid is not None
+         title (str, optional): the citation title (feature name) of the new interpretation;
+            ignored if uuid is not None
+         extra_metadata (dict, optional): extra metadata items for the new stratigraphic column rank interpretation
+      """
 
       self.feature_uuid = earth_model_feature_uuid  # interpreted earth model feature uuid
       self.domain = domain
