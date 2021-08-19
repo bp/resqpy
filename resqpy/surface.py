@@ -1198,7 +1198,8 @@ class PointSet(_BaseSurface):
                        uuid = uuid,
                        title = title,
                        originator = originator,
-                       root_node = point_set_root)
+                       root_node = point_set_root,
+                       extra_metadata = extra_metadata)
 
       if self.root is not None:
          if load_hdf5:
@@ -1298,7 +1299,7 @@ class PointSet(_BaseSurface):
       for child in rqet.list_of_tag(root_node, 'NodePatch'):
          point_count = rqet.find_tag_int(child, 'Count')
          geom_node = rqet.find_tag(child, 'Geometry')
-         assert geom_node, 'geometry missing in xml for point set patch'
+         assert geom_node is not None, 'geometry missing in xml for point set patch'
          crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
          assert crs_uuid, 'crs uuid missing in geometry xml for point set patch'
          if self.crs_uuid is None:
@@ -1533,6 +1534,14 @@ class PointSet(_BaseSurface):
       with open(file_name, 'w') as f:
          for item in lines:
             f.write(item)
+
+   def append_extra_metadata(self, meta_dict):
+      """Append a given dictionary of metadata to the existing metadata."""
+
+      if self.extra_metadata is None:
+         self.extra_metadata = {}
+      for key in meta_dict:
+         self.extra_metadata[key] = meta_dict[key]
 
 
 class Mesh(_BaseSurface):
