@@ -342,7 +342,7 @@ class GeologicUnitInterpretation(BaseResqpy):
          mi_node.text = self.material_implacement
 
       if add_as_part:
-         self.model.add_part(self.resqml_type, self.uuid, gu)
+         self.model.add_part('obj_' + self.resqml_type, self.uuid, gu)
          if add_relationships:
             self.model.create_reciprocal_relationship(gu, 'destinationObject', guf_root, 'sourceObject')
 
@@ -705,7 +705,7 @@ class StratigraphicColumnRank(BaseResqpy):
          unit_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(su_node, ['Unit', 'UUID']))
          assert index is not None and unit_uuid is not None
          assert self.model.type_of_uuid(unit_uuid, strip_obj = True) == 'StratigraphicUnitInterpretation'
-         self.units.append((index, unit_uuid))
+         self.units.append((index, StratigraphicUnitInterpretation(self.model, uuid = unit_uuid)))
       self._sort_units()
       self.contacts = []
       for contact_node in rqet.list_of_tag(root_node, 'ContactInterpretation'):
@@ -863,7 +863,7 @@ class StratigraphicColumnRank(BaseResqpy):
          contact.create_xml(scri)
 
       if add_as_part:
-         self.model.add_part(self.resqml_type, self.uuid, scri)
+         self.model.add_part('obj_StratigraphicColumnRankInterpretation', self.uuid, scri)
          if add_relationships:
             emi_root = self.model.root(uuid = self.feature_uuid)
             self.model.create_reciprocal_relationship(scri, 'destinationObject', emi_root, 'sourceObject')
