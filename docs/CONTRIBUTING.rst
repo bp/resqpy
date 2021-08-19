@@ -204,9 +204,15 @@ at `readthedocs <https://resqpy.readthedocs.io/>`_.
 There a few different versions of the documentation available, tied to different
 versions of the code:
 
-* `https://resqpy.readthedocs.io/en/latest/` (the `master` branch, default)
-* `https://resqpy.readthedocs.io/en/stable/` (the most recent git tag)
-* `https://resqpy.readthedocs.io/en/docs/`  (the `docs` branch)
++------------------------------------------+------------------------------+--------+
+| URL                                      | Version                      | Hidden |
++==========================================+==============================+========+
+| https://resqpy.readthedocs.io/en/latest/ | The `master` branch, default | No     |
++------------------------------------------+------------------------------+--------+
+| https://resqpy.readthedocs.io/en/stable/ | The most recent git tag      | No     |
++------------------------------------------+------------------------------+--------+
+| https://resqpy.readthedocs.io/en/docs/   | The `docs` branch            | Yes    |
++------------------------------------------+------------------------------+--------+
 
 These automatically re-build when the relevant branch is updated, or when a new
 tag is pushed.
