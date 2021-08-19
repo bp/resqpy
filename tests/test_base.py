@@ -104,8 +104,8 @@ def test_base_reuse_duplicate(tmp_model):
    assert len(uuids) == 1
    assert bu.matching_uuids(uuids[0], dummy_2.uuid)
 
+
 def test_append_extra_metadata(tmp_model):
-    dummy = ReusableDummyObj(model = tmp_model, extra_metadata={'fruit':'apple','animal':'alpaca'})
-    dummy.append_extra_metadata({'fruit':'pear'})
-    assert dummy.extra_metadata == {'fruit':'pear','animal':'alpaca'}, 'did not append dictionary correctly'
-    
+   dummy = ReusableDummyObj(model = tmp_model, extra_metadata = {'fruit': 'apple', 'animal': 'alpaca'})
+   dummy.append_extra_metadata({'fruit': 'pear'})
+   assert dummy.extra_metadata == {'fruit': 'pear', 'animal': 'alpaca'}, 'did not append dictionary correctly'
