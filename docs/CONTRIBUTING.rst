@@ -222,6 +222,12 @@ create a new feature branch called `docs` and push changes there; you can then
 use the link above to check it renders correctly. One can delete the `docs` git
 branch as usual when closing a PR, and re-create it when needed.
 
+You may find it helpful to run a linter to check that the syntax of your
+ReStructured text is correct: the python package `restructuredtext-lint` is
+pretty good for this purpose. Similarly, many IDEs or plugins have a "rewrap"
+function that inserts line endings for uniform line lengths, which can make text
+more readable and visually pleasing.
+
 You can also build the docs locally, providing you have installed all required
 dependencies as described above:
 
