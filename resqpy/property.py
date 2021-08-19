@@ -5045,14 +5045,6 @@ class StringLookup(BaseResqpy):
             return k
       return None
 
-   def append_extra_metadata(self, meta_dict):
-      """Append a given dictionary of metadata to the existing metadata."""
-
-      if self.extra_metadata is None:
-         self.extra_metadata = {}
-      for key in meta_dict:
-         self.extra_metadata[key] = meta_dict[key]
-
    def create_xml(self, title = None, originator = None, add_as_part = True, reuse = True):
       """Creates an xml node for the string table lookup.
 

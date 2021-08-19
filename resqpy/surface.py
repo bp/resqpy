@@ -1198,7 +1198,8 @@ class PointSet(_BaseSurface):
                        uuid = uuid,
                        title = title,
                        originator = originator,
-                       root_node = point_set_root)
+                       root_node = point_set_root,
+                       extra_metadata = extra_metadata)
 
       if self.root is not None:
          if load_hdf5:
@@ -1298,7 +1299,7 @@ class PointSet(_BaseSurface):
       for child in rqet.list_of_tag(root_node, 'NodePatch'):
          point_count = rqet.find_tag_int(child, 'Count')
          geom_node = rqet.find_tag(child, 'Geometry')
-         assert geom_node, 'geometry missing in xml for point set patch'
+         assert geom_node is not None, 'geometry missing in xml for point set patch'
          crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
          assert crs_uuid, 'crs uuid missing in geometry xml for point set patch'
          if self.crs_uuid is None:
