@@ -4,11 +4,11 @@ This tutorial describes two workflows that allow us to pass relative permeabilit
 
 We will be moving water-oil relperm data between resqpy's :class:`resqpy.olio.relperm.RelPerm` class and pyscal's :class:`pyscal.WaterOil` class.
 
-Please note that similar workflows can be used for moving gas-oil data to/from the :class:`pyscal.pyscal.GasOil` class.
+Please note that similar workflows can be used for moving gas-oil data to/from the :class:`pyscal.GasOil` class.
 
 Importing the relperm and wateroil modules
 --------------------------------------
-In this tutorial we will be moving water-oil relperm data between the ``RelPerm`` object's :meth:`resqpy.olio.relperm.dataframe` method and the ``WaterOil`` object's :attr:`pyscal.WaterOil.table` attribute.
+In this tutorial we will be moving water-oil relperm data between the ``RelPerm`` object's :meth:`resqpy.olio.relperm.RelPerm.dataframe` method and the ``WaterOil`` object's :attr:`pyscal.WaterOil.table` attribute.
 
 .. code-block:: python
 
