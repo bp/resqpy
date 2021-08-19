@@ -138,9 +138,8 @@ def test_strata(tmp_path):
    strata_column = strata.StratigraphicColumn(model, uuid = strata_column_uuid)
    assert strata_column is not None
    assert len(strata_column.ranks) == 1
-   strata_column_ri_uuid = model.uuid(obj_type = 'StratigraphicColumnRankInterpretation')
-   #   strata_column_ri_uuid = model.uuid(obj_type = 'StratigraphicColumnRankInterpretation',
-   #                                      related_uuid = strata_column_uuid)
+   strata_column_ri_uuid = model.uuid(obj_type = 'StratigraphicColumnRankInterpretation',
+                                      related_uuid = strata_column_uuid)
    assert strata_column_ri_uuid is not None and bu.matching_uuids(strata_column_ri_uuid, scri.uuid)
    assert bu.matching_uuids(strata_column_ri_uuid, strata_column.ranks[0].uuid)
    assert bu.matching_uuids(strata_column_ri_uuid, grid.stratigraphic_column_rank_uuid)
