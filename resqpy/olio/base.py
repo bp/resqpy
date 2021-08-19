@@ -112,6 +112,9 @@ class BaseResqpy(metaclass = ABCMeta):
          return True
       uuid_list = self.model.uuids(obj_type = self.resqml_type)
       for other_uuid in uuid_list:
+         if bu.matching_uuids(self.uuid, other_uuid):
+            logger.debug(f'reusing existing xml for uuid {other_uuid}')
+            return True
          other = self.__class__(self.model, uuid = other_uuid)
          if self == other:
             logger.debug(f'reusing equivalent resqml object with uuid {other_uuid}')

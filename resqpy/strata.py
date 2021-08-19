@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '18th August 2021'
+version = '19th August 2021'
 
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 # RMS is a registered trademark of Roxar Software Solutions AS, an Emerson company
@@ -315,7 +315,7 @@ class GeologicUnitInterpretation(BaseResqpy):
       guf_root = self.geologic_unit_feature.root
       assert guf_root is not None, 'interpreted feature not established for geologic unit interpretation'
 
-      assert self.domain in self.valid_domains, 'illegal domain value for geologic unit interpretation'
+      assert self.domain in valid_domains, 'illegal domain value for geologic unit interpretation'
       dom_node = rqet.SubElement(gu, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       dom_node.text = self.domain
@@ -412,7 +412,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
       self.min_thickness = min_thickness
       self.max_thickness = max_thickness
       self.thickness_uom = thickness_uom
-      super().__init__(model = parent_model,
+      super().__init__(parent_model,
                        uuid = uuid,
                        title = title,
                        domain = domain,
@@ -438,7 +438,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
       if feature_uuid is not None:
          self.geologic_unit_feature = StratigraphicUnitFeature(self.model,
                                                                uuid = feature_uuid,
-                                                               feature_name = self.model.title(uuid = feature_uuid))
+                                                               title = self.model.title(uuid = feature_uuid))
       # load deposition mode and min & max thicknesses (& uom), if present
       self.deposition_mode = rqet.find_tag_text(root_node, 'DepositionMode')
       for min_max in ['Min', 'Max']:
@@ -516,7 +516,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
       if self.max_thickness is not None:
          max_thick_node = rqet.SubElement(sui, ns['resqml2'] + 'MaxThickness')
          max_thick_node.set(ns['xsi'] + 'type', ns['eml'] + 'LengthMeasure')
-         min_thick_node.set('uom', self.thickness_uom)
+         max_thick_node.set('uom', self.thickness_uom)
          max_thick_node.text = str(self.max_thickness)
 
       return sui
@@ -566,7 +566,7 @@ class StratigraphicColumn(BaseResqpy):
       rank_node_list = rqet.list_of_tag(self.root, 'Ranks')
       assert rank_node_list is not None, 'no stratigraphic column ranks in xml for stratigraphic column'
       for rank_node in rank_node_list:
-         rank = StratigraphicColumnRank(self.model, uuid = rqet.uuid_for_part_root(rank_node))
+         rank = StratigraphicColumnRank(self.model, uuid = rqet.find_tag_text(rank_node, 'UUID'))
          self.add_rank(rank)
 
    def iter_ranks(self):
@@ -575,17 +575,18 @@ class StratigraphicColumn(BaseResqpy):
       for rank in self.ranks:
          yield rank
 
-   def add_rank(self, rank_uuid):
+   def add_rank(self, rank):
       """Adds another stratigraphic column rank to this stratigraphic column.
 
       arguments:
-         rank_uuid (uuid.UUID): uuid of an established rank to be added to this stratigraphic column
+         rank (StratigraphicColumnRank): an established rank to be added to this stratigraphic column
 
       note:
          ranks should be ordered from geologically oldest to youngest, with increasing index values
       """
-      assert rank_uuid is not None
-      self.ranks.append(StratigraphicColumnRank(self.model, uuid = rank_uuid))
+
+      assert rank is not None and rank.index is not None
+      self.ranks.append(rank)
       self._sort_ranks()
 
    def _sort_ranks(self):
@@ -642,7 +643,7 @@ class StratigraphicColumn(BaseResqpy):
       assert sci is not None
 
       for rank in self.ranks:
-         self.model.create_ref_node('InterpretedFeature',
+         self.model.create_ref_node('Ranks',
                                     rank.title,
                                     rank.uuid,
                                     content_type = 'obj_StratigraphicColumnRankInterpretation',
@@ -670,12 +671,13 @@ class StratigraphicColumnRank(BaseResqpy):
          uuid = None,
          domain = 'time',  # or should this be depth?
          rank_index = None,
+         earth_model_feature_uuid = None,
          strata_uuid_list = None,  # ordered list of stratigraphic unit interpretations
          title = None,
          extra_metadata = None):
       """Initialises a Stratigraphic Column Rank resqpy object (RESQML StratigraphicColumnRankInterpretation)."""
 
-      self.feature_uuid = None  # interpreted earth model feature uuid
+      self.feature_uuid = earth_model_feature_uuid  # interpreted earth model feature uuid
       self.domain = domain
       self.index = rank_index
       self.has_occurred_during = (None, None)  # optional RESQML item
@@ -721,7 +723,7 @@ class StratigraphicColumnRank(BaseResqpy):
       self.units = []
       for i, uuid in enumerate(strata_uuid_list):
          assert self.model.type_of_uuid(uuid, strip_obj = True) == 'StratigraphicUnitInterpretation'
-         self.units.append(i, StratigraphicUnitInterpretation(self.model, uuid = uuid))
+         self.units.append((i, StratigraphicUnitInterpretation(self.model, uuid = uuid)))
 
    def _sort_units(self):
       """Sorts units list, in situ, into increasing order of index values."""
@@ -771,8 +773,16 @@ class StratigraphicColumnRank(BaseResqpy):
    def iter_units(self):
       """Yields the ordered stratigraphic unit interpretations which constitute this stratigraphic colunn."""
 
-      for unit in self.units:
+      for _, unit in self.units:
          yield unit
+
+   def unit_for_unit_index(self, index):
+      """Returns the stratigraphic unit interpretation with the given index in this stratigraphic colunn."""
+
+      for i, unit in self.units:
+         if i == index:
+            return unit
+      return None
 
    def iter_contacts(self):
       """Yields the internal binary contact interpretations of this stratigraphic colunn."""
@@ -810,14 +820,15 @@ class StratigraphicColumnRank(BaseResqpy):
       scri = super().create_xml(add_as_part = False, originator = originator)
 
       assert self.feature_uuid is not None
-      assert self.model.type_of_uuid(self.feature_uuid, strip_obj = True) == 'EarthModelInterpretation'
+      assert self.model.type_of_uuid(self.feature_uuid, strip_obj = True) == 'OrganizationFeature'
+      # todo: could also check that the kind is 'earth model'
       self.model.create_ref_node('InterpretedFeature',
                                  self.model.title(uuid = self.feature_uuid),
                                  self.feature_uuid,
-                                 content_type = 'EarthModelInterpretation',
+                                 content_type = 'OrganizationFeature',
                                  root = scri)
 
-      assert self.domain in self.valid_domains, 'illegal domain value for stratigraphic column rank interpretation'
+      assert self.domain in valid_domains, 'illegal domain value for stratigraphic column rank interpretation'
       dom_node = rqet.SubElement(scri, ns['resqml2'] + 'Domain')
       dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
       dom_node.text = self.domain

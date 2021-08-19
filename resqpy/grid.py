@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '18th August 2021'
+version = '19th August 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -502,18 +502,25 @@ class Grid(BaseResqpy):
                                      dtype = 'bool')
          assert hasattr(self, 'k_gap_after_array')
          assert self.k_gap_after_array.ndim == 1 and self.k_gap_after_array.size == self.nk - 1
-         self.k_raw_index_array = np.empty((self.nk,), dtype = int)
-         gap_count = 0
-         for k in range(self.nk):
-            self.k_raw_index_array[k] = k + gap_count
-            if k < self.nk - 1 and self.k_gap_after_array[k]:
-               gap_count += 1
-         assert gap_count == self.k_gaps, 'inconsistency in k gap data'
+         self._set_k_raw_index_array()
       else:
          self.nk_plus_k_gaps = self.nk
          self.k_gap_after_array = None
          self.k_raw_index_array = np.arange(self.nk, dtype = int)
       return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
+
+   def _set_k_raw_index_array(self):
+      """Sets the layering raw index array based on the k gap after boolean array."""
+      if self.k_gap_after_array is None:
+         self.k_raw_index_array = None
+         return
+      self.k_raw_index_array = np.empty((self.nk,), dtype = int)
+      gap_count = 0
+      for k in range(self.nk):
+         self.k_raw_index_array[k] = k + gap_count
+         if k < self.nk - 1 and self.k_gap_after_array[k]:
+            gap_count += 1
+      assert gap_count == self.k_gaps, 'inconsistency in k gap data'
 
    def extract_stratigraphy(self):
       """Loads stratigraphic information from xml."""
@@ -4365,7 +4372,7 @@ class Grid(BaseResqpy):
          file = self.model.h5_file_name()
       h5_reg = rwh5.H5Register(self.model)
 
-      if stratigraphy and self.stratigraphic_units:
+      if stratigraphy and self.stratigraphic_units is not None:
          h5_reg.register_dataset(self.uuid, 'unitIndices', self.stratigraphic_units, dtype = 'uint32')
 
       if geometry:
@@ -4833,9 +4840,10 @@ class Grid(BaseResqpy):
 
          self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'GapAfterLayer', root = kgal_values)
 
-      if self.stratigraphic_column_rank_uuid is not None and self.stratigraphic_units:
+      if self.stratigraphic_column_rank_uuid is not None and self.stratigraphic_units is not None:
 
-         assert self.model.type_of_uuid(self.stratigraphic_column_rank_uuid) == 'StratigraphicColumnRankInterpretation'
+         assert self.model.type_of_uuid(
+            self.stratigraphic_column_rank_uuid) == 'obj_StratigraphicColumnRankInterpretation'
 
          strata_node = rqet.SubElement(ijk, ns['resqml2'] + 'IntervalStratigraphicUnits')
          strata_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntervalStratigraphicUnits')
@@ -5112,7 +5120,7 @@ class Grid(BaseResqpy):
       if add_as_part:
          self.model.add_part('obj_IjkGridRepresentation', self.uuid, ijk)
          if add_relationships:
-            if self.stratigraphic_column_rank_uuid is not None and self.stratigraphic_units:
+            if self.stratigraphic_column_rank_uuid is not None and self.stratigraphic_units is not None:
                self.model.create_reciprocal_relationship(ijk, 'destinationObject',
                                                          self.model.root_for_uuid(self.stratigraphic_column_rank_uuid),
                                                          'sourceObject')
