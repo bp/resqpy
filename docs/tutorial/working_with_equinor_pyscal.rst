@@ -22,7 +22,7 @@ In this tutorial we will be moving water-oil relperm data between the ``RelPerm`
 resqpy RelPerm.dataframe() to pyscal WaterOil.table
 --------------------------------------
 
-Initialize an instance of a ``RelPerm`` object that is stored in a resqpy ``Model`` instance. This can be done using the *uuid* of the existing ``Grid2dRepresentation`` object that acts as support for the dataframe of relperm data. :
+Initialize an instance of a ``RelPerm`` object that is stored in a resqpy ``Model`` instance. This can be done using the *uuid* of the existing ``Grid2dRepresentation`` object that acts as support for the dataframe of relperm data.
 
 .. code-block:: python
 
