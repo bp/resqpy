@@ -199,9 +199,25 @@ Documentation
 -------------
 
 The docs are built automatically when code is merged into master, and are hosted
-at `readthedocs <https://resqpy.readthedocs.io/>`_. You can also build the docs
-locally, providing you have installed all required dependencies as described
-above:
+at `readthedocs <https://resqpy.readthedocs.io/>`_.
+
+There a few different versions of the documentation available, tied to different
+versions of the code:
+
+* `https://resqpy.readthedocs.io/en/latest/` (the `master` branch, default)
+* `https://resqpy.readthedocs.io/en/stable/` (the most recent git tag)
+* `https://resqpy.readthedocs.io/en/docs/`  (the `docs` branch)
+
+These automatically re-build when the relevant branch is updated, or when a new
+tag is pushed.
+
+The `docs` version is intended for previewing changes to documentation. Just
+create a new feature branch called `docs` and push changes there; you can then
+use the link above to check it renders correctly. One can delete the `docs` git
+branch as usual when closing a PR, and re-create it when needed.
+
+You can also build the docs locally, providing you have installed all required
+dependencies as described above:
 
 .. code:: bash
 
