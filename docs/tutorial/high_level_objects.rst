@@ -181,7 +181,7 @@ The table below shows which high level resqpy class is used to represent each RE
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_GeologicUnitFeature                                | none       | :class:`resqpy.organize.GeologicUnitFeature`              |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_GeologicUnitInterpretation                         |            |                                                           |
+| obj_GeologicUnitInterpretation                         | none       | :class:`resqpy.strata.GeologicUnitInterpretation`         |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_GlobalChronostratigraphicColumn                    |            |                                                           |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
@@ -245,15 +245,15 @@ The table below shows which high level resqpy class is used to represent each RE
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_SeismicLineSetFeature                              |            |                                                           |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_StratigraphicColumn                                |            |                                                           |
+| obj_StratigraphicColumn                                | none       | :class:`resqpy.strata.StratigraphicColumn`                |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_StratigraphicColumnRankInterpretation              |            |                                                           |
+| obj_StratigraphicColumnRankInterpretation              | none       | :class:`resqpy.strata.StratigraphicColumnRank`            |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_StratigraphicOccurrenceInterpretation              |            |                                                           |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_StratigraphicUnitFeature                           |            |                                                           |
+| obj_StratigraphicUnitFeature                           | none       | :class:`resqpy.strata.StratigraphicUnitFeature`           |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_StratigraphicUnitInterpretation                    |            |                                                           |
+| obj_StratigraphicUnitInterpretation                    | none       | :class:`resqpy.strata.StratigraphicUnitInterpretation`    |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_StreamlinesFeature                                 |            |                                                           |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
