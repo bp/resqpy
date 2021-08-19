@@ -1535,14 +1535,6 @@ class PointSet(_BaseSurface):
          for item in lines:
             f.write(item)
 
-   def append_extra_metadata(self, meta_dict):
-      """Append a given dictionary of metadata to the existing metadata."""
-
-      if self.extra_metadata is None:
-         self.extra_metadata = {}
-      for key in meta_dict:
-         self.extra_metadata[key] = meta_dict[key]
-
 
 class Mesh(_BaseSurface):
    """Class covering meshes (lattices: surfaces where points form a 2D grid; RESQML obj_Grid2dRepresentation)."""
