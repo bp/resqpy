@@ -1,4 +1,4 @@
-Working with olio.RelPerm and equinor/pyscal
+Working with the RelPerm class and equinor/pyscal
 ======================================
 This tutorial describes two workflows that allow us to pass relative permeability and capillary pressure data between the resqpy library and the `equinor\\pyscal <https://github.com/equinor/pyscal>`_ library.
 
