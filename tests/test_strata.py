@@ -16,8 +16,7 @@ import resqpy.olio.uuid as bu
 
 def test_strata(tmp_path):
 
-   #   epc = os.path.join(tmp_path, 'strata.epc')
-   epc = os.path.join('/users/andy/bifröst/bc', 'strata.epc')
+   epc = os.path.join(tmp_path, 'strata.epc')
 
    model = rq.new_model(epc_file = epc)
 
