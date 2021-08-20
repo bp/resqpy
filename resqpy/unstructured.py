@@ -17,7 +17,7 @@ import resqpy.olio.write_hdf5 as rwh5
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 import resqpy.crs as rqc
-import resqpy.property as rprop
+import resqpy.property as rqp
 
 valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']
 
@@ -118,13 +118,15 @@ class UnstructuredGrid(BaseResqpy):
       if self.geometry_root is None:
          self.cell_shape = None
       else:
+         self.extract_crs_uuid()
          self.cell_shape = rqet.find_tag_text(grid_root, 'CellShape')
          assert self.cell_shape in valid_cell_shapes
          self.node_count = rqet.find_tag_int(grid_root, 'NodeCount')
          assert self.node_count > 3
          self.face_count = rqet.find_tag_int(grid_root, 'FaceCount')
          assert self.face_count > 3
-         # note: arrays not loaded until demanded; see cache_all_geometry_arrays()
+      self.extract_inactive_mask()
+      # note: geometry arrays not loaded until demanded; see cache_all_geometry_arrays()
 
    def set_cell_count(self, n: int):
       """Set the number of cells in the grid.
@@ -205,6 +207,58 @@ class UnstructuredGrid(BaseResqpy):
                                   array_attribute = main_attribute + '_cl',
                                   dtype = 'int')
 
+   def extract_crs_uuid(self):
+      """Returns uuid for coordinate reference system, as stored in geometry xml tree.
+
+      returns:
+         uuid.UUID object
+      """
+
+      if self.crs_uuid is not None:
+         return self.crs_uuid
+      if self.geometry_root is None:
+         return None
+      uuid_str = rqet.find_nested_tags_text(self.geometry_root, ['LocalCrs', 'UUID'])
+      if uuid_str:
+         self.crs_uuid = bu.uuid_from_string(uuid_str)
+      return self.crs_uuid
+
+   def extract_inactive_mask(self):
+      """Returns boolean numpy array indicating which cells are inactive, if (in)active property found for this grid.
+
+      returns:
+         numpy array of booleans, of shape (cell_count,) being True for cells which are inactive; False for active
+
+      note:
+         RESQML does not have a built-in concept of inactive (dead) cells, though the usage guide advises to use a
+         discrete property with a local property kind of 'active'; this resqpy code can maintain an 'inactive'
+         attribute for the grid object, which is a boolean numpy array indicating which cells are inactive
+      """
+
+      if self.inactive is not None:
+         return self.inactive
+      self.inactive = np.zeros((self.cell_count,), dtype = bool)  # ie. all active
+      self.all_inactive = False
+      gpc = self.extract_property_collection()
+      if gpc is None:
+         return self.inactive
+      active_gpc = rqp.PropertyCollection()
+      # note: use of bespoke (local) property kind 'active' as suggested in resqml usage guide
+      active_gpc.inherit_parts_selectively_from_other_collection(other = gpc,
+                                                                 property_kind = 'active',
+                                                                 continuous = False)
+      if active_gpc.number_of_parts() > 0:
+         if active_gpc.number_of_parts() > 1:
+            log.warning('more than one property found with bespoke kind "active", using last encountered')
+         active_part = active_gpc.parts()[-1]
+         active_array = active_gpc.cached_part_array_ref(active_part, dtype = 'bool')
+         self.inactive = np.logical_not(active_array)
+         self.active_property_uuid = active_gpc.uuid_for_part(active_part)
+         active_gpc.uncache_part_array(active_part)
+         self.all_inactive = np.all(self.inactive)
+
+      return self.inactive
+
    def extract_property_collection(self):
       """Load grid property collection object holding lists of all properties in model that relate to this grid.
 
@@ -219,7 +273,7 @@ class UnstructuredGrid(BaseResqpy):
 
       if self.property_collection is not None:
          return self.property_collection
-      self.property_collection = rprop.PropertyCollection(support = self)
+      self.property_collection = rqp.PropertyCollection(support = self)
       return self.property_collection
 
    def points_ref(self):
@@ -296,10 +350,220 @@ class UnstructuredGrid(BaseResqpy):
 
       return None
 
-   def write_hdf5(self):
-      # TODO
-      pass
+   def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
+      """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays."""
 
-   def create_xml(self):
-      # TODO
-      pass
+      # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
+      # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
+      # xml is not created here for property objects
+
+      if geometry:
+         assert self.node_count > 0 and self.face_count > 0, 'geometry not present when writing unstructured grid to hdf5'
+
+      if write_active is None:
+         write_active = geometry
+
+      self.cache_all_geometry_arrays()
+
+      if not file:
+         file = self.model.h5_file_name()
+      h5_reg = rwh5.H5Register(self.model)
+
+      if geometry:
+         h5_reg.register_dataset(self.uuid, 'Points', self.points_cached)
+         h5_reg.register_dataset(self.uuid, 'NodesPerFace/elements', self.nodes_per_face, dtype = 'uint32')
+         h5_reg.register_dataset(self.uuid, 'NodesPerFace/cumulativeLength', self.nodes_per_face_cl, dtype = 'uint32')
+         h5_reg.register_dataset(self.uuid, 'FacesPerCell/elements', self.faces_per_cell, dtype = 'uint32')
+         h5_reg.register_dataset(self.uuid, 'FacesPerCell/cumulativeLength', self.faces_per_cell_cl, dtype = 'uint32')
+         h5_reg.register_dataset(self.uuid, 'CellFaceIsRightHanded', self.cell_face_is_right_handed, dtype = 'uint8')
+
+      if write_active and self.inactive is not None:
+         if imported_properties is None:
+            imported_properties = rqp.PropertyCollection()
+            imported_properties.set_support(support = self)
+         else:
+            filtered_list = []
+            for entry in imported_properties.imported_list:
+               if entry[2].upper() == 'ACTIVE' or entry[10] == 'active':
+                  continue  # keyword or property kind
+               filtered_list.append(entry)
+            imported_properties.imported_list = filtered_list  # might have unintended side effects elsewhere
+         active_mask = np.logical_not(self.inactive)
+         imported_properties.add_cached_array_to_imported_list(active_mask,
+                                                               'active cell mask',
+                                                               'ACTIVE',
+                                                               discrete = True,
+                                                               property_kind = 'active')
+
+      if imported_properties is not None and imported_properties.imported_list is not None:
+         for entry in imported_properties.imported_list:
+            if hasattr(imported_properties, entry[3]):  # otherwise constant array
+               h5_reg.register_dataset(entry[0], 'values_patch0', imported_properties.__dict__[entry[3]])
+            if entry[10] == 'active':
+               self.active_property_uuid = entry[0]
+
+      h5_reg.write(file, mode = 'a')
+
+   def create_xml(self,
+                  ext_uuid = None,
+                  add_as_part = True,
+                  add_relationships = True,
+                  title = None,
+                  originator = None,
+                  write_active = True,
+                  write_geometry = True,
+                  extra_metadata = {}):
+      """Creates an unstructured grid node and optionally adds as a part in the model.
+
+      arguments:
+         ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the array data for the grid geometry
+         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+            in the model
+         add_relationships (boolean, default True): if True, relationship xml parts are created relating the
+            new grid part to: the crs, and the hdf5 external part
+         title (string): used as the citation title text; careful consideration should be given
+            to this argument when dealing with multiple grids in one model, as it is the means by which a
+            human will distinguish them
+         originator (string, optional): the name of the human being who created the unstructured grid part;
+            default is to use the login name
+         write_active (boolean, default True): if True, xml for an active cell property is also generated, but
+            only if the active_property_uuid is set and no part exists in the model for that uuid
+         write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
+         extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
+
+      returns:
+         the newly created unstructured grid xml node
+
+      notes:
+         the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
+         the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
+         the explicit geometry may be omitted for unstructured grids, in which case the arrays should not be written to
+         the hdf5 file either
+
+      :meta common:
+      """
+
+      if ext_uuid is None:
+         ext_uuid = self.model.h5_uuid()
+      if title:
+         self.title = title
+      if not self.title:
+         self.title = 'ROOT'
+
+      ug = super().create_xml(add_as_part = False, originator = originator, extra_metadata = extra_metadata)
+
+      if self.grid_representation and not write_geometry:
+         rqet.create_metadata_xml(node = ug, extra_metadata = {'grid_flavour': self.grid_representation})
+
+      cc_node = rqet.SubElement(ug, ns['resqml2'] + 'CellCount')
+      cc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+      cc_node.text = str(self.cell_count)
+
+      if write_geometry:
+
+         geom = rqet.SubElement(ug, ns['resqml2'] + 'Geometry')
+         geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'UnstructuredGridGeometry')
+         geom.text = '\n'
+
+         # the remainder of this function is populating the geometry node
+         self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
+
+         points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
+         points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
+         points_node.text = '\n'
+
+         coords = rqet.SubElement(points_node, ns['resqml2'] + 'Coordinates')
+         coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+         coords.text = '\n'
+
+         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Points', root = coords)
+
+         shape_node = rqet.SubElement(geom, ns['resqml2'] + 'CellShape')
+         shape_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'CellShape')
+         shape_node.text = self.cell_shape
+
+         nc_node = rqet.SubElement(ug, ns['resqml2'] + 'NodeCount')
+         nc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+         nc_node.text = str(self.node_count)
+
+         fc_node = rqet.SubElement(ug, ns['resqml2'] + 'FaceCount')
+         fc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+         fc_node.text = str(self.face_count)
+
+         self._create_jagged_array_xml(geom, 'NodesPerFace', ext_uuid)
+
+         self._create_jagged_array_xml(geom, 'FacesPerCell', ext_uuid)
+
+         cfirh_node = rqet.SubElement(geom, ns['resqml2'] + 'CellFaceIsRightHanded')
+         cfirh_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanHdf5Array')
+         cfirh_node.text = '\n'
+
+         cfirh_values = rqet.SubElement(cfirh_node, ns['resqml2'] + 'Values')
+         cfirh_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+         cfirh_values.text = '\n'
+
+         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'CellFaceIsRightHanded', root = cfirh_values)
+
+      if add_as_part:
+         self.model.add_part('obj_UnstructuredGridRepresentation', self.uuid, ug)
+         if add_relationships:
+            if write_geometry:
+               # create 2 way relationship between UnstructuredGrid and Crs
+               self.model.create_reciprocal_relationship(ug, 'destinationObject', self.model.root(uuid = self.crs_uuid),
+                                                         'sourceObject')
+               # create 2 way relationship between UnstructuredGrid and Ext
+               ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
+               ext_node = self.model.root_for_part(ext_part)
+               self.model.create_reciprocal_relationship(ug, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
+
+      if write_active and self.active_property_uuid is not None and self.model.part(
+            uuid = self.active_property_uuid) is None:
+         active_collection = rqp.PropertyCollection()
+         active_collection.set_support(support = self)
+         active_collection.create_xml(None,
+                                      None,
+                                      'ACTIVE',
+                                      'active',
+                                      p_uuid = self.active_property_uuid,
+                                      discrete = True,
+                                      add_min_max = False,
+                                      find_local_property_kinds = True)
+
+      return ug
+
+   def _create_jagged_array_xml(self, parent_node, tag, ext_uuid, null_value = -1):
+
+      j_node = rqet.SubElement(parent_node, ns['resqml2'] + tag)
+      j_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlJaggedArray')
+      j_node.text = '\n'
+
+      elements = rqet.SubElement(j_node, ns['resqml2'] + 'Elements')
+      elements.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
+      elements.text = '\n'
+
+      el_null = rqet.SubElement(elements, ns['resqml2'] + 'NullValue')
+      el_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+      el_null.text = str(null_value)
+
+      el_values = rqet.SubElement(elements, ns['resqml2'] + 'Values')
+      el_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+      el_values.text = '\n'
+
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, tag + '/elements', root = el_values)
+
+      c_length = rqet.SubElement(j_node, ns['resqml2'] + 'CumulativeLength')
+      c_length.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
+      c_length.text = '\n'
+
+      cl_null = rqet.SubElement(c_length, ns['resqml2'] + 'NullValue')
+      cl_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+      cl_null.text = '0'
+
+      cl_values = rqet.SubElement(c_length, ns['resqml2'] + 'Values')
+      cl_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+      cl_values.text = '\n'
+
+      self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, tag + '/cumulativeLength', root = cl_values)
+
+
+# todo: add specialist derived classes for TetraGrid, PyramidGrid, PrismGrid, HexaGrid

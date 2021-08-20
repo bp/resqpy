@@ -5541,7 +5541,9 @@ def is_regular_grid(grid_root):
 
 
 def any_grid(parent_model, grid_root = None, uuid = None, find_properties = True):
-   """Returns a Grid or RegularGrid object depending on the extra metadata in the xml."""
+   """Returns a Grid or RegularGrid or UnstructuredGrid object depending on the extra metadata in the xml."""
+
+   import resqpy.unstructured as rug
 
    if uuid is None and grid_root is not None:
       uuid = rqet.uuid_for_part_root(grid_root)
@@ -5552,4 +5554,6 @@ def any_grid(parent_model, grid_root = None, uuid = None, find_properties = True
       return Grid(parent_model, uuid = uuid, find_properties = find_properties)
    if flavour == 'IjkBlockGrid':
       return RegularGrid(parent_model, extent_kji = None, uuid = uuid, find_properties = find_properties)
+   if flavour == 'UnstructuredGrid':
+      return rug.UnstructuredGrid(parent_model, uuid = uuid, find_properties = find_properties)
    return None
