@@ -171,6 +171,19 @@ class UnstructuredGrid(BaseResqpy):
          self._load_jagged_array('FacesPerCell', 'faces_per_cell')
          assert len(self.faces_per_cell_cl) == self.cell_count
 
+      if self.cell_face_is_right_handed is None:
+         assert self.geometry_root is not None
+         cfirh_node = rqet.find_tag(self.geometry_root, 'CellFaceIsRightHanded')
+         assert cfirh_node is not None
+         h5_key_pair = self.model.h5_uuid_and_path_for_node(cfirh_node)
+         self.model.h5_array_element(h5_key_pair,
+                                     index = None,
+                                     cache_array = True,
+                                     object = self,
+                                     array_attribute = 'CellFaceIsRightHanded',
+                                     required_shape = (len(self.faces_per_cell),),
+                                     dtype = 'bool')
+
    def _load_jagged_array(self, tag, main_attribute):
       assert self.geometry_root is not None
       root_node = rqet.find_tag(self.geometry_root, tag)
@@ -193,10 +206,21 @@ class UnstructuredGrid(BaseResqpy):
                                   dtype = 'int')
 
    def extract_property_collection(self):
-      """Loads the property collection attribute based on properties related to this grid with indexable element 'cells'."""
+      """Load grid property collection object holding lists of all properties in model that relate to this grid.
 
-      # TODO
-      pass
+      returns:
+         resqml_property.PropertyCollection object
+
+      note:
+         a reference to the grid property collection is cached in this grid object; if the properties change,
+         for example by generating some new properties, the property_collection attribute of the grid object
+         would need to be reset to None elsewhere before calling this method again
+      """
+
+      if self.property_collection is not None:
+         return self.property_collection
+      self.property_collection = rprop.PropertyCollection(support = self)
+      return self.property_collection
 
    def points_ref(self):
       """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.
