@@ -1614,7 +1614,7 @@ def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap conne
    return kgcs
 
 
-def add_connection_set_and_tmults(model, fault_incl, tmult_dict={}):
+def add_connection_set_and_tmults(model, fault_incl, tmult_dict = {}):
    """Add a grid connection set to a resqml model, based on a fault include file and a dictionary of fault:tmult pairs.
 
    Grid connection set added to resqml model, with extra_metadata on the fault interpretation containing the MULTFL values
@@ -1646,15 +1646,18 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict={}):
    faults = set(faces_df['name'])
    for fault in faults:
       mults = set(faces_df[faces_df['name'] == fault]['mult'])
-      if not len(mults) == 1: raise NotImplementedError(f'Expected a single multiplier value in the fault include files for each fault, cannot write fault {fault}')
+      if not len(mults) == 1:
+         raise NotImplementedError(
+            f'Expected a single multiplier value in the fault include files for each fault, cannot write fault {fault}')
       # TODO: Update this to save TX/TY/TZ as three different values
       log.debug(f"Working on {fault}")
       tbf = rqo.TectonicBoundaryFeature(parent_model = model, feature_name = fault, kind = 'fault')
       tbf.create_xml()
       fint = rqo.FaultInterpretation(parent_model = model, tectonic_boundary_feature = tbf, is_normal = True)
       if fault in tmult_dict.keys():
-         mult = list(mults)[0] * tmult_dict[fault] # multiply by our MULTFL from the input dictionary
-      else: mult = list(mults)[0]
+         mult = list(mults)[0] * tmult_dict[fault]  # multiply by our MULTFL from the input dictionary
+      else:
+         mult = list(mults)[0]
       fint.extra_metadata = {"Transmissibility multiplier": mult}
       fint.create_xml()
       model.store_epc()
