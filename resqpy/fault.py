@@ -1641,7 +1641,6 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict = {}):
          temp_faults = fault_incl[0]
    else:
       temp_faults = fault_incl
-
    faces_df = rnf.load_nexus_fault_mult_table(temp_faults)
    faults = set(faces_df['name'])
    for fault in faults:
