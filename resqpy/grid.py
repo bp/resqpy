@@ -278,7 +278,7 @@ class Grid(BaseResqpy):
          if self.all_inactive:
             return 0
          if self.inactive is not None:
-            return self.inactive.size - np.count_nonzero(self.model.inactive)
+            return self.inactive.size - np.count_nonzero(self.inactive)
          else:
             geometry_defined_only = True
       if geometry_defined_only:
