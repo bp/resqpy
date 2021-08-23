@@ -1,5 +1,6 @@
 Working with the RelPerm class and equinor/pyscal
-======================================
+=================================================
+
 This tutorial describes two workflows that allow us to pass relative permeability and capillary pressure data between the resqpy library and the `equinor\\pyscal <https://github.com/equinor/pyscal>`_ library.
 
 We will be moving water-oil relperm data between resqpy's :class:`resqpy.olio.relperm.RelPerm` class and pyscal's :class:`pyscal.WaterOil` class.
@@ -7,7 +8,8 @@ We will be moving water-oil relperm data between resqpy's :class:`resqpy.olio.re
 Please note that similar workflows can be used for moving gas-oil data to/from the :class:`pyscal.GasOil` class.
 
 Importing the relperm and wateroil modules
---------------------------------------
+------------------------------------------
+
 In this tutorial we will be moving water-oil relperm data between the ``RelPerm`` object's :meth:`resqpy.olio.relperm.RelPerm.dataframe` method and the ``WaterOil`` object's :attr:`pyscal.WaterOil.table` attribute.
 
 .. code-block:: python
@@ -20,7 +22,7 @@ In this tutorial we will be moving water-oil relperm data between the ``RelPerm`
     import resqpy.model as rm
 
 resqpy RelPerm.dataframe() to pyscal WaterOil.table
---------------------------------------
+---------------------------------------------------
 
 Initialize an instance of a ``RelPerm`` object that is stored in a resqpy ``Model`` instance. This can be done using the *uuid* of the existing ``Grid2dRepresentation`` object that acts as support for the dataframe of relperm data.
 
@@ -70,7 +72,8 @@ The image below compares two sets of relperm and capillary pressure data:
 .. image:: images/relperm_pyscal_plots.png
 
 pyscal WaterOil.table to resqpy RelPerm.dataframe()
---------------------------------------
+---------------------------------------------------
+
 Moving data in the opposite direction is simple, and involves reformatting the column names of the ``WaterOil`` table to be compatible with the ``RelPerm`` initialiser method.
 We reference the same ``WaterOil`` table instance, pyscal_wo_df, from the previous section.
 
