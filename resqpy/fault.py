@@ -1614,18 +1614,21 @@ def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap conne
    return kgcs
 
 
-def add_connection_set_and_tmults(model, fault_incl, tmult_dict = {}):
+def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
    """Add a grid connection set to a resqml model, based on a fault include file and a dictionary of fault:tmult pairs.
 
    Grid connection set added to resqml model, with extra_metadata on the fault interpretation containing the MULTFL values
 
    Args:
-      model - resqml model object
-      fault_incl - fullpath to fault include file or list of fullpaths to fault include files
-      tmult_dict - dictionary of fault name: tmult pairs (must align with faults in include file). Optional, if blank values in the fault.include file will be used instead
+      model: resqml model object
+      fault_incl: fullpath to fault include file or list of fullpaths to fault include files
+      tmult_dict: dictionary of fault name/transmissibility multiplier pairs (must align with faults in include file).
+         Optional, if blank values in the fault.include file will be used instead
    Returns:
       grid connection set uuid
    """
+   if tmult_dict is None:
+      tmult_dict = {}
    if isinstance(fault_incl, list):
       if len(fault_incl) > 1:
          # Making a concatenated version of the faultincl files
