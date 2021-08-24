@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '20th August 2021'
+version = '23rd August 2021'
 
 import logging
 
@@ -77,8 +77,8 @@ class UnstructuredGrid(BaseResqpy):
       self.cell_shape = cell_shape  #: the shape of cells withing the grid
       self.crs_uuid = None  #: uuid of the coordinate reference system used by the grid's geometry
       self.points_cached = None  #: numpy array of raw points data; loaded on demand
-      self.node_count = None  #: number of distinct points used in geometry
-      self.face_count = None  #: number of distinct faces used in geometry
+      self.node_count = None  #: number of distinct points used in geometry; None if no geometry present
+      self.face_count = None  #: number of distinct faces used in geometry; None if no geometry present
       self.nodes_per_face = None
       self.nodes_per_face_cl = None
       self.faces_per_cell = None
@@ -87,7 +87,7 @@ class UnstructuredGrid(BaseResqpy):
       self.inactive = None  #: numpy boolean array indicating which cells are inactive in flow simulation
       self.all_inactive = None  #: boolean indicating whether all cells are inactive
       self.active_property_uuid = None  #: uuid of property holding active cell boolean array (used to populate inactive)
-      self.grid_representation = None  #: flavour of grid, 'UnstructuredGrid'; not much used
+      self.grid_representation = 'UnstructuredGrid'  #: flavour of grid, 'UnstructuredGrid'; not much used
       self.geometry_root = None  #: xml node at root of geometry sub-tree, if present
 
       super().__init__(model = parent_model,
@@ -111,7 +111,6 @@ class UnstructuredGrid(BaseResqpy):
       # Extract simple attributes from xml and set as attributes in this resqpy object
       grid_root = self.root
       assert grid_root is not None
-      self.grid_representation = 'UnstructuredGrid'  # this attribute not much used
       self.cell_count = rqet.find_tag_int(grid_root, 'CellCount')
       assert self.cell_count > 0
       self.geometry_root = rqet.find_tag(grid_root, 'Geometry')
@@ -312,6 +311,37 @@ class UnstructuredGrid(BaseResqpy):
 
       return self.points_cached
 
+   def face_centre_point(self, face_index):
+      """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
+
+      note:
+         this is a nominal centre point for a face and not generally its barycentre
+      """
+
+      self.cache_all_geometry_arrays()
+      start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
+      return np.mean(self.points_cached[self.nodes_per_face[start:self.nodes_per_face_cl[face_index]]], axis = 0)
+
+   def cell_face_centre_points(self, cell):
+      """Returns a numpy array of centre points of the faces for a single cell."""
+
+      self.cache_all_geometry_arrays()
+      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
+      face_count = self.faces_per_cell_cl[cell] - start
+      face_centres = np.empty((face_count, 3))
+      for fi, face_index in enumerate(self.faces_per_cell[start:start + face_count]):  # todo: vectorise
+         face_centres[fi] = self.face_centre_point(face_index)
+      return face_centres
+
+   def cell_centre_point(self, cell):
+      """Returns centre point of a single cell calculated as the mean position of the centre points of its faces.
+
+      note:
+         this is a nominal centre point and not generally the barycentre of the cell
+      """
+
+      return np.mean(self.cell_face_centre_points(cell), axis = 0)
+
    def centre_point(self, cell = None, cache_centre_array = False):
       """Returns centre point of a cell or array of centre points of all cells; optionally cache centre points for all cells.
 
@@ -326,7 +356,8 @@ class UnstructuredGrid(BaseResqpy):
          or numpy 2D array of shape (cell_count, 3) if cell is None
 
       notes:
-         a simple mean of the distinct contributing nodes is used to calculate the centre point of a cell;
+         a simple mean of the positions of the distinct contributing nodes is used to calculate the centre point of a cell;
+         this is not generally the barycentre of the cell;
          resulting coordinates are in the same (local) crs as the grid points
 
       :meta common:
@@ -335,20 +366,25 @@ class UnstructuredGrid(BaseResqpy):
       if cell is None:
          cache_centre_array = True
 
-      if hasattr(self, 'array_centre_point'):
+      if hasattr(self, 'array_centre_point') and self.array_centre_point is not None:
          if cell is None:
             return self.array_centre_point
          return self.array_centre_point[cell]  # could check for nan here and return None
 
-      if cache_centre_array:
-         # TODO
-         pass
-      else:
-         # only calculate for the specified cell
-         # TODO
-         pass
+      if self.node_count is None:  # no geometry present
+         return None
 
-      return None
+      if cache_centre_array:  # calculate for all cells and cache
+         self.array_centre_point = np.empty((self.cell_count, 3))
+         for cell_index in range(self.cell_count):  # todo: vectorise
+            self.array_centre_point[cell_index] = self.cell_centre_point(cell_index)
+         if cell is None:
+            return self.array_centre_point
+         else:
+            return self.array_centre_point[cell]
+
+      else:
+         return self.cell_centre_point[cell]
 
    def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
       """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays."""
@@ -566,4 +602,190 @@ class UnstructuredGrid(BaseResqpy):
       self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, tag + '/cumulativeLength', root = cl_values)
 
 
-# todo: add specialist derived classes for TetraGrid, PyramidGrid, PrismGrid, HexaGrid
+class TetraGrid(UnstructuredGrid):
+
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                find_properties = True,
+                cache_geometry = False,
+                title = None,
+                originator = None,
+                extra_metadata = {}):
+
+      super().__init__(parent_model = parent_model,
+                       uuid = uuid,
+                       find_properties = find_properties,
+                       geometry_required = True,
+                       cache_geometry = cache_geometry,
+                       cell_shape = 'tetrahedral',
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata)
+
+      self.grid_representation = 'TetraGrid'  #: flavour of grid; not much used
+
+      if self.root is not None:
+         self.check_tetra()
+
+   def check_tetra(self):
+      """Checks that each cell has 4 faces and each face has 3 nodes."""
+
+      assert self.cell_shape == 'tetrahedral'
+      self.cache_all_geometry_arrays()
+      assert self.faces_per_cell_cl is not None and self.nodes_per_face_cl is not None
+      assert self.faces_per_cell_cl[0] == 4 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 4)
+      assert self.nodes_per_face_cl[0] == 3 and np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] == 3)
+
+   def face_centre_point(self, face_index):
+      """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
+
+      note:
+         this is a nominal centre point for a face and not generally its barycentre
+      """
+
+      self.cache_all_geometry_arrays()
+      start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
+      return np.mean(self.points_cached[self.nodes_per_face[start:start + 3]], axis = 0)
+
+   # todo: add tetra specific methods for centre_point(), volume()
+
+
+class PyramidGrid(UnstructuredGrid):
+   """Class for unstructured grids where every cell is a quadrilateral pyramid."""
+
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                find_properties = True,
+                cache_geometry = False,
+                title = None,
+                originator = None,
+                extra_metadata = {}):
+
+      super().__init__(parent_model = parent_model,
+                       uuid = uuid,
+                       find_properties = find_properties,
+                       geometry_required = True,
+                       cache_geometry = cache_geometry,
+                       cell_shape = 'pyramidal',
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata)
+
+      self.grid_representation = 'PyramidGrid'  #: flavour of grid; not much used
+
+      if self.root is not None:
+         self.check_pyramidal()
+
+   def check_pyramidal(self):
+      """Checks that each cell has 5 faces and each face has 3 or 4 nodes.
+
+      note:
+         currently only performs a cursory check, without checking nodes are shared or that there is exactly one
+         quadrilateral face
+      """
+
+      assert self.cell_shape == 'pyramidal'
+      self.cache_all_geometry_arrays()
+      assert self.faces_per_cell_cl is not None and self.nodes_per_face_cl is not None
+      assert self.faces_per_cell_cl[0] == 5 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 5)
+      nodes_per_face_count = np.empty(self.face_count)
+      nodes_per_face_count[0] = self.nodes_per_face_cl[0]
+      nodes_per_face_count[1:] = self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1]
+      assert np.all(np.logical_or(nodes_per_face_count == 3, nodes_per_face_count == 4))
+
+   # todo: add pyramidal specific methods for centre_point(), volume() – see olio.volume tets()
+
+
+class PrismGrid(UnstructuredGrid):
+   """Class for unstructured grids where every cell is a triangular prism."""
+
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                find_properties = True,
+                cache_geometry = False,
+                title = None,
+                originator = None,
+                extra_metadata = {}):
+
+      super().__init__(parent_model = parent_model,
+                       uuid = uuid,
+                       find_properties = find_properties,
+                       geometry_required = True,
+                       cache_geometry = cache_geometry,
+                       cell_shape = 'prism',
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata)
+
+      self.grid_representation = 'PrismGrid'  #: flavour of grid; not much used
+
+      if self.root is not None:
+         self.check_prism()
+
+   def check_prism(self):
+      """Checks that each cell has 5 faces and each face has 3 or 4 nodes.
+
+      note:
+         currently only performs a cursory check, without checking nodes are shared or that there are exactly two
+         triangular faces without shared nodes
+      """
+
+      assert self.cell_shape == 'prism'
+      self.cache_all_geometry_arrays()
+      assert self.faces_per_cell_cl is not None and self.nodes_per_face_cl is not None
+      assert self.faces_per_cell_cl[0] == 5 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 5)
+      nodes_per_face_count = np.empty(self.face_count)
+      nodes_per_face_count[0] = self.nodes_per_face_cl[0]
+      nodes_per_face_count[1:] = self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1]
+      assert np.all(np.logical_or(nodes_per_face_count == 3, nodes_per_face_count == 4))
+
+   # todo: add prism specific methods for centre_point(), volume() – see olio.volume tets()
+
+
+class HexaGrid(UnstructuredGrid):
+   """Class for unstructured grids where every cell is hexahedral (faces may be degenerate)."""
+
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                find_properties = True,
+                cache_geometry = False,
+                title = None,
+                originator = None,
+                extra_metadata = {}):
+
+      super().__init__(parent_model = parent_model,
+                       uuid = uuid,
+                       find_properties = find_properties,
+                       geometry_required = True,
+                       cache_geometry = cache_geometry,
+                       cell_shape = 'hexahedral',
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata)
+
+      self.grid_representation = 'HexaGrid'  #: flavour of grid; not much used
+
+      if self.root is not None:
+         self.check_hexahedral()
+
+   def check_hexahedral(self):
+      """Checks that each cell has 6 faces and each face has 4 nodes.
+
+      notes:
+         currently only performs a cursory check, without checking nodes are shared;
+         assumes that degenerate faces still have four nodes identified
+      """
+
+      assert self.cell_shape == 'hexahedral'
+      self.cache_all_geometry_arrays()
+      assert self.faces_per_cell_cl is not None and self.nodes_per_face_cl is not None
+      assert self.faces_per_cell_cl[0] == 6 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 6)
+      assert self.nodes_per_face_cl[0] == 4 and np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] == 4)
+
+   # todo: add class method to generate a HexaGrid from a Grid (IjkGrid)
+   # todo: add hexahedral specific methods for centre_point(), volume() – see olio.volume
+   # todo: also add methods equivalent to those in Grid class
