@@ -223,6 +223,11 @@ class GeologicUnitInterpretation(BaseResqpy):
 
       returns:
          a new geologic unit interpretation resqpy object which may be the basis of a derived class object
+
+      note:
+         the RESQML 2.0.1 schema definition includes a spurious trailing space in the names of two compositions;
+         resqpy removes such spaces in the composition attribute as presented to calling code (but includes them
+         in xml)
       """
 
       self.domain = domain
@@ -407,9 +412,12 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
       returns:
          a new stratigraphic unit interpretation resqpy object
 
-      note:
+      notes:
          if given, the thickness_uom must be a valid RESQML length unit of measure; the set of valid uoms is
-         returned by: weights_and_measures.valid_uoms(quantity = 'length')
+         returned by: weights_and_measures.valid_uoms(quantity = 'length');
+         the RESQML 2.0.1 schema definition includes a spurious trailing space in the names of two compositions;
+         resqpy removes such spaces in the composition attribute as presented to calling code (but includes them
+         in xml)
       """
 
       self.deposition_mode = deposition_mode
