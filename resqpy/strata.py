@@ -1,6 +1,6 @@
 """strata.py: RESQML stratigraphy classes."""
 
-version = '19th August 2021'
+version = '24th August 2021'
 
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 # RMS is a registered trademark of Roxar Software Solutions AS, an Emerson company
@@ -19,6 +19,7 @@ import resqpy.olio.uuid as bu
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.base import BaseResqpy
 
+# note: two compositions have a spurious trailing space in the RESQML xsd; resqpy hides this from calling code
 valid_compositions = [
    'intrusive clay ', 'intrusive clay', 'organic', 'intrusive mud ', 'intrusive mud', 'evaporite salt',
    'evaporite non salt', 'sedimentary siliclastic', 'carbonate', 'magmatic intrusive granitoid',
@@ -229,7 +230,7 @@ class GeologicUnitInterpretation(BaseResqpy):
       self.has_occurred_during = (None, None)  # optional RESQML item
       if (not title) and geologic_unit_feature is not None:
          title = geologic_unit_feature.feature_name
-      self.composition = composition  # optional RESQML item
+      self.composition = composition.strip()  # optional RESQML item; resqpy attribute has any trailing space removed
       self.material_implacement = material_implacement  # optional RESQML item
       super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
       if self.composition:
@@ -252,7 +253,7 @@ class GeologicUnitInterpretation(BaseResqpy):
                                                                  uuid = feature_uuid,
                                                                  feature_name = self.model.title(uuid = feature_uuid))
       self.has_occurred_during = rqo.extract_has_occurred_during(root_node)
-      self.composition = rqet.find_tag_text(root_node, 'GeologicUnitComposition')
+      self.composition = rqet.find_tag_text(root_node, 'GeologicUnitComposition').strip()
       self.material_implacement = rqet.find_tag_text(root_node, 'GeologicUnitMaterialImplacement')
 
    def is_equivalent(self, other, check_extra_metadata = True):
@@ -333,6 +334,8 @@ class GeologicUnitInterpretation(BaseResqpy):
          comp_node = rqet.SubElement(gu, ns['resqml2'] + 'GeologicUnitComposition')
          comp_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitComposition')
          comp_node.text = self.composition
+         if self.composition + ' ' in valid_compositions:
+            comp_node.text += ' '
 
       if self.material_implacement is not None:
          assert self.material_implacement in valid_implacements,  \
