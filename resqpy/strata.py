@@ -230,12 +230,13 @@ class GeologicUnitInterpretation(BaseResqpy):
       self.has_occurred_during = (None, None)  # optional RESQML item
       if (not title) and geologic_unit_feature is not None:
          title = geologic_unit_feature.feature_name
-      self.composition = composition.strip()  # optional RESQML item; resqpy attribute has any trailing space removed
+      self.composition = composition  # optional RESQML item
       self.material_implacement = material_implacement  # optional RESQML item
       super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
       if self.composition:
          assert self.composition in valid_compositions,  \
             f'invalid composition {self.composition} for geological unit interpretation'
+         self.composition = self.composition.strip()
       if self.material_implacement:
          assert self.material_implacement in valid_implacements,  \
             f'invalid material implacement {self.material_implacement} for geological unit interpretation'
@@ -253,7 +254,7 @@ class GeologicUnitInterpretation(BaseResqpy):
                                                                  uuid = feature_uuid,
                                                                  feature_name = self.model.title(uuid = feature_uuid))
       self.has_occurred_during = rqo.extract_has_occurred_during(root_node)
-      self.composition = rqet.find_tag_text(root_node, 'GeologicUnitComposition').strip()
+      self.composition = rqet.find_tag_text(root_node, 'GeologicUnitComposition')
       self.material_implacement = rqet.find_tag_text(root_node, 'GeologicUnitMaterialImplacement')
 
    def is_equivalent(self, other, check_extra_metadata = True):
@@ -334,7 +335,7 @@ class GeologicUnitInterpretation(BaseResqpy):
          comp_node = rqet.SubElement(gu, ns['resqml2'] + 'GeologicUnitComposition')
          comp_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitComposition')
          comp_node.text = self.composition
-         if self.composition + ' ' in valid_compositions:
+         if self.composition + ' ' in valid_compositions:  # RESQML xsd has spurious trailing space for two compositions
             comp_node.text += ' '
 
       if self.material_implacement is not None:
