@@ -31,3 +31,4 @@ executed whilst progressing through the material.
    well_basics
    surfaces
    creating_test
+   working_with_equinor_pyscal
