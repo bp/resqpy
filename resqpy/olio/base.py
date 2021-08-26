@@ -50,7 +50,7 @@ class BaseResqpy(metaclass = ABCMeta):
       self.extra_metadata = {}
       if extra_metadata:
          self.extra_metadata = extra_metadata
-         self.standardise_extra_metadata()  # has side effect of making a copy
+         self._standardise_extra_metadata()  # has side effect of making a copy
 
       if root_node is not None:
          warnings.warn("root_node parameter is deprecated, use uuid instead", DeprecationWarning)
@@ -172,7 +172,13 @@ class BaseResqpy(metaclass = ABCMeta):
 
       return node
 
-   def standardise_extra_metadata(self):
+   def append_extra_metadata(self, meta_dict):
+      """Append a given dictionary of metadata to the existing metadata."""
+      for key in meta_dict:
+         self.extra_metadata[key] = meta_dict[key]
+      self._standardise_extra_metadata()
+
+   def _standardise_extra_metadata(self):
       if self.extra_metadata:
          em = {}
          for key, value in self.extra_metadata.items():

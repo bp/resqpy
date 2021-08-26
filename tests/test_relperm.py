@@ -125,9 +125,16 @@ def test_relperm(tmp_path):
    assert model.part(extra = {'relperm_table': 'true', 'low_sal': 'true'}) == model.part(title = 'table1')
    assert len(relperm_parts_in_model(model, low_sal = False)) == 1
    dataframe1.df_to_text(filepath = tmp_path, filename = 'oil_water_test_table')
-   df1_reconstructed = text_to_relperm_dict(os.path.join(tmp_path, 'oil_water_test_table.dat'))['relperm_table1']['df']
-   assert_frame_equal(df1, df1_reconstructed)
-   assert df1_reconstructed.iloc[3]['Kro'] == 0.350
+   # reconstruct a dataframe of rel. perm. data from a text file
+   df1_reconstructed_from_file = text_to_relperm_dict(os.path.join(tmp_path,
+                                                                   'oil_water_test_table.dat'))['relperm_table1']['df']
+   assert_frame_equal(df1, df1_reconstructed_from_file)
+   assert df1_reconstructed_from_file.iloc[3]['Kro'] == 0.350
+   # reconstruct a dataframe of rel. perm. data from a string
+   with open(os.path.join(tmp_path, 'oil_water_test_table.dat')) as f:
+      relperm_string = f.read()
+   df1_reconstructed_from_string = text_to_relperm_dict(relperm_string, is_file = False)['relperm_table1']['df']
+   assert_frame_equal(df1, df1_reconstructed_from_string)
    # initialize a RelPerm object from an existing uuid
    new_wo_obj = RelPerm(model, uuid = model.uuid(title = 'table1'))
    assert new_wo_obj.phase_combo == phase_combo1

@@ -632,14 +632,6 @@ class Polyline(_BasePolyline):
       h5_reg.register_dataset(self.uuid, 'points_patch0', self.coordinates)
       h5_reg.write(file_name, mode = mode)
 
-   def append_extra_metadata(self, meta_dict):
-      """Append a given dictionary of metadata to the existing metadata."""
-
-      if self.extra_metadata is None:
-         self.extra_metadata = {}
-      for key in meta_dict:
-         self.extra_metadata[key] = meta_dict[key]
-
 
 class PolylineSet(_BasePolyline):
    """Class for RESQML polyline set representation."""
@@ -1190,14 +1182,6 @@ class PolylineSet(_BasePolyline):
       with open(file_name, 'w') as f:
          for item in lines:
             f.write(item)
-
-   def append_extra_metadata(self, meta_dict):
-      """Append a given dictionary of metadata to the existing metadata."""
-
-      if self.extra_metadata is None:
-         self.extra_metadata = {}
-      for key in meta_dict:
-         self.extra_metadata[key] = meta_dict[key]
 
 
 def shift_polyline(parent_model, poly_root, xyz_shift = (0, 0, 0), title = ''):

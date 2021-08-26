@@ -3733,6 +3733,7 @@ class Property(BaseResqpy):
       assert part is not None
       self.uuid = self.collection.uuid_for_part(part)
       self.title = self.collection.citation_title_for_part(part)
+      return self.root
 
 
 class GridPropertyCollection(PropertyCollection):
@@ -5044,14 +5045,6 @@ class StringLookup(BaseResqpy):
          if v == string:
             return k
       return None
-
-   def append_extra_metadata(self, meta_dict):
-      """Append a given dictionary of metadata to the existing metadata."""
-
-      if self.extra_metadata is None:
-         self.extra_metadata = {}
-      for key in meta_dict:
-         self.extra_metadata[key] = meta_dict[key]
 
    def create_xml(self, title = None, originator = None, add_as_part = True, reuse = True):
       """Creates an xml node for the string table lookup.

@@ -199,9 +199,37 @@ Documentation
 -------------
 
 The docs are built automatically when code is merged into master, and are hosted
-at `readthedocs <https://resqpy.readthedocs.io/>`_. You can also build the docs
-locally, providing you have installed all required dependencies as described
-above:
+at `readthedocs <https://resqpy.readthedocs.io/>`_.
+
+There a few different versions of the documentation available, tied to different
+versions of the code:
+
++------------------------------------------+------------------------------+--------+
+| URL                                      | Version                      | Hidden |
++==========================================+==============================+========+
+| https://resqpy.readthedocs.io/en/latest/ | The `master` branch, default | No     |
++------------------------------------------+------------------------------+--------+
+| https://resqpy.readthedocs.io/en/stable/ | The most recent git tag      | No     |
++------------------------------------------+------------------------------+--------+
+| https://resqpy.readthedocs.io/en/docs/   | The `docs` branch            | Yes    |
++------------------------------------------+------------------------------+--------+
+
+These automatically re-build when the relevant branch is updated, or when a new
+tag is pushed.
+
+The `docs` version is intended for previewing changes to documentation. Just
+create a new feature branch called `docs` and push changes there; you can then
+use the link above to check it renders correctly. One can delete the `docs` git
+branch as usual when closing a PR, and re-create it when needed.
+
+You may find it helpful to run a linter to check that the syntax of your
+ReStructured text is correct: the python package `restructuredtext-lint` is
+pretty good for this purpose. Similarly, many IDEs or plugins have a "rewrap"
+function that inserts line endings for uniform line lengths, which can make text
+more readable and visually pleasing.
+
+You can also build the docs locally, providing you have installed all required
+dependencies as described above:
 
 .. code:: bash
 

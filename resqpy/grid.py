@@ -281,7 +281,7 @@ class Grid(BaseResqpy):
          if self.all_inactive:
             return 0
          if self.inactive is not None:
-            return self.inactive.size - np.count_nonzero(self.model.inactive)
+            return self.inactive.size - np.count_nonzero(self.inactive)
          else:
             geometry_defined_only = True
       if geometry_defined_only:
@@ -794,7 +794,8 @@ class Grid(BaseResqpy):
          numpy array of booleans, of shape (nk, nj, ni) being True for cells which are inactive; False for active
 
       note:
-         resqml does not have a built-in concept of inactive (dead) cells; this code can maintain an 'inactive'
+         RESQML does not have a built-in concept of inactive (dead) cells, though the usage guide advises to use a
+         discrete property with a local property kind of 'active'; this resqpy code can maintain an 'inactive'
          attribute for the grid object, which is a boolean numpy array indicating which cells are inactive
       """
 
@@ -816,8 +817,7 @@ class Grid(BaseResqpy):
       # note: use of bespoke (local) property kind 'active' as suggested in resqml usage guide
       active_gpc.inherit_parts_selectively_from_other_collection(other = gpc,
                                                                  property_kind = 'active',
-                                                                 continuous = False,
-                                                                 categorical = False)
+                                                                 continuous = False)
       if active_gpc.number_of_parts() > 0:
          if active_gpc.number_of_parts() > 1:
             log.warning('more than one property found with bespoke kind "active", using last encountered')
