@@ -1,6 +1,6 @@
 """write_hdf5.py: Class to write a resqml hdf5 file."""
 
-version = '25th August 2021'
+version = '26th August 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -207,17 +207,22 @@ def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w'):
    assert mode in ['w', 'a']
    copy_count = 0
    with h5py.File(file_out, mode) as fp_out:
-      assert fp_out is not None, 'failed to open output hdf5 file: ' + file_out
+      assert fp_out is not None, f'failed to open output hdf5 file: {file_out}'
       with h5py.File(file_in, 'r') as fp_in:
-         assert fp_in is not None, 'failed to open input hdf5 file: ' + file_in
+         assert fp_in is not None, f'failed to open input hdf5 file: {file_in}'
          for path in hdf5_path_list:
-            group = fp_in[path]
-            assert group is not None
-            if group in fp_out:
-               log.warning('not copying hdf5 data due to pre-existence for: ' + str(group))
+            if path in fp_out:
+               log.warning(f'not copying hdf5 data due to pre-existence for: {path}')
                continue
-            log.debug('copying hdf5 data for: ' + group)
-            fp_in.copy(group, fp_out, expand_soft = True, expand_external = True, expand_refs = True)
+            assert path in fp_in, f'internal path {path} not found in hdf5 file {file_in}'
+            log.debug(f'copying hdf5 data for: {path}')
+            build = ''
+            for w in path.split(sep = '/'):
+               if w:
+                  build += '/' + w
+                  if build not in fp_out:
+                     fp_out.create_group(build)
+            fp_in.copy(path, fp_out[path], expand_soft = True, expand_external = True, expand_refs = True)
             copy_count += 1
    return copy_count
 

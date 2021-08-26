@@ -144,7 +144,9 @@ def test_model_copy_all_parts(example_model_with_properties):
 
    copied.copy_all_parts_from_other_model(original, consolidate = False)
 
-   assert set(copied.uuids()) == set(original.uuids()).append(new_crs.uuid)
+   assert len(copied.parts()) == len(original.parts()) + 1
+   assert set(original.parts()).issubset(set(copied.parts()))
+   assert len(copied.parts(obj_type = 'LocalDepth3dCrs')) == 2
 
    # test with consolidation of two crs objects
    copied = rq.new_model(copied_epc)
@@ -153,7 +155,8 @@ def test_model_copy_all_parts(example_model_with_properties):
 
    copied.copy_all_parts_from_other_model(original, consolidate = True)
 
-   assert len(copied.uuids()) == len(original.uuids())
+   assert len(copied.parts()) == len(original.parts())
+   assert len(copied.parts(obj_type = 'LocalDepth3dCrs')) == 1
 
    crs_uuid = copied.uuid(obj_type = 'LocalDepth3dCrs')
    assert (bu.matching_uuids(crs_uuid, new_crs.uuid) or
@@ -164,7 +167,7 @@ def test_model_copy_all_parts(example_model_with_properties):
    re_opened = rq.Model(copied_epc)
    assert re_opened is not None
 
-   assert len(re_opened.uuids()) == len(original.uuids())
+   assert len(copied.parts()) == len(original.parts())
 
    crs_uuid = re_opened.uuid(obj_type = 'LocalDepth3dCrs')
    assert (bu.matching_uuids(crs_uuid, new_crs.uuid) or
