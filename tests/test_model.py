@@ -120,3 +120,52 @@ def test_model_as_graph(example_model_with_well):
    nodes, edges = model.as_graph(uuids_subset = [datum.uuid])
    assert len(nodes.keys()) == 1
    assert len(edges) == 0
+
+
+def test_model_copy_all_parts(example_model_with_properties):
+
+   epc = example_model_with_properties.epc_file
+   dir = example_model_with_properties.epc_directory
+   copied_epc = os.path.join(dir, 'copied.epc')
+
+   # test copying without consolidation
+   original = rq.Model(epc)
+   assert original is not None
+   copied = rq.new_model(copied_epc)
+   copied.copy_all_parts_from_other_model(original, consolidate = False)
+
+   assert set(original.uuids()) == set(copied.uuids())
+   assert set(original.parts()) == set(copied.parts())
+
+   # test without consolidation of two crs objects
+   copied = rq.new_model(copied_epc)
+   new_crs = rqc.Crs(copied)
+   new_crs.create_xml()
+
+   copied.copy_all_parts_from_other_model(original, consolidate = False)
+
+   assert set(copied.uuids()) == set(original.uuids()).append(new_crs.uuid)
+
+   # test with consolidation of two crs objects
+   copied = rq.new_model(copied_epc)
+   new_crs = rqc.Crs(copied)
+   new_crs.create_xml()
+
+   copied.copy_all_parts_from_other_model(original, consolidate = True)
+
+   assert len(copied.uuids()) == len(original.uuids())
+
+   crs_uuid = copied.uuid(obj_type = 'LocalDepth3dCrs')
+   assert (bu.matching_uuids(crs_uuid, new_crs.uuid) or
+           bu.matching_uuids(crs_uuid, original.uuid(obj_type = 'LocalDepth3dCrs')))
+
+   # test write and re-load of copied model
+   copied.store_epc()
+   re_opened = rq.Model(copied_epc)
+   assert re_opened is not None
+
+   assert len(re_opened.uuids()) == len(original.uuids())
+
+   crs_uuid = re_opened.uuid(obj_type = 'LocalDepth3dCrs')
+   assert (bu.matching_uuids(crs_uuid, new_crs.uuid) or
+           bu.matching_uuids(crs_uuid, original.uuid(obj_type = 'LocalDepth3dCrs')))
