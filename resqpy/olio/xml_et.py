@@ -213,6 +213,18 @@ def list_of_tag(root, tag_name):
    return results
 
 
+def list_of_descendant_tag(root, tag_name):
+   """Returns a list of descendants in xml node tree with a (prefix-stripped) tag matching given tag name."""
+
+   if root is None:
+      return None
+   results = []
+   for child in root.iterdescendants():
+      if stripped_of_prefix(child.tag) == tag_name:
+         results.append(child)
+   return results
+
+
 def list_obj_references(root, skip_hdf5 = True):
    """Returns list of nodes of type DataObjectReference."""
 

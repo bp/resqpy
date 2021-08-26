@@ -3733,6 +3733,7 @@ class Property(BaseResqpy):
       assert part is not None
       self.uuid = self.collection.uuid_for_part(part)
       self.title = self.collection.citation_title_for_part(part)
+      return self.root
 
 
 class GridPropertyCollection(PropertyCollection):
