@@ -30,9 +30,10 @@ class H5Register():
       """Create a new, empty register of arrays to be written to an hdf5 file."""
 
       self.dataset_dict = {}  # dictionary mapping from (object_uuid, group_tail) to (numpy_array, dtype)
+      self.hdf5_path_dict = {}  # dictionary optionally mapping from (object_uuid, group_tail) to hdf5 internal path
       self.model = model
 
-   def register_dataset(self, object_uuid, group_tail, a, dtype = None):
+   def register_dataset(self, object_uuid, group_tail, a, dtype = None, hdf5_path = None):
       """Register an array to be included as a dataset in the hdf5 file.
 
       arguments:
@@ -41,6 +42,8 @@ class H5Register():
             uuid elements)
          a (numpy array): the dataset (array) to be registered for writing
          dtype (type or string): the type of the individual elements within the dataset
+         hdf5_path (string, optional): if present, a full hdf5 internal path to use instead of
+            the default generated from the uuid
 
       returns:
          None
@@ -60,6 +63,8 @@ class H5Register():
       if (object_uuid, group_tail) in self.dataset_dict.keys():
          pass  # todo: warn of re-registration?
       self.dataset_dict[(object_uuid, group_tail)] = (a, dtype)
+      if hdf5_path:
+         self.hdf5_path_dict[(object_uuid, group_tail)] = hdf5_path
 
    def write_fp(self, fp):
       """Write or append to an hdf5 file, writing the pre-registered datasets (arrays).
@@ -78,7 +83,10 @@ class H5Register():
       #       this function allows appending to any hdf5 file; calling code should set a new uuid when needed
       assert (fp is not None)
       for (object_uuid, group_tail) in self.dataset_dict.keys():
-         hdf5_path = resqml_path_head + str(object_uuid) + '/' + group_tail
+         if (object_uuid, group_tail) in self.hdf5_path_dict.keys():
+            hdf5_path = self.hdf5_path_dict[(object_uuid, group_tail)]
+         else:
+            hdf5_path = resqml_path_head + str(object_uuid) + '/' + group_tail
          (a, dtype) = self.dataset_dict[(object_uuid, group_tail)]
          if dtype is None:
             dtype = a.dtype
@@ -228,7 +236,13 @@ def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w'):
 
 
 def change_uuid(file, old_uuid, new_uuid):
-   """Changes hdf5 internal path (group name) for part, switching from old to new uuid."""
+   """Changes hdf5 internal path (group name) for part, switching from old to new uuid.
+
+   notes:
+      this is low level functionality not usually called directly;
+      the function assumes that hdf5 internal path names conform to the format that resqpy uses
+      when writing data, namely /RESQML/uuid/tail...
+   """
 
    assert file, 'hdf5 file name missing'
    assert old_uuid is not None and new_uuid is not None, 'missing uuid'
