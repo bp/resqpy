@@ -234,7 +234,7 @@ def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w'):
                      fp_out.create_group(build)
             build += '/' + group_list[-1]
             fp_out.create_dataset(build, data = fp_in[path])
-#            fp_in.copy(path, fp_out[path], expand_soft = True, expand_external = True, expand_refs = True)
+            #            fp_in.copy(path, fp_out[path], expand_soft = True, expand_external = True, expand_refs = True)
             copy_count += 1
    return copy_count
 
