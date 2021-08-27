@@ -1,12 +1,15 @@
 from numpy.lib.arraysetops import isin
 import pytest
 import os
+import numpy as np
 
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.well as rqw
+import resqpy.property as rqp
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
+import resqpy.olio.write_hdf5 as rwh5
 
 
 def test_model(tmp_path):
@@ -120,3 +123,117 @@ def test_model_as_graph(example_model_with_well):
    nodes, edges = model.as_graph(uuids_subset = [datum.uuid])
    assert len(nodes.keys()) == 1
    assert len(edges) == 0
+
+
+def test_model_copy_all_parts(example_model_with_properties):
+
+   epc = example_model_with_properties.epc_file
+   dir = example_model_with_properties.epc_directory
+   copied_epc = os.path.join(dir, 'copied.epc')
+
+   # test copying without consolidation
+   original = rq.Model(epc)
+   assert original is not None
+   copied = rq.new_model(copied_epc)
+   copied.copy_all_parts_from_other_model(original, consolidate = False)
+
+   assert set(original.uuids()) == set(copied.uuids())
+   assert set(original.parts()) == set(copied.parts())
+
+   # test without consolidation of two crs objects
+   copied = rq.new_model(copied_epc)
+   new_crs = rqc.Crs(copied)
+   new_crs.create_xml()
+
+   copied.copy_all_parts_from_other_model(original, consolidate = False)
+
+   assert len(copied.parts()) == len(original.parts()) + 1
+   assert set(original.parts()).issubset(set(copied.parts()))
+   assert len(copied.parts(obj_type = 'LocalDepth3dCrs')) == 2
+
+   # test with consolidation of two crs objects
+   copied = rq.new_model(copied_epc)
+   new_crs = rqc.Crs(copied)
+   new_crs.create_xml()
+
+   copied.copy_all_parts_from_other_model(original, consolidate = True)
+
+   assert len(copied.parts()) == len(original.parts())
+   assert len(copied.parts(obj_type = 'LocalDepth3dCrs')) == 1
+
+   crs_uuid = copied.uuid(obj_type = 'LocalDepth3dCrs')
+   assert (bu.matching_uuids(crs_uuid, new_crs.uuid) or
+           bu.matching_uuids(crs_uuid, original.uuid(obj_type = 'LocalDepth3dCrs')))
+
+   # test write and re-load of copied model
+   copied.store_epc()
+   re_opened = rq.Model(copied_epc)
+   assert re_opened is not None
+
+   assert len(copied.parts()) == len(original.parts())
+
+   crs_uuid = re_opened.uuid(obj_type = 'LocalDepth3dCrs')
+   assert (bu.matching_uuids(crs_uuid, new_crs.uuid) or
+           bu.matching_uuids(crs_uuid, original.uuid(obj_type = 'LocalDepth3dCrs')))
+
+
+def test_model_copy_all_parts_non_resqpy_hdf5_paths(example_model_with_properties):
+   # this test uses low level methods to override the hdf5 internal paths for some new objects
+
+   epc = example_model_with_properties.epc_file
+   dir = example_model_with_properties.epc_directory
+   copied_epc = os.path.join(dir, 'copied.epc')
+   extent_kji = (3, 5, 5)  # needs to match extent of grid in example model
+
+   # add some properties with bespoke internal hdf5 paths
+   original = rq.Model(epc)
+   assert original is not None
+   grid_uuid = original.uuid(obj_type = 'IjkGridRepresentation')
+   assert grid_uuid is not None
+   data = np.linspace(0.0, 1000.0, num = 75).reshape(extent_kji)
+
+   hdf5_paths = [
+      '/RESQML/uuid_waffle/values', '/RESQML/waffle_uuid/unusual_name', 'RESQML/class_uuid_waffle/values0',
+      'RESQML/something_interesting/array', '/RESQML/abrupt', 'no_resqml/uuid/values'
+   ]
+
+   prop_list = []
+   path_list = []  # elements will have 'uuid' replaced with uuid string
+   h5_reg = rwh5.H5Register(original)
+   for i, hdf5_path in enumerate(hdf5_paths):
+      prop = rqp.Property(original, support_uuid = grid_uuid)
+      if 'uuid' in hdf5_path:
+         path = hdf5_path.replace('uuid', str(prop.uuid))
+      else:
+         path = hdf5_path
+      prop.prepare_import(cached_array = data,
+                          source_info = 'test data',
+                          keyword = f'TEST{i}',
+                          property_kind = 'continuous',
+                          uom = 'm')
+      for entry in prop.collection.imported_list:  # only one entry
+         # override internal hdf5 path
+         h5_reg.register_dataset(entry[0], 'values_patch0', prop.collection.__dict__[entry[3]], hdf5_path = path)
+      prop_list.append(prop)
+      path_list.append(path)
+   h5_reg.write(mode = 'a')
+
+   for prop, hdf5_path in zip(prop_list, path_list):
+      root_node = prop.create_xml(find_local_property_kind = False)
+      assert root_node is not None
+      # override the hdf5 internal path in the xml tree
+      path_node = rqet.find_nested_tags(root_node, ['PatchOfValues', 'Values', 'Values', 'PathInHdfFile'])
+      assert path_node is not None
+      path_node.text = hdf5_path
+
+   # rewrite model
+   original.store_epc()
+
+   # re-open model and test copying
+   original = rq.Model(epc)
+   assert original is not None
+   copied = rq.new_model(copied_epc)
+   copied.copy_all_parts_from_other_model(original, consolidate = False)
+
+   assert set(original.uuids()) == set(copied.uuids())
+   assert set(original.parts()) == set(copied.parts())

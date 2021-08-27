@@ -3081,7 +3081,8 @@ class Model():
             ri_node.text = str(realization)
 
          # copy hdf5 data
-         hdf5_count = whdf5.copy_h5(other_h5_file_name, self_h5_file_name, uuid_inclusion_list = [uuid], mode = 'a')
+         hdf5_internal_paths = [node.text for node in rqet.list_of_descendant_tag(other_root, 'PathInHdfFile')]
+         hdf5_count = whdf5.copy_h5_path_list(other_h5_file_name, self_h5_file_name, hdf5_internal_paths, mode = 'a')
 
          # create relationship with hdf5 if needed and modify h5 file uuid in xml references
          if hdf5_count:
