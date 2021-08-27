@@ -225,12 +225,16 @@ def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w'):
             assert path in fp_in, f'internal path {path} not found in hdf5 file {file_in}'
             log.debug(f'copying hdf5 data for: {path}')
             build = ''
-            for w in path.split(sep = '/'):
+            group_list = list(path.split(sep = '/'))
+            assert len(group_list) > 1, f'no hdf5 group(s) in internal path {path}'
+            for w in group_list[:-1]:
                if w:
                   build += '/' + w
                   if build not in fp_out:
                      fp_out.create_group(build)
-            fp_in.copy(path, fp_out[path], expand_soft = True, expand_external = True, expand_refs = True)
+            build += '/' + group_list[-1]
+            fp_out.create_dataset(build, data = fp_in[path])
+#            fp_in.copy(path, fp_out[path], expand_soft = True, expand_external = True, expand_refs = True)
             copy_count += 1
    return copy_count
 
