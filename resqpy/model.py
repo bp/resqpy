@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '20th July 2021'
+version = '27th August 2021'
 
 import logging
 
@@ -1691,7 +1691,7 @@ class Model():
 
       if check_for_duplicates:
          for g in self.grid_list:
-            if bu.mathcing_uuids(g.uuid, grid_object.uuid):
+            if bu.matching_uuids(g.uuid, grid_object.uuid):
                return
       self.grid_list.append(grid_object)
 
