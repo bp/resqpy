@@ -540,6 +540,8 @@ class UnstructuredGrid(BaseResqpy):
 
          self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'CellFaceIsRightHanded', root = cfirh_values)
 
+         self.geometry_root = geom
+
       if add_as_part:
          self.model.add_part('obj_UnstructuredGridRepresentation', self.uuid, ug)
          if add_relationships:
@@ -771,6 +773,61 @@ class HexaGrid(UnstructuredGrid):
 
       if self.root is not None:
          self.check_hexahedral()
+
+   @classmethod
+   def from_unsplit_grid(cls, parent_model, grid_uuid, inherit_properties = True, title = None, extra_metadata = {}):
+      """Creates a new (unstructured) HexaGrid from an existing resqpy unsplit (IJK) Grid without K gaps."""
+
+      import resqpy.grid as grr
+
+      raise Exception('code not completed')
+
+      # establish existing IJK grid
+      ijk_grid = grr.Grid(parent_model, uuid = grid_uuid, find_properties = inherit_properties)
+      assert ijk_grid is not None
+      assert not ijk_grid.has_split_coordinate_lines, 'IJK grid has split coordinate lines (faults)'
+      assert not ijk_grid.k_gaps, 'IJK grid has K gaps'
+      ijk_grid.cache_all_geometry_arrays()
+      ijk_points = ijk_grid.points_ref(masked = False)
+
+      # make empty unstructured hexa grid
+      hexa_grid = cls(parent_model, title = title, extra_metadata = extra_metadata)
+
+      # derive hexa grid attributes from ijk grid
+      hexa_grid.crs_uuid = ijk_grid.crs_uuid
+      hexa_grid.set_cell_count(ijk_grid.cell_count())
+      if ijk_grid.inactive is not None:
+         hexa_grid.inactive = ijk_grid.inactive.reshape((hexa_grid.cell_count,))
+         hexa_grid.all_inactive = np.all(hexa_grid.inactive)
+         if hexa_grid.all_inactive:
+            log.warning(f'all cells marked as inactive for unstructured hexa grid {hexa_grid.title}')
+      else:
+         hexa_grid.all_inactive = False
+      hexa_grid.points_cached = ijk_points.reshape((-1, 3))
+      hexa_grid.node_count = hexa_grid.points_cached.shape[0]
+      assert hexa_grid.node_count == (ijk_grid.nk + 1) * (ijk_grid.nj + 1) * (ijk_grid.ni + 1)
+      # ordering: all K faces, then all J faces, then all I faces
+      k_face_count = (ijk_grid.nk + 1) * ijk_grid.nj * ijk_grid.ni
+      j_face_count = ijk_grid.nk * (ijk_grid.nj + 1) * ijk_grid.ni
+      i_face_count = ijk_grid.nk * ijk_grid.nj * (ijk_grid.ni + 1)
+      hexa_grid.face_count = (k_face_count + j_face_count + i_face_count)
+      hexa_grid.nodes_per_face_cl = 4 * (1 + np.arange(hexa_grid.face_count, dtype = int))
+      hexa_grid.faces_per_cell_cl = 6 * (1 + np.arange(hexa_grid.cell_count, dtype = int))
+      hexa_grid.faces_per_cell = np.empty(6 * hexa_grid.cell_count, dtype = int)
+      arange = np.arange(hexa_grid.cell_count, dtype = int)
+      hexa_grid.faces_per_cell[0::6] = arange  # K- faces
+      hexa_grid.faces_per_cell[1::6] = ijk_grid.nj * ijk_grid.ni + arange  # K+ faces
+      # TODO: following is wrong
+      hexa_grid.faces_per_cell[2::6] = k_face_count + arange  # J- faces
+      hexa_grid.faces_per_cell[3::6] = k_face_count + ijk_grid.nk * ijk_grid.ni + arange  # J+ faces
+      # TODO
+      # faces per cell
+      # nodes per face
+      # cell face is right handed
+
+      # TODO: inherit properties
+
+      return hexa_grid
 
    def check_hexahedral(self):
       """Checks that each cell has 6 faces and each face has 4 nodes.
