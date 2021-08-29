@@ -227,7 +227,7 @@ class PropertyCollection():
       if support_uuid is None:
          if self.support_uuid is not None:
             log.warning('clearing supporting representation for property collection')
-         self.model = None
+#         self.model = None
          self.support = None
          self.support_root = None
          self.support_uuid = None
