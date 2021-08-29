@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '23rd August 2021'
+version = '29th August 2021'
 
 import logging
 
@@ -780,8 +780,6 @@ class HexaGrid(UnstructuredGrid):
 
       import resqpy.grid as grr
 
-      raise Exception('code not completed')
-
       # establish existing IJK grid
       ijk_grid = grr.Grid(parent_model, uuid = grid_uuid, find_properties = inherit_properties)
       assert ijk_grid is not None
@@ -803,29 +801,90 @@ class HexaGrid(UnstructuredGrid):
             log.warning(f'all cells marked as inactive for unstructured hexa grid {hexa_grid.title}')
       else:
          hexa_grid.all_inactive = False
+
+      # inherit points (nodes) in IJK grid order, ie. K cycling fastest, then I, then J
       hexa_grid.points_cached = ijk_points.reshape((-1, 3))
-      hexa_grid.node_count = hexa_grid.points_cached.shape[0]
-      assert hexa_grid.node_count == (ijk_grid.nk + 1) * (ijk_grid.nj + 1) * (ijk_grid.ni + 1)
-      # ordering: all K faces, then all J faces, then all I faces
-      k_face_count = (ijk_grid.nk + 1) * ijk_grid.nj * ijk_grid.ni
-      j_face_count = ijk_grid.nk * (ijk_grid.nj + 1) * ijk_grid.ni
-      i_face_count = ijk_grid.nk * ijk_grid.nj * (ijk_grid.ni + 1)
+
+      # setup faces per cell
+      # ordering of faces (in nodes per face): all K faces, then all J faces, then all I faces
+      # within J faces, ordering is all of J- faces for J = 0 first, then increasing planes in J
+      # similarly for I faces
+      nk_plus_1 = ijk_grid.nk + 1
+      nj_plus_1 = ijk_grid.nj + 1
+      ni_plus_1 = ijk_grid.ni + 1
+      k_face_count = nk_plus_1 * ijk_grid.nj * ijk_grid.ni
+      j_face_count = ijk_grid.nk * nj_plus_1 * ijk_grid.ni
+      i_face_count = ijk_grid.nk * ijk_grid.nj * ni_plus_1
+      kj_face_count = k_face_count + j_face_count
       hexa_grid.face_count = (k_face_count + j_face_count + i_face_count)
-      hexa_grid.nodes_per_face_cl = 4 * (1 + np.arange(hexa_grid.face_count, dtype = int))
-      hexa_grid.faces_per_cell_cl = 6 * (1 + np.arange(hexa_grid.cell_count, dtype = int))
+      hexa_grid.faces_per_cell_cl = 6 * (1 + np.arange(hexa_grid.cell_count, dtype = int))  # 6 faces per cell
       hexa_grid.faces_per_cell = np.empty(6 * hexa_grid.cell_count, dtype = int)
       arange = np.arange(hexa_grid.cell_count, dtype = int)
       hexa_grid.faces_per_cell[0::6] = arange  # K- faces
       hexa_grid.faces_per_cell[1::6] = ijk_grid.nj * ijk_grid.ni + arange  # K+ faces
-      # TODO: following is wrong
-      hexa_grid.faces_per_cell[2::6] = k_face_count + arange  # J- faces
-      hexa_grid.faces_per_cell[3::6] = k_face_count + ijk_grid.nk * ijk_grid.ni + arange  # J+ faces
-      # TODO
-      # faces per cell
-      # nodes per face
-      # cell face is right handed
+      nki = ijk_grid.nk * ijk_grid.ni
+      nkj = ijk_grid.nk * ijk_grid.nj
+      # todo: vectorise following for loop
+      for cell in range(hexa_grid.cell_count):
+         k, j, i = ijk_grid.denaturalized_cell_index(cell)
+         j_minus_face = k_face_count + nki * j + ijk_grid.ni * k + i
+         hexa_grid.faces_per_cell[6 * cell + 2] = j_minus_face  # J- face
+         hexa_grid.faces_per_cell[6 * cell + 3] = j_minus_face + nki  # J+ face
+         i_minus_face = kj_face_count + nkj * i + ijk_grid.nj * k + j
+         hexa_grid.faces_per_cell[6 * cell + 4] = i_minus_face  # I- face
+         hexa_grid.faces_per_cell[6 * cell + 5] = i_minus_face + nkj  # I+ face
 
-      # TODO: inherit properties
+      # setup nodes per face, clockwise when viewed from negative side of face if ijk handedness matches xyz handedness
+      # ordering of nodes in points array is as for the IJK grid, ie. cycling down a pillar fastest
+      hexa_grid.node_count = hexa_grid.points_cached.shape[0]
+      assert hexa_grid.node_count == (ijk_grid.nk + 1) * (ijk_grid.nj + 1) * (ijk_grid.ni + 1)
+      hexa_grid.nodes_per_face_cl = 4 * (1 + np.arange(hexa_grid.face_count, dtype = int))  # 4 nodes per face
+      # todo: vectorise for loops
+      # K faces
+      face_base = 0
+      for k in range(nk_plus_1):
+         for j in range(ijk_grid.nj):
+            for i in range(ijk_grid.ni):
+               hexa_grid.nodes_per_face[face_base] = (j * ni_plus_1 + i) * nk_plus_1 + k  # ip 0, jp 0
+               hexa_grid.nodse_per_face[face_base + 1] = ((j + 1) * ni_plus_1 + i) * nk_plus_1 + k  # ip 0, jp 1
+               hexa_grid.nodse_per_face[face_base + 2] = ((j + 1) * ni_plus_1 + i + 1) * nk_plus_1 + k  # ip 1, jp 1
+               hexa_grid.nodse_per_face[face_base + 3] = (j * ni_plus_1 + i + 1) * nk_plus_1 + k  # ip 1, jp 0
+               face_base += 4
+      # J faces
+      assert face_base == k_face_count
+      for j in range(nj_plus_1):
+         for k in range(ijk_grid.nk):
+            for i in range(ijk_grid.ni):
+               hexa_grid.nodes_per_face[face_base] = (j * ni_plus_1 + i) * nk_plus_1 + k  # ip 0, kp 0
+               hexa_grid.nodes_per_face[face_base + 1] = (j * ni_plus_1 + i + 1) * nk_plus_1 + k  # ip 1, kp 0
+               hexa_grid.nodes_per_face[face_base + 2] = (j * ni_plus_1 + i + 1) * nk_plus_1 + k + 1  # ip 1, kp 1
+               hexa_grid.nodes_per_face[face_base + 3] = (j * ni_plus_1 + i) * nk_plus_1 + k + 1  # ip 0, kp 1
+               face_base += 4
+      # I faces
+      assert face_base == kj_face_count
+      for i in range(ni_plus_1):
+         for k in range(ijk_grid.nk):
+            for j in range(ijk_grid.nj):
+               hexa_grid.nodes_per_face[face_base] = (j * ni_plus_1 + i) * nk_plus_1 + k  # jp 0, kp 0
+               hexa_grid.nodes_per_face[face_base + 1] = (j * ni_plus_1 + i) * nk_plus_1 + k + 1  # jp 0, kp 1
+               hexa_grid.nodes_per_face[face_base + 2] = ((j + 1) * ni_plus_1 + i) * nk_plus_1 + k + 1  # jp 1, kp 1
+               hexa_grid.nodes_per_face[face_base + 3] = ((j + 1) * ni_plus_1 + i) * nk_plus_1 + k  # jp 1, kp 0
+               face_base += 4
+      assert face_base == hexa_grid.face_count
+
+      # set cell face is right handed
+      # todo: check Energistics documents for meaning of cell face is right handed
+      # here the assumption is clockwise ordering of nodes viewed from within cell means 'right handed'
+      hexa_grid.cell_face_is_right_handed = np.zeros(hexa_grid.face_count, dtype = bool)  # initially set to left handed
+      # if IJK grid's ijk handedness matches the xyz handedness, then set +ve faces to right handed; else -ve faces
+      if ijk_grid.off_handed():
+         hexa_grid.cell_face_is_right_handed[0::2] = True  # negative faces are right handed
+      else:
+         hexa_grid.cell_face_is_right_handed[1::2] = True  # positive faces are right handed
+
+      if inherit_properties:
+         # TODO: inherit property collection, flattening property arrays
+         raise NotImplementedError('code not written for inheriting properies in class method from_unsplit_grid()')
 
       return hexa_grid
 
@@ -843,6 +902,5 @@ class HexaGrid(UnstructuredGrid):
       assert self.faces_per_cell_cl[0] == 6 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 6)
       assert self.nodes_per_face_cl[0] == 4 and np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] == 4)
 
-   # todo: add class method to generate a HexaGrid from a Grid (IjkGrid)
    # todo: add hexahedral specific methods for centre_point(), volume() – see olio.volume
    # todo: also add methods equivalent to those in Grid class
