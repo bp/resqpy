@@ -5,6 +5,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.unstructured as rqu
+import resqpy.olio.uuid as bu
 
 
 def test_hexa_grid_from_grid(example_model_with_properties):
@@ -40,14 +41,22 @@ def test_hexa_grid_from_grid(example_model_with_properties):
 
    assert hexa_grid.cell_shape == 'hexahedral'
 
+   hexa_grid.check_hexahedral()
+
    # instantiate ijk grid and compare hexa grid with it
    ijk_grid = grr.any_grid(model, uuid = ijk_grid_uuid)
    assert ijk_grid is not None
 
    assert hexa_grid.cell_count == ijk_grid.cell_count()
+   assert hexa_grid.active_cell_count() == hexa_grid.cell_count
    assert hexa_grid.node_count == (ijk_grid.nk + 1) * (ijk_grid.nj + 1) * (ijk_grid.ni + 1)
    assert hexa_grid.face_count == ((ijk_grid.nk + 1) * ijk_grid.nj * ijk_grid.ni + ijk_grid.nk *
                                    (ijk_grid.nj + 1) * ijk_grid.ni + ijk_grid.nk * ijk_grid.nj * (ijk_grid.ni + 1))
+
+   assert bu.matching_uuids(hexa_grid.extract_crs_uuid(), ijk_grid.crs_uuid)
+
+   # points arrays should be identical for the two grids
+   assert_array_almost_equal(hexa_grid.points_ref(), ijk_grid.points_ref(masked = False).reshape((-1, 3)))
 
    # compare centre points of cells (not sure if these would be coincident for irregular shaped cells)
    hexa_centres = hexa_grid.centre_point()
