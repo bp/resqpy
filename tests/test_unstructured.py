@@ -9,8 +9,8 @@ import resqpy.unstructured as rqu
 
 def test_hexa_grid_from_grid(example_model_with_properties):
 
-   #   model = example_model_with_properties
-   model = rq.Model('/users/andy/bifröst/bc/u_test.epc', copy_from = example_model_with_properties.epc_file)
+   model = example_model_with_properties
+   # model = rq.Model('/users/andy/bifröst/bc/u_test.epc', copy_from = example_model_with_properties.epc_file)
 
    ijk_grid_uuid = model.uuid(obj_type = 'IjkGridRepresentation')
    assert ijk_grid_uuid is not None
