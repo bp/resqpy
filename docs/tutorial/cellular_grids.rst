@@ -20,7 +20,7 @@ One further RESQML class is rather ill-defined and caters for research grids:
 
 * GpGridRepresentation – the Gp stands for general purpose
 
-Of these six RESQML classes only the first, obj_IjkGridRepresentation, has currently been implemented in resqpy. The equivalent resqpy class is Grid, though a derived class, RegularGrid, can be used to construct simple block grids.
+Of these six RESQML classes only obj_IjkGridRepresentation and obj_UnstructuredGridRepresentation have currently been implemented in resqpy. The equivalent resqpy classes are Grid and UnstructuredGrid, though there are some derived classes. RegularGrid, can be used to construct simple block IJK grids and there are a handful of classes derived from UnstructuredGrid for constrained cell shapes.
 
 IJK grid variants
 -----------------
@@ -202,3 +202,45 @@ If, on the other hand, you want to treat the new grid as a standard Grid object,
     new_grid.create_xml(write_geometry = True, add_cell_length_properties = False)
 
 If you want the constant cell length property arrays to be generated anyway, leave the *add_cell_length_properties* argument at its default value of True.
+
+Unstructured Grids in resqpy
+----------------------------
+The unstructured grid classes are not as fully developed as the Grid and RegularGrid classes. To work with unstructured grids, include the unstructured module, for example:
+
+.. code-block:: python
+
+    import resqpy.unstructured as rug
+
+To read an existing RESQML unstructured grid object with a known uuid, use the familiar form:
+
+.. code-block:: python
+
+    u_grid = rug.UnstructuredGrid(model, uuid = u_grid_uuid)
+
+Alternatively, there is a convenience function in the grid module which will instantiate a suitable resqpy object for any of the supported types of grid (including IJK grids):
+
+.. code-block:: python
+
+    u_grid = grr.any_grid(model, uuid = u_grid_uuid)
+
+Unstructured grids can be used with or without a geometry. To create a new unstructured grid without a geometry, use code along these lines:
+
+.. code-block:: python
+
+    new_grid = rug.UnstructuredGrid(model, find_properties = False, geometry_required = False, title = 'abstract grid')
+    new_grid.set_cell_count(1500)
+
+Typically, such a grid without a geometry exists primarily as a supporting representation for properties. These properties can be created and added in the same way as for IJK grid properties - see the Grid Properties tutorial. The only significant difference is the shape of the property arrays (3D for Grid, 1D for UnstructuredGrid).
+
+If no geometry is present, the write_hdf5() method can typically be skipped (though it can still be used to process a new property collection and/or write an active cell boolean array). The xml for a new unstructured grid is created in the familiar way:
+
+    new_grid.create_xml(write_active = False, write_geometry = False)
+
+Unstructured Grids for Specialised Cell Shapes
+----------------------------------------------
+RESQML unstructured grids with a geometry include a cell shape attribute. In the general case, this is set to 'polyhedral'. However, if all cells in a grid have a similar shape, then this attribute can be set to one of 'tetrahedral', 'pyramidal', 'prism', or 'hexahedral'. The pyramidal setting implies all cells have a quadrilateral based pyramid shape, ie. one face with four edges and four triangular faces. The prism setting implies all cells are triangular prisms with two non-adjacent triangular faces and three quadrilateral faces. The hexahedral setting implies all cells have 6 quadrilateral faces (though degeneracy is allowed).
+
+Each of these more specialised cell shapes has a corresponding resqpy class, inheriting from UnstructuredGrid. The classes are: TetraGrid, PyramidGrid, PrismGrid and HexaGrid. The intention is to include optimised methods for these classes in future.
+
+The HexaGrid class includes a class method to create an unstructured grid from an existing unsplit IJK grid (with no K gaps): from_unsplit_grid().
+

@@ -1014,7 +1014,7 @@ class HexaGrid(UnstructuredGrid):
          hexa_grid.cell_face_is_right_handed[1::2] = True  # positive faces are right handed
 
       hexa_grid.write_hdf5(write_active = write_active)
-      hexa_grid.create_xml()
+      hexa_grid.create_xml(write_active = write_active)
 
       if inherit_properties:
          ijk_pc = ijk_grid.extract_property_collection()
