@@ -187,6 +187,7 @@ class UnstructuredGrid(BaseResqpy):
                                      dtype = 'bool')
 
    def _load_jagged_array(self, tag, main_attribute):
+      # jagged arrays are used by RESQML to efficiantly pack arrays of lists of numbers
       assert self.geometry_root is not None
       root_node = rqet.find_tag(self.geometry_root, tag)
       assert root_node is not None
@@ -315,8 +316,15 @@ class UnstructuredGrid(BaseResqpy):
    def face_centre_point(self, face_index):
       """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
 
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy float array of shape (3,) being the xyz location of the centre point of the face
+
       note:
-         this is a nominal centre point for a face and not generally its barycentre
+         this returns a nominal centre point for a face - the mean position of its nodes - which is not generally
+         its barycentre
       """
 
       self.cache_all_geometry_arrays()
@@ -324,7 +332,19 @@ class UnstructuredGrid(BaseResqpy):
       return np.mean(self.points_cached[self.nodes_per_face[start:self.nodes_per_face_cl[face_index]]], axis = 0)
 
    def cell_face_centre_points(self, cell):
-      """Returns a numpy array of centre points of the faces for a single cell."""
+      """Returns a numpy array of centre points of the faces for a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which face centre points are required
+
+      returns:
+         numpy array of shape (F, 3) being the xyz location of each of the F faces for the cell
+
+      notes:
+         the order of the returned face centre points matches the faces_per_cell for the cell;
+         the returned values are nominal centre points for the faces - the mean position of their nodes - which
+         are not generally their barycentres
+      """
 
       self.cache_all_geometry_arrays()
       start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
@@ -337,8 +357,15 @@ class UnstructuredGrid(BaseResqpy):
    def cell_centre_point(self, cell):
       """Returns centre point of a single cell calculated as the mean position of the centre points of its faces.
 
+      arguments:
+         cell (int): the index of the cell for which the centre point is required
+
+      returns:
+         numpy float array of shape (3,) being the xyz location of the centre point of the cell
+
       note:
-         this is a nominal centre point and not generally the barycentre of the cell
+         this is a nominal centre point - the mean of the nominal face centres - which is not generally
+         the barycentre of the cell
       """
 
       return np.mean(self.cell_face_centre_points(cell), axis = 0)
@@ -353,11 +380,11 @@ class UnstructuredGrid(BaseResqpy):
             is generated and added as an attribute of the grid, with attribute name array_centre_point
 
       returns:
-         (x, y, z) 3 element numpy array of floats holding centre point of cell;
+         (x, y, z) 3 element numpy array of floats holding centre point of a single cell;
          or numpy 2D array of shape (cell_count, 3) if cell is None
 
       notes:
-         a simple mean of the positions of the distinct contributing nodes is used to calculate the centre point of a cell;
+         a simple mean of the nominal centres of the faces is used to calculate the centre point of a cell;
          this is not generally the barycentre of the cell;
          resulting coordinates are in the same (local) crs as the grid points
 
@@ -606,6 +633,7 @@ class UnstructuredGrid(BaseResqpy):
 
 
 class TetraGrid(UnstructuredGrid):
+   """Class for unstructured grids where every cell is a tetrahedron."""
 
    def __init__(self,
                 parent_model,
@@ -615,6 +643,25 @@ class TetraGrid(UnstructuredGrid):
                 title = None,
                 originator = None,
                 extra_metadata = {}):
+      """Creates a new resqpy TetraGrid object (RESQML UnstructuredGrid with cell shape tetrahedral)
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+         find_properties (boolean, default True): if True and uuid is present, a
+            grid property collection is instantiated as an attribute, holding properties for which
+            this grid is the supporting representation
+         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+            are loaded into attributes of the new grid object
+         title (str, optional): citation title for new grid; ignored if uuid is present
+         originator (str, optional): name of person creating the grid; defaults to login id;
+            ignored if uuid is present
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+            ignored if uuid is present
+
+      returns:
+         a newly created TetraGrid object
+      """
 
       super().__init__(parent_model = parent_model,
                        uuid = uuid,
@@ -665,6 +712,25 @@ class PyramidGrid(UnstructuredGrid):
                 title = None,
                 originator = None,
                 extra_metadata = {}):
+      """Creates a new resqpy PyramidGrid object (RESQML UnstructuredGrid with cell shape pyramidal)
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+         find_properties (boolean, default True): if True and uuid is present, a
+            grid property collection is instantiated as an attribute, holding properties for which
+            this grid is the supporting representation
+         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+            are loaded into attributes of the new grid object
+         title (str, optional): citation title for new grid; ignored if uuid is present
+         originator (str, optional): name of person creating the grid; defaults to login id;
+            ignored if uuid is present
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+            ignored if uuid is present
+
+      returns:
+         a newly created PyramidGrid object
+      """
 
       super().__init__(parent_model = parent_model,
                        uuid = uuid,
@@ -712,6 +778,25 @@ class PrismGrid(UnstructuredGrid):
                 title = None,
                 originator = None,
                 extra_metadata = {}):
+      """Creates a new resqpy PrismGrid object (RESQML UnstructuredGrid with cell shape trisngular prism)
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+         find_properties (boolean, default True): if True and uuid is present, a
+            grid property collection is instantiated as an attribute, holding properties for which
+            this grid is the supporting representation
+         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+            are loaded into attributes of the new grid object
+         title (str, optional): citation title for new grid; ignored if uuid is present
+         originator (str, optional): name of person creating the grid; defaults to login id;
+            ignored if uuid is present
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+            ignored if uuid is present
+
+      returns:
+         a newly created PrismGrid object
+      """
 
       super().__init__(parent_model = parent_model,
                        uuid = uuid,
@@ -759,6 +844,25 @@ class HexaGrid(UnstructuredGrid):
                 title = None,
                 originator = None,
                 extra_metadata = {}):
+      """Creates a new resqpy HexaGrid object (RESQML UnstructuredGrid with cell shape hexahedral)
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+         find_properties (boolean, default True): if True and uuid is present, a
+            grid property collection is instantiated as an attribute, holding properties for which
+            this grid is the supporting representation
+         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+            are loaded into attributes of the new grid object
+         title (str, optional): citation title for new grid; ignored if uuid is present
+         originator (str, optional): name of person creating the grid; defaults to login id;
+            ignored if uuid is present
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+            ignored if uuid is present
+
+      returns:
+         a newly created HexaGrid object
+      """
 
       super().__init__(parent_model = parent_model,
                        uuid = uuid,
@@ -776,8 +880,26 @@ class HexaGrid(UnstructuredGrid):
          self.check_hexahedral()
 
    @classmethod
-   def from_unsplit_grid(cls, parent_model, grid_uuid, inherit_properties = True, title = None, extra_metadata = {}):
+   def from_unsplit_grid(cls,
+                         parent_model,
+                         grid_uuid,
+                         inherit_properties = True,
+                         title = None,
+                         extra_metadata = {},
+                         write_active = None):
       """Creates a new (unstructured) HexaGrid from an existing resqpy unsplit (IJK) Grid without K gaps.
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         grid_uuid (uuid.UUID): the uuid of an IjkGridRepresentation from which the hexa grid will be created
+         inherit_properties (boolean, default True): if True, properties will be created for the new grid
+         title (str, optional): citation title for the new grid
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
+         write_active (boolean, optional): if True (or None and inactive property is established) then an
+            active cell property is created (in addition to any inherited properties)
+
+      returns:
+         a newly created HexaGrid object
 
       note:
          this method includes the writing of hdf5 data, creation of xml for the new grid and adding it as a part
@@ -792,6 +914,8 @@ class HexaGrid(UnstructuredGrid):
       assert not ijk_grid.k_gaps, 'IJK grid has K gaps'
       ijk_grid.cache_all_geometry_arrays()
       ijk_points = ijk_grid.points_ref(masked = False)
+      if title is None:
+         title = ijk_grid.title
 
       # make empty unstructured hexa grid
       hexa_grid = cls(parent_model, title = title, extra_metadata = extra_metadata)
@@ -889,7 +1013,7 @@ class HexaGrid(UnstructuredGrid):
       else:
          hexa_grid.cell_face_is_right_handed[1::2] = True  # positive faces are right handed
 
-      hexa_grid.write_hdf5()
+      hexa_grid.write_hdf5(write_active = write_active)
       hexa_grid.create_xml()
 
       if inherit_properties:
