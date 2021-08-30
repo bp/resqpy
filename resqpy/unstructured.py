@@ -897,7 +897,7 @@ class HexaGrid(UnstructuredGrid):
          hexa_pc = rqp.PropertyCollection(support = hexa_grid)
          for part in ijk_pc.parts():
             count = ijk_pc.count_for_part(part)
-            hexa_part_shape = (hexa_grid.cell_count, ) if count == 1 else (hexa_grid.cell_count, count)
+            hexa_part_shape = (hexa_grid.cell_count,) if count == 1 else (hexa_grid.cell_count, count)
             hexa_pc.add_cached_array_to_imported_list(ijk_pc.cached_part_array_ref(part).reshape(hexa_part_shape),
                                                       'inherited from grid ' + str(ijk_grid.title),
                                                       ijk_pc.citation_title_for_part(part),

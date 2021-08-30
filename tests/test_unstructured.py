@@ -93,4 +93,3 @@ def test_hexa_grid_from_grid(example_model_with_properties):
          assert_array_almost_equal(hexa_array.flatten(), ijk_array.flatten())
       else:
          assert np.all(hexa_array.flatten() == ijk_array.flatten())
-
