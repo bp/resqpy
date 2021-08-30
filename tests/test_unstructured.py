@@ -16,10 +16,8 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    ijk_grid_uuid = model.uuid(obj_type = 'IjkGridRepresentation')
    assert ijk_grid_uuid is not None
 
-   # create an unstructured grid with hexahedral cells from an unsplit IJK grid
-   hexa = rqu.HexaGrid.from_unsplit_grid(model, ijk_grid_uuid, inherit_properties = False, title = 'HEXA')
-   hexa.write_hdf5()
-   hexa.create_xml()
+   # create an unstructured grid with hexahedral cells from an unsplit IJK grid (includes write_hdf5 and create_xml)
+   hexa = rqu.HexaGrid.from_unsplit_grid(model, ijk_grid_uuid, inherit_properties = True, title = 'HEXA')
 
    hexa_uuid = hexa.uuid
 
@@ -60,9 +58,7 @@ def test_hexa_grid_from_grid(example_model_with_properties):
 
    # compare centre points of cells (not sure if these would be coincident for irregular shaped cells)
    hexa_centres = hexa_grid.centre_point()
-   print(hexa_centres)
    ijk_centres = ijk_grid.centre_point()
-   print(ijk_centres)
    assert_array_almost_equal(hexa_centres, ijk_centres.reshape((-1, 3)), decimal = 3)
 
    # check that face and node indices are in range
@@ -78,3 +74,23 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert len(hexa_grid.cell_face_is_right_handed) == 6 * hexa_grid.cell_count
    # following assertion only applies to HexaGrid built from_unsplit_grid()
    assert np.count_nonzero(hexa_grid.cell_face_is_right_handed) == 3 * hexa_grid.cell_count  # half are right handed
+
+   # compare properties
+   ijk_pc = ijk_grid.extract_property_collection()
+   hexa_pc = hexa_grid.extract_property_collection()
+   assert ijk_pc is not None and hexa_pc is not None
+   assert ijk_pc.number_of_parts() <= hexa_pc.number_of_parts()  # hexa grid has extra active array in this test
+   for ijk_part in ijk_pc.parts():
+      p_title = ijk_pc.citation_title_for_part(ijk_part)
+      hexa_part = hexa_pc.singleton(citation_title = p_title)
+      assert hexa_part is not None
+      assert hexa_part != ijk_part  # properties are different objects with distinct uuids
+      assert hexa_pc.continuous_for_part(hexa_part) == ijk_pc.continuous_for_part(ijk_part)
+      ijk_array = ijk_pc.cached_part_array_ref(ijk_part)
+      hexa_array = hexa_pc.cached_part_array_ref(hexa_part)
+      assert ijk_array is not None and hexa_array is not None
+      if hexa_pc.continuous_for_part(hexa_part):
+         assert_array_almost_equal(hexa_array.flatten(), ijk_array.flatten())
+      else:
+         assert np.all(hexa_array.flatten() == ijk_array.flatten())
+

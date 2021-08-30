@@ -777,7 +777,11 @@ class HexaGrid(UnstructuredGrid):
 
    @classmethod
    def from_unsplit_grid(cls, parent_model, grid_uuid, inherit_properties = True, title = None, extra_metadata = {}):
-      """Creates a new (unstructured) HexaGrid from an existing resqpy unsplit (IJK) Grid without K gaps."""
+      """Creates a new (unstructured) HexaGrid from an existing resqpy unsplit (IJK) Grid without K gaps.
+
+      note:
+         this method includes the writing of hdf5 data, creation of xml for the new grid and adding it as a part
+      """
 
       import resqpy.grid as grr
 
@@ -885,9 +889,37 @@ class HexaGrid(UnstructuredGrid):
       else:
          hexa_grid.cell_face_is_right_handed[1::2] = True  # positive faces are right handed
 
+      hexa_grid.write_hdf5()
+      hexa_grid.create_xml()
+
       if inherit_properties:
-         # TODO: inherit property collection, flattening property arrays
-         raise NotImplementedError('code not written for inheriting properies in class method from_unsplit_grid()')
+         ijk_pc = ijk_grid.extract_property_collection()
+         hexa_pc = rqp.PropertyCollection(support = hexa_grid)
+         for part in ijk_pc.parts():
+            count = ijk_pc.count_for_part(part)
+            hexa_part_shape = (hexa_grid.cell_count, ) if count == 1 else (hexa_grid.cell_count, count)
+            hexa_pc.add_cached_array_to_imported_list(ijk_pc.cached_part_array_ref(part).reshape(hexa_part_shape),
+                                                      'inherited from grid ' + str(ijk_grid.title),
+                                                      ijk_pc.citation_title_for_part(part),
+                                                      discrete = not ijk_pc.continuous_for_part(part),
+                                                      uom = ijk_pc.uom_for_part(part),
+                                                      time_index = ijk_pc.time_index_for_part(part),
+                                                      null_value = ijk_pc.null_value_for_part(part),
+                                                      property_kind = ijk_pc.property_kind_for_part(part),
+                                                      local_property_kind_uuid = ijk_pc.local_property_kind_uuid(part),
+                                                      facet_type = ijk_pc.facet_type_for_part(part),
+                                                      facet = ijk_pc.facet_for_part(part),
+                                                      realization = ijk_pc.realization_for_part(part),
+                                                      indexable_element = ijk_pc.indexable_for_part(part),
+                                                      count = count,
+                                                      const_value = ijk_pc.constant_value_for_part(part))
+            # todo: patch min & max values if present in ijk part
+            hexa_pc.write_hdf5_for_imported_list()
+            hexa_pc.create_xml_for_imported_list_and_add_parts_to_model(
+               support_uuid = hexa_grid.uuid,
+               time_series_uuid = ijk_pc.time_series_uuid_for_part(part),
+               string_lookup_uuid = ijk_pc.string_lookup_uuid_for_part(part),
+               extra_metadata = ijk_pc.extra_metadata_for_part(part))
 
       return hexa_grid
 
