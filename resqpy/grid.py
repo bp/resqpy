@@ -5532,7 +5532,7 @@ def grid_flavour(grid_root):
    if flavour is None:
       node_type = rqet.node_type(grid_root, strip_obj = True)
       if node_type == 'IjkGridRepresentation':
-         if rqet.find_tag(grid_root, 'Geometry'):
+         if rqet.find_tag(grid_root, 'Geometry') is not None:
             flavour = 'IjkGrid'
          else:
             flavour = 'IjkBlockGrid'  # this might cause issues

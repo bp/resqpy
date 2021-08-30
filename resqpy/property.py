@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '20th August 2021'
+version = '29th August 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -197,8 +197,8 @@ class PropertyCollection():
 
       Arguments:
          support_uuid: the uuid of the supporting representation which the properties in this collection are for
-         support: a grid.Grid, unstructured.UnstructuredGrid, well.WellboreFrame, well.BlockedWell, surface.Mesh, or
-            fault.GridConnectionSet object which the properties in this collection are for
+         support: a grid.Grid, unstructured.UnstructuredGrid (or derived class), well.WellboreFrame, well.BlockedWell,
+            surface.Mesh, or fault.GridConnectionSet object which the properties in this collection are for
          model (model.Model object, optional): if present, the model associated with this collection is set to this;
             otherwise the model is assigned from the supporting object
          modify_parts (boolean, default True): if True, any parts already in this collection have their individual
@@ -264,7 +264,7 @@ class PropertyCollection():
          else:
             if type(self.support) in [
                   grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
-                  rug.UnstructuredGrid
+                  rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.PyramidGrid
             ]:
                self.support_root = self.support.root
             else:
@@ -348,7 +348,7 @@ class PropertyCollection():
          if indexable_element is None or indexable_element == 'faces':
             shape_list = [support.count]
 
-      elif isinstance(support, rug.UnstructuredGrid):
+      elif type(support) in [rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.PyramidGrid]:
          if indexable_element is None or indexable_element == 'cells':
             shape_list = [support.cell_count]
          elif indexable_element == 'faces per cell':
