@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '30th August 2021'
+version = '31st August 2021'
 
 import logging
 
@@ -19,7 +19,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 import resqpy.crs as rqc
 import resqpy.property as rqp
 
-valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']
+valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']  #: valid cell shapes
 
 
 class UnstructuredGrid(BaseResqpy):
@@ -74,7 +74,7 @@ class UnstructuredGrid(BaseResqpy):
          assert cell_shape in valid_cell_shapes, f'invalid cell shape {cell_shape} for unstructured grid'
 
       self.cell_count = None  #: the number of cells in the grid
-      self.cell_shape = cell_shape  #: the shape of cells withing the grid
+      self.cell_shape = cell_shape  #: the shape of cells within the grid
       self.crs_uuid = None  #: uuid of the coordinate reference system used by the grid's geometry
       self.points_cached = None  #: numpy array of raw points data; loaded on demand
       self.node_count = None  #: number of distinct points used in geometry; None if no geometry present
@@ -327,9 +327,61 @@ class UnstructuredGrid(BaseResqpy):
          its barycentre
       """
 
+      return np.mean(self.points_cached[self.node_indices_for_face(face_index)], axis = 0)
+
+   def node_indices_for_face(self, face_index):
+      """Returns numpy list of node indices for a single face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy int array of shape (N,) being the node indices identifying the vertices of the face
+
+      note:
+         the node indices are used to index the points data (points_cached attribute)
+      """
+
       self.cache_all_geometry_arrays()
       start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
-      return np.mean(self.points_cached[self.nodes_per_face[start:self.nodes_per_face_cl[face_index]]], axis = 0)
+      return self.nodes_per_face[start:self.nodes_per_face_cl[face_index]]
+
+   def distinct_node_indices_for_cell(self, cell):
+      """Returns a numpy list of distinct node indices used by the faces of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which distinct node indices are required
+
+      returns:
+         numpy int array of shape (N, ) being the indices of N distinct nodes used by the cell's faces
+
+      note:
+         the returned array is sorted by increasing node index
+      """
+
+      face_indices = self.face_indices_for_cell(cell)
+      node_set = self.node_indices_for_face(face_indices[0])
+      for face_index in face_indices[1:]:
+         node_set = np.union1d(node_set, self.node_indices_for_face(face_index))
+      return node_set
+
+   def face_indices_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (F,) being the face indices of each of the F faces for the cell
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces
+      """
+
+      self.cache_all_geometry_arrays()
+      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
+      return self.faces_per_cell[start:self.faces_per_cell_cl[cell]].copy()
 
    def cell_face_centre_points(self, cell):
       """Returns a numpy array of centre points of the faces for a single cell.
@@ -346,11 +398,9 @@ class UnstructuredGrid(BaseResqpy):
          are not generally their barycentres
       """
 
-      self.cache_all_geometry_arrays()
-      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
-      face_count = self.faces_per_cell_cl[cell] - start
-      face_centres = np.empty((face_count, 3))
-      for fi, face_index in enumerate(self.faces_per_cell[start:start + face_count]):  # todo: vectorise
+      face_indices = self.face_indices_for_cell(cell)
+      face_centres = np.empty((len(face_indices), 3))
+      for fi, face_index in enumerate(face_indices):  # todo: vectorise?
          face_centres[fi] = self.face_centre_point(face_index)
       return face_centres
 
@@ -415,7 +465,10 @@ class UnstructuredGrid(BaseResqpy):
          return self.cell_centre_point[cell]
 
    def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
-      """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays."""
+      """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays.
+
+      :meta common:
+      """
 
       # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
       # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
@@ -1060,6 +1113,23 @@ class HexaGrid(UnstructuredGrid):
       assert self.faces_per_cell_cl is not None and self.nodes_per_face_cl is not None
       assert self.faces_per_cell_cl[0] == 6 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 6)
       assert self.nodes_per_face_cl[0] == 4 and np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] == 4)
+
+   def corner_points(self, cell):
+      """Returns corner points (nodes) of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the corner points are required
+
+      returns:
+         numpy float array of shape (8, 3) being the xyz points of 8 nodes defining a single hexahedral cell
+
+      note:
+         if this hexa grid has been created using the from_unsplit_grid class method, then the result can be
+         reshaped to (2, 2, 2, 3) for corner points compatible with those used by the Grid class
+      """
+
+      self.cache_all_geometry_arrays()
+      return self.points_cached[self.distinct_node_indices_for_cell(cell)]
 
    # todo: add hexahedral specific methods for centre_point(), volume() – see olio.volume
    # todo: also add methods equivalent to those in Grid class

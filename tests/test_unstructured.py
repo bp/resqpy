@@ -57,6 +57,7 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert_array_almost_equal(hexa_grid.points_ref(), ijk_grid.points_ref(masked = False).reshape((-1, 3)))
 
    # compare centre points of cells (not sure if these would be coincident for irregular shaped cells)
+   # note that the centre_point() method exercises several other methods
    hexa_centres = hexa_grid.centre_point()
    ijk_centres = ijk_grid.centre_point()
    assert_array_almost_equal(hexa_centres, ijk_centres.reshape((-1, 3)), decimal = 3)
@@ -69,6 +70,21 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert np.all(hexa_grid.nodes_per_face < hexa_grid.node_count)
    assert len(hexa_grid.faces_per_cell_cl) == hexa_grid.cell_count
    assert len(hexa_grid.nodes_per_face_cl) == hexa_grid.face_count
+
+   # check distinct nodes for first cell
+   cell_nodes = hexa_grid.distinct_node_indices_for_cell(0)  # is sorted by node index
+   assert len(cell_nodes) == 8
+   ni1_nj1 = (ijk_grid.ni + 1) * (ijk_grid.nj + 1)
+   expected_nodes = np.array((0, 1, ijk_grid.ni + 1, ijk_grid.ni + 2, ni1_nj1, ni1_nj1 + 1, ni1_nj1 + ijk_grid.ni + 1,
+                              ni1_nj1 + ijk_grid.ni + 2),
+                             dtype = int)
+   assert np.all(cell_nodes == expected_nodes)
+
+   # compare corner points for first cell with those for ijk grid cell
+   cp = hexa_grid.corner_points(0)
+   assert cp.shape == (8, 3)
+   assert_array_almost_equal(cp.reshape((2, 2, 2, 3)),
+                             ijk_grid.corner_points(cell_kji0 = (0, 0, 0), cache_resqml_array = False))
 
    # have a look at handedness of cell faces
    assert len(hexa_grid.cell_face_is_right_handed) == 6 * hexa_grid.cell_count
