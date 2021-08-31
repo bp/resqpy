@@ -950,10 +950,14 @@ class PyramidGrid(UnstructuredGrid):
       apex = self.points_cached[apex_node]
       abcd = self.points_cached[base_nodes]
 
-      return vol.pyramid_volume(apex, abcd[0], abcd[1], abcd[2], abcd[3],
+      return vol.pyramid_volume(apex,
+                                abcd[0],
+                                abcd[1],
+                                abcd[2],
+                                abcd[3],
                                 crs_is_right_handed = (self.crs_is_right_handed == hands[0]))
 
-   # todo: add pyramidal specific methods for centre_point(), volume() – see olio.volume tets()
+   # todo: add pyramidal specific method for centre_point()
 
 
 class PrismGrid(UnstructuredGrid):
@@ -1019,7 +1023,7 @@ class PrismGrid(UnstructuredGrid):
       nodes_per_face_count[1:] = self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1]
       assert np.all(np.logical_or(nodes_per_face_count == 3, nodes_per_face_count == 4))
 
-   # todo: add prism specific methods for centre_point(), volume() – see olio.volume tets()
+   # todo: add prism specific methods for centre_point(), volume()
 
 
 class HexaGrid(UnstructuredGrid):
@@ -1285,9 +1289,13 @@ class HexaGrid(UnstructuredGrid):
          nodes = self.node_indices_for_face(face_index)
          abcd = self.points_cached[nodes]
          assert abcd.shape == (4, 3)
-         v += vol.pyramid_volume(apex, abcd[0], abcd[1], abcd[2], abcd[3],
+         v += vol.pyramid_volume(apex,
+                                 abcd[0],
+                                 abcd[1],
+                                 abcd[2],
+                                 abcd[3],
                                  crs_is_right_handed = (self.crs_is_right_handed == handedness))
       return v
 
-   # todo: add hexahedral specific methods for centre_point(), volume() – see olio.volume
-   # todo: also add methods equivalent to those in Grid class
+   # todo: add hexahedral specific method for centre_point()?
+   # todo: also add other methods equivalent to those in Grid class
