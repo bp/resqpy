@@ -214,6 +214,7 @@ def test_tetra_grid(tmp_path):
    expected_cell_volume = ((2.0 * half_edge)**3) / (6.0 * maths.sqrt(2.0))
    for cell in range(tetra.cell_count):
       assert maths.isclose(tetra.volume(cell), expected_cell_volume, rel_tol = 1.0e-3)
+   assert maths.isclose(tetra.grid_volume(), 5.0 * expected_cell_volume)
 
    # test internal / external face lists
    assert np.all(tetra.external_face_indices() == np.arange(4, 16, dtype = int))

@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '1st April 2021'
+version = '31st August 2021'
 
 import logging
 
@@ -156,6 +156,14 @@ def azimuth(v):  # 'azimuth' is synonymous with 'compass bearing'
    return degrees_from_radians(radians)
 
 
+def inclination(v):
+   """Returns the inclination in degrees of v (angle relative to +ve z axis)."""
+   assert 2 <= v.size <= 3
+   unit_v = unit_vector(v)
+   radians = maths.acos(dot_product(unit_v, np.array((0.0, 0.0, 1.0))))
+   return degrees_from_radians(radians)
+
+
 def points_direction_vector(a, axis):
    """Returns an average direction vector based on first and last points or slices in given axis."""
 
@@ -176,7 +184,7 @@ def points_direction_vector(a, axis):
       if not np.all(np.isnan(a[tuple(finish_slicing)])):
          break
       finish += 1
-   log.debug(f'axis: {axis}; start: {start}; finish: {finish}')
+#   log.debug(f'axis: {axis}; start: {start}; finish: {finish}')
    if start >= finish:
       return None
    if a.ndim > 2:
@@ -186,8 +194,10 @@ def points_direction_vector(a, axis):
    else:
       start_p = a[start]
       finish_p = a[finish]
-   log.debug(f'start_p: {start_p}')
-   log.debug(f'finish_p: {finish_p}')
+
+
+#   log.debug(f'start_p: {start_p}')
+#   log.debug(f'finish_p: {finish_p}')
    return finish_p - start_p
 
 
@@ -353,6 +363,16 @@ def tilt_points(pivot_xyz, azimuth, dip, points):
    log.debug('points shape: ' + str(points.shape))
    points[:] = np.matmul(matrix, points.reshape((-1, 3)).transpose()).transpose().reshape(points_shape)
    points[:] += pivot_xyz
+
+
+def project_points_onto_plane(plane_xyz, normal_vector, points):
+   """Modifies array of xyz points in situ to project onto a plane defined by a point and normal vector."""
+
+   az = azimuth(normal_vector)
+   incl = inclination(normal_vector)
+   tilt_points(plane_xyz, az, -incl, points)
+   points[..., 2] = plane_xyz[2]
+   tilt_points(plane_xyz, az, incl, points)
 
 
 def perspective_vector(xyz_box, view_axis, vanishing_distance, vector):

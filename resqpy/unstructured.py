@@ -13,6 +13,7 @@ from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.weights_and_measures as bwam
 import resqpy.olio.vector_utilities as vec
+import resqpy.olio.triangulation as triangulation
 import resqpy.olio.volume as vol
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
@@ -988,12 +989,19 @@ class TetraGrid(UnstructuredGrid):
          tetra.points_cached[:-1] = u_grid.points_cached[u_cell_nodes].copy()
          tetra.points_cached[-1] = u_grid.centre_point(cell = cell)
 
-         # TODO
-         # for each face in u cell:
-         # project points onto a plane (normal to average normal of face centre x edges)
-         # create Delaunay triangulation of face
-         # for each triangle:
-         # add a cell to tetra grid, using triangle nodes plus centre node
+         for fi in u_cell_faces:
+            face_points = u_grid.points_cached[u_grid.node_indices_for_face(fi)].copy()
+            face_centre = u_grid.face_centre_point(fi)
+            # project face points onto a plane
+            normal = u_grid.face_normal(fi)
+            az = vec.azimuth(normal)
+            incl = vec.inclination(normal)
+            vec.tilt_points(face_centre, az, -incl, face_points)
+            # create Delaunay triangulation of face
+            triangulated_face = triangulation.dt(face_points[:, :2])  # int array of shape (M, 3)
+            for tfi in range(len(triangulated_face)):
+               # add a cell to tetra grid, using triangle nodes plus centre node
+               pass
 
          raise NotImplementedError('from_unstructured_cell not yet implemented')
 
