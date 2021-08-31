@@ -12,6 +12,7 @@ import numpy as np
 from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.weights_and_measures as bwam
+import resqpy.olio.volume as vol
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -90,6 +91,7 @@ class UnstructuredGrid(BaseResqpy):
       self.grid_representation = 'UnstructuredGrid'  #: flavour of grid, 'UnstructuredGrid'; not much used
       self.geometry_root = None  #: xml node at root of geometry sub-tree, if present
       self.property_collection = None  #: collection of properties for which this grid is the supporting representation
+      self.crs_is_right_handed = None  #: cached boolean indicating handedness of crs axes
 
       super().__init__(model = parent_model,
                        uuid = uuid,
@@ -222,6 +224,7 @@ class UnstructuredGrid(BaseResqpy):
       uuid_str = rqet.find_nested_tags_text(self.geometry_root, ['LocalCrs', 'UUID'])
       if uuid_str:
          self.crs_uuid = bu.uuid_from_string(uuid_str)
+         self._set_crs_handedness()
       return self.crs_uuid
 
    def extract_inactive_mask(self):
@@ -329,6 +332,13 @@ class UnstructuredGrid(BaseResqpy):
 
       return np.mean(self.points_cached[self.node_indices_for_face(face_index)], axis = 0)
 
+   def node_count_for_face(self, face_index):
+      """Returns the number of nodes for a particular face."""
+
+      self.cache_all_geometry_arrays()
+      start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
+      return self.nodes_per_face_cl[face_index] - start
+
    def node_indices_for_face(self, face_index):
       """Returns numpy list of node indices for a single face.
 
@@ -339,7 +349,9 @@ class UnstructuredGrid(BaseResqpy):
          numpy int array of shape (N,) being the node indices identifying the vertices of the face
 
       note:
-         the node indices are used to index the points data (points_cached attribute)
+         the node indices are used to index the points data (points_cached attribute);
+         ordering of returned nodes is clockwise or anticlockwise when viewed from within the cell,
+         as indicated by the entry in the cell_face_is_right_handed array
       """
 
       self.cache_all_geometry_arrays()
@@ -382,6 +394,28 @@ class UnstructuredGrid(BaseResqpy):
       self.cache_all_geometry_arrays()
       start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
       return self.faces_per_cell[start:self.faces_per_cell_cl[cell]].copy()
+
+   def face_indices_and_handedness_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell, and numpy boolean list of face right handedness.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (F,), numpy boolean array of shape (F, ):
+         being the face indices of each of the F faces for the cell, and the right handedness (clockwise order)
+         of the face nodes when viewed from within the cell
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
+         some processing of geometry such as volume calculations
+      """
+
+      self.cache_all_geometry_arrays()
+      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
+      return (self.faces_per_cell[start:self.faces_per_cell_cl[cell]].copy(),
+              self.cell_face_is_right_handed[start:self.faces_per_cell_cl[cell]].copy())
 
    def cell_face_centre_points(self, cell):
       """Returns a numpy array of centre points of the faces for a single cell.
@@ -684,6 +718,13 @@ class UnstructuredGrid(BaseResqpy):
 
       self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, tag + '/cumulativeLength', root = cl_values)
 
+   def _set_crs_handedness(self):
+      if self.crs_is_right_handed is not None:
+         return
+      assert self.crs_uuid is not None
+      crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+      self.crs_is_right_handed = crs.is_right_handed_xyz()
+
 
 class TetraGrid(UnstructuredGrid):
    """Class for unstructured grids where every cell is a tetrahedron."""
@@ -816,6 +857,101 @@ class PyramidGrid(UnstructuredGrid):
       nodes_per_face_count[0] = self.nodes_per_face_cl[0]
       nodes_per_face_count[1:] = self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1]
       assert np.all(np.logical_or(nodes_per_face_count == 3, nodes_per_face_count == 4))
+
+   def face_indices_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (5,) being the face indices of each of the 5 faces for the cell; the first
+         index in the array is for the quadrilateral face
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces
+      """
+
+      faces = super().face_indices_for_cell(cell)
+      assert len(faces) == 5
+      result = -np.ones(5, dtype = int)
+      i = 1
+      for f in range(5):
+         nc = self.node_count_for_face(faces[f])
+         if nc == 3:
+            assert i < 5, 'too many triangular faces for cell in pyramid grid'
+            result[i] = faces[f]
+            i += 1
+         else:
+            assert nc == 4, 'pyramid grid includes a face that is neither triangle nor quadrilateral'
+            assert result[0] == -1, 'more than one quadrilateral face for cell in pyramid grid'
+            result[0] = faces[f]
+      return result
+
+   def face_indices_and_handedness_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell, and numpy boolean list of face right handedness.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (5,), numpy boolean array of shape (5, ):
+         being the face indices of each of the 5 faces for the cell, and the right handedness (clockwise order)
+         of the face nodes when viewed from within the cell; the first entry in each list is for the
+         quadrilateral face
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
+         some processing of geometry such as volume calculations
+      """
+
+      faces, handednesses = super().face_indices_and_handedness_for_cell(cell)
+      assert len(faces) == 5 and len(handednesses) == 5
+      f_result = -np.ones(5, dtype = int)
+      h_result = np.empty(5, dtype = bool)
+      i = 1
+      for f in range(5):
+         nc = self.node_count_for_face(faces[f])
+         if nc == 3:
+            assert i < 5, 'too many triangular faces for cell in pyramid grid'
+            f_result[i] = faces[f]
+            h_result[i] = handednesses[f]
+            i += 1
+         else:
+            assert nc == 4, 'pyramid grid includes a face that is neither triangle nor quadrilateral'
+            assert f_result[0] == -1, 'more than one quadrilateral face for cell in pyramid grid'
+            f_result[0] = faces[f]
+            h_result[0] = handednesses[f]
+      return f_result, h_result
+
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the pyramidal cell; units of measure is implied by crs units
+      """
+
+      self._set_crs_handedness()
+      self.cache_all_geometry_arrays()
+      faces, hands = self.face_indices_and_handedness_for_cell(cell)
+      nodes = self.distinct_node_indices_for_cell(cell)
+      base_nodes = self.node_indices_for_face(faces[0])
+      for node in nodes:
+         if node not in base_nodes:
+            apex_node = node
+            break
+      else:
+         raise Exception('apex node not found for cell in pyramid grid')
+      apex = self.points_cached[apex_node]
+      abcd = self.points_cached[base_nodes]
+
+      return vol.pyramid_volume(apex, abcd[0], abcd[1], abcd[2], abcd[3],
+                                crs_is_right_handed = (self.crs_is_right_handed == hands[0]))
 
    # todo: add pyramidal specific methods for centre_point(), volume() – see olio.volume tets()
 
@@ -1130,6 +1266,28 @@ class HexaGrid(UnstructuredGrid):
 
       self.cache_all_geometry_arrays()
       return self.points_cached[self.distinct_node_indices_for_cell(cell)]
+
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the hexahedral cell; units of measure is implied by crs units
+      """
+
+      self._set_crs_handedness()
+      apex = self.cell_centre_point(cell)
+      v = 0.0
+      faces, handednesses = self.face_indices_and_handedness_for_cell(cell)
+      for face_index, handedness in zip(faces, handednesses):
+         nodes = self.node_indices_for_face(face_index)
+         abcd = self.points_cached[nodes]
+         assert abcd.shape == (4, 3)
+         v += vol.pyramid_volume(apex, abcd[0], abcd[1], abcd[2], abcd[3],
+                                 crs_is_right_handed = (self.crs_is_right_handed == handedness))
+      return v
 
    # todo: add hexahedral specific methods for centre_point(), volume() – see olio.volume
    # todo: also add methods equivalent to those in Grid class

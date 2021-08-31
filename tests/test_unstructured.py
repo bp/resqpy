@@ -1,8 +1,10 @@
 import pytest
+import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.model as rq
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.unstructured as rqu
 import resqpy.olio.uuid as bu
@@ -52,6 +54,7 @@ def test_hexa_grid_from_grid(example_model_with_properties):
                                    (ijk_grid.nj + 1) * ijk_grid.ni + ijk_grid.nk * ijk_grid.nj * (ijk_grid.ni + 1))
 
    assert bu.matching_uuids(hexa_grid.extract_crs_uuid(), ijk_grid.crs_uuid)
+   assert hexa_grid.crs_is_right_handed == rqc.Crs(model, uuid = ijk_grid.crs_uuid).is_right_handed_xyz()
 
    # points arrays should be identical for the two grids
    assert_array_almost_equal(hexa_grid.points_ref(), ijk_grid.points_ref(masked = False).reshape((-1, 3)))
@@ -90,6 +93,11 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert len(hexa_grid.cell_face_is_right_handed) == 6 * hexa_grid.cell_count
    # following assertion only applies to HexaGrid built from_unsplit_grid()
    assert np.count_nonzero(hexa_grid.cell_face_is_right_handed) == 3 * hexa_grid.cell_count  # half are right handed
+
+   # compare cell volumes for first cell
+   hexa_vol = hexa_grid.volume(0)
+   ijk_vol = ijk_grid.volume(cell_kji0 = 0, cache_resqml_array = False, cache_volume_array = False)
+   assert maths.isclose(hexa_vol, ijk_vol)
 
    # compare properties
    ijk_pc = ijk_grid.extract_property_collection()
