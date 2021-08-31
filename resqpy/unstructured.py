@@ -92,6 +92,7 @@ class UnstructuredGrid(BaseResqpy):
       self.geometry_root = None  #: xml node at root of geometry sub-tree, if present
       self.property_collection = None  #: collection of properties for which this grid is the supporting representation
       self.crs_is_right_handed = None  #: cached boolean indicating handedness of crs axes
+      self.cells_per_face = None  #: numpy int array of shape (face_count, 2) holding cells for faces; -1 is null value
 
       super().__init__(model = parent_model,
                        uuid = uuid,
@@ -279,6 +280,99 @@ class UnstructuredGrid(BaseResqpy):
          return self.property_collection
       self.property_collection = rqp.PropertyCollection(support = self)
       return self.property_collection
+
+   def set_cells_per_face(self, check_all_faces_used = True):
+      """Sets and returns the cells_per_face array showing which cells are using each face.
+
+      arguments:
+         check_all_faces_used (boolean, default True): if True, an assertion error is raised if there are any
+            faces which do not appear in any cells
+
+      returns:
+         numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
+         null value; if only one cell uses a face, its index is always in position 0 of the second axis
+      """
+
+      if self.cells_per_face is not None:
+         return self.cells_per_face
+      assert self.face_count is not None
+      self.cells_per_face = -np.ones((self.face_count, 2), dtype = int)  # -1 is used here as a null value
+      for cell in range(self.cell_count):
+         for face in self.face_indices_for_cell(cell):
+            if self.cells_per_face[face, 0] == -1:
+               self.cells_per_face[face, 0] = cell
+            else:
+               assert self.cells_per_face[face, 1] == -1, f'more than two cells use face with index {face}'
+               self.cells_per_face[face, 1] = cell
+      if check_all_faces_used:
+         assert np.all(self.cells_per_face[:, 0] >= 0), 'not all faces used by cells'
+      return self.cells_per_face
+
+   def masked_cells_per_face(self, exclude_cell_mask):
+      """Sets and returns the cells_per_face array showing which cells are using each face.
+
+      arguments:
+         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+         are excluded when populating the result
+
+      returns:
+         numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
+         null value; if only one cell uses a face, its index is always in position 0 of the second axis
+
+      note:
+         this method recomputes the result on every call - nothing extra is cached in the grid
+      """
+
+      assert self.face_count is not None
+      result = -np.ones((self.face_count, 2), dtype = int)  # -1 is used here as a null value
+      for cell in range(self.cell_count):
+         if exclude_cell_mask[cell]:
+            continue
+         for face in self.face_indices_for_cell(cell):
+            if result[face, 0] == -1:
+               result[face, 0] = cell
+            else:
+               assert result[face, 1] == -1, f'more than two cells use face with index {face}'
+               result[face, 1] = cell
+      return result
+
+   def external_face_indices(self):
+      """Returns a numpy int vector listing the indices of faces which are only used by one cell.
+
+      note:
+         resulting array is ordered by face index
+      """
+
+      self.set_cells_per_face()
+      return np.where(self.cells_per_face[:, 1] == -1)[0]
+
+   def external_face_indices_for_masked_cells(self, exclude_cell_mask):
+      """Returns a numpy int vector listing the indices of faces which are used by exactly one of masked cells.
+
+      arguments:
+         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+         are excluded when populating the result
+
+      note:
+         resulting array is ordered by face index
+      """
+
+      cpf = self.masked_cells_per_face(exclude_cell_mask)
+      return np.where(np.logical_and(cpf[:, 0] >= 0, cpf[:, 1] == -1))[0]
+
+   def internal_face_indices_for_masked_cells(self, exclude_cell_mask):
+      """Returns a numpy int vector listing the indices of faces which are used by two of masked cells.
+
+      arguments:
+         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+         are excluded when populating the result
+
+      note:
+         resulting array is ordered by face index
+      """
+
+      cpf = self.masked_cells_per_face(exclude_cell_mask)
+      return np.where(np.logical_and(cpf[:, 0] >= 0, cpf[:, 1] >= 0))[0]
 
    def points_ref(self):
       """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.

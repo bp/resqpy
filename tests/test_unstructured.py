@@ -211,3 +211,13 @@ def test_tetra_grid(tmp_path):
    expected_cell_volume = ((2.0 * half_edge)**3) / (6.0 * maths.sqrt(2.0))
    for cell in range(tetra.cell_count):
       assert maths.isclose(tetra.volume(cell), expected_cell_volume, rel_tol = 1.0e-3)
+
+   # test internal / external face lists
+   assert np.all(tetra.external_face_indices() == np.arange(4, 16, dtype = int))
+   inactive_mask = np.zeros(5, dtype = bool)
+   assert np.all(tetra.external_face_indices_for_masked_cells(inactive_mask) == tetra.external_face_indices())
+   assert np.all(tetra.internal_face_indices_for_masked_cells(inactive_mask) == np.arange(4, dtype = int))
+   # mask out central cell
+   inactive_mask[0] = True
+   assert len(tetra.external_face_indices_for_masked_cells(inactive_mask)) == tetra.face_count
+   assert len(tetra.internal_face_indices_for_masked_cells(inactive_mask)) == 0
