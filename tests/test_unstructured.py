@@ -100,6 +100,9 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    ijk_vol = ijk_grid.volume(cell_kji0 = 0, cache_resqml_array = False, cache_volume_array = False)
    assert maths.isclose(hexa_vol, ijk_vol)
 
+   # check face normal for first face (K- face of first cell)
+   assert_array_almost_equal(hexa_grid.face_normal(0), (0.0, 0.0, -1.0))
+
    # compare properties
    ijk_pc = ijk_grid.extract_property_collection()
    hexa_pc = hexa_grid.extract_property_collection()

@@ -12,6 +12,7 @@ import numpy as np
 from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.weights_and_measures as bwam
+import resqpy.olio.vector_utilities as vec
 import resqpy.olio.volume as vol
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
@@ -532,6 +533,37 @@ class UnstructuredGrid(BaseResqpy):
          face_centres[fi] = self.face_centre_point(face_index)
       return face_centres
 
+   def face_normal(self, face_index):
+      """Returns a unit vector normal to a planar approximation of the face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy float array of shape (3,) being the xyz components of a unit length vector normal to the face
+
+      note:
+         in the case of a degenerate face, a zero length vector is returned;
+         the direction of the normal will be into or out of the cell depending on the handedness of the
+         cell face
+      """
+
+      self.cache_all_geometry_arrays()
+      vertices = self.points_cached[self.node_indices_for_face(face_index)]
+      centre = self.face_centre_point(face_index)
+      normal_sum = np.zeros(3)
+
+      for e in range(len(vertices)):
+         edge = vertices[e] - vertices[e - 1]
+         radial = centre - 0.5 * (vertices[e] + vertices[e - 1])
+         weight = vec.naive_length(edge)
+         if weight == 0.0:
+            continue
+         edge_normal = vec.unit_vector(vec.cross_product(edge, radial))
+         normal_sum += weight * edge_normal
+
+      return vec.unit_vector(normal_sum)
+
    def cell_centre_point(self, cell):
       """Returns centre point of a single cell calculated as the mean position of the centre points of its faces.
 
@@ -901,7 +933,75 @@ class TetraGrid(UnstructuredGrid):
       assert abcd.shape == (4, 3)
       return vol.tetrahedron_volume(abcd[0], abcd[1], abcd[2], abcd[3])
 
-   # todo: add tetra specific methods for centre_point()
+   def grid_volume(self):
+      """Returns the sum of the volumes of all the cells in the grid.
+
+      returns:
+         float being the total volume of the grid; units of measure is implied by crs units
+      """
+
+      v = 0.0
+      for cell in range(self.cell_count):
+         v += self.volume(cell)
+      return v
+
+   @classmethod
+   def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = {}):
+      """Instantiates a small TetraGrid representing a single cell from an UnstructuredGrid as tetrahedra."""
+
+      if not title:
+         title = str(u_grid.title) + f'_cell_{cell}'
+
+      assert u_grid.cell_shape in valid_cell_shapes
+      u_grid.cache_all_geometry_arrays()
+      u_cell_faces = u_grid.face_indices_for_cell(cell)
+      u_cell_nodes = u_grid.distinct_node_indices_for_cell(cell)
+
+      # create an empty TetreGrid
+      tetra = cls(u_grid.model, title = title, extra_metadata = extra_metadata)
+      tetra.crs_uuid = u_grid.crs_uuid
+
+      u_cell_node_count = len(u_cell_nodes)
+      assert u_cell_node_count >= 4
+      u_cell_face_count = len(u_cell_faces)
+      assert u_cell_face_count >= 4
+
+      # build attributes, depending on the shape of the individual unstructured cell
+
+      if u_cell_node_count == 4:  # cell is tetrahedral
+
+         assert u_cell_face_count == 4
+         tetra.set_cell_count(1)
+         tetra.face_count = 4
+         tetra.faces_per_cell_cl = np.array((4,), dtype = int)
+         tetra.faces_per_cell = np.arange(4, dtype = int)
+         tetra.node_count = 4
+         tetra.nodes_per_face_cl = np.arange(3, 3 * 4 + 1, 3, dtype = int)
+         tetra.nodes_per_face = np.array((0, 1, 2, 0, 3, 1, 1, 3, 2, 2, 3, 0), dtype = int)
+         tetra.cell_face_is_right_handed = np.ones(4, dtype = bool)
+         tetra.points_cached = u_grid.points_cached[u_cell_nodes].copy()
+
+      else:  # generic case: add a node at centre of unstructured cell and divide faces into triangles
+
+         tetra.node_count = u_cell_node_count + 1
+         tetra.points_cached = np.empty((tetra.node_count, 3))
+         tetra.points_cached[:-1] = u_grid.points_cached[u_cell_nodes].copy()
+         tetra.points_cached[-1] = u_grid.centre_point(cell = cell)
+
+         # TODO
+         # for each face in u cell:
+         # project points onto a plane (normal to average normal of face centre x edges)
+         # create Delaunay triangulation of face
+         # for each triangle:
+         # add a cell to tetra grid, using triangle nodes plus centre node
+
+         raise NotImplementedError('from_unstructured_cell not yet implemented')
+
+      tetra.check_tetra()
+
+      return tetra
+
+   # todo: add tetra specific method for centre_point()
 
 
 class PyramidGrid(UnstructuredGrid):
