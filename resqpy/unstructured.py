@@ -792,7 +792,22 @@ class TetraGrid(UnstructuredGrid):
       start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
       return np.mean(self.points_cached[self.nodes_per_face[start:start + 3]], axis = 0)
 
-   # todo: add tetra specific methods for centre_point(), volume()
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the tetrahedral cell; units of measure is implied by crs units
+      """
+
+      self.cache_all_geometry_arrays()
+      abcd = self.points_cached[self.distinct_node_indices_for_cell(cell)]
+      assert abcd.shape == (4, 3)
+      return vol.tetrahedron_volume(abcd[0], abcd[1], abcd[2], abcd[3])
+
+   # todo: add tetra specific methods for centre_point()
 
 
 class PyramidGrid(UnstructuredGrid):

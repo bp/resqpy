@@ -1,4 +1,5 @@
 import pytest
+import os
 import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
@@ -6,7 +7,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
-import resqpy.unstructured as rqu
+import resqpy.unstructured as rug
 import resqpy.olio.uuid as bu
 
 
@@ -19,7 +20,7 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert ijk_grid_uuid is not None
 
    # create an unstructured grid with hexahedral cells from an unsplit IJK grid (includes write_hdf5 and create_xml)
-   hexa = rqu.HexaGrid.from_unsplit_grid(model, ijk_grid_uuid, inherit_properties = True, title = 'HEXA')
+   hexa = rug.HexaGrid.from_unsplit_grid(model, ijk_grid_uuid, inherit_properties = True, title = 'HEXA')
 
    hexa_uuid = hexa.uuid
 
@@ -37,7 +38,7 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert unstructured_uuids is not None and len(unstructured_uuids) == 1
 
    hexa_grid = grr.any_grid(model, uuid = unstructured_uuids[0])
-   assert isinstance(hexa_grid, rqu.HexaGrid)
+   assert isinstance(hexa_grid, rug.HexaGrid)
 
    assert hexa_grid.cell_shape == 'hexahedral'
 
@@ -117,3 +118,96 @@ def test_hexa_grid_from_grid(example_model_with_properties):
          assert_array_almost_equal(hexa_array.flatten(), ijk_array.flatten())
       else:
          assert np.all(hexa_array.flatten() == ijk_array.flatten())
+
+
+def test_tetra_grid(tmp_path):
+
+   epc = os.path.join(tmp_path, 'tetra_test.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+
+   # create an empty TetraGrid
+   tetra = rug.TetraGrid(model, title = 'star')
+   assert tetra.cell_shape == 'tetrahedral'
+
+   # hand craft all attribute data
+   tetra.crs_uuid = model.uuid(obj_type = 'LocalDepth3dCrs')
+   assert tetra.crs_uuid is not None
+   assert bu.matching_uuids(tetra.crs_uuid, crs.uuid)
+   tetra.set_cell_count(5)
+   # faces
+   tetra.face_count = 16
+   tetra.faces_per_cell_cl = np.arange(4, 4 * 5 + 1, 4, dtype = int)
+   tetra.faces_per_cell = np.empty(20, dtype = int)
+   tetra.faces_per_cell[:4] = (0, 1, 2, 3)  # cell 0
+   tetra.faces_per_cell[4:8] = (0, 4, 5, 6)  # cell 1
+   tetra.faces_per_cell[8:12] = (1, 7, 8, 9)  # cell 2
+   tetra.faces_per_cell[12:16] = (2, 10, 11, 12)  # cell 3
+   tetra.faces_per_cell[16:] = (3, 13, 14, 15)  # cell 4
+   # nodes
+   tetra.node_count = 8
+   tetra.nodes_per_face_cl = np.arange(3, 3 * 16 + 1, 3, dtype = int)
+   tetra.nodes_per_face = np.empty(48, dtype = int)
+   # internal faces (cell 0)
+   tetra.nodes_per_face[:3] = (0, 1, 2)  # face 0
+   tetra.nodes_per_face[3:6] = (0, 3, 1)  # face 1
+   tetra.nodes_per_face[6:9] = (1, 3, 2)  # face 2
+   tetra.nodes_per_face[9:12] = (2, 3, 0)  # face 3
+   # external faces (cell 1)
+   tetra.nodes_per_face[12:15] = (0, 1, 4)  # face 4
+   tetra.nodes_per_face[15:18] = (1, 2, 4)  # face 5
+   tetra.nodes_per_face[18:21] = (2, 0, 4)  # face 6
+   # external faces (cell 2)
+   tetra.nodes_per_face[21:24] = (0, 3, 5)  # face 7
+   tetra.nodes_per_face[24:27] = (3, 1, 5)  # face 8
+   tetra.nodes_per_face[27:30] = (1, 0, 5)  # face 9
+   # external faces (cell 3)
+   tetra.nodes_per_face[30:33] = (1, 3, 6)  # face 10
+   tetra.nodes_per_face[33:36] = (3, 2, 6)  # face 11
+   tetra.nodes_per_face[36:39] = (2, 1, 6)  # face 12
+   # external faces (cell 4)
+   tetra.nodes_per_face[39:42] = (2, 3, 7)  # face 10
+   tetra.nodes_per_face[42:45] = (3, 0, 7)  # face 11
+   tetra.nodes_per_face[45:] = (0, 2, 7)  # face 12
+   # face handedness
+   tetra.cell_face_is_right_handed = np.zeros(20, dtype = bool)  # False for all faces for external cells (1 to 4)
+   tetra.cell_face_is_right_handed[:4] = True  # True for all faces of internal cell (0)
+   # points
+   tetra.points_cached = np.zeros((8, 3))
+   # internal cell (0) points
+   half_edge = 36.152
+   one_over_root_two = 1.0 / maths.sqrt(2.0)
+   tetra.points_cached[0] = (-half_edge, 0.0, -half_edge * one_over_root_two)
+   tetra.points_cached[1] = (half_edge, 0.0, -half_edge * one_over_root_two)
+   tetra.points_cached[2] = (0.0, half_edge, half_edge * one_over_root_two)
+   tetra.points_cached[3] = (0.0, -half_edge, half_edge * one_over_root_two)
+   # project remaining nodes outwards
+   for fi, o_node in enumerate((3, 2, 0, 1)):
+      fc = tetra.face_centre_point(fi)
+      tetra.points_cached[4 + fi] = fc - (tetra.points_cached[o_node] - fc)
+
+   # basic validity check
+   tetra.check_tetra()
+
+   # write arrays, create xml and store model
+   tetra.write_hdf5()
+   tetra.create_xml()
+   model.store_epc()
+
+   # re-open model and establish grid
+   model = rq.Model(epc)
+   assert model is not None
+   tetra_uuid = model.uuid(obj_type = 'UnstructuredGridRepresentation', title = 'star')
+   assert tetra_uuid is not None
+   tetra = rug.TetraGrid(model, uuid = tetra_uuid)
+   assert tetra is not None
+   # perform basic checks
+   assert tetra.cell_count == 5
+   assert tetra.cell_shape == 'tetrahedral'
+   tetra.check_tetra()
+
+   # test volume calculation
+   expected_cell_volume = ((2.0 * half_edge) ** 3) / (6.0 * maths.sqrt(2.0))
+   for cell in range(tetra.cell_count):
+      assert maths.isclose(tetra.volume(cell), expected_cell_volume, rel_tol = 1.0e-3)
