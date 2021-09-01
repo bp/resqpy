@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '30th August 2021'
+version = '1st September 2021'
 
 import logging
 
@@ -12,6 +12,9 @@ import numpy as np
 from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.weights_and_measures as bwam
+import resqpy.olio.vector_utilities as vec
+import resqpy.olio.triangulation as tri
+import resqpy.olio.volume as vol
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -19,7 +22,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 import resqpy.crs as rqc
 import resqpy.property as rqp
 
-valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']
+valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']  #: valid cell shapes
 
 
 class UnstructuredGrid(BaseResqpy):
@@ -74,7 +77,7 @@ class UnstructuredGrid(BaseResqpy):
          assert cell_shape in valid_cell_shapes, f'invalid cell shape {cell_shape} for unstructured grid'
 
       self.cell_count = None  #: the number of cells in the grid
-      self.cell_shape = cell_shape  #: the shape of cells withing the grid
+      self.cell_shape = cell_shape  #: the shape of cells within the grid
       self.crs_uuid = None  #: uuid of the coordinate reference system used by the grid's geometry
       self.points_cached = None  #: numpy array of raw points data; loaded on demand
       self.node_count = None  #: number of distinct points used in geometry; None if no geometry present
@@ -90,6 +93,8 @@ class UnstructuredGrid(BaseResqpy):
       self.grid_representation = 'UnstructuredGrid'  #: flavour of grid, 'UnstructuredGrid'; not much used
       self.geometry_root = None  #: xml node at root of geometry sub-tree, if present
       self.property_collection = None  #: collection of properties for which this grid is the supporting representation
+      self.crs_is_right_handed = None  #: cached boolean indicating handedness of crs axes
+      self.cells_per_face = None  #: numpy int array of shape (face_count, 2) holding cells for faces; -1 is null value
 
       super().__init__(model = parent_model,
                        uuid = uuid,
@@ -222,6 +227,7 @@ class UnstructuredGrid(BaseResqpy):
       uuid_str = rqet.find_nested_tags_text(self.geometry_root, ['LocalCrs', 'UUID'])
       if uuid_str:
          self.crs_uuid = bu.uuid_from_string(uuid_str)
+         self._set_crs_handedness()
       return self.crs_uuid
 
    def extract_inactive_mask(self):
@@ -277,6 +283,99 @@ class UnstructuredGrid(BaseResqpy):
       self.property_collection = rqp.PropertyCollection(support = self)
       return self.property_collection
 
+   def set_cells_per_face(self, check_all_faces_used = True):
+      """Sets and returns the cells_per_face array showing which cells are using each face.
+
+      arguments:
+         check_all_faces_used (boolean, default True): if True, an assertion error is raised if there are any
+            faces which do not appear in any cells
+
+      returns:
+         numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
+         null value; if only one cell uses a face, its index is always in position 0 of the second axis
+      """
+
+      if self.cells_per_face is not None:
+         return self.cells_per_face
+      assert self.face_count is not None
+      self.cells_per_face = -np.ones((self.face_count, 2), dtype = int)  # -1 is used here as a null value
+      for cell in range(self.cell_count):
+         for face in self.face_indices_for_cell(cell):
+            if self.cells_per_face[face, 0] == -1:
+               self.cells_per_face[face, 0] = cell
+            else:
+               assert self.cells_per_face[face, 1] == -1, f'more than two cells use face with index {face}'
+               self.cells_per_face[face, 1] = cell
+      if check_all_faces_used:
+         assert np.all(self.cells_per_face[:, 0] >= 0), 'not all faces used by cells'
+      return self.cells_per_face
+
+   def masked_cells_per_face(self, exclude_cell_mask):
+      """Sets and returns the cells_per_face array showing which cells are using each face.
+
+      arguments:
+         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+         are excluded when populating the result
+
+      returns:
+         numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
+         null value; if only one cell uses a face, its index is always in position 0 of the second axis
+
+      note:
+         this method recomputes the result on every call - nothing extra is cached in the grid
+      """
+
+      assert self.face_count is not None
+      result = -np.ones((self.face_count, 2), dtype = int)  # -1 is used here as a null value
+      for cell in range(self.cell_count):
+         if exclude_cell_mask[cell]:
+            continue
+         for face in self.face_indices_for_cell(cell):
+            if result[face, 0] == -1:
+               result[face, 0] = cell
+            else:
+               assert result[face, 1] == -1, f'more than two cells use face with index {face}'
+               result[face, 1] = cell
+      return result
+
+   def external_face_indices(self):
+      """Returns a numpy int vector listing the indices of faces which are only used by one cell.
+
+      note:
+         resulting array is ordered by face index
+      """
+
+      self.set_cells_per_face()
+      return np.where(self.cells_per_face[:, 1] == -1)[0]
+
+   def external_face_indices_for_masked_cells(self, exclude_cell_mask):
+      """Returns a numpy int vector listing the indices of faces which are used by exactly one of masked cells.
+
+      arguments:
+         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+         are excluded when populating the result
+
+      note:
+         resulting array is ordered by face index
+      """
+
+      cpf = self.masked_cells_per_face(exclude_cell_mask)
+      return np.where(np.logical_and(cpf[:, 0] >= 0, cpf[:, 1] == -1))[0]
+
+   def internal_face_indices_for_masked_cells(self, exclude_cell_mask):
+      """Returns a numpy int vector listing the indices of faces which are used by two of masked cells.
+
+      arguments:
+         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+         are excluded when populating the result
+
+      note:
+         resulting array is ordered by face index
+      """
+
+      cpf = self.masked_cells_per_face(exclude_cell_mask)
+      return np.where(np.logical_and(cpf[:, 0] >= 0, cpf[:, 1] >= 0))[0]
+
    def points_ref(self):
       """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.
 
@@ -327,9 +426,152 @@ class UnstructuredGrid(BaseResqpy):
          its barycentre
       """
 
+      return np.mean(self.points_cached[self.node_indices_for_face(face_index)], axis = 0)
+
+   def node_count_for_face(self, face_index):
+      """Returns the number of nodes for a particular face."""
+
       self.cache_all_geometry_arrays()
       start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
-      return np.mean(self.points_cached[self.nodes_per_face[start:self.nodes_per_face_cl[face_index]]], axis = 0)
+      return self.nodes_per_face_cl[face_index] - start
+
+   def node_indices_for_face(self, face_index):
+      """Returns numpy list of node indices for a single face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy int array of shape (N,) being the node indices identifying the vertices of the face
+
+      note:
+         the node indices are used to index the points data (points_cached attribute);
+         ordering of returned nodes is clockwise or anticlockwise when viewed from within the cell,
+         as indicated by the entry in the cell_face_is_right_handed array
+      """
+
+      self.cache_all_geometry_arrays()
+      start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
+      return self.nodes_per_face[start:self.nodes_per_face_cl[face_index]]
+
+   def distinct_node_indices_for_cell(self, cell):
+      """Returns a numpy list of distinct node indices used by the faces of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which distinct node indices are required
+
+      returns:
+         numpy int array of shape (N, ) being the indices of N distinct nodes used by the cell's faces
+
+      note:
+         the returned array is sorted by increasing node index
+      """
+
+      face_indices = self.face_indices_for_cell(cell)
+      node_set = self.node_indices_for_face(face_indices[0])
+      for face_index in face_indices[1:]:
+         node_set = np.union1d(node_set, self.node_indices_for_face(face_index))
+      return node_set
+
+   def face_indices_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (F,) being the face indices of each of the F faces for the cell
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces
+      """
+
+      self.cache_all_geometry_arrays()
+      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
+      return self.faces_per_cell[start:self.faces_per_cell_cl[cell]].copy()
+
+   def face_indices_and_handedness_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell, and numpy boolean list of face right handedness.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (F,), numpy boolean array of shape (F, ):
+         being the face indices of each of the F faces for the cell, and the right handedness (clockwise order)
+         of the face nodes when viewed from within the cell
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
+         some processing of geometry such as volume calculations
+      """
+
+      self.cache_all_geometry_arrays()
+      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
+      return (self.faces_per_cell[start:self.faces_per_cell_cl[cell]].copy(),
+              self.cell_face_is_right_handed[start:self.faces_per_cell_cl[cell]].copy())
+
+   def edges_for_face(self, face_index):
+      """Returns numpy list of pairs of node indices, each pair being one edge of the face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
+
+      notes:
+         the order of the pairs follows the order of the nodes for the face; within each pair, the
+         order of the two node indices also follows the order of the nodes for the face
+      """
+
+      face_nodes = self.node_indices_for_face(face_index)
+      return np.array([(face_nodes[i - 1], face_nodes[i]) for i in range(len(face_nodes))], dtype = int)
+
+   def edges_for_face_with_node_indices_ordered_within_pairs(self, face_index):
+      """Returns numpy list of pairs of node indices, each pair being one edge of the face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
+
+      notes:
+         the order of the pairs follows the order of the nodes for the face; within each pair, the
+         two node indices are ordered with the lower index first
+      """
+
+      edges = self.edges_for_face(face_index)
+      for i in range(len(edges)):
+         a, b = edges[i]
+         if b < a:
+            edges[i] = (b, a)
+      return edges
+
+   def distinct_edges_for_cell(self, cell):
+      """Returns numpy list of pairs of node indices, each pair being one distinct edge of the cell.
+
+      arguments:
+         cell (int): the index of the cell
+
+      returns:
+         numpy int array of shape (E, 2) being the node indices identifying the E edges of the cell
+
+      note:
+         within each pair, the two node indices are ordered with the lower index first
+      """
+
+      edge_list = []
+      for face_index in self.face_indices_for_cell(cell):
+         for a, b in self.edges_for_face(face_index):
+            if b < a:
+               a, b = b, a
+            if (a, b) not in edge_list:
+               edge_list.append((a, b))
+      return np.array(edge_list, dtype = int)
 
    def cell_face_centre_points(self, cell):
       """Returns a numpy array of centre points of the faces for a single cell.
@@ -346,13 +588,122 @@ class UnstructuredGrid(BaseResqpy):
          are not generally their barycentres
       """
 
-      self.cache_all_geometry_arrays()
-      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
-      face_count = self.faces_per_cell_cl[cell] - start
-      face_centres = np.empty((face_count, 3))
-      for fi, face_index in enumerate(self.faces_per_cell[start:start + face_count]):  # todo: vectorise
+      face_indices = self.face_indices_for_cell(cell)
+      face_centres = np.empty((len(face_indices), 3))
+      for fi, face_index in enumerate(face_indices):  # todo: vectorise?
          face_centres[fi] = self.face_centre_point(face_index)
       return face_centres
+
+   def face_normal(self, face_index):
+      """Returns a unit vector normal to a planar approximation of the face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy float array of shape (3,) being the xyz components of a unit length vector normal to the face
+
+      note:
+         in the case of a degenerate face, a zero length vector is returned;
+         the direction of the normal will be into or out of the cell depending on the handedness of the
+         cell face
+      """
+
+      self.cache_all_geometry_arrays()
+      vertices = self.points_cached[self.node_indices_for_face(face_index)]
+      centre = self.face_centre_point(face_index)
+      normal_sum = np.zeros(3)
+
+      for e in range(len(vertices)):
+         edge = vertices[e] - vertices[e - 1]
+         radial = centre - 0.5 * (vertices[e] + vertices[e - 1])
+         weight = vec.naive_length(edge)
+         if weight == 0.0:
+            continue
+         edge_normal = vec.unit_vector(vec.cross_product(edge, radial))
+         normal_sum += weight * edge_normal
+
+      return vec.unit_vector(normal_sum)
+
+   def planar_face_points(self, face_index, xy_plane = False):
+      """Returns points for a planar approximation of a face.
+
+      arguments:
+         face_index (int): the index of the face for which a planar approximation is required
+         xy_plane (boolean, default False): if True, the returned points lie in a horizontal plane with z = 0.0;
+            if False, the plane is located approximately in the position of the original face, with the same
+            normal direction
+
+      returns:
+         numpy float array of shape (N, 3) being the xyz points of the planar face nodes corresponding to the
+         N nodes of the original face, in the same order
+      """
+
+      self.cache_all_geometry_arrays()
+      face_centre = self.face_centre_point(face_index)
+      assert np.all(self.node_indices_for_face(face_index) >= 0)  # debug
+      assert np.all(self.node_indices_for_face(face_index) < self.node_count)  # debug
+      face_points = self.points_cached[self.node_indices_for_face(face_index), :].copy()
+      normal = self.face_normal(face_index)
+      az = vec.azimuth(normal)
+      incl = vec.inclination(normal)
+      vec.tilt_points(face_centre, az, -incl, face_points)  # modifies face_points in situ
+      if xy_plane:
+         face_points[..., 2] = 0.0
+      else:
+         face_points[..., 2] = face_centre[2]
+         vec.tilt_points(face_centre, az, incl, face_points)  # tilt back to original average normal
+      return face_points
+
+   def face_triangulation(self, face_index, local_nodes = False):
+      """Returns a Delauney triangulation of (a planar approximation of) a face.
+
+      arguments:
+         face_index (int): the index of the face for which a triangulation is required
+         local_nodes (boolean, default False): if True, the returned node indices are local to the face nodes,
+            ie. can index into node_indices_for_face(); if False, the returned node indices are the global
+            node indices in use by the grid
+
+      returns:
+         numpy int array of shape (N - 2, 3) being the node indices of the triangulation, where N is the number
+         of nodes defining the face
+      """
+
+      face_points = self.planar_face_points(face_index, xy_plane = True)
+      local_triangulation = tri.dt(face_points)  # returns int array of shape (M, 3)
+      assert len(local_triangulation) == len(face_points) - 2, 'face triangulation failure (concave edges when planar?)'
+      if local_nodes:
+         return local_triangulation
+      return self.node_indices_for_face(face_index)[local_triangulation]
+
+   def area_of_face(self, face_index, in_plane = False):
+      """Returns the area of a face.
+
+      arguments:
+         face_index (int): the index of the face for which the area is required
+         in_plane (boolean, default False): if True, the area returned is the area of the planar approximation
+            of the face; if False, the area is the sum of the areas of the triangulation of the face, which
+            need not be planar
+
+      returns:
+         float being the area of the face
+
+      notes:
+         units of measure of the area is implied by the units of the crs in use by the grid
+      """
+
+      if in_plane:
+         face_points = self.planar_face_points(face_index, xy_plane = True)
+         local_triangulation = tri.dt(face_points)
+         triangulated_points = face_points[local_triangulation]
+      else:
+         global_triangulation = self.face_triangulation(face_index)
+         triangulated_points = self.points_cached[global_triangulation]
+      assert triangulated_points.ndim == 3 and triangulated_points.shape[1:] == (3, 3)
+      area = 0.0
+      for tp in triangulated_points:
+         area += vec.area_of_triangle(tp[0], tp[1], tp[2])
+      return area
 
    def cell_centre_point(self, cell):
       """Returns centre point of a single cell calculated as the mean position of the centre points of its faces.
@@ -414,8 +765,44 @@ class UnstructuredGrid(BaseResqpy):
       else:
          return self.cell_centre_point[cell]
 
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the cell; units of measure is implied by crs units
+
+      note:
+         this is a computationally expensive method
+      """
+
+      tetra = TetraGrid.from_unstructured_cell(self, cell, set_handedness = False)
+      assert tetra is not None
+      return tetra.grid_volume()
+
+   def check_indices(self):
+      """Asserts that all node and face indices are within range."""
+
+      self.cache_all_geometry_arrays()
+      assert self.cell_count > 0
+      assert self.face_count >= 4
+      assert self.node_count >= 4
+      assert np.all(self.faces_per_cell >= 0) and np.all(self.faces_per_cell < self.face_count)
+      assert self.faces_per_cell_cl[0] >= 4
+      assert np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] >= 4)
+      assert len(self.faces_per_cell_cl) == self.cell_count
+      assert np.all(self.nodes_per_face >= 0) and np.all(self.nodes_per_face < self.node_count)
+      assert self.nodes_per_face_cl[0] >= 3
+      assert np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] >= 3)
+      assert len(self.nodes_per_face_cl) == self.face_count
+
    def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
-      """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays."""
+      """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays.
+
+      :meta common:
+      """
 
       # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
       # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
@@ -631,6 +1018,13 @@ class UnstructuredGrid(BaseResqpy):
 
       self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, tag + '/cumulativeLength', root = cl_values)
 
+   def _set_crs_handedness(self):
+      if self.crs_is_right_handed is not None:
+         return
+      assert self.crs_uuid is not None
+      crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+      self.crs_is_right_handed = crs.is_right_handed_xyz()
+
 
 class TetraGrid(UnstructuredGrid):
    """Class for unstructured grids where every cell is a tetrahedron."""
@@ -698,7 +1092,141 @@ class TetraGrid(UnstructuredGrid):
       start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
       return np.mean(self.points_cached[self.nodes_per_face[start:start + 3]], axis = 0)
 
-   # todo: add tetra specific methods for centre_point(), volume()
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the tetrahedral cell; units of measure is implied by crs units
+      """
+
+      self.cache_all_geometry_arrays()
+      abcd = self.points_cached[self.distinct_node_indices_for_cell(cell)]
+      assert abcd.shape == (4, 3)
+      return vol.tetrahedron_volume(abcd[0], abcd[1], abcd[2], abcd[3])
+
+   def grid_volume(self):
+      """Returns the sum of the volumes of all the cells in the grid.
+
+      returns:
+         float being the total volume of the grid; units of measure is implied by crs units
+      """
+
+      v = 0.0
+      for cell in range(self.cell_count):
+         v += self.volume(cell)
+      return v
+
+   @classmethod
+   def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = {}, set_handedness = False):
+      """Instantiates a small TetraGrid representing a single cell from an UnstructuredGrid as a set of tetrahedra."""
+
+      def _min_max(a, b):
+         if a < b:
+            return (a, b)
+         else:
+            return (b, a)
+
+      if not title:
+         title = str(u_grid.title) + f'_cell_{cell}'
+
+      assert u_grid.cell_shape in valid_cell_shapes
+      u_grid.cache_all_geometry_arrays()
+      u_cell_faces = u_grid.face_indices_for_cell(cell)
+      u_cell_nodes = u_grid.distinct_node_indices_for_cell(cell)
+
+      # create an empty TetreGrid
+      tetra = cls(u_grid.model, title = title, extra_metadata = extra_metadata)
+      tetra.crs_uuid = u_grid.crs_uuid
+
+      u_cell_node_count = len(u_cell_nodes)
+      assert u_cell_node_count >= 4
+      u_cell_face_count = len(u_cell_faces)
+      assert u_cell_face_count >= 4
+
+      # build attributes, depending on the shape of the individual unstructured cell
+
+      if u_cell_node_count == 4:  # cell is tetrahedral
+
+         assert u_cell_face_count == 4
+         tetra.set_cell_count(1)
+         tetra.face_count = 4
+         tetra.faces_per_cell_cl = np.array((4,), dtype = int)
+         tetra.faces_per_cell = np.arange(4, dtype = int)
+         tetra.node_count = 4
+         tetra.nodes_per_face_cl = np.arange(3, 3 * 4 + 1, 3, dtype = int)
+         tetra.nodes_per_face = np.array((0, 1, 2, 0, 3, 1, 1, 3, 2, 2, 3, 0), dtype = int)
+         tetra.cell_face_is_right_handed = np.ones(4, dtype = bool)
+         tetra.points_cached = u_grid.points_cached[u_cell_nodes].copy()
+
+      # todo: add optimised code for pyramidal (and hexahedral?) cells
+
+      else:  # generic case: add a node at centre of unstructured cell and divide faces into triangles
+
+         tetra.node_count = u_cell_node_count + 1
+         tetra.points_cached = np.empty((tetra.node_count, 3))
+         tetra.points_cached[:-1] = u_grid.points_cached[u_cell_nodes].copy()
+         tetra.points_cached[-1] = u_grid.centre_point(cell = cell)
+         centre_node = tetra.node_count - 1
+
+         u_cell_nodes = list(u_cell_nodes)  # to allow simple index usage below
+
+         # build list of distinct edges used by cell
+         u_cell_edge_list = u_grid.distinct_edges_for_cell(cell)
+         u_edge_count = len(u_cell_edge_list)
+         assert u_edge_count >= 4
+
+         t_cell_list = []  # list of 4-tuples of ints, being local face indices for tetra cells
+
+         # create an internal tetra face for each edge, using centre point as third node
+         # note: u_a, u_b are a sorted pair, and u_cell_nodes is also aorted, so t_a, t_b are a sorted pair
+         t_face_list = []  # list of triple ints each triplet being local node indices for a triangular face
+         for u_a, u_b in u_cell_edge_list:
+            t_a, t_b = u_cell_nodes.index(u_a), u_cell_nodes.index(u_b)
+            t_face_list.append((t_a, t_b, centre_node))
+
+         # for each unstructured face, create a Delauney triangulation; create a tetra face for each
+         # triangle in the triangulation; create internal tetra faces for each of the internal edges in
+         # the triangulation; and create a tetra cell for each triangle in the triangulation
+         # note: the resqpy Delauney triangulation is for a 2D system, so here the unstructured face
+         # is projected onto a planar approximation defined by the face centre point and an average
+         # normal vector
+         for fi in u_cell_faces:
+            triangulated_face = u_grid.face_triangulation(fi)
+            for u_a, u_b, u_c in triangulated_face:
+               t_a, t_b, t_c = u_cell_nodes.index(u_a), u_cell_nodes.index(u_b), u_cell_nodes.index(u_c)
+               t_cell_faces = [len(t_face_list)]  # local face index for this triangle
+               t_face_list.append((t_a, t_b, t_c))
+               tri_edges = np.array([_min_max(t_a, t_b), _min_max(t_b, t_c), _min_max(t_c, t_a)], dtype = int)
+               for e_a, e_b in tri_edges:
+                  try:
+                     pos = t_face_list.index((e_a, e_b, centre_node))
+                  except ValueError:
+                     pos = len(t_face_list)
+                     t_face_list.append((e_a, e_b, centre_node))
+                  t_cell_faces.append(pos)
+               t_cell_list.append(tuple(t_cell_faces))
+
+         # everything is now ready to populate the tetra grid attributes (apart from handedness)
+         tetra.set_cell_count(len(t_cell_list))
+         tetra.face_count = len(t_face_list)
+         tetra.faces_per_cell_cl = np.arange(4, 4 * tetra.cell_count + 1, 4, dtype = int)
+         tetra.faces_per_cell = np.array(t_cell_list, dtype = int).flatten()
+         tetra.nodes_per_face_cl = np.arange(3, 3 * tetra.face_count + 1, 3, dtype = int)
+         tetra.nodes_per_face = np.array(t_face_list, dtype = int).flatten()
+
+         tetra.cell_face_is_right_handed = np.ones(len(tetra.faces_per_cell), dtype = bool)
+         if set_handedness:
+            # TODO: set handedness correctly and make default for set_handedness True
+            raise NotImplementedError('code not written to set handedness for tetra from unstructured cell')
+
+      tetra.check_tetra()
+
+      return tetra
+
+   # todo: add tetra specific method for centre_point()
 
 
 class PyramidGrid(UnstructuredGrid):
@@ -764,7 +1292,106 @@ class PyramidGrid(UnstructuredGrid):
       nodes_per_face_count[1:] = self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1]
       assert np.all(np.logical_or(nodes_per_face_count == 3, nodes_per_face_count == 4))
 
-   # todo: add pyramidal specific methods for centre_point(), volume() – see olio.volume tets()
+   def face_indices_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (5,) being the face indices of each of the 5 faces for the cell; the first
+         index in the array is for the quadrilateral face
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces
+      """
+
+      faces = super().face_indices_for_cell(cell)
+      assert len(faces) == 5
+      result = -np.ones(5, dtype = int)
+      i = 1
+      for f in range(5):
+         nc = self.node_count_for_face(faces[f])
+         if nc == 3:
+            assert i < 5, 'too many triangular faces for cell in pyramid grid'
+            result[i] = faces[f]
+            i += 1
+         else:
+            assert nc == 4, 'pyramid grid includes a face that is neither triangle nor quadrilateral'
+            assert result[0] == -1, 'more than one quadrilateral face for cell in pyramid grid'
+            result[0] = faces[f]
+      return result
+
+   def face_indices_and_handedness_for_cell(self, cell):
+      """Returns numpy list of face indices for a single cell, and numpy boolean list of face right handedness.
+
+      arguments:
+         cell (int): the index of the cell for which face indices are required
+
+      returns:
+         numpy int array of shape (5,), numpy boolean array of shape (5, ):
+         being the face indices of each of the 5 faces for the cell, and the right handedness (clockwise order)
+         of the face nodes when viewed from within the cell; the first entry in each list is for the
+         quadrilateral face
+
+      note:
+         the face indices are used when accessing the nodes per face data and can also be used to identify
+         shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
+         some processing of geometry such as volume calculations
+      """
+
+      faces, handednesses = super().face_indices_and_handedness_for_cell(cell)
+      assert len(faces) == 5 and len(handednesses) == 5
+      f_result = -np.ones(5, dtype = int)
+      h_result = np.empty(5, dtype = bool)
+      i = 1
+      for f in range(5):
+         nc = self.node_count_for_face(faces[f])
+         if nc == 3:
+            assert i < 5, 'too many triangular faces for cell in pyramid grid'
+            f_result[i] = faces[f]
+            h_result[i] = handednesses[f]
+            i += 1
+         else:
+            assert nc == 4, 'pyramid grid includes a face that is neither triangle nor quadrilateral'
+            assert f_result[0] == -1, 'more than one quadrilateral face for cell in pyramid grid'
+            f_result[0] = faces[f]
+            h_result[0] = handednesses[f]
+      return f_result, h_result
+
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the pyramidal cell; units of measure is implied by crs units
+      """
+
+      self._set_crs_handedness()
+      self.cache_all_geometry_arrays()
+      faces, hands = self.face_indices_and_handedness_for_cell(cell)
+      nodes = self.distinct_node_indices_for_cell(cell)
+      base_nodes = self.node_indices_for_face(faces[0])
+      for node in nodes:
+         if node not in base_nodes:
+            apex_node = node
+            break
+      else:
+         raise Exception('apex node not found for cell in pyramid grid')
+      apex = self.points_cached[apex_node]
+      abcd = self.points_cached[base_nodes]
+
+      return vol.pyramid_volume(apex,
+                                abcd[0],
+                                abcd[1],
+                                abcd[2],
+                                abcd[3],
+                                crs_is_right_handed = (self.crs_is_right_handed == hands[0]))
+
+   # todo: add pyramidal specific method for centre_point()
 
 
 class PrismGrid(UnstructuredGrid):
@@ -830,7 +1457,7 @@ class PrismGrid(UnstructuredGrid):
       nodes_per_face_count[1:] = self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1]
       assert np.all(np.logical_or(nodes_per_face_count == 3, nodes_per_face_count == 4))
 
-   # todo: add prism specific methods for centre_point(), volume() – see olio.volume tets()
+   # todo: add prism specific methods for centre_point(), volume()
 
 
 class HexaGrid(UnstructuredGrid):
@@ -1061,5 +1688,48 @@ class HexaGrid(UnstructuredGrid):
       assert self.faces_per_cell_cl[0] == 6 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 6)
       assert self.nodes_per_face_cl[0] == 4 and np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] == 4)
 
-   # todo: add hexahedral specific methods for centre_point(), volume() – see olio.volume
-   # todo: also add methods equivalent to those in Grid class
+   def corner_points(self, cell):
+      """Returns corner points (nodes) of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the corner points are required
+
+      returns:
+         numpy float array of shape (8, 3) being the xyz points of 8 nodes defining a single hexahedral cell
+
+      note:
+         if this hexa grid has been created using the from_unsplit_grid class method, then the result can be
+         reshaped to (2, 2, 2, 3) for corner points compatible with those used by the Grid class
+      """
+
+      self.cache_all_geometry_arrays()
+      return self.points_cached[self.distinct_node_indices_for_cell(cell)]
+
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the hexahedral cell; units of measure is implied by crs units
+      """
+
+      self._set_crs_handedness()
+      apex = self.cell_centre_point(cell)
+      v = 0.0
+      faces, handednesses = self.face_indices_and_handedness_for_cell(cell)
+      for face_index, handedness in zip(faces, handednesses):
+         nodes = self.node_indices_for_face(face_index)
+         abcd = self.points_cached[nodes]
+         assert abcd.shape == (4, 3)
+         v += vol.pyramid_volume(apex,
+                                 abcd[0],
+                                 abcd[1],
+                                 abcd[2],
+                                 abcd[3],
+                                 crs_is_right_handed = (self.crs_is_right_handed == handedness))
+      return v
+
+   # todo: add hexahedral specific method for centre_point()?
+   # todo: also add other methods equivalent to those in Grid class

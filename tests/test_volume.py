@@ -79,3 +79,22 @@ def test_array_volume():
    assert_array_almost_equal(v1, v2)
    assert np.all(v1 >= 0.0), 'negative volume(s) returned by array function'
    assert np.all(v1 <= 27.0), 'exaggerated volume(s) returned by array function'
+
+
+def test_pyramid_volume():
+   apex = (1.0, 1.0, -3.0)
+   a = (0.0, 0.0, 0.0)
+   b = (0.0, 2.0, 0.0)
+   c = (2.0, 2.0, 0.0)
+   d = (2.0, 0.0, 0.0)
+   assert maths.isclose(vol.pyramid_volume(apex, a, b, c, d), 4.0)
+   assert maths.isclose(vol.pyramid_volume(apex, a, d, c, b, crs_is_right_handed = True), 4.0)
+
+
+def test_tetrahedron_volume():
+   one_over_root_two = 1.0 / maths.sqrt(2.0)
+   a = (-1.0, 0.0, -one_over_root_two)
+   b = (1.0, 0.0, -one_over_root_two)
+   c = (0.0, -1.0, one_over_root_two)
+   d = (0.0, 1.0, one_over_root_two)
+   assert maths.isclose(vol.tetrahedron_volume(a, b, c, d), 4.0 / (3.0 * maths.sqrt(2.0)))
