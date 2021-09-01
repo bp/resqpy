@@ -1,6 +1,6 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '29th April 2021'
+version = '1st September 2021'
 
 import numpy as np
 
@@ -183,7 +183,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
       progress_count -= 1
 
    # remove any triangles using invented container vertices
-   tri_set = t[np.where(np.all(t < n_p, axis = 1))]
+   tri_set = t[np.where(np.all(t[:nt] < n_p, axis = 1))]
    if plot_fn is not None:
       plot_fn(p, tri_set)
    if progress_fn is not None:

@@ -42,11 +42,13 @@ def test_hexa_grid_from_grid(example_model_with_properties):
 
    assert hexa_grid.cell_shape == 'hexahedral'
 
+   hexa_grid.check_indices()
    hexa_grid.check_hexahedral()
 
    # instantiate ijk grid and compare hexa grid with it
    ijk_grid = grr.any_grid(model, uuid = ijk_grid_uuid)
    assert ijk_grid is not None
+   assert not np.any(np.isnan(ijk_grid.points_ref()))
 
    assert hexa_grid.cell_count == ijk_grid.cell_count()
    assert hexa_grid.active_cell_count() == hexa_grid.cell_count
@@ -58,6 +60,7 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert hexa_grid.crs_is_right_handed == rqc.Crs(model, uuid = ijk_grid.crs_uuid).is_right_handed_xyz()
 
    # points arrays should be identical for the two grids
+   assert not np.any(np.isnan(hexa_grid.points_ref()))
    assert_array_almost_equal(hexa_grid.points_ref(), ijk_grid.points_ref(masked = False).reshape((-1, 3)))
 
    # compare centre points of cells (not sure if these would be coincident for irregular shaped cells)
@@ -99,6 +102,7 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    hexa_vol = hexa_grid.volume(0)
    ijk_vol = ijk_grid.volume(cell_kji0 = 0, cache_resqml_array = False, cache_volume_array = False)
    assert maths.isclose(hexa_vol, ijk_vol)
+   assert maths.isclose(hexa_vol, 1.0, rel_tol = 1.0e-3)
 
    # check face normal for first face (K- face of first cell)
    assert_array_almost_equal(hexa_grid.face_normal(0), (0.0, 0.0, -1.0))
@@ -114,9 +118,10 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    assert triangulated.shape == (2, 3)
    assert np.all(triangulated.flatten() < 4)
    assert np.all(np.unique(triangulated) == (0, 1, 2, 3))
-   # also test the triangulation using the global node indices
-   triangulated = hexa_grid.face_triangulation(fi, local_nodes = False)
-   assert triangulated.shape == (2, 3)
+   # also test the triangulation using the global node indices, for all the faces of the last cell
+   for face_index in hexa_grid.face_indices_for_cell(hexa_grid.cell_count - 1):
+      triangulated = hexa_grid.face_triangulation(face_index, local_nodes = False)
+      assert triangulated.shape == (2, 3)
 
    # check the area of a middle face (the example model has unit area faces)
    assert maths.isclose(hexa_grid.area_of_face(hexa_grid.face_count // 2), 1.0, rel_tol = 1.0e-3)
@@ -139,6 +144,16 @@ def test_hexa_grid_from_grid(example_model_with_properties):
          assert_array_almost_equal(hexa_array.flatten(), ijk_array.flatten())
       else:
          assert np.all(hexa_array.flatten() == ijk_array.flatten())
+
+   # test TetraGrid.from_unstructured_cell is as expected for a hexahedral cell
+   tetra = rug.TetraGrid.from_unstructured_cell(hexa_grid, hexa_grid.cell_count // 2)
+   tetra.check_indices()
+   tetra.check_tetra()
+   assert tetra.cell_count == 12  # 2 tetrahedra per hexa face
+   assert tetra.node_count == 9  # 8 nodes of hexa cell plus centre point
+   assert tetra.face_count == 6 * 2 + 12 + 6
+   # check total volume of tetra grid version of cell
+   assert maths.isclose(tetra.grid_volume(), 1.0, rel_tol = 1.0e-3)
 
 
 def test_tetra_grid(tmp_path):

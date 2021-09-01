@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '31st August 2021'
+version = '1st September 2021'
 
 import logging
 
@@ -641,7 +641,9 @@ class UnstructuredGrid(BaseResqpy):
 
       self.cache_all_geometry_arrays()
       face_centre = self.face_centre_point(face_index)
-      face_points = self.points_cached[self.node_indices_for_face(face_index)].copy()
+      assert np.all(self.node_indices_for_face(face_index) >= 0)  # debug
+      assert np.all(self.node_indices_for_face(face_index) < self.node_count)  # debug
+      face_points = self.points_cached[self.node_indices_for_face(face_index), :].copy()
       normal = self.face_normal(face_index)
       az = vec.azimuth(normal)
       incl = vec.inclination(normal)
@@ -668,7 +670,7 @@ class UnstructuredGrid(BaseResqpy):
       """
 
       face_points = self.planar_face_points(face_index, xy_plane = True)
-      local_triangulation = tri.dt(face_points.copy())  # returns int array of shape (M, 3)
+      local_triangulation = tri.dt(face_points)  # returns int array of shape (M, 3)
       assert len(local_triangulation) == len(face_points) - 2, 'face triangulation failure (concave edges when planar?)'
       if local_nodes:
          return local_triangulation
@@ -762,6 +764,39 @@ class UnstructuredGrid(BaseResqpy):
 
       else:
          return self.cell_centre_point[cell]
+
+   def volume(self, cell):
+      """Returns the volume of a single cell.
+
+      arguments:
+         cell (int): the index of the cell for which the volume is required
+
+      returns:
+         float being the volume of the cell; units of measure is implied by crs units
+
+      note:
+         this is a computationally expensive method
+      """
+
+      tetra = TetraGrid.from_unstructured_cell(self, cell, set_handedness = False)
+      assert tetra is not None
+      return tetra.grid_volume()
+
+   def check_indices(self):
+      """Asserts that all node and face indices are within range."""
+
+      self.cache_all_geometry_arrays()
+      assert self.cell_count > 0
+      assert self.face_count >= 4
+      assert self.node_count >= 4
+      assert np.all(self.faces_per_cell >= 0) and np.all(self.faces_per_cell < self.face_count)
+      assert self.faces_per_cell_cl[0] >= 4
+      assert np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] >= 4)
+      assert len(self.faces_per_cell_cl) == self.cell_count
+      assert np.all(self.nodes_per_face >= 0) and np.all(self.nodes_per_face < self.node_count)
+      assert self.nodes_per_face_cl[0] >= 3
+      assert np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] >= 3)
+      assert len(self.nodes_per_face_cl) == self.face_count
 
    def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
       """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays.
@@ -1085,8 +1120,14 @@ class TetraGrid(UnstructuredGrid):
       return v
 
    @classmethod
-   def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = {}):
+   def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = {}, set_handedness = False):
       """Instantiates a small TetraGrid representing a single cell from an UnstructuredGrid as a set of tetrahedra."""
+
+      def _min_max(a, b):
+         if a < b:
+            return (a, b)
+         else:
+            return (b, a)
 
       if not title:
          title = str(u_grid.title) + f'_cell_{cell}'
@@ -1130,16 +1171,20 @@ class TetraGrid(UnstructuredGrid):
          tetra.points_cached[-1] = u_grid.centre_point(cell = cell)
          centre_node = tetra.node_count - 1
 
+         u_cell_nodes = list(u_cell_nodes)  # to allow simple index usage below
+
          # build list of distinct edges used by cell
          u_cell_edge_list = u_grid.distinct_edges_for_cell(cell)
-         edge_count = len(u_cell_edge_list)
-         assert edge_count >= 4
+         u_edge_count = len(u_cell_edge_list)
+         assert u_edge_count >= 4
+
+         t_cell_list = []  # list of 4-tuples of ints, being local face indices for tetra cells
 
          # create an internal tetra face for each edge, using centre point as third node
          # note: u_a, u_b are a sorted pair, and u_cell_nodes is also aorted, so t_a, t_b are a sorted pair
-         t_face_list = []
+         t_face_list = []  # list of triple ints each triplet being local node indices for a triangular face
          for u_a, u_b in u_cell_edge_list:
-            t_a, t_b = u_cell_nodes.index(u_a), u_cell_nodes.index[u_b]
+            t_a, t_b = u_cell_nodes.index(u_a), u_cell_nodes.index(u_b)
             t_face_list.append((t_a, t_b, centre_node))
 
          # for each unstructured face, create a Delauney triangulation; create a tetra face for each
@@ -1149,21 +1194,33 @@ class TetraGrid(UnstructuredGrid):
          # is projected onto a planar approximation defined by the face centre point and an average
          # normal vector
          for fi in u_cell_faces:
-            u_face_nodes = u_grid.node_indices_for_face(fi)
-            face_points = u_grid.points_cached[u_face_nodes].copy()
-            face_centre = u_grid.face_centre_point(fi)
-            # project face points onto a plane
-            normal = u_grid.face_normal(fi)
-            az = vec.azimuth(normal)
-            incl = vec.inclination(normal)
-            vec.tilt_points(face_centre, az, -incl, face_points)  # modifies face_points in situ
-            # create Delaunay triangulation of unstructured face
-            triangulated_face = tri.dt(face_points[:, :2])  # int array of shape (M, 3)
-            for triangle in triangulated_face:
-               # add a cell to tetra grid, using triangle nodes plus centre node
-               pass
+            triangulated_face = u_grid.face_triangulation(fi)
+            for u_a, u_b, u_c in triangulated_face:
+               t_a, t_b, t_c = u_cell_nodes.index(u_a), u_cell_nodes.index(u_b), u_cell_nodes.index(u_c)
+               t_cell_faces = [len(t_face_list)]  # local face index for this triangle
+               t_face_list.append((t_a, t_b, t_c))
+               tri_edges = np.array([_min_max(t_a, t_b), _min_max(t_b, t_c), _min_max(t_c, t_a)], dtype = int)
+               for e_a, e_b in tri_edges:
+                  try:
+                     pos = t_face_list.index((e_a, e_b, centre_node))
+                  except ValueError:
+                     pos = len(t_face_list)
+                     t_face_list.append((e_a, e_b, centre_node))
+                  t_cell_faces.append(pos)
+               t_cell_list.append(tuple(t_cell_faces))
 
-         raise NotImplementedError('from_unstructured_cell not yet implemented')
+         # everything is now ready to populate the tetra grid attributes (apart from handedness)
+         tetra.set_cell_count(len(t_cell_list))
+         tetra.face_count = len(t_face_list)
+         tetra.faces_per_cell_cl = np.arange(4, 4 * tetra.cell_count + 1, 4, dtype = int)
+         tetra.faces_per_cell = np.array(t_cell_list, dtype = int).flatten()
+         tetra.nodes_per_face_cl = np.arange(3, 3 * tetra.face_count + 1, 3, dtype = int)
+         tetra.nodes_per_face = np.array(t_face_list, dtype = int).flatten()
+
+         tetra.cell_face_is_right_handed = np.ones(len(tetra.faces_per_cell), dtype = bool)
+         if set_handedness:
+            # TODO: set handedness correctly and make default for set_handedness True
+            raise NotImplementedError('code not written to set handedness for tetra from unstructured cell')
 
       tetra.check_tetra()
 

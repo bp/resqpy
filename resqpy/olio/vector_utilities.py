@@ -143,6 +143,8 @@ def azimuth(v):  # 'azimuth' is synonymous with 'compass bearing'
    unit_v = unit_vector(z_zero_v)  # also checks that z_zero_v is not zero vector
    x = unit_v[0]
    y = unit_v[1]  # ignore z component
+   if x == 0.0 and y == 0.0:
+      return 0.0  # arbitrary azimuth of a vertical vector
    if abs(x) >= abs(y):
       radians = maths.pi / 2.0 - maths.atan(y / x)
       if x < 0.0:
