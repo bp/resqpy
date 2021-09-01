@@ -13,7 +13,7 @@ from resqpy.olio.base import BaseResqpy
 import resqpy.olio.uuid as bu
 import resqpy.weights_and_measures as bwam
 import resqpy.olio.vector_utilities as vec
-import resqpy.olio.triangulation as triangulation
+import resqpy.olio.triangulation as tri
 import resqpy.olio.volume as vol
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
@@ -513,6 +513,66 @@ class UnstructuredGrid(BaseResqpy):
       return (self.faces_per_cell[start:self.faces_per_cell_cl[cell]].copy(),
               self.cell_face_is_right_handed[start:self.faces_per_cell_cl[cell]].copy())
 
+   def edges_for_face(self, face_index):
+      """Returns numpy list of pairs of node indices, each pair being one edge of the face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
+
+      notes:
+         the order of the pairs follows the order of the nodes for the face; within each pair, the
+         order of the two node indices also follows the order of the nodes for the face
+      """
+
+      face_nodes = self.node_indices_for_face(face_index)
+      return np.array([(face_nodes[i - 1], face_nodes[i]) for i in range(len(face_nodes))], dtype = int)
+
+   def edges_for_face_with_node_indices_ordered_within_pairs(self, face_index):
+      """Returns numpy list of pairs of node indices, each pair being one edge of the face.
+
+      arguments:
+         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+
+      returns:
+         numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
+
+      notes:
+         the order of the pairs follows the order of the nodes for the face; within each pair, the
+         two node indices are ordered with the lower index first
+      """
+
+      edges = self.edges_for_face(face_index)
+      for i in range(len(edges)):
+         a, b = edges[i]
+         if b < a:
+            edges[i] = (b, a)
+      return edges
+
+   def distinct_edges_for_cell(self, cell):
+      """Returns numpy list of pairs of node indices, each pair being one distinct edge of the cell.
+
+      arguments:
+         cell (int): the index of the cell
+
+      returns:
+         numpy int array of shape (E, 2) being the node indices identifying the E edges of the cell
+
+      note:
+         within each pair, the two node indices are ordered with the lower index first
+      """
+
+      edge_list = []
+      for face_index in self.face_indices_for_cell(cell):
+         for a, b in self.edges_for_face(face_index):
+            if b < a:
+               a, b = b, a
+            if (a, b) not in edge_list:
+               edge_list.append((a, b))
+      return np.array(edge_list, dtype = int)
+
    def cell_face_centre_points(self, cell):
       """Returns a numpy array of centre points of the faces for a single cell.
 
@@ -564,6 +624,84 @@ class UnstructuredGrid(BaseResqpy):
          normal_sum += weight * edge_normal
 
       return vec.unit_vector(normal_sum)
+
+   def planar_face_points(self, face_index, xy_plane = False):
+      """Returns points for a planar approximation of a face.
+
+      arguments:
+         face_index (int): the index of the face for which a planar approximation is required
+         xy_plane (boolean, default False): if True, the returned points lie in a horizontal plane with z = 0.0;
+            if False, the plane is located approximately in the position of the original face, with the same
+            normal direction
+
+      returns:
+         numpy float array of shape (N, 3) being the xyz points of the planar face nodes corresponding to the
+         N nodes of the original face, in the same order
+      """
+
+      self.cache_all_geometry_arrays()
+      face_centre = self.face_centre_point(face_index)
+      face_points = self.points_cached[self.node_indices_for_face(face_index)].copy()
+      normal = self.face_normal(face_index)
+      az = vec.azimuth(normal)
+      incl = vec.inclination(normal)
+      vec.tilt_points(face_centre, az, -incl, face_points)  # modifies face_points in situ
+      if xy_plane:
+         face_points[..., 2] = 0.0
+      else:
+         face_points[..., 2] = face_centre[2]
+         vec.tilt_points(face_centre, az, incl, face_points)  # tilt back to original average normal
+      return face_points
+
+   def face_triangulation(self, face_index, local_nodes = False):
+      """Returns a Delauney triangulation of (a planar approximation of) a face.
+
+      arguments:
+         face_index (int): the index of the face for which a triangulation is required
+         local_nodes (boolean, default False): if True, the returned node indices are local to the face nodes,
+            ie. can index into node_indices_for_face(); if False, the returned node indices are the global
+            node indices in use by the grid
+
+      returns:
+         numpy int array of shape (N - 2, 3) being the node indices of the triangulation, where N is the number
+         of nodes defining the face
+      """
+
+      face_points = self.planar_face_points(face_index, xy_plane = True)
+      local_triangulation = tri.dt(face_points.copy())  # returns int array of shape (M, 3)
+      assert len(local_triangulation) == len(face_points) - 2, 'face triangulation failure (concave edges when planar?)'
+      if local_nodes:
+         return local_triangulation
+      return self.node_indices_for_face(face_index)[local_triangulation]
+
+   def area_of_face(self, face_index, in_plane = False):
+      """Returns the area of a face.
+
+      arguments:
+         face_index (int): the index of the face for which the area is required
+         in_plane (boolean, default False): if True, the area returned is the area of the planar approximation
+            of the face; if False, the area is the sum of the areas of the triangulation of the face, which
+            need not be planar
+
+      returns:
+         float being the area of the face
+
+      notes:
+         units of measure of the area is implied by the units of the crs in use by the grid
+      """
+
+      if in_plane:
+         face_points = self.planar_face_points(face_index, xy_plane = True)
+         local_triangulation = tri.dt(face_points)
+         triangulated_points = face_points[local_triangulation]
+      else:
+         global_triangulation = self.face_triangulation(face_index)
+         triangulated_points = self.points_cached[global_triangulation]
+      assert triangulated_points.ndim == 3 and triangulated_points.shape[1:] == (3, 3)
+      area = 0.0
+      for tp in triangulated_points:
+         area += vec.area_of_triangle(tp[0], tp[1], tp[2])
+      return area
 
    def cell_centre_point(self, cell):
       """Returns centre point of a single cell calculated as the mean position of the centre points of its faces.
@@ -948,7 +1086,7 @@ class TetraGrid(UnstructuredGrid):
 
    @classmethod
    def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = {}):
-      """Instantiates a small TetraGrid representing a single cell from an UnstructuredGrid as tetrahedra."""
+      """Instantiates a small TetraGrid representing a single cell from an UnstructuredGrid as a set of tetrahedra."""
 
       if not title:
          title = str(u_grid.title) + f'_cell_{cell}'
@@ -982,24 +1120,46 @@ class TetraGrid(UnstructuredGrid):
          tetra.cell_face_is_right_handed = np.ones(4, dtype = bool)
          tetra.points_cached = u_grid.points_cached[u_cell_nodes].copy()
 
+      # todo: add optimised code for pyramidal (and hexahedral?) cells
+
       else:  # generic case: add a node at centre of unstructured cell and divide faces into triangles
 
          tetra.node_count = u_cell_node_count + 1
          tetra.points_cached = np.empty((tetra.node_count, 3))
          tetra.points_cached[:-1] = u_grid.points_cached[u_cell_nodes].copy()
          tetra.points_cached[-1] = u_grid.centre_point(cell = cell)
+         centre_node = tetra.node_count - 1
 
+         # build list of distinct edges used by cell
+         u_cell_edge_list = u_grid.distinct_edges_for_cell(cell)
+         edge_count = len(u_cell_edge_list)
+         assert edge_count >= 4
+
+         # create an internal tetra face for each edge, using centre point as third node
+         # note: u_a, u_b are a sorted pair, and u_cell_nodes is also aorted, so t_a, t_b are a sorted pair
+         t_face_list = []
+         for u_a, u_b in u_cell_edge_list:
+            t_a, t_b = u_cell_nodes.index(u_a), u_cell_nodes.index[u_b]
+            t_face_list.append((t_a, t_b, centre_node))
+
+         # for each unstructured face, create a Delauney triangulation; create a tetra face for each
+         # triangle in the triangulation; create internal tetra faces for each of the internal edges in
+         # the triangulation; and create a tetra cell for each triangle in the triangulation
+         # note: the resqpy Delauney triangulation is for a 2D system, so here the unstructured face
+         # is projected onto a planar approximation defined by the face centre point and an average
+         # normal vector
          for fi in u_cell_faces:
-            face_points = u_grid.points_cached[u_grid.node_indices_for_face(fi)].copy()
+            u_face_nodes = u_grid.node_indices_for_face(fi)
+            face_points = u_grid.points_cached[u_face_nodes].copy()
             face_centre = u_grid.face_centre_point(fi)
             # project face points onto a plane
             normal = u_grid.face_normal(fi)
             az = vec.azimuth(normal)
             incl = vec.inclination(normal)
-            vec.tilt_points(face_centre, az, -incl, face_points)
-            # create Delaunay triangulation of face
-            triangulated_face = triangulation.dt(face_points[:, :2])  # int array of shape (M, 3)
-            for tfi in range(len(triangulated_face)):
+            vec.tilt_points(face_centre, az, -incl, face_points)  # modifies face_points in situ
+            # create Delaunay triangulation of unstructured face
+            triangulated_face = tri.dt(face_points[:, :2])  # int array of shape (M, 3)
+            for triangle in triangulated_face:
                # add a cell to tetra grid, using triangle nodes plus centre node
                pass
 

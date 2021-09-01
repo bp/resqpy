@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '31st August 2021'
+version = '1st September 2021'
 
 import logging
 
@@ -490,6 +490,17 @@ def nearest_point_projected(p, points, projection):
 
    d2 = point_distance_sqr_to_points_projected(p, points, projection)
    return np.unravel_index(np.nanargmin(d2), d2.shape)
+
+
+def area_of_triangle(a, b, c):
+   """Returns the area of the triangle defined by three vertices."""
+
+   # uses Heron's formula
+   la = naive_length(a - b)
+   lb = naive_length(b - c)
+   lc = naive_length(c - a)
+   s = 0.5 * (la + lb + lc)
+   return maths.sqrt(s * (s - la) * (s - lb) * (s - lc))
 
 
 # end of vector_utilities module

@@ -103,6 +103,24 @@ def test_hexa_grid_from_grid(example_model_with_properties):
    # check face normal for first face (K- face of first cell)
    assert_array_almost_equal(hexa_grid.face_normal(0), (0.0, 0.0, -1.0))
 
+   # check that planar approximation of last face is about the same as the original
+   fi = hexa_grid.face_count - 1
+   assert_array_almost_equal(hexa_grid.planar_face_points(fi),
+                             hexa_grid.points_cached[hexa_grid.node_indices_for_face(fi)],
+                             decimal = 3)
+
+   # construct a Delauney triangulation of the last face
+   triangulated = hexa_grid.face_triangulation(fi, local_nodes = True)
+   assert triangulated.shape == (2, 3)
+   assert np.all(triangulated.flatten() < 4)
+   assert np.all(np.unique(triangulated) == (0, 1, 2, 3))
+   # also test the triangulation using the global node indices
+   triangulated = hexa_grid.face_triangulation(fi, local_nodes = False)
+   assert triangulated.shape == (2, 3)
+
+   # check the area of a middle face (the example model has unit area faces)
+   assert maths.isclose(hexa_grid.area_of_face(hexa_grid.face_count // 2), 1.0, rel_tol = 1.0e-3)
+
    # compare properties
    ijk_pc = ijk_grid.extract_property_collection()
    hexa_pc = hexa_grid.extract_property_collection()
@@ -215,6 +233,11 @@ def test_tetra_grid(tmp_path):
    for cell in range(tetra.cell_count):
       assert maths.isclose(tetra.volume(cell), expected_cell_volume, rel_tol = 1.0e-3)
    assert maths.isclose(tetra.grid_volume(), 5.0 * expected_cell_volume)
+
+   # test face area
+   expected_area = maths.sqrt(3.0 * half_edge * (half_edge**3))
+   area = tetra.area_of_face(0)
+   assert maths.isclose(area, expected_area, rel_tol = 1.0e-3)
 
    # test internal / external face lists
    assert np.all(tetra.external_face_indices() == np.arange(4, 16, dtype = int))
