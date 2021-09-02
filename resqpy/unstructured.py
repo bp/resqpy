@@ -763,7 +763,7 @@ class UnstructuredGrid(BaseResqpy):
             return self.array_centre_point[cell]
 
       else:
-         return self.cell_centre_point[cell]
+         return self.cell_centre_point(cell)
 
    def volume(self, cell):
       """Returns the volume of a single cell.
