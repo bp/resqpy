@@ -1,6 +1,6 @@
 """surface.py: surface class based on resqml standard."""
 
-version = '2nd July 2021'
+version = '2nd September 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -687,12 +687,19 @@ class Surface(_BaseSurface):
       self.patch_list = [tri_patch]
       self.uuid = bu.new_uuid()
 
-   def set_from_point_set(self, point_set):
-      """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object."""
+   def set_from_point_set(self, point_set, convexity_parameter = 5.0):
+      """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
+
+      arguments:
+         point_set (PointSet): the set of points to be triangulated to form a surface
+         convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
+            convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
+            chance of even a slight concavity
+      """
 
       p = point_set.full_array_ref()
       log.debug('number of points going into dt: ' + str(len(p)))
-      t = triangulate.dt(p[:, :2])
+      t = triangulate.dt(p[:, :2], container_size_factor = convexity_parameter)
       log.debug('number of triangles: ' + str(len(t)))
       self.crs_uuid = point_set.crs_uuid
       self.set_from_triangles_and_points(t, p)
