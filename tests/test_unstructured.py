@@ -86,6 +86,19 @@ def test_hexa_grid_from_grid(example_model_with_properties):
                              dtype = int)
    assert np.all(cell_nodes == expected_nodes)
 
+   # check that some simple convenience methods work okay
+   assert hexa_grid.face_count_for_cell(0) == 6
+   assert hexa_grid.max_face_count_for_any_cell() == 6
+   assert hexa_grid.max_node_count_for_any_face() == 4
+
+   # check that correct number of edges is found for a face
+   edges = hexa_grid.edges_for_face(hexa_grid.face_count // 2)  # arbitrary face in middle
+   assert edges.shape == (4, 2)
+   edges = hexa_grid.edges_for_face_with_node_indices_ordered_within_pairs(hexa_grid.face_count // 2)
+   assert edges.shape == (4, 2)
+   for a, b in edges:  # check node within pair ordering
+      assert a < b
+
    # compare corner points for first cell with those for ijk grid cell
    cp = hexa_grid.corner_points(0)
    assert cp.shape == (8, 3)
