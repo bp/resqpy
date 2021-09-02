@@ -428,12 +428,31 @@ class UnstructuredGrid(BaseResqpy):
 
       return np.mean(self.points_cached[self.node_indices_for_face(face_index)], axis = 0)
 
+   def face_count_for_cell(self, cell):
+      """Returns the number of faces for a particular cell."""
+
+      self.cache_all_geometry_arrays()
+      start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
+      return self.faces_per_cell_cl[cell] - start
+
+   def max_face_count_for_any_cell(self):
+      """Returns the largest number of faces in use by any one cell."""
+
+      self.cache_all_geometry_arrays()
+      return max(self.faces_per_cell_cl[0], np.max(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1]))
+
    def node_count_for_face(self, face_index):
       """Returns the number of nodes for a particular face."""
 
       self.cache_all_geometry_arrays()
       start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
       return self.nodes_per_face_cl[face_index] - start
+
+   def max_node_count_for_any_face(self):
+      """Returns the largest number of nodes in use by any one face."""
+
+      self.cache_all_geometry_arrays()
+      return max(self.nodes_per_face_cl[0], np.max(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1]))
 
    def node_indices_for_face(self, face_index):
       """Returns numpy list of node indices for a single face.
@@ -452,7 +471,7 @@ class UnstructuredGrid(BaseResqpy):
 
       self.cache_all_geometry_arrays()
       start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
-      return self.nodes_per_face[start:self.nodes_per_face_cl[face_index]]
+      return self.nodes_per_face[start:self.nodes_per_face_cl[face_index]].copy()
 
    def distinct_node_indices_for_cell(self, cell):
       """Returns a numpy list of distinct node indices used by the faces of a single cell.
