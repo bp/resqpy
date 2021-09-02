@@ -1,6 +1,6 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '1st September 2021'
+version = '2nd September 2021'
 
 import numpy as np
 
@@ -91,9 +91,12 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
    p = np.empty((n_p + 3, 2))
    p[:-3] = po[:, :2]
    # add 3 points sure of containing all po
-   p[-3] = (min_xy[0] - 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
-   p[-2] = (max_xy[0] + 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
-   p[-1] = (min_xy[0] + 0.5 * dxy[0], max_xy[1] + 0.8 * dxy[1])
+   #   p[-3] = (min_xy[0] - 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
+   #   p[-2] = (max_xy[0] + 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
+   #   p[-1] = (min_xy[0] + 0.5 * dxy[0], max_xy[1] + 0.8 * dxy[1])
+   p[-3] = (min_xy[0] - 80.0 * dxy[0], min_xy[1] - 10.0 * dxy[1])
+   p[-2] = (max_xy[0] + 80.0 * dxy[0], min_xy[1] - 10.0 * dxy[1])
+   p[-1] = (min_xy[0] + 50.0 * dxy[0], max_xy[1] + 80.0 * dxy[1])
 
    # triangle vertex indices
    t = np.empty((2 * n_p + 2, 3), dtype = int)  # empty space for triangle vertex indices
