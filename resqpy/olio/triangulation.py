@@ -12,7 +12,7 @@ import resqpy.olio.vector_utilities as vec
 #       t[1], t[2] = t[2], t[1]
 
 
-def _dt_simple(po, plot_fn = None, progress_fn = None):
+def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = None):
 
    def flip(ei):
       nonlocal fm, e, t, te, p, nt, p_i, ne
@@ -91,12 +91,10 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
    p = np.empty((n_p + 3, 2))
    p[:-3] = po[:, :2]
    # add 3 points sure of containing all po
-   #   p[-3] = (min_xy[0] - 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
-   #   p[-2] = (max_xy[0] + 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
-   #   p[-1] = (min_xy[0] + 0.5 * dxy[0], max_xy[1] + 0.8 * dxy[1])
-   p[-3] = (min_xy[0] - 80.0 * dxy[0], min_xy[1] - 10.0 * dxy[1])
-   p[-2] = (max_xy[0] + 80.0 * dxy[0], min_xy[1] - 10.0 * dxy[1])
-   p[-1] = (min_xy[0] + 50.0 * dxy[0], max_xy[1] + 80.0 * dxy[1])
+   csf = 100.0 if container_size_factor is None else max(1.0, container_size_factor)
+   p[-3] = (min_xy[0] - 0.8 * csf * dxy[0], min_xy[1] - 0.1 * csf * dxy[1])
+   p[-2] = (max_xy[0] + 0.8 * csf * dxy[0], min_xy[1] - 0.1 * csf * dxy[1])
+   p[-1] = (min_xy[0] + 0.5 * csf * dxy[0], max_xy[1] + 0.8 * csf * dxy[1])
 
    # triangle vertex indices
    t = np.empty((2 * n_p + 2, 3), dtype = int)  # empty space for triangle vertex indices
@@ -195,7 +193,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
    return tri_set
 
 
-def dt(p, algorithm = None, plot_fn = None, progress_fn = None):
+def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0):
    """Returns the Delauney Triangulation of 2D point set p.
 
    arguments:
@@ -207,6 +205,8 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None):
          depending on the algorithm with 3 extra points added to form an enveloping triangle
       progress_fn (function of form f(x), optional): if present, this function is called at regulat
          intervals by the algorithm, passing increasing values in the range 0.0 to 1.0 as x
+      container_size_factor (float, default 100.0): the larger this number, the more likely the
+         resulting triangulation is to be convex; reduce to 1.0 to allow slight concavities
 
    returns:
       numpy int array of shape (M, 3) being the indices into the first axis of p of the 3 points
@@ -218,6 +218,6 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None):
       algorithm = 'simple'
 
    if algorithm == 'simple':
-      return _dt_simple(p, plot_fn = plot_fn, progress_fn = progress_fn)
+      return _dt_simple(p, plot_fn = plot_fn, progress_fn = progress_fn, container_size_factor = container_size_factor)
    else:
       raise Exception('unrecognised Delauney Triangulation algorithm name')
