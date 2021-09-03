@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '18th June 2021'
+version = '29th August 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -197,8 +197,8 @@ class PropertyCollection():
 
       Arguments:
          support_uuid: the uuid of the supporting representation which the properties in this collection are for
-         support: a grid.Grid, well.WellboreFrame, well.BlockedWell, surface.Mesh, or fault.GridConnectionSet object
-            which the properties in this collection are for
+         support: a grid.Grid, unstructured.UnstructuredGrid (or derived class), well.WellboreFrame, well.BlockedWell,
+            surface.Mesh, or fault.GridConnectionSet object which the properties in this collection are for
          model (model.Model object, optional): if present, the model associated with this collection is set to this;
             otherwise the model is assigned from the supporting object
          modify_parts (boolean, default True): if True, any parts already in this collection have their individual
@@ -207,6 +207,7 @@ class PropertyCollection():
 
       # when at global level was causing circular reference loading issues as grid imports this module
       import resqpy.grid as grr
+      import resqpy.unstructured as rug
       import resqpy.well as rqw
       import resqpy.surface as rqs
       import resqpy.fault as rqf
@@ -253,21 +254,21 @@ class PropertyCollection():
                self.support = rqs.Mesh(model, uuid = self.support_uuid)
             elif support_type == 'obj_GridConnectionSetRepresentation':
                self.support = rqf.GridConnectionSet(model, uuid = self.support_uuid)
+            elif support_type == 'obj_UnstructuredGridRepresentation':
+               self.support = rug.UnstructuredGrid(model,
+                                                   uuid = self.support_uuid,
+                                                   geometry_required = False,
+                                                   find_properties = False)
             else:
                raise TypeError('unsupported property supporting representation class: ' + str(support_type))
          else:
-            if isinstance(self.support, grr.Grid):
-               self.support_root = self.support.root
-            elif isinstance(self.support, rqw.WellboreFrame):
-               self.support_root = self.support.root
-            elif isinstance(self.support, rqw.BlockedWell):
-               self.support_root = self.support.root
-            elif isinstance(self.support, rqs.Mesh):
-               self.support_root = self.support.root
-            elif isinstance(self.support, rqf.GridConnectionSet):
+            if type(self.support) in [
+                  grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
+                  rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.PyramidGrid
+            ]:
                self.support_root = self.support.root
             else:
-               raise TypeError('unsupported property supporting representation class: ' + str(type(support)))
+               raise TypeError('unsupported property supporting representation class: ' + str(type(self.support)))
          if modify_parts:
             for (part, info) in self.dict.items():
                if info[1] is not None:
@@ -293,6 +294,7 @@ class PropertyCollection():
 
       # when at global level was causing circular reference loading issues as grid imports this module
       import resqpy.grid as grr
+      import resqpy.unstructured as rug
       import resqpy.well as rqw
       import resqpy.surface as rqs
       import resqpy.fault as rqf
@@ -345,6 +347,13 @@ class PropertyCollection():
       elif isinstance(support, rqf.GridConnectionSet):
          if indexable_element is None or indexable_element == 'faces':
             shape_list = [support.count]
+
+      elif type(support) in [rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.PyramidGrid]:
+         if indexable_element is None or indexable_element == 'cells':
+            shape_list = [support.cell_count]
+         elif indexable_element == 'faces per cell':
+            support.cache_all_geometry_arrays()
+            shape_list = [len(support.faces_per_cell)]
 
       else:
          raise Exception(f'unsupported support class {type(support)} for property')
@@ -1217,6 +1226,7 @@ class PropertyCollection():
       """
 
       import resqpy.grid as grr
+      import resqpy.unstructured as rug
 
       support_uuid = self.support_uuid_for_part(part)
       if support_uuid is None:
@@ -1225,7 +1235,9 @@ class PropertyCollection():
          return self.support
       assert self.model is not None
       part = self.model.part_for_uuid(support_uuid)
-      assert part is not None and self.model.type_of_part(part) == 'obj_IjkGridRepresentation'
+      assert part is not None and self.model.type_of_part(part) in [
+         'obj_IjkGridRepresentation', 'obj_UnstructuredGridRepresentation'
+      ]
       return grr.any_grid(self.model, uuid = support_uuid, find_properties = False)
 
    def uuid_for_part(self, part):
@@ -2258,6 +2270,7 @@ class PropertyCollection():
             arranged copy of resqml_a
 
       notes:
+         this method is for properties of IJK grids only;
          RESQML documentation is not entirely clear about the required ordering of -I, +I, -J, +J faces;
          current implementation assumes count = 1 for the property
       """
@@ -2285,6 +2298,7 @@ class PropertyCollection():
             ready to be stored as a RESQML property array with indexable element faces per cell
 
       notes:
+         this method is for properties of IJK grids only;
          RESQML documentation is not entirely clear about the required ordering of -I, +I, -J, +J faces;
          current implementation assumes count = 1 for the property
       """
@@ -2812,12 +2826,15 @@ class PropertyCollection():
 
       support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
       if indexable_element is None:
-         if support_type == 'obj_IjkGridRepresentation':
+         if support_type in [
+               'obj_IjkGridRepresentation', 'obj_BlockedWellboreRepresentation', 'obj_Grid2dRepresentation',
+               'obj_UnstructuredGridRepresentation'
+         ]:
             indexable_element = 'cells'
          elif support_type == 'obj_WellboreFrameRepresentation':
             indexable_element = 'nodes'  # note: could be 'intervals'
-         elif support_type == 'obj_BlockedWellboreRepresentation':
-            indexable_element = 'cells'  # default could be 'intervals'
+         elif support_type == 'obj_GridConnectionSetRepresentation':
+            indexable_element = 'faces'
          else:
             raise Exception('indexable element unknown for unsupported supporting representation object')
 
@@ -3737,7 +3754,7 @@ class Property(BaseResqpy):
 
 
 class GridPropertyCollection(PropertyCollection):
-   """Class for RESQML Property collection for a Grid, inheriting from PropertyCollection."""
+   """Class for RESQML Property collection for an IJK Grid, inheriting from PropertyCollection."""
 
    def __init__(self, grid = None, property_set_root = None, realization = None):
       """Creates a new property collection related to an IJK grid.

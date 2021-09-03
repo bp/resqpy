@@ -1,6 +1,6 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '29th April 2021'
+version = '2nd September 2021'
 
 import numpy as np
 
@@ -12,7 +12,7 @@ import resqpy.olio.vector_utilities as vec
 #       t[1], t[2] = t[2], t[1]
 
 
-def _dt_simple(po, plot_fn = None, progress_fn = None):
+def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = None):
 
    def flip(ei):
       nonlocal fm, e, t, te, p, nt, p_i, ne
@@ -67,7 +67,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
       te[t1] = fte1
       fm[ei] = True
       # debug plot here
-      if plot_fn:
+      if plot_fn is not None:
          plot_fn(p, t[:nt])
       # recursively flip, not sure all these are needed
       flip(fte0[0])
@@ -78,7 +78,10 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
    n_p = len(po)
    if n_p < 3:
       return None  # not enough points
-   if progress_fn:
+   elif n_p == 3:
+      return np.array([0, 1, 2], dtype = int).reshape((1, 3))
+
+   if progress_fn is not None:
       progress_fn(0.0)
 
    min_xy = np.min(po[:, :2], axis = 0)
@@ -88,13 +91,14 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
    p = np.empty((n_p + 3, 2))
    p[:-3] = po[:, :2]
    # add 3 points sure of containing all po
-   p[-3] = (min_xy[0] - 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
-   p[-2] = (max_xy[0] + 0.8 * dxy[0], min_xy[1] - 0.1 * dxy[1])
-   p[-1] = (min_xy[0] + 0.5 * dxy[0], max_xy[1] + 0.8 * dxy[1])
+   csf = 100.0 if container_size_factor is None else max(1.0, container_size_factor)
+   p[-3] = (min_xy[0] - 0.8 * csf * dxy[0], min_xy[1] - 0.1 * csf * dxy[1])
+   p[-2] = (max_xy[0] + 0.8 * csf * dxy[0], min_xy[1] - 0.1 * csf * dxy[1])
+   p[-1] = (min_xy[0] + 0.5 * csf * dxy[0], max_xy[1] + 0.8 * csf * dxy[1])
 
    # triangle vertex indices
    t = np.empty((2 * n_p + 2, 3), dtype = int)  # empty space for triangle vertex indices
-   t[0] = (n_p, n_p + 1, n_p + 2)  # initial set of one contining triangle
+   t[0] = (n_p, n_p + 1, n_p + 2)  # initial set of one containing triangle
    nt = 1  # number of triangles so far populated
 
    # edges: list of indices of triangles and edge within triangle; -1 indicates no triangle using edge
@@ -119,7 +123,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
 
    for p_i in range(n_p):  # index of next point to consider
 
-      if progress_fn and progress_count <= 0:
+      if progress_fn is not None and progress_count <= 0:
          progress_fn(float(p_i) / float(n_p))
          progress_count = progress_period
 
@@ -170,7 +174,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
       fm[:] = False
 
       # debug plot here, with new point, before flipping
-      if plot_fn:
+      if plot_fn is not None:
          plot_fn(p, t[:nt])
 
       flip(e0)
@@ -180,16 +184,16 @@ def _dt_simple(po, plot_fn = None, progress_fn = None):
       progress_count -= 1
 
    # remove any triangles using invented container vertices
-   tri_set = t[np.where(np.all(t < n_p, axis = 1))]
-   if plot_fn:
+   tri_set = t[np.where(np.all(t[:nt] < n_p, axis = 1))]
+   if plot_fn is not None:
       plot_fn(p, tri_set)
-   if progress_fn:
+   if progress_fn is not None:
       progress_fn(1.0)
 
    return tri_set
 
 
-def dt(p, algorithm = None, plot_fn = None, progress_fn = None):
+def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0):
    """Returns the Delauney Triangulation of 2D point set p.
 
    arguments:
@@ -201,19 +205,19 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None):
          depending on the algorithm with 3 extra points added to form an enveloping triangle
       progress_fn (function of form f(x), optional): if present, this function is called at regulat
          intervals by the algorithm, passing increasing values in the range 0.0 to 1.0 as x
+      container_size_factor (float, default 100.0): the larger this number, the more likely the
+         resulting triangulation is to be convex; reduce to 1.0 to allow slight concavities
 
    returns:
       numpy int array of shape (M, 3) being the indices into the first axis of p of the 3 points
          per triangle in the Delauney Triangulation
    """
-   global plot_out
-
    assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delauney Triangulation'
 
    if not algorithm:
       algorithm = 'simple'
 
    if algorithm == 'simple':
-      return _dt_simple(p, plot_fn = plot_fn, progress_fn = progress_fn)
+      return _dt_simple(p, plot_fn = plot_fn, progress_fn = progress_fn, container_size_factor = container_size_factor)
    else:
       raise Exception('unrecognised Delauney Triangulation algorithm name')

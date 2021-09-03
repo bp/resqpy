@@ -19,6 +19,7 @@
     strata
     surface
     time_series
+    unstructured
     weights_and_measures
     well
     olio

@@ -1461,6 +1461,39 @@ class Model():
       if count > 0:
          self.set_modified()
 
+   def change_uuid_in_supporting_representation_reference(self, node, old_uuid, new_uuid, new_title = None):
+      """Look for supporting representation reference using the old_uuid and replace with the new_uuid.
+
+      arguments:
+         node: the root node of an xml tree within which the supporting representation uuid is to be changed
+         old_uuid (uuid.UUID or str): the uuid currently to be found in the supporting representation reference
+         new_uuid (uuid.UUID or str): the new uuid to replace the old one
+         new_title (string, optional): if present, the title stored in the xml reference block is changed to this
+
+      returns:
+         boolean: True if the change was carried out; False otherwise
+
+      notes:
+         this method is typically used to temporarily set a supporting representation to a locally mocked
+         representation object when the actual supporting representation is not present in the dataset
+      """
+
+      ref_node = rqet.find_tag(node, 'SupportingRepresentation')
+      if ref_node is None:
+         return False
+      uuid_node = rqet.find_tag(ref_node, 'UUID')
+      if uuid_node is None:
+         return False
+      if not bu.matching_uuids(uuid_node.text, old_uuid):
+         return False
+      uuid_node.text = str(new_uuid)
+      if new_title:
+         title_node = rqet.find_tag(ref_node, 'Title')
+         if title_node is not None:
+            title_node.text = str(new_title)
+      self.set_modified()
+      return True
+
    def change_filename_in_hdf5_rels(self, new_hdf5_filename = None):
       """Scan relationships forest for hdf5 external parts and patch in a new filename.
 

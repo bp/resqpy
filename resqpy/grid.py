@@ -5602,7 +5602,24 @@ def grid_flavour(grid_root):
    em = rqet.load_metadata_from_xml(grid_root)
    flavour = em.get('grid_flavour')
    if flavour is None:
-      flavour = 'IjkGrid'
+      node_type = rqet.node_type(grid_root, strip_obj = True)
+      if node_type == 'IjkGridRepresentation':
+         if rqet.find_tag(grid_root, 'Geometry') is not None:
+            flavour = 'IjkGrid'
+         else:
+            flavour = 'IjkBlockGrid'  # this might cause issues
+      elif node_type == 'UnstructuredGridRepresentation':
+         cell_shape = rqet.find_nested_tags_text(grid_root, ['Geometry', 'CellShape'])
+         if cell_shape is None or cell_shape == 'polyhedral':
+            flavour = 'UnstructuredGrid'
+         elif cell_shape == 'tetrahedral':
+            flavour = 'TetraGrid'
+         elif cell_shape == 'hexahedral':
+            flavour = 'HexaGrid'
+         elif cell_shape == 'pyramidal':
+            flavour = 'PyramidGrid'
+         elif cell_shape == 'prism':
+            flavour = 'PrismGrid'
    return flavour
 
 
@@ -5613,7 +5630,9 @@ def is_regular_grid(grid_root):
 
 
 def any_grid(parent_model, grid_root = None, uuid = None, find_properties = True):
-   """Returns a Grid or RegularGrid object depending on the extra metadata in the xml."""
+   """Returns a Grid or RegularGrid or UnstructuredGrid object depending on the extra metadata in the xml."""
+
+   import resqpy.unstructured as rug
 
    if uuid is None and grid_root is not None:
       uuid = rqet.uuid_for_part_root(grid_root)
@@ -5624,4 +5643,14 @@ def any_grid(parent_model, grid_root = None, uuid = None, find_properties = True
       return Grid(parent_model, uuid = uuid, find_properties = find_properties)
    if flavour == 'IjkBlockGrid':
       return RegularGrid(parent_model, extent_kji = None, uuid = uuid, find_properties = find_properties)
+   if flavour == 'UnstructuredGrid':
+      return rug.UnstructuredGrid(parent_model, uuid = uuid, find_properties = find_properties)
+   if flavour == 'TetraGrid':
+      return rug.TetraGrid(parent_model, uuid = uuid, find_properties = find_properties)
+   if flavour == 'HexaGrid':
+      return rug.HexaGrid(parent_model, uuid = uuid, find_properties = find_properties)
+   if flavour == 'PyramidGrid':
+      return rug.PyramidGrid(parent_model, uuid = uuid, find_properties = find_properties)
+   if flavour == 'PrismGrid':
+      return rug.PrismGrid(parent_model, uuid = uuid, find_properties = find_properties)
    return None

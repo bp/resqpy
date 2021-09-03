@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '1st April 2021'
+version = '1st September 2021'
 
 import logging
 
@@ -143,6 +143,8 @@ def azimuth(v):  # 'azimuth' is synonymous with 'compass bearing'
    unit_v = unit_vector(z_zero_v)  # also checks that z_zero_v is not zero vector
    x = unit_v[0]
    y = unit_v[1]  # ignore z component
+   if x == 0.0 and y == 0.0:
+      return 0.0  # arbitrary azimuth of a vertical vector
    if abs(x) >= abs(y):
       radians = maths.pi / 2.0 - maths.atan(y / x)
       if x < 0.0:
@@ -153,6 +155,14 @@ def azimuth(v):  # 'azimuth' is synonymous with 'compass bearing'
          radians += maths.pi
    if radians < 0.0:
       radians += 2.0 * maths.pi
+   return degrees_from_radians(radians)
+
+
+def inclination(v):
+   """Returns the inclination in degrees of v (angle relative to +ve z axis)."""
+   assert 2 <= v.size <= 3
+   unit_v = unit_vector(v)
+   radians = maths.acos(dot_product(unit_v, np.array((0.0, 0.0, 1.0))))
    return degrees_from_radians(radians)
 
 
@@ -176,7 +186,7 @@ def points_direction_vector(a, axis):
       if not np.all(np.isnan(a[tuple(finish_slicing)])):
          break
       finish += 1
-   log.debug(f'axis: {axis}; start: {start}; finish: {finish}')
+#   log.debug(f'axis: {axis}; start: {start}; finish: {finish}')
    if start >= finish:
       return None
    if a.ndim > 2:
@@ -186,8 +196,10 @@ def points_direction_vector(a, axis):
    else:
       start_p = a[start]
       finish_p = a[finish]
-   log.debug(f'start_p: {start_p}')
-   log.debug(f'finish_p: {finish_p}')
+
+
+#   log.debug(f'start_p: {start_p}')
+#   log.debug(f'finish_p: {finish_p}')
    return finish_p - start_p
 
 
@@ -346,13 +358,23 @@ def tilt_3d_matrix(azimuth, dip):
 def tilt_points(pivot_xyz, azimuth, dip, points):
    """Modifies array of xyz points in situ to apply dip in direction of azimuth, about pivot point."""
 
-   log.debug('pivot xyz: ' + str(pivot_xyz))
+   #   log.debug('pivot xyz: ' + str(pivot_xyz))
    matrix = tilt_3d_matrix(azimuth, dip)
    points_shape = points.shape
    points[:] -= pivot_xyz
-   log.debug('points shape: ' + str(points.shape))
+   #   log.debug('points shape: ' + str(points.shape))
    points[:] = np.matmul(matrix, points.reshape((-1, 3)).transpose()).transpose().reshape(points_shape)
    points[:] += pivot_xyz
+
+
+def project_points_onto_plane(plane_xyz, normal_vector, points):
+   """Modifies array of xyz points in situ to project onto a plane defined by a point and normal vector."""
+
+   az = azimuth(normal_vector)
+   incl = inclination(normal_vector)
+   tilt_points(plane_xyz, az, -incl, points)
+   points[..., 2] = plane_xyz[2]
+   tilt_points(plane_xyz, az, incl, points)
 
 
 def perspective_vector(xyz_box, view_axis, vanishing_distance, vector):
@@ -470,6 +492,17 @@ def nearest_point_projected(p, points, projection):
 
    d2 = point_distance_sqr_to_points_projected(p, points, projection)
    return np.unravel_index(np.nanargmin(d2), d2.shape)
+
+
+def area_of_triangle(a, b, c):
+   """Returns the area of the triangle defined by three vertices."""
+
+   # uses Heron's formula
+   la = naive_length(a - b)
+   lb = naive_length(b - c)
+   lc = naive_length(c - a)
+   s = 0.5 * (la + lb + lc)
+   return maths.sqrt(s * (s - la) * (s - lb) * (s - lc))
 
 
 # end of vector_utilities module
