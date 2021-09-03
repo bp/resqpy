@@ -16,6 +16,7 @@
     organize
     property
     rq_import
+    strata
     surface
     time_series
     unstructured

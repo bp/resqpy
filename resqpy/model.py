@@ -1543,7 +1543,7 @@ class Model():
             also note that hdf5 data and high level objects maintained by other modules are not duplicated here;
             use this method to duplicate a part within a model prior to modifying the duplicated part in some way;
             to import a part from another model, use copy_part_from_other_model() instead; for copying a grid
-            it is best to use the higher level derevied_model.copy_grid() function
+            it is best to use the higher level derived_model.copy_grid() function
       """
 
       old_uuid_str = str(existing_uuid)
