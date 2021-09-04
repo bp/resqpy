@@ -1608,8 +1608,17 @@ class VerticalPrismGrid(PrismGrid):
       vpg = cls(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
       assert vpg is not None
 
-      # fetch the data for the top surface, to be used as the master for the triangular pattern
       top = surfaces[0]
+
+      # set and check consistency of crs
+      vpg.crs_uuid = top.crs_uuid
+      for s in surfaces[1:]:
+         if not bu.matching_uuids(vpg.crs_uuid, s.crs_uuid):
+            # check for equivalence
+            assert rqc.Crs(parent_model, uuid = vpg.crs_uuid) == rqc.Crs(parent_model,
+                                                                         uuid = s.crs_uuid), 'mismatching surface crs'
+
+      # fetch the data for the top surface, to be used as the master for the triangular pattern
       top_triangles, top_points = top.triangles_and_points()
       assert top_triangles.ndim == 2 and top_triangles.shape[1] == 3
       assert top_points.ndim == 2 and top_points.shape[1] == 3
@@ -1682,8 +1691,18 @@ class VerticalPrismGrid(PrismGrid):
          # TODO: set handedness correctly and make default for set_handedness True
          raise NotImplementedError('code not written to set handedness for vertical prism grid from surfaces')
 
-      # TODO
       # instersect gravity vectors from top surface points with other surfaces, and update z values in points
+      gravity = np.zeros((top_points.shape[0], 3))
+      gravity[:, 2] = 1.0  # up/down does not matter for the intersection function used below
+      for layer in range(layer_count):
+         base_triangles, base_points = surfaces[layer + 1].triangles_and_points()  # surface at base of layer
+         intersects = meet.line_set_triangles_intersects(top_points, gravity, base_points[base_triangles])
+         single_intersects = meet.last_intersects(intersects)  # will be triple NaN where no intersection occurs
+         # inherit point from surface above where no intersection has occurred
+         nan_lines = np.isnan(single_intersects[:, 0])
+         single_intersects[nan_lines] = points[layer][nan_lines]
+         # populate z values for layer of points
+         points[layer + 1, :, 2] = single_intersects[:, 2]
 
       vpg.points_cached = points.reshape((-1, 3))
       assert np.all(vpg.faces_per_cell < len(vpg.points_cached))
