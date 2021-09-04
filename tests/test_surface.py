@@ -172,3 +172,4 @@ def test_regular_mesh(example_model_and_crs):
    assert len(t) == 4 * (ni - 1) * (nj - 1)
    assert_array_almost_equal(np.min(p, axis = 0), np.min(peristent_mesh.full_array_ref().reshape(-1, 3), axis = 0))
    assert_array_almost_equal(np.max(p, axis = 0), np.max(peristent_mesh.full_array_ref().reshape(-1, 3), axis = 0))
+   assert len(surf.distinct_edges()) == 6 * (ni - 1) * (nj - 1) + (ni - 1) + (nj - 1)
