@@ -1633,6 +1633,7 @@ class VerticalPrismGrid(PrismGrid):
       vpg.cell_count = column_count * layer_count
       vpg.node_count = len(top_points) * (layer_count + 1)
       vpg.face_count = column_count * (layer_count + 1) + column_edge_count * layer_count
+      vpg.layer_count = layer_count
 
       # setup points with copies of points for top surface, deeper z values to be updated later
       points = np.empty((layer_count + 1, top_points.shape[0], top_points.shape[1]))

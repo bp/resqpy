@@ -7,6 +7,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
+import resqpy.surface as rqs
 import resqpy.unstructured as rug
 import resqpy.olio.uuid as bu
 
@@ -275,3 +276,62 @@ def test_tetra_grid(tmp_path):
    inactive_mask[0] = True
    assert len(tetra.external_face_indices_for_masked_cells(inactive_mask)) == tetra.face_count
    assert len(tetra.internal_face_indices_for_masked_cells(inactive_mask)) == 0
+
+
+def test_vertical_prism_grid_from_surfaces(tmp_path):
+
+   epc = os.path.join(tmp_path, 'vertical_prism.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+
+   # create a point set representing a pentagon with a centre node
+   pentagon_points = np.array([[-100.0, -200.0, 1050.0], [-200.0, 0.0, 1050.0], [0.0, 200.0, 1025.0],
+                               [200.0, 0.0, 975.0], [100.0, -200.0, 999.0], [0.0, 0.0, 1000.0]])
+   pentagon = rqs.PointSet(model, points_array = pentagon_points, crs_uuid = crs.uuid, title = 'pentagon')
+   pentagon.write_hdf5()
+   pentagon.create_xml()
+
+   # create a surface from the point set (will make a Delauney triangulation)
+   top_surf = rqs.Surface(model, point_set = pentagon, title = 'top surface')
+   top_surf.write_hdf5()
+   top_surf.create_xml()
+   surf_list = [top_surf]
+
+   # check the pentagon surface
+   pentagon_triangles, pentagon_points = top_surf.triangles_and_points()
+   assert pentagon_points.shape == (6, 3)
+   assert pentagon_triangles.shape == (5, 3)
+
+   # create a couple of horizontal surfaces at greater depths
+   boundary = np.array([[-300.0, -300.0, 0.0], [300.0, 300.0, 0.0]])
+   for depth in (1100.0, 1200.0):
+      base = rqs.Surface(model)
+      base.set_to_horizontal_plane(depth, boundary)
+      base.write_hdf5()
+      base.create_xml()
+      surf_list.append(base)
+
+   # now build a vertical prism grid from the surfaces
+   grid = rug.VerticalPrismGrid.from_surfaces(model, surf_list, title = 'the pentagon')
+   grid.write_hdf5()
+   grid.create_xml()
+
+   model.store_epc()
+
+   # re-open model
+
+   model = rq.Model(epc)
+   assert model is not None
+
+   # find grid by title
+   grid_uuid = model.uuid(obj_type = 'UnstructuredGridRepresentation', title = 'the pentagon')
+   assert grid_uuid is not None
+
+   # re-instantiate the grid
+   grid = rug.VerticalPrismGrid(model, uuid = grid_uuid)
+   assert grid is not None
+   assert grid.layer_count == 2
+   assert grid.cell_count == 10
+   assert grid.node_count == 18
+   assert grid.faces_count == 35
