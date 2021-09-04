@@ -1548,7 +1548,13 @@ class VerticalPrismGrid(PrismGrid):
       self.grid_representation = 'VerticalPrismGrid'  #: flavour of grid; not much used
 
    @classmethod
-   def from_surfaces(cls, parent_model, surfaces, title = None, originator = None, extra_metadata = {}, set_handedness = False):
+   def from_surfaces(cls,
+                     parent_model,
+                     surfaces,
+                     title = None,
+                     originator = None,
+                     extra_metadata = {},
+                     set_handedness = False):
       """Create a layered vertical prism grid from an ordered list of untorn surfaces.
 
       arguments:
@@ -1668,7 +1674,8 @@ class VerticalPrismGrid(PrismGrid):
             # set quadrilateral faces of cells in column, for this edge
             vpg.faces_per_cell[col + t_edge : 5 * vpg.cell_count + 1 : 5 * column_count] =  \
                np.arange(column_count * (layer_count + 1) + edge, np.face_count + 1, column_count)
-      assert np.count_nonzero(vpg.faces_per_cell) == vpg.faces_per_cell.size - 1  # face zero is a top triangle, only used once
+      assert np.count_nonzero(
+         vpg.faces_per_cell) == vpg.faces_per_cell.size - 1  # face zero is a top triangle, only used once
 
       vpg.cell_face_is_right_handed = np.ones(len(vpg.faces_per_cell), dtype = bool)
       if set_handedness:
@@ -1682,6 +1689,7 @@ class VerticalPrismGrid(PrismGrid):
       assert np.all(vpg.faces_per_cell < len(vpg.points_cached))
 
       return vpg
+
 
 class HexaGrid(UnstructuredGrid):
    """Class for unstructured grids where every cell is hexahedral (faces may be degenerate)."""
