@@ -685,15 +685,11 @@ class Surface(_BaseSurface):
       if self.triangles is None:
          self.extract_patches(self.root)
       tri_count = len(self.triangles)
-      all_edges_unsorted = np.empty((tri_count, 3, 2))
+      all_edges = np.empty((tri_count, 3, 2))
       for i in range(3):
-         all_edges_unsorted[:, i, 0] = self.triangles[:, i - 1]
-         all_edges_unsorted[:, i, 1] = self.triangles[:, i]
-      all_edges_pair_sorted = np.empty((tri_count, 3, 2))
-      flip_mask = (all_edges_unsorted[:, :, 1] < all_edges_unsorted[:, :, 0])
-      all_edges_pair_sorted[:, :, 0] = np.where(flip_mask, all_edges_unsorted[:, :, 1], all_edges_unsorted[:, :, 0])
-      all_edges_pair_sorted[:, :, 1] = np.where(flip_mask, all_edges_unsorted[:, :, 0], all_edges_unsorted[:, :, 1])
-      return np.unique(all_edges_pair_sorted.reshape((-1, 2)), axis = 0)
+         all_edges[:, i, 0] = self.triangles[:, i - 1]
+         all_edges[:, i, 1] = self.triangles[:, i]
+      return np.unique(np.sort(all_edges.reshape((-1, 2)), axis = 1), axis = 0)
 
    def set_from_triangles_and_points(self, triangles, points):
       """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
