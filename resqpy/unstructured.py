@@ -1493,8 +1493,8 @@ class VerticalPrismGrid(PrismGrid):
    """Class for unstructured grids where every cell is a vertical triangular prism.
 
    notes:
-      prism cells are constrained to have a fixed triangular cross-section, though top and base triangular faces
-      need not be horizontal; edges not involved in the triangular faces must be vertical;
+      vertical prism cells are constrained to have a fixed triangular cross-section, though top and base triangular
+      faces need not be horizontal; edges not involved in the triangular faces must be vertical;
       this is not a native RESQML sub-class but is a resqpy concoction to allow optimisation of some methods;
       face ordering within a cell is also constrained to be top, base, then the three vertical planar quadrilateral
       faces; node ordering within triangular faces is constrained to ensure correspondence of nodes in triangles
@@ -1542,11 +1542,13 @@ class VerticalPrismGrid(PrismGrid):
       if self.root is not None:
          assert grr.grid_flavour(self.root) in ['VerticalPrismGrid', 'PrismGrid']
          self.check_prism()
+         if 'layer count' in self.extra_metadata:
+            self.layer_count = int(self.extra_metadata['layer count'])
 
       self.grid_representation = 'VerticalPrismGrid'  #: flavour of grid; not much used
 
    @classmethod
-   def from_surfaces(cls, parent_model, surfaces, title = None, originator = None, extra_metadata = {}):
+   def from_surfaces(cls, parent_model, surfaces, title = None, originator = None, extra_metadata = {}, set_handedness = False):
       """Create a layered vertical prism grid from an ordered list of untorn surfaces.
 
       arguments:
@@ -1573,6 +1575,26 @@ class VerticalPrismGrid(PrismGrid):
          convert from a resqpy VerticalPrismGrid
       """
 
+      def find_pair(a, pair):
+         # for sorted array a of shape (N, 2) returns index in first axis of a pair
+
+         def frp(a, pair, b, c):
+            m = b + ((c - b) // 2)
+            assert m < len(a), 'pair not found in sorted array'
+            if np.all(a[m] == pair):
+               return m
+            assert c > b, 'pair not found in sorted array'
+            if a[m, 0] < pair[0]:
+               return frp(a, pair, m + 1, c)
+            elif a[m, 0] > pair[0]:
+               return frp(a, pair, b, m)
+            elif a[m, 1] < pair[1]:
+               return frp(a, pair, m + 1, c)
+            else:
+               return frp(a, pair, b, m)
+
+         return frp(a, pair, 0, len(a))
+
       assert len(surfaces) > 1
       for s in surfaces:
          assert isinstance(s, rqs.Surface)
@@ -1597,9 +1619,69 @@ class VerticalPrismGrid(PrismGrid):
       vpg.node_count = len(top_points) * (layer_count + 1)
       vpg.face_count = column_count * (layer_count + 1) + column_edge_count * layer_count
 
-      # TODO
-      pass
+      # setup points with copies of points for top surface, deeper z values to be updated later
+      points = np.empty((layer_count + 1, top_points.shape[0], top_points.shape[1]))
+      points[:] = top_points
 
+      # arrange faces with all triangles first, followed by the vertical quadrilaterals
+      vpg.nodes_per_face_cl = np.zeros(vpg.face_count, dtype = int)
+      vpg.nodes_per_face_cl[:column_count * (layer_count + 1)] =  \
+         np.arange(3, 3 * column_count * (layer_count + 1) + 1, 3, dtype = int)
+      quad_start = vpg.nodes_per_face_cl[column_count * (layer_count + 1) - 1] + 4
+      vpg.nodes_per_face_cl[column_count * (layer_count + 1):] =  \
+         np.arange(quad_start, quad_start + 4 * column_edge_count * layer_count + 1, 4)
+      assert vpg.nodes_per_face_cl[-1] == 3 * column_count * (layer_count + 1) + 4 * column_edge_count * layer_count
+      # populate nodes per face for triangular faces
+      vpg_nodes_per_face = np.zeros(vpg.nodes_per_face_cl[-1], dtype = int)
+      for surface_index in range(layer_count + 1):
+         vpg.nodes_per_face[surface_index * 3 * column_count : (surface_index + 1) * 3 * column_count] =  \
+            top_triangles.flatten() + surface_index * top_points.shape[0]
+      # populate nodes per face for quadrilateral faces
+      quad_nodes = np.empty((layer_count, column_edge_count, 2, 2), dtype = int)
+      for layer in range(layer_count):
+         quad_nodes[layer, :, 0, :] = column_edges + layer * top_points.shape[0]
+         # reverse order of base pairs to maintain cyclic ordering of nodes per face
+         quad_nodes[layer, :, 1, 0] = column_edges[:, 1] + (layer + 1) * top_points.shape[0]
+         quad_nodes[layer, :, 1, 1] = column_edges[:, 0] + (layer + 1) * top_points.shape[0]
+      vpg.nodes_per_face[(layer_count + 1) * 3 * column_count:] = quad_nodes.flatten()
+      assert vpg.nodes_per_face[-1] > 0
+
+      # set up faces per cell
+      vpg.faces_per_cell = np.zeros(5 * vpg.cell_count)
+      vpg.faces_per_cell_cl = np.arange(5, 5 * vpg.cell_count + 1, 5, dtype = int)
+      # set cell top triangle indices
+      for layer in range(layer_count):
+         # top triangular faces of cells
+         vpg.faces_per_cell[layer * 5 * column_count : (layer + 1) * 5 * column_count : 5] =  \
+            layer * column_count + np.arange(column_count)
+         # base triangular faces of cells
+         vpg.faces_per_cell[layer * 5 * column_count + 1: (layer + 1) * 5 * column_count : 5] =  \
+            (layer + 1) * column_count + np.arange(column_count)
+      # todo: some clever numpy indexing to irradicate the following for loop
+      for col in range(column_count):
+         t_nodes = top_triangles[col]
+         for t_edge in range(3):
+            a, b = t_nodes[t_edge - 1], t_nodes[t_edge]
+            if b < a:
+               a, b = b, a
+            edge = find_pair(column_edges, (a, b))  # returns index into first axis of column edges
+            # set quadrilateral faces of cells in column, for this edge
+            vpg.faces_per_cell[col + t_edge : 5 * vpg.cell_count + 1 : 5 * column_count] =  \
+               np.arange(column_count * (layer_count + 1) + edge, np.face_count + 1, column_count)
+      assert np.count_nonzero(vpg.faces_per_cell) == vpg.faces_per_cell.size - 1  # face zero is a top triangle, only used once
+
+      vpg.cell_face_is_right_handed = np.ones(len(vpg.faces_per_cell), dtype = bool)
+      if set_handedness:
+         # TODO: set handedness correctly and make default for set_handedness True
+         raise NotImplementedError('code not written to set handedness for vertical prism grid from surfaces')
+
+      # TODO
+      # instersect gravity vectors from top surface points with other surfaces, and update z values in points
+
+      vpg.points_cached = points.reshape((-1, 3))
+      assert np.all(vpg.faces_per_cell < len(vpg.points_cached))
+
+      return vpg
 
 class HexaGrid(UnstructuredGrid):
    """Class for unstructured grids where every cell is hexahedral (faces may be degenerate)."""
