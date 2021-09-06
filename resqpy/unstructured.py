@@ -1645,10 +1645,10 @@ class VerticalPrismGrid(PrismGrid):
          np.arange(3, 3 * column_count * (layer_count + 1) + 1, 3, dtype = int)
       quad_start = vpg.nodes_per_face_cl[column_count * (layer_count + 1) - 1] + 4
       vpg.nodes_per_face_cl[column_count * (layer_count + 1):] =  \
-         np.arange(quad_start, quad_start + 4 * column_edge_count * layer_count + 1, 4)
+         np.arange(quad_start, quad_start + 4 * column_edge_count * layer_count, 4)
       assert vpg.nodes_per_face_cl[-1] == 3 * column_count * (layer_count + 1) + 4 * column_edge_count * layer_count
       # populate nodes per face for triangular faces
-      vpg_nodes_per_face = np.zeros(vpg.nodes_per_face_cl[-1], dtype = int)
+      vpg.nodes_per_face = np.zeros(vpg.nodes_per_face_cl[-1], dtype = int)
       for surface_index in range(layer_count + 1):
          vpg.nodes_per_face[surface_index * 3 * column_count : (surface_index + 1) * 3 * column_count] =  \
             top_triangles.flatten() + surface_index * top_points.shape[0]
@@ -1683,7 +1683,7 @@ class VerticalPrismGrid(PrismGrid):
             edge = find_pair(column_edges, (a, b))  # returns index into first axis of column edges
             # set quadrilateral faces of cells in column, for this edge
             vpg.faces_per_cell[col + t_edge : 5 * vpg.cell_count + 1 : 5 * column_count] =  \
-               np.arange(column_count * (layer_count + 1) + edge, np.face_count + 1, column_count)
+               np.arange(column_count * (layer_count + 1) + edge, vpg.face_count + 1, column_edge_count)
       assert np.count_nonzero(
          vpg.faces_per_cell) == vpg.faces_per_cell.size - 1  # face zero is a top triangle, only used once
 
