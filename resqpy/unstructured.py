@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '1st September 2021'
+version = '7th September 2021'
 
 import logging
 
@@ -15,11 +15,14 @@ import resqpy.weights_and_measures as bwam
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.triangulation as tri
 import resqpy.olio.volume as vol
+import resqpy.olio.intersection as meet
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 import resqpy.crs as rqc
+import resqpy.grid as grr
+import resqpy.surface as rqs
 import resqpy.property as rqp
 
 valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']  #: valid cell shapes
@@ -1086,10 +1089,11 @@ class TetraGrid(UnstructuredGrid):
                        originator = originator,
                        extra_metadata = extra_metadata)
 
-      self.grid_representation = 'TetraGrid'  #: flavour of grid; not much used
-
       if self.root is not None:
+         assert grr.grid_flavour(self.root) == 'TetraGrid'
          self.check_tetra()
+
+      self.grid_representation = 'TetraGrid'  #: flavour of grid; not much used
 
    def check_tetra(self):
       """Checks that each cell has 4 faces and each face has 3 nodes."""
@@ -1289,10 +1293,11 @@ class PyramidGrid(UnstructuredGrid):
                        originator = originator,
                        extra_metadata = extra_metadata)
 
-      self.grid_representation = 'PyramidGrid'  #: flavour of grid; not much used
-
       if self.root is not None:
+         assert grr.grid_flavour(self.root) == 'PyramidGrid'
          self.check_pyramidal()
+
+      self.grid_representation = 'PyramidGrid'  #: flavour of grid; not much used
 
    def check_pyramidal(self):
       """Checks that each cell has 5 faces and each face has 3 or 4 nodes.
@@ -1414,7 +1419,11 @@ class PyramidGrid(UnstructuredGrid):
 
 
 class PrismGrid(UnstructuredGrid):
-   """Class for unstructured grids where every cell is a triangular prism."""
+   """Class for unstructured grids where every cell is a triangular prism.
+
+   note:
+      prism cells are not constrained to have a fixed cross-section, though in practice they often will
+   """
 
    def __init__(self,
                 parent_model,
@@ -1454,10 +1463,11 @@ class PrismGrid(UnstructuredGrid):
                        originator = originator,
                        extra_metadata = extra_metadata)
 
-      self.grid_representation = 'PrismGrid'  #: flavour of grid; not much used
-
       if self.root is not None:
+         assert grr.grid_flavour(self.root) in ['PrismGrid', 'VerticalPrismGrid']
          self.check_prism()
+
+      self.grid_representation = 'PrismGrid'  #: flavour of grid; not much used
 
    def check_prism(self):
       """Checks that each cell has 5 faces and each face has 3 or 4 nodes.
@@ -1477,6 +1487,233 @@ class PrismGrid(UnstructuredGrid):
       assert np.all(np.logical_or(nodes_per_face_count == 3, nodes_per_face_count == 4))
 
    # todo: add prism specific methods for centre_point(), volume()
+
+
+class VerticalPrismGrid(PrismGrid):
+   """Class for unstructured grids where every cell is a vertical triangular prism.
+
+   notes:
+      vertical prism cells are constrained to have a fixed triangular cross-section, though top and base triangular
+      faces need not be horizontal; edges not involved in the triangular faces must be vertical;
+      this is not a native RESQML sub-class but is a resqpy concoction to allow optimisation of some methods;
+      face ordering within a cell is also constrained to be top, base, then the three vertical planar quadrilateral
+      faces; node ordering within triangular faces is constrained to ensure correspondence of nodes in triangles
+      within a column
+   """
+
+   def __init__(self,
+                parent_model,
+                uuid = None,
+                find_properties = True,
+                cache_geometry = False,
+                title = None,
+                originator = None,
+                extra_metadata = {}):
+      """Creates a new resqpy VerticalPrismGrid object.
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+         find_properties (boolean, default True): if True and uuid is present, a
+            grid property collection is instantiated as an attribute, holding properties for which
+            this grid is the supporting representation
+         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+            are loaded into attributes of the new grid object
+         title (str, optional): citation title for new grid; ignored if uuid is present
+         originator (str, optional): name of person creating the grid; defaults to login id;
+            ignored if uuid is present
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+            ignored if uuid is present
+
+      returns:
+         a newly created VerticalPrismGrid object
+      """
+
+      self.layer_count = None  #: number of layers when constructed as a layered grid
+
+      super().__init__(parent_model = parent_model,
+                       uuid = uuid,
+                       find_properties = find_properties,
+                       cache_geometry = cache_geometry,
+                       title = title,
+                       originator = originator,
+                       extra_metadata = extra_metadata)
+
+      if self.root is not None:
+         assert grr.grid_flavour(self.root) in ['VerticalPrismGrid', 'PrismGrid']
+         self.check_prism()
+         if 'layer count' in self.extra_metadata:
+            self.layer_count = int(self.extra_metadata['layer count'])
+
+      self.grid_representation = 'VerticalPrismGrid'  #: flavour of grid; not much used
+
+   @classmethod
+   def from_surfaces(cls,
+                     parent_model,
+                     surfaces,
+                     title = None,
+                     originator = None,
+                     extra_metadata = {},
+                     set_handedness = False):
+      """Create a layered vertical prism grid from an ordered list of untorn surfaces.
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
+            shallowest to deepest; see notes
+         title (str, optional): citation title for the new grid
+         originator (str, optional): name of person creating the grid; defaults to login id
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
+
+      returns:
+         a newly created VerticalPrismGrid object
+
+      notes:
+         this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
+         the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
+         the first, shallowest, surface is used as a master and determines the triangular pattern of
+         the columns; where a gravity vector from a node above does not intersect a surface, the
+         point is inherited as a copy of the node above;
+         the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
+         Grid2dRepresentation), or for a horizontal plane;
+         this class is represented in RESQML as an UnstructuredGridRepresentation – when a resqpy
+         class is written for ColumnLayerGridRepresentation, a method will be added to that class to
+         convert from a resqpy VerticalPrismGrid
+      """
+
+      def find_pair(a, pair):
+         # for sorted array a of shape (N, 2) returns index in first axis of a pair
+
+         def frp(a, pair, b, c):
+            m = b + ((c - b) // 2)
+            assert m < len(a), 'pair not found in sorted array'
+            if np.all(a[m] == pair):
+               return m
+            assert c > b, 'pair not found in sorted array'
+            if a[m, 0] < pair[0]:
+               return frp(a, pair, m + 1, c)
+            elif a[m, 0] > pair[0]:
+               return frp(a, pair, b, m)
+            elif a[m, 1] < pair[1]:
+               return frp(a, pair, m + 1, c)
+            else:
+               return frp(a, pair, b, m)
+
+         return frp(a, pair, 0, len(a))
+
+      assert len(surfaces) > 1
+      for s in surfaces:
+         assert isinstance(s, rqs.Surface)
+
+      vpg = cls(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
+      assert vpg is not None
+
+      top = surfaces[0]
+
+      # set and check consistency of crs
+      vpg.crs_uuid = top.crs_uuid
+      for s in surfaces[1:]:
+         if not bu.matching_uuids(vpg.crs_uuid, s.crs_uuid):
+            # check for equivalence
+            assert rqc.Crs(parent_model, uuid = vpg.crs_uuid) == rqc.Crs(parent_model,
+                                                                         uuid = s.crs_uuid), 'mismatching surface crs'
+
+      # fetch the data for the top surface, to be used as the master for the triangular pattern
+      top_triangles, top_points = top.triangles_and_points()
+      assert top_triangles.ndim == 2 and top_triangles.shape[1] == 3
+      assert top_points.ndim == 2 and top_points.shape[1] == 3
+      assert len(top_triangles) > 0
+      bad_points = np.zeros(top_points.shape[0], dtype = bool)
+
+      # setup size of arrays for the vertical prism grid
+      column_count = top_triangles.shape[0]
+      surface_count = len(surfaces)
+      layer_count = surface_count - 1
+      column_edges = top.distinct_edges()  # ordered pairs of node indices
+      column_edge_count = len(column_edges)
+      vpg.cell_count = column_count * layer_count
+      vpg.node_count = len(top_points) * surface_count
+      vpg.face_count = column_count * surface_count + column_edge_count * layer_count
+      vpg.layer_count = layer_count
+      if vpg.extra_metadata is None:
+         vpg.extra_metadata = {}
+      vpg.extra_metadata['layer count'] = vpg.layer_count
+
+      # setup points with copies of points for top surface, deeper z values to be updated later
+      points = np.empty((surface_count, top_points.shape[0], 3))
+      points[:] = top_points
+
+      # arrange faces with all triangles first, followed by the vertical quadrilaterals
+      vpg.nodes_per_face_cl = np.zeros(vpg.face_count, dtype = int)
+      vpg.nodes_per_face_cl[:column_count * surface_count] =  \
+         np.arange(3, 3 * column_count * surface_count + 1, 3, dtype = int)
+      quad_start = vpg.nodes_per_face_cl[column_count * surface_count - 1] + 4
+      vpg.nodes_per_face_cl[column_count * surface_count:] =  \
+         np.arange(quad_start, quad_start + 4 * column_edge_count * layer_count, 4)
+      assert vpg.nodes_per_face_cl[-1] == 3 * column_count * surface_count + 4 * column_edge_count * layer_count
+      # populate nodes per face for triangular faces
+      vpg.nodes_per_face = np.zeros(vpg.nodes_per_face_cl[-1], dtype = int)
+      for surface_index in range(surface_count):
+         vpg.nodes_per_face[surface_index * 3 * column_count : (surface_index + 1) * 3 * column_count] =  \
+            top_triangles.flatten() + surface_index * top_points.shape[0]
+      # populate nodes per face for quadrilateral faces
+      quad_nodes = np.empty((layer_count, column_edge_count, 2, 2), dtype = int)
+      for layer in range(layer_count):
+         quad_nodes[layer, :, 0, :] = column_edges + layer * top_points.shape[0]
+         # reverse order of base pairs to maintain cyclic ordering of nodes per face
+         quad_nodes[layer, :, 1, 0] = column_edges[:, 1] + (layer + 1) * top_points.shape[0]
+         quad_nodes[layer, :, 1, 1] = column_edges[:, 0] + (layer + 1) * top_points.shape[0]
+      vpg.nodes_per_face[3 * surface_count * column_count:] = quad_nodes.flatten()
+      assert vpg.nodes_per_face[-1] > 0
+
+      # set up faces per cell
+      vpg.faces_per_cell = np.zeros(5 * vpg.cell_count)
+      vpg.faces_per_cell_cl = np.arange(5, 5 * vpg.cell_count + 1, 5, dtype = int)
+      assert len(vpg.faces_per_cell_cl) == vpg.cell_count
+      # set cell top triangle indices
+      for layer in range(layer_count):
+         # top triangular faces of cells
+         vpg.faces_per_cell[5 * layer * column_count : (layer + 1) * 5 * column_count : 5] =  \
+            layer * column_count + np.arange(column_count)
+         # base triangular faces of cells
+         vpg.faces_per_cell[layer * 5 * column_count + 1: (layer + 1) * 5 * column_count : 5] =  \
+            (layer + 1) * column_count + np.arange(column_count)
+      # todo: some clever numpy indexing to irradicate the following for loop
+      for col in range(column_count):
+         t_nodes = top_triangles[col]
+         for t_edge in range(3):
+            a, b = t_nodes[t_edge - 1], t_nodes[t_edge]
+            if b < a:
+               a, b = b, a
+            edge = find_pair(column_edges, (a, b))  # returns index into first axis of column edges
+            # set quadrilateral faces of cells in column, for this edge
+            vpg.faces_per_cell[5 * col + t_edge + 2 : 5 * vpg.cell_count : 5 * column_count] =  \
+               np.arange(column_count * surface_count + edge, vpg.face_count, column_edge_count)
+      # check full population of faces_per_cell (face zero is a top triangle, only used once)
+      assert np.count_nonzero(vpg.faces_per_cell) == vpg.faces_per_cell.size - 1
+
+      vpg.cell_face_is_right_handed = np.ones(len(vpg.faces_per_cell), dtype = bool)
+      if set_handedness:
+         # TODO: set handedness correctly and make default for set_handedness True
+         raise NotImplementedError('code not written to set handedness for vertical prism grid from surfaces')
+
+      # instersect gravity vectors from top surface points with other surfaces, and update z values in points
+      gravity = np.zeros((top_points.shape[0], 3))
+      gravity[:, 2] = 1.0  # up/down does not matter for the intersection function used below
+      for layer in range(layer_count):
+         base_triangles, base_points = surfaces[layer + 1].triangles_and_points()  # surface at base of layer
+         intersects = meet.line_set_triangles_intersects(top_points, gravity, base_points[base_triangles])
+         single_intersects = meet.last_intersects(intersects)  # will be triple NaN where no intersection occurs
+         # inherit point from surface above where no intersection has occurred
+         nan_lines = np.isnan(single_intersects[:, 0])
+         single_intersects[nan_lines] = points[layer][nan_lines]
+         # populate z values for layer of points
+         points[layer + 1, :, 2] = single_intersects[:, 2]
+
+      vpg.points_cached = points.reshape((-1, 3))
+      assert np.all(vpg.nodes_per_face < len(vpg.points_cached))
+
+      return vpg
 
 
 class HexaGrid(UnstructuredGrid):
@@ -1520,10 +1757,11 @@ class HexaGrid(UnstructuredGrid):
                        originator = originator,
                        extra_metadata = extra_metadata)
 
-      self.grid_representation = 'HexaGrid'  #: flavour of grid; not much used
-
       if self.root is not None:
+         assert grr.grid_flavour(self.root) == 'HexaGrid'
          self.check_hexahedral()
+
+      self.grid_representation = 'HexaGrid'  #: flavour of grid; not much used
 
    @classmethod
    def from_unsplit_grid(cls,

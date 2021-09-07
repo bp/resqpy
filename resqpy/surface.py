@@ -679,6 +679,18 @@ class Surface(_BaseSurface):
          points_offset += p.shape[0]
       return (self.triangles, self.points)
 
+   def distinct_edges(self):
+      """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles."""
+
+      if self.triangles is None:
+         self.extract_patches(self.root)
+      tri_count = len(self.triangles)
+      all_edges = np.empty((tri_count, 3, 2))
+      for i in range(3):
+         all_edges[:, i, 0] = self.triangles[:, i - 1]
+         all_edges[:, i, 1] = self.triangles[:, i]
+      return np.unique(np.sort(all_edges.reshape((-1, 2)), axis = 1), axis = 0)
+
    def set_from_triangles_and_points(self, triangles, points):
       """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
 
