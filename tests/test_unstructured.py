@@ -334,4 +334,4 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
    assert grid.layer_count == 2
    assert grid.cell_count == 10
    assert grid.node_count == 18
-   assert grid.faces_count == 35
+   assert grid.face_count == 35

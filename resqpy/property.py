@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '29th August 2021'
+version = '7th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -264,7 +264,8 @@ class PropertyCollection():
          else:
             if type(self.support) in [
                   grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
-                  rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.PyramidGrid
+                  rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
+                  rug.PyramidGrid
             ]:
                self.support_root = self.support.root
             else:
@@ -348,7 +349,9 @@ class PropertyCollection():
          if indexable_element is None or indexable_element == 'faces':
             shape_list = [support.count]
 
-      elif type(support) in [rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.PyramidGrid]:
+      elif type(support) in [
+            rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid
+      ]:
          if indexable_element is None or indexable_element == 'cells':
             shape_list = [support.cell_count]
          elif indexable_element == 'faces per cell':
