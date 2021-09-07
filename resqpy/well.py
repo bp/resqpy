@@ -3043,10 +3043,12 @@ class BlockedWell(BaseResqpy):
                   angla_rad = maths.acos(cosine_angla)
                   # negate angla if vector is 'clockwise from' i_axis when viewed from above, projected in the xy plane
                   # todo: have discussion around angla sign under different ijk handedness (and z inc direction?)
-                  if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0:
-                     angla = -angla
                   sine_angla = maths.sin(angla_rad)
                   angla = vec.degrees_from_radians(angla_rad)
+                  if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0:
+                     angla = -angla
+                     angle_rad = -angla_rad
+                     sine_angla = -sine_angla
 
 
 #              log.debug('angla: ' + str(angla))
