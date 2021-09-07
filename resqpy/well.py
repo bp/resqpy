@@ -3050,6 +3050,7 @@ class BlockedWell(BaseResqpy):
                      angle_rad = -angla_rad
                      sine_angla = -sine_angla
 
+
 #              log.debug('angla: ' + str(angla))
          else:
             if angla is None:
