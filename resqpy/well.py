@@ -3047,6 +3047,8 @@ class BlockedWell(BaseResqpy):
                   angla = vec.degrees_from_radians(angla_rad)
                   if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0:
                      angla = -angla
+                     angle_rad = -angla_rad
+                     sine_angla = -sine_angla
 
 #              log.debug('angla: ' + str(angla))
          else:
