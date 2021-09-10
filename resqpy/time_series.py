@@ -7,7 +7,8 @@ version = '10th September 2021'
 # At present, no time zone information is handled
 
 # This module differentiates between 'human timeframe' and 'geologic timeframe' time series, though RESQML does
-# not make such a distinction explicitly
+# not make such a distinction explicitly; the code here uses presence of YearOffset xml data to imply a time
+# series on a geological timeframe
 
 import logging
 
