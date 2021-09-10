@@ -64,9 +64,11 @@ def test_time_series_from_list(tmp_path):
    model = rq.Model(epc)
    ts_uuid = model.uuid(obj_type = 'TimeSeries')
    assert ts_uuid is not None
-   ts = rqts.TimeSeries(model, uuid = ts_uuid)
+   ts = rqts.any_time_series(model, uuid = ts_uuid)
+   assert isinstance(ts, rqts.TimeSeries)
    assert ts.number_of_timestamps() == 4
    assert ts.days_between_timestamps(0, 3) == 31 + 28 + 31
+   assert ts.timeframe == 'human'
 
 
 def test_time_series_from_args(tmp_path):
@@ -91,3 +93,24 @@ def test_time_series_from_args(tmp_path):
    assert ts.number_of_timestamps() == 26
    assert ts.days_between_timestamps(2, 3) == 1
    assert ts.days_between_timestamps(0, 25) == 8 + 4 * 30 + 8 * 90 + 5 * 365
+
+
+def test_geologic_time_series(tmp_path):
+   epc = os.path.join(tmp_path, 'ts_geologic.epc')
+   model = rq.new_model(epc)
+   # Cretaceous Age start times, in Ma, with random use of sign to check it is ignored
+   ma_list = (145, 72.1, -83.6, 86.3, 89.8, 93.9, 100.5, -113, -125, 129.4, 132.9, 139.8)
+   ts_list = [int(round(ma * 1000000)) for ma in ma_list]
+   ts = rqts.time_series_from_list(ts_list, parent_model = model)
+   assert ts.number_of_timestamps() == 12
+   ts.create_xml()
+   model.store_epc()
+   model = rq.Model(epc)
+   ts_uuid = model.uuid(obj_type = 'TimeSeries')
+   assert ts_uuid is not None
+   ts = rqts.any_time_series(model, uuid = ts_uuid)
+   assert isinstance(ts, rqts.GeologicTimeSeries)
+   assert ts.timeframe == 'geologic'
+   assert ts.number_of_timestamps() == 12
+   assert ts.timestamps[0] == -145000000
+   assert ts.timestamps[-1] == -72100000

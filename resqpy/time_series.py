@@ -222,10 +222,11 @@ class AnyTimeSeries(BaseResqpy):
          dt_node = rqet.SubElement(time_node, ns['resqml2'] + 'DateTime')
          dt_node.set(ns['xsi'] + 'type', ns['xsd'] + 'dateTime')
          if self.timeframe == 'geologic':
+            assert isinstance(self.timestamps[index], int)
             dt_node.text = '0000-01-01T00:00:00Z'
             yo_node = rqet.SubElement(time_node, ns['resqml2'] + 'YearOffset')
             yo_node.set(ns['xsi'] + 'type', ns['xsd'] + 'long')
-            yo_node.text = str(self.timestamps(index))
+            yo_node.text = str(self.timestamps[index])
          else:
             dt_node.text = self.timestamp(index)
 
@@ -585,9 +586,11 @@ def time_series_from_list(timestamp_list, parent_model = None, title = None):
    assert (len(timestamp_list) > 0)
    sorted_timestamps = sorted(timestamp_list)
    if isinstance(sorted_timestamps[0], int):
+      sorted_timestamps = sorted([-t if t > 0 else t for t in timestamp_list])
       time_series = GeologicTimeSeries(parent_model = parent_model, title = title)
       time_series.timestamps = sorted_timestamps
    else:
+      sorted_timestamps = sorted(timestamp_list)
       time_series = TimeSeries(parent_model = parent_model,
                                first_timestamp = cleaned_timestamp(sorted_timestamps[0]),
                                title = title)
