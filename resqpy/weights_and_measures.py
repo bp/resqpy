@@ -387,7 +387,7 @@ def _try_parse_unit(units):
       uom = UOM_ALIAS_MAP[ul]
    elif ul in uom_list:
       uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
-   elif units.startswith('(') and units.endswith(')'):
+   elif units.startswith('(') and units.endswith(')') and '(' not in units[1:]:  # simplistic
       uom = _try_parse_unit(units[1:-1])
    elif '/' in units:  # May be a fraction: match each part against known aliases
       parts = units.split('/', 1)
