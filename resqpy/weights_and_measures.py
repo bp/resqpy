@@ -6,7 +6,7 @@ import warnings
 from functools import lru_cache
 from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
-version = '6th July 2021'
+version = '12th September 2021'
 
 # physical constants
 feet_to_metres = 0.3048
@@ -22,12 +22,18 @@ s_to_d = 1.0 / d_to_s
 
 # Mapping from uom to set of common case-insensitive aliases
 # Nb. No need to write out fractional combinations such as "bbl/day"
+# note: some of the aliases are ambiguous, e.g. 'gm' could mean gigametre or gramme
 UOM_ALIASES = {
-   # Lengths
+   # Mass
+   'g': {'gm', 'gram', 'gramme', 'grams', 'grammes'},
+   'lbm': {'lb', 'lbs'},  # assumes pounds mass rather than pounds force
+
+   # Length
    'm': {'m', 'metre', 'metres', 'meter', 'meters'},
    'ft': {'ft', 'foot', 'feet'},
+   'cm': {'centimetre', 'centimetres', 'centimeter', 'centimeters'},
 
-   # Times
+   # Time
    'ms': {'ms', 'msec', 'millisecs', 'millisecond', 'milliseconds'},
    's': {'s', 'sec', 'secs', 'second', 'seconds'},
    'min': {'min', 'mins', 'minute', 'minutes'},
@@ -36,26 +42,39 @@ UOM_ALIASES = {
    'wk': {'wk', 'week', 'weeks'},
    'a': {'a', 'yr', 'year', 'years'},
 
-   # Ratios
-   '%': {'%', 'pu', 'p.u.'},
+   # Ratio
+   '%': {'%', 'pu', 'p.u.', 'percent'},
    'm3/m3': {'m3/m3', 'v/v'},
    'g/cm3': {'g/cm3', 'g/cc'},
 
-   # Volumes
-   'bbl': {'bbl', 'stb'},
-   '1000 bbl': {'1000 bbl', 'mstb', 'mbbl'},
+   # Volume
+   'bbl': {'bbl', 'stb', 'rb'},
+   '1000 bbl': {'1000 bbl', 'mstb', 'mbbl', 'mrb'},
    '1E6 bbl': {'1E6 bbl', 'mmstb', 'mmbbl'},
    '1E6 ft3': {'1E6 ft3', 'mmscf'},
    '1000 ft3': {'1000 ft3', 'mscf'},
-   'm3': {'m3', 'sm3'},
-   'ft3': {'ft3', 'scf'},
+   'm3': {'m3', 'sm3', 'stm3', 'rm3'},
+   '1000 m3': {'kstm3', 'krm3', 'msm3', 'mrm3'},
+   'ft3': {'ft3', 'scf', 'cf', 'rcf', 'cu.ft.'},
+   'cm3': {'cc', 'scc', 'stcc'},
+   'L': {'krcc', 'kstcc', 'kscc', 'litre', 'litres', 'liter', 'liters'},
+
+   # Pressure & Reciprocal Pressure
+   'psi': {'psi', 'psia'},
+
+   # Thermodynamic Temperature
+   'degC': {'c', 'degrees c', 'degreesc'},
+   'degF': {'f', 'degrees f', 'degreesf'},
+
+   # Energy
+   'Btu[IT]': {'btu'},  # assumes BTU to refer to ISO standard, rather than older Btu[UK]
 
    # Other
    'gAPI': {'gapi'},
    'S': {'mho'},
    'mS': {'mmho'},
-   'psi': {'psi', 'psia'},
-   'Euc': {'count'},
+   'mol': {'mole', 'moles'},
+   'Euc': {'count', 'fraction', 'none'},
 }
 # Mapping from alias to valid uom
 UOM_ALIAS_MAP = {alias.casefold(): uom for uom, aliases in UOM_ALIASES.items() for alias in aliases}
