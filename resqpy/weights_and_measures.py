@@ -392,6 +392,8 @@ def _try_parse_unit(units):
       uom = UOM_ALIAS_MAP[ul]
    elif ul in uom_list:
       uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
+   elif units.startswith('(') and units.endswith(')'):
+      uom = _try_parse_unit(units[1:-1])
    else:
       uom = None
    return uom
