@@ -103,13 +103,6 @@ def rq_uom(units, quantity = None):
 
    uom = _try_parse_unit(units)
 
-   # May be a fraction: match each part against known aliases
-   if uom is None and '/' in units:
-      parts = units.split('/', 1)
-      newpart0 = _try_parse_unit(parts[0])
-      newpart1 = _try_parse_unit(parts[1])
-      uom = _try_parse_unit(f"{newpart0}/{newpart1}")
-
    if uom is None:
       raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
 
@@ -384,6 +377,8 @@ def _try_parse_unit(units):
    uom_list = valid_uoms()
    ul = units.casefold()
 
+   uom = None
+
    if units in uom_list:
       uom = units
    elif ul in CASE_INSENSITIVE_UOMS:
@@ -394,6 +389,13 @@ def _try_parse_unit(units):
       uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
    elif units.startswith('(') and units.endswith(')'):
       uom = _try_parse_unit(units[1:-1])
-   else:
-      uom = None
+   elif '/' in units:  # May be a fraction: match each part against known aliases
+      parts = units.split('/', 1)
+      newpart0 = _try_parse_unit(parts[0])
+      newpart1 = _try_parse_unit(parts[1])
+      if newpart0 and newpart1:
+         ratio = f"{newpart0}/{newpart1}"
+         if ratio in uom_list:
+            uom = ratio
+
    return uom
