@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '27th August 2021'
+version = '13th September 2021'
 
 import logging
 
@@ -2785,7 +2785,8 @@ class Model():
                     xsd_type = 'double',
                     null_value = None,
                     const_value = None,
-                    const_count = None):
+                    const_count = None,
+                    points = False):
       """Create a node for a patch of values, including ref to hdf5 data set, optionally add to root.
 
       arguments:
@@ -2806,6 +2807,8 @@ class Model():
             const_count must also be present if const_value is not None
          const_count (int, optional): the number of elements in (size of) the constant array; required if
             const_value is not None, ignored otherwise
+         points (bool, default False): if True, the created node will be for a patch of points,
+            otherwise a patch of values
 
       returns:
          newly created xml node for the patch of values
@@ -2827,15 +2830,27 @@ class Model():
       lxt = str(xsd_type).lower()
       discrete = ('int' in lxt) or ('bool' in lxt)
 
-      patch_node = rqet.Element(ns['resqml2'] + 'PatchOfValues')
-      patch_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PatchOfValues')
-      patch_node.text = rqet.null_xml_text
+      if points:
+         assert not discrete
+         patch_node = rqet.Element(ns['resqml2'] + 'PatchOfPoints')
+         patch_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PatchOfPoints')
+         patch_node.text = rqet.null_xml_text
+         outer_values_tag = 'Points'
+         inner_values_tag = 'Coordinates'
+         hdf_path_tail = 'points_patch'
+      else:
+         patch_node = rqet.Element(ns['resqml2'] + 'PatchOfValues')
+         patch_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PatchOfValues')
+         patch_node.text = rqet.null_xml_text
+         outer_values_tag = 'Values'
+         inner_values_tag = 'Values'
+         hdf_path_tail = 'values_patch'
 
       rep_patch_index = rqet.SubElement(patch_node, ns['resqml2'] + 'RepresentationPatchIndex')
       rep_patch_index.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
       rep_patch_index.text = str(patch_index)
 
-      outer_values_node = rqet.SubElement(patch_node, ns['resqml2'] + 'Values')
+      outer_values_node = rqet.SubElement(patch_node, ns['resqml2'] + outer_values_tag)
       outer_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + hdf5_type)  # may also be constant array type
       outer_values_node.text = rqet.null_xml_text
 
@@ -2851,11 +2866,11 @@ class Model():
 
       if const_value is None:
 
-         inner_values_node = rqet.SubElement(outer_values_node, ns['resqml2'] + 'Values')
+         inner_values_node = rqet.SubElement(outer_values_node, ns['resqml2'] + inner_values_tag)
          inner_values_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
          inner_values_node.text = rqet.null_xml_text
 
-         self.create_hdf5_dataset_ref(ext_uuid, p_uuid, 'values_patch{}'.format(patch_index), root = inner_values_node)
+         self.create_hdf5_dataset_ref(ext_uuid, p_uuid, f'{hdf_path_tail}{patch_index}', root = inner_values_node)
 
       else:
 

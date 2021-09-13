@@ -118,9 +118,10 @@ class PropertyCollection():
    notes:
       this is a base class inherited by GridPropertyCollection and WellLogCollection (and others to follow), application
       code usually works with the derived classes;
-      resqml caters for three types of property: Continuous (ie. real data, aka floating point);
+      RESQML caters for three simple types of numerical property: Continuous (ie. real data, aka floating point);
       Discrete (ie. integer data, or boolean); Categorical (integer data, usually non-negative, with an associated
-      look-up table to convert to a string)
+      look-up table to convert to a string); Points properties are for storing xyz values; resqpy does not currently
+      support Comment properties
    """
 
    def __init__(self, support = None, property_set_root = None, realization = None):
@@ -141,7 +142,7 @@ class PropertyCollection():
          at present, if the collection is being initialised from a property set, the support argument must also be specified;
          also for now, if not initialising from a property set, all properties related to the support are included, whether
          the relationship is supporting representation or some other relationship;
-         the full handling of resqml property sets and property series is still under development
+         the full handling of RESQML property sets and property series is still under development
 
       :meta common:
       """
@@ -152,9 +153,11 @@ class PropertyCollection():
       self.dict = {}  # main dictionary of model property parts which are members of the collection
       # above is mapping from part_name to:
       # (realization, support, uuid, xml_node, continuous, count, indexable, prop_kind, facet_type, facet, citation_title,
-      #   time_series_uuid, time_index, min, max, uom, string_lookup_uuid, property_kind_uuid, extra_metadata, null_value, const_value)
+      #   time_series_uuid, time_index, min, max, uom, string_lookup_uuid, property_kind_uuid, extra_metadata, null_value,
+      #     const_value, points)
       #  0            1        2     3         4           5      6          7          8           9      10
-      #   11                12          13   14   15   16                  17                  18              19          20
+      #   11                12          13   14   15   16                  17                  18              19
+      #     20           21
       # note: grid is included to allow for super-collections covering more than one grid
       # todo: replace items 8 & 9 with a facet dictionary (to allow for multiple facets)
       self.model = None
@@ -170,8 +173,8 @@ class PropertyCollection():
       self.parent_set_root = None
       self.realization = realization  # model realization number within an ensemble
       self.imported_list = []  # list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
-      # min_value, max_value, property_kind, facet_type, facet, realization,
-      # indexable_element, count, local_property_kind_uuid, const_value)
+      #                                   min_value, max_value, property_kind, facet_type, facet, realization,
+      #                                   indexable_element, count, local_property_kind_uuid, const_value, points)
       if support is not None:
          self.model = support.model
          self.set_support(support = support)
@@ -189,6 +192,9 @@ class PropertyCollection():
             props_list = self.model.parts_list_of_type(type_of_interest = 'obj_ContinuousProperty')
             continuous_props_list = self.model.parts_list_filtered_by_supporting_uuid(props_list, self.support_uuid)
             self.add_parts_list_to_dict(continuous_props_list)
+            props_list = self.model.parts_list_of_type(type_of_interest = 'obj_PointsProperty')
+            points_props_list = self.model.parts_list_filtered_by_supporting_uuid(props_list, self.support_uuid)
+            self.add_parts_list_to_dict(points_props_list)
          else:
             self.populate_from_property_set(property_set_root)
 
@@ -421,7 +427,8 @@ class PropertyCollection():
          arguments:
             part (string): the name of a part (which exists in the support's parent model) to be added to this collection
             continuous (boolean, optional): whether the property is of a continuous (real) kind; if not None,
-                     is checked against the property's type and an assertion error is raised if there is a mismatch
+                     is checked against the property's type and an assertion error is raised if there is a mismatch;
+                     should be None or True for Points properties
             realization (integer, optional): if present, must match this collection's realization number if that is
                      not None; if this argument is None then the part is assigned the realization number associated
                      with this collection as a whole; if the xml for the part includes a realization index then that
@@ -445,11 +452,12 @@ class PropertyCollection():
       assert xml_node is not None
       type = self.model.type_of_part(part)
       #      log.debug('adding part ' + part + ' of type ' + type)
-      assert type in ['obj_ContinuousProperty', 'obj_DiscreteProperty', 'obj_CategoricalProperty']
+      assert type in ['obj_ContinuousProperty', 'obj_DiscreteProperty', 'obj_CategoricalProperty', 'obj_PointsProperty']
       if continuous is None:
-         continuous = (type == 'obj_ContinuousProperty')
+         continuous = (type in ['obj_ContinuousProperty', 'obj_PointsProperty'])
       else:
-         assert continuous == (type == 'obj_ContinuousProperty')
+         assert continuous == (type in ['obj_ContinuousProperty', 'obj_PointsProperty'])
+      points = (type == 'obj_PointsProperty')
       string_lookup_uuid = None
       if type == 'obj_CategoricalProperty':
          sl_ref_node = rqet.find_tag(xml_node, 'Lookup')
@@ -465,7 +473,7 @@ class PropertyCollection():
       assert indexable_node is not None
       indexable = indexable_node.text
       citation_title = rqet.find_tag(rqet.find_tag(xml_node, 'Citation'), 'Title').text
-      (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
+      (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
       prop_kind_node = rqet.find_tag(xml_node, 'PropertyKind')
       assert (prop_kind_node is not None)
       kind_node = rqet.find_tag(prop_kind_node, 'Kind')
@@ -478,9 +486,12 @@ class PropertyCollection():
             property_kind = rqet.find_tag_text(lpk_node, 'Title')
             property_kind_uuid = rqet.find_tag_text(lpk_node, 'UUID')
       assert property_kind is not None and len(property_kind) > 0
+      if p_kind_from_keyword and p_kind_from_keyword != property_kind:
+         log.warning(
+            f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
       facet_type = None
       facet = None
-      facet_node = rqet.find_tag(xml_node, 'Facet')  # might have to handle more than one facet for a property?
+      facet_node = rqet.find_tag(xml_node, 'Facet')  # todo: handle more than one facet for a property
       if facet_node is not None:
          facet_type = rqet.find_tag(facet_node, 'Facet').text
          facet = rqet.find_tag(facet_node, 'Value').text
@@ -530,7 +541,7 @@ class PropertyCollection():
             const_value = rqet.find_tag_int(values_node, 'Value')
       self.dict[part] = (realization, support_uuid, uuid, xml_node, continuous, count, indexable, property_kind,
                          facet_type, facet, citation_title, time_series_uuid, time_index, minimum, maximum, uom,
-                         string_lookup_uuid, property_kind_uuid, extra_metadata, null_value, const_value)
+                         string_lookup_uuid, property_kind_uuid, extra_metadata, null_value, const_value, points)
 
    def add_parts_list_to_dict(self, parts_list):
       """Add all the parts named in the parts list to the dictionary for this collection.
@@ -638,6 +649,7 @@ class PropertyCollection():
          uuid = None,
          continuous = None,
          count = None,
+         points = None,
          indexable = None,
          property_kind = None,
          facet_type = None,
@@ -660,7 +672,7 @@ class PropertyCollection():
             yet is already in this collection will result in an assertion error; if True, such duplicates
             are simply skipped without modifying the existing part in this collection
 
-      Other optional arguments (realization, grid, uuid, continuous, count, indexable, property_kind, facet_type,
+      Other optional arguments (realization, grid, uuid, continuous, count, points, indexable, property_kind, facet_type,
       facet, citation_title, time_series_uuid, time_index, uom, string_lookup_uuid, categorical):
 
       For each of these arguments: if None, then all members of collection pass this filter;
@@ -711,6 +723,8 @@ class PropertyCollection():
                if not (other.continuous_for_part(part) or (other.string_lookup_uuid_for_part(part) is None)):
                   continue
          if count is not None and other.count_for_part(part) != count:
+            continue
+         if points is not None and other.points_for_part(part) != points:
             continue
          if indexable is not None and other.indexable_for_part(part) != indexable:
             continue
@@ -775,6 +789,7 @@ class PropertyCollection():
          realization = other.realization_for_part(example_part),
          support_uuid = other.support_uuid_for_part(example_part),
          continuous = other.continuous_for_part(example_part),
+         points = other.points_for_part(example_part),
          indexable = other.indexable_for_part(example_part),
          property_kind = other.property_kind_for_part(example_part),
          facet_type = other.facet_type_for_part(example_part),
@@ -805,6 +820,8 @@ class PropertyCollection():
          inherited
       """
 
+      # the following RESQML limitation could be reported as a warning here, instead of an assertion
+      assert not other.points_for_part(example_part), 'facets not allowed for RESQML Points properties'
       assert other is not None
       assert other.part_in_collection(example_part)
       title = other.citation_title_for_part(example_part)
@@ -816,6 +833,7 @@ class PropertyCollection():
          realization = other.realization_for_part(example_part),
          support_uuid = other.support_uuid_for_part(example_part),
          continuous = other.continuous_for_part(example_part),
+         points = False,
          indexable = other.indexable_for_part(example_part),
          property_kind = other.property_kind_for_part(example_part),
          citation_title = title,
@@ -855,6 +873,7 @@ class PropertyCollection():
          realization = None,
          support_uuid = other.support_uuid_for_part(example_part),
          continuous = other.continuous_for_part(example_part),
+         points = other.points_for_part(example_part),
          indexable = other.indexable_for_part(example_part),
          property_kind = other.property_kind_for_part(example_part),
          facet_type = other.facet_type_for_part(example_part),
@@ -967,6 +986,7 @@ class PropertyCollection():
          grid = None,  # for backward compatibility
          uuid = None,
          continuous = None,
+         points = None,
          count = None,
          indexable = None,
          property_kind = None,
@@ -1002,6 +1022,7 @@ class PropertyCollection():
                                                         support_uuid = support_uuid,
                                                         uuid = uuid,
                                                         continuous = continuous,
+                                                        points = points,
                                                         count = count,
                                                         indexable = indexable,
                                                         property_kind = property_kind,
@@ -1027,6 +1048,7 @@ class PropertyCollection():
          grid = None,  # for backward compatibility
          uuid = None,
          continuous = None,
+         points = None,
          count = None,
          indexable = None,
          property_kind = None,
@@ -1052,7 +1074,7 @@ class PropertyCollection():
             will also be masked out
 
       Other optional arguments:
-      realization, support, support_uuid, grid, continuous, count, indexable, property_kind, facet_type, facet,
+      realization, support, support_uuid, grid, continuous, points, count, indexable, property_kind, facet_type, facet,
       citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical:
 
       For each of these arguments: if None, then all members of collection pass this filter;
@@ -1082,6 +1104,7 @@ class PropertyCollection():
                             support_uuid = support_uuid,
                             uuid = uuid,
                             continuous = continuous,
+                            points = points,
                             count = count,
                             indexable = indexable,
                             property_kind = property_kind,
@@ -1310,18 +1333,18 @@ class PropertyCollection():
       return self.element_for_part(part, 19)
 
    def continuous_for_part(self, part):
-      """Returns True if the property is continuous; False if it is discrete (or categorical).
+      """Returns True if the property is continuous (including points); False if it is discrete (or categorical).
 
       arguments:
          part (string): the part name for which the continuous versus discrete flag is required
 
       returns:
-         True if the part is representing a continuous property, ie. the array elements are real numbers
-         (float); False if the part is representing a discrete property or a categorical property, ie the
-         array elements are integers (or boolean)
+         True if the part is representing a continuous (or points) property, ie. the array elements are
+         real numbers (float); False if the part is representing a discrete property or a categorical property,
+         ie the array elements are integers (or boolean)
 
       note:
-         resqml differentiates between discrete and categorical properties; discrete properties are
+         RESQML differentiates between discrete and categorical properties; discrete properties are
          unbounded integers where the values have numerical significance (eg. could be added together),
          whilst categorical properties have an associated dictionary mapping from a finite set of integer
          key values onto strings (eg. {1: 'background', 2: 'channel sand', 3: 'mud drape'}); however, this
@@ -1332,8 +1355,21 @@ class PropertyCollection():
 
       return self.element_for_part(part, 4)
 
+   def points_for_part(self, part):
+      """Returns True if the property is a points property; False otherwise.
+
+      arguments:
+         part (string): the part name for which the points flag is required
+
+      returns:
+         True if the part is representing a points property, ie. the array has an extra dimension of extent 3
+         covering the xyz axes; False if the part is representing a non-points property
+      """
+
+      return self.element_for_part(part, 21)
+
    def all_continuous(self):
-      """Returns True if all the parts are for continuous (real) properties."""
+      """Returns True if all the parts are for continuous (real) properties (includes points)."""
 
       unique_elements = self.unique_element_list(4, sort_list = False)
       if len(unique_elements) != 1:
@@ -1844,7 +1880,7 @@ class PropertyCollection():
       self.dict = new_dict
       self.has_multiple_realizations_flag = (realization > 1)
 
-   def masked_array(self, simple_array, exclude_inactive = True, exclude_value = None):
+   def masked_array(self, simple_array, exclude_inactive = True, exclude_value = None, points = False):
       """Returns a masked version of simple_array, using inactive mask associated with support for this property collection.
 
       arguments:
@@ -1854,6 +1890,8 @@ class PropertyCollection():
             are masked out if this argument is True
          exclude_value (float or int, optional): if present, elements which match this value are masked out; if not None
             then usually set to np.NaN for continuous data or null_value_for_part() for discrete data
+         points (boolean, default False): if True, the simple array is expected to have an extra dimension of extent 3,
+            relative to the inactive attribute of the support
 
       returns:
          a masked version of the array, with the mask set to exclude cells which are inactive in the support
@@ -1866,8 +1904,16 @@ class PropertyCollection():
 
       mask = None
       if (exclude_inactive and self.support is not None and hasattr(self.support, 'inactive') and
-          self.support.inactive is not None and self.support.inactive.shape == simple_array.shape):
-         mask = self.support.inactive
+          self.support.inactive is not None):
+         if not points:
+            if self.support.inactive.shape == simple_array.shape:
+               mask = self.support.inactive
+         else:
+            assert simple_array.ndim > 1 and simple_array.shape[-1] == 3
+            if (self.support.inactive.ndim + 1 == simple_array.ndim and
+                self.support.inactive.shape == tuple(simple_array.shape[:-1])):
+               mask = np.empty(simple_array.shape, dtype = bool)
+               mask[:] = self.support.inactive[:, np.newaxis]
       if exclude_value:
          null_mask = (simple_array == exclude_value)
          if mask is None:
@@ -1881,16 +1927,26 @@ class PropertyCollection():
    def h5_key_pair_for_part(self, part):
       """Return hdf5 key pair (ext uuid, internal path) for the part."""
 
+      # note: this method does not currently support all the possible tag values for different instances
+      # of the RESQML abstract arrays
+
       model = self.model
       part_node = self.node_for_part(part)
       if part_node is None:
          return None
-      patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
-      assert len(patch_list) == 1  # todo: handle more than one patch of values
-      first_values_node = rqet.find_tag(patch_list[0], 'Values')
+      if self.points_for_part(part):
+         patch_list = rqet.list_of_tag(part_node, 'PatchOfPoints')
+         assert len(patch_list) == 1  # todo: handle more than one patch of points
+         first_values_node = rqet.find_tag(patch_list[0], 'Points')
+         tag = 'Coordinates'
+      else:
+         patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
+         assert len(patch_list) == 1  # todo: handle more than one patch of values
+         first_values_node = rqet.find_tag(patch_list[0], 'Values')
+         tag = 'Values'
       if first_values_node is None:
          return None  # could treat as fatal error
-      return model.h5_uuid_and_path_for_node(first_values_node)  # note: Values node within Values node for properties
+      return model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
 
    def cached_part_array_ref(self, part, dtype = None, masked = False, exclude_null = False):
       """Returns a numpy array containing the data for the property part; the array is cached in this collection.
@@ -1933,24 +1989,36 @@ class PropertyCollection():
             part_node = self.node_for_part(part)
             if part_node is None:
                return None
-            patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
-            assert len(patch_list) == 1  # todo: handle more than one patch of values
-            first_values_node = rqet.find_tag(patch_list[0], 'Values')
-            if first_values_node is None:
-               return None  # could treat as fatal error
-            if dtype is None:
-               array_type = rqet.node_type(first_values_node)
-               assert array_type is not None
-               if array_type == 'DoubleHdf5Array':
+            if self.points_for_part(part):
+               patch_list = rqet.list_of_tag(part_node, 'PatchOfPoints')
+               assert len(patch_list) == 1  # todo: handle more than one patch of points
+               first_values_node = rqet.find_tag(patch_list[0], 'Points')
+               if first_values_node is None:
+                  return None  # could treat as fatal error
+               if dtype is None:
                   dtype = 'float'
-               elif array_type == 'IntegerHdf5Array':
-                  dtype = 'int'
-               elif array_type == 'BooleanHdf5Array':
-                  dtype = 'bool'
                else:
-                  raise ValueError('array type not catered for: ' + str(array_type))
-            h5_key_pair = model.h5_uuid_and_path_for_node(
-               first_values_node)  # note: Values node within Values node for properties
+                  assert dtype in ['float', float]
+               tag = 'Coordinates'
+            else:
+               patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
+               assert len(patch_list) == 1  # todo: handle more than one patch of values
+               first_values_node = rqet.find_tag(patch_list[0], 'Values')
+               if first_values_node is None:
+                  return None  # could treat as fatal error
+               if dtype is None:
+                  array_type = rqet.node_type(first_values_node)
+                  assert array_type is not None
+                  if array_type == 'DoubleHdf5Array':
+                     dtype = 'float'
+                  elif array_type == 'IntegerHdf5Array':
+                     dtype = 'int'
+                  elif array_type == 'BooleanHdf5Array':
+                     dtype = 'bool'
+                  else:
+                     raise ValueError('array type not catered for: ' + str(array_type))
+               tag = 'Values'
+            h5_key_pair = model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
             if h5_key_pair is None:
                return None
             model.h5_array_element(h5_key_pair,
@@ -1960,6 +2028,7 @@ class PropertyCollection():
                                    array_attribute = cached_array_name,
                                    dtype = dtype)
          else:
+            assert not self.points_for_part(part), 'constant arrays not supported for points properties'
             assert self.support is not None
             shape = self.supporting_shape()
             assert shape is not None
@@ -2043,14 +2112,20 @@ class PropertyCollection():
          return None, None
 
       if self.constant_value_for_part(part) is not None:
+         assert not self.points_for_part(part), 'constant array not supported for points property'
          assert self.support is not None
          shape = self.supporting_shape()
          assert shape is not None
          return shape, (float if self.continuous_for_part(part) else int)
 
-      patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
-      assert len(patch_list) == 1  # todo: handle more than one patch of values
-      h5_key_pair = model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], 'Values'))
+      if self.points_for_part(part):
+         patch_list = rqet.list_of_tag(part_node, 'PatchOfpoints')
+         assert len(patch_list) == 1  # todo: handle more than one patch of points
+         h5_key_pair = model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], tag = 'Coordinates'))
+      else:
+         patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
+         assert len(patch_list) == 1  # todo: handle more than one patch of values
+         h5_key_pair = model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], tag = 'Values'))
       if h5_key_pair is None:
          return None, None
       return model.h5_array_shape_and_type(h5_key_pair)
@@ -2170,6 +2245,8 @@ class PropertyCollection():
       dtype = dtype_flavour(continuous, use_32_bit)
       shape_list = self.supporting_shape(indexable_element = indexable_element)
       shape_list.insert(0, r_extent)
+      if self.points_for_part(self.parts()[0]):
+         shape_list.append(3)
 
       a = np.full(shape_list, fill_value, dtype = dtype)
 
@@ -2252,6 +2329,8 @@ class PropertyCollection():
       dtype = dtype_flavour(continuous, use_32_bit)
       shape_list = self.supporting_shape(indexable_element = indexable_element)
       shape_list.insert(0, ti_extent)
+      if self.points_for_part(self.parts()[0]):
+         shape_list.append(3)
 
       a = np.full(shape_list, fill_value, dtype = dtype)
 
@@ -2285,7 +2364,8 @@ class PropertyCollection():
       notes:
          this method is for properties of IJK grids only;
          RESQML documentation is not entirely clear about the required ordering of -I, +I, -J, +J faces;
-         current implementation assumes count = 1 for the property
+         current implementation assumes count = 1 for the property;
+         does not currently support points properties
       """
 
       assert resqml_a.shape[-1] == 6
@@ -2313,7 +2393,8 @@ class PropertyCollection():
       notes:
          this method is for properties of IJK grids only;
          RESQML documentation is not entirely clear about the required ordering of -I, +I, -J, +J faces;
-         current implementation assumes count = 1 for the property
+         current implementation assumes count = 1 for the property;
+         does not currently support points properties
       """
 
       assert resqpy_a.ndim >= 2 and resqpy_a.shape[-2] == 3 and resqpy_a.shape[-1] == 2
@@ -2385,9 +2466,11 @@ class PropertyCollection():
          for floating point data, NaN values will be handled okay; if all data are NaN, (None, NaN, NaN) is returned;
          for integer data, null values are not currently supported (though the RESQML metadata can hold a null value);
          the masked argument is most applicable to properties for grid objects; note that NaN values are excluded when
-         determining the min and max regardless of the value of the masked argument
+         determining the min and max regardless of the value of the masked argument;
+         not applicable to points properties
       """
 
+      assert not self.points_for_part(part), 'property normalisation not available for points properties'
       assert fix_zero_at is None or not use_logarithm
 
       p_array = self.cached_part_array_ref(part, masked = masked)
@@ -2494,7 +2577,8 @@ class PropertyCollection():
                                          realization = None,
                                          indexable_element = None,
                                          count = 1,
-                                         const_value = None):
+                                         const_value = None,
+                                         points = False):
       """Caches array and adds to the list of imported properties (but not to the collection dict).
 
       arguments:
@@ -2520,6 +2604,7 @@ class PropertyCollection():
             must be the fastest cycling axis in the cached array, ie last index
          const_value (int, float or bool, optional): the value with which a constant array is filled;
             required if cached_array is None, must be None otherwise
+         points (bool, default False): if True, this is a points property with an extra dimension of extent 3
 
       returns:
          uuid of nascent property object
@@ -2536,6 +2621,7 @@ class PropertyCollection():
       """
 
       assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
+      assert not points or not discrete
       assert count > 0
       if self.imported_list is None:
          self.imported_list = []
@@ -2561,7 +2647,7 @@ class PropertyCollection():
             min_value = max_value = const_value
       self.imported_list.append((uuid, source_info, keyword, cached_name, discrete, uom, time_index, null_value,
                                  min_value, max_value, property_kind, facet_type, facet, realization, indexable_element,
-                                 count, local_property_kind_uuid, const_value))
+                                 count, local_property_kind_uuid, const_value, points))
       return uuid
 
    def remove_cached_imported_arrays(self):
@@ -2596,7 +2682,8 @@ class PropertyCollection():
       for entry in self.imported_list:
          if entry[17] is not None:
             continue  # constant array – handled entirely in xml
-         h5_reg.register_dataset(entry[0], 'values_patch0', self.__dict__[entry[3]])
+         tail = 'points_patch0' if entry[18] else 'values_patch0'
+         h5_reg.register_dataset(entry[0], tail, self.__dict__[entry[3]])
       h5_reg.write(file = file_name, mode = mode)
 
    def write_hdf5_for_part(self, part, file_name = None, mode = 'a'):
@@ -2606,7 +2693,8 @@ class PropertyCollection():
          return
       h5_reg = rwh5.H5Register(self.model)
       a = self.cached_part_array_ref(part)
-      h5_reg.register_dataset(self.uuid_for_part(part), 'values_patch0', a)
+      tail = 'points_patch0' if self.points_for_part(part) else 'values_patch0'
+      h5_reg.register_dataset(self.uuid_for_part(part), tail, a)
       h5_reg.write(file = file_name, mode = mode)
 
    def create_xml_for_imported_list_and_add_parts_to_model(self,
@@ -2663,17 +2751,18 @@ class PropertyCollection():
       uuid_list = []
       for (p_uuid, p_file_name, p_keyword, p_cached_name, p_discrete, p_uom, p_time_index, p_null_value, p_min_value,
            p_max_value, property_kind, facet_type, facet, realization, indexable_element, count,
-           local_property_kind_uuid, const_value) in self.imported_list:
+           local_property_kind_uuid, const_value, points) in self.imported_list:
          log.debug('processing imported property ' + str(p_keyword))
+         assert not points or not p_discrete
          if local_property_kind_uuid is None:
             local_property_kind_uuid = property_kind_uuid
          if property_kind is None:
             if local_property_kind_uuid is not None:
-               property_kind = self.model.title(
-                  uuid = local_property_kind_uuid)  # note: requires local property kind to be present
+               # note: requires local property kind to be present
+               property_kind = self.model.title(uuid = local_property_kind_uuid)
             else:
-               (property_kind, facet_type,
-                facet) = property_kind_and_facet_from_keyword(p_keyword)  # todo: only if None in ab_property_list
+               # todo: only if None in ab_property_list
+               (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(p_keyword)
          if property_kind is None:
             # todo: the following are abstract standard property kinds, which shouldn't really have data directly associated with them
             if p_discrete:
@@ -2681,13 +2770,15 @@ class PropertyCollection():
                   property_kind = 'categorical'
                else:
                   property_kind = 'discrete'
+            elif points:
+               property_kind = 'length'
             else:
                property_kind = 'continuous'
          if hasattr(self, p_cached_name):
             p_array = self.__dict__[p_cached_name]
          else:
             p_array = None
-         if property_kind == 'categorical':
+         if points or property_kind == 'categorical':
             add_min_max = False
          elif local_property_kind_uuid is not None and string_lookup_uuid is not None:
             add_min_max = False
@@ -2721,6 +2812,7 @@ class PropertyCollection():
             property_kind_uuid = local_property_kind_uuid,
             indexable_element = indexable_element,
             count = count,
+            points = points,
             find_local_property_kinds = find_local_property_kinds,
             extra_metadata = extra_metadata,
             const_value = const_value)
@@ -2758,6 +2850,7 @@ class PropertyCollection():
                   find_local_property_kinds = True,
                   indexable_element = None,
                   count = 1,
+                  points = False,
                   extra_metadata = {},
                   const_value = None):
       """Create a property xml node for a single property related to a given supporting representation node.
@@ -2811,6 +2904,7 @@ class PropertyCollection():
             if None, 'cells' are used for grid properties and 'nodes' for wellbore frame properties
          count (int, default 1): the number of values per indexable element; if greater than one then this axis
             must cycle fastest in the array, ie. be the last index
+         points (bool, default False): if True, this is a points property
          extra_metadata (dictionary, optional): if present, adds extra metadata in the xml
          const_value (float or int, optional): if present, create xml for a constant array filled with this value
 
@@ -2819,14 +2913,18 @@ class PropertyCollection():
 
       notes:
          this function doesn't write the actual array data to the hdf5 file: that should be done
-         before calling this function
-         this code (and elsewhere) only supports at most one facet per property, though the resqml standard
-         allows for multiple facets
+         before calling this function;
+         this code (and elsewhere) only supports at most one facet per property, though the RESQML standard
+         allows for multiple facets;
+         RESQML does not allow facets for points properties
       """
 
       #      log.debug('creating property node for ' + title)
       # currently assumes discrete properties to be 32 bit integers and continuous to be 64 bit reals
       # also assumes property_kind is one of the standard resqml property kinds; todo: allow local p kind node as optional arg
+      assert not discrete or not points
+      assert not points or const_value is None
+      assert not points or facet_type is None
       assert self.model is not None
       if support_uuid is None:
          support_uuid = self.support_uuid
@@ -2856,6 +2954,8 @@ class PropertyCollection():
          if shape_list is not None:
             if count > 1:
                shape_list.append(count)
+            if points:
+               shape_list.append(3)
             if property_array is not None:
                assert tuple(shape_list) == property_array.shape, 'property array does not have the correct shape'
       # todo: assertions:
@@ -2870,6 +2970,11 @@ class PropertyCollection():
             d_or_c_text = 'Categorical'
          xsd_type = 'integer'
          hdf5_type = 'IntegerHdf5Array'
+      elif points:
+         d_or_c_text = 'Points'
+         xsd_type = 'double'
+         hdf5_type = 'Point3dHdf5Array'
+         null_value = None
       else:
          d_or_c_text = 'Continuous'
          xsd_type = 'double'
@@ -2958,7 +3063,8 @@ class PropertyCollection():
                                   xsd_type = xsd_type,
                                   null_value = null_value,
                                   const_value = const_value,
-                                  const_count = const_count)
+                                  const_count = const_count,
+                                  points = points)
 
       if facet_type is not None and facet is not None:
          facet_node = rqet.SubElement(p_node, ns['resqml2'] + 'Facet')
@@ -3285,7 +3391,8 @@ class PropertyCollection():
                      facet = 'K',
                      realization = perms.realization_for_part(perm_i_part),
                      indexable_element = perms.indexable_for_part(perm_i_part),
-                     count = 1)
+                     count = 1,
+                     points = False)
                   self.model.h5_release()
                   kv_collection.write_hdf5_for_imported_list()
                   kv_collection.create_xml_for_imported_list_and_add_parts_to_model()
@@ -3693,7 +3800,8 @@ class Property(BaseResqpy):
                       realization = None,
                       indexable_element = None,
                       count = 1,
-                      const_value = None):
+                      const_value = None,
+                      points = False):
       """Takes a numpy array and metadata and sets up a single array import list; not usually called directly.
 
       note:
@@ -3715,7 +3823,8 @@ class Property(BaseResqpy):
                                                         realization = realization,
                                                         indexable_element = indexable_element,
                                                         count = count,
-                                                        const_value = const_value)
+                                                        const_value = const_value,
+                                                        points = points)
 
    def write_hdf5(self, file_name = None, mode = 'a'):
       """Writes the array data to the hdf5 file; not usually called directly.
@@ -3946,7 +4055,8 @@ class GridPropertyCollection(PropertyCollection):
             facet_type = info[8],
             facet = info[9],
             realization = info[0],
-            const_value = const_value)
+            const_value = const_value,
+            points = info[21])
 
       import resqpy.grid as grr  # at global level was causing issues due to circular references, ie. grid importing this module
 
@@ -4116,7 +4226,8 @@ class GridPropertyCollection(PropertyCollection):
                facet_type = info[8],
                facet = info[9],
                realization = info[0],
-               const_value = const_value)
+               const_value = const_value,
+               points = info[21])
 
    def import_nexus_property_to_cache(self,
                                       file_name,
@@ -4195,7 +4306,8 @@ class GridPropertyCollection(PropertyCollection):
                                              local_property_kind_uuid = local_property_kind_uuid,
                                              facet_type = facet_type,
                                              facet = facet,
-                                             realization = realization)
+                                             realization = realization,
+                                             points = False)
       return import_array
 
    def import_vdb_static_property_to_cache(self, vdbase, keyword, grid_name = 'ROOT', uom = None, realization = None):
@@ -5608,6 +5720,7 @@ def selective_version_of_collection(
       grid = None,  # for backward compatibility
       uuid = None,
       continuous = None,
+      points = None,
       count = None,
       indexable = None,
       property_kind = None,
@@ -5627,8 +5740,8 @@ def selective_version_of_collection(
                   for a supporting representation (grid or wellbore frame)
 
    Other optional arguments:
-   realization, support_uuid, grid, uuid, continuous, count, indexable, property_kind, facet_type, facet, citation_title,
-   time_series_uuid, time_index, uom, string_lookup_uuid, categorical:
+   realization, support_uuid, grid, uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
+   citation_title, time_series_uuid, time_index, uom, string_lookup_uuid, categorical:
 
    for each of these arguments: if None, then all members of collection pass this filter;
    if not None then only those members with the given value pass this filter;
@@ -5658,6 +5771,7 @@ def selective_version_of_collection(
                                                         support_uuid = support_uuid,
                                                         uuid = uuid,
                                                         continuous = continuous,
+                                                        points = points,
                                                         count = count,
                                                         indexable = indexable,
                                                         property_kind = property_kind,
