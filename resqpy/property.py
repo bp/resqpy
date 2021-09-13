@@ -529,7 +529,10 @@ class PropertyCollection():
       if not continuous:
          null_value = rqet.find_nested_tags_int(xml_node, ['PatchOfValues', 'Values', 'NullValue'])
       const_value = None
-      values_node = rqet.find_nested_tags(xml_node, ['PatchOfValues', 'Values'])
+      if points:
+         values_node = rqet.find_nested_tags(xml_node, ['PatchOfPoints', 'Points'])
+      else:
+         values_node = rqet.find_nested_tags(xml_node, ['PatchOfValues', 'Values'])
       values_type = rqet.node_type(values_node)
       assert values_type is not None
       if values_type.endswith('ConstantArray'):
