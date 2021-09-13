@@ -6,7 +6,7 @@ import warnings
 from functools import lru_cache
 from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
-version = '6th July 2021'
+version = '13th September 2021'
 
 # physical constants
 feet_to_metres = 0.3048
@@ -22,12 +22,18 @@ s_to_d = 1.0 / d_to_s
 
 # Mapping from uom to set of common case-insensitive aliases
 # Nb. No need to write out fractional combinations such as "bbl/day"
+# note: some of the aliases are ambiguous, e.g. 'gm' could mean gigametre or gramme
 UOM_ALIASES = {
-   # Lengths
+   # Mass
+   'g': {'gm', 'gram', 'gramme', 'grams', 'grammes'},
+   'lbm': {'lb', 'lbs'},  # assumes pounds mass rather than pounds force
+
+   # Length
    'm': {'m', 'metre', 'metres', 'meter', 'meters'},
    'ft': {'ft', 'foot', 'feet'},
+   'cm': {'centimetre', 'centimetres', 'centimeter', 'centimeters'},
 
-   # Times
+   # Time
    'ms': {'ms', 'msec', 'millisecs', 'millisecond', 'milliseconds'},
    's': {'s', 'sec', 'secs', 'second', 'seconds'},
    'min': {'min', 'mins', 'minute', 'minutes'},
@@ -36,26 +42,40 @@ UOM_ALIASES = {
    'wk': {'wk', 'week', 'weeks'},
    'a': {'a', 'yr', 'year', 'years'},
 
-   # Ratios
-   '%': {'%', 'pu', 'p.u.'},
+   # Ratio
+   '%': {'%', 'pu', 'p.u.', 'percent'},
    'm3/m3': {'m3/m3', 'v/v'},
    'g/cm3': {'g/cm3', 'g/cc'},
 
-   # Volumes
-   'bbl': {'bbl', 'stb'},
-   '1000 bbl': {'1000 bbl', 'mstb', 'mbbl'},
+   # Volume
+   'bbl': {'bbl', 'stb', 'rb'},
+   '1000 bbl': {'1000 bbl', 'mstb', 'mbbl', 'mrb'},
    '1E6 bbl': {'1E6 bbl', 'mmstb', 'mmbbl'},
    '1E6 ft3': {'1E6 ft3', 'mmscf'},
    '1000 ft3': {'1000 ft3', 'mscf'},
-   'm3': {'m3', 'sm3'},
-   'ft3': {'ft3', 'scf'},
+   'm3': {'m3', 'sm3', 'stm3', 'rm3'},
+   '1000 m3': {'kstm3', 'krm3', 'msm3', 'mrm3'},
+   'ft3': {'ft3', 'scf', 'cf', 'rcf', 'cu.ft.'},
+   'cm3': {'cc', 'scc', 'stcc'},
+   'L': {'krcc', 'kstcc', 'kscc', 'litre', 'litres', 'liter', 'liters'},
+
+   # Pressure & Reciprocal Pressure
+   'psi': {'psi', 'psia'},
+
+   # Thermodynamic Temperature
+   'degC': {'c', 'degrees c', 'degreesc'},
+   'degF': {'f', 'degrees f', 'degreesf'},
+
+   # Energy
+   'Btu[IT]': {'btu'},  # assumes BTU to refer to ISO standard, rather than older Btu[UK]
+   'kJ': {'kj'},
 
    # Other
    'gAPI': {'gapi'},
    'S': {'mho'},
    'mS': {'mmho'},
-   'psi': {'psi', 'psia'},
-   'Euc': {'count'},
+   'mol': {'mole', 'moles'},
+   'Euc': {'count', 'fraction', 'none'},
 }
 # Mapping from alias to valid uom
 UOM_ALIAS_MAP = {alias.casefold(): uom for uom, aliases in UOM_ALIASES.items() for alias in aliases}
@@ -82,14 +102,7 @@ def rq_uom(units, quantity = None):
    if not units:
       raise InvalidUnitError("Must provide non-empty unit")
 
-   uom = _try_parse_unit(units)
-
-   # May be a fraction: match each part against known aliases
-   if uom is None and '/' in units:
-      parts = units.split('/', 1)
-      newpart0 = _try_parse_unit(parts[0])
-      newpart1 = _try_parse_unit(parts[1])
-      uom = _try_parse_unit(f"{newpart0}/{newpart1}")
+   uom = _try_parse_unit(units.strip())
 
    if uom is None:
       raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
@@ -365,6 +378,8 @@ def _try_parse_unit(units):
    uom_list = valid_uoms()
    ul = units.casefold()
 
+   uom = None
+
    if units in uom_list:
       uom = units
    elif ul in CASE_INSENSITIVE_UOMS:
@@ -373,6 +388,15 @@ def _try_parse_unit(units):
       uom = UOM_ALIAS_MAP[ul]
    elif ul in uom_list:
       uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
-   else:
-      uom = None
+   elif units.startswith('(') and units.endswith(')') and '(' not in units[1:]:  # simplistic
+      uom = _try_parse_unit(units[1:-1])
+   elif '/' in units:  # May be a fraction: match each part against known aliases
+      parts = units.split('/', 1)
+      newpart0 = _try_parse_unit(parts[0])
+      newpart1 = _try_parse_unit(parts[1])
+      if newpart0 and newpart1:
+         ratio = f"{newpart0}/{newpart1}"
+         if ratio in uom_list:
+            uom = ratio
+
    return uom
