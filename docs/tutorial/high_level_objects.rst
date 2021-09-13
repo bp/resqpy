@@ -213,7 +213,7 @@ The table below shows which high level resqpy class is used to represent each RE
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_PointSetRepresentation                             | large      | :class:`resqpy.surface.PointSet`                          |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_PointsProperty                                     |            |                                                           |
+| obj_PointsProperty                                     | large      | :class:`resqpy.property.PropertyCollection`               |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_PolylineRepresentation                             | small      | :class:`resqpy.lines.Polyline`                            |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
@@ -277,7 +277,7 @@ The table below shows which high level resqpy class is used to represent each RE
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_UnstructuredColumnLayerGridRepresentation          |            |                                                           |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_UnstructuredGridRepresentation                     |            |                                                           |
+| obj_UnstructuredGridRepresentation                     | large      | :class:`resqpy.unstructured.UnstructuredGrid`             |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_WellboreFeature                                    | none       | :class:`resqpy.organize.WellboreFeature`                  |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
