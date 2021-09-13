@@ -6,7 +6,7 @@ import warnings
 from functools import lru_cache
 from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
 
-version = '12th September 2021'
+version = '13th September 2021'
 
 # physical constants
 feet_to_metres = 0.3048
@@ -101,7 +101,7 @@ def rq_uom(units, quantity = None):
    if not units:
       raise InvalidUnitError("Must provide non-empty unit")
 
-   uom = _try_parse_unit(units)
+   uom = _try_parse_unit(units.strip())
 
    if uom is None:
       raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
