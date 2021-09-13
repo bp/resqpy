@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '7th September 2021'
+version = '10th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -323,6 +323,16 @@ class PropertyCollection():
          elif indexable_element == 'faces per cell':
             shape_list = [support.nk, support.nj, support.ni, 6]  # assume K-, K+, J-, I+, J+, I- ordering
             # TODO: resolve ordering of edges and make consistent with maps code (edges per column) and fault module (gcs faces)
+         elif indexable_element == 'nodes per cell':
+            shape_list = [support.nk, support.nj, support.ni, 2, 2,
+                          2]  # kp, jp, ip within each cell; todo: check RESQML shaping
+         elif indexable_element == 'nodes':
+            assert not support.k_gaps, 'indexable element of nodes not currently supported for grids with K gaps'
+            if support.has_split_coordinate_lines:
+               pillar_count = (support.nj + 1) * (support.ni + 1) + support.split_pillar_count
+               shape_list = [support.nk + 1, pillar_count]
+            else:
+               shape_list = [support.nk + 1, support.nj + 1, support.ni + 1]
 
       elif isinstance(support, rqw.WellboreFrame):
          if indexable_element is None or indexable_element == 'nodes':

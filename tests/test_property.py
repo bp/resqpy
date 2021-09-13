@@ -31,6 +31,24 @@ def test_property(tmp_path):
                                 property_kind = 'net to gross ratio',
                                 indexable_element = 'cells',
                                 uom = 'm3/m3')
+   a3 = np.random.random((grid.nk + 1, grid.nj + 1, grid.ni + 1))
+   p3 = rqp.Property.from_array(model,
+                                a3,
+                                source_info = 'random',
+                                keyword = 'jiggle shared nodes',
+                                support_uuid = grid.uuid,
+                                property_kind = 'length',
+                                indexable_element = 'nodes',
+                                uom = 'm3')
+   a4 = np.random.random((grid.nk, grid.nj, grid.ni, 2, 2, 2))
+   p4 = rqp.Property.from_array(model,
+                                a4,
+                                source_info = 'random',
+                                keyword = 'jiggle nodes per cell',
+                                support_uuid = grid.uuid,
+                                property_kind = 'length',
+                                indexable_element = 'nodes per cell',
+                                uom = 'm3')
    pk = rqp.PropertyKind(model, title = 'facies', parent_property_kind = 'discrete')
    pk.create_xml()
    facies_dict = {0: 'background'}
@@ -64,8 +82,25 @@ def test_property(tmp_path):
    assert np.all(p2p.array_ref() == p2.array_ref())
    assert p2p.null_value() is not None and p2p.null_value() == 0
    grid = model.grid()
-   assert grid.property_collection.number_of_parts(
-   ) == 5  # two created here, plus 3 regular grid cell lengths properties
+   jiggle_parts = model.parts(title = 'jiggle', title_mode = 'starts')
+   assert len(jiggle_parts) == 2
+   jiggle_shared_uuid = model.uuid(parts_list = jiggle_parts, title = 'shared', title_mode = 'contains')
+   assert jiggle_shared_uuid is not None
+   p3p = rqp.Property(model, uuid = jiggle_shared_uuid)
+   assert p3p is not None
+   assert p3p.array_ref().shape == (grid.nk + 1, grid.nj + 1, grid.ni + 1)
+   jiggle_per_cell_uuid = model.uuid(parts_list = jiggle_parts, title = 'per cell', title_mode = 'ends')
+   assert jiggle_per_cell_uuid is not None
+   # four properties created here, plus 3 regular grid cell lengths properties
+   assert grid.property_collection.number_of_parts() == 7
+   collection = rqp.selective_version_of_collection(grid.property_collection,
+                                                    property_kind = 'length',
+                                                    uuid = jiggle_per_cell_uuid)
+   assert collection is not None
+   assert collection.number_of_parts() == 1
+   p4p = rqp.Property.from_singleton_collection(collection)
+   assert p4p is not None
+   assert p4p.array_ref().shape == (grid.nk, grid.nj, grid.ni, 2, 2, 2)
 
 
 def test_create_Property_from_singleton_collection(tmp_model):
