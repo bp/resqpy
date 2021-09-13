@@ -2310,7 +2310,7 @@ class Grid(BaseResqpy):
       """
 
       if self.points_cached is None:
-         self.point(cache_array = True)
+         self.point_raw(cache_array = True)
          if self.points_cached is None:
             return None
       if not masked:

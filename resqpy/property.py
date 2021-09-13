@@ -2001,7 +2001,7 @@ class PropertyCollection():
                if dtype is None:
                   dtype = 'float'
                else:
-                  assert dtype in ['float', float]
+                  assert dtype in ['float', float, np.float32, np.float64]
                tag = 'Coordinates'
             else:
                patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
@@ -3014,7 +3014,7 @@ class PropertyCollection():
          related_time_series_node = None
       else:
          related_time_series_node = self.model.root(uuid = time_series_uuid)
-         time_series = rts.TimeSeries(self.model, uuid = time_series_uuid)
+         time_series = rts.any_time_series(self.model, uuid = time_series_uuid)
          time_series.create_time_index(time_index, root = p_node)
 
       self.model.create_supporting_representation(support_uuid = support_uuid,

@@ -6,8 +6,10 @@ import numpy as np
 import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.property as rqp
+import resqpy.time_series as rqts
 import resqpy.derived_model as rqdm
 import resqpy.weights_and_measures as bwam
+import resqpy.olio.vector_utilities as vec
 
 # ---- Test PropertyCollection ---
 
@@ -211,3 +213,133 @@ def test_property_extra_metadata(tmp_path):
    p = rqp.Property(model, uuid = uuid)
    for item in em.items():
       assert item in p.extra_metadata.items()
+
+
+def test_points_properties(tmp_path):
+
+   epc = os.path.join(tmp_path, 'points_test.epc')
+   model = rq.new_model(epc)
+
+   extent_kji = (2, 3, 4)
+   ensemble_size = 5
+   time_series_size = 6
+
+   # create a geological time series
+   years = [int(t) for t in np.linspace(-252170000, -66000000, num = time_series_size, dtype = int)]
+   ts = rqts.GeologicTimeSeries.from_year_list(model, year_list = years, title = 'Mesozoic time series')
+   ts.create_xml()
+   ts_uuid = ts.uuid
+   assert ts.timeframe == 'geologic'
+
+   # create a simple grid without an explicit geometry and ensure it has a property collection initialised
+   grid = grr.RegularGrid(model, extent_kji = extent_kji, origin = (0.0, 0.0, 1000.0))
+   grid.create_xml()
+   if grid.property_collection is None:
+      grid.property_collection = rqp.PropertyCollection(support = grid)
+   pc = grid.property_collection
+
+   # shape of points property arrays
+   points_shape = tuple(list(extent_kji) + [3])
+
+   # create a static points property with multiple realisations
+   for r in range(ensemble_size):
+      stress = vec.unit_vectors(np.random.random(points_shape) + 0.1)
+      pc.add_cached_array_to_imported_list(stress,
+                                           'random stress vectors',
+                                           'stress direction',
+                                           uom = 'm',
+                                           property_kind = 'length',
+                                           realization = r,
+                                           indexable_element = 'cells',
+                                           points = True)
+   pc.write_hdf5_for_imported_list()
+   pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+   # create a dynamic points property (indexable cells) related to the geological time series
+   for r in range(ensemble_size):
+      centres = grid.centre_point().copy()
+      for time_index in range(time_series_size):
+         pc.add_cached_array_to_imported_list(centres,
+                                              'dynamic cell centres',
+                                              'centres',
+                                              uom = 'm',
+                                              property_kind = 'length',
+                                              realization = r,
+                                              time_index = time_index,
+                                              indexable_element = 'cells',
+                                              points = True)
+         centres[..., 2] += 100.0 * (r + 1)
+   pc.write_hdf5_for_imported_list()
+   pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
+
+   # create a dynamic points property (indexable nodes) related to the geological time series
+   for r in range(ensemble_size):
+      nodes = grid.points_ref().copy()
+      for time_index in range(time_series_size):
+         pc.add_cached_array_to_imported_list(nodes,
+                                              'dynamic nodes',
+                                              'points',
+                                              uom = 'm',
+                                              property_kind = 'length',
+                                              realization = r,
+                                              time_index = time_index,
+                                              indexable_element = 'nodes',
+                                              points = True)
+         nodes[..., 2] += 100.0 * (r + 1)
+   pc.write_hdf5_for_imported_list()
+   pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
+
+   # store the xml
+   model.store_epc()
+
+   # re-open the model and access the grid properties
+   model = rq.Model(epc)
+   grid = model.grid()
+   pc = grid.property_collection
+
+   # load a static points property for a single realisation
+   sample_stress = pc.single_array_ref(realization = ensemble_size // 2,
+                                       citation_title = 'stress direction',
+                                       points = True)
+   assert sample_stress is not None and sample_stress.ndim == 4
+   assert np.all(sample_stress.shape[:3] == extent_kji)
+   assert sample_stress.shape[3] == 3
+   assert np.count_nonzero(np.isnan(sample_stress)) == 0
+
+   # select the dynamic points properties related to the geological time series and indexable by cells
+   cc = rqp.selective_version_of_collection(grid.property_collection,
+                                            indexable = 'cells',
+                                            points = True,
+                                            time_series_uuid = ts_uuid)
+   assert cc.number_of_parts() == ensemble_size * time_series_size
+
+   # check that 5 dimensional numpy arrays can be set up, each covering time indices for a single realisation
+   for r in range(ensemble_size):
+      rcc = rqp.selective_version_of_collection(cc, realization = r)
+      assert rcc.number_of_parts() == time_series_size
+      dynamic_nodes = rcc.time_series_array_ref()
+      assert dynamic_nodes.ndim == 5
+      assert dynamic_nodes.shape[0] == time_series_size
+      assert np.all(dynamic_nodes.shape[1:4] == np.array(extent_kji))
+      assert dynamic_nodes.shape[-1] == 3
+      mean_depth = np.nanmean(dynamic_nodes[..., 2])
+      assert mean_depth > 1000.0
+
+   # select the dynamic points properties related to the geological time series and indexable by nodes
+   nc = rqp.selective_version_of_collection(grid.property_collection,
+                                            indexable = 'nodes',
+                                            points = True,
+                                            time_series_uuid = ts_uuid)
+   assert nc.number_of_parts() == ensemble_size * time_series_size
+
+   # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
+   for ti in range(time_series_size):
+      tnc = rqp.selective_version_of_collection(nc, time_index = ti)
+      assert tnc.number_of_parts() == ensemble_size
+      dynamic_nodes = tnc.realizations_array_ref()
+      assert dynamic_nodes.ndim == 5
+      assert dynamic_nodes.shape[0] == ensemble_size
+      assert np.all(dynamic_nodes.shape[1:4] == np.array(extent_kji) + 1)
+      assert dynamic_nodes.shape[-1] == 3
+      mean_depth = np.nanmean(dynamic_nodes[..., 2])
+      assert mean_depth > 1000.0
