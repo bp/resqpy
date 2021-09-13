@@ -68,6 +68,7 @@ UOM_ALIASES = {
 
    # Energy
    'Btu[IT]': {'btu'},  # assumes BTU to refer to ISO standard, rather than older Btu[UK]
+   'kJ': {'kj'},
 
    # Other
    'gAPI': {'gapi'},
