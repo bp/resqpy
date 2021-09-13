@@ -3486,6 +3486,8 @@ class Property(BaseResqpy):
          return rqet.node_type(root_node, strip_obj = True)
       if (not hasattr(self, 'collection') or self.collection.number_of_parts() != 1 or self.is_continuous()):
          return 'ContinuousProperty'
+      if self.collection.points_for_part(self.collection.parts()[0]):
+         return 'PointsProperty'
       return 'CategoricalProperty' if self.is_categorical() else 'DiscreteProperty'
 
    def __init__(self, parent_model, uuid = None, title = None, support_uuid = None, extra_metadata = None):
@@ -3576,6 +3578,7 @@ class Property(BaseResqpy):
                   time_index = None,
                   realization = None,
                   count = 1,
+                  points = False,
                   const_value = None,
                   string_lookup_uuid = None,
                   find_local_property_kind = True,
@@ -3660,6 +3663,7 @@ class Property(BaseResqpy):
                           realization = realization,
                           indexable_element = indexable_element,
                           count = count,
+                          points = points,
                           const_value = const_value)
       prop.write_hdf5()
       prop.create_xml(support_uuid = support_uuid,
@@ -3701,6 +3705,11 @@ class Property(BaseResqpy):
       :meta common:
       """
       return self.collection.continuous_for_part(self.part)
+
+   def is_points(self):
+      """Returns boolean indicating that the property is a points property."""
+
+      return self.collection.points_for_part(self.part)
 
    def is_categorical(self):
       """Returns boolean indicating that the property contains categorical data.
