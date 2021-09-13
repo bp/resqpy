@@ -41,7 +41,7 @@ def test_property(tmp_path):
                                 indexable_element = 'nodes',
                                 uom = 'm3')
    a4 = np.random.random((grid.nk, grid.nj, grid.ni, 2, 2, 2))
-   p3 = rqp.Property.from_array(model,
+   p4 = rqp.Property.from_array(model,
                                 a4,
                                 source_info = 'random',
                                 keyword = 'jiggle nodes per cell',
