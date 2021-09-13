@@ -298,6 +298,10 @@ def test_points_properties(tmp_path):
    pc = grid.property_collection
 
    # load a static points property for a single realisation
+   sample_stress_part = pc.singleton(realization = ensemble_size // 2,
+                                     citation_title = 'stress direction',
+                                     points = True)
+   assert sample_stress_part is not None
    sample_stress = pc.single_array_ref(realization = ensemble_size // 2,
                                        citation_title = 'stress direction',
                                        points = True)
@@ -305,6 +309,14 @@ def test_points_properties(tmp_path):
    assert np.all(sample_stress.shape[:3] == extent_kji)
    assert sample_stress.shape[3] == 3
    assert np.count_nonzero(np.isnan(sample_stress)) == 0
+   stress_uuid = pc.uuid_for_part(sample_stress_part)
+
+   # load the same property using the Property class
+   stress_p = rqp.Property(model, uuid = stress_uuid)
+   assert stress_p is not None
+   assert stress_p.is_points()
+   sample_stress = stress_p.array_ref()
+   assert sample_stress is not None and sample_stress.ndim == 4
 
    # select the dynamic points properties related to the geological time series and indexable by cells
    cc = rqp.selective_version_of_collection(grid.property_collection,
