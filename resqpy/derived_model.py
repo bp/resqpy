@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '14th July 2021'
+version = '14th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -1237,9 +1237,6 @@ def extract_box(epc_file = None,
 
    box_str = bx.string_iijjkk1_for_box_kji0(box)
 
-   if not source_grid.k_gaps and source_grid.nk_plus_k_gaps is None:
-      source_grid.nk_plus_k_gaps = source_grid.nk
-
    # create a new, empty grid object
    grid = grr.Grid(model)
 
@@ -1258,12 +1255,10 @@ def extract_box(epc_file = None,
    grid.crs_uuid = source_grid.crs_uuid
 
    # inherit k_gaps for selected layer range
-   grid.nk_plus_k_gaps = grid.nk
    if source_grid.k_gaps and box[1, 0] > box[0, 0]:
       k_gaps = np.count_nonzero(source_grid.k_gap_after_array[box[0, 0]:box[1, 0]])
       if k_gaps > 0:
          grid.k_gaps = k_gaps
-         grid.nk_plus_k_gaps = grid.nk + k_gaps
          grid.k_gap_after_array = source_grid.k_gap_after_array[box[0, 0]:box[1, 0]].copy()
          grid.k_raw_index_array = np.empty(grid.nk, dtype = int)
          k_offset = 0
@@ -1937,12 +1932,9 @@ def refined_grid(epc_file,
       grid.split_pillars_count = source_grid.split_pillars_count
       grid.k_gaps = source_grid.k_gaps
       if grid.k_gaps:
-         grid.nk_plus_k_gaps = grid.nk + grid.k_gaps
          grid.k_gap_after_array = np.zeros((grid.nk - 1,), dtype = bool)
          grid.k_raw_index_array = np.zeros((grid.nk,), dtype = int)
          # k gap arrays populated below
-      else:
-         grid.nk_plus_k_gaps = grid.nk
       # inherit the coordinate reference system used by the grid geometry
       grid.crs_root = source_grid.crs_root
       grid.crs_uuid = source_grid.crs_uuid
@@ -2192,7 +2184,6 @@ def coarsened_grid(epc_file,
    grid.grid_representation = 'IjkGrid'
    grid.extent_kji = fine_coarse.coarse_extent_kji
    grid.nk, grid.nj, grid.ni = grid.extent_kji[0], grid.extent_kji[1], grid.extent_kji[2]
-   grid.nk_plus_k_gaps = source_grid.nk_plus_k_gaps  # k_gaps not currently supported anyway
    grid.k_direction_is_down = source_grid.k_direction_is_down
    grid.grid_is_right_handed = source_grid.grid_is_right_handed
    grid.pillar_shape = source_grid.pillar_shape
@@ -2885,11 +2876,12 @@ def add_faults(epc_file,
       source_grid = model.grid()  # requires there to be exactly one grid in model
    else:
       model = source_grid.model
-   assert source_grid.grid_representation == 'IjkGrid'  # RegularGrid not catered for
+   assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']  # unstructured grids not catered for
    assert model is not None
    assert len([arg for arg in (polylines, lines_file_list, full_pillar_list_dict) if arg is not None]) == 1
 
    # take a copy of the resqpy grid object, without writing to hdf5 or creating xml
+   # the copy will be a Grid, even if the source is a RegularGrid
    grid = copy_grid(source_grid, model)
    grid_crs = rqcrs.Crs(model, uuid = grid.crs_uuid)
    assert grid_crs is not None
@@ -2956,8 +2948,8 @@ def add_faults(epc_file,
    if new_epc_file:
       write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
    else:
-      ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
-                                                    'Coordinates')
+      ext_uuid = model.h5_uuid()
+
       write_grid(epc_file,
                  grid,
                  ext_uuid = ext_uuid,
@@ -3562,18 +3554,25 @@ def add_single_cell_grid(points, new_grid_title = None, new_epc_file = None):
 
 
 def copy_grid(source_grid, target_model = None, copy_crs = True):
-   """Creates a copy of the grid object in the target model (usually prior to modifying points in situ).
+   """Creates a copy of the IJK grid object in the target model (usually prior to modifying points in situ).
 
    note:
       this function is not usually called directly by application code; it does not write to the hdf5
-      file nor create xml for the copied grid
+      file nor create xml for the copied grid;
+      the copy will be a resqpy Grid even if the source grid is a RegularGrid
    """
+
+   assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
 
    model = source_grid.model
    if target_model is None:
       target_model = model
    if target_model is model:
       copy_crs = False
+
+   # if the source grid is a RegularGrid, ensure that it has explicit points
+   if source_grid.grid_representation == 'IjkBlockGrid':
+      source_grid.make_regular_points_cached()
 
    # create empty grid object (with new uuid)
    grid = grr.Grid(target_model)
@@ -3582,7 +3581,6 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
    grid.grid_representation = 'IjkGrid'
    grid.extent_kji = np.array(source_grid.extent_kji, dtype = 'int')
    grid.nk, grid.nj, grid.ni = source_grid.nk, source_grid.nj, source_grid.ni
-   grid.nk_plus_k_gaps = source_grid.nk_plus_k_gaps
    grid.k_direction_is_down = source_grid.k_direction_is_down
    grid.grid_is_right_handed = source_grid.grid_is_right_handed
    grid.pillar_shape = source_grid.pillar_shape

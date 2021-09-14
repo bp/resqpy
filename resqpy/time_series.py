@@ -1,6 +1,6 @@
 """time_series.py: RESQML time series class."""
 
-version = '10th September 2021'
+version = '13th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -556,13 +556,13 @@ class GeologicTimeSeries(AnyTimeSeries):
       for year in year_list:
          assert isinstance(year, int)
          if year > 0:
-            year_list.append(-year)
+            negative_list.append(-year)
          else:
-            year_list.append(year)
+            negative_list.append(year)
 
       gts = cls(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
 
-      gts.timestamps = sorted(year_list)
+      gts.timestamps = sorted(negative_list)
 
       return gts
 

@@ -106,7 +106,6 @@ def test_strata(tmp_path):
    grid.nk -= 1
    grid.extent_kji = np.array((grid.nk, grid.nj, grid.ni), dtype = int)
    grid.k_gaps = 1
-   grid.nk_plus_k_gaps = grid.nk + grid.k_gaps
    grid.k_gap_after_array = np.array([False, False, False, False, False, True, False, False], dtype = bool)
    grid._set_k_raw_index_array()
 
