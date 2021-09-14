@@ -1,6 +1,9 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '13th September 2021'
+version = '14th September 2021'
+
+# following should be kept in line with major.minor tag values in repository
+citation_format = 'bp:resqpy:1.3'
 
 import logging
 
@@ -2408,7 +2411,7 @@ class Model():
       if rqet.pretend_to_be_fesapi:
          format_node.text = '[F2I-CONSULTING:fesapi]'
       else:
-         format_node.text = 'bp:resqpy:1.0'
+         format_node.text = citation_format
 
       # todo: add optional description field
 
