@@ -211,6 +211,7 @@ def add_zone_by_layer_property(epc_file,
       property_kind = 'zone'
       zone_pk = grr.establish_zone_property_kind(model)
       local_property_kind_uuid = zone_pk.uuid
+      model.store_epc(only_if_modified = True)
    else:
       property_kind = 'discrete'
       local_property_kind_uuid = None

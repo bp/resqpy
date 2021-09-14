@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '19th August 2021'
+version = '14th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -5598,12 +5598,12 @@ class RegularGrid(Grid):
 def establish_zone_property_kind(model):
    """Returns zone local property kind object, creating the xml and adding as part if not found in model."""
 
-   zone_pk_root = model.root(obj_type = 'LocalPropertyKind', title = 'zone')
-   if zone_pk_root is None:
+   zone_pk_uuid = model.uuid(obj_type = 'LocalPropertyKind', title = 'zone')
+   if zone_pk_uuid is None:
       zone_pk = rprop.PropertyKind(model, title = 'zone', parent_property_kind = 'discrete')
       zone_pk.create_xml()
    else:
-      zone_pk = rprop.PropertyKind(model, root_node = zone_pk_root)
+      zone_pk = rprop.PropertyKind(model, uuid = zone_pk_uuid)
    return zone_pk
 
 
