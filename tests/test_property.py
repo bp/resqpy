@@ -233,7 +233,15 @@ def test_points_properties(tmp_path):
    assert ts.timeframe == 'geologic'
 
    # create a simple grid without an explicit geometry and ensure it has a property collection initialised
-   grid = grr.RegularGrid(model, extent_kji = extent_kji, origin = (0.0, 0.0, 1000.0), title = 'unfaulted grid')
+   grid = grr.RegularGrid(model,
+                          extent_kji = extent_kji,
+                          origin = (0.0, 0.0, 1000.0),
+                          dxyz = (100.0, 100.0, -10.0),
+                          title = 'unfaulted grid')
+   # patch K direction, even though it won't be stored in xml
+   grid.k_direction_is_down = False
+   grid.grid_is_right_handed = not grid.grid_is_right_handed
+   # generate xml and establish a property collection for the grid
    grid.create_xml()
    if grid.property_collection is None:
       grid.property_collection = rqp.PropertyCollection(support = grid)
@@ -388,6 +396,7 @@ def test_points_properties(tmp_path):
    # check the faulted grid properties
    f_grid = model.grid(title = 'faulted grid')
    assert f_grid is not None
+   assert not f_grid.k_direction_is_down
 
    # select the dynamic points properties related to the geological time series and indexable by nodes
    fnc = rqp.selective_version_of_collection(f_grid.property_collection,
