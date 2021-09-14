@@ -397,6 +397,8 @@ def test_points_properties(tmp_path):
    f_grid = model.grid(title = 'faulted grid')
    assert f_grid is not None
    assert not f_grid.k_direction_is_down
+   f_grid.set_k_direction_from_points()
+   assert not f_grid.k_direction_is_down
 
    # select the dynamic points properties related to the geological time series and indexable by nodes
    fnc = rqp.selective_version_of_collection(f_grid.property_collection,

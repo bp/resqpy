@@ -420,7 +420,8 @@ class Grid(BaseResqpy):
          resqml allows layers to fold back over themselves, so the relationship between k and depth might not
          be monotonic;
          higher level code sometimes requires k to increase with depth;
-         independently of this, z values may increase upwards or downwards in a coordinate reference system
+         independently of this, z values may increase upwards or downwards in a coordinate reference system;
+         this method does not modify the grid_is_righthanded indicator
       """
 
       if self.k_direction_is_down is not None:
@@ -429,6 +430,21 @@ class Grid(BaseResqpy):
       if k_dir_node is None:
          return None
       self.k_direction_is_down = (k_dir_node.text.lower() == 'down')
+      return self.k_direction_is_down
+
+   def set_k_direction_from_points(self):
+      """Sets the K direction indicator based on z direction and mean z values for top and base.
+
+      note:
+         this method does not modify the grid_is_righthanded indicator
+      """
+
+      p = self.points_ref(masked = False)
+      self.k_direction_is_down = True  # arbitrary default
+      if p is not None:
+         diff = np.nanmean(p[-1] - p[0])
+         if not np.isnan(diff):
+            self.k_direction_is_down = ((diff >= 0.0) == self.z_inc_down())
       return self.k_direction_is_down
 
    def extract_pillar_shape(self):
