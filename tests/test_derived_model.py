@@ -1,3 +1,4 @@
+import pytest
 import os
 import numpy as np
 from numpy.testing import assert_array_almost_equal
@@ -30,6 +31,16 @@ def test_add_single_cell_grid(tmp_path):
 
 def test_add_zone_by_layer_property(tmp_path):
 
+   def check_zone_prop(z_prop):
+      assert z_prop is not None
+      assert not z_prop.is_continuous()
+      assert not z_prop.is_points()
+      assert z_prop.indexable_element() == 'layers'
+      lpk_uuid = z_prop.local_property_kind_uuid()
+      assert lpk_uuid is not None
+      lpk = rqp.PropertyKind(z_prop.model, uuid = lpk_uuid)
+      assert lpk.title == 'zone'
+
    epc = os.path.join(tmp_path, 'in the zone.epc')
 
    model = rq.new_model(epc)
@@ -48,14 +59,58 @@ def test_add_zone_by_layer_property(tmp_path):
                                                title = 'from vector')
    assert tuple(v) == zone_vector
 
-   # check that property looks okay
+   # check that zone property looks okay
    model = rq.Model(epc)
    z_prop = rqp.Property(model, uuid = z_uuid)
-   assert z_prop is not None
-   assert not z_prop.is_continuous()
-   assert not z_prop.is_points()
-   assert z_prop.indexable_element() == 'layers'
-   lpk_uuid = z_prop.local_property_kind_uuid()
-   assert lpk_uuid is not None
-   lpk = rqp.PropertyKind(model, uuid = lpk_uuid)
-   assert lpk.title == 'zone'
+   check_zone_prop(z_prop)
+
+   # add a neatly set up grid cells property
+   za = np.array((1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 5, 5, 5, 5, 5, 5),
+                 dtype = int).reshape(grid.extent_kji)
+   za_uuid = rqdm.add_one_grid_property_array(epc,
+                                              za,
+                                              property_kind = 'code',
+                                              title = 'clean zone',
+                                              grid_uuid = grid_uuid,
+                                              null_value = -1)
+   assert za_uuid is not None
+
+   # add a zone by layer property based on the neat cells property
+   v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
+                                               zone_by_cell_property_uuid = za_uuid,
+                                               title = 'from cells array')
+   assert tuple(v) == (1, 2, 3, 5)
+
+   # check that zone property looks okay
+   model = rq.Model(epc)
+   z_prop = rqp.Property(model, uuid = z_uuid)
+   check_zone_prop(z_prop)
+
+   # make the cells array less tidy and add another copy
+   za[1, 2, :] = 3
+   za_uuid = rqdm.add_one_grid_property_array(epc,
+                                              za,
+                                              property_kind = 'code',
+                                              title = 'messy zone',
+                                              grid_uuid = grid_uuid,
+                                              null_value = -1)
+   assert za_uuid is not None
+
+   # fail to add a zone by layer property based on the messy cells property
+   with pytest.raises(Exception):
+      v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
+                                                  zone_by_cell_property_uuid = za_uuid,
+                                                  use_dominant_zone = False,
+                                                  title = 'should fail')
+
+   # add a zone by layer property based on the neat cells property
+   v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
+                                               zone_by_cell_property_uuid = za_uuid,
+                                               use_dominant_zone = True,
+                                               title = 'from messy cells array')
+   assert tuple(v) == (1, 2, 3, 5)
+
+   # check that zone property looks okay
+   model = rq.Model(epc)
+   z_prop = rqp.Property(model, uuid = z_uuid)
+   check_zone_prop(z_prop)
