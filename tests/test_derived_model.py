@@ -7,6 +7,7 @@ import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.property as rqp
 import resqpy.derived_model as rqdm
+import resqpy.olio.uuid as bu
 
 
 def test_add_single_cell_grid(tmp_path):
@@ -114,3 +115,39 @@ def test_add_zone_by_layer_property(tmp_path):
    model = rq.Model(epc)
    z_prop = rqp.Property(model, uuid = z_uuid)
    check_zone_prop(z_prop)
+
+
+def test_single_layer_grid(tmp_path):
+
+   epc = os.path.join(tmp_path, 'squash.epc')
+
+   model = rq.new_model(epc)
+
+   # create a basic block grid with geometry
+   grid = grr.RegularGrid(model,
+                          extent_kji = (4, 3, 2),
+                          origin = (1000.0, 2000.0, 3000.0),
+                          dxyz = (100.0, 130.0, 25.0),
+                          title = 'to be squashed',
+                          set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True)
+   grid_uuid = grid.uuid
+   model.store_epc()
+
+   # create a single layer version of the grid
+   simplified = rqdm.single_layer_grid(epc, source_grid = grid, new_grid_title = 'squashed')
+   assert simplified is not None
+   simplified_uuid = simplified.uuid
+
+   # re-open the model and load the new grid
+   model = rq.Model(epc)
+   s_uuid = model.uuid(obj_type = 'IjkGridRepresentation', title = 'squashed')
+   assert bu.matching_uuids(s_uuid, simplified_uuid)
+   simplified = grr.any_grid(model, uuid = s_uuid)
+   assert simplified.nk == 1
+   simplified.cache_all_geometry_arrays()
+   assert not simplified.has_split_coordinate_lines
+   assert simplified.points_cached.shape == (2, 4, 3, 3)
+   assert_array_almost_equal(simplified.points_cached[0, ..., 2], np.full((4, 3), 3000.0))
+   assert_array_almost_equal(simplified.points_cached[1, ..., 2], np.full((4, 3), 3100.0))

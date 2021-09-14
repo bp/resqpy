@@ -631,7 +631,9 @@ def zonal_grid(epc_file,
       source_grid = model.grid()  # requires there to be exactly one grid in model (or one named ROOT)
    else:
       model = source_grid.model
-   assert source_grid.grid_representation == 'IjkGrid'
+   assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
+   if source_grid.grid_representation == 'IjkBlockGrid':
+      source_grid.make_regular_points_cached()
    assert model is not None
    single_layer_mode = (not zone_title and not zone_uuid)
 
