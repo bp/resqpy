@@ -335,7 +335,7 @@ class PropertyCollection():
          elif indexable_element == 'nodes':
             assert not support.k_gaps, 'indexable element of nodes not currently supported for grids with K gaps'
             if support.has_split_coordinate_lines:
-               pillar_count = (support.nj + 1) * (support.ni + 1) + support.split_pillar_count
+               pillar_count = (support.nj + 1) * (support.ni + 1) + support.split_pillars_count
                shape_list = [support.nk + 1, pillar_count]
             else:
                shape_list = [support.nk + 1, support.nj + 1, support.ni + 1]

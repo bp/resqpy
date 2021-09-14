@@ -222,6 +222,7 @@ def test_points_properties(tmp_path):
 
    extent_kji = (2, 3, 4)
    ensemble_size = 5
+   faulted_ensemble_size = 2
    time_series_size = 6
 
    # create a geological time series
@@ -232,7 +233,7 @@ def test_points_properties(tmp_path):
    assert ts.timeframe == 'geologic'
 
    # create a simple grid without an explicit geometry and ensure it has a property collection initialised
-   grid = grr.RegularGrid(model, extent_kji = extent_kji, origin = (0.0, 0.0, 1000.0))
+   grid = grr.RegularGrid(model, extent_kji = extent_kji, origin = (0.0, 0.0, 1000.0), title = 'unfaulted grid')
    grid.create_xml()
    if grid.property_collection is None:
       grid.property_collection = rqp.PropertyCollection(support = grid)
@@ -292,9 +293,37 @@ def test_points_properties(tmp_path):
    # store the xml
    model.store_epc()
 
+   # create a second grid being a copy of the first grid but with a fault
+   fault_pillar_dict = {'the fault': [(2, 0), (2, 1), (2, 2), (1, 2), (1, 3), (1, 4)]}
+   rqdm.add_faults(epc, source_grid = grid, full_pillar_list_dict = fault_pillar_dict, new_grid_title = 'faulted grid')
+
+   # re-open the model and build a dynamic points property for the faulted grid
+   model = rq.Model(epc)
+   f_grid = model.grid(title = 'faulted grid')
+   assert f_grid is not None
+   pc = f_grid.property_collection
+   for r in range(faulted_ensemble_size):
+      nodes = f_grid.points_ref().copy()
+      for time_index in range(time_series_size):
+         pc.add_cached_array_to_imported_list(nodes,
+                                              'faulted dynamic nodes',
+                                              'faulted points',
+                                              uom = 'm',
+                                              property_kind = 'length',
+                                              realization = r,
+                                              time_index = time_index,
+                                              indexable_element = 'nodes',
+                                              points = True)
+         nodes[..., 2] += 101.0 * (r + 1)
+   pc.write_hdf5_for_imported_list()
+   pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
+
+   # store the xml again
+   model.store_epc()
+
    # re-open the model and access the grid properties
    model = rq.Model(epc)
-   grid = model.grid()
+   grid = model.grid(title = 'unfaulted grid')
    pc = grid.property_collection
 
    # load a static points property for a single realisation
@@ -355,3 +384,14 @@ def test_points_properties(tmp_path):
       assert dynamic_nodes.shape[-1] == 3
       mean_depth = np.nanmean(dynamic_nodes[..., 2])
       assert mean_depth > 1000.0
+
+   # check the faulted grid properties
+   f_grid = model.grid(title = 'faulted grid')
+   assert f_grid is not None
+
+   # select the dynamic points properties related to the geological time series and indexable by nodes
+   fnc = rqp.selective_version_of_collection(f_grid.property_collection,
+                                             indexable = 'nodes',
+                                             points = True,
+                                             time_series_uuid = ts_uuid)
+   assert fnc.number_of_parts() == faulted_ensemble_size * time_series_size

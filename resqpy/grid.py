@@ -71,6 +71,14 @@ class Grid(BaseResqpy):
 
    resqml_type = 'IjkGridRepresentation'
 
+   @property
+   def nk_plus_k_gaps(self):
+      if self.nk is None:
+         return None
+      if self.k_gaps is None:
+         return self.nk
+      return self.nk + self.k_gaps
+
    def __init__(self,
                 parent_model,
                 uuid = None,
@@ -116,7 +124,6 @@ class Grid(BaseResqpy):
       self.geometry_root = None  #: xml node at root of geometry sub-tree
       self.extent_kji = None  #: size of grid: (nk, nj, ni)
       self.ni = self.nj = self.nk = None  #: duplicated extent information as individual integers
-      self.nk_plus_k_gaps = None  #: int: nk + k_gaps
       self.crs_uuid = None  #: uuid of the coordinate reference system used by the grid's geometry
       self.crs_root = None  #: xml root node for the crs used by the grid's geometry
       self.points_cached = None  #: numpy array of raw points data; loaded on demand
@@ -166,7 +173,6 @@ class Grid(BaseResqpy):
       self.nk = self.extent_kji[0]  # for convenience available as individual attribs as well as np triplet
       self.nj = self.extent_kji[1]
       self.ni = self.extent_kji[2]
-      self.nk_plus_k_gaps = self.nk  # temporarily, set properly by self.extract_k_gaps()
       self.geometry_root = rqet.find_tag(grid_root, 'Geometry')
       if self.geometry_root is None:
          self.geometry_defined_for_all_pillars_cached = True
@@ -483,11 +489,9 @@ class Grid(BaseResqpy):
       """
 
       if self.k_gaps is not None:
-         self.nk_plus_k_gaps = self.nk + self.k_gaps
          return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
       self.k_gaps = rqet.find_nested_tags_int(self.root, ['KGaps', 'Count'])
       if self.k_gaps:
-         self.nk_plus_k_gaps = self.nk + self.k_gaps
          k_gap_after_root = rqet.find_nested_tags(self.root, ['KGaps', 'GapAfterLayer'])
          assert k_gap_after_root is not None
          bool_array_type = rqet.node_type(k_gap_after_root)
@@ -504,7 +508,6 @@ class Grid(BaseResqpy):
          assert self.k_gap_after_array.ndim == 1 and self.k_gap_after_array.size == self.nk - 1
          self._set_k_raw_index_array()
       else:
-         self.nk_plus_k_gaps = self.nk
          self.k_gap_after_array = None
          self.k_raw_index_array = np.arange(self.nk, dtype = int)
       return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
@@ -5231,7 +5234,7 @@ class RegularGrid(Grid):
       """
 
       if uuid is None:
-         super().__init__(parent_model)
+         super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
          self.grid_representation = 'IjkBlockGrid'  # this is not RESQML and might cause issues elsewhere; revert to IjkGrid if needed
          self.extent_kji = np.array(extent_kji).copy()
          self.nk, self.nj, self.ni = self.extent_kji

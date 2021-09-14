@@ -316,7 +316,6 @@ def test_s_bend_fn(tmp_path, epc = None):
                                  known_to_be_straight = True)
 
    # convert second layer to a K gap
-   k_gap_grid.nk_plus_k_gaps = k_gap_grid.nk
    k_gap_grid.nk -= 1
    k_gap_grid.extent_kji[0] = k_gap_grid.nk
    k_gap_grid.k_gaps = 1
