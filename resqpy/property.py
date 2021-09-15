@@ -486,7 +486,9 @@ class PropertyCollection():
             property_kind = rqet.find_tag_text(lpk_node, 'Title')
             property_kind_uuid = rqet.find_tag_text(lpk_node, 'UUID')
       assert property_kind is not None and len(property_kind) > 0
-      if p_kind_from_keyword and p_kind_from_keyword != property_kind:
+      if (p_kind_from_keyword and p_kind_from_keyword != property_kind and
+          (p_kind_from_keyword not in ['cell length', 'length', 'thickness'] or
+           property_kind not in ['cell length', 'length', 'thickness'])):
          log.warning(
             f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
       facet_type = None
