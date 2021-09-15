@@ -5287,12 +5287,12 @@ class RegularGrid(Grid):
             dzk_part = self.property_collection.singleton(property_kind = 'cell length',
                                                           facet_type = 'direction',
                                                           facet = 'K')
-            assert dxi_part is not None and dyj_part is not None and dzk_part is not None
-            dxi = float(self.property_collection.constant_value_for_part(dxi_part))
-            dyj = float(self.property_collection.constant_value_for_part(dyj_part))
-            dzk = float(self.property_collection.constant_value_for_part(dzk_part))
-            assert dxi is not None and dyj is not None and dzk is not None
-            dxyz = (dxi, dyj, dzk)
+            if dxi_part is not None and dyj_part is not None and dzk_part is not None:
+               dxi = float(self.property_collection.constant_value_for_part(dxi_part))
+               dyj = float(self.property_collection.constant_value_for_part(dyj_part))
+               dzk = float(self.property_collection.constant_value_for_part(dzk_part))
+               assert dxi is not None and dyj is not None and dzk is not None
+               dxyz = (dxi, dyj, dzk)
          if crs_uuid is None:
             self.crs_uuid
 
