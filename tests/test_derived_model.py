@@ -9,6 +9,7 @@ import resqpy.property as rqp
 import resqpy.well as rqw
 import resqpy.derived_model as rqdm
 import resqpy.olio.uuid as bu
+import resqpy.olio.box_utilities as bx
 
 
 def test_add_single_cell_grid(tmp_path):
@@ -205,12 +206,39 @@ def test_extract_box_for_well(tmp_path):
    grid_1, box_1 = rqdm.extract_box_for_well(epc_file = epc,
                                              source_grid = grid,
                                              trajectory_uuid = traj_1_uuid,
-                                             radius = 70.0,
+                                             radius = 120.0,
+                                             active_cells_shape = 'tube',
                                              new_grid_title = 'grid 1')
+
+   # check basics of resulting grid
+   assert grid_1 is not None
+   assert box_1 is not None
+   assert tuple(grid_1.extent_kji) == tuple(bx.extent_of_box(box_1))
+   expected_box = np.array([(0, 0, 1), (2, 3, 5)], dtype = int)
+   assert np.all(box_1 == expected_box)
+   #   expected_inactive_1 = np.array(
+   #      [[[1, 0, 1, 1, 1], [0, 0, 0, 1, 1], [1, 0, 1, 1, 1], [1, 1, 1, 1, 1]],
+   #       [[1, 0, 0, 1, 1], [0, 0, 0, 0, 1], [1, 0, 0, 0, 0], [1, 1, 0, 0, 1]],
+   #       [[1, 1, 1, 1, 1], [1, 1, 1, 0, 1], [1, 1, 0, 0, 0], [1, 1, 1, 0, 1]]], dtype = bool)   expected_inactive_1 = np.array(
+   expected_inactive_1 = np.array([[[1, 0, 1, 1, 1], [0, 0, 0, 0, 1], [1, 0, 0, 0, 1], [1, 1, 0, 0, 1]],
+                                   [[1, 0, 0, 1, 1], [0, 0, 0, 0, 1], [1, 0, 0, 0, 0], [1, 1, 0, 0, 1]],
+                                   [[1, 0, 0, 1, 1], [1, 0, 0, 0, 1], [1, 0, 0, 0, 0], [1, 1, 1, 0, 1]]],
+                                  dtype = bool)
+   assert np.all(grid_1.inactive == expected_inactive_1)
 
    # extract box for blocked well made from splined trajectory
    grid_2, box_2 = rqdm.extract_box_for_well(epc_file = epc,
                                              source_grid = grid,
                                              blocked_well_uuid = bw_uuid,
-                                             radius = 70.0,
+                                             radius = 120.0,
+                                             active_cells_shape = 'prism',
                                              new_grid_title = 'grid 2')
+   assert grid_2 is not None
+   assert box_2 is not None
+   assert tuple(grid_2.extent_kji) == tuple(bx.extent_of_box(box_2))
+   assert np.all(box_2 == expected_box)
+   # active cells should be superset of those for linear trajectory tube box
+   assert np.count_nonzero(grid_2.inactive) <= np.count_nonzero(grid_1.inactive)
+   assert np.all(np.logical_not(grid_2.inactive[np.logical_not(expected_inactive_1)]))
+   # check prism shape to inactive cells
+   assert np.all(grid_2.inactive == grid_2.inactive[0])
