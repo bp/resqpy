@@ -978,6 +978,7 @@ class Trajectory(BaseResqpy):
       """Loads the trajectory object based on the centre points of a list of cells."""
 
       assert grid is not None, 'grid argument missing for trajectory initislisation from cell list'
+      cell_kji0_list = np.array(cell_kji0_list, dtype = int)
       assert cell_kji0_list.ndim == 2 and cell_kji0_list.shape[1] == 3
       assert spline_mode in ['none', 'linear', 'square', 'cube']
 

@@ -6,6 +6,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.property as rqp
+import resqpy.well as rqw
 import resqpy.derived_model as rqdm
 import resqpy.olio.uuid as bu
 
@@ -151,3 +152,65 @@ def test_single_layer_grid(tmp_path):
    assert simplified.points_cached.shape == (2, 4, 3, 3)
    assert_array_almost_equal(simplified.points_cached[0, ..., 2], np.full((4, 3), 3000.0))
    assert_array_almost_equal(simplified.points_cached[1, ..., 2], np.full((4, 3), 3100.0))
+
+
+def test_extract_box_for_well(tmp_path):
+
+   epc = os.path.join(tmp_path, 'tube.epc')
+
+   model = rq.new_model(epc)
+
+   # create a basic block grid with geometry
+   grid = grr.RegularGrid(model,
+                          extent_kji = (3, 5, 7),
+                          origin = (0.0, 0.0, 1000.0),
+                          dxyz = (100.0, 100.0, 20.0),
+                          title = 'main grid',
+                          set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True)
+   grid_uuid = grid.uuid
+
+   # create a couple of well trajectories
+   cells_visited = [(0, 1, 2), (1, 1, 2), (1, 1, 3), (1, 2, 3), (1, 2, 4), (2, 2, 4)]
+   traj_1 = rqw.Trajectory(model,
+                           grid = grid,
+                           cell_kji0_list = cells_visited,
+                           length_uom = 'm',
+                           spline_mode = 'linear',
+                           well_name = 'well 1')
+   traj_2 = rqw.Trajectory(model,
+                           grid = grid,
+                           cell_kji0_list = cells_visited,
+                           length_uom = 'm',
+                           spline_mode = 'cube',
+                           well_name = 'well 2')
+   for traj in (traj_1, traj_2):
+      traj.write_hdf5()
+      traj.create_xml()
+   traj_1_uuid = traj_1.uuid
+   traj_2_uuid = traj_2.uuid
+
+   # create a blocked well for one of the trajectories
+   assert traj_2.root is not None
+   bw = rqw.BlockedWell(model, grid = grid, trajectory = traj_2)
+   bw.write_hdf5()
+   bw.create_xml()
+   bw_uuid = bw.uuid
+
+   # store source model
+   model.store_epc()
+
+   # extract box for linear trajectory
+   grid_1, box_1 = rqdm.extract_box_for_well(epc_file = epc,
+                                             source_grid = grid,
+                                             trajectory_uuid = traj_1_uuid,
+                                             radius = 70.0,
+                                             new_grid_title = 'grid 1')
+
+   # extract box for blocked well made from splined trajectory
+   grid_2, box_2 = rqdm.extract_box_for_well(epc_file = epc,
+                                             source_grid = grid,
+                                             blocked_well_uuid = bw_uuid,
+                                             radius = 70.0,
+                                             new_grid_title = 'grid 2')
