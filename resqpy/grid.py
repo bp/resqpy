@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '19th August 2021'
+version = '14th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -5425,7 +5425,7 @@ class RegularGrid(Grid):
 
       return half_t
 
-   def centre_point(self, cell_kji0 = None):
+   def centre_point(self, cell_kji0 = None, cache_centre_array = False):
       """Returns centre point of a cell or array of centre points of all cells.
 
       arguments:
@@ -5442,22 +5442,30 @@ class RegularGrid(Grid):
          resulting coordinates are in the same (local) crs as the grid points
       """
 
+      if cell_kji0 is None:
+         cache_centre_array = True
+
+      if cache_centre_array and (not hasattr(self, 'array_centre_point') or self.array_centre_point is None):
+         centres = np.zeros((self.nk, self.nj, self.ni, 3))
+         # todo: replace for loops with linspace
+         for k in range(self.nk - 1):
+            centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
+         for j in range(self.nj - 1):
+            centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
+         for i in range(self.ni - 1):
+            centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
+         centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
+         self.array_centre_point = centres
+
       if cell_kji0 is not None:
+         if hasattr(self, 'array_centre_point') and self.array_centre_point is not None:
+            return self.array_centre_point[tuple(cell_kji0)]
          float_kji0 = np.array(cell_kji0, dtype = float) + 0.5
          centre = self.block_origin + np.sum(
             self.block_dxyz_dkji * np.expand_dims(float_kji0, axis = -1).repeat(3, axis = -1), axis = 0)
          return centre
 
-      centres = np.zeros((self.nk, self.nj, self.ni, 3))
-      # todo: replace for loops with linspace
-      for k in range(self.nk - 1):
-         centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
-      for j in range(self.nj - 1):
-         centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
-      for i in range(self.ni - 1):
-         centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
-      centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
-      return centres
+      return self.array_centre_point
 
    def volume(self, cell_kji0 = None):
       """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
@@ -5598,12 +5606,12 @@ class RegularGrid(Grid):
 def establish_zone_property_kind(model):
    """Returns zone local property kind object, creating the xml and adding as part if not found in model."""
 
-   zone_pk_root = model.root(obj_type = 'LocalPropertyKind', title = 'zone')
-   if zone_pk_root is None:
+   zone_pk_uuid = model.uuid(obj_type = 'LocalPropertyKind', title = 'zone')
+   if zone_pk_uuid is None:
       zone_pk = rprop.PropertyKind(model, title = 'zone', parent_property_kind = 'discrete')
       zone_pk.create_xml()
    else:
-      zone_pk = rprop.PropertyKind(model, root_node = zone_pk_root)
+      zone_pk = rprop.PropertyKind(model, uuid = zone_pk_uuid)
    return zone_pk
 
 

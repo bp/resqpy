@@ -211,6 +211,7 @@ def add_zone_by_layer_property(epc_file,
       property_kind = 'zone'
       zone_pk = grr.establish_zone_property_kind(model)
       local_property_kind_uuid = zone_pk.uuid
+      model.store_epc(only_if_modified = True)
    else:
       property_kind = 'discrete'
       local_property_kind_uuid = None
@@ -630,7 +631,9 @@ def zonal_grid(epc_file,
       source_grid = model.grid()  # requires there to be exactly one grid in model (or one named ROOT)
    else:
       model = source_grid.model
-   assert source_grid.grid_representation == 'IjkGrid'
+   assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
+   if source_grid.grid_representation == 'IjkBlockGrid':
+      source_grid.make_regular_points_cached()
    assert model is not None
    single_layer_mode = (not zone_title and not zone_uuid)
 
@@ -1230,10 +1233,13 @@ def extract_box(epc_file = None,
       source_grid = model.grid()  # requires there to be exactly one grid in model (or one named 'ROOT')
    else:
       model = source_grid.model
-   assert source_grid.grid_representation == 'IjkGrid'
+   assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
    assert model is not None
    assert box is not None and box.shape == (2, 3)
    assert np.all(box[1, :] >= box[0, :]) and np.all(box[0, :] >= 0) and np.all(box[1, :] < source_grid.extent_kji)
+
+   if source_grid.grid_representation == 'IjkBlockGrid':
+      source_grid.make_regular_points_cached()
 
    box_str = bx.string_iijjkk1_for_box_kji0(box)
 
@@ -1526,13 +1532,16 @@ def extract_box_for_well(epc_file = None,
       source_grid = model.grid()  # requires there to be exactly one grid in model (or one named 'ROOT')
    else:
       model = source_grid.model
-   assert source_grid.grid_representation == 'IjkGrid'
+   assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
    assert model is not None
    if trajectory_epc is None:
       traj_model = model
    else:
       traj_model = rq.Model(trajectory_epc)
    assert traj_model is not None
+
+   if source_grid.grid_representation == 'IjkBlockGrid':
+      source_grid.make_regular_points_cached()
 
    if min_k0 is None:
       min_k0 = 0
@@ -1561,7 +1570,7 @@ def extract_box_for_well(epc_file = None,
       # prepare a trajectory object
       trajectory_root = traj_model.root(obj_type = 'WellboreTrajectoryRepresentation', uuid = trajectory_uuid)
       assert trajectory_root is not None, 'trajectory object not found for uuid: ' + str(trajectory_uuid)
-      trajectory = rqw.Trajectory(traj_model, trajectory_root = trajectory_root)
+      trajectory = rqw.Trajectory(traj_model, uuid = trajectory_uuid)
       well_name = rqw.well_name(trajectory)
       traj_crs = rqcrs.Crs(trajectory.model, uuid = trajectory.crs_uuid)
       grid_crs = rqcrs.Crs(source_grid.model, uuid = source_grid.crs_uuid)
@@ -1579,7 +1588,7 @@ def extract_box_for_well(epc_file = None,
    elif blocked_well_uuid is not None:
       bw_root = traj_model.root(obj_type = 'BlockedWellboreRepresentation', uuid = blocked_well_uuid)
       assert bw_root is not None, 'blocked well object not found for uuid: ' + str(blocked_well_uuid)
-      blocked_well = rqw.BlockedWell(traj_model, blocked_well_root = bw_root)
+      blocked_well = rqw.BlockedWell(traj_model, uuid = blocked_well_uuid)
       bw_box = blocked_well.box(grid_uuid = source_grid.uuid)
       assert bw_box is not None, 'blocked well does not include cells in source grid'
       assert bw_box[0,
