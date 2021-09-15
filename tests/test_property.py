@@ -2,6 +2,7 @@ import os
 
 import pytest
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 
 import resqpy.model as rq
 import resqpy.grid as grr
@@ -381,6 +382,14 @@ def test_points_properties(tmp_path):
                                             time_series_uuid = ts_uuid)
    assert nc.number_of_parts() == ensemble_size * time_series_size
 
+   # check that the cached points for the grid can be populated from a points property
+   grid.make_regular_points_cached()
+   r = ensemble_size // 2
+   ti = time_series_size // 2
+   a = nc.single_array_ref(realization = r, time_index = ti)
+   grid.set_cached_points_from_property(property_collection = nc, realization = r, time_index = ti)
+   assert_array_almost_equal(grid.points_cached, nc.single_array_ref(realization = r, time_index = ti))
+
    # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
    for ti in range(time_series_size):
       tnc = rqp.selective_version_of_collection(nc, time_index = ti)
@@ -406,3 +415,9 @@ def test_points_properties(tmp_path):
                                              points = True,
                                              time_series_uuid = ts_uuid)
    assert fnc.number_of_parts() == faulted_ensemble_size * time_series_size
+
+   # check that the cached points for the faulted grid can be populated from a points property
+   r = faulted_ensemble_size // 2
+   ti = time_series_size - 1
+   f_grid.set_cached_points_from_property(property_collection = fnc, realization = r, time_index = ti)
+   assert_array_almost_equal(f_grid.points_cached, fnc.single_array_ref(realization = r, time_index = ti))

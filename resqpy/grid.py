@@ -1533,6 +1533,65 @@ class Grid(BaseResqpy):
                                         array_attribute = 'cols_for_split_pillars_cl',
                                         dtype = 'int')
 
+   def set_cached_points_from_property(self,
+                                       points_property_uuid = None,
+                                       property_collection = None,
+                                       realization = None,
+                                       time_index = None):
+      """Modifies the cached points (geometry), setting the values from a points property.
+
+      arguments:
+         points_property_uuid (uuid, optional): the uuid of the points property; if present the
+            remaining arguments are ignored
+         property_collection (PropertyCollection, optional): defaults to property collection
+            for the grid; should only contain one set of points properties
+         realization (int, optional): if present, the property in the collection with this
+            realization number is used
+         time_index (int, optional): if present, the property in the collection with this
+            time index is used
+
+      notes:
+         the points property must have indexable element 'nodes' and be the same shape as the
+         official points array for the grid;
+         the uom of the points property must be a length uom and match that used by the grid's crs
+         various cached data are invalidated by this method
+      """
+
+      if points_property_uuid is None:
+         if property_collection is None:
+            property_collection = self.extract_property_collection()
+         part = property_collection.singleton(points = True,
+                                              indexable = 'nodes',
+                                              realization = realization,
+                                              time_index = time_index)
+         assert part is not None, 'failed to identify points part to use for grid geometry'
+         points_property_uuid = property_collection.uuid_for_part(part)
+
+      assert points_property_uuid is not None
+
+      self.cache_all_geometry_arrays()  # the split pillar information must not vary
+
+      # check for compatibility and overwrite cached points for grid
+      points = rprop.Property(self.model, uuid = points_property_uuid)
+      assert points is not None and points.is_points() and points.indexable_element() == 'nodes'
+      assert points.uom() == self.xy_units() and self.z_units() == self.xy_units()
+      points_array = points.array_ref(masked = False)
+      assert points_array is not None
+      assert points_array.shape == self.points_cached.shape
+      self.points_cached = points_array
+
+      # invalidate anything cached that is derived from geometry
+      self.geometry_defined_for_all_pillars_cached = None
+      self.geometry_defined_for_all_cells_cached = None
+      for attr in ('array_unsplit_points', 'array_corner_points', 'array_centre_point', 'array_thickness',
+                   'array_volume', 'array_half_cell_t', 'array_k_transmissibility', 'array_j_transmissibility',
+                   'array_i_transmissibility', 'fgcs', 'array_fgcs_transmissibility', 'pgcs',
+                   'array_pgcs_transmissibility', 'kgcs', 'array_kgcs_transmissibility'):
+         if hasattr(self, attr):
+            delattr(self, attr)
+
+      # TODO: set inactive from paired property
+
    def column_is_inactive(self, col_ji0):
       """Returns True if all the cells in the specified column are inactive.
 
