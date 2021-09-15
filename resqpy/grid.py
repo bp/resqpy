@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '14th September 2021'
+version = '15th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
