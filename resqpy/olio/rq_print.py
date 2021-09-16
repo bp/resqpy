@@ -284,9 +284,11 @@ def print_TimeSeries(model, node, detail_level = 0):
    print('number of timestamps: ' + str(rqet.count_tag(node, 'Time')))
    if not detail_level:
       return
-   time_series = rts.TimeSeries(model, uuid = node.attrib['uuid'])
+   time_series = rts.any_time_series(model, uuid = node.attrib['uuid'])
    for index in range(time_series.number_of_timestamps()):
-      if index:
+      if time_series.timeframe == 'geologic':
+         print(f'{index:>5d}  {time_series.timestamp(index)}')
+      elif index:
          print('{0:>5d}  {1} {2:>5d}'.format(index, rts.simplified_timestamp(time_series.timestamp(index)),
                                              time_series.step_days(index)))
       else:
@@ -405,7 +407,7 @@ def print_Property(model, node, detail_level = 0):
             print('   time series part not found!')
             log.warning('missing time series part: ' + str(time_series_part))
          else:
-            time_series = rts.TimeSeries(model, uuid = time_series_uuid)
+            time_series = rts.any_time_series(model, uuid = time_series_uuid)
             print('   number of timestamps in series: ' + str(time_series.number_of_timestamps()))
          if time_index is not None and time_series is not None:
             print('timestamp for this part: ' + str(rts.simplified_timestamp(time_series.timestamp(time_index))))

@@ -283,6 +283,7 @@ def test_points_properties(tmp_path):
    pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
 
    # create a dynamic points property (indexable nodes) related to the geological time series
+   # also create a parallel set of active cell properties
    for r in range(ensemble_size):
       nodes = grid.points_ref().copy()
       for time_index in range(time_series_size):
@@ -296,6 +297,19 @@ def test_points_properties(tmp_path):
                                               indexable_element = 'nodes',
                                               points = True)
          nodes[..., 2] += 100.0 * (r + 1)
+         active_array = np.ones(extent_kji, dtype = bool)
+         # de-activate some cells
+         if extent_kji[0] > 1 and time_index < time_series_size // 2:
+            active_array[extent_kji[0] // 2:] = False
+         if extent_kji[2] > 1:
+            active_array[:, :, r % extent_kji[2]] = False
+         rqp.write_hdf5_and_create_xml_for_active_property(model,
+                                                           active_array,
+                                                           grid.uuid,
+                                                           title = 'ACTIVE',
+                                                           realization = r,
+                                                           time_series_uuid = ts_uuid,
+                                                           time_index = time_index)
    pc.write_hdf5_for_imported_list()
    pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
 
@@ -390,7 +404,8 @@ def test_points_properties(tmp_path):
    grid.set_cached_points_from_property(property_collection = nc,
                                         realization = r,
                                         time_index = ti,
-                                        set_inactive = False)
+                                        set_inactive = True,
+                                        active_collection = grid.property_collection)
    assert_array_almost_equal(grid.points_cached, nc.single_array_ref(realization = r, time_index = ti))
 
    # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index

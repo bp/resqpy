@@ -1618,11 +1618,11 @@ class Grid(BaseResqpy):
             if active_collection is None:
                active_collection = property_collection
                assert active_collection is not None
-            active_part = property_collection.singleton(property_kind = 'active',
-                                                        indexable = 'cells',
-                                                        continuous = False,
-                                                        realization = realization,
-                                                        time_index = time_index)
+            active_part = active_collection.singleton(property_kind = 'active',
+                                                      indexable = 'cells',
+                                                      continuous = False,
+                                                      realization = realization,
+                                                      time_index = time_index)
             assert active_part is not None, 'failed to identify active property to use for grid inactive mask'
             active_property_uuid = active_collection.uuid_for_part(active_part)
          active = rprop.Property(self.model, uuid = active_property_uuid)
@@ -5257,8 +5257,9 @@ class Grid(BaseResqpy):
                                                          self.model.root_for_uuid(self.parent_grid_uuid),
                                                          'sourceObject')
 
-      if write_active and self.active_property_uuid is not None and self.model.part(
-            uuid = self.active_property_uuid) is None:
+      if (write_active and self.active_property_uuid is not None and
+          self.model.part(uuid = self.active_property_uuid) is None):
+         # TODO: replace following with call to rprop.write_hdf5_and_create_xml_for_active_property()
          active_collection = rprop.PropertyCollection()
          active_collection.set_support(support = self)
          active_collection.create_xml(None,
