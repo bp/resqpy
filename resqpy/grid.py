@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '15th September 2021'
+version = '16th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -1537,24 +1537,45 @@ class Grid(BaseResqpy):
                                        points_property_uuid = None,
                                        property_collection = None,
                                        realization = None,
-                                       time_index = None):
+                                       time_index = None,
+                                       set_inactive = True,
+                                       active_property_uuid = None,
+                                       active_collection = None):
       """Modifies the cached points (geometry), setting the values from a points property.
 
       arguments:
          points_property_uuid (uuid, optional): the uuid of the points property; if present the
-            remaining arguments are ignored
+            remaining arguments are ignored except for inactive & active arguments
          property_collection (PropertyCollection, optional): defaults to property collection
-            for the grid; should only contain one set of points properties
+            for the grid; should only contain one set of points properties (but may also contain
+            other non-points properties)
          realization (int, optional): if present, the property in the collection with this
             realization number is used
          time_index (int, optional): if present, the property in the collection with this
             time index is used
+         set_inactive (bool, default True): if True, the grid's inactive mask will be set
+            based on an active cell property
+         active_property_uuid (uuid, optional): if present, the uuid of an active cell property
+            to base the inactive mask on; ignored if set_inactive is False
+         active_collection (uuid, optional): default's to property_collection if present, or
+            the grid's property collection otherwise; only used if set_inactive is True and
+            active_property_uuid is None
 
       notes:
          the points property must have indexable element 'nodes' and be the same shape as the
          official points array for the grid;
-         the uom of the points property must be a length uom and match that used by the grid's crs
-         various cached data are invalidated by this method
+         note that the shape of the points array is quite different between grids with split
+         pillars and those without;
+         the uom of the points property must be a length uom and match that used by the grid's crs;
+         the inactive mask of the grid will only be updated if the set_inactive argument is True;
+         if points_property_uuid has been provided, and set_inactive is True, the active property
+         must be identified with the active_property_uuid argument;
+         if set_inactive is True and active_property_uuid is None and points_property_uuid is None and
+         realization and/or time_index is in use, the active property collection must contain one
+         series of active properties with the same variants (realizations and time indices) as the
+         points property series;
+         the active cell properties should be discrete and have a local property kind titled 'active';
+         various cached data are invalidated and cleared by this method
       """
 
       if points_property_uuid is None:
@@ -1564,8 +1585,10 @@ class Grid(BaseResqpy):
                                               indexable = 'nodes',
                                               realization = realization,
                                               time_index = time_index)
-         assert part is not None, 'failed to identify points part to use for grid geometry'
+         assert part is not None, 'failed to identify points property to use for grid geometry'
          points_property_uuid = property_collection.uuid_for_part(part)
+      elif set_inactive:
+         assert active_property_uuid is not None, 'active property uuid not provided when setting points from property'
 
       assert points_property_uuid is not None
 
@@ -1590,7 +1613,25 @@ class Grid(BaseResqpy):
          if hasattr(self, attr):
             delattr(self, attr)
 
-      # TODO: set inactive from paired property
+      if set_inactive:
+         if active_property_uuid is None:
+            if active_collection is None:
+               active_collection = property_collection
+               assert active_collection is not None
+            active_part = property_collection.singleton(property_kind = 'active',
+                                                        indexable = 'cells',
+                                                        continuous = False,
+                                                        realization = realization,
+                                                        time_index = time_index)
+            assert active_part is not None, 'failed to identify active property to use for grid inactive mask'
+            active_property_uuid = active_collection.uuid_for_part(active_part)
+         active = rprop.Property(self.model, uuid = active_property_uuid)
+         assert active is not None
+         active_array = active.array_ref()
+         assert active_array.shape == tuple(self.extent_kji)
+         self.inactive = np.logical_not(active_array)
+         self.all_inactive = np.all(self.inactive)
+         self.active_property_uuid = active_property_uuid
 
    def column_is_inactive(self, col_ji0):
       """Returns True if all the cells in the specified column are inactive.

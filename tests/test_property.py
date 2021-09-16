@@ -387,7 +387,10 @@ def test_points_properties(tmp_path):
    r = ensemble_size // 2
    ti = time_series_size // 2
    a = nc.single_array_ref(realization = r, time_index = ti)
-   grid.set_cached_points_from_property(property_collection = nc, realization = r, time_index = ti)
+   grid.set_cached_points_from_property(property_collection = nc,
+                                        realization = r,
+                                        time_index = ti,
+                                        set_inactive = False)
    assert_array_almost_equal(grid.points_cached, nc.single_array_ref(realization = r, time_index = ti))
 
    # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
@@ -419,5 +422,8 @@ def test_points_properties(tmp_path):
    # check that the cached points for the faulted grid can be populated from a points property
    r = faulted_ensemble_size // 2
    ti = time_series_size - 1
-   f_grid.set_cached_points_from_property(property_collection = fnc, realization = r, time_index = ti)
+   f_grid.set_cached_points_from_property(property_collection = fnc,
+                                          realization = r,
+                                          time_index = ti,
+                                          set_inactive = False)
    assert_array_almost_equal(f_grid.points_cached, fnc.single_array_ref(realization = r, time_index = ti))
