@@ -1,6 +1,6 @@
 """time_series.py: RESQML time series class."""
 
-version = '13th September 2021'
+version = '16th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -740,9 +740,9 @@ def geologic_time_str(years):
    assert isinstance(years, int)
    years = abs(years)  # positive and negative values are both interpreted as the same: years before present
    if years < 10000000 and years % 1000000:
-      stamp = f'{float(-years) / 1.0e6:.3f}Ma'
+      stamp = f'{float(-years) / 1.0e6:.3f} Ma'
    else:
-      stamp = f'{-years // 1000000}Ma'
+      stamp = f'{-years // 1000000} Ma'
    return stamp
 
 

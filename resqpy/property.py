@@ -5931,3 +5931,28 @@ def return_cell_indices(i, cell_indices):
       return np.nan
    else:
       return cell_indices[i]
+
+
+def write_hdf5_and_create_xml_for_active_property(model,
+                                                  active_property_array,
+                                                  support_uuid,
+                                                  title = 'ACTIVE',
+                                                  realization = None,
+                                                  time_series_uuid = None,
+                                                  time_index = None):
+   """Writes hdf5 data and creates xml for an active cell property; returns uuid."""
+
+   active = Property.from_array(parent_model = model,
+                                cached_array = active_property_array,
+                                source_info = None,
+                                keyword = title,
+                                support_uuid = support_uuid,
+                                property_kind = 'active',
+                                local_property_kind_uuid = None,
+                                indexable_element = 'cells',
+                                discrete = True,
+                                time_series_uuid = time_series_uuid,
+                                time_index = time_index,
+                                realization = realization,
+                                find_local_property_kind = True)
+   return active.uuid
