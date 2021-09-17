@@ -4573,8 +4573,9 @@ class Grid(BaseResqpy):
 
       if imported_properties is not None and imported_properties.imported_list is not None:
          for entry in imported_properties.imported_list:
+            tail = 'points_patch0' if entry[18] else 'values_patch0'
             if hasattr(imported_properties, entry[3]):  # otherwise constant array
-               h5_reg.register_dataset(entry[0], 'values_patch0', imported_properties.__dict__[entry[3]])
+               h5_reg.register_dataset(entry[0], tail, imported_properties.__dict__[entry[3]])
             if entry[10] == 'active':
                self.active_property_uuid = entry[0]
       h5_reg.write(file, mode = mode)

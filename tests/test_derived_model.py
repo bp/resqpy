@@ -242,3 +242,61 @@ def test_extract_box_for_well(tmp_path):
    assert np.all(np.logical_not(grid_2.inactive[np.logical_not(expected_inactive_1)]))
    # check prism shape to inactive cells
    assert np.all(grid_2.inactive == grid_2.inactive[0])
+
+
+def test_add_grid_points_property(tmp_path):
+
+   epc = os.path.join(tmp_path, 'bland.epc')
+   new_epc = os.path.join(tmp_path, 'pointy.epc')
+
+   model = rq.new_model(epc)
+
+   # create a basic block grid with geometry
+   extent_kji = (3, 5, 2)
+   grid = grr.RegularGrid(model,
+                          extent_kji = extent_kji,
+                          origin = (2000.0, 3000.0, 1000.0),
+                          dxyz = (10.0, 10.0, 20.0),
+                          title = 'the grid',
+                          set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+   grid_uuid = grid.uuid
+
+   # store grid
+   model.store_epc()
+
+   # create a points property array
+   diagonal = grid.axial_lengths_kji()
+   diagonals_extent = tuple(list(extent_kji) + [3])
+   diagonal_array = np.empty(diagonals_extent)
+   diagonal_array[:] = np.array(diagonal).reshape(1, 1, 1, 3)
+
+   # add to model using derived model function but save as new dataset
+   rqdm.add_one_grid_property_array(epc_file = epc,
+                                    a = diagonal_array,
+                                    property_kind = 'length',
+                                    grid_uuid = grid_uuid,
+                                    source_info = 'test',
+                                    title = 'diagonal vectors',
+                                    discrete = False,
+                                    uom = grid.xy_units(),
+                                    points = True,
+                                    extra_metadata = {'test': 'true'},
+                                    new_epc_file = new_epc)
+
+   # re-open the original model and check that the points property is not there
+   model = rq.Model(epc)
+   grid = model.grid()
+   pc = grid.property_collection
+   assert pc is not None
+   assert len(pc.selective_parts_list(points = True)) == 0
+
+   # re-open the new model and load the points property
+   model = rq.Model(new_epc)
+   grid = model.grid()
+   pc = grid.property_collection
+   assert pc is not None
+   assert len(pc.selective_parts_list(points = True)) == 1
+   diag = pc.single_array_ref(points = True)
+   assert_array_almost_equal(diag, diagonal_array)
