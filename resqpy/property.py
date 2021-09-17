@@ -930,6 +930,7 @@ class PropertyCollection():
          support_uuid = None,
          grid = None,  # maintained for backward compatibility
          continuous = None,
+         points = None,
          count = None,
          indexable = None,
          property_kind = None,
@@ -969,6 +970,7 @@ class PropertyCollection():
                                                         realization = realization,
                                                         support_uuid = support_uuid,
                                                         continuous = continuous,
+                                                        points = points,
                                                         count = count,
                                                         indexable = indexable,
                                                         property_kind = property_kind,

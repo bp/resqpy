@@ -253,6 +253,7 @@ def add_one_grid_property_array(epc_file,
                                 local_property_kind_uuid = None,
                                 count_per_element = 1,
                                 const_value = None,
+                                points = False,
                                 extra_metadata = {},
                                 new_epc_file = None):
    """Adds a grid property from a numpy array to an existing resqml dataset.
@@ -285,6 +286,7 @@ def add_one_grid_property_array(epc_file,
          must be the fastest cycling axis in the cached array, ie last index
       const_value (float or int, optional): if present, a constant array is added 'filled' with this value, in which
          case argument a should be None
+      points (bool, default False): if True, this is a points property with an extra dimension of extent 3
       extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
          property
       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
@@ -330,7 +332,8 @@ def add_one_grid_property_array(epc_file,
                                          realization = realization,
                                          indexable_element = indexable_element,
                                          count = count_per_element,
-                                         const_value = const_value)
+                                         const_value = const_value,
+                                         points = points)
 
    # write or re-write model
    model.h5_release()
@@ -378,6 +381,7 @@ def add_one_blocked_well_property(epc_file,
                                   realization = None,
                                   local_property_kind_uuid = None,
                                   count_per_element = 1,
+                                  points = False,
                                   extra_metadata = {},
                                   new_epc_file = None):
    """Adds a blocked well property from a numpy array to an existing resqml dataset.
@@ -406,6 +410,7 @@ def add_one_blocked_well_property(epc_file,
       local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
       count_per_element (int, default 1): the number of values per indexable element; if greater than one then this
          must be the fastest cycling axis in the cached array, ie last index; if greater than 1 then a must be a 2D array
+      points (bool, default False): if True, this is a points property with an extra dimension of extent 3
       extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
          property
       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
@@ -447,7 +452,8 @@ def add_one_blocked_well_property(epc_file,
                                           facet = facet,
                                           realization = realization,
                                           indexable_element = indexable_element,
-                                          count = count_per_element)
+                                          count = count_per_element,
+                                          points = points)
    bwpc.write_hdf5_for_imported_list()
    uuid_list = bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid,
                                                                         string_lookup_uuid = string_lookup_uuid,
@@ -3653,6 +3659,7 @@ def displacement_properties(new_grid, old_grid):
    # todo: create prop collection to hold z_displacement and horizontal_displacement; add them to imported list
    xy_units = rqet.find_tag(new_grid.crs_root, 'ProjectedUom').text.lower()
    z_units = rqet.find_tag(new_grid.crs_root, 'VerticalUom').text.lower()
+   # todo: could replace 3 displacement properties with a single points property
    displacement_collection.add_cached_array_to_imported_list(displacement_collection.x_array,
                                                              'easterly displacement from tilt',
                                                              'DX_DISPLACEMENT',
