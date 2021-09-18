@@ -10,7 +10,7 @@
 
 ## Introduction
 
-resqpy is a pure Python package which provides a programming interface (API) for
+**resqpy** is a pure Python package which provides a programming interface (API) for
 reading, writing, and modifying reservoir models in the RESQML format. It gives
 you the ability to work with reservoir models programmatically, without having
 to know the details of the RESQML standard.
@@ -18,7 +18,7 @@ to know the details of the RESQML standard.
 The package is written and maintained by bp, and is made available under the MIT
 license as a contribution to the open-source community.
 
-resqpy was created by Andy Beer. For enquires about resqpy, please contact
+**resqpy** was created by Andy Beer. For enquires about resqpy, please contact
 Nathan Lane (Nathan.Lane@bp.com)
 
 ### Documentation
