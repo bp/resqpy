@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '16th September 2021'
+version = '17th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -147,6 +147,8 @@ class Grid(BaseResqpy):
       self.grid_skin = None  #: outer skin of grid as a GridSkin object, computed and cached on demand
       self.stratigraphic_column_rank_uuid = None  #: optional reference for interpreting stratigraphic units
       self.stratigraphic_units = None  #: optional array of unit indices (one per layer or K gap)
+      self.time_index = None  #: optional time index for dynamic geometry
+      self.time_series_uuid = None  #: optional time series for dynamic geometry
 
       super().__init__(model = parent_model,
                        uuid = uuid,
@@ -189,6 +191,7 @@ class Grid(BaseResqpy):
          self.cell_geometry_is_defined()  # note: if there is no geometry at all, resqpy sets this True
          self.extract_pillar_shape()
          self.extract_k_direction_is_down()
+         self.extract_geometry_time_index()
       self.extract_k_gaps()
       if self.geometry_root is None:
          assert not self.k_gaps, 'K gaps present in grid without geometry'
@@ -431,6 +434,24 @@ class Grid(BaseResqpy):
          return None
       self.k_direction_is_down = (k_dir_node.text.lower() == 'down')
       return self.k_direction_is_down
+
+   def extract_geometry_time_index(self):
+      """Returns integer time index, or None, for the grid geometry, as stored in xml for dynamic geometries.
+
+      notes:
+         if the value is not None, it represents the time index as stored in the xml, or the time index as
+         updated when setting the node points from a points property
+      """
+      if self.time_index is not None and self.time_series_uuid is not None:
+         return self.time_index
+      self.time_index = None
+      self.time_series_uuid = None
+      ti_node = self.resolve_geometry_child('TimeIndex')
+      if ti_node is None:
+         return None
+      self.time_index = rqet.find_tag_int(ti_node, 'Index')
+      self.time_series_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(ti_node, ['TimeSeries', 'UUID']))
+      return self.time_index
 
    def set_k_direction_from_points(self):
       """Sets the K direction indicator based on z direction and mean z values for top and base.
@@ -837,10 +858,23 @@ class Grid(BaseResqpy):
       active_gpc.inherit_parts_selectively_from_other_collection(other = gpc,
                                                                  property_kind = 'active',
                                                                  continuous = False)
-      if active_gpc.number_of_parts() > 0:
-         if active_gpc.number_of_parts() > 1:
+      active_parts = active_gpc.parts()
+      if len(active_parts) > 1:
+         # try further filtering based on grid's time index data (or filtering out time based arrays)
+         self.extract_geometry_time_index()
+         if self.time_index is not None and self.time_series_uuid is not None:
+            active_gpc = rprop.selective_version_of_collection(active_gpc,
+                                                               time_index = self.time_index,
+                                                               time_series_uuid = self.time_series_uuid)
+         else:
+            active_parts = []
+            for part in active_gpc.parts():
+               if active_gpc.time_series_uuid_for_part(part) is None and active_gpc.time_index_for_part(part) is None:
+                  active_parts.append(part)
+      if len(active_parts) > 0:
+         if len(active_parts) > 1:
             log.warning('more than one property found with bespoke kind "active", using last encountered')
-         active_part = active_gpc.parts()[-1]
+         active_part = active_parts[-1]
          active_array = active_gpc.cached_part_array_ref(active_part, dtype = 'bool')
          self.inactive = np.logical_or(self.inactive, np.logical_not(active_array))
          self.active_property_uuid = active_gpc.uuid_for_part(active_part)
@@ -1538,6 +1572,7 @@ class Grid(BaseResqpy):
                                        property_collection = None,
                                        realization = None,
                                        time_index = None,
+                                       set_grid_time_index = True,
                                        set_inactive = True,
                                        active_property_uuid = None,
                                        active_collection = None):
@@ -1553,6 +1588,10 @@ class Grid(BaseResqpy):
             realization number is used
          time_index (int, optional): if present, the property in the collection with this
             time index is used
+         set_grid_time_index (bool, default True): if True, the grid's time index will be set
+            to the time_index argument and the grid's time series uuid will be set to that
+            referred to by the points property; if False, the grid's time index will not be
+            modified
          set_inactive (bool, default True): if True, the grid's inactive mask will be set
             based on an active cell property
          active_property_uuid (uuid, optional): if present, the uuid of an active cell property
@@ -1602,6 +1641,15 @@ class Grid(BaseResqpy):
       assert points_array is not None
       assert points_array.shape == self.points_cached.shape
       self.points_cached = points_array
+
+      # set grid's time index and series, if requested
+      if set_grid_time_index:
+         self.time_index = points.time_index()
+         ts_uuid = points.time_series_uuid()
+         if ts_uuid is not None and self.time_series_uuid is not None:
+            if not bu.matching_uuids(ts_uuid, self.time_series_uuid):
+               log.warning('change of time series uuid for dynamic grid geometry')
+         self.time_series_uuid = ts_uuid
 
       # invalidate anything cached that is derived from geometry
       self.geometry_defined_for_all_pillars_cached = None
@@ -5236,6 +5284,24 @@ class Grid(BaseResqpy):
                                                self.uuid,
                                                'ColumnsPerSplitCoordinateLine/cumulativeLength',
                                                root = cl_values)
+
+         if self.time_index is not None:
+
+            assert self.time_series_uuid is not None
+
+            ti_node = rqet.SubElement(geom, ns['resqml2'] + 'TimeIndex')
+            ti_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'TimeIndex')
+            ti_node.text = '\n'
+
+            index_node = rqet.SubElement(ti_node, ns['resqml2'] + 'Index')
+            index_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
+            index_node.text = str(self.time_index)
+
+            self.model.create_ref_node('TimeSeries',
+                                       self.model.title(uuid = self.time_series_uuid),
+                                       self.time_series_uuid,
+                                       content_type = 'obj_TimeSeries',
+                                       root = ti_node)
 
       if add_as_part:
          self.model.add_part('obj_IjkGridRepresentation', self.uuid, ijk)

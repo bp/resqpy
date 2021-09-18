@@ -11,6 +11,7 @@ import resqpy.time_series as rqts
 import resqpy.derived_model as rqdm
 import resqpy.weights_and_measures as bwam
 import resqpy.olio.vector_utilities as vec
+import resqpy.olio.uuid as bu
 
 # ---- Test PropertyCollection ---
 
@@ -321,6 +322,8 @@ def test_points_properties(tmp_path):
    rqdm.add_faults(epc, source_grid = grid, full_pillar_list_dict = fault_pillar_dict, new_grid_title = 'faulted grid')
 
    # re-open the model and build a dynamic points property for the faulted grid
+   # NB. this test implicitly has the oldest geometry as the 'official' grid geometry whereas
+   # the RESQML documentation states that the geometry stored for the grid should be 'current' (ie. youngest)
    model = rq.Model(epc)
    f_grid = model.grid(title = 'faulted grid')
    assert f_grid is not None
@@ -337,7 +340,7 @@ def test_points_properties(tmp_path):
                                               time_index = time_index,
                                               indexable_element = 'nodes',
                                               points = True)
-         nodes[..., 2] += 101.0 * (r + 1)
+         nodes[..., 2] += 101.0 * (r + 1)  # add more and more depth for each realisation
    pc.write_hdf5_for_imported_list()
    pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
 
@@ -348,6 +351,9 @@ def test_points_properties(tmp_path):
    model = rq.Model(epc)
    grid = model.grid(title = 'unfaulted grid')
    pc = grid.property_collection
+
+   # check that the grid as stored has all cells active
+   assert grid.inactive is None or np.count_nonzero(grid.inactive) == 0
 
    # load a static points property for a single realisation
    sample_stress_part = pc.singleton(realization = ensemble_size // 2,
@@ -407,6 +413,11 @@ def test_points_properties(tmp_path):
                                         set_inactive = True,
                                         active_collection = grid.property_collection)
    assert_array_almost_equal(grid.points_cached, nc.single_array_ref(realization = r, time_index = ti))
+   # check that grid's time index has been set
+   assert grid.time_index == ti
+   assert bu.matching_uuids(grid.time_series_uuid, ts_uuid)
+   # and that the inactive array now indicates some cells are inactive
+   assert grid.inactive is not None and np.count_nonzero(grid.inactive) > 0
 
    # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
    for ti in range(time_series_size):
@@ -427,6 +438,10 @@ def test_points_properties(tmp_path):
    f_grid.set_k_direction_from_points()
    assert not f_grid.k_direction_is_down
 
+   # compute and cache cell centre points
+   older_centres = f_grid.centre_point()
+   assert hasattr(f_grid, 'array_centre_point') and f_grid.array_centre_point is not None
+
    # select the dynamic points properties related to the geological time series and indexable by nodes
    fnc = rqp.selective_version_of_collection(f_grid.property_collection,
                                              indexable = 'nodes',
@@ -437,8 +452,24 @@ def test_points_properties(tmp_path):
    # check that the cached points for the faulted grid can be populated from a points property
    r = faulted_ensemble_size // 2
    ti = time_series_size - 1
-   f_grid.set_cached_points_from_property(property_collection = fnc,
-                                          realization = r,
-                                          time_index = ti,
+   p_uuid = fnc.uuid_for_part(fnc.singleton(realization = r, time_index = ti))
+   assert p_uuid is not None
+   f_grid.set_cached_points_from_property(points_property_uuid = p_uuid,
+                                          set_grid_time_index = True,
                                           set_inactive = False)
    assert_array_almost_equal(f_grid.points_cached, fnc.single_array_ref(realization = r, time_index = ti))
+
+   # check that grid's time index has been set
+   assert f_grid.time_index == ti
+   assert bu.matching_uuids(f_grid.time_series_uuid, ts_uuid)
+   # and that the centre point cache has been invalidated
+   assert not hasattr(f_grid, 'array_centre_point') or f_grid.array_centre_point is None
+
+   # re-compute centre points based on the dynamically loaded geometry
+   younger_centres = f_grid.centre_point()
+   assert hasattr(f_grid, 'array_centre_point') and f_grid.array_centre_point is not None
+
+   # check that later centres are vertically below the earlier centres
+   # (in this example, the depths of all cells are increasing with time)
+   assert_array_almost_equal(older_centres[..., :2], younger_centres[..., :2])  # xy
+   assert np.all(older_centres[..., 2] < younger_centres[..., 2])  # depths
