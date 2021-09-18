@@ -858,10 +858,23 @@ class Grid(BaseResqpy):
       active_gpc.inherit_parts_selectively_from_other_collection(other = gpc,
                                                                  property_kind = 'active',
                                                                  continuous = False)
-      if active_gpc.number_of_parts() > 0:
-         if active_gpc.number_of_parts() > 1:
+      active_parts = active_gpc.parts()
+      if len(active_parts) > 1:
+         # try further filtering based on grid's time index data (or filtering out time based arrays)
+         self.extract_geometry_time_index()
+         if self.time_index is not None and self.time_series_uuid is not None:
+            active_gpc = rprop.selective_version_of_collection(active_gpc,
+                                                               time_index = self.time_index,
+                                                               time_series_uuid = self.time_series_uuid)
+         else:
+            active_parts = []
+            for part in active_gpc.parts():
+               if active_gpc.time_series_uuid_for_part(part) is None and active_gpc.time_index_for_part(part) is None:
+                  active_parts.append(part)
+      if len(active_parts) > 0:
+         if len(active_parts) > 1:
             log.warning('more than one property found with bespoke kind "active", using last encountered')
-         active_part = active_gpc.parts()[-1]
+         active_part = active_parts[-1]
          active_array = active_gpc.cached_part_array_ref(active_part, dtype = 'bool')
          self.inactive = np.logical_or(self.inactive, np.logical_not(active_array))
          self.active_property_uuid = active_gpc.uuid_for_part(active_part)
