@@ -1,10 +1,11 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '2nd September 2021'
+version = '19th September 2021'
 
 import numpy as np
 
 import resqpy.olio.vector_utilities as vec
+import resqpy.olio.intersection as meet
 
 # _ccw_t() no longer needed: triangle vertices maintained in anti-clockwise order throughout
 # def _ccw_t(p, t):   # puts triangle vertex indices into anti-clockwise order, in situ
@@ -221,3 +222,19 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
       return _dt_simple(p, plot_fn = plot_fn, progress_fn = progress_fn, container_size_factor = container_size_factor)
    else:
       raise Exception('unrecognised Delauney Triangulation algorithm name')
+
+
+def ccc(p1, p2, p3):
+   """Returns the centre of the circumcircle of the three points."""
+
+   v12 = p2 - p1
+   v13 = p3 - p1
+   m12 = 0.5 * (p1 + p2)
+   m13 = 0.5 * (p1 + p3)
+   o12 = m12.copy()
+   o12[0] += v12[1]
+   o12[1] -= v12[0]
+   o13 = m13.copy()
+   o13[0] += v13[1]
+   o13[1] -= v13[0]
+   return meet.line_line_intersect(m12[0], m12[1], o12[0], o12[1], m13[0], m13[1], o13[0], o13[1])
