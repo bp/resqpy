@@ -1,6 +1,7 @@
 import os
 
 import pytest
+import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
@@ -13,11 +14,9 @@ import resqpy.weights_and_measures as bwam
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.uuid as bu
 
-# ---- Test PropertyCollection ---
+# ---- Test PropertyCollection methods ---
 
 # TODO
-
-# ---- Test Property ---
 
 
 def test_property(tmp_path):
@@ -148,9 +147,6 @@ def test_infer_property_kind(input_name, input_unit, kind, facet_type, facet):
    assert facet == facet_
 
 
-# ---- Test bespoke property kind reuse ---
-
-
 def test_bespoke_property_kind():
    model = rq.Model(create_basics = True)
    em = {'something': 'important', 'and_another_thing': 42}
@@ -175,9 +171,6 @@ def test_bespoke_property_kind():
    assert pk6 == pk4
 
 
-# ---- Test string lookup ---
-
-
 def test_string_lookup():
    model = rq.Model(create_basics = True)
    d = {1: 'peaty', 2: 'muddy', 3: 'sandy', 4: 'granite'}
@@ -196,6 +189,42 @@ def test_string_lookup():
    sl2.create_xml()
    assert set(model.titles(obj_type = 'StringTableLookup')) == set(['stargazing', 'head in the clouds'])
    assert sl != sl2
+
+
+def test_constant_array_expansion(tmp_path):
+   epc = os.path.join(tmp_path, 'boring.epc')
+   model = rq.new_model(epc)
+   grid = grr.RegularGrid(model, extent_kji = (2, 3, 4))
+   grid.write_hdf5()
+   grid.create_xml()
+   p1 = rqp.Property.from_array(model,
+                                cached_array = None,
+                                source_info = 'test',
+                                keyword = 'constant pi',
+                                support_uuid = grid.uuid,
+                                property_kind = 'continuous',
+                                indexable_element = 'cells',
+                                const_value = maths.pi,
+                                expand_const_arrays = True)
+   p2 = rqp.Property.from_array(model,
+                                cached_array = None,
+                                source_info = 'test',
+                                keyword = 'constant three',
+                                support_uuid = grid.uuid,
+                                property_kind = 'discrete',
+                                discrete = True,
+                                indexable_element = 'cells',
+                                const_value = 3,
+                                expand_const_arrays = False)
+   model.store_epc()
+   # re-open the model and check that p1 appears as an ordinary array whilst p2 is still a constant
+   model = rq.Model(epc)
+   p1p = rqp.Property(model, uuid = p1.uuid)
+   p2p = rqp.Property(model, uuid = p2.uuid)
+   assert p1p.constant_value() is None
+   assert p2p.constant_value() == 3
+   assert_array_almost_equal(p1p.array_ref(), np.full(grid.extent_kji, maths.pi))
+   assert np.all(p2p.array_ref() == 3) and p2p.array_ref().shape == tuple(grid.extent_kji)
 
 
 def test_property_extra_metadata(tmp_path):
