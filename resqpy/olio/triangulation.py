@@ -238,3 +238,36 @@ def ccc(p1, p2, p3):
    o13[0] += v13[1]
    o13[1] -= v13[0]
    return meet.line_line_intersect(m12[0], m12[1], o12[0], o12[1], m13[0], m13[1], o13[0], o13[1])
+
+
+def voronoi(p, t):
+   """Returns dual Voronoi diagram for a Delauney triangulation.
+
+   arguments:
+      p (numpy float array of shape (N, 2)): seed points used in the Delauney triangulation
+      t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
+
+   returns:
+      c, v where: c is a numpy float array of shape (M, 2) being the circumcircle centres of
+      the triangles; and v is a list of N lists of clockwise ints, each int being an index into c
+
+   note:
+      not sure what to do about outer perimeter nodes!
+   """
+
+   assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
+   assert t.ndim == 2 and t.shape[1] == 3
+
+   # compute circumcircle centres
+   c = np.empty((t.shape[0], 2))
+   for ti in range(len(t)):
+      c[ti] = ccc(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]])
+
+   # TODO: for each seed point, find triangles making use of that point
+   # TODO: find common edges of triangles and sort into clockwise order? is this the same as ccc ordering?
+   # TODO: if first & last edges are not the same, deal with perimeter
+   # TODO: append ordered lists of indices into c onto v
+   v = []
+   pass
+
+   return c, v
