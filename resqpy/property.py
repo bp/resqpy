@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '15th September 2021'
+version = '19th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -253,9 +253,9 @@ class PropertyCollection():
             if support_type == 'obj_IjkGridRepresentation':
                self.support = grr.any_grid(model, uuid = self.support_uuid, find_properties = False)
             elif support_type == 'obj_WellboreFrameRepresentation':
-               self.support = rqw.WellboreFrame(model, frame_root = self.support_root)
+               self.support = rqw.WellboreFrame(model, uuid = self.support_uuid)
             elif support_type == 'obj_BlockedWellboreRepresentation':
-               self.support = rqw.BlockedWell(model, blocked_well_root = self.support_root)
+               self.support = rqw.BlockedWell(model, uuid = self.support_uuid)
             elif support_type == 'obj_Grid2dRepresentation':
                self.support = rqs.Mesh(model, uuid = self.support_uuid)
             elif support_type == 'obj_GridConnectionSetRepresentation':
@@ -519,7 +519,9 @@ class PropertyCollection():
       support_uuid = self.model.supporting_representation_for_part(part)
       if support_uuid is None:
          support_uuid = self.support_uuid
-      elif self.support_uuid is not None and not bu.matching_uuids(support_uuid, self.support.uuid):
+      elif self.support_uuid is None:
+         self.set_support(support_uuid)
+      elif not bu.matching_uuids(support_uuid, self.support.uuid):  # multi-support collection
          self.set_support(None)
       if continuous:
          uom_node = rqet.find_tag(xml_node, 'UOM')
@@ -1706,6 +1708,9 @@ class PropertyCollection():
    def constant_value_for_part(self, part):
       """Returns the value (float or int) of a constant array part, or None for an hdf5 array.
 
+      note:
+         a constant array can optionally be expanded and written to the hdf5, in which case it will
+         not have a constant value assigned when the dataset is read from file
       :meta common:
       """
 
@@ -2677,8 +2682,14 @@ class PropertyCollection():
       self.remove_cached_imported_arrays()
       self.remove_cached_part_arrays()
 
-   def write_hdf5_for_imported_list(self, file_name = None, mode = 'a'):
+   def write_hdf5_for_imported_list(self, file_name = None, mode = 'a', expand_const_arrays = False):
       """Create or append to an hdf5 file, writing datasets for the imported arrays.
+
+      arguments:
+         file_name (str, optional): if present, this hdf5 filename will override the default
+         mode (str, default 'a'): the mode to open the hdf5 file in, either 'a' (append), or 'w' (overwrite)
+         expand_const_arrays (boolean, default False): if True, constant arrays will be written in full to
+            the hdf5 file and the same argument should be used when creating the xml
 
       :meta common:
       """
@@ -2686,11 +2697,21 @@ class PropertyCollection():
       # NB: imported array data must all have been cached prior to calling this function
       assert self.imported_list is not None
       h5_reg = rwh5.H5Register(self.model)
-      for entry in self.imported_list:
-         if entry[17] is not None:
-            continue  # constant array – handled entirely in xml
+      for ei, entry in enumerate(self.imported_list):
+         if entry[17] is not None:  # array has constant value
+            if not expand_const_arrays:
+               continue  # constant array – handled entirely in xml
+            uuid = entry[0]
+            cached_name = _cache_name_for_uuid(uuid)
+            assert self.support is not None
+            shape = self.supporting_shape()
+            value = float(entry[17]) if isinstance(entry[17], str) else entry[17]
+            self.__dict__[cached_name] = np.full(shape, value)
+         else:
+            uuid = entry[0]
+            cached_name = entry[3]
          tail = 'points_patch0' if entry[18] else 'values_patch0'
-         h5_reg.register_dataset(entry[0], tail, self.__dict__[entry[3]])
+         h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name])
       h5_reg.write(file = file_name, mode = mode)
 
    def write_hdf5_for_part(self, part, file_name = None, mode = 'a'):
@@ -2712,6 +2733,7 @@ class PropertyCollection():
                                                            string_lookup_uuid = None,
                                                            property_kind_uuid = None,
                                                            find_local_property_kinds = True,
+                                                           expand_const_arrays = False,
                                                            extra_metadata = {}):
       """Add imported or generated grid property arrays as parts in parent model, creating xml; hdf5 should already have been written.
 
@@ -2732,6 +2754,8 @@ class PropertyCollection():
             property arrays in the imported list (except those with an individual local property kind uuid)
          find_local_property_kinds (boolean, default True): if True, local property kind uuids need not be provided as
             long as the property kinds are set to match the titles of the appropriate local property kind objects
+         expand_const_arrays (boolean, default False): if True, the hdf5 write must also have been called with the
+            same argument and the xml will treat the constant arrays as normal arrays
          extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
 
       returns:
@@ -2822,7 +2846,8 @@ class PropertyCollection():
             points = points,
             find_local_property_kinds = find_local_property_kinds,
             extra_metadata = extra_metadata,
-            const_value = const_value)
+            const_value = const_value,
+            expand_const_arrays = expand_const_arrays)
          if p_node is not None:
             prop_parts_list.append(rqet.part_name_for_part_root(p_node))
             uuid_list.append(rqet.uuid_for_part_root(p_node))
@@ -2859,7 +2884,8 @@ class PropertyCollection():
                   count = 1,
                   points = False,
                   extra_metadata = {},
-                  const_value = None):
+                  const_value = None,
+                  expand_const_arrays = False):
       """Create a property xml node for a single property related to a given supporting representation node.
 
       arguments:
@@ -2914,6 +2940,8 @@ class PropertyCollection():
          points (bool, default False): if True, this is a points property
          extra_metadata (dictionary, optional): if present, adds extra metadata in the xml
          const_value (float or int, optional): if present, create xml for a constant array filled with this value
+         expand_const_arrays (boolean, default False): if True, the hdf5 write must also have been called with the
+            same argument and the xml will treat a constant array as a normal array
 
       returns:
          the newly created property xml node
@@ -2941,6 +2969,9 @@ class PropertyCollection():
 
       if ext_uuid is None:
          ext_uuid = self.model.h5_uuid()
+
+      if expand_const_arrays:
+         const_value = None
 
       support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
       if indexable_element is None:
@@ -3586,6 +3617,7 @@ class Property(BaseResqpy):
                   const_value = None,
                   string_lookup_uuid = None,
                   find_local_property_kind = True,
+                  expand_const_arrays = False,
                   extra_metadata = {}):
       """Populates a new Property from a numpy array and metadata; NB. Writes data to hdf5 and adds part to model.
 
@@ -3627,6 +3659,8 @@ class Property(BaseResqpy):
             relates to; if None, the property will not be configured as categorical
          find_local_property_kind (boolean, default True): if True, local property kind uuid need not be provided as
             long as the property_kind is set to match the title of the appropriate local property kind object
+         expand_const_arrays (boolean, default False): if True, and a const_value is given, the array will be fully
+            expanded and written to the hdf5 file; the xml will then not indicate that it is constant
          extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
 
       returns:
@@ -3646,7 +3680,10 @@ class Property(BaseResqpy):
       assert cached_array is not None or const_value is not None
 
       # Instantiate the object i.e. call the class __init__ method
-      prop = cls(parent_model = parent_model, title = keyword, extra_metadata = extra_metadata)
+      prop = cls(parent_model = parent_model,
+                 title = keyword,
+                 support_uuid = support_uuid,
+                 extra_metadata = extra_metadata)
 
       # Prepare array data in collection attribute and add to model
       prop.collection.set_support(model = prop.model,
@@ -3669,12 +3706,13 @@ class Property(BaseResqpy):
                           count = count,
                           points = points,
                           const_value = const_value)
-      prop.write_hdf5()
+      prop.write_hdf5(expand_const_arrays = expand_const_arrays)
       prop.create_xml(support_uuid = support_uuid,
                       time_series_uuid = time_series_uuid,
                       string_lookup_uuid = string_lookup_uuid,
                       property_kind_uuid = local_property_kind_uuid,
                       find_local_property_kind = find_local_property_kind,
+                      expand_const_arrays = expand_const_arrays,
                       extra_metadata = extra_metadata)
       return prop
 
@@ -3842,7 +3880,7 @@ class Property(BaseResqpy):
                                                         const_value = const_value,
                                                         points = points)
 
-   def write_hdf5(self, file_name = None, mode = 'a'):
+   def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False):
       """Writes the array data to the hdf5 file; not usually called directly.
 
       notes:
@@ -3851,7 +3889,9 @@ class Property(BaseResqpy):
       if not self.collection.imported_list:
          log.warning('no imported Property array to write to hdf5')
          return
-      self.collection.write_hdf5_for_imported_list(file_name = file_name, mode = mode)
+      self.collection.write_hdf5_for_imported_list(file_name = file_name,
+                                                   mode = mode,
+                                                   expand_const_arrays = expand_const_arrays)
 
    def create_xml(self,
                   ext_uuid = None,
@@ -3860,6 +3900,7 @@ class Property(BaseResqpy):
                   string_lookup_uuid = None,
                   property_kind_uuid = None,
                   find_local_property_kind = True,
+                  expand_const_arrays = False,
                   extra_metadata = {}):
       """Creates an xml tree for the property and adds it as a part to the model; not usually called directly.
 
@@ -3879,6 +3920,7 @@ class Property(BaseResqpy):
          string_lookup_uuid = string_lookup_uuid,
          property_kind_uuid = property_kind_uuid,
          find_local_property_kinds = find_local_property_kind,
+         expand_const_arrays = expand_const_arrays,
          extra_metadata = extra_metadata)
       self.collection.has_single_property_kind_flag = True
       self.collection.has_single_uom_flag = True

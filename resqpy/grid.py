@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '17th September 2021'
+version = '19th September 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -4523,7 +4523,8 @@ class Grid(BaseResqpy):
                               geometry = True,
                               imported_properties = None,
                               write_active = None,
-                              stratigraphy = True):
+                              stratigraphy = True,
+                              expand_const_arrays = False):
       """Create or append to an hdf5 file, writing datasets for the grid geometry (and parent grid mapping) and properties from cached arrays."""
 
       # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
@@ -4622,13 +4623,18 @@ class Grid(BaseResqpy):
       if imported_properties is not None and imported_properties.imported_list is not None:
          for entry in imported_properties.imported_list:
             tail = 'points_patch0' if entry[18] else 'values_patch0'
-            if hasattr(imported_properties, entry[3]):  # otherwise constant array
+            # expand constant arrays if required
+            if not hasattr(imported_properties, entry[3]) and expand_const_arrays and entry[17] is not None:
+               value = float(entry[17]) if isinstance(entry[17], str) else entry[17]
+               assert entry[14] == 'cells' and entry[15] == 1
+               imported_properties.__dict__[entry[3]] = np.full(self.extent_kji, value)
+            if hasattr(imported_properties, entry[3]):  # otherwise constant array not being expanded
                h5_reg.register_dataset(entry[0], tail, imported_properties.__dict__[entry[3]])
             if entry[10] == 'active':
                self.active_property_uuid = entry[0]
       h5_reg.write(file, mode = mode)
 
-   def write_hdf5(self):
+   def write_hdf5(self, expand_const_arrays = False):
       """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches().
 
       :meta common:
@@ -4638,7 +4644,8 @@ class Grid(BaseResqpy):
                                   geometry = True,
                                   imported_properties = None,
                                   write_active = True,
-                                  stratigraphy = True)
+                                  stratigraphy = True,
+                                  expand_const_arrays = expand_const_arrays)
 
    def off_handed(self):
       """Returns False if IJK and xyz have same handedness, True if they differ."""
@@ -5456,11 +5463,11 @@ class RegularGrid(Grid):
                                                           facet_type = 'direction',
                                                           facet = 'K')
             if dxi_part is not None and dyj_part is not None and dzk_part is not None:
-               dxi = float(self.property_collection.constant_value_for_part(dxi_part))
-               dyj = float(self.property_collection.constant_value_for_part(dyj_part))
-               dzk = float(self.property_collection.constant_value_for_part(dzk_part))
-               assert dxi is not None and dyj is not None and dzk is not None
-               dxyz = (dxi, dyj, dzk)
+               dxi = self.property_collection.constant_value_for_part(dxi_part)
+               dyj = self.property_collection.constant_value_for_part(dyj_part)
+               dzk = self.property_collection.constant_value_for_part(dzk_part)
+               if dxi is not None and dyj is not None and dzk is not None:
+                  dxyz = (float(dxi), float(dyj), float(dzk))
          if crs_uuid is None:
             self.crs_uuid
 
@@ -5721,6 +5728,7 @@ class RegularGrid(Grid):
                   write_active = True,
                   write_geometry = False,
                   extra_metadata = {},
+                  expand_const_arrays = False,
                   add_cell_length_properties = True):
       """Creates xml for this RegularGrid object; by default the explicit geometry is not included.
 
@@ -5760,7 +5768,9 @@ class RegularGrid(Grid):
                                                   indexable_element = 'cells',
                                                   count = 1,
                                                   const_value = axes_lengths_kji[axis])
-         dpc.create_xml_for_imported_list_and_add_parts_to_model()
+         if expand_const_arrays:
+            dpc.write_hdf5_for_imported_list(expand_const_arrays = True)
+         dpc.create_xml_for_imported_list_and_add_parts_to_model(expand_const_arrays = expand_const_arrays)
          if self.property_collection is None:
             self.property_collection = dpc
          else:
