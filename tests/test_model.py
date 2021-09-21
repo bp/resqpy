@@ -237,3 +237,34 @@ def test_model_copy_all_parts_non_resqpy_hdf5_paths(example_model_with_propertie
 
    assert set(original.uuids()) == set(copied.uuids())
    assert set(original.parts()) == set(copied.parts())
+
+
+def test_model_context(tmp_path):
+
+   # Create a new model
+   epc_path = str(tmp_path / 'tmp_model.epc')
+   model = rq.new_model(epc_path)
+   crs = rqc.Crs(parent_model = model, title = 'kuzcotopia')
+   crs_uuid = crs.uuid
+   crs.create_xml()
+   model.store_epc()
+   del crs, model
+
+   # Re-open model
+   with rq.ModelContext(epc_path, write = True) as model2:
+
+      crs2 = rqc.Crs(model2, uuid = crs_uuid)
+      assert len(list(model2.iter_crs())) == 1
+      assert crs2.title == 'kuzcotopia'
+
+      # Make a change
+      crs2.title = 'wabajam'
+      crs2.create_xml(reuse = False)
+
+   # Re-open model
+   with rq.ModelContext(epc_path, write = False) as model3:
+
+      # Check model has loaded correctly
+      assert len(list(model3.iter_crs())) == 1
+      crs3 = rqc.Crs(model3, uuid = crs_uuid)
+      assert crs3.title == 'wabajam'

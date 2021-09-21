@@ -3449,7 +3449,54 @@ class Model():
          pass
 
 
-def new_model(epc_file):
+class ModelContext:
+   """Context manager for easy opening and closing of resqpy models
+
+   Example::
+
+      with ModelContext("my_model.epc") as model:
+         print(model.uuids())
+   
+   When a model is opened this way, any open file handles are safely closed
+   when the "with" clause exits. Optionally, the epc can be written back to
+   disk upon exit.
+
+   Note:
+
+      The "write_hdf5" and "create_xml" methods of individual resqpy objects
+      still need to be invoked as usual.
+   
+   """
+
+   def __init__(self, epc_file, write = True) -> None:
+      """Open a resqml file.
+      
+      Args:
+         epc_file (str): path to existing resqml file
+         write (bool): if True, the model's `store_epc` method is called
+            before the file is closed to save any changes to disk.
+      """
+      self.epc_file = epc_file
+      self.write = write
+      self.model: Model = None
+
+   def __enter__(self) -> Model:
+      # Enter the runtime context, return a model
+      self.model = Model(epc_file = str(self.epc_file))
+      return self.model
+
+   def __exit__(self, exc_type, exc_value, exc_tb):
+      # Exit the runtime context, close the model
+
+      # Only write to disk if no exception has occured
+      if self.write and exc_type is None:
+         self.model.store_epc()
+
+      # Release file handles
+      self.model.h5_release()
+
+
+def new_model(epc_file) -> Model:
    """Returns a new, empty Model object with basics and hdf5 ext part set up."""
 
    return Model(epc_file = epc_file, new_epc = True, create_basics = True, create_hdf5_ext = True)
