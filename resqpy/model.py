@@ -3478,22 +3478,22 @@ class ModelContext:
       """
       self.epc_file = epc_file
       self.write = write
-      self.model: Model = None
+      self._model: Optional[Model] = None
 
    def __enter__(self) -> Model:
       # Enter the runtime context, return a model
-      self.model = Model(epc_file = str(self.epc_file))
-      return self.model
+      self._model = Model(epc_file = str(self.epc_file))
+      return self._model
 
    def __exit__(self, exc_type, exc_value, exc_tb):
       # Exit the runtime context, close the model
 
       # Only write to disk if no exception has occured
       if self.write and exc_type is None:
-         self.model.store_epc()
+         self._model.store_epc()
 
       # Release file handles
-      self.model.h5_release()
+      self._model.h5_release()
 
 
 def new_model(epc_file) -> Model:
