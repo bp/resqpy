@@ -1,6 +1,6 @@
 """polylines.py: Resqml polylines module."""
 
-version = '14th July 2021'
+version = '25th September 2021'
 
 import logging
 
@@ -229,9 +229,29 @@ class Polyline(_BasePolyline):
          if cw_bool is None:
             result = False  # whole polyline lies in a straight line
          if result:
-            extras['is_clockwise'] = cw_bool
-      extras['is_convex'] = result
+            extras['is_clockwise'] = str(cw_bool).lower()
+      extras['is_convex'] = str(result).lower()
       self.append_extra_metadata(extras)
+      return result
+
+   def is_clockwise(self, trust_metadata = True):
+      """Returns True if first non-straight triplet of nodes is clockwise in the xy plane; False if anti-clockwise.
+
+      note:
+         this method currently assumes that the xy axes are left-handed
+      """
+
+      if trust_metadata and self.extra_metadata is not None and 'is_clockwise' in self.extra_metadata.keys():
+         return str(self.extra_metadata['is_clockwise']).lower() == 'true'
+      result = None
+      for node in range(3, len(self.coordinates)):
+         cw = vu.clockwise(self.coordinates[node - 2], self.coordinates[node - 1], self.coordinates[node])
+         if cw == 0.0:
+            continue  # striaght line section
+         result = (cw > 0.0)
+         break
+      if result is not None:
+         self.append_extra_metadata({'is_clockwise': str(result).lower()})
       return result
 
    def point_is_inside_xy(self, p, mode = 'crossing'):
@@ -250,16 +270,30 @@ class Polyline(_BasePolyline):
    def segment_length(self, segment_index, in_xy = False):
       """Returns the naive length (ie. assuming x,y & z units are the same) of an individual segment of the polyline."""
 
-      successor = segment_index + 1
-      if self.isclosed:
-         assert 0 <= segment_index < len(self.coordinates)
-         if segment_index == len(self.coordinates) - 1:
-            successor = 0
-      else:
-         assert 0 <= segment_index < len(self.coordinates) - 1
-
+      successor = self._successor(segment_index)
       d = 2 if in_xy else 3
       return vu.naive_length(self.coordinates[successor, :d] - self.coordinates[segment_index, :d])
+
+   def segment_midpoint(self, segment_index):
+      """Returns the midpoint of an individual segment of the polyline."""
+
+      successor = self._successor(segment_index)
+      return 0.5 * (self.coordinates[segment_index] + self.coordinates[successor])
+
+   def segment_normal(self, segment_index):
+      """For a closed polyline returns a unit vector giving the 2D (xy) direction of an outward facing normal to a segment."""
+
+      successor = self._successor(segment_index)
+      segment_vector = self.coordinates[successor, :2] - self.coordinates[segment_index, :2]
+      segment_vector = vu.unit_vector(segment_vector)
+      normal_vector = np.zeros(3)
+      normal_vector[0] = -segment_vector[1]
+      normal_vector[1] = segment_vector[0]
+      cw = self.is_clockwise()
+      assert cw is not None, 'polyline is straight'
+      if not cw:
+         normal_vector = -normal_vector
+      return normal_vector
 
    def full_length(self, in_xy = False):
       """Returns the naive length of the entire polyline.
@@ -631,6 +665,18 @@ class Polyline(_BasePolyline):
       h5_reg = rwh5.H5Register(self.model)
       h5_reg.register_dataset(self.uuid, 'points_patch0', self.coordinates)
       h5_reg.write(file_name, mode = mode)
+
+   def _successor(self, segment_index):
+      """Returns segment_index + 1; or zero if segment_index is the last segment in a closed polyline."""
+
+      successor = segment_index + 1
+      if self.isclosed:
+         assert 0 <= segment_index < len(self.coordinates)
+         if segment_index == len(self.coordinates) - 1:
+            successor = 0
+      else:
+         assert 0 <= segment_index < len(self.coordinates) - 1
+      return successor
 
 
 class PolylineSet(_BasePolyline):

@@ -1,9 +1,10 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '19th September 2021'
+version = '25th September 2021'
 
 import numpy as np
 
+import resqpy.lines as rql
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.intersection as meet
 
@@ -14,6 +15,7 @@ import resqpy.olio.intersection as meet
 
 
 def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = None):
+   # returns Delauney triangulation of po and list of hull point indices, using a simple algorithm
 
    def flip(ei):
       nonlocal fm, e, t, te, p, nt, p_i, ne
@@ -78,9 +80,9 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
 
    n_p = len(po)
    if n_p < 3:
-      return None  # not enough points
+      return None, None  # not enough points
    elif n_p == 3:
-      return np.array([0, 1, 2], dtype = int).reshape((1, 3))
+      return np.array([0, 1, 2], dtype = int).reshape((1, 3)), np.array([0, 1, 2], dtype = int)
 
    if progress_fn is not None:
       progress_fn(0.0)
@@ -188,13 +190,17 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
    tri_set = t[np.where(np.all(t[:nt] < n_p, axis = 1))]
    if plot_fn is not None:
       plot_fn(p, tri_set)
+
+   external_t = t[np.where(np.any(t[:nt] >= n_p, axis = 1))]
+   external_pi = np.unique(external_t)[:-3]  # discard 3 invented container vertices
+
    if progress_fn is not None:
       progress_fn(1.0)
 
-   return tri_set
+   return tri_set, external_pi
 
 
-def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0):
+def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
    """Returns the Delauney Triangulation of 2D point set p.
 
    arguments:
@@ -208,6 +214,9 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
          intervals by the algorithm, passing increasing values in the range 0.0 to 1.0 as x
       container_size_factor (float, default 100.0): the larger this number, the more likely the
          resulting triangulation is to be convex; reduce to 1.0 to allow slight concavities
+      return_hull (boolean, default False): if True, a pair is returned with the second item being
+         a clockwise ordered list of indices into p identifying the points on the boundary of the
+         returned triangulation
 
    returns:
       numpy int array of shape (M, 3) being the indices into the first axis of p of the 3 points
@@ -219,7 +228,14 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
       algorithm = 'simple'
 
    if algorithm == 'simple':
-      return _dt_simple(p, plot_fn = plot_fn, progress_fn = progress_fn, container_size_factor = container_size_factor)
+      t, boundary = _dt_simple(p,
+                               plot_fn = plot_fn,
+                               progress_fn = progress_fn,
+                               container_size_factor = container_size_factor)
+      if return_hull:
+         return t, vec.clockwise_sorted_indices(boundary)
+      else:
+         return t
    else:
       raise Exception('unrecognised Delauney Triangulation algorithm name')
 
@@ -240,34 +256,69 @@ def ccc(p1, p2, p3):
    return meet.line_line_intersect(m12[0], m12[1], o12[0], o12[1], m13[0], m13[1], o13[0], o13[1])
 
 
-def voronoi(p, t):
+def voronoi(p, t, b, aoi):
    """Returns dual Voronoi diagram for a Delauney triangulation.
 
    arguments:
       p (numpy float array of shape (N, 2)): seed points used in the Delauney triangulation
       t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
+      b (numpy int array of shape (B,)): the clockwise sorted list of indices into p of the
+         boundary points of the triangulation t
+      aoi (lines.Polyline): area of interest; a closed polyline that must strictly contain
+         all p (no points exactly on or outside the polyline)
 
    returns:
-      c, v where: c is a numpy float array of shape (M, 2) being the circumcircle centres of
-      the triangles; and v is a list of N lists of clockwise ints, each int being an index into c
+      c, v where: c is a numpy float array of shape (M+E, 2) being the circumcircle centres of
+      the M triangles and E boundary points from the aoi polygon line; and v is a list of
+      N Voronoi cell lists of clockwise ints, each int being an index into c
 
-   note:
-      not sure what to do about outer perimeter nodes!
+   notes:
+      the aoi polyline forms the outer boundary for the Voronoi polygons for points on the
+      outer edge of the triangulation; all points p must lie strictly within the aoi
    """
+   # this code assumes that the Voronoi polygon for a seed point visits the circumcentres of
+   # all the triangles that make use of the point – currently understood to be always the case
+   # for a Delauney triangulation
 
    assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
    assert t.ndim == 2 and t.shape[1] == 3
+   assert b.ndim == 1 and b.shape[0] > 2
+   assert aoi.isclosed
+
+   # create temporary polyline for hull of triangulation
+   hull = rql.Polyline(
+      aoi.model,
+      set_bool = True,  # polyline is closed
+      set_coord = p[b],
+      set_crs = aoi.crs_uuid,
+      title = 'triangulation hull')
 
    # compute circumcircle centres
    c = np.empty((t.shape[0], 2))
    for ti in range(len(t)):
       c[ti] = ccc(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]])
 
-   # TODO: for each seed point, find triangles making use of that point
-   # TODO: find common edges of triangles and sort into clockwise order? is this the same as ccc ordering?
-   # TODO: if first & last edges are not the same, deal with perimeter
-   # TODO: append ordered lists of indices into c onto v
    v = []
-   pass
+   # for each seed point...
+   for p_i in range(len(p)):
+      # find triangles making use of that point
+      ts_for_p = np.where(t == p_i)[0]
+      # find azimuths of vectors from seed point to circumcircle centres
+      azi = [vec.azimuth(p[p_i] - centre) for centre in c[ts_for_p]]
+      # sort triangle indices for seed point into clockwise order of circumcircle centres
+      ts_for_p = [ti for (_, ti) in sorted(zip(azi, ts_for_p))]
+      # if this point is on boundary, identify the neighbouring boundary points
+      external_point = (p_i in b)
+      if (p_i in b):
+         bp = [i for i in t[ts_for_p].flatten() if i in b]
+         assert len(bp) == 3, 'boundary failure when constructing Voronoi diagram'
+         # TODO: find clockwise ordering of the two boundary edges
+         # TODO: use segment midpoint and normal methods of hull to project out
+         # TODO: use first intersection method of aoi to intersect projected normals
+         # TODO: add intersection points to E list
+         # TODO: add indices for intersection points and in-between aoi points to ts_for_p
+         continue  # temporary until above code written
+
+      v.append(ts_for_p)
 
    return c, v

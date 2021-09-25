@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '1st September 2021'
+version = '25th September 2021'
 
 import logging
 
@@ -503,6 +503,26 @@ def area_of_triangle(a, b, c):
    lc = naive_length(c - a)
    s = 0.5 * (la + lb + lc)
    return maths.sqrt(s * (s - la) * (s - lb) * (s - lc))
+
+
+def clockwise_sorted_indices(p):
+   """Returns a clockwise sorted numpy list of indices into the unsorted points p.
+
+   note:
+      this function is designed for preparing a list of points defining a convex polygon when projected in
+      the xy plane, starting from the unsorted points; more specifically, it assumes that the mean of p
+      (over axis 0) lies within the polygon and the clockwise ordering is relative to that mean point
+   """
+
+   # note: this function currently assumes that the mean of points bp lies within the hull of bp
+   # and that the points form a convex polygon from the perspective of the mean point
+   assert p.ndim == 2 and len(p) >= 3
+   centre = np.mean(p, axis = 0)
+   hull_list = []  # list of azimuths and indices into p (axis 0)
+   for i in range(len(p)):
+      azi = azimuth(p[i] - centre)
+      hull_list.append((azi, i))
+   return np.array([i for (_, i) in sorted(hull_list)], dtype = int)
 
 
 # end of vector_utilities module
