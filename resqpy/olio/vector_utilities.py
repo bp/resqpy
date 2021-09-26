@@ -85,9 +85,9 @@ def unit_vectors(v):
    scaling = np.sqrt(np.sum(v * v, axis = -1))
    zero_mask = np.zeros(v.shape, dtype = bool)
    zero_mask[np.where(scaling == 0.0), :] = True
-   np.seterr(divide = 'ignore')
+   restore = np.seterr(all = 'ignore')
    result = np.where(zero_mask, 0.0, v / np.expand_dims(scaling, -1))
-   np.seterr(divide = 'warn')
+   np.seterr(**restore)
    return result
 
 
