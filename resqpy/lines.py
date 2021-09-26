@@ -209,7 +209,7 @@ class Polyline(_BasePolyline):
       if not self.isclosed:
          return False
       if trust_metadata and self.extra_metadata is not None and 'is_convex' in self.extra_metadata.keys():
-         return self.extra_metadata['is_convex']
+         return self.extra_metadata['is_convex'].lower() == 'true'
       nodes = len(self.coordinates)
       extras = {}
       if nodes < 3:
@@ -217,7 +217,7 @@ class Polyline(_BasePolyline):
       else:
          cw_bool = None
          result = True
-         for node in range(3, nodes):
+         for node in range(nodes):
             cw = vu.clockwise(self.coordinates[node - 2], self.coordinates[node - 1], self.coordinates[node])
             if cw == 0.0:
                continue  # striaght line section

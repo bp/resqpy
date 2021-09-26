@@ -105,3 +105,54 @@ def test_irap(example_model_and_crs, test_data_path):
    assert reload.title == 'IRAP_example'
    assert (reload.count_perpol == [15]).all(), f"Expected count per polyline to be [15], found {reload.count_perpol}"
    assert len(reload.coordinates) == 15, f"Expected length of coordinates to be 15, found {len(reload.coordinates)}"
+
+
+def test_is_clockwise(example_model_and_crs):
+   # Set up a Polyline
+   title = 'diamond'
+   model, crs = example_model_and_crs
+   line = resqpy.lines.Polyline(
+      parent_model = model,
+      title = title,
+      set_crs = crs.uuid,
+      set_bool = True,
+      set_coord = np.array([
+         (3.0, 2.0, 4.3),  # z values are ignored for clockwise test
+         (2.0, 1.0, -13.5),
+         (1.0, 2.5, 7.8),
+         (2.1, 3.9, -2.0)
+      ]))
+   assert line is not None
+   for trust in [False, True]:
+      assert line.is_clockwise(trust_metadata = trust)
+   # reverse the order of the coordinates
+   line.coordinates = np.flip(line.coordinates, axis = 0)
+   assert line.is_clockwise(trust_metadata = True)
+   assert not line.is_clockwise(trust_metadata = False)  # should reset metadata
+   assert not line.is_clockwise(trust_metadata = True)
+
+
+def test_is_convex(example_model_and_crs):
+   # Set up a Polyline
+   title = 'pentagon'
+   model, crs = example_model_and_crs
+   line = resqpy.lines.Polyline(
+      parent_model = model,
+      title = title,
+      set_crs = crs.uuid,
+      set_bool = True,
+      set_coord = np.array([
+         (3.0, 2.0, 4.3),  # z values are ignored for convexity
+         (2.0, 1.0, -13.5),
+         (1.0, 2.5, 7.8),
+         (1.5, 3.0, -2.0),
+         (2.5, 3.0, 23.4)
+      ]))
+   assert line is not None
+   for trust in [False, True]:
+      assert line.is_convex(trust_metadata = trust)
+   # adjust one point to make shape concave
+   line.coordinates[4, 1] = 1.9
+   assert line.is_convex(trust_metadata = True)
+   assert not line.is_convex(trust_metadata = False)  # should reset metadata
+   assert not line.is_convex(trust_metadata = True)
