@@ -1,6 +1,9 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '25th September 2021'
+version = '26th September 2021'
+
+import logging
+log = logging.getLogger(__name__)
 
 import numpy as np
 
@@ -82,7 +85,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
    if n_p < 3:
       return None, None  # not enough points
    elif n_p == 3:
-      return np.array([0, 1, 2], dtype = int).reshape((1, 3)), np.array([0, 1, 2], dtype = int)
+      return (np.array([0, 1, 2], dtype = int).reshape((1, 3)), np.array([0, 1, 2], dtype = int))
 
    if progress_fn is not None:
       progress_fn(0.0)
@@ -197,6 +200,10 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
    if progress_fn is not None:
       progress_fn(1.0)
 
+   log.debug(f'dt p: {p}')
+   log.debug(f'dt t: {t[:nt]}')
+   log.debug(f'dt b: {external_pi}')
+
    return tri_set, external_pi
 
 
@@ -219,8 +226,10 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
          returned triangulation
 
    returns:
-      numpy int array of shape (M, 3) being the indices into the first axis of p of the 3 points
-         per triangle in the Delauney Triangulation
+      numpy int array of shape (M, 3) - being the indices into the first axis of p of the 3 points
+         per triangle in the Delauney Triangulation - and if return_hull is True, another int array
+         of shape (B,) - being indices into p of the clockwise ordered points on the boundary of
+         the triangulation
    """
    assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delauney Triangulation'
 
@@ -233,7 +242,7 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
                                progress_fn = progress_fn,
                                container_size_factor = container_size_factor)
       if return_hull:
-         return t, vec.clockwise_sorted_indices(boundary)
+         return t, vec.clockwise_sorted_indices(p, boundary)
       else:
          return t
    else:
@@ -262,8 +271,8 @@ def voronoi(p, t, b, aoi):
    arguments:
       p (numpy float array of shape (N, 2)): seed points used in the Delauney triangulation
       t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
-      b (numpy int array of shape (B,)): the clockwise sorted list of indices into p of the
-         boundary points of the triangulation t
+      b (numpy int array of shape (B,)): unsorted list of indices into p of the boundary
+         points of the triangulation t
       aoi (lines.Polyline): area of interest; a closed polyline that must strictly contain
          all p (no points exactly on or outside the polyline)
 
@@ -280,6 +289,9 @@ def voronoi(p, t, b, aoi):
    # all the triangles that make use of the point – currently understood to be always the case
    # for a Delauney triangulation
 
+   log.debug(f'p: {p}')
+   log.debug(f't: {t}')
+   log.debug(f'b: {b}')
    assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
    assert t.ndim == 2 and t.shape[1] == 3
    assert b.ndim == 1 and b.shape[0] > 2
@@ -292,32 +304,57 @@ def voronoi(p, t, b, aoi):
       set_coord = p[b],
       set_crs = aoi.crs_uuid,
       title = 'triangulation hull')
+   hull_count = len(b)
 
    # compute circumcircle centres
    c = np.empty((t.shape[0], 2))
    for ti in range(len(t)):
       c[ti] = ccc(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]])
+   c_count = len(c)
+   c = np.concatenate((c, aoi.coordinates[:, :2], np.zeros((hull_count, 2))))
+   ca_count = c_count + len(aoi.coordinates)
+   cae_count = ca_count + hull_count
+   assert cae_count == len(c)
 
-   v = []
+   # compute intersection points between hull normals and aoi polyline
+   aoi_intersect_segments = np.empty((hull_count,), dtype = int)
+   for ei, b_i in enumerate(b):
+      # use segment midpoint and normal methods of hull to project out
+      m = hull.segment_midpoint(b_i)  # midpoint
+      n = m + hull.segment_normal(b_i)  # point on normal
+      # use first intersection method of aoi to intersect projected normal from triangulation hull
+      aoi_seg, aoi_x, aoi_y = aoi.first_line_intersection(m[0], m[1], n[0], n[1], half_segment = True)
+      assert aoi_seg is not None
+      # inject intersection points to extension area of c and take note of aoi segment of intersection
+      c[ca_count + ei] = (aoi_x, aoi_y)
+      aoi_intersect_segments[ei] = aoi_seg
+
+   v = []  # list of voronoi cells (each a numpy list of node indices into c extended with aoi points then aoi intersections)
    # for each seed point...
    for p_i in range(len(p)):
       # find triangles making use of that point
       ts_for_p = np.where(t == p_i)[0]
-      # find azimuths of vectors from seed point to circumcircle centres
-      azi = [vec.azimuth(p[p_i] - centre) for centre in c[ts_for_p]]
-      # sort triangle indices for seed point into clockwise order of circumcircle centres
-      ts_for_p = [ti for (_, ti) in sorted(zip(azi, ts_for_p))]
       # if this point is on boundary, identify the neighbouring boundary points
-      external_point = (p_i in b)
       if (p_i in b):
-         bp = [i for i in t[ts_for_p].flatten() if i in b]
-         assert len(bp) == 3, 'boundary failure when constructing Voronoi diagram'
-         # TODO: find clockwise ordering of the two boundary edges
-         # TODO: use segment midpoint and normal methods of hull to project out
-         # TODO: use first intersection method of aoi to intersect projected normals
-         # TODO: add intersection points to E list
-         # TODO: add indices for intersection points and in-between aoi points to ts_for_p
-         continue  # temporary until above code written
+         b_i = np.where(b == p_i)[0][0]
+         p_b_i = (b_i - 1) % hull_count  # predecessor, ie. anti-clockwise boundary point
+         # build list of aoi boundary point indices ready for insertion into cell node indices
+         e = [ca_count + p_b_i]  # one intersection point
+         aoi_seg = aoi_intersect_segments[p_b_i]
+         while aoi_seg != aoi_intersect_segments[b_i]:
+            aoi_seg += 1
+            e.append(c_count + aoi_seg)
+         e.append(ca_count + b_i)  # other intersection point
+         # inject aoi boundary point indices into ts_for_p
+         injection_t = np.where(t[ts_for_p] == b[p_b_i])[0]
+         assert len(injection_t) == 1
+         injection_t = injection_t[0]
+         injection_point = np.where(ts_for_p == injection_t)[0][0]
+         ts_for_p = np.concatenate((ts_for_p[:injection_point], np.array(e, dtype = int), ts_for_p[injection_point:]), dtype = int)
+      # find azimuths of vectors from seed point to circumcircle centres and boundary points
+      azi = [vec.azimuth(p[p_i] - centre) for centre in c[ts_for_p]]
+      # sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
+      ts_for_p = [ti for (_, ti) in sorted(zip(azi, ts_for_p))]
 
       v.append(ts_for_p)
 
