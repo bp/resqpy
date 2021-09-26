@@ -73,17 +73,11 @@ def amplify(v, scaling):  # note: could just use numpy a * scalar facility
 
 def unit_vector(v):
    """Returns vector with same direction as v but with unit length."""
-   assert v.size == 3
-   result = zero_vector()
-   if np.all(v == result):
-      return result  # NB: v is zero vector: could raise an exception
-   scaling = 0.0
-   for i in range(3):
-      scaling += v[i] * v[i]
-   scaling = maths.sqrt(scaling)
-   for i in range(3):
-      result[i] = v[i] / scaling
-   return result
+   assert 2 <= len(v) <= 3
+   v = np.array(v, dtype = float)
+   if np.all(v == 0.0):
+      return v
+   return v / maths.sqrt(np.sum(v * v))
 
 
 def unit_vectors(v):

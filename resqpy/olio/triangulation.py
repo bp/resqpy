@@ -312,7 +312,8 @@ def voronoi(p, t, b, aoi):
       c[ti] = ccc(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]])
    c_count = len(c)
    c = np.concatenate((c, aoi.coordinates[:, :2], np.zeros((hull_count, 2))))
-   ca_count = c_count + len(aoi.coordinates)
+   aoi_count = len(aoi.coordinates)
+   ca_count = c_count + aoi_count
    cae_count = ca_count + hull_count
    assert cae_count == len(c)
 
@@ -342,7 +343,7 @@ def voronoi(p, t, b, aoi):
          e = [ca_count + p_b_i]  # one intersection point
          aoi_seg = aoi_intersect_segments[p_b_i]
          while aoi_seg != aoi_intersect_segments[b_i]:
-            aoi_seg += 1
+            aoi_seg = (aoi_seg + 1) % aoi_count
             e.append(c_count + aoi_seg)
          e.append(ca_count + b_i)  # other intersection point
          # inject aoi boundary point indices into ts_for_p
