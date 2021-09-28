@@ -3456,20 +3456,10 @@ class ModelContext:
    when the "with" clause exits. Optionally, the epc can be written back to
    disk upon exit.
 
-   To open a model without saving changes::
+   Example::
 
-      with ModelContext("my_model.epc", "read") as model:
+      with ModelContext("my_model.epc", mode="rw") as model:
          print(model.uuids())
-
-   To save changes to disk upon exit::
-
-      with ModelContext("my_model.epc", "read/write") as model:
-         model.do_stuff()  
-
-   To create a new model, deleting any existing model::
-
-      with ModelContext("my_model.epc", "create") as model:
-         model.do_stuff()
    
    Note:
 
