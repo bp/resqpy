@@ -8,6 +8,12 @@ import resqpy.olio.triangulation as tri
 
 
 def test_ccc():
+
+   def check_equidistant(c, p_list):
+      v = np.stack(tuple([c - p[:2] for p in p_list]))
+      r = vec.naive_2d_lengths(v)
+      assert_array_almost_equal(r[1:], r[0])
+
    # 3 points in orthogonal pattern
    p1 = np.array((0.0, 0.0, 0.0))
    p2 = np.array((20.0, 0.0, 0.0))
@@ -24,6 +30,10 @@ def test_ccc():
    p2 = np.array((23.6, 2.9, -1.0))
    p3 = np.array((22.1, 87.3, 1.5))
    c = np.array(tri.ccc(p1, p2, p3))
-   v = np.stack((c - p1[:2], c - p2[:2], c - p3[:2]))
-   r = vec.naive_2d_lengths(v)
-   assert_array_almost_equal(r[1:], r[0])
+   check_equidistant(c, (p1, p2, p3))
+   # highly asymmetric triangle
+   p1 = np.array((0.0, 0.0, 0.0))
+   p2 = np.array((100.0, 0.0, 0.0))
+   p3 = np.array((200.0, 1.0, 0.0))
+   c = np.array(tri.ccc(p1, p2, p3))
+   check_equidistant(c, (p1, p2, p3))

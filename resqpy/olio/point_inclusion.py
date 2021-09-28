@@ -15,21 +15,29 @@ import resqpy.olio.simple_lines as sl
 
 
 def pip_cn(p, poly):
-   """2D point inclusion: returns True if point is inside polygon (uses crossing number algorithm)"""
+   """2D point inclusion: returns True if point is inside polygon (uses crossing number algorithm).
+
+   arguments:
+      p (numpy array, tuple or list of at least 2 floats): xy point to test for inclusion in polygon
+      poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
+         defining a polygon
+
+   returns:
+      boolean: True if point is within the polygon
+
+   note:
+      if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
+   """
 
    # p should be a tuple-like object with first two elements x, y
    # poly should be a numpy array with first axis being the different vertices
    #    and the second starting x, y
 
    crossings = 0
-   vertex_count = poly.shape[0]
 
-   for edge in range(vertex_count):
-      v1 = poly[edge]
-      if edge == vertex_count - 1:
-         v2 = poly[0]
-      else:
-         v2 = poly[edge + 1]
+   for edge in range(len(poly)):
+      v1 = poly[edge - 1]
+      v2 = poly[edge]
       if ((v1[0] > p[0] or v2[0] > p[0]) and ((v1[1] <= p[1] and v2[1] > p[1]) or (v1[1] > p[1] and v2[1] <= p[1]))):
          if v1[0] > p[0] and v2[0] > p[0]:
             crossings += 1
@@ -40,17 +48,25 @@ def pip_cn(p, poly):
 
 
 def pip_wn(p, poly):
-   """2D point inclusion: returns True if point is inside polygon (uses winding number algorithm)"""
+   """2D point inclusion: returns True if point is inside polygon (uses winding number algorithm).
+
+   arguments:
+      p (numpy array, tuple or list of at least 2 floats): xy point to test for inclusion in polygon
+      poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
+         defining a polygon
+
+   returns:
+      boolean: True if point is within the polygon
+
+   note:
+      if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
+   """
 
    winding = 0
-   vertex_count = poly.shape[0]
 
-   for edge in range(vertex_count):
-      v1 = poly[edge]
-      if edge == vertex_count - 1:
-         v2 = poly[0]
-      else:
-         v2 = poly[edge + 1]
+   for edge in range(len(poly)):
+      v1 = poly[edge - 1]
+      v2 = poly[edge]
       if v1[0] <= p[0] and v2[0] <= p[0]:
          continue
       if v1[1] <= p[1] and v2[1] > p[1]:
@@ -68,28 +84,32 @@ def pip_wn(p, poly):
 
 
 def pip_array_cn(p_a, poly):
-   """array of 2D points inclusion: returns bool array True where point is inside polygon (uses crossing number algorithm)"""
+   """array of 2D points inclusion: returns bool array True where point is inside polygon (uses crossing number algorithm).
+
+   arguments:
+      p_a (2D numpy float array): set of xy points to test for inclusion in polygon
+      poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
+         defining a polygon
+
+   returns:
+      numpy boolean vector: True where corresponding point in p_a is within the polygon
+
+   note:
+      if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
+   """
 
    # p_array should be a numpy array of 2 or more axes; the final axis has extent at least 2, being x, y, ...
    # returned boolean array has shape of p_array less the final axis
 
-   log.debug('type(poly): ' + str(type(poly)))
    elements = np.prod(list(p_a.shape)[:-1], dtype = int)
-   log.debug('elements: ' + str(elements))
    p = p_a.reshape((elements, -1))
-   log.debug('p.shape: ' + str(p.shape))
    crossings = np.zeros((elements,), dtype = int)
-   vertex_count = poly.shape[0]
-   log.debug('vertex_count: ' + str(vertex_count))
 
    np_err_dict = np.geterr()
    np.seterr(divide = 'ignore', invalid = 'ignore')
-   for edge in range(vertex_count):
-      v1 = poly[edge]
-      if edge == vertex_count - 1:
-         v2 = poly[0]
-      else:
-         v2 = poly[edge + 1]
+   for edge in range(len(poly)):
+      v1 = poly[edge - 1]
+      v2 = poly[edge]
       crossings += np.where(
          np.logical_and(
             np.logical_and(
@@ -132,7 +152,6 @@ def points_in_polygon(x, y, polygon_file, poly_unit_multiplier = None):
 def scan(origin, ncol, nrow, dx, dy, poly):
    """Scans lines of pixels returning 2D boolean array of points within convex polygon."""
 
-   vertex_count = poly.shape[0]
    inside = np.zeros((nrow, ncol), dtype = bool)
    ix = np.empty((2))
 
@@ -140,12 +159,9 @@ def scan(origin, ncol, nrow, dx, dy, poly):
       ix[:] = 0.0
       y = origin[1] + dy * row
       ic = 0
-      for edge in range(vertex_count):
-         v1 = poly[edge]
-         if edge == vertex_count - 1:
-            v2 = poly[0]
-         else:
-            v2 = poly[edge + 1]
+      for edge in range(len(poly)):
+         v1 = poly[edge - 1]
+         v2 = poly[edge]
          if (v1[1] > y and v2[1] > y) or (v1[1] <= y and v2[1] <= y):
             continue
          ix[ic] = v1[0] + (v2[0] - v1[0]) * (y - v1[1]) / (v2[1] - v1[1])

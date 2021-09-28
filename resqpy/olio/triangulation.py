@@ -317,6 +317,9 @@ def voronoi(p, t, b, aoi):
    ca_count = c_count + aoi_count
    assert ca_count + hull_count == len(c)
 
+   # make list of triangle indices whose circumcircle centres are within area of interest
+   tc_in_aoi = [ti for ti in range(c_count) if aoi.point_is_inside_xy(c[ti])]
+
    # compute intersection points between hull normals and aoi polyline
    aoi_intersect_segments = np.empty((hull_count,), dtype = int)
    for ei in range(len(b)):
@@ -330,9 +333,9 @@ def voronoi(p, t, b, aoi):
       c[ca_count + ei] = (aoi_x, aoi_y)
       aoi_intersect_segments[ei] = aoi_seg
 
-   v = [
-   ]  # list of voronoi cells (each a numpy list of node indices into c extended with aoi points then aoi intersections)
-   # for each seed point...
+   # list of voronoi cells (each a numpy list of node indices into c extended with aoi points then aoi intersections)
+   v = []
+   # for each seed point build the voronoi cell
    for p_i in range(len(p)):
       log.debug(f'p_i: {p_i}')
       # find triangles making use of that point
@@ -357,14 +360,16 @@ def voronoi(p, t, b, aoi):
          assert len(injection_t) == 1
          injection_t = (injection_t[0] + 1) % len(ts_for_p)
          log.debug(f'injection_t: {injection_t}')
-         #         injection_point = np.where(ts_for_p == injection_t)[0][0]
+         # injection_point = np.where(ts_for_p == injection_t)[0][0]
          ts_for_p = np.concatenate((ts_for_p[:injection_t], np.array(e, dtype = int), ts_for_p[injection_t:]))
          log.debug(f'expanded ts_for_p: {ts_for_p}')
+      # remove circumcircle centres that are outwith the aoi
+      ts_for_p = np.array([ti for ti in ts_for_p if ti >= c_count or ti in tc_in_aoi], dtype = int)
       # find azimuths of vectors from seed point to circumcircle centres and boundary points
-      azi = [vec.azimuth(p[p_i] - centre) for centre in c[ts_for_p]]
+      azi = [vec.azimuth(centre - p[p_i]) for centre in c[ts_for_p]]
       # sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
-      ts_for_p = [ti for (_, ti) in sorted(zip(azi, ts_for_p))]
+      ordered_t = [ti for (_, ti) in sorted(zip(azi, ts_for_p))]
 
-      v.append(ts_for_p)
+      v.append(ordered_t)
 
    return c, v
