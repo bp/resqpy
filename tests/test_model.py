@@ -250,8 +250,8 @@ def test_model_context(tmp_path):
    model.store_epc()
    del crs, model
 
-   # Re-open model
-   with rq.ModelContext(epc_path, write = True) as model2:
+   # Re-open model in read/write mode
+   with rq.ModelContext(epc_path, mode = "rw") as model2:
 
       crs2 = rqc.Crs(model2, uuid = crs_uuid)
       assert len(list(model2.iter_crs())) == 1
@@ -261,10 +261,16 @@ def test_model_context(tmp_path):
       crs2.title = 'wabajam'
       crs2.create_xml(reuse = False)
 
-   # Re-open model
-   with rq.ModelContext(epc_path, write = False) as model3:
+   # Re-open model in read mode
+   with rq.ModelContext(epc_path, mode = "r") as model3:
 
       # Check model has loaded correctly
       assert len(list(model3.iter_crs())) == 1
       crs3 = rqc.Crs(model3, uuid = crs_uuid)
       assert crs3.title == 'wabajam'
+
+   # Overwrite model
+   with rq.ModelContext(epc_path, mode = "create") as model4:
+      # Should be empty
+      crs_list = list(model4.iter_crs())
+      assert len(crs_list) == 0
