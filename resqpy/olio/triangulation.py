@@ -1,6 +1,6 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '26th September 2021'
+version = '29th September 2021'
 
 import logging
 
@@ -251,12 +251,15 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
 
 
 def ccc(p1, p2, p3):
-   """Returns the centre of the circumcircle of the three points."""
+   """Returns the centre of the circumcircle of the three points in the xy plane."""
 
+   # two edges as vectors
    v12 = p2 - p1
    v13 = p3 - p1
+   # midpoints of the two edges
    m12 = 0.5 * (p1 + p2)
    m13 = 0.5 * (p1 + p3)
+   # pairs of points defining two edge normals passing through the midpoints
    o12 = m12.copy()
    o12[0] += v12[1]
    o12[1] -= v12[0]
@@ -286,13 +289,38 @@ def voronoi(p, t, b, aoi):
       the aoi polyline forms the outer boundary for the Voronoi polygons for points on the
       outer edge of the triangulation; all points p must lie strictly within the aoi
    """
+
    # this code assumes that the Voronoi polygon for a seed point visits the circumcentres of
    # all the triangles that make use of the point – currently understood to be always the case
    # for a Delauney triangulation
 
+   def aoi_intervening_nodes(aoi_count, c_count, seg_a, seg_c):
+      nodes = []
+      seg = seg_a
+      while seg != seg_c:
+         seg = (seg + 1) % aoi_count
+         nodes.append(c_count + seg)
+      return nodes
+
+   def shorter_sides_p_i(p3):
+      max_length = -1.0
+      max_i = None
+      for i in range(3):
+         opp_length = vec.naive_length(p3[i - 1] - p3[i - 2])
+         if opp_length > max_length:
+            max_length = opp_length
+            max_i = i
+      return max_i
+
+   def azi_between(a, c, t):
+      if c < a:
+         c += 360.0
+      return (a <= t <= c) or (a <= t + 360.0 <= c)
+
    log.debug(f'p: {p}')
    log.debug(f't: {t}')
    log.debug(f'b: {b}')
+   # todo: allow aoi to be None in which case create an aoi as hull with border
    assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
    assert t.ndim == 2 and t.shape[1] == 3
    assert b.ndim == 1 and b.shape[0] > 2
@@ -312,13 +340,23 @@ def voronoi(p, t, b, aoi):
    for ti in range(len(t)):
       c[ti] = ccc(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]])
    c_count = len(c)
-   c = np.concatenate((c, aoi.coordinates[:, :2], np.zeros((hull_count, 2), dtype = float)))
+
+   # make list of triangle indices whose circumcircle centres are outwith the area of interest
+   tc_outwith_aoi = [ti for ti in range(c_count) if not aoi.point_is_inside_xy(c[ti])]
+   o_count = len(tc_outwith_aoi)
+
+   # make space for combined points data needed for all voronoi cell nodes:
+   # 1. circumcircle centres for traingles in delauney triangulation
+   # 2. nodes defining area of interest polygon
+   # 3. intersection of normals to traingulation hull edges with aoi polygon
+   # 4. extra intersections for normals to other two (non-hull) triangle edges, with aoi,
+   #    where circumcircle centre is outside the area of interest
+   c = np.concatenate((c, aoi.coordinates[:, :2], np.zeros((hull_count, 2),
+                                                           dtype = float), np.zeros((2 * o_count, 2), dtype = float)))
    aoi_count = len(aoi.coordinates)
    ca_count = c_count + aoi_count
-   assert ca_count + hull_count == len(c)
-
-   # make list of triangle indices whose circumcircle centres are within area of interest
-   tc_in_aoi = [ti for ti in range(c_count) if aoi.point_is_inside_xy(c[ti])]
+   cah_count = ca_count + hull_count
+   assert cah_count + 2 * o_count == len(c)
 
    # compute intersection points between hull normals and aoi polyline
    aoi_intersect_segments = np.empty((hull_count,), dtype = int)
@@ -333,43 +371,164 @@ def voronoi(p, t, b, aoi):
       c[ca_count + ei] = (aoi_x, aoi_y)
       aoi_intersect_segments[ei] = aoi_seg
 
+   # where cicrumcircle centres are outwith aoi, compute intersections of normals of wing edges with aoi
+   out_pair_intersect_segments = np.empty((o_count, 2), dtype = int)
+   for oi, ti in enumerate(tc_outwith_aoi):
+      non_hull_p_count = 0
+      non_hull_p_in_t = None
+      for tpi in range(3):
+         if t[ti, tpi] not in b:
+            non_hull_p_count += 1
+            non_hull_p_in_t = tpi
+      if non_hull_p_count != 1:
+         non_hull_p_in_t = shorter_sides_p_i(p[t[ti]])
+      tpi = non_hull_p_in_t
+      for wing in range(2):
+         # note: triangle nodes are anticlockwise
+         m = 0.5 * (p[t[ti, tpi - 1]] + p[t[ti, tpi]])[:2]  # triangle edge midpoint
+         edge_v = p[t[ti, tpi]] - p[t[ti, tpi - 1]]
+         n = m + np.array((-edge_v[1], edge_v[0]))  # point on perpendicular bisector of triangle edge
+         o_seg, o_x, o_y = aoi.first_line_intersection(m[0], m[1], n[0], n[1], half_segment = True)
+         c[cah_count + 2 * oi + wing] = (o_x, o_y)
+         out_pair_intersect_segments[oi, wing] = o_seg
+         tpi = (tpi + 1) % 3
+
    # list of voronoi cells (each a numpy list of node indices into c extended with aoi points then aoi intersections)
    v = []
    # for each seed point build the voronoi cell
    for p_i in range(len(p)):
       log.debug(f'p_i: {p_i}')
       # find triangles making use of that point
-      ts_for_p = np.where(t == p_i)[0]
-      log.debug(f'ts_for_p: {ts_for_p}')
+      ci_for_p = np.where(t == p_i)[0]
+      log.debug(f'ci_for_p: {ci_for_p}')
       # if this point is on boundary, identify the neighbouring boundary points
+      e_a_list = []
+      e_c_list = []
+      aoi_seg_a_list = []
+      aoi_seg_c_list = []
       if (p_i in b):
          log.debug('boundary')
          b_i = np.where(b == p_i)[0][0]
-         p_b_i = (b_i - 1) % hull_count  # predecessor, ie. anti-clockwise boundary point
-         log.debug(f'b_i: {b_i}; p_b_i: {p_b_i}')
-         # build list of aoi boundary point indices ready for insertion into cell node indices
-         e = [ca_count + p_b_i]  # one intersection point
-         aoi_seg = aoi_intersect_segments[p_b_i]
-         while aoi_seg != aoi_intersect_segments[b_i]:
-            aoi_seg = (aoi_seg + 1) % aoi_count
-            e.append(c_count + aoi_seg)
-         e.append(ca_count + b_i)  # other intersection point
-         log.debug(f'e: {e}')
-         # inject aoi boundary point indices into ts_for_p
-         injection_t = np.where(t[ts_for_p] == b[p_b_i])[0]
-         assert len(injection_t) == 1
-         injection_t = (injection_t[0] + 1) % len(ts_for_p)
-         log.debug(f'injection_t: {injection_t}')
-         # injection_point = np.where(ts_for_p == injection_t)[0][0]
-         ts_for_p = np.concatenate((ts_for_p[:injection_t], np.array(e, dtype = int), ts_for_p[injection_t:]))
-         log.debug(f'expanded ts_for_p: {ts_for_p}')
-      # remove circumcircle centres that are outwith the aoi
-      ts_for_p = np.array([ti for ti in ts_for_p if ti >= c_count or ti in tc_in_aoi], dtype = int)
-      # find azimuths of vectors from seed point to circumcircle centres and boundary points
-      azi = [vec.azimuth(centre - p[p_i]) for centre in c[ts_for_p]]
-      # sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
-      ordered_t = [ti for (_, ti) in sorted(zip(azi, ts_for_p))]
+         p_b_i_a = (b_i - 1) % hull_count  # predecessor, ie. anti-clockwise boundary point
+         hull_t_a = [ti for ti in ci_for_p if b[p_b_i_a] in t[ti]]
+         assert len(hull_t_a) == 1
+         hull_t_a = hull_t_a[0]
+         p_b_i_c = (b_i + 1) % hull_count  # successor, ie. clockwise boundary point
+         hull_t_c = [ti for ti in ci_for_p if b[p_b_i_c] in t[ti]]
+         assert len(hull_t_c) == 1
+         hull_t_c = hull_t_c[0]
+         # identify (out, in) intersection info (fill in with aoi points after)
+         # if hull triangles have circumcircle centre outwith aoi, use wing normal intersection with aoi
+         #    else use hull edge normal intersection with aoi
+         # one intersection point (anticlockwise wrt. p_i)
+         if hull_t_a in tc_outwith_aoi:
+            oi = tc_outwith_aoi.index(hull_t_a)
+            e_a = cah_count + 2 * oi + 1
+            aoi_seg_a = out_pair_intersect_segments[oi, 1]
+         else:
+            e_a = ca_count + p_b_i_a
+            aoi_seg_a = aoi_intersect_segments[p_b_i_a]
+         # the other intersection point (clockwise wrt. p_i)
+         if hull_t_c in tc_outwith_aoi:
+            oi = tc_outwith_aoi.index(hull_t_c)
+            e_c = cah_count + 2 * oi
+            aoi_seg_c = out_pair_intersect_segments[oi, 0]
+         else:
+            e_c = ca_count + b_i
+            aoi_seg_c = aoi_intersect_segments[b_i]
+         e_a_list = [e_a]
+         e_c_list = [e_c]
+         aoi_seg_a_list = [aoi_seg_a]
+         aoi_seg_c_list = [aoi_seg_c]
+      # check for (non-hull) triangles with a circumcircle centre outwith aoi
+      for t_i in [ti for ti in ci_for_p if ti in tc_outwith_aoi]:
+         t_hull_count = 0
+         for i in range(3):
+            if t[t_i, i] in b:
+               t_hull_count += 1
+         is_hull_triangle = (t_hull_count >= 2)
+         if is_hull_triangle and (p_i in b):
+            continue  # already handled above
+         oi = tc_outwith_aoi.index(t_i)
+         e_a_t = cah_count + 2 * oi
+         e_c_t = e_a_t + 1
+         a_wing = 0
+         if not is_hull_triangle:
+            e_a_t, e_c_t = e_c_t, e_a_t
+            a_wing = 1
+         e_a_list.append(e_a_t)
+         aoi_seg_a_list.append(out_pair_intersect_segments[oi, a_wing])
+         e_c_list.append(e_c_t)
+         aoi_seg_c_list.append(out_pair_intersect_segments[oi, 1 - a_wing])
 
-      v.append(ordered_t)
+      # check for interference between aoi boundary sections and distill
+      if len(e_a_list) > 1:
+         assert len(e_a_list) <= 3, f'cannot handle {len(e_a_list)} aoi boundary sections for a single point'
+         azi_a_list = []
+         azi_c_list = []
+         for i in range(len(e_a_list)):
+            azi_a_list.append(vec.azimuth(p[p_i][:2] - c[e_a_list[i]]))
+            azi_c_list.append(vec.azimuth(p[p_i][:2] - c[e_c_list[i]]))
+         distilled_a_indices = []  # indices into existing lists
+         distilled_c_indices = []
+         if len(e_a_list) == 2:
+            pairs = ((0, 1),)
+         else:
+            pairs = ((0, 1), (0, 2), (1, 2))
+         for pair in pairs:
+            a0, a1 = azi_a_list[pair[0]], azi_a_list[pair[1]]
+            c0, c1 = azi_c_list[pair[0]], azi_c_list[pair[1]]
+            if azi_between(a0, c0, a1) and azi_between(a0, c0, c1):
+               distilled_a_indices.append(pair[1])
+               distilled_c_indices.append(pair[1])
+            elif azi_between(a1, c1, a0) and azi_between(a1, c1, c0):
+               distilled_a_indices.append(pair[0])
+               distilled_c_indices.append(pair[0])
+            elif azi_between(a0, c0, a1):
+               distilled_a_indices.append(pair[1])
+               distilled_c_indices.append(pair[0])
+            elif azi_between(a1, c1, a0):
+               distilled_a_indices.append(pair[0])
+               distilled_c_indices.append(pair[1])
+            else:
+               distilled_a_indices += list(pair)
+               distilled_c_indices += list(pair)
+         distilled_e_a_list = []
+         distilled_e_c_list = []
+         distilled_aoi_seg_a_list = []
+         distilled_aoi_seg_c_list = []
+         for a_i in distilled_a_indices:
+            distilled_e_a_list.append(e_a_list[a_i])
+            distilled_aoi_seg_a_list.append(aoi_seg_a_list[a_i])
+         for c_i in distilled_c_indices:
+            distilled_e_c_list.append(e_c_list[c_i])
+            distilled_aoi_seg_c_list.append(aoi_seg_c_list[c_i])
+         e_a_list = distilled_e_a_list
+         e_c_list = distilled_e_c_list
+         aoi_seg_a_list = distilled_aoi_seg_a_list
+         aoi_seg_c_list = distilled_aoi_seg_c_list
+
+      # build list of aoi boundary point indices ready for insertion into cell node indices
+      aoi_nodes = []
+      for e_a, e_c, aoi_seg_a, aoi_seg_c in zip(e_a_list, e_c_list, aoi_seg_a_list, aoi_seg_c_list):
+         aoi_nodes = [e_a]
+         aoi_nodes += aoi_intervening_nodes(aoi_count, c_count, aoi_seg_a, aoi_seg_c)
+         aoi_nodes.append(e_c)
+
+      # append any aoi boundary point c indices to ci_for_p
+      if len(aoi_nodes):
+         log.debug(f'aoi_nodes: {aoi_nodes}')
+         ci_for_p = np.concatenate((ci_for_p, np.array(aoi_nodes, dtype = int)))
+         log.debug(f'expanded ci_for_p: {ci_for_p}')
+
+      # remove circumcircle centres that are outwith area of interest
+      ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
+
+      # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
+      azi = [vec.azimuth(centre - p[p_i]) for centre in c[ci_for_p]]
+      # sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
+      ordered_ci = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
+
+      v.append(ordered_ci)
 
    return c, v
