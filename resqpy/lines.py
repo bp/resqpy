@@ -1,6 +1,6 @@
 """polylines.py: Resqml polylines module."""
 
-version = '25th September 2021'
+version = '1st October 2021'
 
 import logging
 
@@ -567,6 +567,16 @@ class Polyline(_BasePolyline):
                       set_crs = self.crs_uuid,
                       title = title,
                       rep_int_root = rep_int_root)
+
+   def area(self):
+      """Returns the area in the xy plane of a closed convex polygon."""
+      assert self.isclosed
+      assert self.is_convex()
+      centre = np.mean(self.coordinates, axis = 0)
+      a = 0.0
+      for node in range(len(self.coordinates)):
+         a += vu.area_of_triangle(centre, self.coordinates[node - 1], self.coordinates[node])
+      return a
 
    def create_xml(self,
                   ext_uuid = None,

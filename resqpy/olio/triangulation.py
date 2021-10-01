@@ -317,6 +317,20 @@ def voronoi(p, t, b, aoi):
          c += 360.0
       return (a <= t <= c) or (a <= t + 360.0 <= c)
 
+   def seg_for_ci(ci):  # returns hull segment for a boundary index
+      nonlocal ca_count, cah_count, caho_count, cahon_count, wing_hull_segments
+      assert ca_count <= ci < cahon_count
+      #      if not ca_count <= ci < cahon_count:
+      #         log.debug(f'bad seg ci: {ci}')
+      #         assert False
+      if ci < cah_count:  # hull edge intersection
+         return ci - ca_count
+      if ci < caho_count:  # wings
+         oi, wing = divmod(ci - cah_count, 2)
+         return wing_hull_segments[oi, wing]
+      # else virtual centre for hull edge
+      return ci - caho_count
+
    log.debug(f'p: {p}')
    log.debug(f't: {t}')
    log.debug(f'b: {b}')
@@ -391,6 +405,7 @@ def voronoi(p, t, b, aoi):
 
    # where cicrumcircle centres are outwith aoi, compute intersections of normals of wing edges with aoi
    out_pair_intersect_segments = np.empty((o_count, 2), dtype = int)
+   wing_hull_segments = np.empty((o_count, 2), dtype = int)
    for oi, ti in enumerate(tc_outwith_aoi):
       tpi = shorter_sides_p_i(p[t[ti]])
       for wing in range(2):
@@ -401,6 +416,7 @@ def voronoi(p, t, b, aoi):
          o_seg, o_x, o_y = aoi.first_line_intersection(m[0], m[1], n[0], n[1], half_segment = True)
          c[cah_count + 2 * oi + wing] = (o_x, o_y)
          out_pair_intersect_segments[oi, wing] = o_seg
+         wing_hull_segments[oi, wing], _, _ = hull.first_line_intersection(m[0], m[1], n[0], n[1], half_segment = True)
          tpi = (tpi + 1) % 3
          log.debug(f"wings: ti: {ti}; c pair {'c' if wing else 'a'}: {(o_x, o_y)}")
 
@@ -491,7 +507,10 @@ def voronoi(p, t, b, aoi):
          ci_for_p = trimmed_ci
 
       # for sequences on aoi boundary, just keep those between the first and last (?)
-      elif any([ci < c_count for ci in ci_for_p]):
+
+
+#      elif any([ci < c_count for ci in ci_for_p]):
+      else:
          trimmed_ci = []
          cii = 0
          finish_at = len(ci_for_p)
@@ -503,38 +522,49 @@ def voronoi(p, t, b, aoi):
                cii += 1
                continue
             start_cii = cii
-            while ci_for_p[start_cii - 1] >= c_count:
+            cii_seg = seg_for_ci(ci_for_p[cii])
+            while cii == 0 and ci_for_p[start_cii - 1] >= c_count and seg_for_ci(ci_for_p[start_cii - 1]) == cii_seg:
                start_cii -= 1
             start_cii = start_cii % len(ci_for_p)
-            end_cii = (cii + 1) % len(ci_for_p)
-            while ci_for_p[end_cii] >= c_count:
-               end_cii = (end_cii + 1) % len(ci_for_p)
-            end_cii = (end_cii - 1) % len(ci_for_p)  # unpythonesque: end element included in scan
+            end_cii = cii + 1
+            while end_cii < len(ci_for_p) and ci_for_p[end_cii] >= c_count and seg_for_ci(ci_for_p[end_cii]) == cii_seg:
+               end_cii += 1
+            end_cii -= 1  # unpythonesque: end element included in scan
             if end_cii == start_cii:
                trimmed_ci.append(ci_for_p[cii])
                cii += 1
                continue
-            elif end_cii == (start_cii + 1) % len(ci_for_p):
-               trimmed_ci.append(ci_for_p[start_cii])
-               trimmed_ci.append(ci_for_p[end_cii])
-               cii += 2
-               continue
             if end_cii < start_cii:
                finish_at = start_cii
+            if end_cii == (start_cii + 1) % len(ci_for_p):
+               trimmed_ci.append(ci_for_p[start_cii])
+               trimmed_ci.append(ci_for_p[end_cii])
+               cii = end_cii + 1
+               continue
             start_azi = vec.azimuth(c[ci_for_p[start_cii]] - p[p_i, :2])
             end_azi = vec.azimuth(c[ci_for_p[end_cii]] - p[p_i, :2])
             scan_cii = start_cii
             while True:
                if scan_cii == start_cii:
                   trimmed_ci.append(ci_for_p[scan_cii])
-               if scan_cii == end_cii:
+               elif scan_cii == end_cii:
                   trimmed_ci.append(ci_for_p[scan_cii])
                   break
                else:
-                  # TODO: if b_i is None and (aoi_segs are different, or hull segs are different), append
-                  azi = vec.azimuth(c[ci_for_p[scan_cii]] - p[p_i, :2])
-                  if azi_between(start_azi, end_azi, azi):
+                  # if point is around a hull corner from previous, then include (?)
+                  next_cii = (scan_cii + 1) % len(ci_for_p)
+                  if b_i is None and seg_for_ci(ci_for_p[scan_cii]) != seg_for_ci(ci_for_p[next_cii]):
                      trimmed_ci.append(ci_for_p[scan_cii])
+                     trimmed_ci.append(ci_for_p[next_cii])
+                     scan_cii = next_cii
+                  elif b_i is None and seg_for_ci(trimmed_ci[-1]) != seg_for_ci(ci_for_p[scan_cii]):
+                     trimmed_ci.append(ci_for_p[scan_cii])
+                  else:
+                     azi = vec.azimuth(c[ci_for_p[scan_cii]] - p[p_i, :2])
+                     if azi_between(start_azi, end_azi, azi):
+                        trimmed_ci.append(ci_for_p[scan_cii])
+               if scan_cii == end_cii:
+                  break
                scan_cii = (scan_cii + 1) % len(ci_for_p)
             cii = end_cii + 1
          ci_for_p = trimmed_ci
@@ -546,10 +576,11 @@ def voronoi(p, t, b, aoi):
       # build list of intervening aoi boundary point indices and append to list
       aoi_nodes = []
       r = [1] if len(ci_for_p) == 2 else range(len(ci_for_p))
+      just_done_pair = False
       for cii in r:
          cip = ci_for_p[cii - 1]
          ci = ci_for_p[cii]
-         if cip >= c_count and ci >= c_count:
+         if cip >= c_count and ci >= c_count and not just_done_pair:
             # identify aoi segments
             if cip < cah_count:
                aoi_seg_a = aoi_intersect_segments[cip - ca_count]
@@ -560,6 +591,9 @@ def voronoi(p, t, b, aoi):
             else:
                aoi_seg_c = out_pair_intersect_segments[divmod(ci - cah_count, 2)]
             aoi_nodes += aoi_intervening_nodes(aoi_count, c_count, aoi_seg_a, aoi_seg_c)
+            just_done_pair = True
+         else:
+            just_done_pair = False
       ci_for_p += aoi_nodes
       if p_i in [0, 10]:
          log.debug(f'aoi node infill ci_for_p: {ci_for_p}')

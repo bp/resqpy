@@ -3,8 +3,12 @@ import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
+import resqpy.model as rq
+import resqpy.crs as rqc
+import resqpy.lines as rql
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.triangulation as tri
+from resqpy.olio.random_seed import seed
 
 
 def test_ccc():
@@ -37,3 +41,30 @@ def test_ccc():
    p3 = np.array((200.0, 1.0, 0.0))
    c = np.array(tri.ccc(p1, p2, p3))
    check_equidistant(c, (p1, p2, p3))
+
+
+def test_voronoi():
+   seed_value = 3567
+   #   n_list = range(5, 13)
+   n_list = range(5, 50)
+   model = rq.Model(create_basics = True)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+   aoi_xyz = np.zeros((4, 3))
+   aoi_xyz[1, 1] = 1.0
+   aoi_xyz[2, :2] = 1.0
+   aoi_xyz[3, 0] = 1.0
+   aoi = rql.Polyline(model, set_coord = aoi_xyz, set_bool = True, set_crs = crs.uuid, title = 'aoi')
+   for n in n_list:
+      seed(seed_value)
+      x = np.random.random(n)
+      y = np.random.random(n)
+      p = np.stack((x, y), axis = -1)
+      t, b = tri.dt(p, plot_fn = None, progress_fn = None, return_hull = True)
+      c, v = tri.voronoi(p, t, b, aoi)
+      assert len(v) == n
+      area = 0.0
+      for nodes in v:
+         v_cell = rql.Polyline(model, set_coord = c[nodes], set_bool = True, set_crs = crs.uuid, title = 'v cell')
+         area += v_cell.area()
+      assert maths.isclose(area, 1.0, rel_tol = 0.001)
