@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '1st September 2021'
+version = '26th September 2021'
 
 import logging
 
@@ -10,29 +10,7 @@ log.debug('vector_utilities.py version %s', version)
 
 # works with 3D vectors in a cartesian space
 # a vector is a one dimensional numpy array with 3 elements: x, y, z
-
-# functions defined here:
-#    def radians_from_degrees(deg):
-#    def degrees_from_radians(rad):
-#    def zero_vector():
-#    def add(a, b):                            # note: could just use numpy a + b facility
-#    def subtract(a, b):                       # note: could just use numpy a - b facility
-#    def elemental_multiply(a, b):             # note: could just use numpy a * b facility
-#    def amplify(v, scaling):                  # note: could just use numpy a * scalar facility
-#    def unit_vector(v):
-#    def unit_vector_from_azimuth(azimuth):
-#    def azimuth(v):                           # 'azimuth' is synonymous with 'compass bearing'
-#    def dot_product(a, b):
-#    def cross_product(a, b):
-#    def naive_length(v):
-#    def unit_corrected_length(v, unit_conversion):
-#    def manhattan_distance(p1, p2):
-#    def rotation_matrix_3d_axial(axis, angle):
-#    def rotation_3d_matrix(xzy_axis_angles):
-#    def rotate_vector(rotation_matrix, vector):
-#    def perspective_vector(xyz_box, view_axis, vanishing_distance, vector):
-#    def determinant(a, b, c):
-#    def determinant_3x3(a):
+# some functions accept a tuple or list of 3 elements as an alternative to a numpy array
 
 import math as maths
 import numpy as np
@@ -65,53 +43,41 @@ def v_3d(v):
 
 def add(a, b):  # note: could just use numpy a + b facility
    """Returns vector sum a+b."""
-   assert (a.size == b.size == 3)
-   result = zero_vector()
-   for i in range(3):
-      result[i] = a[i] + b[i]
-   return result
+   a = np.array(a)
+   b = np.array(b)
+   assert a.size == b.size
+   return a + b
 
 
 def subtract(a, b):  # note: could just use numpy a - b facility
    """Returns vector difference a-b."""
-   assert (a.size == b.size == 3)
-   result = zero_vector()
-   for i in range(3):
-      result[i] = a[i] - b[i]
-   return result
+   a = np.array(a)
+   b = np.array(b)
+   assert a.size == b.size
+   return a - b
 
 
 def elemental_multiply(a, b):  # note: could just use numpy a * b facility
    """Returns vector with products of corresponding elements of a and b."""
-   assert (a.size == b.size == 3)
-   result = zero_vector()
-   for i in range(3):
-      result[i] = a[i] * b[i]
-   return result
+   a = np.array(a)
+   b = np.array(b)
+   assert a.size == b.size
+   return a * b
 
 
 def amplify(v, scaling):  # note: could just use numpy a * scalar facility
    """Returns vector with direction of v, amplified by scaling."""
-   assert (v.size == 3)
-   result = zero_vector()
-   for i in range(3):
-      result[i] = scaling * v[i]
-   return result
+   v = np.array(v)
+   return scaling * v
 
 
 def unit_vector(v):
    """Returns vector with same direction as v but with unit length."""
-   assert v.size == 3
-   result = zero_vector()
-   if np.all(v == result):
-      return result  # NB: v is zero vector: could raise an exception
-   scaling = 0.0
-   for i in range(3):
-      scaling += v[i] * v[i]
-   scaling = maths.sqrt(scaling)
-   for i in range(3):
-      result[i] = v[i] / scaling
-   return result
+   assert 2 <= len(v) <= 3
+   v = np.array(v, dtype = float)
+   if np.all(v == 0.0):
+      return v
+   return v / maths.sqrt(np.sum(v * v))
 
 
 def unit_vectors(v):
@@ -119,9 +85,9 @@ def unit_vectors(v):
    scaling = np.sqrt(np.sum(v * v, axis = -1))
    zero_mask = np.zeros(v.shape, dtype = bool)
    zero_mask[np.where(scaling == 0.0), :] = True
-   np.seterr(divide = 'ignore')
+   restore = np.seterr(all = 'ignore')
    result = np.where(zero_mask, 0.0, v / np.expand_dims(scaling, -1))
-   np.seterr(divide = 'warn')
+   np.seterr(**restore)
    return result
 
 
@@ -503,6 +469,26 @@ def area_of_triangle(a, b, c):
    lc = naive_length(c - a)
    s = 0.5 * (la + lb + lc)
    return maths.sqrt(s * (s - la) * (s - lb) * (s - lc))
+
+
+def clockwise_sorted_indices(p, b):
+   """Returns a clockwise sorted numpy list of indices b into the points p.
+
+   note:
+      this function is designed for preparing a list of points defining a convex polygon when projected in
+      the xy plane, starting from a subset of the unsorted points; more specifically, it assumes that the
+      mean of p (over axis 0) lies within the polygon and the clockwise ordering is relative to that mean point
+   """
+
+   # note: this function currently assumes that the mean of points bp lies within the hull of bp
+   # and that the points form a convex polygon from the perspective of the mean point
+   assert p.ndim == 2 and len(p) >= 3
+   centre = np.mean(p, axis = 0)
+   hull_list = []  # list of azimuths and indices into p (axis 0)
+   for i in b:
+      azi = azimuth(p[i] - centre)
+      hull_list.append((azi, i))
+   return np.array([i for (_, i) in sorted(hull_list)], dtype = int)
 
 
 # end of vector_utilities module
