@@ -45,26 +45,51 @@ def test_ccc():
 
 def test_voronoi():
    seed_value = 3567
-   # n_list = range(5, 13)
    n_list = range(5, 50)
    model = rq.Model(create_basics = True)
    crs = rqc.Crs(model)
    crs.create_xml()
+   # setup unit square area of interest
    aoi_xyz = np.zeros((4, 3))
    aoi_xyz[1, 1] = 1.0
    aoi_xyz[2, :2] = 1.0
    aoi_xyz[3, 0] = 1.0
    aoi = rql.Polyline(model, set_coord = aoi_xyz, set_bool = True, set_crs = crs.uuid, title = 'aoi')
+   # and an alternative area of interest
+   aoi_heptagon_xyz = np.zeros((7, 3))
+   aoi_heptagon_xyz[:, :2] = ((-0.5, -1.0), (-1.5, 0.5), (-1.0, 1.7), (0.5, 2.0), (2.0, 1.7), (2.5, 0.5), (1.5, -1.0))
+   aoi_heptagon = rql.Polyline(model,
+                               set_coord = aoi_heptagon_xyz,
+                               set_bool = True,
+                               set_crs = crs.uuid,
+                               title = 'heptagon')
+   aoi_heptagon_area = aoi_heptagon.area()
+
    for n in n_list:
       seed(seed_value)
       x = np.random.random(n)
       y = np.random.random(n)
       p = np.stack((x, y), axis = -1)
+      # compute the Delauney triangulation
       t, b = tri.dt(p, plot_fn = None, progress_fn = None, return_hull = True)
+      # dt function can return triangulation with a slightly concave hull, which voronoi function cannot handle
+      hull = rql.Polyline(model, set_coord = p[b], set_bool = True, set_crs = crs.uuid, title = 'v cell')
+      if not hull.is_convex():
+         continue
+      # test the Voronoi diagram with the unit square area of interest
       c, v = tri.voronoi(p, t, b, aoi)
       assert len(v) == n
+      # check that the areas of the Voronoi cells sum to the area of interest
       area = 0.0
       for nodes in v:
          v_cell = rql.Polyline(model, set_coord = c[nodes], set_bool = True, set_crs = crs.uuid, title = 'v cell')
          area += v_cell.area()
       assert maths.isclose(area, 1.0, rel_tol = 0.001)
+      # test the Voronoi diagram with the heptagonal area of interest
+      c_hept, v_hept = tri.voronoi(p, t, b, aoi_heptagon)
+      assert len(v_hept) == n
+      area = 0.0
+      for nodes in v_hept:
+         v_cell = rql.Polyline(model, set_coord = c_hept[nodes], set_bool = True, set_crs = crs.uuid, title = 'v cell')
+         area += v_cell.area()
+      assert maths.isclose(area, aoi_heptagon_area, rel_tol = 0.001)

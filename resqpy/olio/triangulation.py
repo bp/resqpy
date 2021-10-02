@@ -201,10 +201,6 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
    if progress_fn is not None:
       progress_fn(1.0)
 
-   log.debug(f'dt p: {p}')
-   log.debug(f'dt t: {t[:nt]}')
-   log.debug(f'dt b: {external_pi}')
-
    return tri_set, external_pi
 
 
@@ -287,7 +283,10 @@ def voronoi(p, t, b, aoi):
 
    notes:
       the aoi polyline forms the outer boundary for the Voronoi polygons for points on the
-      outer edge of the triangulation; all points p must lie strictly within the aoi
+      outer edge of the triangulation; all points p must lie strictly within the aoi, which
+      must be convex; the triangulation t, of points p, must also have a convex hull; note
+      that the dt() function can produce a triangulation with slight concavities on the hull,
+      especially for smaller values of its container_size_factor argument
    """
 
    # this code assumes that the Voronoi polygon for a seed point visits the circumcentres of
@@ -321,10 +320,6 @@ def voronoi(p, t, b, aoi):
       nonlocal ca_count, cah_count, caho_count, cahon_count, wing_hull_segments
       if ci < ca_count:
          return None
-#      assert ca_count <= ci < cahon_count
-#      if not ca_count <= ci < cahon_count:
-#         log.debug(f'bad seg ci: {ci}')
-#         assert False
       if ci < cah_count:  # hull edge intersection
          return ci - ca_count
       if ci < caho_count:  # wings
@@ -335,13 +330,9 @@ def voronoi(p, t, b, aoi):
       # else virtual centre for hull point; arbitrarily pick clockwise segment
       return ci - cahon_count
 
-   log.debug(f'\n\nVoronoi: nt: {len(p)}; nt: {len(t)}; hull: {len(b)}; aoi: {len(aoi.coordinates)}')
-   for i in range(len(p)):
-      log.debug(f'p{i:2d}: {p[i]}')
-   for i in range(len(t)):
-      log.debug(f't{i:2d}: {t[i]}')
-   log.debug(f'b: {b}')
-   # todo: allow aoi to be None in which case create an aoi as hull with border
+#   log.debug(f'\n\nVoronoi: nt: {len(p)}; nt: {len(t)}; hull: {len(b)}; aoi: {len(aoi.coordinates)}')
+# todo: allow aoi to be None in which case create an aoi as hull with border
+
    assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
    assert t.ndim == 2 and t.shape[1] == 3
    assert b.ndim == 1 and b.shape[0] > 2
@@ -357,6 +348,10 @@ def voronoi(p, t, b, aoi):
       title = 'triangulation hull')
    hull_count = len(b)
 
+   # check for concavities in hull
+   if not hull.is_convex():
+      log.warning('Delauney triangulation is not convex; Voronoi diagram construction might fail')
+
    # compute circumcircle centres
    c = np.zeros((t.shape[0], 2))
    for ti in range(len(t)):
@@ -366,7 +361,6 @@ def voronoi(p, t, b, aoi):
    # make list of triangle indices whose circumcircle centres are outwith the area of interest
    tc_outwith_aoi = [ti for ti in range(c_count) if not aoi.point_is_inside_xy(c[ti])]
    o_count = len(tc_outwith_aoi)
-   log.debug(f'outwith nt: {o_count}; t: {tc_outwith_aoi}')
 
    # make space for combined points data needed for all voronoi cell nodes:
    # 1. circumcircle centres for traingles in delauney triangulation
@@ -427,7 +421,6 @@ def voronoi(p, t, b, aoi):
          out_pair_intersect_segments[oi, wing] = o_seg
          wing_hull_segments[oi, wing], _, _ = hull.first_line_intersection(m[0], m[1], n[0], n[1], half_segment = True)
          tpi = (tpi + 1) % 3
-         log.debug(f"wings: ti: {ti}; c pair {'c' if wing else 'a'}: {(o_x, o_y)}")
 
    # list of voronoi cells (each a numpy list of node indices into c extended with aoi points etc)
    v = []
@@ -435,12 +428,8 @@ def voronoi(p, t, b, aoi):
    # for each seed point build the voronoi cell
    for p_i in range(len(p)):
 
-      if p_i in [16, 20]:
-         log.debug(f'****** p_i: {p_i}')
       # find triangles making use of that point
       ci_for_p = list(np.where(t == p_i)[0])
-      if p_i in [16, 20]:
-         log.debug(f'ci_for_p: {ci_for_p}')
 
       # if seed point is on hull boundary, introduce three extended virtual centres
       b_i = None
@@ -448,8 +437,6 @@ def voronoi(p, t, b, aoi):
          b_i = np.where(b == p_i)[0][0]  # index into hull coordinates
          p_b_i = (b_i - 1) % hull_count  # predecessor, ie. anti-clockwise boundary point
          ci_for_p += [caho_count + p_b_i, cahon_count + b_i, caho_count + b_i]
-         if p_i in [16, 20]:
-            log.debug(f'boundary ci_for_p: {ci_for_p}')
 
       # find azimuths of vectors from seed point to circumcircle centres (and virtual centres)
       azi = [vec.azimuth(centre - p[p_i]) for centre in c[ci_for_p]]
@@ -457,9 +444,6 @@ def voronoi(p, t, b, aoi):
       hull_node_azi = None if b_i is None else azi[-2]
       # sort triangle indices for seed point into clockwise order of circumcircle (and virtual) centres
       ci_for_p = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
-
-      if p_i in [16, 20]:
-         log.debug(f'sorted ci_for_p: {ci_for_p}')
 
       # where circumcirle (or virtual) centre is outwith aoi, replace with a point on aoi boundary
       # virtual centres related to hull points (not hull edges) can be discarded
@@ -483,8 +467,6 @@ def voronoi(p, t, b, aoi):
             # replace with index for intersection point on aoi boundary
             trimmed_ci.append(ca_count + ci - caho_count)
       ci_for_p = trimmed_ci
-      if p_i in [16, 20]:
-         log.debug(f'trimmed to aoi ci_for_p: {ci_for_p}')
 
       # if this is a hull seed point, classify aoi boundary points into anti- or clockwise, and find closest to seed
       if b_i is not None:
@@ -577,8 +559,6 @@ def voronoi(p, t, b, aoi):
                scan_cii = (scan_cii + 1) % len(ci_for_p)
             cii = end_cii + 1
          ci_for_p = trimmed_ci
-      if p_i in [16, 20]:
-         log.debug(f'first & last aoi ci_for_p: {ci_for_p}')
 
       # reverse points if needed for pair of aoi points only
       assert len(ci_for_p) >= 2
@@ -587,8 +567,6 @@ def voronoi(p, t, b, aoi):
          seg_1 = seg_for_ci(ci_for_p[1])
          if seg_0 is not None and seg_1 is not None and seg_0 == (seg_1 + 1) % hull_count:
             ci_for_p.reverse()
-         if p_i in [16, 20]:
-            log.debug(f'reversed ci_for_p: {ci_for_p}')
 
       # build list of intervening aoi boundary point indices and append to list
       aoi_nodes = []
@@ -612,21 +590,15 @@ def voronoi(p, t, b, aoi):
          else:
             just_done_pair = False
       ci_for_p += aoi_nodes
-      if p_i in [16, 20]:
-         log.debug(f'aoi node infill ci_for_p: {ci_for_p}')
 
       # remove circumcircle centres that are outwith area of interest
       ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
-      if p_i in [16, 20]:
-         log.debug(f'outwith removed ci_for_p: {ci_for_p}')
 
       # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
       azi = [vec.azimuth(centre - p[p_i]) for centre in c[ci_for_p]]
 
       # re-sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
       ordered_ci = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
-      if p_i in [16, 20]:
-         log.debug(f'ordered ci: {ci_for_p}')
 
       v.append(ordered_ci)
 
