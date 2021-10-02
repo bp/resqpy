@@ -45,7 +45,7 @@ def test_ccc():
 
 def test_voronoi():
    seed_value = 3567
-   n_list = range(5, 30)
+   n_list = range(5, 40)
    model = rq.Model(create_basics = True)
    crs = rqc.Crs(model)
    crs.create_xml()
