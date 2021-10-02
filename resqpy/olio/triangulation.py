@@ -283,7 +283,10 @@ def voronoi(p, t, b, aoi):
 
    notes:
       the aoi polyline forms the outer boundary for the Voronoi polygons for points on the
-      outer edge of the triangulation; all points p must lie strictly within the aoi
+      outer edge of the triangulation; all points p must lie strictly within the aoi, which
+      must be convex; the triangulation t, of points p, must also have a convex hull; note
+      that the dt() function can produce a triangulation with slight concavities on the hull,
+      especially for smaller values of its container_size_factor argument
    """
 
    # this code assumes that the Voronoi polygon for a seed point visits the circumcentres of
@@ -344,6 +347,10 @@ def voronoi(p, t, b, aoi):
       set_crs = aoi.crs_uuid,
       title = 'triangulation hull')
    hull_count = len(b)
+
+   # check for concavities in hull
+   if not hull.is_convex():
+      log.warning('Delauney triangulation is not convex; Voronoi diagram construction might fail')
 
    # compute circumcircle centres
    c = np.zeros((t.shape[0], 2))
