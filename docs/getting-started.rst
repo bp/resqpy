@@ -13,6 +13,14 @@ A first step is typically to instantiate a :class:`resqpy.model.Model` object fr
     >>> model = Model(epc_file='my_file.epc')
     <resqpy.model.Model at 0x7fdcd14e4700>
 
+Models can be conveniently opened with the :class:`resqpy.model.ModelContext` context manager, to ensure file handles are closed properly upon exit:
+
+.. code-block:: python
+
+    >>> from resqpy.model import ModelContext
+    >>> with ModelContext("my_model.epc") as model:
+    >>>     print(model.uuids())
+
 If you don't have any RESQML datasets, you can use the tiny datasets included in the example_data directory of the resqpy repository.
 
 To list all the parts (high level objects) in the model:
