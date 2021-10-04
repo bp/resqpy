@@ -1551,6 +1551,8 @@ class VerticalPrismGrid(PrismGrid):
    def from_surfaces(cls,
                      parent_model,
                      surfaces,
+                     column_points = None,
+                     column_triangles = None,
                      title = None,
                      originator = None,
                      extra_metadata = {},
@@ -1561,6 +1563,10 @@ class VerticalPrismGrid(PrismGrid):
          parent_model (model.Model object): the model which this grid is part of
          surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
             shallowest to deepest; see notes
+         column_points (2D numpy float array, optional): if present, the xy points to use for
+            the grid's triangulation; see notes
+         column_triangles (numpy int array of shape (M, 3), optional): if present, indices into the
+            first dimension of column_points giving the xy triangulation to use for the grid; see notes
          title (str, optional): citation title for the new grid
          originator (str, optional): name of person creating the grid; defaults to login id
          extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
@@ -1571,9 +1577,12 @@ class VerticalPrismGrid(PrismGrid):
       notes:
          this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
          the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
-         the first, shallowest, surface is used as a master and determines the triangular pattern of
-         the columns; where a gravity vector from a node above does not intersect a surface, the
-         point is inherited as a copy of the node above;
+         the triangular pattern of the columns (in the xy plane) can be specified with the column_points
+         and column_triangles arguments;
+         if those arguments are None, the first, shallowest, surface is used as a master and determines
+         the triangular pattern of the columns;
+         where a gravity vector from a node above does not intersect a surface, the point is inherited
+         as a copy of the node above;
          the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
          Grid2dRepresentation), or for a horizontal plane;
          this class is represented in RESQML as an UnstructuredGridRepresentation – when a resqpy
@@ -1601,6 +1610,7 @@ class VerticalPrismGrid(PrismGrid):
 
          return frp(a, pair, 0, len(a))
 
+      assert (column_points is None) == (column_triangles is None)
       assert len(surfaces) > 1
       for s in surfaces:
          assert isinstance(s, rqs.Surface)
@@ -1619,9 +1629,12 @@ class VerticalPrismGrid(PrismGrid):
                                                                          uuid = s.crs_uuid), 'mismatching surface crs'
 
       # fetch the data for the top surface, to be used as the master for the triangular pattern
-      top_triangles, top_points = top.triangles_and_points()
+      if column_triangles is None:
+         top_triangles, top_points = top.triangles_and_points()
+      else:
+         top_triangles, top_points = column_triangles, column_points
       assert top_triangles.ndim == 2 and top_triangles.shape[1] == 3
-      assert top_points.ndim == 2 and top_points.shape[1] == 3
+      assert top_points.ndim == 2 and top_points.shape[1] in [2, 3]
       assert len(top_triangles) > 0
       bad_points = np.zeros(top_points.shape[0], dtype = bool)
 
@@ -1639,9 +1652,9 @@ class VerticalPrismGrid(PrismGrid):
          vpg.extra_metadata = {}
       vpg.extra_metadata['layer count'] = vpg.layer_count
 
-      # setup points with copies of points for top surface, deeper z values to be updated later
-      points = np.empty((surface_count, top_points.shape[0], 3))
-      points[:] = top_points
+      # setup points with copies of points for top surface, z values to be updated later
+      points = np.zeros((surface_count, top_points.shape[0], 3))
+      points[:, :, :top_points.shape[1]] = top_points
 
       # arrange faces with all triangles first, followed by the vertical quadrilaterals
       vpg.nodes_per_face_cl = np.zeros(vpg.face_count, dtype = int)
@@ -1697,18 +1710,22 @@ class VerticalPrismGrid(PrismGrid):
          # TODO: set handedness correctly and make default for set_handedness True
          raise NotImplementedError('code not written to set handedness for vertical prism grid from surfaces')
 
-      # instersect gravity vectors from top surface points with other surfaces, and update z values in points
+      # instersect gravity vectors from column points with other surfaces, and update z values in points
       gravity = np.zeros((top_points.shape[0], 3))
       gravity[:, 2] = 1.0  # up/down does not matter for the intersection function used below
-      for layer in range(layer_count):
-         base_triangles, base_points = surfaces[layer + 1].triangles_and_points()  # surface at base of layer
-         intersects = meet.line_set_triangles_intersects(top_points, gravity, base_points[base_triangles])
+      start = 1 if top_triangles is None else 0
+      for surf in range(start, surface_count):
+         surf_triangles, surf_points = surfaces[surf].triangles_and_points()
+         intersects = meet.line_set_triangles_intersects(top_points, gravity, surf_points[surf_triangles])
          single_intersects = meet.last_intersects(intersects)  # will be triple NaN where no intersection occurs
          # inherit point from surface above where no intersection has occurred
          nan_lines = np.isnan(single_intersects[:, 0])
-         single_intersects[nan_lines] = points[layer][nan_lines]
+         if surf == 0:
+            assert not np.any(nan_lines), 'top surface does not cover all column points'
+         else:
+            single_intersects[nan_lines] = points[surf - 1][nan_lines]
          # populate z values for layer of points
-         points[layer + 1, :, 2] = single_intersects[:, 2]
+         points[surf, :, 2] = single_intersects[:, 2]
 
       vpg.points_cached = points.reshape((-1, 3))
       assert np.all(vpg.nodes_per_face < len(vpg.points_cached))
