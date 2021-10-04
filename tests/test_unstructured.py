@@ -2,7 +2,7 @@ import pytest
 import os
 import math as maths
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_allclose
 
 import resqpy.model as rq
 import resqpy.crs as rqc
@@ -10,6 +10,7 @@ import resqpy.grid as grr
 import resqpy.surface as rqs
 import resqpy.unstructured as rug
 import resqpy.olio.uuid as bu
+import resqpy.olio.triangulation as triangulation
 
 
 def test_hexa_grid_from_grid(example_model_with_properties):
@@ -335,3 +336,39 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
    assert grid.cell_count == 10
    assert grid.node_count == 18
    assert grid.face_count == 35
+
+   # create a very similar grid using explicit triangulation arguments
+
+   # make the same Delauney triangulation
+   triangles = triangulation.dt(pentagon_points)
+
+   # slightly shrink pentagon points to be within area of surfaces
+   for i in range(len(pentagon_points)):
+      if pentagon_points[i, 0] < 0.0:
+         pentagon_points[i, 0] += 1.0
+      elif pentagon_points[i, 0] > 0.0:
+         pentagon_points[i, 0] -= 1.0
+      if pentagon_points[i, 1] < 0.0:
+         pentagon_points[i, 1] += 1.0
+      elif pentagon_points[i, 1] > 0.0:
+         pentagon_points[i, 1] -= 1.0
+
+   # load the surfaces
+   surf_uuids = model.uuids(obj_type = 'TriangulatedSetRepresentation', sort_by = 'oldest')
+   surf_list = []
+   for surf_uuid in surf_uuids:
+      surf_list.append(rqs.Surface(model, uuid = surf_uuid))
+
+   # create a new vertical prism grid using the explicit triangulation arguments
+   similar = rug.VerticalPrismGrid.from_surfaces(model,
+                                                 surf_list,
+                                                 column_points = pentagon_points,
+                                                 column_triangles = triangles,
+                                                 title = 'similar pentagon')
+
+   # check similarity
+   for attr in ('cell_shape', 'layer_count', 'cell_count', 'node_count', 'face_count'):
+      assert getattr(grid, attr) == getattr(similar, attr)
+   for index_attr in ('nodes_per_face', 'nodes_per_face_cl', 'faces_per_cell', 'faces_per_cell_cl'):
+      assert np.all(getattr(grid, index_attr) == getattr(similar, index_attr))
+   assert_allclose(grid.points_ref(), similar.points_ref(), atol = 2.0)

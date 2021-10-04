@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '7th September 2021'
+version = '4th October 2021'
 
 import logging
 
@@ -1631,8 +1631,12 @@ class VerticalPrismGrid(PrismGrid):
       # fetch the data for the top surface, to be used as the master for the triangular pattern
       if column_triangles is None:
          top_triangles, top_points = top.triangles_and_points()
+         column_edges = top.distinct_edges()  # ordered pairs of node indices
       else:
          top_triangles, top_points = column_triangles, column_points
+         column_surf = rqs.Surface(parent_model, crs_uuid = vpg.crs_uuid)
+         column_surf.set_from_triangles_and_points(column_triangles, column_points)
+         column_edges = column_surf.distinct_edges()
       assert top_triangles.ndim == 2 and top_triangles.shape[1] == 3
       assert top_points.ndim == 2 and top_points.shape[1] in [2, 3]
       assert len(top_triangles) > 0
@@ -1642,7 +1646,6 @@ class VerticalPrismGrid(PrismGrid):
       column_count = top_triangles.shape[0]
       surface_count = len(surfaces)
       layer_count = surface_count - 1
-      column_edges = top.distinct_edges()  # ordered pairs of node indices
       column_edge_count = len(column_edges)
       vpg.cell_count = column_count * layer_count
       vpg.node_count = len(top_points) * surface_count
