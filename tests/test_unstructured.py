@@ -451,7 +451,11 @@ def test_vertical_prism_grid_from_seed_points_and_surfaces(tmp_path):
                               title = 'h' + str(i))
       horizon_mesh.write_hdf5()
       horizon_mesh.create_xml()
-      horizon_surface = rqs.Surface(model, mesh = horizon_mesh, quad_triangles = True, title = horizon_mesh.title)
+      horizon_surface = rqs.Surface(model,
+                                    crs_uuid = crs.uuid,
+                                    mesh = horizon_mesh,
+                                    quad_triangles = True,
+                                    title = horizon_mesh.title)
       horizon_surface.write_hdf5()
       horizon_surface.create_xml()
       horizons.append(horizon_surface)
@@ -463,3 +467,7 @@ def test_vertical_prism_grid_from_seed_points_and_surfaces(tmp_path):
                                                               aoi,
                                                               title = "giant's causeway")
    assert grid is not None
+   grid.write_hdf5()
+   grid.create_xml()
+
+   model.store_epc()
