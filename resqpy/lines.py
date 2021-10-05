@@ -134,7 +134,7 @@ class Polyline(_BasePolyline):
       self.crs_uuid = set_crs
       self.coordinates = None
       self.centre = None
-      self.rep_int_root = rep_int_root  # Optional
+      self.rep_int_root = rep_int_root  # Optional represented interpretation xml root node
       super().__init__(model = parent_model,
                        uuid = uuid,
                        title = title,
@@ -145,10 +145,6 @@ class Polyline(_BasePolyline):
       if self.root is None and all(i is not None for i in [set_bool, set_coord, set_crs, title]):
          # Using data from a polyline set
          assert set_coord.ndim > 1 and 2 <= set_coord.shape[-1] <= 3
-         if rep_int_root is not None:
-            self.rep_int_root = rep_int_root
-         else:
-            self.rep_int_root = None
          # allow for x,y or x,y,z incoming coordinates but use x,y,z internally
          coord_shape = list(set_coord.shape)
          coord_shape[-1] = 3
@@ -202,6 +198,45 @@ class Polyline(_BasePolyline):
    def rep_int_uuid(self):
       # TODO: Track uuid only, not root
       return rqet.uuid_for_part_root(self.rep_int_root)
+
+   @classmethod
+   def from_scaled_polyline(cls, original, scaling, title = None, originator = None, extra_metadata = None):
+      """Returns a scaled version of the original polyline.
+
+      arguments:
+         original (Polyline): the polyline from which the new polyline will be sporned
+         scaling (float): the factor by which the original will be scaled
+         title (str, optional): the citation title for the new polyline; inherited from
+            original if None
+         originator (str, optional): the name of the person creating the polyline; inherited
+            from original if None
+         extra_metadata (dict, optional): extra metadata for the new polyline; inherited from
+            original if None
+
+      returns:
+         a new Polyline
+
+      notes:
+         the scaling factor is applied to vectors radiating from the balanced centre of the
+         original polyline to its coordinates; a scaling of 1.0 will result in a copy of the original;
+         if extra_metadata is not None, no extra metadata is inherited from original
+      """
+
+      if extra_metadata is None:
+         extra_metadata = original.extra_metadata
+
+      polyline = cls(original.model,
+                     set_crs = original.crs_uuid,
+                     set_bool = original.isclosed,
+                     title = title if title else original.title,
+                     originator = originator if originator else original.originator,
+                     extra_metadata = extra_metadata)
+
+      o_centre = original.balanced_centre()
+      polyline.coordinates = scaling * (original.coordinates - o_centre) + o_centre
+      polyline.nodepatch = (0, len(polyline.coordinates))
+
+      return polyline
 
    def is_convex(self, trust_metadata = True):
       """Returns True if the polyline is closed and convex in the xy plane, otherwise False."""

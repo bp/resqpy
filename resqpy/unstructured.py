@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '7th September 2021'
+version = '5th October 2021'
 
 import logging
 
@@ -1493,8 +1493,8 @@ class VerticalPrismGrid(PrismGrid):
    """Class for unstructured grids where every cell is a vertical triangular prism.
 
    notes:
-      vertical prism cells are constrained to have a fixed triangular cross-section, though top and base triangular
-      faces need not be horizontal; edges not involved in the triangular faces must be vertical;
+      vertical prism cells are constrained to have a fixed triangular horzontal cross-section, though top and base
+      triangular faces need not be horizontal; edges not involved in the triangular faces must be vertical;
       this is not a native RESQML sub-class but is a resqpy concoction to allow optimisation of some methods;
       face ordering within a cell is also constrained to be top, base, then the three vertical planar quadrilateral
       faces; node ordering within triangular faces is constrained to ensure correspondence of nodes in triangles
@@ -1551,6 +1551,8 @@ class VerticalPrismGrid(PrismGrid):
    def from_surfaces(cls,
                      parent_model,
                      surfaces,
+                     column_points = None,
+                     column_triangles = None,
                      title = None,
                      originator = None,
                      extra_metadata = {},
@@ -1561,6 +1563,10 @@ class VerticalPrismGrid(PrismGrid):
          parent_model (model.Model object): the model which this grid is part of
          surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
             shallowest to deepest; see notes
+         column_points (2D numpy float array, optional): if present, the xy points to use for
+            the grid's triangulation; see notes
+         column_triangles (numpy int array of shape (M, 3), optional): if present, indices into the
+            first dimension of column_points giving the xy triangulation to use for the grid; see notes
          title (str, optional): citation title for the new grid
          originator (str, optional): name of person creating the grid; defaults to login id
          extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
@@ -1571,9 +1577,12 @@ class VerticalPrismGrid(PrismGrid):
       notes:
          this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
          the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
-         the first, shallowest, surface is used as a master and determines the triangular pattern of
-         the columns; where a gravity vector from a node above does not intersect a surface, the
-         point is inherited as a copy of the node above;
+         the triangular pattern of the columns (in the xy plane) can be specified with the column_points
+         and column_triangles arguments;
+         if those arguments are None, the first, shallowest, surface is used as a master and determines
+         the triangular pattern of the columns;
+         where a gravity vector from a node above does not intersect a surface, the point is inherited
+         as a copy of the node above and will be NaNs if no surface above has an intersection;
          the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
          Grid2dRepresentation), or for a horizontal plane;
          this class is represented in RESQML as an UnstructuredGridRepresentation – when a resqpy
@@ -1601,6 +1610,7 @@ class VerticalPrismGrid(PrismGrid):
 
          return frp(a, pair, 0, len(a))
 
+      assert (column_points is None) == (column_triangles is None)
       assert len(surfaces) > 1
       for s in surfaces:
          assert isinstance(s, rqs.Surface)
@@ -1619,29 +1629,41 @@ class VerticalPrismGrid(PrismGrid):
                                                                          uuid = s.crs_uuid), 'mismatching surface crs'
 
       # fetch the data for the top surface, to be used as the master for the triangular pattern
-      top_triangles, top_points = top.triangles_and_points()
+      if column_triangles is None:
+         top_triangles, top_points = top.triangles_and_points()
+         column_edges = top.distinct_edges()  # ordered pairs of node indices
+      else:
+         top_triangles = column_triangles
+         if column_points.shape[1] == 3:
+            top_points = column_points
+         else:
+            top_points = np.zeros((len(column_points), 3))
+            top_points[:, :column_points.shape[1]] = column_points
+         column_surf = rqs.Surface(parent_model, crs_uuid = vpg.crs_uuid)
+         column_surf.set_from_triangles_and_points(column_triangles, column_points)
+         column_edges = column_surf.distinct_edges()
       assert top_triangles.ndim == 2 and top_triangles.shape[1] == 3
-      assert top_points.ndim == 2 and top_points.shape[1] == 3
+      assert top_points.ndim == 2 and top_points.shape[1] in [2, 3]
       assert len(top_triangles) > 0
-      bad_points = np.zeros(top_points.shape[0], dtype = bool)
+      p_count = len(top_points)
+      bad_points = np.zeros(p_count, dtype = bool)
 
       # setup size of arrays for the vertical prism grid
       column_count = top_triangles.shape[0]
       surface_count = len(surfaces)
       layer_count = surface_count - 1
-      column_edges = top.distinct_edges()  # ordered pairs of node indices
       column_edge_count = len(column_edges)
       vpg.cell_count = column_count * layer_count
-      vpg.node_count = len(top_points) * surface_count
+      vpg.node_count = p_count * surface_count
       vpg.face_count = column_count * surface_count + column_edge_count * layer_count
       vpg.layer_count = layer_count
       if vpg.extra_metadata is None:
          vpg.extra_metadata = {}
       vpg.extra_metadata['layer count'] = vpg.layer_count
 
-      # setup points with copies of points for top surface, deeper z values to be updated later
-      points = np.empty((surface_count, top_points.shape[0], 3))
-      points[:] = top_points
+      # setup points with copies of points for top surface, z values to be updated later
+      points = np.zeros((surface_count, p_count, 3))
+      points[:, :, :] = top_points
 
       # arrange faces with all triangles first, followed by the vertical quadrilaterals
       vpg.nodes_per_face_cl = np.zeros(vpg.face_count, dtype = int)
@@ -1655,14 +1677,14 @@ class VerticalPrismGrid(PrismGrid):
       vpg.nodes_per_face = np.zeros(vpg.nodes_per_face_cl[-1], dtype = int)
       for surface_index in range(surface_count):
          vpg.nodes_per_face[surface_index * 3 * column_count : (surface_index + 1) * 3 * column_count] =  \
-            top_triangles.flatten() + surface_index * top_points.shape[0]
+            top_triangles.flatten() + surface_index * p_count
       # populate nodes per face for quadrilateral faces
       quad_nodes = np.empty((layer_count, column_edge_count, 2, 2), dtype = int)
       for layer in range(layer_count):
-         quad_nodes[layer, :, 0, :] = column_edges + layer * top_points.shape[0]
+         quad_nodes[layer, :, 0, :] = column_edges + layer * p_count
          # reverse order of base pairs to maintain cyclic ordering of nodes per face
-         quad_nodes[layer, :, 1, 0] = column_edges[:, 1] + (layer + 1) * top_points.shape[0]
-         quad_nodes[layer, :, 1, 1] = column_edges[:, 0] + (layer + 1) * top_points.shape[0]
+         quad_nodes[layer, :, 1, 0] = column_edges[:, 1] + (layer + 1) * p_count
+         quad_nodes[layer, :, 1, 1] = column_edges[:, 0] + (layer + 1) * p_count
       vpg.nodes_per_face[3 * surface_count * column_count:] = quad_nodes.flatten()
       assert vpg.nodes_per_face[-1] > 0
 
@@ -1697,21 +1719,90 @@ class VerticalPrismGrid(PrismGrid):
          # TODO: set handedness correctly and make default for set_handedness True
          raise NotImplementedError('code not written to set handedness for vertical prism grid from surfaces')
 
-      # instersect gravity vectors from top surface points with other surfaces, and update z values in points
-      gravity = np.zeros((top_points.shape[0], 3))
+      # instersect gravity vectors from column points with other surfaces, and update z values in points
+      gravity = np.zeros((p_count, 3))
       gravity[:, 2] = 1.0  # up/down does not matter for the intersection function used below
-      for layer in range(layer_count):
-         base_triangles, base_points = surfaces[layer + 1].triangles_and_points()  # surface at base of layer
-         intersects = meet.line_set_triangles_intersects(top_points, gravity, base_points[base_triangles])
+      start = 1 if top_triangles is None else 0
+      for surf in range(start, surface_count):
+         surf_triangles, surf_points = surfaces[surf].triangles_and_points()
+         intersects = meet.line_set_triangles_intersects(top_points, gravity, surf_points[surf_triangles])
          single_intersects = meet.last_intersects(intersects)  # will be triple NaN where no intersection occurs
          # inherit point from surface above where no intersection has occurred
          nan_lines = np.isnan(single_intersects[:, 0])
-         single_intersects[nan_lines] = points[layer][nan_lines]
+         if surf == 0:
+            # allow NaN entries to handle unused distant circumcentres in Voronoi graph data
+            # assert not np.any(nan_lines), 'top surface does not cover all column points'
+            single_intersects[nan_lines] = np.NaN
+         else:
+            single_intersects[nan_lines] = points[surf - 1][nan_lines]
          # populate z values for layer of points
-         points[layer + 1, :, 2] = single_intersects[:, 2]
+         points[surf, :, 2] = single_intersects[:, 2]
 
       vpg.points_cached = points.reshape((-1, 3))
       assert np.all(vpg.nodes_per_face < len(vpg.points_cached))
+
+      return vpg
+
+   @classmethod
+   def from_seed_points_and_surfaces(cls,
+                                     parent_model,
+                                     seed_xy,
+                                     surfaces,
+                                     area_of_interest,
+                                     title = None,
+                                     originator = None,
+                                     extra_metadata = {},
+                                     set_handedness = False):
+      """Create a layered vertical prism grid from seed points and an ordered list of untorn surfaces.
+
+      arguments:
+         parent_model (model.Model object): the model which this grid is part of
+         seed_xy (numpy float array of shape (N, 2 or 3)): the xy locations of seed points
+         surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
+            shallowest to deepest; see notes
+         area_of_interest (closed convex Polyline): the frontier polygon in the xy plane
+         title (str, optional): citation title for the new grid
+         originator (str, optional): name of person creating the grid; defaults to login id
+         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
+
+      returns:
+         a newly created VerticalPrismGrid object
+
+      notes:
+         the triangular pattern of the columns (in the xy plane) is constructed as a re-triangulation
+         of the Voronoi diagram of the Delauney triangulation of the seed points;
+         the seed points may be xy or xyz data but z is ignored;
+         this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
+         the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
+         all the seed points must lie wholly within the area of interest;
+         where a gravity vector from a node above does not intersect a surface, the point is inherited
+         as a copy of the node above (the topmost surface must cover the entire area of interest);
+         the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
+         Grid2dRepresentation), or for a horizontal plane
+      """
+
+      assert seed_xy.ndim == 2 and seed_xy.shape[1] in [2, 3]
+      assert area_of_interest.isclosed and area_of_interest.is_convex()
+
+      # compute Delauney triangulation
+      delauney_t, hull_indices = tri.dt(seed_xy, return_hull = True)
+
+      # construct Voronoi graph
+      voronoi_points, voronoi_indices = tri.voronoi(seed_xy, delauney_t, hull_indices, area_of_interest)
+
+      # re-triangulate Voronoi cells
+      points, triangles = tri.triangulated_polygons(voronoi_points, voronoi_indices, centres = seed_xy[:, :2])
+
+      vpg = cls.from_surfaces(parent_model,
+                              surfaces,
+                              column_points = points,
+                              column_triangles = triangles,
+                              title = title,
+                              originator = originator,
+                              extra_metadata = extra_metadata,
+                              set_handedness = set_handedness)
+
+      # TODO: store information relating columns to seed points, and seed points to top layer points?
 
       return vpg
 

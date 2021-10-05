@@ -1,6 +1,6 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '2nd October 2021'
+version = '5th October 2021'
 
 import logging
 
@@ -8,6 +8,8 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
+import resqpy.model as rq
+import resqpy.crs as rqc
 import resqpy.lines as rql
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.intersection as meet
@@ -273,7 +275,7 @@ def voronoi(p, t, b, aoi):
       t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
       b (numpy int array of shape (B,)): clockwise sorted list of indices into p of the boundary
          points of the triangulation t
-      aoi (lines.Polyline): area of interest; a closed polyline that must strictly contain
+      aoi (lines.Polyline): area of interest; a closed clockwise polyline that must strictly contain
          all p (no points exactly on or outside the polyline)
 
    returns:
@@ -330,7 +332,7 @@ def voronoi(p, t, b, aoi):
       # else virtual centre for hull point; arbitrarily pick clockwise segment
       return ci - cahon_count
 
-#   log.debug(f'\n\nVoronoi: nt: {len(p)}; nt: {len(t)}; hull: {len(b)}; aoi: {len(aoi.coordinates)}')
+   # log.debug(f'\n\nVoronoi: nt: {len(p)}; nt: {len(t)}; hull: {len(b)}; aoi: {len(aoi.coordinates)}')
 # todo: allow aoi to be None in which case create an aoi as hull with border
 
    assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
@@ -338,6 +340,7 @@ def voronoi(p, t, b, aoi):
    assert b.ndim == 1 and b.shape[0] > 2
    assert len(aoi.coordinates) >= 3
    assert aoi.isclosed
+   assert aoi.is_clockwise()
 
    # create temporary polyline for hull of triangulation
    hull = rql.Polyline(
@@ -363,9 +366,9 @@ def voronoi(p, t, b, aoi):
    o_count = len(tc_outwith_aoi)
 
    # make space for combined points data needed for all voronoi cell nodes:
-   # 1. circumcircle centres for traingles in delauney triangulation
+   # 1. circumcircle centres for triangles in delauney triangulation
    # 2. nodes defining area of interest polygon
-   # 3. intersection of normals to traingulation hull edges with aoi polygon
+   # 3. intersection of normals to triangulation hull edges with aoi polygon
    # 4. extra intersections for normals to other two (non-hull) triangle edges, with aoi,
    #    where circumcircle centre is outside the area of interest
    # 5. extended ccc for hull edge normals
@@ -439,7 +442,7 @@ def voronoi(p, t, b, aoi):
          ci_for_p += [caho_count + p_b_i, cahon_count + b_i, caho_count + b_i]
 
       # find azimuths of vectors from seed point to circumcircle centres (and virtual centres)
-      azi = [vec.azimuth(centre - p[p_i]) for centre in c[ci_for_p]]
+      azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
       # if this is a hull seed point, make a note of azimuth to virtual centre
       hull_node_azi = None if b_i is None else azi[-2]
       # sort triangle indices for seed point into clockwise order of circumcircle (and virtual) centres
@@ -595,7 +598,7 @@ def voronoi(p, t, b, aoi):
       ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
 
       # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
-      azi = [vec.azimuth(centre - p[p_i]) for centre in c[ci_for_p]]
+      azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
 
       # re-sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
       ordered_ci = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
@@ -603,3 +606,66 @@ def voronoi(p, t, b, aoi):
       v.append(ordered_ci)
 
    return c[:caho_count], v
+
+
+def triangulated_polygons(p, v, centres = None):
+   """Returns triangulation of polygons using centres as extra points.
+
+   arguments:
+      p (2D numpy float array): points used as vertices of polygons
+      v (list of list of ints): ordered indices into p for each polygon
+      centres (2D numpy float array, optional): the points to use as the centre for each polygon
+
+   returns:
+      points, triangles where: points is a copy of p extended with the centre points of polygons;
+      and triangles is a numpy int array of shape (N, 3) being the triangulation of points, where N is
+      equal to the overall length of v
+
+   notes:
+      if no centres are provided, balanced centre points are computed for the polygons;
+      the polygons must be convex (at least from the perspective of the centre points);
+      the clockwise/anti-clockwise order of the triangle edges will match that of the polygon;
+      the centre point is the first point in each triangle;
+      the order of triangles will match the order of vertices in a flattened view of list v;
+      p and centres may have a shape of 2 or 3 in the second dimension (xy or xyz data);
+      p & v could be the values (c, v) returned by the voronoi() function, in which case the
+      original seed points p passed into voronoi() can be passed as centres here
+   """
+
+   assert p.ndim == 2 and p.shape[1] in [2, 3]
+   assert len(v) > 0
+   if centres is not None:
+      assert centres.ndim == 2
+      assert len(centres) == len(v)
+      assert centres.shape[1] == p.shape[1]
+
+   model = rq.Model(create_basics = True)  # temporary object for handling Polylines
+   crs = rqc.Crs(model)
+
+   points = np.zeros((len(p) + len(v), p.shape[1]))  # polygon nodes, to be extended with centre points
+   points[:len(p)] = p
+   if centres is not None:
+      points[len(p):] = centres
+
+   t_count = sum([len(x) for x in v])
+   triangles = np.empty((t_count, 3), dtype = int)
+   t_index = 0
+
+   for cell, poly_vertices in enumerate(v):
+      # add polygon centre points to points array, if not already provided
+      centre_i = len(p) + cell
+      if centres is None:
+         polygon = rql.Polyline(model,
+                                set_coord = p[np.array(poly_vertices, dtype = int)],
+                                set_bool = True,
+                                set_crs = crs.uuid,
+                                title = 'v cell')
+         poly_centre = polygon.balanced_centre()
+         points[centre_i] = poly_centre[:p.shape[1]]
+      # and populate triangles for this polygon
+      for ti in range(len(poly_vertices)):
+         triangles[t_index] = (centre_i, poly_vertices[ti], poly_vertices[(ti + 1) % len(poly_vertices)])
+         t_index += 1
+   assert t_index == t_count
+
+   return points, triangles

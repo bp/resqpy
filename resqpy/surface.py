@@ -1,6 +1,6 @@
 """surface.py: surface class based on resqml standard."""
 
-version = '2nd September 2021'
+version = '4th October 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -200,8 +200,11 @@ class TriangulatedPatch:
       """Populate this (empty) patch from triangle node indices and points from elsewhere."""
 
       assert triangles.ndim == 2 and triangles.shape[-1] == 3
-      assert points.ndim == 2 and points.shape[1] == 3
-
+      assert points.ndim == 2 and points.shape[1] in [2, 3]
+      if points.shape[1] == 2:
+         p = np.zeros((points.shape[0], 3))
+         p[:, :2] = points
+         points = p
       self.node_count = points.shape[0]
       self.points = points.copy()
       self.triangle_count = triangles.shape[0]
@@ -682,13 +685,13 @@ class Surface(_BaseSurface):
    def distinct_edges(self):
       """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles."""
 
-      if self.triangles is None:
-         self.extract_patches(self.root)
-      tri_count = len(self.triangles)
+      triangles, _ = self.triangles_and_points()
+      assert triangles is not None
+      tri_count = len(triangles)
       all_edges = np.empty((tri_count, 3, 2))
       for i in range(3):
-         all_edges[:, i, 0] = self.triangles[:, i - 1]
-         all_edges[:, i, 1] = self.triangles[:, i]
+         all_edges[:, i, 0] = triangles[:, i - 1]
+         all_edges[:, i, 1] = triangles[:, i]
       return np.unique(np.sort(all_edges.reshape((-1, 2)), axis = 1), axis = 0)
 
    def set_from_triangles_and_points(self, triangles, points):
@@ -1180,8 +1183,8 @@ class PointSet(_BaseSurface):
             with this uuid
          load_hdf5 (boolean, default False): if True and point_set_root is present, the actual points are
             pre-loaded into a numpy array; otherwise the points will be loaded on demand
-         points_array (numpy float array of shape (..., 3), optional): if present, the xyz data which
-            will constitute the point set; ignored if point_set_root is not None
+         points_array (numpy float array of shape (..., 2 or 3), optional): if present, the xy(&z) data which
+            will constitute the point set; missing z will be set to zero; ignored if point_set_root is not None
          crs_uuid (uuid.UUID, optional): if present, identifies the coordinate reference system for the points;
             ignored if point_set_root is not None; if None, 'imported' points will be associated with the
             default crs of the parent model
@@ -1395,7 +1398,13 @@ class PointSet(_BaseSurface):
    def add_patch(self, points_array):
       """Extend the current point set with a new patch of points."""
 
-      assert points_array.ndim >= 2 and points_array.shape[-1] == 3
+      assert points_array.ndim >= 2 and points_array.shape[-1] in [2, 3]
+      if points_array.shape[-1] == 2:
+         shape = list(points_array.shape)
+         shape[-1] = 3
+         p = np.zeros(shape)
+         p[..., :2] = points_array
+         points_array = p
       self.patch_array_list.append(points_array.reshape(-1, 3).copy())
       self.patch_ref_list.append((None, None, points_array.shape[0]))
       self.full_array = None
@@ -1727,7 +1736,7 @@ class Mesh(_BaseSurface):
          self.nj = nj
          self.ni = ni
          self.ref_uuid = z_supporting_mesh_uuid
-         self.ref_mesh = Mesh(self.model, root_node = self.model.root_for_uuid(z_supporting_mesh_uuid))
+         self.ref_mesh = Mesh(self.model, uuid = z_supporting_mesh_uuid)
          assert self.ref_mesh is not None
          assert self.ref_mesh.nj == nj and self.ref_mesh.ni == ni
          self.full_array = self.ref_mesh.full_array_ref().copy()
@@ -1937,7 +1946,7 @@ class Mesh(_BaseSurface):
          delattr(self, 'temp_z')
 
       else:
-         raise Exception('unrecognised mesh flavour when fetching full array')
+         raise Exception(f'unrecognised mesh flavour when fetching full array: {self.flavour}')
 
       return self.full_array
 

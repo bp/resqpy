@@ -2,14 +2,18 @@ import pytest
 import os
 import math as maths
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_allclose
 
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.surface as rqs
+import resqpy.lines as rql
 import resqpy.unstructured as rug
 import resqpy.olio.uuid as bu
+import resqpy.olio.triangulation as triangulation
+import resqpy.olio.vector_utilities as vec
+from resqpy.olio.random_seed import seed
 
 
 def test_hexa_grid_from_grid(example_model_with_properties):
@@ -335,3 +339,127 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
    assert grid.cell_count == 10
    assert grid.node_count == 18
    assert grid.face_count == 35
+
+   # create a very similar grid using explicit triangulation arguments
+
+   # make the same Delauney triangulation
+   triangles = triangulation.dt(pentagon_points)
+
+   # slightly shrink pentagon points to be within area of surfaces
+   for i in range(len(pentagon_points)):
+      if pentagon_points[i, 0] < 0.0:
+         pentagon_points[i, 0] += 1.0
+      elif pentagon_points[i, 0] > 0.0:
+         pentagon_points[i, 0] -= 1.0
+      if pentagon_points[i, 1] < 0.0:
+         pentagon_points[i, 1] += 1.0
+      elif pentagon_points[i, 1] > 0.0:
+         pentagon_points[i, 1] -= 1.0
+
+   # load the surfaces
+   surf_uuids = model.uuids(obj_type = 'TriangulatedSetRepresentation', sort_by = 'oldest')
+   surf_list = []
+   for surf_uuid in surf_uuids:
+      surf_list.append(rqs.Surface(model, uuid = surf_uuid))
+
+   # create a new vertical prism grid using the explicit triangulation arguments
+   similar = rug.VerticalPrismGrid.from_surfaces(model,
+                                                 surf_list,
+                                                 column_points = pentagon_points,
+                                                 column_triangles = triangles,
+                                                 title = 'similar pentagon')
+
+   # check similarity
+   for attr in ('cell_shape', 'layer_count', 'cell_count', 'node_count', 'face_count'):
+      assert getattr(grid, attr) == getattr(similar, attr)
+   for index_attr in ('nodes_per_face', 'nodes_per_face_cl', 'faces_per_cell', 'faces_per_cell_cl'):
+      assert np.all(getattr(grid, index_attr) == getattr(similar, index_attr))
+   assert_allclose(grid.points_ref(), similar.points_ref(), atol = 2.0)
+
+
+def test_vertical_prism_grid_from_seed_points_and_surfaces(tmp_path):
+
+   seed(23487656)  # to ensure test reproducibility
+
+   epc = os.path.join(tmp_path, 'voronoi_prism_grid.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+
+   # define a boundary polyline:
+   b_count = 7
+   boundary_points = np.empty((b_count, 3))
+   radius = 1000.0
+   for i in range(b_count):
+      theta = -vec.radians_from_degrees(i * 360.0 / b_count)
+      boundary_points[i] = (2.0 * radius * maths.cos(theta), radius * maths.sin(theta), 0.0)
+   boundary = rql.Polyline(model,
+                           set_coord = boundary_points,
+                           set_bool = True,
+                           set_crs = crs.uuid,
+                           title = 'rough ellipse')
+   boundary.write_hdf5()
+   boundary.create_xml()
+
+   # derive a larger area of interest
+   aoi = rql.Polyline.from_scaled_polyline(boundary, 1.1, title = 'area of interest')
+   aoi.write_hdf5()
+   aoi.create_xml()
+   min_xy = np.min(aoi.coordinates[:, :2], axis = 0) - 50.0
+   max_xy = np.max(aoi.coordinates[:, :2], axis = 0) + 50.0
+
+   print(f'***** min max xy aoi+ : {min_xy} {max_xy}')  # debug
+
+   # create some seed points within boundary
+   seed_count = 5
+   seeds = rqs.PointSet(model,
+                        crs_uuid = crs.uuid,
+                        polyline = boundary,
+                        random_point_count = seed_count,
+                        title = 'seeds')
+   seeds.write_hdf5()
+   seeds.create_xml()
+   seeds_xy = seeds.single_patch_array_ref(0)
+
+   for seed_xy in seeds_xy:
+      assert aoi.point_is_inside_xy(seed_xy), f'seed point {seed_xy} outwith aoi'
+
+   print(f'***** min max xy seeds : {np.min(seeds_xy, axis = 0)} {np.max(seeds_xy, axis = 0)}')  # debug
+
+   # create some horizon surfaces
+   ni, nj = 21, 11
+   lattice = rqs.Mesh(model,
+                      crs_uuid = crs.uuid,
+                      mesh_flavour = 'regular',
+                      ni = ni,
+                      nj = nj,
+                      origin = (min_xy[0], min_xy[1], 0.0),
+                      dxyz_dij = np.array([[(max_xy[0] - min_xy[0]) / (ni - 1), 0.0, 0.0],
+                                           [0.0, (max_xy[1] - min_xy[1]) / (nj - 1), 0.0]]))
+   lattice.write_hdf5()
+   lattice.create_xml()
+   horizons = []
+   for i in range(4):
+      horizon_depths = 1000.0 + 100.0 * i + 20.0 * (np.random.random((nj, ni)) - 0.5)
+      horizon_mesh = rqs.Mesh(model,
+                              crs_uuid = crs.uuid,
+                              mesh_flavour = 'ref&z',
+                              ni = ni,
+                              nj = nj,
+                              z_values = horizon_depths,
+                              z_supporting_mesh_uuid = lattice.uuid,
+                              title = 'h' + str(i))
+      horizon_mesh.write_hdf5()
+      horizon_mesh.create_xml()
+      horizon_surface = rqs.Surface(model, mesh = horizon_mesh, quad_triangles = True, title = horizon_mesh.title)
+      horizon_surface.write_hdf5()
+      horizon_surface.create_xml()
+      horizons.append(horizon_surface)
+
+   # create a re-triangulated Voronoi vertical prism grid
+   grid = rug.VerticalPrismGrid.from_seed_points_and_surfaces(model,
+                                                              seeds_xy,
+                                                              horizons,
+                                                              aoi,
+                                                              title = "giant's causeway")
+   assert grid is not None

@@ -6,6 +6,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.lines as rql
+import resqpy.surface as rqs
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.triangulation as tri
 from resqpy.olio.random_seed import seed
@@ -45,7 +46,7 @@ def test_ccc():
 
 def test_voronoi():
    seed_value = 3567
-   n_list = range(5, 50)
+   n_list = range(5, 50, 3)
    model = rq.Model(create_basics = True)
    crs = rqc.Crs(model)
    crs.create_xml()
@@ -65,7 +66,7 @@ def test_voronoi():
                                title = 'heptagon')
    aoi_heptagon_area = aoi_heptagon.area()
 
-   for n in n_list:
+   for n in n_list:  # number of seed points (number of Voronoi cells)
       seed(seed_value)
       x = np.random.random(n)
       y = np.random.random(n)
@@ -93,3 +94,19 @@ def test_voronoi():
          v_cell = rql.Polyline(model, set_coord = c_hept[nodes], set_bool = True, set_crs = crs.uuid, title = 'v cell')
          area += v_cell.area()
       assert maths.isclose(area, aoi_heptagon_area, rel_tol = 0.001)
+      # test re-triangulation of a Voronoi diagram, passing centre points
+      points, triangles = tri.triangulated_polygons(c_hept, v_hept, centres = p)
+      assert len(points) == len(c_hept) + n
+      assert len(triangles) == sum(len(vh) for vh in v_hept)
+      # test re-triangulation of a Voronoi diagram, computing centre points
+      points_2, triangles_2 = tri.triangulated_polygons(c_hept, v_hept)
+      assert len(points_2) == len(c_hept) + n
+      assert len(triangles_2) == sum(len(vh) for vh in v_hept)
+      assert np.all(triangles_2 == triangles)
+      for cell in range(n):
+         v_cell = rql.Polyline(model,
+                               set_coord = c_hept[v_hept[cell]],
+                               set_bool = True,
+                               set_crs = crs.uuid,
+                               title = 'v cell')
+         assert v_cell.point_is_inside_xy(points_2[len(c_hept) + cell])
