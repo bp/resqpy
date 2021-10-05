@@ -1,6 +1,6 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '4th October 2021'
+version = '5th October 2021'
 
 import logging
 
@@ -652,6 +652,7 @@ def triangulated_polygons(p, v, centres = None):
 
    for cell, poly_vertices in enumerate(v):
       # add polygon centre points to points array, if not already provided
+      centre_i = len(p) + cell
       if centres is None:
          polygon = rql.Polyline(model,
                                 set_coord = p[np.array(poly_vertices, dtype = int)],
@@ -659,7 +660,6 @@ def triangulated_polygons(p, v, centres = None):
                                 set_crs = crs.uuid,
                                 title = 'v cell')
          poly_centre = polygon.balanced_centre()
-         centre_i = len(p) + cell
          points[centre_i] = poly_centre[:p.shape[1]]
       # and populate triangles for this polygon
       for ti in range(len(poly_vertices)):
