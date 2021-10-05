@@ -6,6 +6,8 @@ import resqpy.organize
 import numpy as np
 import os
 
+from numpy.testing import assert_array_almost_equal
+
 
 def test_lines(example_model_and_crs):
 
@@ -156,3 +158,31 @@ def test_is_convex(example_model_and_crs):
    assert line.is_convex(trust_metadata = True)
    assert not line.is_convex(trust_metadata = False)  # should reset metadata
    assert not line.is_convex(trust_metadata = True)
+
+
+def test_from_scaled_polyline(example_model_and_crs):
+   # Set up an original Polyline
+   title = 'rectangle'
+   model, crs = example_model_and_crs
+   line = resqpy.lines.Polyline(parent_model = model,
+                                title = title,
+                                set_crs = crs.uuid,
+                                set_bool = True,
+                                set_coord = np.array([(0.0, 0.0, 10.0), (0.0, 3.0, 10.0), (12.0, 3.0, 10.0),
+                                                      (12.0, 0.0, 10.0)]))
+   assert line is not None
+
+   # test scaling up to a larger polyline
+   bigger = resqpy.lines.Polyline.from_scaled_polyline(line, 1.5, originator = 'testing')
+   expected = np.array([(-3.0, -0.75, 10.0), (-3.0, 3.75, 10.0), (15.0, 3.75, 10.0), (15.0, -0.75, 10.0)])
+   assert bigger.isclosed
+   assert bigger.is_convex()
+   assert bigger.title == 'rectangle'
+   assert bigger.originator == 'testing'
+   assert_array_almost_equal(bigger.coordinates, expected)
+
+   # test scaling to a smaller polyline
+   smaller = resqpy.lines.Polyline.from_scaled_polyline(line, 2.0 / 3.0, title = 'small')
+   expected = np.array([(2.0, 0.5, 10.0), (2.0, 2.5, 10.0), (10.0, 2.5, 10.0), (10.0, 0.5, 10.0)])
+   assert smaller.title == 'small'
+   assert_array_almost_equal(smaller.coordinates, expected)

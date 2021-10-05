@@ -275,7 +275,7 @@ def voronoi(p, t, b, aoi):
       t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
       b (numpy int array of shape (B,)): clockwise sorted list of indices into p of the boundary
          points of the triangulation t
-      aoi (lines.Polyline): area of interest; a closed polyline that must strictly contain
+      aoi (lines.Polyline): area of interest; a closed clockwise polyline that must strictly contain
          all p (no points exactly on or outside the polyline)
 
    returns:
@@ -332,7 +332,7 @@ def voronoi(p, t, b, aoi):
       # else virtual centre for hull point; arbitrarily pick clockwise segment
       return ci - cahon_count
 
-#   log.debug(f'\n\nVoronoi: nt: {len(p)}; nt: {len(t)}; hull: {len(b)}; aoi: {len(aoi.coordinates)}')
+   # log.debug(f'\n\nVoronoi: nt: {len(p)}; nt: {len(t)}; hull: {len(b)}; aoi: {len(aoi.coordinates)}')
 # todo: allow aoi to be None in which case create an aoi as hull with border
 
    assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
@@ -340,6 +340,7 @@ def voronoi(p, t, b, aoi):
    assert b.ndim == 1 and b.shape[0] > 2
    assert len(aoi.coordinates) >= 3
    assert aoi.isclosed
+   assert aoi.is_clockwise()
 
    # create temporary polyline for hull of triangulation
    hull = rql.Polyline(
@@ -441,7 +442,7 @@ def voronoi(p, t, b, aoi):
          ci_for_p += [caho_count + p_b_i, cahon_count + b_i, caho_count + b_i]
 
       # find azimuths of vectors from seed point to circumcircle centres (and virtual centres)
-      azi = [vec.azimuth(centre - p[p_i]) for centre in c[ci_for_p]]
+      azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
       # if this is a hull seed point, make a note of azimuth to virtual centre
       hull_node_azi = None if b_i is None else azi[-2]
       # sort triangle indices for seed point into clockwise order of circumcircle (and virtual) centres
@@ -597,7 +598,7 @@ def voronoi(p, t, b, aoi):
       ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
 
       # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
-      azi = [vec.azimuth(centre - p[p_i]) for centre in c[ci_for_p]]
+      azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
 
       # re-sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
       ordered_ci = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]

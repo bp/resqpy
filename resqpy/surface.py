@@ -1736,7 +1736,7 @@ class Mesh(_BaseSurface):
          self.nj = nj
          self.ni = ni
          self.ref_uuid = z_supporting_mesh_uuid
-         self.ref_mesh = Mesh(self.model, root_node = self.model.root_for_uuid(z_supporting_mesh_uuid))
+         self.ref_mesh = Mesh(self.model, uuid = z_supporting_mesh_uuid)
          assert self.ref_mesh is not None
          assert self.ref_mesh.nj == nj and self.ref_mesh.ni == ni
          self.full_array = self.ref_mesh.full_array_ref().copy()
@@ -1946,7 +1946,7 @@ class Mesh(_BaseSurface):
          delattr(self, 'temp_z')
 
       else:
-         raise Exception('unrecognised mesh flavour when fetching full array')
+         raise Exception(f'unrecognised mesh flavour when fetching full array: {self.flavour}')
 
       return self.full_array
 

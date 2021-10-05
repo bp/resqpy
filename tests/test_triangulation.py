@@ -6,6 +6,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.lines as rql
+import resqpy.surface as rqs
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.triangulation as tri
 from resqpy.olio.random_seed import seed
@@ -45,7 +46,7 @@ def test_ccc():
 
 def test_voronoi():
    seed_value = 3567
-   n_list = range(5, 50)
+   n_list = range(5, 50, 3)
    model = rq.Model(create_basics = True)
    crs = rqc.Crs(model)
    crs.create_xml()
