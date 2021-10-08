@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '26th September 2021'
+version = '8th October 2021'
 
 import logging
 
@@ -172,6 +172,11 @@ def points_direction_vector(a, axis):
 def dot_product(a, b):
    """Returns the dot product (scalar product) of the two vectors."""
    return np.dot(a, b)
+
+
+def dot_products(a, b):
+   """Returns the dot products of pairs of vectors; last axis covers element of a vector."""
+   return np.sum(a * b, axis = -1)
 
 
 #   assert(a.size == b.size)

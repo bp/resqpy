@@ -25,7 +25,7 @@ def half_cell_t(grid,
                 realization = None,
                 darcy_constant = None,
                 tolerance = 1.0e-6):
-   """Creates a half cell transmissibilty property array.
+   """Creates a half cell transmissibilty property array for a regular or irregular IJK grid.
 
    arguments:
       grid (grid.Grid or grid.RegularGrid): the grid for which half cell transmissibilities are required
@@ -122,7 +122,9 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
       the two half cell transmissibilities and multiply by any transmissibility multiplier;
       returned array will need to be re-shaped before storing as a RESQML property
       with indexable elements of 'faces';
-      the coordinate referemce system for the grid must have the same length units for xy and z
+      the coordinate referemce system for the grid must have the same length units for xy and z;
+      this function is vastly more computationally efficient than the general (irregular grid)
+      function
    """
 
    assert perm_k is not None and perm_j is not None and perm_i is not None
@@ -148,7 +150,7 @@ def half_cell_t_irregular(grid,
                           ntg = None,
                           darcy_constant = None,
                           tolerance = 1.0e-6):
-   """Creates a half cell transmissibilty property array.
+   """Creates a half cell transmissibilty property array for an IJK grid.
 
    arguments:
       grid (grid.Grid): the grid for which half cell transmissibilities are required
@@ -353,6 +355,58 @@ def half_cell_t_irregular(grid,
    np.seterr(divide = 'warn', invalid = 'warn')
 
    return np.abs(darcy_constant * half_t)
+
+
+def half_cell_t_2d_triangular_precursor(p, t):
+   """Creates a precursor to horizontal transmissibility for prism grids (see notes).
+
+   arguments:
+      p (numpy float array of shape (N, 2 or 3)): the xy(&z) locations of cell vertices
+      t (numpy int array of shape (M, 3)): the triangulation of p for which the transmissibility
+         precursor is required
+
+   returns:
+      numpy float array of shape (M, 3) being the 'area' over length ratio for the 3 'faces' of
+      each triangular 'cell'; the order of the 3 faces for a cell follows that of the vertex
+      indices in t, but the face opposite the vertex being in the corresponding position
+
+   notes:
+      the function acrs as a precursor to the equivalent of the half cell transmissibility
+      functions but for prism grids; for a resqpy VerticalPrismGrid, the triangulation can
+      be shared by many layers with this function only needing to be called once
+   """
+
+   assert p.ndim == 2 and p.shape[1] in [2, 3]
+   assert t.ndim == 2 and t.shape[1] == 3
+
+   # centre points of triangles
+   centres = np.mean(p[t], axis = 1)
+   # midpoints of edges of triangles
+   edge_midpoints = np.empty(tuple(list(t.shape) + [p.shape[1]]), dtype = float)
+   edge_midpoints[:, 0, :] = 0.5 * (p[t[:, 1]] + p[t[:, 2]])
+   edge_midpoints[:, 1, :] = 0.5 * (p[t[:, 2]] + p[t[:, 0]])
+   edge_midpoints[:, 2, :] = 0.5 * (p[t[:, 0]] + p[t[:, 1]])
+   # triangle edge vectors, projected in xy
+   edge_vectors = np.empty(edge_midpoints.shape, dtype = float)
+   edge_vectors[:, 0] = (p[t[:, 2]] - p[t[:, 1]])[:, :2]
+   edge_vectors[:, 1] = (p[t[:, 0]] - p[t[:, 2]])[:, :2]
+   edge_vectors[:, 2] = (p[t[:, 1]] - p[t[:, 0]])[:, :2]
+   # vectors from triangle centres to mid points of edges (3 per triangle), in xy plane
+   cem_vectors = np.zeros(edge_midpoints.shape)
+   cem_vectors[:2] = (edge_midpoints - centres.reshape((t.shape[0], 1, p.shape[1])))[:, :, :2]
+   cem_lengths = vec.naive_lengths(cem_vectors)
+   # unit length vectors normal to cem_vectors, in the xy plane
+   normal_vectors = np.zeros(edge_midpoints.shape)
+   normal_vectors[:, :, 0] = cem_vectors[:, :, 1]
+   normal_vectors[:, :, 1] = -cem_vectors[:, :, 0]
+   normal_vectors = vec.unit_vectors(normal_vectors)
+   # edge lengths projected onto normal vectors (length perpendicular to nominal flow direction)
+   normal_lengths = np.abs(vec.dot_products(edge_vectors, normal_vectors))
+   # ratio of normal (cross-sectional) lengths to nominal flow direction lengths
+   a_over_l = normal_lengths / cem_lengths
+   assert a_over_l.shape == t.shape
+
+   return a_over_l
 
 
 def fault_connection_set(grid, skip_inactive = False):
