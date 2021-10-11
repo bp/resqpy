@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '8th October 2021'
+version = '11th October 2021'
 
 import logging
 
@@ -122,6 +122,24 @@ def azimuth(v):  # 'azimuth' is synonymous with 'compass bearing'
    if radians < 0.0:
       radians += 2.0 * maths.pi
    return degrees_from_radians(radians)
+
+
+def azimuths(va):  # 'azimuth' is synonymous with 'compass bearing'
+   """Returns the compass bearings in degrees of the direction of each vector in va (x = East, y = North), ignoring z."""
+   assert va.ndim > 1 and 2 <= va.shape[-1] <= 3
+   shape = va.shape[:-1]
+   z_zero_v = np.zeros(shape, 3)
+   z_zero_v[..., :2] = va[..., :2]
+   unit_v = unit_vectors(z_zero_v)  # also checks that z_zero_v is not zero vector
+   x = unit_v[..., 0]
+   y = unit_v[..., 1]  # ignore z component
+   # todo: handle cases where x == y == 0
+   radians = np.where(
+      np.abs(x) >= np.abs(y),
+      np.where(x < 0.0, maths.pi * 3.0 / 2.0 - maths.atan(y / x), maths.pi / 2.0 - maths.atan(y / x)),
+      np.where(y < 0.0, maths.pi + maths.atan(x / y), maths.atan(x / y)))
+   radians = np.where(radians < 0.0, radians + 2.0 * maths.pi, radians)
+   return np.degrees(radians)
 
 
 def inclination(v):
@@ -474,6 +492,23 @@ def area_of_triangle(a, b, c):
    lc = naive_length(c - a)
    s = 0.5 * (la + lb + lc)
    return maths.sqrt(s * (s - la) * (s - lb) * (s - lc))
+
+
+def area_of_triangles(p, t, xy_projection = False):
+   """Returns numpy array of areas of triangles, optionally when projected onto xy plane."""
+
+   # uses Heron's formula
+   pt = p[t]
+   if xy_projection:
+      la = naive_2d_lengths(pt[:, 0, :] - pt[:, 1, :])
+      lb = naive_2d_lengths(pt[:, 1, :] - pt[:, 2, :])
+      lc = naive_2d_lengths(pt[:, 2, :] - pt[:, 0, :])
+   else:
+      la = naive_lengths(pt[:, 0, :] - pt[:, 1, :])
+      lb = naive_lengths(pt[:, 1, :] - pt[:, 2, :])
+      lc = naive_lengths(pt[:, 2, :] - pt[:, 0, :])
+   s = 0.5 * (la + lb + lc)
+   return np.sqrt(s * (s - la) * (s - lb) * (s - lc))
 
 
 def clockwise_sorted_indices(p, b):

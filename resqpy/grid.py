@@ -3743,8 +3743,8 @@ class Grid(BaseResqpy):
             half_t = pc.combobulate(half_t_resqml)
 
       if half_t is None:
-         half_t = rqtr.half_cell_t(
-            self, realization = realization)  # note: properties must be identifiable in property_collection
+         # note: properties must be identifiable in property_collection
+         half_t = rqtr.half_cell_t(self, realization = realization)
 
       if realization is None:
          self.array_half_cell_t = half_t

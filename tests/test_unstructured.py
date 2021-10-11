@@ -335,7 +335,7 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
    # re-instantiate the grid
    grid = rug.VerticalPrismGrid(model, uuid = grid_uuid)
    assert grid is not None
-   assert grid.layer_count == 2
+   assert grid.nk == 2
    assert grid.cell_count == 10
    assert grid.node_count == 18
    assert grid.face_count == 35
@@ -370,7 +370,7 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
                                                  title = 'similar pentagon')
 
    # check similarity
-   for attr in ('cell_shape', 'layer_count', 'cell_count', 'node_count', 'face_count'):
+   for attr in ('cell_shape', 'nk', 'cell_count', 'node_count', 'face_count'):
       assert getattr(grid, attr) == getattr(similar, attr)
    for index_attr in ('nodes_per_face', 'nodes_per_face_cl', 'faces_per_cell', 'faces_per_cell_cl'):
       assert np.all(getattr(grid, index_attr) == getattr(similar, index_attr))

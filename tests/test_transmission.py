@@ -79,7 +79,8 @@ def test_half_cell_t_2d_triangular_precursor_equilateral():
    # create a pair of equilateral triangles
    p = np.array([(0.0, 0.0), (side, 0.0), (side / 2.0, height), (side * 3.0 / 2.0, height)])
    t = np.array([(0, 1, 2), (1, 2, 3)], dtype = int)
-   a_over_l = rqtr.half_cell_t_2d_triangular_precursor(p, t)
+   a, b = rqtr.half_cell_t_2d_triangular_precursor(p, t)
+   a_over_l = a / b
    expected = side / (height / 3)
    assert a_over_l.shape == (2, 3)
    assert_array_almost_equal(a_over_l, expected)
