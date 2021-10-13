@@ -376,6 +376,27 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
       assert np.all(getattr(grid, index_attr) == getattr(similar, index_attr))
    assert_allclose(grid.points_ref(), similar.points_ref(), atol = 2.0)
 
+   # check that isotropic horizontal permeability is preserved
+   permeability = 250.0
+   primary_k = np.full((grid.cell_count,), permeability)
+   orthogonal_k = primary_k.copy()
+   triple_k = grid.triple_horizontal_permeability(primary_k, orthogonal_k, 37.0)
+   assert triple_k.shape == (grid.cell_count, 3)
+   assert_array_almost_equal(triple_k, permeability)
+   azimuth = np.linspace(0.0, 360.0, num = grid.cell_count)
+   triple_k = grid.triple_horizontal_permeability(primary_k, orthogonal_k, azimuth)
+   assert triple_k.shape == (grid.cell_count, 3)
+   assert_array_almost_equal(triple_k, permeability)
+
+   # check that anisotropic horizontal permeability is correctly bounded
+   orthogonal_k *= 0.1
+   triple_k = grid.triple_horizontal_permeability(primary_k, orthogonal_k, azimuth)
+   assert triple_k.shape == (grid.cell_count, 3)
+   assert np.all(triple_k <= permeability)
+   assert np.all(triple_k >= permeability * 0.1)
+   assert np.min(triple_k) < permeability / 2.0
+   assert np.max(triple_k) > permeability / 2.0
+
 
 def test_vertical_prism_grid_from_seed_points_and_surfaces(tmp_path):
 

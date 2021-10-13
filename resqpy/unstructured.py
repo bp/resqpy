@@ -1870,7 +1870,7 @@ class VerticalPrismGrid(PrismGrid):
       p = self.points_ref()
       t = self.triangulation()
       # mid point of triangle edges
-      m = np.empty((t.shape[0], 3, 3), dtype = 3)
+      m = np.empty((t.shape[0], 3, 3), dtype = float)
       for e in range(3):
          m[:, e, :] = 0.5 * (p[t[:, e]] + p[t[:, e - 1]])
       # cell centre points
@@ -1885,8 +1885,9 @@ class VerticalPrismGrid(PrismGrid):
          # work with one layer only
          ap_rad = np.radians(a - primary_azimuth)
       else:
-         # value per cell in whole grid
-         ap_rad = np.radians(np.repeat(a.reshape((1, -1, 3)), self.nk, axis = 0).reshape((-1, 3)) - primary_azimuth)
+         # value per face per cell in whole grid
+         ap_rad = np.radians(
+            np.repeat(a.reshape((1, -1, 3)), self.nk, axis = 0).reshape((-1, 3)) - primary_azimuth.reshape((-1, 1)))
       cos_ap = np.cos(ap_rad)
       sin_ap = np.sin(ap_rad)
       cos_sqr_ap = cos_ap * cos_ap
@@ -1895,7 +1896,8 @@ class VerticalPrismGrid(PrismGrid):
          cos_sqr_ap = np.repeat(cos_sqr_ap.reshape(1, -1, 3), self.nk, axis = 0).reshape((-1, 3))
          sin_sqr_ap = np.repeat(sin_sqr_ap.reshape(1, -1, 3), self.nk, axis = 0).reshape((-1, 3))
       # local elliptical permeability projected in directions of azimuths
-      k = np.sqrt(primary_k * primary_k * cos_sqr_ap + orthogonal_k * orthogonal_k * sin_sqr_ap)
+      k = np.sqrt((primary_k * primary_k).reshape((-1, 1)) * cos_sqr_ap +
+                  (orthogonal_k * orthogonal_k).reshape((-1, 1)) * sin_sqr_ap)
 
       return k
 

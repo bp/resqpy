@@ -127,18 +127,20 @@ def azimuth(v):  # 'azimuth' is synonymous with 'compass bearing'
 def azimuths(va):  # 'azimuth' is synonymous with 'compass bearing'
    """Returns the compass bearings in degrees of the direction of each vector in va (x = East, y = North), ignoring z."""
    assert va.ndim > 1 and 2 <= va.shape[-1] <= 3
-   shape = va.shape[:-1]
-   z_zero_v = np.zeros(shape, 3)
+   shape = tuple(list(va.shape[:-1]) + [3])
+   z_zero_v = np.zeros(shape)
    z_zero_v[..., :2] = va[..., :2]
    unit_v = unit_vectors(z_zero_v)  # also checks that z_zero_v is not zero vector
    x = unit_v[..., 0]
    y = unit_v[..., 1]  # ignore z component
    # todo: handle cases where x == y == 0
+   restore = np.seterr(all = 'ignore')
    radians = np.where(
       np.abs(x) >= np.abs(y),
-      np.where(x < 0.0, maths.pi * 3.0 / 2.0 - maths.atan(y / x), maths.pi / 2.0 - maths.atan(y / x)),
-      np.where(y < 0.0, maths.pi + maths.atan(x / y), maths.atan(x / y)))
-   radians = np.where(radians < 0.0, radians + 2.0 * maths.pi, radians)
+      np.where(x < 0.0, maths.pi * 3.0 / 2.0 - np.arctan(y / x), maths.pi / 2.0 - np.arctan(y / x)),
+      np.where(y < 0.0, maths.pi + np.arctan(x / y), np.arctan(x / y)))
+   np.seterr(**restore)
+   radians = radians % (2.0 * maths.pi)
    return np.degrees(radians)
 
 
