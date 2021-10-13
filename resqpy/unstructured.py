@@ -1848,7 +1848,7 @@ class VerticalPrismGrid(PrismGrid):
          orthogonal_k (numpy float array of shape (N,) being the horizontal permeability for each cell in a
             direction orthogonal to the primary permeability
          primary_azimuth (float or numpy float array of shape (N,), default 0.0): the azimuth(s) of the
-            primary permeability
+            primary permeability, in degrees compass bearing
 
       returns:
          numpy float array of shape (N, 3) being the triple horizontal permeabilities applicable to half
@@ -1869,16 +1869,35 @@ class VerticalPrismGrid(PrismGrid):
 
       p = self.points_ref()
       t = self.triangulation()
+      # mid point of triangle edges
+      m = np.empty((t.shape[0], 3, 3), dtype = 3)
+      for e in range(3):
+         m[:, e, :] = 0.5 * (p[t[:, e]] + p[t[:, e - 1]])
+      # cell centre points
       c = self.centre_point()
       # todo: decide which directions to use: cell centre to face centre; or face normal?
-      v = c.reshape((self.nk, -1, 1, 3)) - p[t].reshape(
-         (1, -1, 3, 3))  # vectors with direction cell centre to face centre
+      # vectors with direction cell centre to face centre (for one layer only)
+      v = m - c.reshape((self.nk, -1, 1, 3))[0]
+      # compass directions of those vectors
       a = vec.azimuths(v)
+      # vector directions relative to primary permeability direction (per cell)
+      if azimuth_is_constant:
+         # work with one layer only
+         ap_rad = np.radians(a - primary_azimuth)
+      else:
+         # value per cell in whole grid
+         ap_rad = np.radians(np.repeat(a.reshape((1, -1, 3)), self.nk, axis = 0).reshape((-1, 3)) - primary_azimuth)
+      cos_ap = np.cos(ap_rad)
+      sin_ap = np.sin(ap_rad)
+      cos_sqr_ap = cos_ap * cos_ap
+      sin_sqr_ap = sin_ap * sin_ap
+      if azimuth_is_constant:
+         cos_sqr_ap = np.repeat(cos_sqr_ap.reshape(1, -1, 3), self.nk, axis = 0).reshape((-1, 3))
+         sin_sqr_ap = np.repeat(sin_sqr_ap.reshape(1, -1, 3), self.nk, axis = 0).reshape((-1, 3))
+      # local elliptical permeability projected in directions of azimuths
+      k = np.sqrt(primary_k * primary_k * cos_sqr_ap + orthogonal_k * orthogonal_k * sin_sqr_ap)
 
-      # TODO: find local elliptical permeability projected in directions of azimuths
-
-      raise NotImplementedError
-      return None
+      return k
 
    def half_cell_transmissibility(self, use_property = True, realization = None, tolerance = 1.0e-6):
       """Returns (and caches if realization is None) half cell transmissibilities for this vertical prism grid.
