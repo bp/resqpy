@@ -491,4 +491,9 @@ def test_vertical_prism_grid_from_seed_points_and_surfaces(tmp_path):
    grid.write_hdf5()
    grid.create_xml()
 
+   # check cell thicknesses are in expected range
+   thick = grid.thickness()
+   assert np.all(thick >= 80.0)
+   assert np.all(thick <= 120.0)
+
    model.store_epc()

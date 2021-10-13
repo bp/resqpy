@@ -357,29 +357,48 @@ def half_cell_t_irregular(grid,
    return np.abs(darcy_constant * half_t)
 
 
-def half_cell_t_vertical_prism(vpg, realization = None):
+def half_cell_t_vertical_prism(vpg,
+                               perm_k = None,
+                               triple_perm_horizontal = None,
+                               ntg = None,
+                               realization = None,
+                               darcy_constant = None,
+                               tolerance = 1.0e-6):
    """Creates a half cell transmissibilty property array for a vertical prism grid.
 
    returns:
-      numpy float array of shape (N, 5) being the half cell transmissibilities for each cell
+      numpy float array of shape (N, 5) being the per-face half cell transmissibilities for each cell
 
    note:
       order of 5 faces matches those of faces per cell, ie. top, base, then the 3 vertical faces
    """
 
-   # TODO: gather property arrays, deriving tri-permeablities if required
    # fetch triangulation and call precursor function
    p = vpg.points_ref()
    t = vpg.triangulation()
    a_t, d_t = half_cell_t_2d_triangular_precursor(p, t)
    # find heights of cells and faces
    # find horizontal area of triangles
-   triangle_areas = vec.area_of_triangles(p, t, xy_projection = True)
-   # TODO: compute dip adjustments for non-vertical transmissibilities
-   # compute transmissibilities
+   triangle_areas = vec.area_of_triangles(p, t, xy_projection = True).reshape((1, -1))
+   cp = vpg.corner_points()
+   half_thickness = 0.5 * vpg.thickness()
 
-   raise NotImplementedError
-   return None
+   # compute transmissibilities
+   tr = np.zeros((vpg.cell_count, 5), dtype = float)
+   # vertical
+   tr[:, :2] = np.where(half_thickness < tolerance, np.NaN, (perm_k.reshape(
+      (vpg.nk, -1)) * triangle_areas / half_thickness).flatten())
+   # horizontal
+   # TODO: compute dip adjustments for non-vertical transmissibilities
+   dt_full = np.empty((vpg.nk, vpg.cell_count // vpg.nk, 3), dtpye = float)
+   dt_full[:] = d_t
+   tr[:, 2:] = np.where(d_t < tolerance, np.NaN,
+                        triple_perm_horizontal.reshape((vpg.nk, -1)) * a_t.reshape((1, -1)) / dt_full)
+   if ntg is not None:
+      tr[:, 2:] *= ntg
+
+   tr *= darcy_constant
+   return tr
 
 
 def half_cell_t_2d_triangular_precursor(p, t):

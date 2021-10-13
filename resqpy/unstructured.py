@@ -7,6 +7,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('unstructured.py version ' + version)
 
+import math as maths
 import numpy as np
 
 from resqpy.olio.base import BaseResqpy
@@ -1690,7 +1691,7 @@ class VerticalPrismGrid(PrismGrid):
       assert vpg.nodes_per_face[-1] > 0
 
       # set up faces per cell
-      vpg.faces_per_cell = np.zeros(5 * vpg.cell_count)
+      vpg.faces_per_cell = np.zeros(5 * vpg.cell_count, dtype = int)
       vpg.faces_per_cell_cl = np.arange(5, 5 * vpg.cell_count + 1, 5, dtype = int)
       assert len(vpg.faces_per_cell_cl) == vpg.cell_count
       # set cell top triangle indices
@@ -1815,6 +1816,68 @@ class VerticalPrismGrid(PrismGrid):
       assert remainder == 0, 'code failure for vertical prism grid: cell and layer counts not compatible'
       return n_col
 
+   def corner_points(self, cell = None):
+      """Returns corner points for all cells or for a single cell.
+
+      arguments:
+         cell (int, optional): cell index of single cell for which corner points are required;
+            if None, corner points are returned for all cells
+
+      returns:
+         numpy float array of shape (2, 3, 3) being xyz points for top & base points for one cell, or
+         numpy float array of shape (N, 2, 3, 3) being xyz points for top & base points for all cells
+      """
+
+      if hasattr(self, 'array_corner_points'):
+         if cell is None:
+            return self.array_corner_points
+         return self.array_corner_points[cell]
+
+      p = self.points_ref()
+      if cell is None:
+         cp = np.empty((self.cell_count, 2, 3, 3), dtype = float)
+         top_fi = self.faces_per_cell.reshape((-1, 5))[:, 0]
+         top_npfi_start = np.where(top_fi == 0, 0, self.nodes_per_face_cl[top_fi - 1])
+         top_npfi_end = self.nodes_per_face_cl[top_fi]
+         base_fi = self.faces_per_cell.reshape((-1, 5))[:, 1]
+         base_npfi_start = self.nodes_per_face_cl[base_fi - 1]
+         base_npfi_end = self.nodes_per_face_cl[base_fi]
+         for cell in range(self.cell_count):
+            cp[cell, 0] = p[self.nodes_per_face[top_npfi_start[cell]:top_npfi_end[cell]]]
+            cp[cell, 1] = p[self.nodes_per_face[base_npfi_start[cell]:base_npfi_end[cell]]]
+         self.array_corner_points = cp
+         return cp
+
+      top_fi, base_fi = self.faces_per_cell.reshape((-1, 5))[cell, :2]
+      top_npfi_start = 0 if top_fi == 0 else self.nodes_per_face_cl[top_fi - 1]
+      base_npfi_start = self.nodes_per_face_cl[base_fi - 1]
+      cp = np.empty((2, 3, 3), dtype = float)
+      cp[0] = p[self.nodes_per_face[top_npfi_start:self.nodes_per_face_cl[top_fi]]]
+      cp[1] = p[self.nodes_per_face[base_npfi_start:self.nodes_per_face_cl[base_fi]]]
+      return cp
+
+   def thickness(self, cell = None):
+      """Returns array of thicknesses of all cells or a single cell.
+
+      note:
+         units are z units of crs used by this grid
+      """
+
+      if hasattr(self, 'array_thickness'):
+         if cell is None:
+            return self.array_thickness
+         return self.array_thickness[cell]
+
+      cp = self.corner_points(cell = cell)
+
+      if cell is None:
+         thick = np.mean(cp[:, 1, :, 2] - cp[:, 0, :, 2], axis = -1)
+         self.array_thickness = thick
+      else:
+         thick = np.mean(cp[1, :, 2] - cp[0, :, 2])
+
+      return thick
+
    def top_faces(self):
       """Returns the global face indices for the top triangular faces of the top layer of cells."""
 
@@ -1927,6 +1990,8 @@ class VerticalPrismGrid(PrismGrid):
       if realization is None and hasattr(self, 'array_half_cell_t'):
          return self.array_half_cell_t
 
+      # TODO: gather property arrays, deriving tri-permeablities if required
+
       half_t = None
 
       if use_property:
@@ -1941,6 +2006,7 @@ class VerticalPrismGrid(PrismGrid):
 
       if half_t is None:
          # note: properties must be identifiable in property_collection
+         # TODO: insert property array arguments
          half_t = rqtr.half_cell_t_vertical_prism(self, realization = realization)
 
       if realization is None:
