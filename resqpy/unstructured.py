@@ -101,6 +101,7 @@ class UnstructuredGrid(BaseResqpy):
       self.property_collection = None  #: collection of properties for which this grid is the supporting representation
       self.crs_is_right_handed = None  #: cached boolean indicating handedness of crs axes
       self.cells_per_face = None  #: numpy int array of shape (face_count, 2) holding cells for faces; -1 is null value
+      self.xyz_box_cached = None
 
       super().__init__(model = parent_model,
                        uuid = uuid,
@@ -386,7 +387,7 @@ class UnstructuredGrid(BaseResqpy):
       """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.
 
       returns:
-         numpy array of shape (node_count,)
+         numpy array of shape (node_count, 3)
 
       notes:
          this is the usual way to get at the actual grid geometry points data in the native RESQML layout;
@@ -417,6 +418,23 @@ class UnstructuredGrid(BaseResqpy):
                                      required_shape = (self.node_count, 3))
 
       return self.points_cached
+
+   def xyz_box(self):
+      """Returns the minimum and maximum xyz for the grid geometry.
+
+      returns:
+         numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
+
+      :meta common:
+      """
+
+      if self.xyz_box_cached is None:
+         self.xyz_box_cached = np.empty((2, 3), dtype = float)
+         p = self.points_ref()
+         self.xyz_box_cached[0] = np.min(p, axis = 0)
+         self.xyz_box_cached[1] = np.max(p, axis = 0)
+
+      return self.xyz_box_cached
 
    def face_centre_point(self, face_index):
       """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
@@ -1840,6 +1858,19 @@ class VerticalPrismGrid(PrismGrid):
       assert remainder == 0, 'code failure for vertical prism grid: cell and layer counts not compatible'
       return n_col
 
+   def cell_centre_point(self, cell = None):
+      """Returns centre point of a single cell (or all cells) calculated as the mean position of its 6 nodes.
+
+      arguments:
+         cell (int): the index of the cell for which the centre point is required
+
+      returns:
+         numpy float array of shape (3,) being the xyz location of the centre point of the cell
+      """
+
+      cp = self.corner_points(cell = cell)
+      return np.mean(cp.reshape((-1, 6, 3)), axis = (1))
+
    def corner_points(self, cell = None):
       """Returns corner points for all cells or for a single cell.
 
@@ -2024,7 +2055,8 @@ class VerticalPrismGrid(PrismGrid):
                                       count = 1,
                                       indexable = 'faces per cell')
          if half_t:
-            assert half_t.shape == (self.cell_count, 5)
+            assert half_t.size == 5 * self.cell_count
+            half_t = half_t.reshape(self.cell_count, 5)
 
       if half_t is None:
          # note: properties must be identifiable in property_collection

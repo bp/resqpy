@@ -399,21 +399,23 @@ def half_cell_t_vertical_prism(vpg,
    # find horizontal area of triangles
    triangle_areas = vec.area_of_triangles(p, t, xy_projection = True).reshape((1, -1))
    cp = vpg.corner_points()
-   half_thickness = 0.5 * vpg.thickness()
+   half_thickness = 0.5 * vpg.thickness().reshape((vpg.nk, -1))
 
    # compute transmissibilities
    tr = np.zeros((vpg.cell_count, 5), dtype = float)
    # vertical
-   tr[:, :2] = np.where(half_thickness < tolerance, np.NaN, (perm_k.reshape(
-      (vpg.nk, -1)) * triangle_areas / half_thickness).flatten())
+   tr[:, 0] = np.where(half_thickness < tolerance, np.NaN, (perm_k.reshape(
+      (vpg.nk, -1)) * triangle_areas / half_thickness)).flatten()
+   tr[:, 1] = tr[:, 0]
    # horizontal
    # TODO: compute dip adjustments for non-vertical transmissibilities
    dt_full = np.empty((vpg.nk, vpg.cell_count // vpg.nk, 3), dtype = float)
    dt_full[:] = d_t
-   tr[:, 2:] = np.where(d_t < tolerance, np.NaN,
-                        triple_perm_horizontal.reshape((vpg.nk, -1)) * a_t.reshape((1, -1)) / dt_full)
+   tr[:, 2:] = np.where(dt_full < tolerance, np.NaN,
+                        triple_perm_horizontal.reshape((vpg.nk, -1, 3)) * a_t.reshape((1, -1, 3)) / dt_full).reshape(
+                           (-1, 3))
    if ntg is not None:
-      tr[:, 2:] *= ntg
+      tr[:, 2:] *= ntg.reshape((-1, 1))
 
    tr *= darcy_constant
    return tr
@@ -447,21 +449,20 @@ def half_cell_t_2d_triangular_precursor(p, t):
    assert p.ndim == 2 and p.shape[1] in [2, 3]
    assert t.ndim == 2 and t.shape[1] == 3
 
-   # centre points of triangles
-   centres = np.mean(p[t], axis = 1)
-   # midpoints of edges of triangles
-   edge_midpoints = np.empty(tuple(list(t.shape) + [p.shape[1]]), dtype = float)
-   edge_midpoints[:, 0, :] = 0.5 * (p[t[:, 1]] + p[t[:, 2]])
-   edge_midpoints[:, 1, :] = 0.5 * (p[t[:, 2]] + p[t[:, 0]])
-   edge_midpoints[:, 2, :] = 0.5 * (p[t[:, 0]] + p[t[:, 1]])
+   # centre points of triangles, in xy
+   centres = np.mean(p[t], axis = 1)[:, :2]
+   # midpoints of edges of triangles, in xy
+   edge_midpoints = np.empty(tuple(list(t.shape) + [2]), dtype = float)
+   edge_midpoints[:, 0, :] = 0.5 * (p[t[:, 1]] + p[t[:, 2]])[:, :2]
+   edge_midpoints[:, 1, :] = 0.5 * (p[t[:, 2]] + p[t[:, 0]])[:, :2]
+   edge_midpoints[:, 2, :] = 0.5 * (p[t[:, 0]] + p[t[:, 1]])[:, :2]
    # triangle edge vectors, projected in xy
    edge_vectors = np.empty(edge_midpoints.shape, dtype = float)
    edge_vectors[:, 0] = (p[t[:, 2]] - p[t[:, 1]])[:, :2]
    edge_vectors[:, 1] = (p[t[:, 0]] - p[t[:, 2]])[:, :2]
    edge_vectors[:, 2] = (p[t[:, 1]] - p[t[:, 0]])[:, :2]
    # vectors from triangle centres to mid points of edges (3 per triangle), in xy plane
-   cem_vectors = np.zeros(edge_midpoints.shape)
-   cem_vectors[:2] = (edge_midpoints - centres.reshape((t.shape[0], 1, p.shape[1])))[:, :, :2]
+   cem_vectors = edge_midpoints - centres.reshape((-1, 1, 2))
    cem_lengths = vec.naive_lengths(cem_vectors)
    # unit length vectors normal to cem_vectors, in the xy plane
    normal_vectors = np.zeros(edge_midpoints.shape)

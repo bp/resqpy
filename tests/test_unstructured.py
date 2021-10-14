@@ -397,6 +397,81 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
    assert np.min(triple_k) < permeability / 2.0
    assert np.max(triple_k) > permeability / 2.0
 
+   # set up some properties
+   pc = grid.property_collection
+   assert pc is not None
+   pc.add_cached_array_to_imported_list(cached_array = None,
+                                        source_info = 'unit test',
+                                        keyword = 'NETGRS',
+                                        property_kind = 'net to gross ratio',
+                                        discrete = False,
+                                        uom = 'm3/m3',
+                                        indexable_element = 'cells',
+                                        const_value = 0.75)
+   pc.add_cached_array_to_imported_list(cached_array = None,
+                                        source_info = 'unit test',
+                                        keyword = 'PERMK',
+                                        property_kind = 'permeability rock',
+                                        facet_type = 'direction',
+                                        facet = 'K',
+                                        discrete = False,
+                                        uom = 'mD',
+                                        indexable_element = 'cells',
+                                        const_value = 10.0)
+   pc.add_cached_array_to_imported_list(cached_array = None,
+                                        source_info = 'unit test',
+                                        keyword = 'PERM',
+                                        property_kind = 'permeability rock',
+                                        facet_type = 'direction',
+                                        facet = 'primary',
+                                        discrete = False,
+                                        uom = 'mD',
+                                        indexable_element = 'cells',
+                                        const_value = 100.0)
+   pc.add_cached_array_to_imported_list(cached_array = None,
+                                        source_info = 'unit test',
+                                        keyword = 'PERM',
+                                        property_kind = 'permeability rock',
+                                        facet_type = 'direction',
+                                        facet = 'orthogonal',
+                                        discrete = False,
+                                        uom = 'mD',
+                                        indexable_element = 'cells',
+                                        const_value = 20.0)
+   x_min, x_max = grid.xyz_box()[:, 0]
+   relative_x = (grid.centre_point()[:, 0] - x_min) * (x_max - x_min)
+   azi = relative_x * 90.0 + 45.0
+   pc.add_cached_array_to_imported_list(cached_array = azi,
+                                        source_info = 'unit test',
+                                        keyword = 'primary permeability azimuth',
+                                        property_kind = 'plane angle',
+                                        facet_type = 'direction',
+                                        facet = 'primary',
+                                        discrete = False,
+                                        uom = 'dega',
+                                        indexable_element = 'cells')
+   pc.write_hdf5_for_imported_list()
+   pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+   model.store_epc()
+
+   # test that half cell transmissibilities can be computed
+   half_t = grid.half_cell_transmissibility()
+   assert np.all(half_t > 0.0)
+
+   # add the half cell transmissibility array as a property
+   pc.add_cached_array_to_imported_list(cached_array = half_t.flatten(),
+                                        source_info = 'unit test',
+                                        keyword = 'half transmissibility',
+                                        property_kind = 'transmissibility',
+                                        discrete = False,
+                                        count = 1,
+                                        indexable_element = 'faces per cell')
+   pc.write_hdf5_for_imported_list()
+   pc.create_xml_for_imported_list_and_add_parts_to_model(extra_metadata = {'uom': 'm3.cP/(d.kPa)'})
+
+   model.store_epc()
+
 
 def test_vertical_prism_grid_from_seed_points_and_surfaces(tmp_path):
 
