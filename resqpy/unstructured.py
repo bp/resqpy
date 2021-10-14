@@ -1,6 +1,6 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '11th October 2021'
+version = '14th October 2021'
 
 import logging
 
@@ -26,6 +26,7 @@ import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.surface as rqs
 import resqpy.property as rqp
+import resqpy.weights_and_measures as wam
 
 valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']  #: valid cell shapes
 
@@ -822,6 +823,22 @@ class UnstructuredGrid(BaseResqpy):
       assert np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] >= 3)
       assert len(self.nodes_per_face_cl) == self.face_count
 
+   def xy_units(self):
+      """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid.
+
+      :meta common:
+      """
+
+      return rqet.find_tag(self._crs_root(), 'ProjectedUom').text
+
+   def z_units(self):
+      """Returns the vertical (z) units of measure of the coordinate reference system for the grid.
+
+      :meta common:
+      """
+
+      return rqet.find_tag(self._crs_root(), 'VerticalUom').text
+
    def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
       """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays.
 
@@ -1048,6 +1065,13 @@ class UnstructuredGrid(BaseResqpy):
       assert self.crs_uuid is not None
       crs = rqc.Crs(self.model, uuid = self.crs_uuid)
       self.crs_is_right_handed = crs.is_right_handed_xyz()
+
+   def _crs_root(self):
+      """Returns xml root node for the crs object referred to by this grid."""
+
+      if self.crs_uuid is None:
+         return None
+      return self.model.root(uuid = self.crs_uuid)
 
 
 class TetraGrid(UnstructuredGrid):
@@ -1990,24 +2014,85 @@ class VerticalPrismGrid(PrismGrid):
       if realization is None and hasattr(self, 'array_half_cell_t'):
          return self.array_half_cell_t
 
-      # TODO: gather property arrays, deriving tri-permeablities if required
-
       half_t = None
+      pc = self.property_collection
 
       if use_property:
-         pc = self.property_collection
-         half_t_resqml = pc.single_array_ref(property_kind = 'transmissibility',
-                                             realization = realization,
-                                             continuous = True,
-                                             count = 1,
-                                             indexable = 'faces per cell')
-         if half_t_resqml:
-            assert half_t_resqml.shape == (self.cell_count, 5)
+         half_t = pc.single_array_ref(property_kind = 'transmissibility',
+                                      realization = realization,
+                                      continuous = True,
+                                      count = 1,
+                                      indexable = 'faces per cell')
+         if half_t:
+            assert half_t.shape == (self.cell_count, 5)
 
       if half_t is None:
          # note: properties must be identifiable in property_collection
-         # TODO: insert property array arguments
-         half_t = rqtr.half_cell_t_vertical_prism(self, realization = realization)
+         # TODO: gather property arrays, deriving tri-permeablities
+         # make sub-collection of permeability properties
+         ppc = rqp.selective_version_of_collection(pc,
+                                                   continuous = True,
+                                                   realization = realization,
+                                                   property_kind = 'permeability rock')
+         assert ppc.number_of_parts() > 0, 'no permeability properties available for vertical prism grid'
+
+         # look for a triple permeability; if present, assume to be per face horizontal permeabilities
+         triple_perm_horizontal = ppc.single_array_ref(count = 3, indexable = 'cells')
+
+         if triple_perm_horizontal is None:
+            # look for horizontal isotropic permeability
+            iso_h_part = None
+            if ppc.number_of_parts() == 1:
+               iso_h_part = ppc.parts()[0]
+               assert ppc.indexable_for_part(iso_h_part) == 'cells', 'single permeability property is not for cells'
+            else:
+               iso_h_part = ppc.singleton(facet_type = 'direction',
+                                          facet = 'horizontal',
+                                          count = 1,
+                                          indexable = 'cells')
+            if iso_h_part is not None:
+               triple_perm_horizontal = np.repeat(ppc.cached_part_array_ref(iso_h_part), 3).reshape((-1, 3))
+            else:
+               # look for horizontal permeability field properties and derive triple perm array
+               primary_k = ppc.single_array_ref(facet_type = 'direction',
+                                                facet = 'primary',
+                                                count = 1,
+                                                indexable = 'cells')
+               orthogonal_k = ppc.single_array_ref(facet_type = 'direction',
+                                                   facet = 'orthogonal',
+                                                   count = 1,
+                                                   indexable = 'cells')
+               assert primary_k is not None and orthogonal_k is not None,  \
+                  'failed to identify horizontal permeability properties for vertical prism grid'
+               # todo: add extra metadata or further faceting to be sure of finding correct property
+               azimuth_part = pc.singleton(property_kind = 'plane angle',
+                                           facet_type = 'direction',
+                                           facet = 'primary',
+                                           realization = realization,
+                                           continuous = True,
+                                           count = 1,
+                                           indexable = 'cells')
+               if azimuth_part is None:
+                  primary_azimuth = 0.0  # default to north
+               else:
+                  primary_azimuth = pc.cached_part_array_ref(azimuth_part)
+                  azi_uom = pc.uom_for_part(azimuth_part)
+                  if azi_uom is not None and azi_uom != 'dega':
+                     primary_azimuth = wam.convert(primary_azimuth, azi_uom, 'dega', quantity = 'plane angle')
+               triple_perm_horizontal = self.triple_horizontal_permeability(primary_k, orthogonal_k, primary_azimuth)
+
+         perm_k = ppc.single_array_ref(facet_type = 'direction', facet = 'K', count = 1, indexable = 'cells')
+
+         ntg = pc.single_array_ref(property_kind = 'net to gross ratio',
+                                   realization = realization,
+                                   continuous = True,
+                                   count = 1,
+                                   indexable = 'cells')
+
+         half_t = rqtr.half_cell_t_vertical_prism(self,
+                                                  triple_perm_horizontal = triple_perm_horizontal,
+                                                  perm_k = perm_k,
+                                                  ntg = ntg)
 
       if realization is None:
          self.array_half_cell_t = half_t

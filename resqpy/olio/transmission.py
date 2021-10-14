@@ -1,6 +1,6 @@
 # transmission.py
 
-version = '11th October 2021'
+version = '14th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -36,7 +36,7 @@ def half_cell_t(grid,
          property collection is used
       realization (int, optional): if present and the property collection is scanned for perm or ntg
          arrays, only those properties for this realization will be used; ignored if arrays passed in
-      darcy_constant (float, optional): if present, the value to use for the D'Arcy constant;
+      darcy_constant (float, optional): if present, the value to use for the Darcy constant;
          if None, the grid's length units will determine the value as expected by Nexus
       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
@@ -59,6 +59,7 @@ def half_cell_t(grid,
 
    if darcy_constant is None:
       length_units = grid.xy_units()
+      assert length_units == 'm' or length_units.startswith('ft'), "Darcy constant must be specified"
       assert grid.z_units() == length_units
       darcy_constant = 0.008527 if length_units == 'm' else 0.001127  # these values from Nexus keyword ref.
 
@@ -104,7 +105,7 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
          (for each direction), in mD;
       ntg (float array of shape (nk, nj, ni), or float, optional): net to gross values to apply to I & J
          calculations; if a single float, is treated as a constant; if None, a value of 1.0 is used
-      darcy_constant (float, required): the value to use for the D'Arcy constant
+      darcy_constant (float, required): the value to use for the Darcy constant
 
    returns:
       numpy float array of shape (nk, nj, ni, 3) where the 3 covers K,J,I;
@@ -117,7 +118,7 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
       the same half cell transmissibility value is applicable to both - and + polarity faces;
       the axes of the regular grid are assumed to be orthogonal;
       the net to gross factor is only applied to I & J transmissibilities, not K; the results
-      include the D'Arcy Constant factor but not any transmissibility multiplier applied at the
+      include the Darcy Constant factor but not any transmissibility multiplier applied at the
       face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
       the two half cell transmissibilities and multiply by any transmissibility multiplier;
       returned array will need to be re-shaped before storing as a RESQML property
@@ -158,7 +159,7 @@ def half_cell_t_irregular(grid,
          (for each direction), in mD;
       ntg (float array of shape (nk, nj, ni), or float, required): net to gross values to apply to I & J
          calculations; if a single float, is treated as a constant;
-      darcy_constant (float, required): the value to use for the D'Arcy constant
+      darcy_constant (float, required): the value to use for the Darcy constant
       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
          units are implicitly those of the grid's crs length units
@@ -176,7 +177,7 @@ def half_cell_t_irregular(grid,
       calculation; each resulting value is effectively for the entire face, so area proportional
       fractions will be needed at faults with throw, or at grid boundaries; the net to gross
       factor is only applied to I & J transmissibilities, not K; the results
-      include the D'Arcy Constant factor but not any transmissibility multiplier applied at the
+      include the Darcy Constant factor but not any transmissibility multiplier applied at the
       face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
       the two half cell transmissibilities and multiply by any transmissibility multiplier; if
       the two cells do not have simple sharing of a common face, first reduce each half cell
@@ -261,7 +262,6 @@ def half_cell_t_irregular(grid,
             perm_k * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
          plus_face_t = np.where(zero_length_mask, np.NaN,
                                 perm_k * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
-#         log.debug(f'cell 0 K: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
 
       elif axis == 1:  # j
          if grid.has_split_coordinate_lines:
@@ -301,7 +301,6 @@ def half_cell_t_irregular(grid,
             perm_j * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
          plus_face_t = np.where(zero_length_mask, np.NaN,
                                 perm_j * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
-#         log.debug(f'cell 0 J: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
 
       else:  # i
          if grid.has_split_coordinate_lines:
@@ -342,9 +341,6 @@ def half_cell_t_irregular(grid,
          plus_face_t = np.where(zero_length_mask, np.NaN,
                                 perm_i * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
 
-
-#         log.debug(f'cell 0 I: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
-
       if axis != 0 and ntg is not None:
          minus_face_t *= ntg
          plus_face_t *= ntg
@@ -358,13 +354,25 @@ def half_cell_t_irregular(grid,
 
 
 def half_cell_t_vertical_prism(vpg,
-                               perm_k = None,
                                triple_perm_horizontal = None,
+                               perm_k = None,
                                ntg = None,
-                               realization = None,
                                darcy_constant = None,
                                tolerance = 1.0e-6):
    """Creates a half cell transmissibilty property array for a vertical prism grid.
+
+   arguments:
+      vpg (VerticalPrismGrid): the grid for which the half cell transmissibilities are required
+      triple_perm_horizontal (numpy float array of shape (N, 3)): the directional permeabilities to apply
+         to each of the three vertical faces per cell
+      perm_k (numpy float array of shape (N,)): the permeability to use for the vertical transmissibilities
+      ntg (numpy float array of shape (N,), optional): if present, acts as a multiplier in the
+         computation of non-vertical transmissibilities
+      darcy_constant (float, optional): the value to use for the Darcy constant; if None, a suitable
+         value will be used depending on the length units of the vpg grid's crs
+      tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+         will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+         units are implicitly those of the grid's crs length units
 
    returns:
       numpy float array of shape (N, 5) being the per-face half cell transmissibilities for each cell
@@ -372,6 +380,16 @@ def half_cell_t_vertical_prism(vpg,
    note:
       order of 5 faces matches those of faces per cell, ie. top, base, then the 3 vertical faces
    """
+
+   assert triple_perm_horizontal is not None
+   assert triple_perm_horizontal.shape == (vpg.cell_count, 3)
+   if perm_k is None:
+      perm_k = np.mean(triple_perm_horizontal, axis = 1)
+   if darcy_constant is None:
+      length_units = vpg.xy_units()
+      assert length_units == 'm' or length_units.startswith('ft')
+      assert vpg.z_units() == length_units
+      darcy_constant = 0.008527 if length_units == 'm' else 0.001127  # these values from Nexus keyword ref.
 
    # fetch triangulation and call precursor function
    p = vpg.points_ref()
@@ -390,7 +408,7 @@ def half_cell_t_vertical_prism(vpg,
       (vpg.nk, -1)) * triangle_areas / half_thickness).flatten())
    # horizontal
    # TODO: compute dip adjustments for non-vertical transmissibilities
-   dt_full = np.empty((vpg.nk, vpg.cell_count // vpg.nk, 3), dtpye = float)
+   dt_full = np.empty((vpg.nk, vpg.cell_count // vpg.nk, 3), dtype = float)
    dt_full[:] = d_t
    tr[:, 2:] = np.where(d_t < tolerance, np.NaN,
                         triple_perm_horizontal.reshape((vpg.nk, -1)) * a_t.reshape((1, -1)) / dt_full)
