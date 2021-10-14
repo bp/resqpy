@@ -1,6 +1,6 @@
 # transmission.py
 
-version = '25th June 2021'
+version = '14th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -25,7 +25,7 @@ def half_cell_t(grid,
                 realization = None,
                 darcy_constant = None,
                 tolerance = 1.0e-6):
-   """Creates a half cell transmissibilty property array.
+   """Creates a half cell transmissibilty property array for a regular or irregular IJK grid.
 
    arguments:
       grid (grid.Grid or grid.RegularGrid): the grid for which half cell transmissibilities are required
@@ -36,7 +36,7 @@ def half_cell_t(grid,
          property collection is used
       realization (int, optional): if present and the property collection is scanned for perm or ntg
          arrays, only those properties for this realization will be used; ignored if arrays passed in
-      darcy_constant (float, optional): if present, the value to use for the D'Arcy constant;
+      darcy_constant (float, optional): if present, the value to use for the Darcy constant;
          if None, the grid's length units will determine the value as expected by Nexus
       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
@@ -59,6 +59,7 @@ def half_cell_t(grid,
 
    if darcy_constant is None:
       length_units = grid.xy_units()
+      assert length_units == 'm' or length_units.startswith('ft'), "Darcy constant must be specified"
       assert grid.z_units() == length_units
       darcy_constant = 0.008527 if length_units == 'm' else 0.001127  # these values from Nexus keyword ref.
 
@@ -104,7 +105,7 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
          (for each direction), in mD;
       ntg (float array of shape (nk, nj, ni), or float, optional): net to gross values to apply to I & J
          calculations; if a single float, is treated as a constant; if None, a value of 1.0 is used
-      darcy_constant (float, required): the value to use for the D'Arcy constant
+      darcy_constant (float, required): the value to use for the Darcy constant
 
    returns:
       numpy float array of shape (nk, nj, ni, 3) where the 3 covers K,J,I;
@@ -117,12 +118,14 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
       the same half cell transmissibility value is applicable to both - and + polarity faces;
       the axes of the regular grid are assumed to be orthogonal;
       the net to gross factor is only applied to I & J transmissibilities, not K; the results
-      include the D'Arcy Constant factor but not any transmissibility multiplier applied at the
+      include the Darcy Constant factor but not any transmissibility multiplier applied at the
       face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
       the two half cell transmissibilities and multiply by any transmissibility multiplier;
       returned array will need to be re-shaped before storing as a RESQML property
       with indexable elements of 'faces';
-      the coordinate referemce system for the grid must have the same length units for xy and z
+      the coordinate referemce system for the grid must have the same length units for xy and z;
+      this function is vastly more computationally efficient than the general (irregular grid)
+      function
    """
 
    assert perm_k is not None and perm_j is not None and perm_i is not None
@@ -148,7 +151,7 @@ def half_cell_t_irregular(grid,
                           ntg = None,
                           darcy_constant = None,
                           tolerance = 1.0e-6):
-   """Creates a half cell transmissibilty property array.
+   """Creates a half cell transmissibilty property array for an IJK grid.
 
    arguments:
       grid (grid.Grid): the grid for which half cell transmissibilities are required
@@ -156,7 +159,7 @@ def half_cell_t_irregular(grid,
          (for each direction), in mD;
       ntg (float array of shape (nk, nj, ni), or float, required): net to gross values to apply to I & J
          calculations; if a single float, is treated as a constant;
-      darcy_constant (float, required): the value to use for the D'Arcy constant
+      darcy_constant (float, required): the value to use for the Darcy constant
       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
          units are implicitly those of the grid's crs length units
@@ -174,7 +177,7 @@ def half_cell_t_irregular(grid,
       calculation; each resulting value is effectively for the entire face, so area proportional
       fractions will be needed at faults with throw, or at grid boundaries; the net to gross
       factor is only applied to I & J transmissibilities, not K; the results
-      include the D'Arcy Constant factor but not any transmissibility multiplier applied at the
+      include the Darcy Constant factor but not any transmissibility multiplier applied at the
       face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
       the two half cell transmissibilities and multiply by any transmissibility multiplier; if
       the two cells do not have simple sharing of a common face, first reduce each half cell
@@ -259,7 +262,6 @@ def half_cell_t_irregular(grid,
             perm_k * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
          plus_face_t = np.where(zero_length_mask, np.NaN,
                                 perm_k * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
-#         log.debug(f'cell 0 K: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
 
       elif axis == 1:  # j
          if grid.has_split_coordinate_lines:
@@ -299,7 +301,6 @@ def half_cell_t_irregular(grid,
             perm_j * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
          plus_face_t = np.where(zero_length_mask, np.NaN,
                                 perm_j * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
-#         log.debug(f'cell 0 J: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
 
       else:  # i
          if grid.has_split_coordinate_lines:
@@ -340,9 +341,6 @@ def half_cell_t_irregular(grid,
          plus_face_t = np.where(zero_length_mask, np.NaN,
                                 perm_i * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
 
-
-#         log.debug(f'cell 0 I: half axis vector: {half_axis_vectors[0, 0, 0]}; + face areas: {plus_face_areas[0, 0, 0]}; + face t: {plus_face_t[0, 0, 0]}')
-
       if axis != 0 and ntg is not None:
          minus_face_t *= ntg
          plus_face_t *= ntg
@@ -353,6 +351,130 @@ def half_cell_t_irregular(grid,
    np.seterr(divide = 'warn', invalid = 'warn')
 
    return np.abs(darcy_constant * half_t)
+
+
+def half_cell_t_vertical_prism(vpg,
+                               triple_perm_horizontal = None,
+                               perm_k = None,
+                               ntg = None,
+                               darcy_constant = None,
+                               tolerance = 1.0e-6):
+   """Creates a half cell transmissibilty property array for a vertical prism grid.
+
+   arguments:
+      vpg (VerticalPrismGrid): the grid for which the half cell transmissibilities are required
+      triple_perm_horizontal (numpy float array of shape (N, 3)): the directional permeabilities to apply
+         to each of the three vertical faces per cell
+      perm_k (numpy float array of shape (N,)): the permeability to use for the vertical transmissibilities
+      ntg (numpy float array of shape (N,), optional): if present, acts as a multiplier in the
+         computation of non-vertical transmissibilities
+      darcy_constant (float, optional): the value to use for the Darcy constant; if None, a suitable
+         value will be used depending on the length units of the vpg grid's crs
+      tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+         will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+         units are implicitly those of the grid's crs length units
+
+   returns:
+      numpy float array of shape (N, 5) being the per-face half cell transmissibilities for each cell
+
+   note:
+      order of 5 faces matches those of faces per cell, ie. top, base, then the 3 vertical faces
+   """
+
+   assert triple_perm_horizontal is not None
+   assert triple_perm_horizontal.shape == (vpg.cell_count, 3)
+   if perm_k is None:
+      perm_k = np.mean(triple_perm_horizontal, axis = 1)
+   if darcy_constant is None:
+      length_units = vpg.xy_units()
+      assert length_units == 'm' or length_units.startswith('ft')
+      assert vpg.z_units() == length_units
+      darcy_constant = 0.008527 if length_units == 'm' else 0.001127  # these values from Nexus keyword ref.
+
+   # fetch triangulation and call precursor function
+   p = vpg.points_ref()
+   t = vpg.triangulation()
+   a_t, d_t = half_cell_t_2d_triangular_precursor(p, t)
+   # find heights of cells and faces
+   # find horizontal area of triangles
+   triangle_areas = vec.area_of_triangles(p, t, xy_projection = True).reshape((1, -1))
+   cp = vpg.corner_points()
+   half_thickness = 0.5 * vpg.thickness().reshape((vpg.nk, -1))
+
+   # compute transmissibilities
+   tr = np.zeros((vpg.cell_count, 5), dtype = float)
+   # vertical
+   tr[:, 0] = np.where(half_thickness < tolerance, np.NaN, (perm_k.reshape(
+      (vpg.nk, -1)) * triangle_areas / half_thickness)).flatten()
+   tr[:, 1] = tr[:, 0]
+   # horizontal
+   # TODO: compute dip adjustments for non-vertical transmissibilities
+   dt_full = np.empty((vpg.nk, vpg.cell_count // vpg.nk, 3), dtype = float)
+   dt_full[:] = d_t
+   tr[:, 2:] = np.where(dt_full < tolerance, np.NaN,
+                        triple_perm_horizontal.reshape((vpg.nk, -1, 3)) * a_t.reshape((1, -1, 3)) / dt_full).reshape(
+                           (-1, 3))
+   if ntg is not None:
+      tr[:, 2:] *= ntg.reshape((-1, 1))
+
+   tr *= darcy_constant
+   return tr
+
+
+def half_cell_t_2d_triangular_precursor(p, t):
+   """Creates a precursor to horizontal transmissibility for prism grids (see notes).
+
+   arguments:
+      p (numpy float array of shape (N, 2 or 3)): the xy(&z) locations of cell vertices
+      t (numpy int array of shape (M, 3)): the triangulation of p for which the transmissibility
+         precursor is required
+
+   returns:
+      a pair of numpy float arrays, each of shape (M, 3) being the normal length and flow length
+      relevant for flow across the face opposite each vertex as defined by t
+
+   notes:
+      this function acts as a precursor to the equivalent of the half cell transmissibility
+      functions but for prism grids; for a resqpy VerticalPrismGrid, the triangulation can
+      be shared by many layers with this function only needing to be called once; the first
+      of the returned values (normal length) is the length of the triangle edge, in xy, when
+      projected onto the normal of the flow direction; multiplying the normal length by a cell
+      height will yield the area needed for transmissibility calculations; the second of the
+      returned values (flow length) is the distance from the trangle centre to the midpoint of
+      the edge and can be used as the distance term for a half cell transmissibilty; this
+      function does not account for dip, it only handles the geometric aspects of half
+      cell transmissibility in the xy plane
+   """
+
+   assert p.ndim == 2 and p.shape[1] in [2, 3]
+   assert t.ndim == 2 and t.shape[1] == 3
+
+   # centre points of triangles, in xy
+   centres = np.mean(p[t], axis = 1)[:, :2]
+   # midpoints of edges of triangles, in xy
+   edge_midpoints = np.empty(tuple(list(t.shape) + [2]), dtype = float)
+   edge_midpoints[:, 0, :] = 0.5 * (p[t[:, 1]] + p[t[:, 2]])[:, :2]
+   edge_midpoints[:, 1, :] = 0.5 * (p[t[:, 2]] + p[t[:, 0]])[:, :2]
+   edge_midpoints[:, 2, :] = 0.5 * (p[t[:, 0]] + p[t[:, 1]])[:, :2]
+   # triangle edge vectors, projected in xy
+   edge_vectors = np.empty(edge_midpoints.shape, dtype = float)
+   edge_vectors[:, 0] = (p[t[:, 2]] - p[t[:, 1]])[:, :2]
+   edge_vectors[:, 1] = (p[t[:, 0]] - p[t[:, 2]])[:, :2]
+   edge_vectors[:, 2] = (p[t[:, 1]] - p[t[:, 0]])[:, :2]
+   # vectors from triangle centres to mid points of edges (3 per triangle), in xy plane
+   cem_vectors = edge_midpoints - centres.reshape((-1, 1, 2))
+   cem_lengths = vec.naive_lengths(cem_vectors)
+   # unit length vectors normal to cem_vectors, in the xy plane
+   normal_vectors = np.zeros(edge_midpoints.shape)
+   normal_vectors[:, :, 0] = cem_vectors[:, :, 1]
+   normal_vectors[:, :, 1] = -cem_vectors[:, :, 0]
+   normal_vectors = vec.unit_vectors(normal_vectors)
+   # edge lengths projected onto normal vectors (length perpendicular to nominal flow direction)
+   normal_lengths = np.abs(vec.dot_products(edge_vectors, normal_vectors))
+   # return normal (cross-sectional) lengths and nominal flow direction lengths
+   assert normal_lengths.shape == t.shape and cem_lengths.shape == t.shape
+
+   return normal_lengths, cem_lengths
 
 
 def fault_connection_set(grid, skip_inactive = False):
@@ -404,36 +526,24 @@ def fault_connection_set(grid, skip_inactive = False):
          return 5
 
       def basic_fr(g, h, ea, eb, tol):
-         # returns fractional area for simple patters (2 sides of overlap quadrilateral lie on pillars)
-         #         if ea < tol:
-         #            if eb < tol: return 0.0  # pinchout
-         #            return 0.5 * (1.0 + h / eb)
-         #         if eb < tol: return 0.5 * (g / ea + 1.0)
-         #         return 0.5 * (g / ea  +  h / eb)
+         # returns fractional area for simple patterns (2 sides of overlap quadrilateral lie on pillars)
          if ea + eb < tol:
             return 0.0
          return (g + h) / (ea + eb)
 
       def fractional_area(paml_top, paml_bot, papl_top, papl_bot, pbml_top, pbml_bot, pbpl_top, pbpl_bot, tol = 0.001):
          # calculate fractional area of overlap, from m perspective (calling code swaps m & p for other perspective)
-         #         log.debug(f'paml_top: {paml_top}; paml_bot: {paml_bot}; papl_top: {papl_top}; papl_bot: {papl_bot}')
-         #         log.debug(f'pbml_top: {pbml_top}; pbml_bot: {pbml_bot}; pbpl_top: {pbpl_top}; pbpl_bot: {pbpl_bot}')
          fla = pillar_flavour(paml_top, paml_bot, papl_top, papl_bot, tol = tol)
          flb = pillar_flavour(pbml_top, pbml_bot, pbpl_top, pbpl_bot, tol = tol)
          if (fla, flb) == (4, 4):  # diagram 1
-            #            log.debug('(4, 4) diagram 1')
             return basic_fr(papl_bot - papl_top, pbpl_bot - pbpl_top, paml_bot - paml_top, pbml_bot - pbml_top, tol)
          elif (fla, flb) == (3, 3):  # diagram 1 (reverse perspective); diagram 3
-            #            log.debug('(3, 3) diagram 1r')
             return 1.0
          elif (fla, flb) == (5, 5):  # diagram 2
-            #            log.debug('(5, 5) diagram 2')
             return basic_fr(paml_bot - papl_top, pbml_bot - pbpl_top, paml_bot - paml_top, pbml_bot - pbml_top, tol)
          elif (fla, flb) == (2, 2):  # diagram 2 (reverse perspective)
-            #            log.debug('(2, 2) diagram 2r')
             return basic_fr(papl_bot - paml_top, pbpl_bot - pbml_top, paml_bot - paml_top, pbml_bot - pbml_top, tol)
          elif (fla, flb) == (5, 4):  # diagram 5 (diagram 4 is a special case of 5 and 2)
-            #            log.debug('(5, 4) diagram 5')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_bot
@@ -445,7 +555,6 @@ def fault_connection_set(grid, skip_inactive = False):
             return basic_fr(paml_bot - papl_top, pbml_bot - pbpl_top, paml_bot - paml_top, pbml_bot - pbml_top,
                             tol) - sub
          elif (fla, flb) == (4, 5):  # diagram 5 mirror (diagram 4 is a special case of 5)
-            #            log.debug('(4, 5) diagram 5m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_bot
@@ -457,7 +566,6 @@ def fault_connection_set(grid, skip_inactive = False):
             return basic_fr(pbml_bot - pbpl_top, paml_bot - papl_top, pbml_bot - pbml_top, paml_bot - paml_top,
                             tol) - sub
          elif (fla, flb) == (2, 3):  # diagram 5 (reverse perspective), similar to 1.0 - diagram 10
-            #            log.debug('(2, 3) diagram 5r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_bot
@@ -466,7 +574,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = pbpl_bot - pbml_bot
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (3, 2):  # diagram 5 mirror (reverse perspective)
-            #            log.debug('(3, 2) diagram 5mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_bot
@@ -475,7 +582,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = papl_bot - paml_bot
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (5, 2):  # diagram 6
-            #            log.debug('(5, 2) diagram 6')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
@@ -491,10 +597,8 @@ def fault_connection_set(grid, skip_inactive = False):
                v = papl_bot - paml_bot
                subb = (g / (ea + eb)) * (1.0 - v / (v + g))
             sub = suba + subb
-            #            log.debug(f'diagram 6: suba: {suba}; subb: {subb}')
             return 1.0 - sub
          elif (fla, flb) == (2, 5):  # diagram 6 mirror
-            #            log.debug('(2, 5) diagram 6m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
@@ -510,10 +614,8 @@ def fault_connection_set(grid, skip_inactive = False):
                v = pbpl_bot - pbml_bot
                suba = (g / (ea + eb)) * (1.0 - v / (v + g))
             sub = suba + subb
-            #            log.debug(f'diagram 6m: suba: {suba}; subb: {subb}')
             return 1.0 - sub
          elif (fla, flb) == (2, 1):  # diagram 10
-            #            log.debug('(2, 1) diagram 10')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_bot - paml_top
@@ -522,7 +624,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = pbml_top - pbpl_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (1, 2):  # diagram 10 mirror
-            #            log.debug('(1, 2) diagram 10m')
             eb = pbml_bot - pbml_top
             ea = paml_bot - paml_top
             g = pbpl_bot - pbml_top
@@ -531,7 +632,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = paml_top - papl_bot
             return (g / (eb + ea)) * (1.0 - v / (v + g))
          elif (fla, flb) == (5, 6):  # diagram 10 (reverse perspective)
-            #            log.debug('(5, 6) diagram 10r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_top
@@ -540,7 +640,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = pbpl_top - pbml_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (6, 5):  # diagram 10 mirror (reverse perspective)
-            #            log.debug('(6, 5) diagram 10mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_top
@@ -549,7 +648,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = papl_top - paml_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (2, 4):  # diagram 11
-            #            log.debug('(2, 4) diagram 11')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
@@ -561,7 +659,6 @@ def fault_connection_set(grid, skip_inactive = False):
             return basic_fr(papl_bot - paml_top, pbpl_bot - pbml_top, paml_bot - paml_top, pbml_bot - pbml_top,
                             tol) - sub
          elif (fla, flb) == (4, 2):  # diagram 11 mirror
-            #            log.debug('(4, 2) diagram 11m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
@@ -573,7 +670,6 @@ def fault_connection_set(grid, skip_inactive = False):
             return basic_fr(pbpl_bot - pbml_top, papl_bot - paml_top, pbml_bot - pbml_top, paml_bot - paml_top,
                             tol) - sub
          elif (fla, flb) == (5, 3):  # diagram 11 (reverse perspective) similar to 1.0 - diagram 10
-            #            log.debug('(5, 3) diagram 11r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
@@ -582,7 +678,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = pbml_top - pbpl_top
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (3, 5):  # diagram 11 mirror (reverse perspective)
-            #            log.debug('(3, 5) diagram 11mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
@@ -591,7 +686,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = paml_top - papl_top
             return 1.0 - (g / (ea + eb)) * (1.0 - v / (v + g))
          elif (fla, flb) == (3, 1):  # diagram 7 (only accurate if pillars parallel and layer constant thickness?)
-            #            log.debug('(3, 1) diagram 7')
             s = papl_bot - paml_bot
             ea = paml_bot - paml_top
             if s + ea <= tol:
@@ -601,9 +695,8 @@ def fault_connection_set(grid, skip_inactive = False):
             if t + v <= tol:
                return 1.0
             return 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s))
-         elif (fla, flb) == (1,
-                             3):  # diagram 7 mirror (only accurate if pillars parallel and layer constant thickness?)
-            #            log.debug('(1, 3) diagram 7m')
+         elif (fla, flb) == (1, 3):  # diagram 7 mirror
+            # (only accurate if pillars parallel and layer constant thickness?)
             s = pbpl_bot - pbml_bot
             eb = pbml_bot - pbml_top
             if s + eb <= tol:
@@ -614,7 +707,6 @@ def fault_connection_set(grid, skip_inactive = False):
                return 1.0
             return 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s))
          elif (fla, flb) == (4, 6):  # diagram 7 (reverse perspective)
-            #            log.debug('(4, 6) diagram 7r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_top
@@ -629,7 +721,6 @@ def fault_connection_set(grid, skip_inactive = False):
                sub = (gs / (ea + eb)) * (1.0 - vs / (vs + gs))
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (6, 4):  # diagram 7 mirror (reverse perspective)
-            #            log.debug('(6, 4) diagram 7mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_top
@@ -644,7 +735,6 @@ def fault_connection_set(grid, skip_inactive = False):
                sub = (gs / (ea + eb)) * (1.0 - vs / (vs + gs))
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (4, 1):  # diagram 12
-            #            log.debug('(4, 1) diagram 12')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_bot - paml_top
@@ -659,7 +749,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = pbml_top - pbpl_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (1, 4):  # diagram 12 mirror
-            #            log.debug('(1, 4) diagram 12m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_bot - pbml_top
@@ -674,7 +763,6 @@ def fault_connection_set(grid, skip_inactive = False):
             v = paml_top - papl_bot
             return (g / (ea + eb)) * (1.0 - v / (v + g)) - sub
          elif (fla, flb) == (3, 6):  # diagram 12 (reverse perspective)
-            #            log.debug('(3, 6) diagram 12m')
             s = pbpl_top - pbml_bot
             eb = pbml_bot - pbml_top
             if s + eb <= tol:
@@ -685,7 +773,6 @@ def fault_connection_set(grid, skip_inactive = False):
                return 0.0
             return 1.0 - (0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)))
          elif (fla, flb) == (6, 3):  # diagram 12 mirror (reverse perspective)
-            #            log.debug('(6, 3) diagram 12mr')
             s = papl_top - paml_bot
             ea = paml_bot - paml_top
             if s + ea <= tol:
@@ -696,7 +783,6 @@ def fault_connection_set(grid, skip_inactive = False):
                return 0.0
             return 1.0 - (0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)))
          elif (fla, flb) == (5, 1):  # diagram 9 (only accurate if pillars parallel and layer constant thickness?)
-            #            log.debug('(5, 1) diagram 9')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = papl_top - paml_top
@@ -714,7 +800,6 @@ def fault_connection_set(grid, skip_inactive = False):
                return 1.0 - sub
             return 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)) - sub
          elif (fla, flb) == (1, 5):  # diagram 9 mirror
-            #            log.debug('(1, 5) diagram 9m')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbpl_top - pbml_top
@@ -732,7 +817,6 @@ def fault_connection_set(grid, skip_inactive = False):
                return 1.0 - sub
             return 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)) - sub
          elif (fla, flb) == (2, 6):  # diagram 9 (reverse perspective)
-            #            log.debug('(2, 6) diagram 9r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = paml_bot - papl_bot
@@ -750,7 +834,6 @@ def fault_connection_set(grid, skip_inactive = False):
                return 1.0 - sub
             return 0.5 * (s / (s + t) + 1.0 - v / (v + ea + s)) - sub
          elif (fla, flb) == (6, 2):  # diagram 9 mirror (reverse perspective)
-            #            log.debug('(6, 2) diagram 9mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             g = pbml_bot - pbpl_bot
@@ -768,7 +851,6 @@ def fault_connection_set(grid, skip_inactive = False):
                return 1.0 - sub
             return 0.5 * (s / (s + t) + 1.0 - v / (v + eb + s)) - sub
          elif (fla, flb) == (6, 1):  # diagram 8; solution only accurate if pillars are parallel
-            #            log.debug('(6, 1) diagram 8 or 8mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             s = papl_top - paml_bot
@@ -788,7 +870,6 @@ def fault_connection_set(grid, skip_inactive = False):
             sub = suba + subb
             return max(1.0 - sub, 0.0)
          elif (fla, flb) == (1, 6):  # diagram 8 mirror or reverse perspective
-            #            log.debug('(1, 6) diagram 8m or 8r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             s = pbpl_top - pbml_bot
@@ -808,7 +889,6 @@ def fault_connection_set(grid, skip_inactive = False):
             sub = suba + subb
             return max(1.0 - sub, 0.0)
          elif (fla, flb) == (4, 3):  # diagram 13
-            #            log.debug('(4, 3) diagram 13 or 13mr')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             if ea < tol:
@@ -827,7 +907,6 @@ def fault_connection_set(grid, skip_inactive = False):
                sub2 = (g / (ea + eb)) * (1.0 - v / (v + g))
             return 1.0 - (sub1 + sub2)
          elif (fla, flb) == (3, 4):  # diagram 13 mirror or reverse perspective
-            #            log.debug('(3, 4) diagram 13m or 13r')
             ea = paml_bot - paml_top
             eb = pbml_bot - pbml_top
             if eb < tol:
@@ -872,11 +951,6 @@ def fault_connection_set(grid, skip_inactive = False):
       for i in range(pbpln.size):
          pbpln[i] = np.dot(pbpl[i], pbv)
 
-
-#      log.debug(f'pamln:\n{pamln}')
-#      log.debug(f'papln:\n{papln}')
-#      log.debug(f'pbmln:\n{pbmln}')
-#      log.debug(f'pbpln:\n{pbpln}')
       juxta_list = []
       fa_p_totals = np.zeros(grid.nk)
       fa_m_worst_scaling = 1.0
@@ -943,7 +1017,7 @@ def fault_connection_set(grid, skip_inactive = False):
             fa_m_downscaling_count += 1
             if fa_m_total > fa_m_worst_scaling:
                fa_m_worst_scaling = fa_m_total
-            #            log.warning(f'downscaling fractional areas on minus side of fault by factor of {fa_m_total} in layer {km}')
+               # log.warning(f'downscaling fractional areas on minus side of fault by factor of {fa_m_total} in layer {km}')
             for i in range(km_start_index, len(juxta_list)):
                (km, kp, fa_m, fa_p) = juxta_list[i]
                juxta_list[i] = (km, kp, fa_m / fa_m_total, fa_p)
@@ -953,7 +1027,7 @@ def fault_connection_set(grid, skip_inactive = False):
       for kp in range(grid.nk):
          if fa_p_totals[kp] > 1.0:
             fa_p_downscaling_count += 1
-            #            log.warning(f'downscaling fractional areas on plus side of fault by factor of {fa_p_totals[kp]} in layer {kp}')
+            # log.warning(f'downscaling fractional areas on plus side of fault by factor of {fa_p_totals[kp]} in layer {kp}')
             any_p_scaling = True
       if any_p_scaling:
          for i in range(len(juxta_list)):
@@ -980,10 +1054,6 @@ def fault_connection_set(grid, skip_inactive = False):
       pap = pfc[j + 1, i, 0, 0]  # pillar index for -I edge of J face, for col on +J side of fault
       pbm = pfc[j, i, 1, 1]  # pillar index for +I edge of J face, for col on -J side of fault
       pbp = pfc[j + 1, i, 0, 1]  # pillar index for +I edge of J face, for col on +J side of fault
-      #      log.debug(f'pam: {pam}\n{p[:, pam, :]}')
-      #      log.debug(f'pap: {pap}\n{p[:, pap, :]}')
-      #      log.debug(f'pbm: {pbm}\n{p[:, pbm, :]}')
-      #      log.debug(f'pbp: {pbp}\n{p[:, pbp, :]}')
       ji_list, scaling_info = juxtapose(grid, p, pv, pam, pap, pbm, pbp)
       if scaling_info[2] > 1.2 or scaling_info[3] > 1.2:
          if warning_count < 20:

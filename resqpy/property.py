@@ -2995,7 +2995,8 @@ class PropertyCollection():
             if points:
                shape_list.append(3)
             if property_array is not None:
-               assert tuple(shape_list) == property_array.shape, 'property array does not have the correct shape'
+               assert tuple(shape_list) == property_array.shape,  \
+                  f'property array shape {property_array.shape} is not the expected {tuple(shape_list)}'
       # todo: assertions:
       #    numpy data type matches discrete flag (and assumptions about precision)
       #    uom are valid units for property_kind

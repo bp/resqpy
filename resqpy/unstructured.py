@@ -1,12 +1,13 @@
 """unstructured.py: resqpy unstructured grid module."""
 
-version = '5th October 2021'
+version = '14th October 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
 log.debug('unstructured.py version ' + version)
 
+import math as maths
 import numpy as np
 
 from resqpy.olio.base import BaseResqpy
@@ -16,6 +17,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.triangulation as tri
 import resqpy.olio.volume as vol
 import resqpy.olio.intersection as meet
+import resqpy.olio.transmission as rqtr
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.write_hdf5 as rwh5
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -24,6 +26,7 @@ import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.surface as rqs
 import resqpy.property as rqp
+import resqpy.weights_and_measures as wam
 
 valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']  #: valid cell shapes
 
@@ -98,6 +101,7 @@ class UnstructuredGrid(BaseResqpy):
       self.property_collection = None  #: collection of properties for which this grid is the supporting representation
       self.crs_is_right_handed = None  #: cached boolean indicating handedness of crs axes
       self.cells_per_face = None  #: numpy int array of shape (face_count, 2) holding cells for faces; -1 is null value
+      self.xyz_box_cached = None
 
       super().__init__(model = parent_model,
                        uuid = uuid,
@@ -383,7 +387,7 @@ class UnstructuredGrid(BaseResqpy):
       """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.
 
       returns:
-         numpy array of shape (node_count,)
+         numpy array of shape (node_count, 3)
 
       notes:
          this is the usual way to get at the actual grid geometry points data in the native RESQML layout;
@@ -414,6 +418,23 @@ class UnstructuredGrid(BaseResqpy):
                                      required_shape = (self.node_count, 3))
 
       return self.points_cached
+
+   def xyz_box(self):
+      """Returns the minimum and maximum xyz for the grid geometry.
+
+      returns:
+         numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
+
+      :meta common:
+      """
+
+      if self.xyz_box_cached is None:
+         self.xyz_box_cached = np.empty((2, 3), dtype = float)
+         p = self.points_ref()
+         self.xyz_box_cached[0] = np.min(p, axis = 0)
+         self.xyz_box_cached[1] = np.max(p, axis = 0)
+
+      return self.xyz_box_cached
 
    def face_centre_point(self, face_index):
       """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
@@ -820,6 +841,22 @@ class UnstructuredGrid(BaseResqpy):
       assert np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] >= 3)
       assert len(self.nodes_per_face_cl) == self.face_count
 
+   def xy_units(self):
+      """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid.
+
+      :meta common:
+      """
+
+      return rqet.find_tag(self._crs_root(), 'ProjectedUom').text
+
+   def z_units(self):
+      """Returns the vertical (z) units of measure of the coordinate reference system for the grid.
+
+      :meta common:
+      """
+
+      return rqet.find_tag(self._crs_root(), 'VerticalUom').text
+
    def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
       """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays.
 
@@ -1046,6 +1083,13 @@ class UnstructuredGrid(BaseResqpy):
       assert self.crs_uuid is not None
       crs = rqc.Crs(self.model, uuid = self.crs_uuid)
       self.crs_is_right_handed = crs.is_right_handed_xyz()
+
+   def _crs_root(self):
+      """Returns xml root node for the crs object referred to by this grid."""
+
+      if self.crs_uuid is None:
+         return None
+      return self.model.root(uuid = self.crs_uuid)
 
 
 class TetraGrid(UnstructuredGrid):
@@ -1529,7 +1573,7 @@ class VerticalPrismGrid(PrismGrid):
          a newly created VerticalPrismGrid object
       """
 
-      self.layer_count = None  #: number of layers when constructed as a layered grid
+      self.nk = None  #: number of layers when constructed as a layered grid
 
       super().__init__(parent_model = parent_model,
                        uuid = uuid,
@@ -1543,7 +1587,7 @@ class VerticalPrismGrid(PrismGrid):
          assert grr.grid_flavour(self.root) in ['VerticalPrismGrid', 'PrismGrid']
          self.check_prism()
          if 'layer count' in self.extra_metadata:
-            self.layer_count = int(self.extra_metadata['layer count'])
+            self.nk = int(self.extra_metadata['layer count'])
 
       self.grid_representation = 'VerticalPrismGrid'  #: flavour of grid; not much used
 
@@ -1656,10 +1700,10 @@ class VerticalPrismGrid(PrismGrid):
       vpg.cell_count = column_count * layer_count
       vpg.node_count = p_count * surface_count
       vpg.face_count = column_count * surface_count + column_edge_count * layer_count
-      vpg.layer_count = layer_count
+      vpg.nk = layer_count
       if vpg.extra_metadata is None:
          vpg.extra_metadata = {}
-      vpg.extra_metadata['layer count'] = vpg.layer_count
+      vpg.extra_metadata['layer count'] = vpg.nk
 
       # setup points with copies of points for top surface, z values to be updated later
       points = np.zeros((surface_count, p_count, 3))
@@ -1689,7 +1733,7 @@ class VerticalPrismGrid(PrismGrid):
       assert vpg.nodes_per_face[-1] > 0
 
       # set up faces per cell
-      vpg.faces_per_cell = np.zeros(5 * vpg.cell_count)
+      vpg.faces_per_cell = np.zeros(5 * vpg.cell_count, dtype = int)
       vpg.faces_per_cell_cl = np.arange(5, 5 * vpg.cell_count + 1, 5, dtype = int)
       assert len(vpg.faces_per_cell_cl) == vpg.cell_count
       # set cell top triangle indices
@@ -1805,6 +1849,287 @@ class VerticalPrismGrid(PrismGrid):
       # TODO: store information relating columns to seed points, and seed points to top layer points?
 
       return vpg
+
+   def column_count(self):
+      """Returns the number of columns in the grid."""
+
+      assert self.nk > 1, 'no layer information set for vertical prism grid'
+      n_col, remainder = divmod(self.cell_count, self.nk)
+      assert remainder == 0, 'code failure for vertical prism grid: cell and layer counts not compatible'
+      return n_col
+
+   def cell_centre_point(self, cell = None):
+      """Returns centre point of a single cell (or all cells) calculated as the mean position of its 6 nodes.
+
+      arguments:
+         cell (int): the index of the cell for which the centre point is required
+
+      returns:
+         numpy float array of shape (3,) being the xyz location of the centre point of the cell
+      """
+
+      cp = self.corner_points(cell = cell)
+      return np.mean(cp.reshape((-1, 6, 3)), axis = (1))
+
+   def corner_points(self, cell = None):
+      """Returns corner points for all cells or for a single cell.
+
+      arguments:
+         cell (int, optional): cell index of single cell for which corner points are required;
+            if None, corner points are returned for all cells
+
+      returns:
+         numpy float array of shape (2, 3, 3) being xyz points for top & base points for one cell, or
+         numpy float array of shape (N, 2, 3, 3) being xyz points for top & base points for all cells
+      """
+
+      if hasattr(self, 'array_corner_points'):
+         if cell is None:
+            return self.array_corner_points
+         return self.array_corner_points[cell]
+
+      p = self.points_ref()
+      if cell is None:
+         cp = np.empty((self.cell_count, 2, 3, 3), dtype = float)
+         top_fi = self.faces_per_cell.reshape((-1, 5))[:, 0]
+         top_npfi_start = np.where(top_fi == 0, 0, self.nodes_per_face_cl[top_fi - 1])
+         top_npfi_end = self.nodes_per_face_cl[top_fi]
+         base_fi = self.faces_per_cell.reshape((-1, 5))[:, 1]
+         base_npfi_start = self.nodes_per_face_cl[base_fi - 1]
+         base_npfi_end = self.nodes_per_face_cl[base_fi]
+         for cell in range(self.cell_count):
+            cp[cell, 0] = p[self.nodes_per_face[top_npfi_start[cell]:top_npfi_end[cell]]]
+            cp[cell, 1] = p[self.nodes_per_face[base_npfi_start[cell]:base_npfi_end[cell]]]
+         self.array_corner_points = cp
+         return cp
+
+      top_fi, base_fi = self.faces_per_cell.reshape((-1, 5))[cell, :2]
+      top_npfi_start = 0 if top_fi == 0 else self.nodes_per_face_cl[top_fi - 1]
+      base_npfi_start = self.nodes_per_face_cl[base_fi - 1]
+      cp = np.empty((2, 3, 3), dtype = float)
+      cp[0] = p[self.nodes_per_face[top_npfi_start:self.nodes_per_face_cl[top_fi]]]
+      cp[1] = p[self.nodes_per_face[base_npfi_start:self.nodes_per_face_cl[base_fi]]]
+      return cp
+
+   def thickness(self, cell = None):
+      """Returns array of thicknesses of all cells or a single cell.
+
+      note:
+         units are z units of crs used by this grid
+      """
+
+      if hasattr(self, 'array_thickness'):
+         if cell is None:
+            return self.array_thickness
+         return self.array_thickness[cell]
+
+      cp = self.corner_points(cell = cell)
+
+      if cell is None:
+         thick = np.mean(cp[:, 1, :, 2] - cp[:, 0, :, 2], axis = -1)
+         self.array_thickness = thick
+      else:
+         thick = np.mean(cp[1, :, 2] - cp[0, :, 2])
+
+      return thick
+
+   def top_faces(self):
+      """Returns the global face indices for the top triangular faces of the top layer of cells."""
+
+      return self.faces_per_cell[:self.column_count() * 5].reshape(-1, 5)[:, 0]
+
+   def triangulation(self):
+      """Returns triangulation used by this vertical prism grid.
+
+      returns:
+         numpy int array of shape (M, 3) being the indices into the grid points of the triangles forming
+         the top faces of the top layer of cells of the grid
+
+      notes:
+         use points_ref() to access the full points data;
+         the order of the first axis of the returned values will match the order of the columns
+         within cell related data
+      """
+
+      n_col = self.column_count()
+      top_face_indices = self.top_faces()
+      top_nodes = np.empty((n_col, 3), dtype = int)
+      for column in range(n_col):  # also used as cell number
+         top_nodes[column] = self.node_indices_for_face(top_face_indices[column])
+      return top_nodes
+
+   def triple_horizontal_permeability(self, primary_k, orthogonal_k, primary_azimuth = 0.0):
+      """Returns array of triple horizontal permeabilities derived from a pair of permeability properties
+
+      arguments:
+         primary_k (numpy float array of shape (N,) being the primary horizontal permeability for each cell
+         orthogonal_k (numpy float array of shape (N,) being the horizontal permeability for each cell in a
+            direction orthogonal to the primary permeability
+         primary_azimuth (float or numpy float array of shape (N,), default 0.0): the azimuth(s) of the
+            primary permeability, in degrees compass bearing
+
+      returns:
+         numpy float array of shape (N, 3) being the triple horizontal permeabilities applicable to half
+         cell horizontal transmissibilities
+
+      notes:
+         this method should be used to generate horizontal permeabilities for use in transmissibility
+         calculations if starting from an anisotropic permeability defined by a pair of locally
+         orthogonal values; resulting values will be locally bounded by the pair of source values;
+         the order of the 3 values per cell follows the node indices for the top triangle, for the
+         opposing vertical face; no net to gross ratio modification is applied here;
+      """
+
+      assert primary_k.size == self.cell_count and orthogonal_k.size == self.cell_count
+      azimuth_is_constant = isinstance(primary_azimuth, float) or isinstance(primary_azimuth, int)
+      if not azimuth_is_constant:
+         assert primary_azimuth.size == self.cell_count
+
+      p = self.points_ref()
+      t = self.triangulation()
+      # mid point of triangle edges
+      m = np.empty((t.shape[0], 3, 3), dtype = float)
+      for e in range(3):
+         m[:, e, :] = 0.5 * (p[t[:, e]] + p[t[:, e - 1]])
+      # cell centre points
+      c = self.centre_point()
+      # todo: decide which directions to use: cell centre to face centre; or face normal?
+      # vectors with direction cell centre to face centre (for one layer only)
+      v = m - c.reshape((self.nk, -1, 1, 3))[0]
+      # compass directions of those vectors
+      a = vec.azimuths(v)
+      # vector directions relative to primary permeability direction (per cell)
+      if azimuth_is_constant:
+         # work with one layer only
+         ap_rad = np.radians(a - primary_azimuth)
+      else:
+         # value per face per cell in whole grid
+         ap_rad = np.radians(
+            np.repeat(a.reshape((1, -1, 3)), self.nk, axis = 0).reshape((-1, 3)) - primary_azimuth.reshape((-1, 1)))
+      cos_ap = np.cos(ap_rad)
+      sin_ap = np.sin(ap_rad)
+      cos_sqr_ap = cos_ap * cos_ap
+      sin_sqr_ap = sin_ap * sin_ap
+      if azimuth_is_constant:
+         cos_sqr_ap = np.repeat(cos_sqr_ap.reshape(1, -1, 3), self.nk, axis = 0).reshape((-1, 3))
+         sin_sqr_ap = np.repeat(sin_sqr_ap.reshape(1, -1, 3), self.nk, axis = 0).reshape((-1, 3))
+      # local elliptical permeability projected in directions of azimuths
+      k = np.sqrt((primary_k * primary_k).reshape((-1, 1)) * cos_sqr_ap +
+                  (orthogonal_k * orthogonal_k).reshape((-1, 1)) * sin_sqr_ap)
+
+      return k
+
+   def half_cell_transmissibility(self, use_property = True, realization = None, tolerance = 1.0e-6):
+      """Returns (and caches if realization is None) half cell transmissibilities for this vertical prism grid.
+
+      arguments:
+         use_property (boolean, default True): if True, the grid's property collection is inspected for
+            a possible half cell transmissibility array and if found, it is used instead of calculation
+         realization (int, optional) if present, only a property with this realization number will be used
+         tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+            will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+            units are implicitly those of the grid's crs length units
+
+      returns:
+         numpy float array of shape (N, 5) where N is the number of cells in the grid and the 5 covers
+         the faces of a cell in the order of the faces_per_cell data;
+         units will depend on the length units of the coordinate reference system for the grid;
+         the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft respectively
+
+      notes:
+         this method does not write to hdf5, nor create a new property or xml;
+         if realization is None, a grid attribute cached array will be used;
+         tolerance will only be used if the half cell transmissibilities are actually computed
+      """
+
+      if realization is None and hasattr(self, 'array_half_cell_t'):
+         return self.array_half_cell_t
+
+      half_t = None
+      pc = self.property_collection
+
+      if use_property:
+         half_t = pc.single_array_ref(property_kind = 'transmissibility',
+                                      realization = realization,
+                                      continuous = True,
+                                      count = 1,
+                                      indexable = 'faces per cell')
+         if half_t:
+            assert half_t.size == 5 * self.cell_count
+            half_t = half_t.reshape(self.cell_count, 5)
+
+      if half_t is None:
+         # note: properties must be identifiable in property_collection
+         # TODO: gather property arrays, deriving tri-permeablities
+         # make sub-collection of permeability properties
+         ppc = rqp.selective_version_of_collection(pc,
+                                                   continuous = True,
+                                                   realization = realization,
+                                                   property_kind = 'permeability rock')
+         assert ppc.number_of_parts() > 0, 'no permeability properties available for vertical prism grid'
+
+         # look for a triple permeability; if present, assume to be per face horizontal permeabilities
+         triple_perm_horizontal = ppc.single_array_ref(count = 3, indexable = 'cells')
+
+         if triple_perm_horizontal is None:
+            # look for horizontal isotropic permeability
+            iso_h_part = None
+            if ppc.number_of_parts() == 1:
+               iso_h_part = ppc.parts()[0]
+               assert ppc.indexable_for_part(iso_h_part) == 'cells', 'single permeability property is not for cells'
+            else:
+               iso_h_part = ppc.singleton(facet_type = 'direction',
+                                          facet = 'horizontal',
+                                          count = 1,
+                                          indexable = 'cells')
+            if iso_h_part is not None:
+               triple_perm_horizontal = np.repeat(ppc.cached_part_array_ref(iso_h_part), 3).reshape((-1, 3))
+            else:
+               # look for horizontal permeability field properties and derive triple perm array
+               primary_k = ppc.single_array_ref(facet_type = 'direction',
+                                                facet = 'primary',
+                                                count = 1,
+                                                indexable = 'cells')
+               orthogonal_k = ppc.single_array_ref(facet_type = 'direction',
+                                                   facet = 'orthogonal',
+                                                   count = 1,
+                                                   indexable = 'cells')
+               assert primary_k is not None and orthogonal_k is not None,  \
+                  'failed to identify horizontal permeability properties for vertical prism grid'
+               # todo: add extra metadata or further faceting to be sure of finding correct property
+               azimuth_part = pc.singleton(property_kind = 'plane angle',
+                                           facet_type = 'direction',
+                                           facet = 'primary',
+                                           realization = realization,
+                                           continuous = True,
+                                           count = 1,
+                                           indexable = 'cells')
+               if azimuth_part is None:
+                  primary_azimuth = 0.0  # default to north
+               else:
+                  primary_azimuth = pc.cached_part_array_ref(azimuth_part)
+                  azi_uom = pc.uom_for_part(azimuth_part)
+                  if azi_uom is not None and azi_uom != 'dega':
+                     primary_azimuth = wam.convert(primary_azimuth, azi_uom, 'dega', quantity = 'plane angle')
+               triple_perm_horizontal = self.triple_horizontal_permeability(primary_k, orthogonal_k, primary_azimuth)
+
+         perm_k = ppc.single_array_ref(facet_type = 'direction', facet = 'K', count = 1, indexable = 'cells')
+
+         ntg = pc.single_array_ref(property_kind = 'net to gross ratio',
+                                   realization = realization,
+                                   continuous = True,
+                                   count = 1,
+                                   indexable = 'cells')
+
+         half_t = rqtr.half_cell_t_vertical_prism(self,
+                                                  triple_perm_horizontal = triple_perm_horizontal,
+                                                  perm_k = perm_k,
+                                                  ntg = ntg)
+
+      if realization is None:
+         self.array_half_cell_t = half_t
+
+      return half_t
 
 
 class HexaGrid(UnstructuredGrid):

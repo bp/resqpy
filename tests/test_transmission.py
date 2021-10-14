@@ -1,7 +1,10 @@
 # test module for resqpy.olio.transmission.py
 
 import pytest
+from numpy.testing import assert_array_almost_equal
+
 import os
+import math as maths
 import numpy as np
 
 import resqpy.model as rq
@@ -68,3 +71,16 @@ def test_regular_grid_half_cell_transmission(tmp_path):
       os.remove(temp_epc[-4] + '.h5')
    except Exception:
       pass
+
+
+def test_half_cell_t_2d_triangular_precursor_equilateral():
+   side = 123.45
+   height = side * maths.sin(vec.radians_from_degrees(60.0))
+   # create a pair of equilateral triangles
+   p = np.array([(0.0, 0.0), (side, 0.0), (side / 2.0, height), (side * 3.0 / 2.0, height)])
+   t = np.array([(0, 1, 2), (1, 2, 3)], dtype = int)
+   a, b = rqtr.half_cell_t_2d_triangular_precursor(p, t)
+   a_over_l = a / b
+   expected = side / (height / 3)
+   assert a_over_l.shape == (2, 3)
+   assert_array_almost_equal(a_over_l, expected)
