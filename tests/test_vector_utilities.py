@@ -13,6 +13,8 @@ def test_simple_functions():
    assert_array_almost_equal(vec.subtract((5.6, 7.8, 10.0), (1.2, 3.4, -1.0)), np.array([4.4, 4.4, 11.0]))
    assert_array_almost_equal(vec.elemental_multiply((1.2, 3.4), (5.6, 7.8)), (6.72, 26.52))
    assert_array_almost_equal(vec.amplify((1.0, 2.0, 4.5), 2.5), (2.5, 5.0, 11.25))
+   assert_array_almost_equal(vec.v_3d((23.4, -98.7)), (23.4, -98.7, 0.0))
+   assert_array_almost_equal(vec.v_3d((23.4, 45.4, -98.7)), np.array((23.4, 45.4, -98.7)))
 
 
 def test_unit_vectors():
@@ -23,10 +25,21 @@ def test_unit_vectors():
    for v, e in zip(v_set, expected):
       assert_array_almost_equal(vec.unit_vector(v), e)
    assert_array_almost_equal(vec.unit_vectors(v_set), expected)
+   azi = [0.0, -90.0, 120.0, 180.0, 270.0, 360.0]
+   expected = np.array([(0.0, 1.0, 0.0), (-1.0, 0.0, 0.0), (maths.cos(maths.pi / 6), -0.5, 0.0), (0.0, -1.0, 0.0),
+                        (-1.0, 0.0, 0.0), (0.0, 1.0, 0.0)])
+   for a, e in zip(azi, expected):
+      assert_array_almost_equal(vec.unit_vector_from_azimuth(a), e)
 
 
 def test_angles():
-   assert maths.isclose(vec.radians_from_degrees(90.0), maths.pi / 2.0)
+   pi_by_2 = maths.pi / 2.0
+   assert maths.isclose(vec.radians_from_degrees(90.0), pi_by_2)
+   assert_array_almost_equal(vec.radians_from_degrees((0.0, -90.0, 120.0, 270.0)),
+                             (0.0, -pi_by_2, maths.pi * 2 / 3, pi_by_2 * 3))
+   assert maths.isclose(vec.radians_from_degrees(vec.degrees_from_radians(1.2647)), 1.2647)
+   assert_array_almost_equal(vec.degrees_from_radians((0.0, -pi_by_2, maths.pi * 2 / 3, pi_by_2 * 3)),
+                             (0.0, -90.0, 120.0, 270.0))
    assert maths.isclose(vec.degrees_from_radians(maths.pi), 180.0)
 
 

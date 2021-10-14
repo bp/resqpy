@@ -18,12 +18,12 @@ import numpy as np
 
 def radians_from_degrees(deg):
    """Converts angle from degrees to radians."""
-   return maths.radians(deg)
+   return np.radians(deg)
 
 
 def degrees_from_radians(rad):
    """Converts angle from radians to degrees."""
-   return maths.degrees(rad)
+   return np.degrees(rad)
 
 
 def zero_vector():
@@ -93,7 +93,7 @@ def unit_vectors(v):
 
 def unit_vector_from_azimuth(azimuth):
    """Returns horizontal unit vector in compass bearing given by azimuth (x = East, y = North)."""
-   assert (0.0 <= azimuth <= 360.0)
+   azimuth = azimuth % 360.0
    azimuth_radians = radians_from_degrees(azimuth)
    result = zero_vector()
    result[0] = maths.sin(azimuth_radians)  # x (increasing to east)
