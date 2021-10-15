@@ -20,3 +20,16 @@ def test_pip_cn_and_wn():
          assert not pip_fn(p, poly)
    assert np.all(pip.pip_array_cn(p_in, poly))
    assert not np.any(pip.pip_array_cn(p_out, poly))
+
+
+def test_figure_of_eight():
+   fig_8 = np.array([(-100.0, -200.0), (100.0, 200.0), (-100.0, 200.0), (100.0, -200, 0)])
+   p_in = np.array([(-99.0, -199.0), (0.0, -1.0), (99.0, 199.0), (0.0, 1.0), (49.9, -100.0)])
+   p_out = np.array([(1000.0, -23.0), (1.0, 0.0), (-0.001, 0.0), (-50.1, 100.0)])
+   for pip_fn in (pip.pip_cn, pip.pip_wn):
+      for p in p_in:
+         assert pip_fn(p, fig_8)
+      for p in p_out:
+         assert not pip_fn(p, fig_8)
+   assert np.all(pip.pip_array_cn(p_in, fig_8))
+   assert not np.any(pip.pip_array_cn(p_out, fig_8))
