@@ -231,12 +231,14 @@ class MdDatum(BaseResqpy):
 
       return datum
 
-   def __eq__(self, other):
-      """Implements equals operator. Compares class type and uuid"""
+   def is_equivalent(self, other):
+      """Implements equals operator, comparing metadata items deemed significant."""
 
-      # TODO: more detailed equality comparison
-      other_uuid = getattr(other, "uuid", None)
-      return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
+      if not isinstance(other, self.__class__):
+         return False
+      if self.md_reference != other.md_reference or not np.allclose(self.location, other.location):
+         return False
+      return bu.matching_uuids(self.crs_uuid, other.crs_uuid)
 
 
 class DeviationSurvey(BaseResqpy):
@@ -269,7 +271,7 @@ class DeviationSurvey(BaseResqpy):
                 represented_interp = None,
                 md_datum = None,
                 md_uom = 'm',
-                angle_uom = 'degrees',
+                angle_uom = 'dega',
                 measured_depths = None,
                 azimuths = None,
                 inclinations = None,
@@ -351,7 +353,7 @@ class DeviationSurvey(BaseResqpy):
                        y_col = 'Y',
                        z_col = 'Z',
                        md_uom = 'm',
-                       angle_uom = 'degrees'):
+                       angle_uom = 'dega'):
       """Load MD, aximuth & inclination data from a pandas data frame.
 
       Args:
@@ -367,7 +369,7 @@ class DeviationSurvey(BaseResqpy):
          z_col (string, default 'Z'): the name of the column holding an z value in the first row
          md_uom (string, default 'm'): a resqml length unit of measure applicable to the
             measured depths; should be 'm' or 'ft'
-         angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
+         angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
             the azimuth and inclination data
 
       Returns:
@@ -409,7 +411,7 @@ class DeviationSurvey(BaseResqpy):
                        y_col = 'Y',
                        z_col = 'Z',
                        md_uom = 'm',
-                       angle_uom = 'degrees',
+                       angle_uom = 'dega',
                        md_datum = None):
       """Load MD, aximuth & inclination data from an ascii deviation survey file.
 
@@ -428,7 +430,7 @@ class DeviationSurvey(BaseResqpy):
          z_col (string, default 'Z'): the name of the column holding an z value in the first row
          md_uom (string, default 'm'): a resqml length unit of measure applicable to the
             measured depths; should be 'm' or 'ft'
-         angle_uom (string, default 'degrees'): a resqml angle unit of measure applicable to both
+         angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
             the azimuth and inclination data
          md_datum (MdDatum object): the datum that the depths for this survey are measured from
 
