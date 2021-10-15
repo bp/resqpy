@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation."""
 
-version = '2nd July 2021'
+version = '15th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -9,6 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('fault.py version ' + version)
 
+import math as maths
 import numpy as np
 import pandas as pd
 import os
@@ -24,6 +25,7 @@ import resqpy.olio.trademark as tm
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 import resqpy.organize as rqo
+import resqpy.property as rqp
 
 
 class GridConnectionSet(BaseResqpy):
@@ -35,6 +37,7 @@ class GridConnectionSet(BaseResqpy):
                 parent_model,
                 uuid = None,
                 connection_set_root = None,
+                find_properties = True,
                 grid = None,
                 ascii_load_format = None,
                 ascii_file = None,
@@ -43,6 +46,8 @@ class GridConnectionSet(BaseResqpy):
                 i_faces = None,
                 feature_name = None,
                 create_organizing_objects_where_needed = False,
+                create_transmissibility_multiplier_property = True,
+                fault_tmult_dict = None,
                 title = None,
                 originator = None,
                 extra_metadata = None):
@@ -54,6 +59,8 @@ class GridConnectionSet(BaseResqpy):
                this resqpy object is populated
          connection_set_root (DEPRECATED): use uuid instead; the root node of the xml tree for the
                obj_GridConnectionSet part; ignored if uuid is present
+         find_properties (boolean, default True): if True and uuid is present, the property collection
+               relating to the grid connection set is prepared
          grid (grid.Grid object, optional): If present, the grid object that this connection set relates to;
                if absent, the main grid for the parent model is assumed; only used if connection set root is
                None; see also notes
@@ -68,6 +75,10 @@ class GridConnectionSet(BaseResqpy):
                face masks, a fault interpretation object and tectonic boundary feature object will be created
                for any named fault for which such objects do not exist; if False, missing organizational objects
                will cause an error to be logged; ignored when loading from xml
+         create_transmissibility_multiplier_property (boolean, default True): if True when loading from ascii,
+               a transmissibility multiplier property is created for the connection set
+         fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
+               multiplier; only used if initialising from ascii and creating a multiplier property
          title (str, optional): the citation title to use for a new grid connection set;
             ignored if uuid or connection_set_root is not None
          originator (str, optional): the name of the person creating the new grid connection set, defaults to login id;
@@ -87,25 +98,28 @@ class GridConnectionSet(BaseResqpy):
          juxtaposition information; the simple mode is adequate for identifying which faces are involved in a
          fault but not for matters of juxtaposition or absolute transmissibility calculations;
          if uuid is None and connection_set_root is None and ascii_file is None and k_faces, j_faces & i_faces are None,
-         then an empty connection set is returned
+         then an empty connection set is returned;
+         if a transmissibility multiplier property is generated, it will only appear in the property collection
+         for the grid connection set after the create_xml() method has been called
 
       :meta common:
       """
 
       log.debug('initialising grid connection set')
-      self.count = None  # number of face-juxtaposition pairs in this connection set
-      self.cell_index_pairs = None  # shape (count, 2); dtype int; index normalized for flattened array
-      self.cell_index_pairs_null_value = -1  # integer null value for array above
-      self.grid_index_pairs = None  # shape (count, 2); dtype int; optional; used if more than one grid referenced
-      self.face_index_pairs = None  # shape (count, 2); dtype int32; local to cell, ie. range 0 to 5
-      self.face_index_pairs_null_value = -1  # integer null value for array above
+      self.count = None  #: number of face-juxtaposition pairs in this connection set
+      self.cell_index_pairs = None  #: shape (count, 2); dtype int; index normalized for flattened array
+      self.cell_index_pairs_null_value = -1  #: integer null value for array above
+      self.grid_index_pairs = None  #: shape (count, 2); dtype int; optional; used if more than one grid referenced
+      self.face_index_pairs = None  #: shape (count, 2); dtype int32; local to cell, ie. range 0 to 5
+      self.face_index_pairs_null_value = -1  #: integer null value for array above
       # NB face index values 0..5 usually mean [K-, K+, J+, I+, J-, I-] respectively but there is some ambiguity
       #    over I & J in the Energistics RESQML Usage Guide; see comments in DevOps backlog item 269001 for more info
-      self.grid_list = []  # ordered list of grid objects, indexed by grid_index_pairs
-      self.feature_indices = None  # shape (count,); dtype int; optional; which fault interpretation each pair is part of
+      self.grid_list = []  #: ordered list of grid objects, indexed by grid_index_pairs
+      self.feature_indices = None  #: shape (count,); dtype int; optional; which fault interpretation each pair is part of
       # note: resqml data structures allow a face pair to be part of more than one fault but this code restricts to one
-      self.feature_list = None  # ordered list, actually of interpretations, indexed by feature_indices
+      self.feature_list = None  #: ordered list, actually of interpretations, indexed by feature_indices
       # feature list contains tuples: (content_type, uuid, title) for fault features (or other interpretations)
+      self.property_collection = None  #: optional property.PropertyCollection
 
       # NB: RESQML documentation is not clear which order is correct; should be kept consistent with same data in property.py
       # face_index_map maps from (axis, p01) to face index value in range 0..5
@@ -135,14 +149,21 @@ class GridConnectionSet(BaseResqpy):
             assert grid is not None, 'No ROOT grid found in model'
          self.grid_list = [grid]
          if ascii_load_format and ascii_file:
+            faces = None
             if ascii_load_format == 'nexus':
                log.debug('loading connection set (fault) faces from Nexus format ascii file: ' + ascii_file)
                tm.log_nexus_tm('debug')
                faces = rnf.load_nexus_fault_mult_table(ascii_file)
             else:
-               log.debug('ascii format for connection set faces not handled by base resqpy code: ' + ascii_load_format)
+               log.warning('ascii format for connection set faces not handled by base resqpy code: ' +
+                           ascii_load_format)
             assert faces is not None, 'failed to load fault face information from file: ' + ascii_file
-            self.set_pairs_from_faces_df(faces, create_organizing_objects_where_needed)
+            self.set_pairs_from_faces_df(
+               faces,
+               create_organizing_objects_where_needed = create_organizing_objects_where_needed,
+               create_mult_prop = create_transmissibility_multiplier_property,
+               fault_tmult_dict = fault_tmult_dict,
+               one_based_indexing = True)
             # note: hdf5 write and xml generation elsewhere
             # todo: optionally set face sets in grid object? or add to existing set?
             # grid.make_face_set_from_dataframe(faces) to set from dataframe
@@ -155,6 +176,8 @@ class GridConnectionSet(BaseResqpy):
          elif k_faces is not None or j_faces is not None or i_faces is not None:
             self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name,
                                            create_organizing_objects_where_needed)
+      elif find_properties:
+         self.extract_property_collection()
 
    def _load_from_xml(self):
       root = self.root
@@ -197,6 +220,13 @@ class GridConnectionSet(BaseResqpy):
          grid = self.model.grid(find_properties = False)  # should find only or ROOT grid
          assert grid is not None, 'No ROOT grid found in model'
          self.grid_list = [grid]
+
+   def extract_property_collection(self):
+      """Prepares the property collection for this grid connection set."""
+
+      if self.property_collection is None:
+         self.property_collection = rqp.PropertyCollection(support = self)
+      return self.property_collection
 
    def set_pairs_from_kelp(self, kelp_0, kelp_1, feature_name, create_organizing_objects_where_needed, axis = 'K'):
       """Sets cell_index_pairs and face_index_pairs based on j and i face kelp strands, using simple no throw pairing."""
@@ -355,14 +385,35 @@ class GridConnectionSet(BaseResqpy):
       self.feature_indices = np.zeros(self.count, dtype = int)
       assert len(self.face_index_pairs) == self.count
 
-   def set_pairs_from_faces_df(self, faces, create_organizing_objects_where_needed):
-      """Sets cell_index_pairs and face_index_pairs based on pandas dataframe, using simple no throw pairing."""
+   def set_pairs_from_faces_df(self,
+                               faces,
+                               create_organizing_objects_where_needed = False,
+                               create_mult_prop = True,
+                               fault_tmult_dict = None,
+                               one_based_indexing = True):
+      """Sets cell_index_pairs and face_index_pairs based on pandas dataframe, using simple no throw pairing.
+
+      arguments:
+         faces (pandas.DataFrame): dataframe with columns 'name', 'face', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult'
+         create_organizing_objects_where_needed (bool, default False): if True, FaultInterpretation and
+            TectonicBoundaryFeature objects are created (including xml creation) where needed
+         create_mult_prop (bool, default True): if True, a transmissibility multiplier property is added to the
+            collection for this grid connection set
+         fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
+               multiplier; if present, is combined with multiplier values from the dataframe
+         one_based_indexing (bool, default True): if True, the i, j & k values in the dataframe are taken to be
+            in simulator protocol and 1 is subtracted to yield the RESQML cell indices
+
+      note:
+         as a side effect, this method will set the cell indices in faces to be zero based
+      """
 
       if len(self.grid_list) > 1:
          log.warning('setting grid connection set pairs from dataframe for first grid in list only')
       grid = self.grid_list[0]
       standardize_face_indicator_in_faces_df(faces)
-      zero_base_cell_indices_in_faces_df(faces)
+      if one_based_indexing:
+         zero_base_cell_indices_in_faces_df(faces)
       faces = remove_external_faces_from_faces_df(faces, self.grid_list[0].extent_kji)
       self.feature_list = []
       cell_pair_list = []
@@ -371,30 +422,38 @@ class GridConnectionSet(BaseResqpy):
       feature_index = 0
       name_list = faces['name'].unique()
       fi_parts_list = self.model.parts_list_of_type('FaultInterpretation')
-      if fi_parts_list is None or len(fi_parts_list) == 0:
+      if not create_organizing_objects_where_needed and (fi_parts_list is None or len(fi_parts_list) == 0):
          log.warning('no fault interpretation parts found in model')
       fi_dict = {}  # maps fault name to interpretation uuid
+      mult_list = []
+      const_mult = True
       for fi_part in fi_parts_list:
          fi_dict[self.model.title_for_part(fi_part).split()[0].lower()] = self.model.uuid_for_part(fi_part)
       if create_organizing_objects_where_needed:
          tbf_parts_list = self.model.parts_list_of_type('TectonicBoundaryFeature')
       for name in name_list:
+         fault_dict_multiplier = 1.0
+         if fault_tmult_dict is not None:
+            if name in fault_tmult_dict:
+               fault_dict_multiplier = float(fault_tmult_dict[name])
+            if name.lower() in fault_tmult_dict:
+               fault_dict_multiplier = float(fault_tmult_dict[name.lower()])
          # fetch uuid for fault interpretation object
          if name.lower() in fi_dict:
             fi_uuid = fi_dict[name.lower()]
          elif create_organizing_objects_where_needed:
             tbf = None
+            fi_root = None
             for tbf_part in tbf_parts_list:
                if name.lower() == self.model.title_for_part(tbf_part).split()[0].lower():
-                  tbf_root = self.model.root_for_part(tbf_part)
-                  tbf = rqo.TectonicBoundaryFeature(self.model, root_node = tbf_root)
+                  tbf = rqo.TectonicBoundaryFeature(self.model, uuid = self.model.uuid_for_part(tbf_part))
                   break
             if tbf is None:
-               tbf = rqo.TectonicBoundaryFeature(self.model, feature_name = name)
-               tbf_root = tbf.create_xml()
-            fi = rqo.FaultInterpretation(self.model, tectonic_boundary_feature = tbf,
+               tbf = rqo.TectonicBoundaryFeature(self.model, feature_name = name, kind = 'fault')
+               tbf.create_xml()
+            fi = rqo.FaultInterpretation(self.model, title = name, tectonic_boundary_feature = tbf,
                                          is_normal = True)  # todo: set is_normal based on fault geometry in grid?
-            fi_root = fi.create_xml(tbf_root)
+            fi_root = fi.create_xml(tectonic_boundary_feature_root = tbf.root)
             fi_uuid = rqet.uuid_for_part_root(fi_root)
             fi_dict[name.lower()] = fi_uuid
          else:
@@ -402,11 +461,21 @@ class GridConnectionSet(BaseResqpy):
             continue
          self.feature_list.append(('obj_FaultInterpretation', fi_uuid, str(name)))
          feature_faces = faces[faces['name'] == name]
+         fault_const_mult = True
+         fault_mult_value = None
          for i in range(len(feature_faces)):
             entry = feature_faces.iloc[i]
             f = entry['face']
             axis = 'KJI'.index(f[0])
             fp = '-+'.index(f[1])
+            multiplier = float(entry['mult']) * fault_dict_multiplier
+            if const_mult and len(mult_list):
+               const_mult = maths.isclose(multiplier, mult_list[0])
+            if fault_const_mult:
+               if fault_mult_value is None:
+                  fault_mult_value = multiplier
+               else:
+                  fault_const_mult = maths.isclose(multiplier, fault_mult_value)
             for k0 in range(entry['k1'], entry['k2'] + 1):
                for j0 in range(entry['j1'], entry['j2'] + 1):
                   for i0 in range(entry['i1'], entry['i2'] + 1):
@@ -418,12 +487,46 @@ class GridConnectionSet(BaseResqpy):
                      fi_list.append(feature_index)
                      cell_pair_list.append((grid.natural_cell_index((k0, j0, i0)), grid.natural_cell_index(neighbour)))
                      face_pair_list.append((self.face_index_map[axis, fp], self.face_index_map[axis, 1 - fp]))
+                     if create_mult_prop:
+                        mult_list.append(multiplier)
+         if fi_root is not None and fault_const_mult and fault_mult_value is not None:
+            #patch extra_metadata into xml for new fault interpretation object
+            rqet.create_metadata_xml(fi_root, {"Transmissibility multiplier": str(fault_mult_value)})
          feature_index += 1
       self.feature_indices = np.array(fi_list, dtype = int)
       self.cell_index_pairs = np.array(cell_pair_list, dtype = int)
       self.face_index_pairs = np.array(face_pair_list, dtype = int)
       self.count = len(self.cell_index_pairs)
       assert len(self.face_index_pairs) == self.count
+      if create_mult_prop and self.count > 0:
+         pc = self.extract_property_collection()
+         if const_mult:
+            mult_array = None
+            const_value = mult_list[0]
+         else:
+            mult_array = np.array(mult_list, dtype = float)
+            const_value = None
+         pc.add_cached_array_to_imported_list(
+            mult_array,
+            'dataframe from ascii simulator input file',
+            'TMULT',
+            uom = 'Euc',  # actually a ratio of transmissibilities
+            property_kind = 'transmissibility multiplier',
+            local_property_kind_uuid = None,
+            realization = None,
+            indexable_element = 'faces',
+            const_value = const_value)
+
+   def write_hdf5_and_create_xml_for_new_properties(self):
+      """Wites any new property arrays to hdf5, creates xml for the properties and adds them to model.
+
+      note:
+         this method is usually called by the create_xml() method for the grid connection set
+      """
+
+      if self.property_collection is not None:
+         self.property_collection.write_hdf5_for_imported_list()
+         self.property_collection.create_xml_for_imported_list_and_add_parts_to_model()
 
    def append(self, other):
       """Adds the features in other grid connection set to this one."""
@@ -928,7 +1031,13 @@ class GridConnectionSet(BaseResqpy):
 
       h5_reg.write(file_name, mode = mode)
 
-   def create_xml(self, ext_uuid = None, add_as_part = True, add_relationships = True, title = None, originator = None):
+   def create_xml(self,
+                  ext_uuid = None,
+                  add_as_part = True,
+                  add_relationships = True,
+                  write_new_properties = True,
+                  title = None,
+                  originator = None):
       """Creates a Grid Connection Set (fault faces) xml node and optionally adds as child of root and/or to parts forest.
 
       :meta common:
@@ -1079,6 +1188,9 @@ class GridConnectionSet(BaseResqpy):
             self.model.create_reciprocal_relationship(gcs, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
             for grid in self.grid_list:
                self.model.create_reciprocal_relationship(gcs, 'destinationObject', grid.root, 'sourceObject')
+
+      if write_new_properties:
+         self.write_hdf5_and_create_xml_for_new_properties()
 
       return gcs
 
@@ -1627,8 +1739,7 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
    Returns:
       grid connection set uuid
    """
-   if tmult_dict is None:
-      tmult_dict = {}
+
    if isinstance(fault_incl, list):
       if len(fault_incl) > 1:
          # Making a concatenated version of the faultincl files
@@ -1644,30 +1755,14 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
          temp_faults = fault_incl[0]
    else:
       temp_faults = fault_incl
-   faces_df = rnf.load_nexus_fault_mult_table(temp_faults)
-   faults = set(faces_df['name'])
-   for fault in faults:
-      mults = set(faces_df[faces_df['name'] == fault]['mult'])
-      if not len(mults) == 1:
-         raise NotImplementedError(
-            f'Expected a single multiplier value in the fault include files for each fault, cannot write fault {fault}')
-      # TODO: Update this to save TX/TY/TZ as three different values
-      log.debug(f"Working on {fault}")
-      tbf = rqo.TectonicBoundaryFeature(parent_model = model, feature_name = fault, kind = 'fault')
-      tbf.create_xml()
-      fint = rqo.FaultInterpretation(parent_model = model, tectonic_boundary_feature = tbf, is_normal = True)
-      if fault in tmult_dict.keys():
-         mult = list(mults)[0] * tmult_dict[fault]  # multiply by our MULTFL from the input dictionary
-      else:
-         mult = list(mults)[0]
-      fint.extra_metadata = {"Transmissibility multiplier": mult}
-      fint.create_xml()
-      model.store_epc()
-      log.info(f"{fault} added to RESQML model")
 
    log.info("Creating grid connection set")
-
-   gcs = GridConnectionSet(parent_model = model, ascii_load_format = 'nexus', ascii_file = temp_faults)
+   gcs = GridConnectionSet(parent_model = model,
+                           ascii_load_format = 'nexus',
+                           ascii_file = temp_faults,
+                           create_organizing_objects_where_needed = True,
+                           create_transmissibility_multiplier_property = True,
+                           fault_tmult_dict = tmult_dict)
    gcs.write_hdf5(model.h5_file_name())
    gcs.create_xml(model.h5_uuid())
 

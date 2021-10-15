@@ -719,8 +719,6 @@ class FaultInterpretation(BaseResqpy):
       if self.root is not None and other.root is not None:
          if rqet.citation_title_for_node(self.root) != rqet.citation_title_for_node(other.root):
             return False
-      elif self.root is not None or other.root is not None:
-         return False
       if (not equivalent_chrono_pairs(self.main_has_occurred_during, other.main_has_occurred_during) or
           self.is_normal != other.is_normal or self.domain != other.domain or self.is_listric != other.is_listric):
          return False

@@ -6,18 +6,20 @@ import resqpy.fault as rqf
 import resqpy.olio.xml_et as rqet
 
 
-@pytest.mark.parametrize('inc_list,tmult_dict,expected_mult', [(['fault_1.inc'], {}, {
-   'fault_1': 1
-}), (['fault_1.inc'], {
-   'fault_1': 2
-}, {
-   'fault_1': 2
-}), (['fault_1.inc', 'fault_2.inc'], {
-   'fault_1': 2
-}, {
-   'fault_1': 2,
-   'fault_2': 2
-})])
+@pytest.mark.parametrize(
+   'inc_list,tmult_dict,expected_mult',  # yapf: disable
+   [(['fault_1.inc'], {}, {
+      'fault_1': 1
+   }), (['fault_1.inc'], {
+      'fault_1': 2
+   }, {
+      'fault_1': 2
+   }), (['fault_1.inc', 'fault_2.inc'], {
+      'fault_1': 2
+   }, {
+      'fault_1': 2,
+      'fault_2': 2
+   })])  # yapf: enable
 def test_add_connection_set_and_tmults(example_model_with_properties, test_data_path, inc_list, tmult_dict,
                                        expected_mult):
    model = example_model_with_properties
@@ -41,10 +43,11 @@ def test_add_connection_set_and_tmults(example_model_with_properties, test_data_
       ), f'Expected mult for fault {title} to be {float(expected_mult[title])}, found {metadata["Transmissibility multiplier"]}'
 
 
-def test_add_connection_set_and_tmults_fails(example_model_with_properties, test_data_path, include = 'fault_3.inc'):
-   model = example_model_with_properties
+# no longer a failure mode
+# def test_add_connection_set_and_tmults_fails(example_model_with_properties, test_data_path, include = 'fault_3.inc'):
+#   model = example_model_with_properties
 
-   inc_list = [os.path.join(test_data_path, include)]
+#   inc_list = [os.path.join(test_data_path, include)]
 
-   with pytest.raises(NotImplementedError):
-      rqf.add_connection_set_and_tmults(model, inc_list)
+#   with pytest.raises(NotImplementedError):
+#      rqf.add_connection_set_and_tmults(model, inc_list)
