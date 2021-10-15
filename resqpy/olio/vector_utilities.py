@@ -146,14 +146,14 @@ def azimuths(va):  # 'azimuth' is synonymous with 'compass bearing'
 
 def inclination(v):
    """Returns the inclination in degrees of v (angle relative to +ve z axis)."""
-   assert 2 <= v.size <= 3
+   assert 2 <= len(v) <= 3
    unit_v = unit_vector(v)
    radians = maths.acos(dot_product(unit_v, np.array((0.0, 0.0, 1.0))))
    return degrees_from_radians(radians)
 
 
 def points_direction_vector(a, axis):
-   """Returns an average direction vector based on first and last points or slices in given axis."""
+   """Returns an average direction vector based on first and last non-NaN points or slices in given axis."""
 
    assert a.ndim > 1 and 0 <= axis < a.ndim - 1 and a.shape[-1] > 1 and a.shape[axis] > 1
    if np.all(np.isnan(a)):
@@ -172,7 +172,6 @@ def points_direction_vector(a, axis):
       if not np.all(np.isnan(a[tuple(finish_slicing)])):
          break
       finish += 1
-#   log.debug(f'axis: {axis}; start: {start}; finish: {finish}')
    if start >= finish:
       return None
    if a.ndim > 2:
@@ -183,9 +182,6 @@ def points_direction_vector(a, axis):
       start_p = a[start]
       finish_p = a[finish]
 
-
-#   log.debug(f'start_p: {start_p}')
-#   log.debug(f'finish_p: {finish_p}')
    return finish_p - start_p
 
 
@@ -197,13 +193,6 @@ def dot_product(a, b):
 def dot_products(a, b):
    """Returns the dot products of pairs of vectors; last axis covers element of a vector."""
    return np.sum(a * b, axis = -1)
-
-
-#   assert(a.size == b.size)
-#   result = 0.0
-#   for i in range(a.size):
-#      result += a[i] * b[i]
-#   return result
 
 
 def cross_product(a, b):
@@ -245,7 +234,7 @@ def manhatten_distance(p1, p2):
    return abs(p2[0] - p1[0]) + abs(p2[1] - p1[1]) + abs(p2[2] - p1[2])
 
 
-def manhattan_distance(p1, p2):
+def manhattan_distance(p1, p2):  # alternative spelling to above
    """Returns the Manhattan distance between two points."""
    return abs(p2[0] - p1[0]) + abs(p2[1] - p1[1]) + abs(p2[2] - p1[2])
 

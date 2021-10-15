@@ -43,6 +43,35 @@ def test_angles():
    assert maths.isclose(vec.degrees_from_radians(maths.pi), 180.0)
 
 
+def test_azimuth():
+   vectors = np.array([
+      (0.0, 1.0, 0.0),  # north
+      (27.3, 0.0, 2341.0),  # east
+      (0.0, -4.5e6, -12000.0),  # south
+      (-0.001, 0.0, 23.2),  # west
+      (0.0, 0.0, 100.0),  # no bearing (expected to return 0.0 for azimuth(), NaN for azimuths())
+      (123.45, -123.45, 0.03),  # south east
+      (maths.cos(maths.radians(30.0)), 0.5, 0.0)  # bearing of 60 degrees
+   ])
+   expected = np.array((0.0, 90.0, 180.0, 270.0, 0.0, 135.0, 60.0))
+   for v, e in zip(vectors, expected):
+      assert maths.isclose(vec.azimuth(v), e)
+      assert maths.isclose(vec.azimuth(v[:2]), e)
+   expected[4] = np.NaN
+   assert_array_almost_equal(vec.azimuths(vectors), expected)
+   assert_array_almost_equal(vec.azimuths(vectors[:, :2]), expected)
+
+
+def test_inclination():
+   vectors = np.array([(0.0, 0.0, 1.0), (0.0, 0.0, -458.21), (0.0, 233.67, 233.67), (910.0, 0.0, 910.0),
+                       (0.0, 0.0, 0.0)])
+   expected = (0.0, 180.0, 45.0, 45.0, 90.0)  # last is an arbitrary value returned by the function for zero vector
+   for v, e in zip(vectors, expected):
+      assert maths.isclose(vec.inclination(v), e)
+   assert maths.isclose(vec.inclination((456.7, -456.7, 456.7)),
+                        90.0 - vec.degrees_from_radians(maths.acos(maths.sqrt(2) / maths.sqrt(3))))
+
+
 def test_clockwise():
    p1 = (4.4, 4.4)
    p2 = (6.8, 6.8)
