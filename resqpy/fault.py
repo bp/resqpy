@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation."""
 
-version = '15th October 2021'
+version = '16th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -580,7 +580,7 @@ class GridConnectionSet(BaseResqpy):
       singleton.feature_list = [self.feature_list[feature_index]]
       return singleton
 
-   def filtered_by_layer_range(self, min_k0 = None, max_k0 = None, pare_down = True):
+   def filtered_by_layer_range(self, min_k0 = None, max_k0 = None, pare_down = True, return_indices = False):
       """Returns a new GridConnectionSet, being a copy with cell faces whittled down to a layer range.
 
       arguments:
@@ -589,13 +589,18 @@ class GridConnectionSet(BaseResqpy):
          pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
             and the feature indices adjusted appropriately; if False, unused features will be left in the list for
             the new connection set, meaning that the feature indices will be compatible with those for self
+         return_indices (bool, default False): if True, a numpy list of the selected indices is also returned (see notes)
 
       returns:
-         a new GridConnectionSet
+         a new GridConnectionSet or (GridConnectionSet, numpy int array of shape (N,)) depending on return_indices argument,
+         where the array is a list of selected indices (see notes)
 
       notes:
          cells in layer max_k0 are included in the filtered set (not pythonesque);
-         currently only works for single grid connection sets
+         currently only works for single grid connection sets;
+         if return_indices is True, a second item is returned which is a 1D numpy int array holding the indices of
+         cell face pairs that have been selected from the original grid connection set; these values can be used to
+         select equivalent entries from associated properties
       """
 
       self.cache_arrays()
@@ -608,7 +613,7 @@ class GridConnectionSet(BaseResqpy):
       if min_k0 is None and max_k0 is None:
          dupe = GridConnectionSet(self.model, grid = grid)
          dupe.append(self)
-         return dupe
+         return (dupe, np.arange(self.count)) if return_indices else dupe
       mask = np.zeros(grid.extent_kji, dtype = bool)
       if min_k0 is not None and max_k0 is not None:
          mask[min_k0:max_k0 + 1, :, :] = True
@@ -616,9 +621,9 @@ class GridConnectionSet(BaseResqpy):
          mask[min_k0:, :, :] = True
       else:
          mask[:max_k0 + 1, :, :] = True
-      return self.filtered_by_cell_mask(mask, pare_down = pare_down)
+      return self.filtered_by_cell_mask(mask, pare_down = pare_down, return_indices = return_indices)
 
-   def filtered_by_cell_mask(self, mask, both_cells_required = True, pare_down = True):
+   def filtered_by_cell_mask(self, mask, both_cells_required = True, pare_down = True, return_indices = False):
       """Returns a new GridConnectionSet, being a copy with cell faces whittled down by a boolean mask array.
 
       arguments:
@@ -628,12 +633,17 @@ class GridConnectionSet(BaseResqpy):
          pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
             and the feature indices adjusted appropriately; if False, unused features will be left in the list for
             the new connection set, meaning that the feature indices will be compatible with those for self
+         return_indices (bool, default False): if True, a numpy list of the selected indices is also returned (see notes)
 
       returns:
-         a new GridConnectionSet
+         a new GridConnectionSet or (GridConnectionSet, numpy int array of shape (N,)) depending on return_indices argument,
+         where the array is a list of selected indices (see notes)
 
       note:
-         currently only works for single grid connection sets
+         currently only works for single grid connection sets;
+         if return_indices is True, a second item is returned which is a 1D numpy int array holding the indices of
+         cell face pairs that have been selected from the original grid connection set; these values can be used to
+         select equivalent entries from associated properties
       """
 
       assert len(self.grid_list) == 1, 'attempt to filter multi-grid connection set by cell mask'
@@ -649,7 +659,7 @@ class GridConnectionSet(BaseResqpy):
       indices = np.where(where_both)[0]  # indices into primary axis of original arrays
       if len(indices) == 0:
          log.warning('no connections have passed filtering')
-         return None
+         return (None, None) if return_indices else None
       masked_gcs = GridConnectionSet(self.model, grid = grid)
       masked_gcs.count = len(indices)
       masked_gcs.cell_index_pairs = self.cell_index_pairs[indices, :]
@@ -658,7 +668,7 @@ class GridConnectionSet(BaseResqpy):
       masked_gcs.feature_list = self.feature_list.copy()
       if pare_down:
          masked_gcs.clean_feature_list()
-      return masked_gcs
+      return (masked_gcs, indices) if return_indices else masked_gcs
 
    def clean_feature_list(self):
       """Removes any features that have no associated connections."""
