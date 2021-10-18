@@ -1,6 +1,6 @@
-"""fault.py: Module providing resqml classes relating to fault representation."""
+"""fault.py: Module providing resqml classes relating to fault representation and other grid connection sets."""
 
-version = '16th October 2021'
+version = '18th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -871,6 +871,15 @@ class GridConnectionSet(BaseResqpy):
             return self.feature_indices[match[0]]
       return None
 
+   def indices_for_feature_index(self, feature_index):
+      """Returns numpy list of indices into main arrays for elements for the specified feature."""
+
+      self.cache_arrays()
+      if self.feature_indices is None:
+         return None
+      matches = np.where(self.feature_indices == feature_index)[0]
+      return matches
+
    def raw_list_of_cell_face_pairs_for_feature_index(self, feature_index):
       """Returns list of cell face pairs contributing to feature (fault) with given index, in raw form.
 
@@ -885,14 +894,45 @@ class GridConnectionSet(BaseResqpy):
          in range 0..5; grid indices can be used to index the grid_list attribute for relevant Grid object
       """
 
-      self.cache_arrays()
-      if self.feature_indices is None:
+      matches = self.indices_for_feature_index(feature_index)
+      if matches is None:
          return None
-      matches = np.where(self.feature_indices == feature_index)
       if len(self.grid_list) == 1:
          return self.cell_index_pairs[matches], self.face_index_pairs[matches]
       assert self.grid_index_pairs is not None
       return self.cell_index_pairs[matches], self.face_index_pairs[matches], self.grid_index_pairs[matches]
+
+   def inherit_properties_for_selected_indices(self, other, selected_indices):
+      """Adds to imported property list by sampling the properties for another grid connection set.
+
+      arguments:
+         other (GridConnectionSet): the source grid connection set whose properties will be sampled
+         selected_indices (1D numpy int array): the indices, into the main arrays of other, of the
+            cell face pairs for which data is to be inherited
+
+      notes:
+         this method is typically called after creating a subset grid connection set using methods
+         such as: filtered_by_layer_range(), filtered_by_cell_mask() or single_feature(); for the
+         first two of those, set the return_indices argument True to acquire the array to pass as
+         selected_indices here; when working with a single_feature() connection set, the indices
+         can be acquired by calling indices_for_feature_index() for the source connection set;
+         this method only adds the inherited property data to the imported list of the property
+         collection for this grid connection set (self); it does not write the data to hdf5 or
+         create the xml; those actions will happen when calling create_xml() with the
+         write_new_properties argument set True; they can also be triggered by calling the
+         write_hdf5_and_create_xml_for_new_properties() method directly;
+         the property collection for the other grid connection set must be established before
+         calling this method, for example by setting find_properties to True when instantiating
+         other
+      """
+
+      if other.property_collection is None or other.property_collection.number_of_parts() == 0:
+         return
+      if self.property_collection is None:
+         self.property_collection = rqp.PropertyCollection()
+         self.property_collection.set_support(support = self)
+      self.property_collection.add_to_imported_list_sampling_other_collection(other.property_collection,
+                                                                              selected_indices)
 
    def list_of_cell_face_pairs_for_feature_index(self, feature_index):
       """Returns list of cell face pairs contributing to feature (fault) with given index.
@@ -1777,8 +1817,12 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
    gcs.create_xml(model.h5_uuid())
 
    model.store_epc()
-   if os.path.exists(os.path.join(os.path.dirname(model.epc_file), 'faults_combined_temp.txt')):
-      os.remove(os.path.join(os.path.dirname(model.epc_file), 'faults_combined_temp.txt'))
+
+   # clean up
+   temp_combined_file = os.path.join(os.path.dirname(model.epc_file), 'faults_combined_temp.txt')
+   if os.path.exists(temp_combined_file):
+      os.remove(temp_combined_file)
+
    log.info("Grid connection set added")
 
    return gcs.uuid

@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '19th September 2021'
+version = '18th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -349,6 +349,8 @@ class PropertyCollection():
       elif isinstance(support, rqw.BlockedWell):
          if indexable_element is None or indexable_element == 'intervals':
             shape_list = [support.node_count - 1]  # all intervals, including unblocked
+
+
 #            shape_list = [support.cell_count]  # for blocked intervals only – use 'cells' as indexable element
          elif indexable_element == 'nodes':
             shape_list = [support.node_count]
@@ -2998,7 +3000,9 @@ class PropertyCollection():
          before calling this function;
          this code (and elsewhere) only supports at most one facet per property, though the RESQML standard
          allows for multiple facets;
-         RESQML does not allow facets for points properties
+         RESQML does not allow facets for points properties;
+         if the xml has not been created for the support object, then xml will not be created for relationships
+         between the properties and the supporting representation
       """
 
       #      log.debug('creating property node for ' + title)
@@ -3012,7 +3016,7 @@ class PropertyCollection():
          support_uuid = self.support_uuid
       assert support_uuid is not None
       support_root = self.model.root_for_uuid(support_uuid)
-      assert support_root is not None
+      # assert support_root is not None
 
       if ext_uuid is None:
          ext_uuid = self.model.h5_uuid()
@@ -3101,9 +3105,10 @@ class PropertyCollection():
          time_series = rts.any_time_series(self.model, uuid = time_series_uuid)
          time_series.create_time_index(time_index, root = p_node)
 
+      support_title = '' if support_root is None else rqet.citation_title_for_node(support_root)
       self.model.create_supporting_representation(support_uuid = support_uuid,
                                                   root = p_node,
-                                                  title = rqet.citation_title_for_node(support_root),
+                                                  title = support_title,
                                                   content_type = support_type)
 
       p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
@@ -3226,7 +3231,8 @@ class PropertyCollection():
       if add_as_part:
          self.model.add_part('obj_' + d_or_c_text + 'Property', p_uuid, p_node)
          if add_relationships:
-            self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
+            if support_root is not None:
+               self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
             if property_kind_uuid is not None:
                pk_node = self.model.root_for_uuid(property_kind_uuid)
                if pk_node is not None:
@@ -3237,8 +3243,6 @@ class PropertyCollection():
             if discrete and string_lookup_uuid is not None:
                self.model.create_reciprocal_relationship(p_node, 'destinationObject', sl_root, 'sourceObject')
 
-
-#           ext_node = self.model.root_for_part(rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = True))
             if const_value is None:
                ext_node = self.model.root_for_part(
                   rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False))
