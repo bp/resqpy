@@ -6,20 +6,12 @@ import resqpy.fault as rqf
 import resqpy.olio.xml_et as rqet
 
 
-@pytest.mark.parametrize(
-   'inc_list,tmult_dict,expected_mult',  # yapf: disable
-   [(['fault_1.inc'], {}, {
-      'fault_1': 1
-   }), (['fault_1.inc'], {
-      'fault_1': 2
-   }, {
-      'fault_1': 2
-   }), (['fault_1.inc', 'fault_2.inc'], {
-      'fault_1': 2
-   }, {
-      'fault_1': 2,
-      'fault_2': 2
-   })])  # yapf: enable
+# yapf: disable
+@pytest.mark.parametrize('inc_list,tmult_dict,expected_mult',
+   [(['fault_1.inc'], {}, {'fault_1': 1}),
+    (['fault_1.inc'], {'fault_1': 2}, {'fault_1': 2}),
+    (['fault_1.inc', 'fault_2.inc'], {'fault_1': 2}, {'fault_1': 2, 'fault_2': 2})])
+# yapf: enable
 def test_add_connection_set_and_tmults(example_model_with_properties, test_data_path, inc_list, tmult_dict,
                                        expected_mult):
    model = example_model_with_properties
