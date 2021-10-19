@@ -1386,16 +1386,20 @@ class GridConnectionSet(BaseResqpy):
    def get_property_by_feature_index_list(self,
                                           feature_index_list = None,
                                           property_name = 'Transmissibility multiplier'):
-      """Returns a list of property values by feature.
+      """Returns a list of property values by feature based on extra metadata items.
 
       arguments:
          feature_index_list (list of int, optional): if present, the feature indices for which property values will be included
             in the resulting list; if None, values will be included for each feature in the feature_list for this connection set
          property_name (string, default 'Transmissibility multiplier'): the property name of interest, as used in the features'
-            extra metadata as a key
+            extra metadata as a key (this not a property collection citation title)
 
       returns:
          list of float being the list of property values for the list of features, in corresponding order
+
+      note:
+         this method does not refer to property collection arrays, it simply looks for a constant extra metadata item
+         for each feature; where no such item is found, a NaN is added to the return list
       """
 
       if feature_index_list is None:
@@ -1403,11 +1407,12 @@ class GridConnectionSet(BaseResqpy):
       value_list = []
       for feature_index in feature_index_list:
          _, feature_uuid, _ = self.feature_list[feature_index]
-         feat = rqo.FaultInterpretation(parent_model = self.model, root_node = self.model.root(uuid = feature_uuid))
+         feat = rqo.FaultInterpretation(parent_model = self.model, uuid = feature_uuid)
          if property_name not in feat.extra_metadata.keys():
             log.info(
                f'Property name {property_name} not found in extra_metadata for {self.model.citation_title_for_part(self.model.part_for_uuid(feature_uuid))}'
             )
+            value_list.append(np.NaN)
          else:
             value_list.append(float(feat.extra_metadata[property_name]))
       return value_list
@@ -1415,28 +1420,82 @@ class GridConnectionSet(BaseResqpy):
    def get_column_edge_float_array_for_feature(self,
                                                feature,
                                                fault_by_column_edge_mask,
-                                               property_name = 'Transmissibility multiplier'):
-      """Generate a float value aray defining the property valyes for different column edges present for a given feature and k-layer range
+                                               property_name = 'Transmissibility multiplier',
+                                               gridindex = 0,
+                                               ref_k = None):
+      """Generate a float value aray defining the property values for different column edges present for a given feature
 
       Args:
          feature - feature index
          fault_by_column_edge_mask - fault_by_column_edge_mask with True on edges where feature is present
-         property_name - name of property, should be present within the FaultInterpreation feature metadata
+         property_name - name of property, should be present within the FaultInterpreation feature metadata;
+            lowercase version is also used as property kind when searching for a property array
+         gridindex - index of grid for which column edge data is required
+         ref_k - reference k_layer to use where property has variable value for a feature;
+            if None, no property array will be used and None will be returned for variable properties
+
       Returns:
-         float property_value_by_column_edge array (shape nj,ni,2,2)
+         float property_value_by_column_edge array (shape nj,ni,2,2) based on extra metadata
 
       Note: the indices for the final two axes define the edges:
          the first defines j or i (0 or 1)
          the second negative or positive face (0 or 1)
 
          so [[1,np.nan],[np.nan,np.nan]] indicates the -j edge of the column are present with a value of 1
+
+         this method preferentially uses a constant extra metadata item for the feature, with the property
+         collection being used when the extra metadata is absent
       """
+
+      single_grid = (self.number_of_grids() == 1)
+      if single_grid:
+         assert gridindex == 0
+      else:
+         assert self.grid_index_pairs is not None
 
       prop_values = self.get_property_by_feature_index_list(feature_index_list = [feature],
                                                             property_name = property_name)
-      if prop_values == []:
-         return None
-      property_value_by_column_edge = np.where(fault_by_column_edge_mask, prop_values[0], np.nan)
+      if prop_values == [] or np.isnan(prop_values[0]):
+         pc = self.extract_property_collection()
+         if ref_k is None or pc is None:
+            return None
+         # use property name as (local) property kind
+         pk = property_name.lower()
+         prop_array = pc.single_array_ref(property_kind = pk)
+         if prop_array is None:
+            return None
+         # filter down to a single layer and single feature
+         feature_gcs = self.single_feature(feature)
+         feature_indices = self.indices_for_feature_index(feature)
+         feature_prop_array = prop_array[feature_indices]
+         layer_gcs, layer_indices = feature_gcs.filtered_by_layer_range(min_k0 = ref_k,
+                                                                        max_k0 = ref_k,
+                                                                        pare_down = False,
+                                                                        return_indices = True)
+         assert layer_gcs.count == len(layer_indices)
+         if layer_gcs.count == 0:  # feature does not have any faces in reference layer
+            return None
+         layer_prop_array = feature_prop_array[layer_indices]
+         # fill in individual values rather laboriously
+         property_value_by_column_edge = np.full(fault_by_column_edge_mask.shape, np.nan)
+         for i in range(layer_gcs.count):
+            for side in range(2):
+               gi = 0 if single_grid else layer_gcs.grid_index_pairs[i, side]
+               if gi != gridindex:
+                  continue
+               cell = layer_gcs.cell_index_pairs[i, side]
+               if cell == layer_gcs.cell_index_pairs_null_value:
+                  continue
+               cell_kji = self.grid_list[gi].denaturalized_cell_index(cell)
+               face_index = layer_gcs.face_index_pairs[i, side]
+               if face_index == layer_gcs.face_index_pairs_null_value:
+                  continue
+               axis, polarity = self.face_index_inverse_map[face_index]
+               if axis == 0:  # k face
+                  continue
+               property_value_by_column_edge[cell_kji[1], cell_kji[2], axis - 1, polarity] = layer_prop_array[i]
+      else:
+         property_value_by_column_edge = np.where(fault_by_column_edge_mask, prop_values[0], np.nan)
       return property_value_by_column_edge
 
    def get_combined_fault_mask_index_value_arrays(self,
@@ -1444,15 +1503,19 @@ class GridConnectionSet(BaseResqpy):
                                                   min_k = 0,
                                                   max_k = 0,
                                                   property_name = 'Transmissibility multiplier',
-                                                  feature_list = None):
+                                                  feature_list = None,
+                                                  ref_k = None):
       """Generate a combined mask, index and value arrays for all column edges across a k-layer range, for a defined feature_list
 
       Args:
          gridindex - index of grid to be used in grid connection set gridlist, default 0
          min_k - minimum k_layer
          max_k - maximum k_layer
-         property_name - name of property, should be present within the FaultInterpreation feature metadata
+         property_name - name of property, should be present within the FaultInterpreation feature metadata;
+            lowercase version is used as property kind when searching for a property array
          feature_list - list of feature index numbers to run for, default to all features
+         ref_k - reference k_layer to use where property has variable value for a feature;
+            if None defaults to min_k
       Returns:
          bool array mask showing all column edges within features (shape nj,ni,2,2)
          int array showing the feature index for all column edges within features (shape nj,ni,2,2)
@@ -1462,6 +1525,9 @@ class GridConnectionSet(BaseResqpy):
       #     if feature_list is None: feature_list = np.unique(self.feature_indices)
       if feature_list is None:
          feature_list = np.arange(len(self.feature_list))
+      if ref_k is None:
+         ref_k = min_k
+
       sum_unmasked = None
 
       for i, feature in enumerate(feature_list):
@@ -1471,7 +1537,9 @@ class GridConnectionSet(BaseResqpy):
                                                                                  max_k = max_k)
          property_value_by_column_edge = self.get_column_edge_float_array_for_feature(feature,
                                                                                       fault_by_column_edge_mask,
-                                                                                      property_name = property_name)
+                                                                                      property_name = property_name,
+                                                                                      gridindex = gridindex,
+                                                                                      ref_k = ref_k)
          if i == 0:
             combined_mask = fault_by_column_edge_mask.copy()
             if property_value_by_column_edge is not None:

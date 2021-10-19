@@ -114,7 +114,7 @@ def test_gcs_property_inheritance(tmp_path):
    # inherit the transmissibility multiplier property
    thin_gcs.inherit_properties_for_selected_indices(gcs, thin_indices)
    thin_gcs.write_hdf5()
-   thin_gcs.create_xml()
+   thin_gcs.create_xml()  # by default will include write of new properties
 
    # check that the inheritance has worked
    assert thin_gcs.property_collection is not None and thin_gcs.property_collection.number_of_parts() > 0
@@ -126,12 +126,25 @@ def test_gcs_property_inheritance(tmp_path):
    assert thin_tm.size == thin_gcs.count
    assert_array_almost_equal(thin_tm, tm[thin_indices])
 
+   # check that get_combined...() method can execute using property collection
+   b_a, i_a, f_a = gcs.get_combined_fault_mask_index_value_arrays(min_k = 1,
+                                                                  max_k = 3,
+                                                                  property_name = 'Transmissibility multiplier',
+                                                                  ref_k = 2)
+   assert b_a is not None and i_a is not None and f_a is not None
+   # check that transmissibility multiplier values have been sampled correctly from property array
+   assert f_a.shape == (g.nj, g.ni, 2, 2)
+   assert np.count_nonzero(np.isnan(f_a)) == 4 * g.nj * g.ni - 2 * ((g.nj - 1) + (g.ni - 1))
+   assert np.nanmax(f_a) > np.nanmin(f_a)
+   restore = np.seterr(all = 'ignore')
+   assert np.all(np.logical_or(np.isnan(f_a), f_a >= np.nanmin(thin_tm)))
+   assert np.all(np.logical_or(np.isnan(f_a), f_a <= np.nanmax(thin_tm)))
+   np.seterr(**restore)
+
 
 # no longer a failure mode
 # def test_add_connection_set_and_tmults_fails(example_model_with_properties, test_data_path, include = 'fault_3.inc'):
 #   model = example_model_with_properties
-
 #   inc_list = [os.path.join(test_data_path, include)]
-
 #   with pytest.raises(NotImplementedError):
 #      rqf.add_connection_set_and_tmults(model, inc_list)
