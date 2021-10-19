@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation and other grid connection sets."""
 
-version = '18th October 2021'
+version = '19th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -1574,8 +1574,9 @@ class GridConnectionSet(BaseResqpy):
          tol_half_t (float, default 1.0e-5): if the half cell transmissibility either side of a juxtaposition is
             less than this, the corresponding transmissibility is set to zero; units are as for returned values (see
             notes)
-         apply_multipliers (boolean, default False): if True, a transmissibility multiplier for each feature is
-            extracted from the feature extra metadata and applied to the transmissibility calculation
+         apply_multipliers (boolean, default False): if True, a transmissibility multiplier array is fetched from the
+            property collection for the connection set, and failing that a multiplier for each feature is
+            extracted from the feature extra metadata, and applied to the transmissibility calculation
 
       returns:
          numpy float array of shape (count,) being the absolute transmissibilities across the connected cell face pairs;
@@ -1584,10 +1585,17 @@ class GridConnectionSet(BaseResqpy):
       notes:
          implicit units of measure of returned values will be m3.cP/(kPa.d) if grids' crs length units are metres,
          bbl.cP/(psi.d) if length units are feet; the computation is compatible with the Nexus NEWTRAN formulation;
-         multiple grids are assumed to be in the same units and z units must be the same as xy units
+         multiple grids are assumed to be in the same units and z units must be the same as xy units; this method
+         does not add the transmissibility array as a property
       """
 
-      feature_mult_list = self.get_property_by_feature_index_list() if apply_multipliers else None
+      feature_mult_list = None
+      mult_array = None
+      if apply_multipliers:
+         pc = self.extract_property_collection()
+         mult_array = pc.single_array_ref(property_kind = 'transmissibility multiplier')
+         if mult_array is None:
+            feature_mult_list = self.get_property_by_feature_index_list()
 
       count = self.count
       if fa is not None:
@@ -1620,7 +1628,12 @@ class GridConnectionSet(BaseResqpy):
             fa_m, fa_p = fa[e]
             if fa_m < tol_fa or fa_p < tol_fa:
                continue
-         mult_tr = feature_mult_list[self.feature_indices[e]] if apply_multipliers else 1.0
+         mult_tr = 1.0
+         if apply_multipliers:
+            if mult_array is not None:
+               mult_tr = mult_array[e]
+            elif feature_mult_list is not None:
+               mult_tr = feature_mult_list[self.feature_indices[e]]
          f_tr[e] = mult_tr / (1.0 / (half_t_m * fa_m) + 1.0 / (half_t_p * fa_p))
       return f_tr
 

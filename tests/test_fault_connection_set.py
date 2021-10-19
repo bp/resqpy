@@ -1243,6 +1243,15 @@ def test_add_faults(tmp_path):
       grid.create_xml(write_geometry = True)
       crs = rqc.Crs(model, uuid = grid.crs_uuid)
       model.store_epc()
+      # add a permeability array for the grid
+      grid_pc = grid.extract_property_collection()
+      perm = np.linspace(start = 20.0, stop = 200.0, num = grid.cell_count()).reshape(tuple(grid.extent_kji))
+      rqdm.add_one_grid_property_array(epc,
+                                       perm,
+                                       property_kind = 'permeability rock',
+                                       grid_uuid = grid.uuid,
+                                       title = 'PERM',
+                                       uom = 'mD')
 
       # single straight fault
       a = np.array([[-0.2, 2.0, -0.1], [3.2, 2.0, -0.1]])
@@ -1258,7 +1267,7 @@ def test_add_faults(tmp_path):
                           source_grid = None,
                           polylines = polylines,
                           lines_file_list = lines_file_list,
-                          inherit_properties = False,
+                          inherit_properties = True,
                           new_grid_title = 'ttt_f1 straight')
 
       # single zig-zag fault
@@ -1327,7 +1336,7 @@ def test_add_faults(tmp_path):
                           new_grid_title = 'ttt_f5 horst')
       assert g is not None
 
-      # scaled version of asymmetrical horst block
+      # scaled version of asymmetrical horst block; with some testing of grid connection set properties
       model = rq.Model(epc)
       grid = model.grid(title = 'ttt_f5 horst')
       assert grid is not None
@@ -1336,6 +1345,7 @@ def test_add_faults(tmp_path):
       scaling_dict = {'ttt_f4a': 3.0, 'ttt_f4b': 1.7}
       for i, gcs_uuid in enumerate(gcs_uuids):
          gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+         # scale the fault throw
          rqdm.fault_throw_scaling(epc,
                                   source_grid = grid,
                                   scaling_factor = None,
@@ -1354,6 +1364,24 @@ def test_add_faults(tmp_path):
          model = rq.Model(epc)
          grid = model.grid(title = f'ttt_f6 scaled {i+1}')
          assert grid is not None
+      # generate a new grid connection set based on juxtaposition
+      juxta_gcs, fa = rqtr.fault_connection_set(grid)
+      assert len(fa) == juxta_gcs.count
+      # add some (arbitrary) transmissibility multiplier data for each gcs
+      trm = np.linspace(start = 0.0, stop = float(i + 1), num = juxta_gcs.count)
+      gcs_pc = juxta_gcs.extract_property_collection()
+      gcs_pc.add_cached_array_to_imported_list(trm,
+                                               'unit test',
+                                               'TMULT',
+                                               uom = 'Euc',
+                                               property_kind = 'transmissibility multiplier',
+                                               indexable_element = 'faces')
+      juxta_gcs.write_hdf5_and_create_xml_for_new_properties()
+      # calculate transmissibility across the connection set cell face pairs
+      tr = juxta_gcs.tr_property_array(fa = fa, apply_multipliers = True)
+      assert tr is not None
+      assert tr.shape == (juxta_gcs.count,)
+      model.store_epc()
 
       # two intersecting straight faults
       a = np.array([[-0.2, 2.0, -0.1], [3.2, 2.0, -0.1]])
