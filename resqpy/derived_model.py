@@ -3822,7 +3822,7 @@ def add_edges_per_column_property_array(epc_file,
 
    arguments:
       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
-      a (3D numpy array): the property array to be added to the model (expected shape nj,ni,2,2)
+      a (3D numpy array): the property array to be added to the model; expected shape (nj,ni,2,2) or (nj,ni,4)
       property_kind (string): the resqml property kind
       grid_uuid (uuid object or string, optional): the uuid of the grid to which the property relates;
          if None, the property is attached to the 'main' grid
@@ -3849,10 +3849,24 @@ def add_edges_per_column_property_array(epc_file,
 
    returns:
       uuid.UUID - the uuid of the newly created property
+
+   notes:
+      the RESQML protocol for saving edges per column properties uses a clockwise ordering of the 4 edges
+      of a column; the resqpy protocol uses 2 dimensions of extent 2, being the axis (J, I) and face (-, +);
+      this function assumes the array is in RESQML protocol if it has shape (nj, ni, 4) and resqpy protocol
+      if it has shape (nj, ni, 2, 2); when reloading the property it will be presented in RESQML protocol;
+      calling code can use property module functions reformat_column_edges_from_resqml_format() and
+      reformat_column_edges_to_resqml_format() to convert between the protocols if needed
    """
 
-   assert a.ndim == 4 and a.shape[2] == 2 and a.shape[3] == 2, 'Wrong shape! Expected shape (nj, ni, 2, 2)'
-   array_rq = rqp.reformat_column_edges_to_resqml_format(a)
+   assert a.ndim in [3, 4]
+   if a.ndim == 4:  # resqpy protocol
+      assert a.shape[2] == 2 and a.shape[3] == 2, 'Wrong shape! Expected shape (nj, ni, 2, 2)'
+      array_rq = rqp.reformat_column_edges_to_resqml_format(a)
+   else:  # RESQML protocol
+      assert a.shape[2] == 4, 'Wrong shape! Expected shape (nj, ni, 4)'
+      array_rq = a
+
    property_uuid = add_one_grid_property_array(epc_file,
                                                array_rq,
                                                property_kind,

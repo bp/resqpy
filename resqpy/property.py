@@ -5904,7 +5904,7 @@ def property_collection_for_keyword(collection, keyword):
 
 def reformat_column_edges_to_resqml_format(array):
    """Converts an array of shape (nj,ni,2,2) to shape (nj,ni,4) in RESQML edge ordering"""
-   newarray = np.empty((array.shape[0], array.shape[1], 4))
+   newarray = np.empty((array.shape[0], array.shape[1], 4), dtype = array.dtype)
    newarray[:, :, 0] = array[:, :, 1, 0]
    newarray[:, :, 1] = array[:, :, 0, 1]
    newarray[:, :, 2] = array[:, :, 1, 1]
@@ -5914,7 +5914,7 @@ def reformat_column_edges_to_resqml_format(array):
 
 def reformat_column_edges_from_resqml_format(array):
    """Converts an array of shape (nj,ni,4) in RESQML edge ordering to shape (nj,ni,2,2)"""
-   newarray = np.empty((array.shape[0], array.shape[1], 2, 2))
+   newarray = np.empty((array.shape[0], array.shape[1], 2, 2), dtype = array.dtype)
    newarray[:, :, 0, 0] = array[:, :, 3]
    newarray[:, :, 0, 1] = array[:, :, 1]
    newarray[:, :, 1, 0] = array[:, :, 0]

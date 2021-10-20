@@ -300,3 +300,47 @@ def test_add_grid_points_property(tmp_path):
    assert len(pc.selective_parts_list(points = True)) == 1
    diag = pc.single_array_ref(points = True)
    assert_array_almost_equal(diag, diagonal_array)
+
+
+def test_add_edges_per_column_property_array(tmp_path):
+
+   # create a new model with a grid
+   epc = os.path.join(tmp_path, 'edges_per_column.epc')
+   model = rq.new_model(epc)
+   grid = grr.RegularGrid(model, extent_kji = (2, 3, 4))
+   grid.write_hdf5()
+   grid.create_xml()
+   model.store_epc()
+
+   # fabricate an edges per column property
+   edge_prop = np.zeros((grid.nj, grid.ni, 2, 2))
+   edge_prop[:] = np.linspace(0.1, 0.9, num = edge_prop.size).reshape(edge_prop.shape)
+
+   # add the edges per column property
+   prop_uuid = rqdm.add_edges_per_column_property_array(epc,
+                                                        edge_prop,
+                                                        property_kind = 'multiplier',
+                                                        grid_uuid = grid.uuid,
+                                                        source_info = 'unit testing',
+                                                        title = 'test property on column edges',
+                                                        discrete = False,
+                                                        uom = 'm3/m3')
+   assert prop_uuid is not None
+
+   # re-open the model and inspect the property
+   model = rq.Model(epc)
+   assert len(model.parts(obj_type = 'ContinuousProperty')) > 0
+   edge_property = rqp.Property(model, uuid = prop_uuid)
+   assert edge_property is not None
+   ep_array = edge_property.array_ref()
+   # RESQML holds array with last two dimensions flattened and reordered
+   assert ep_array.shape == (grid.nj, grid.ni, 4)
+   # restore logical resqpy order and shape
+   ep_restored = rqp.reformat_column_edges_from_resqml_format(ep_array)
+   assert_array_almost_equal(ep_restored, edge_prop)
+   assert edge_property.is_continuous()
+   assert not edge_property.is_categorical()
+   assert edge_property.indexable_element() == 'edges per column'
+   assert edge_property.uom() == 'm3/m3'
+   assert edge_property.property_kind() == 'multiplier'
+   assert edge_property.facet() is None
