@@ -525,6 +525,8 @@ class PropertyCollection():
          self.set_support(support_uuid)
       elif not bu.matching_uuids(support_uuid, self.support.uuid):  # multi-support collection
          self.set_support(None)
+      if isinstance(support_uuid, str):
+         support_uuid = bu.uuid_from_string(support_uuid)
       if continuous:
          uom_node = rqet.find_tag(xml_node, 'UOM')
          if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):

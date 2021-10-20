@@ -51,8 +51,9 @@ def test_add_zone_by_layer_property(tmp_path):
    model = rq.new_model(epc)
 
    # create a basic block grid
-   grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'In The Zone')
-   grid.create_xml()
+   grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'In The Zone', set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True)
    grid_uuid = grid.uuid
 
    model.store_epc()
@@ -74,6 +75,7 @@ def test_add_zone_by_layer_property(tmp_path):
                  dtype = int).reshape(grid.extent_kji)
    za_uuid = rqdm.add_one_grid_property_array(epc,
                                               za,
+                                              discrete = True,
                                               property_kind = 'code',
                                               title = 'clean zone',
                                               grid_uuid = grid_uuid,
@@ -95,6 +97,7 @@ def test_add_zone_by_layer_property(tmp_path):
    za[1, 2, :] = 3
    za_uuid = rqdm.add_one_grid_property_array(epc,
                                               za,
+                                              discrete = True,
                                               property_kind = 'code',
                                               title = 'messy zone',
                                               grid_uuid = grid_uuid,
@@ -103,22 +106,42 @@ def test_add_zone_by_layer_property(tmp_path):
 
    # fail to add a zone by layer property based on the messy cells property
    with pytest.raises(Exception):
-      v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
-                                                  zone_by_cell_property_uuid = za_uuid,
-                                                  use_dominant_zone = False,
-                                                  title = 'should fail')
+      v, z2_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
+                                                   zone_by_cell_property_uuid = za_uuid,
+                                                   use_dominant_zone = False,
+                                                   title = 'should fail')
 
    # add a zone by layer property based on the neat cells property
-   v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
-                                               zone_by_cell_property_uuid = za_uuid,
-                                               use_dominant_zone = True,
-                                               title = 'from messy cells array')
+   v, z3_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
+                                                zone_by_cell_property_uuid = za_uuid,
+                                                use_dominant_zone = True,
+                                                title = 'from messy cells array')
    assert tuple(v) == (1, 2, 3, 5)
 
    # check that zone property looks okay
    model = rq.Model(epc)
-   z_prop = rqp.Property(model, uuid = z_uuid)
+   grid = model.grid()
+   z_prop = rqp.Property(model, uuid = z3_uuid)
    check_zone_prop(z_prop)
+
+   # create a zonal grid based on a (neat) zone property array
+   z_grid = rqdm.zonal_grid(epc,
+                            source_grid = grid,
+                            zone_uuid = z_uuid,
+                            use_dominant_zone = False,
+                            inactive_laissez_faire = True,
+                            new_grid_title = 'zonal grid')
+   assert z_grid is not None
+   assert z_grid.nk == 4
+
+   # and another zonal grid based on the dominant zone
+   z3_grid = rqdm.zonal_grid(epc,
+                             source_grid = grid,
+                             zone_uuid = za_uuid,
+                             use_dominant_zone = True,
+                             new_grid_title = 'dominant zone grid')
+   assert z3_grid is not None
+   assert z3_grid.nk == 4
 
 
 def test_single_layer_grid(tmp_path):

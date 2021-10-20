@@ -594,7 +594,7 @@ def zonal_grid(epc_file,
       new grid object (grid.Grid) with one layer per zone of the source grid
 
    notes:
-      usually one of zone_title or zone_uuid or zone_layer_range_list should be passed, if noe are passed then a
+      usually one of zone_title or zone_uuid or zone_layer_range_list should be passed, if none are passed then a
       single layer grid is generated; zone_layer_range_list will take precendence if present
    """
 
@@ -602,25 +602,23 @@ def zonal_grid(epc_file,
       properties = grid.extract_property_collection()
       assert properties is not None and properties.number_of_parts() > 0, 'no properties found in relation to grid'
       properties = rqp.selective_version_of_collection(properties, continuous = False)
-      assert properties is not None and properties.number_of_parts(
-      ) > 0, 'no discreet properties found in relation to grid'
+      assert properties is not None and properties.number_of_parts() > 0,  \
+         'no discreet properties found in relation to grid'
       if zone_title:
          properties = rqp.selective_version_of_collection(properties,
                                                           citation_title = zone_title)  # could make case insensitive?
-         assert properties is not None and properties.number_of_parts(
-         ) > 0, 'no discreet property found with title ' + zone_title
+         assert properties is not None and properties.number_of_parts() > 0,  \
+            'no discreet property found with title ' + zone_title
       if zone_uuid:
+         if isinstance(zone_uuid, str):
+            zone_uuid = bu.uuid_from_string(zone_uuid)
          zone_uuid_str = str(zone_uuid)
-         part_name = None
-         for part in properties.parts():
-            if zone_uuid_str == str(properties.uuid_for_part(part)):
-               part_name = part
-               break
          if zone_title:
             postamble = ' (and title ' + zone_title + ')'
          else:
             postamble = ''
-         assert part_name, 'no property found with uuid ' + zone_uuid_str + postamble
+         assert zone_uuid in properties.uuids(), 'no property found with uuid ' + zone_uuid_str + postamble
+         part_name = grid.model.part(uuid = zone_uuid)
       else:
          part_name = properties.singleton()
       return properties.cached_part_array_ref(part_name, masked = masked)  # .copy() needed?
