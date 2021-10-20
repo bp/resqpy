@@ -19,7 +19,6 @@ import pandas as pd
 # function to load fault data for cell faces from nexus input deck format ascii file
 # returns a pandas dataframe
 #    compatible with that returned by load_table_from_file()
-# note: actual multiplier value is discarded as this is usually set to one in the mult data
 # this version written by Qiang
 
 

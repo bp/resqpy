@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '19th September 2021'
+version = '18th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -349,6 +349,8 @@ class PropertyCollection():
       elif isinstance(support, rqw.BlockedWell):
          if indexable_element is None or indexable_element == 'intervals':
             shape_list = [support.node_count - 1]  # all intervals, including unblocked
+
+
 #            shape_list = [support.cell_count]  # for blocked intervals only – use 'cells' as indexable element
          elif indexable_element == 'nodes':
             shape_list = [support.node_count]
@@ -646,6 +648,48 @@ class PropertyCollection():
                continue
             assert False, 'attempt to inherit a part which already exists in property collection: ' + part
          self.dict[part] = info
+
+   def add_to_imported_list_sampling_other_collection(self, other, flattened_indices):
+      """Makes cut down copies of parts from other collection, using indices, and adds to imported list.
+
+      arguments:
+        other (PropertyCollection): the source collection whose arrays will be sampled
+        flattened_indices (1D numpy int array): the indices (in flattened space) of the elements to be copied
+
+      notes:
+        the values in flattened_indices refer to the source (other) array elements, after flattening;
+        the size of flatted_indices must match the size of the target (self) supporting shape; where different
+        indexable elements are at play, with different implicit sizes, make selective copies of other and
+        call this method once for each group of differently sized properties; for very large collections
+        it might also be necessary to divide the work into smaller groups to reduce memory usage;
+        this method does not write to hdf5 nor create xml – use the usual methods for further processing
+        of the imported list
+      """
+
+      source = 'sampled'
+      if other.support is not None:
+         source += ' from property for ' + str(other.support.title)
+      for (part, info) in other.dict.items():
+         target_shape = self.supporting_shape(indexable_element = other.indexable_for_part(part),
+                                              direction = other._part_direction(part))
+         assert np.prod(target_shape) == flattened_indices.size
+         a = other.cached_part_array_ref(part).flatten()[flattened_indices].reshape(target_shape)
+         self.add_cached_array_to_imported_list(a,
+                                                source,
+                                                info[10],
+                                                discrete = not info[4],
+                                                uom = info[15],
+                                                time_index = info[12],
+                                                null_value = info[19],
+                                                property_kind = info[7],
+                                                local_property_kind_uuid = info[17],
+                                                facet_type = info[8],
+                                                facet = info[9],
+                                                realization = info[0],
+                                                indexable_element = info[6],
+                                                count = info[5],
+                                                const_value = info[20],
+                                                points = info[21])
 
    def inherit_parts_selectively_from_other_collection(
          self,
@@ -2042,7 +2086,8 @@ class PropertyCollection():
          else:
             assert not self.points_for_part(part), 'constant arrays not supported for points properties'
             assert self.support is not None
-            shape = self.supporting_shape()
+            shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
+                                          direction = self._part_direction(part))
             assert shape is not None
             a = np.full(shape, const_value, dtype = float if self.continuous_for_part(part) else int)
             setattr(self, cached_array_name, a)
@@ -2126,7 +2171,8 @@ class PropertyCollection():
       if self.constant_value_for_part(part) is not None:
          assert not self.points_for_part(part), 'constant array not supported for points property'
          assert self.support is not None
-         shape = self.supporting_shape()
+         shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
+                                       direction = self._part_direction(part))
          assert shape is not None
          return shape, (float if self.continuous_for_part(part) else int)
 
@@ -2255,6 +2301,7 @@ class PropertyCollection():
          r_extent = len(r_list)
 
       dtype = dtype_flavour(continuous, use_32_bit)
+      # todo: handle direction dependent shapes
       shape_list = self.supporting_shape(indexable_element = indexable_element)
       shape_list.insert(0, r_extent)
       if self.points_for_part(self.parts()[0]):
@@ -2339,6 +2386,7 @@ class PropertyCollection():
          ti_extent = len(ti_list)
 
       dtype = dtype_flavour(continuous, use_32_bit)
+      # todo: handle direction dependent shapes
       shape_list = self.supporting_shape(indexable_element = indexable_element)
       shape_list.insert(0, ti_extent)
       if self.points_for_part(self.parts()[0]):
@@ -2704,7 +2752,8 @@ class PropertyCollection():
             uuid = entry[0]
             cached_name = _cache_name_for_uuid(uuid)
             assert self.support is not None
-            shape = self.supporting_shape()
+            # note: will not handle direction dependent shapes
+            shape = self.supporting_shape(indexable_element = entry[14])
             value = float(entry[17]) if isinstance(entry[17], str) else entry[17]
             self.__dict__[cached_name] = np.full(shape, value)
          else:
@@ -2951,7 +3000,9 @@ class PropertyCollection():
          before calling this function;
          this code (and elsewhere) only supports at most one facet per property, though the RESQML standard
          allows for multiple facets;
-         RESQML does not allow facets for points properties
+         RESQML does not allow facets for points properties;
+         if the xml has not been created for the support object, then xml will not be created for relationships
+         between the properties and the supporting representation
       """
 
       #      log.debug('creating property node for ' + title)
@@ -2965,7 +3016,7 @@ class PropertyCollection():
          support_uuid = self.support_uuid
       assert support_uuid is not None
       support_root = self.model.root_for_uuid(support_uuid)
-      assert support_root is not None
+      # assert support_root is not None
 
       if ext_uuid is None:
          ext_uuid = self.model.h5_uuid()
@@ -2987,8 +3038,9 @@ class PropertyCollection():
          else:
             raise Exception('indexable element unknown for unsupported supporting representation object')
 
+      direction = None if facet_type is None or facet_type != 'direction' else facet
       if self.support is not None:
-         shape_list = self.supporting_shape(indexable_element = indexable_element)
+         shape_list = self.supporting_shape(indexable_element = indexable_element, direction = direction)
          if shape_list is not None:
             if count > 1:
                shape_list.append(count)
@@ -3053,9 +3105,10 @@ class PropertyCollection():
          time_series = rts.any_time_series(self.model, uuid = time_series_uuid)
          time_series.create_time_index(time_index, root = p_node)
 
+      support_title = '' if support_root is None else rqet.citation_title_for_node(support_root)
       self.model.create_supporting_representation(support_uuid = support_uuid,
                                                   root = p_node,
-                                                  title = rqet.citation_title_for_node(support_root),
+                                                  title = support_title,
                                                   content_type = support_type)
 
       p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
@@ -3091,8 +3144,7 @@ class PropertyCollection():
       # create patch node
       const_count = None
       if const_value is not None:
-         s_shape = self.supporting_shape(indexable_element = indexable_element,
-                                         direction = facet if facet_type == 'direction' else None)
+         s_shape = self.supporting_shape(indexable_element = indexable_element, direction = direction)
          assert s_shape is not None
          const_count = np.product(np.array(s_shape, dtype = int))
       _ = self.model.create_patch(p_uuid,
@@ -3179,7 +3231,8 @@ class PropertyCollection():
       if add_as_part:
          self.model.add_part('obj_' + d_or_c_text + 'Property', p_uuid, p_node)
          if add_relationships:
-            self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
+            if support_root is not None:
+               self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
             if property_kind_uuid is not None:
                pk_node = self.model.root_for_uuid(property_kind_uuid)
                if pk_node is not None:
@@ -3190,8 +3243,6 @@ class PropertyCollection():
             if discrete and string_lookup_uuid is not None:
                self.model.create_reciprocal_relationship(p_node, 'destinationObject', sl_root, 'sourceObject')
 
-
-#           ext_node = self.model.root_for_part(rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = True))
             if const_value is None:
                ext_node = self.model.root_for_part(
                   rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False))
@@ -3510,6 +3561,12 @@ class PropertyCollection():
          'PERMJ': five_uuids[3],
          'PERMK': five_uuids[4]
       }
+
+   def _part_direction(self, part):
+      facet_t = self.facet_type_for_part(part)
+      if facet_t is None or facet_t != 'direction':
+         return None
+      return self.facet_for_part(part)
 
 
 class Property(BaseResqpy):
@@ -4912,7 +4969,7 @@ class WellLogCollection(PropertyCollection):
 
       super().__init__(support = frame, property_set_root = property_set_root, realization = realization)
 
-   def add_log(self, title, data, unit, discrete = False, realization = None, write = True):
+   def add_log(self, title, data, unit, discrete = False, realization = None, write = True, source_info = ''):
       """Add a well log to the collection, and optionally save to HDF / XML
       
       Note:
@@ -4929,6 +4986,7 @@ class WellLogCollection(PropertyCollection):
          discrete (bool): by default False, i.e. continuous
          realization (int): If given, assign data to a realisation.
          write (bool): If True, write XML and HDF5.
+         source_info (str): curve description or other human readable text
 
       Returns:
          uuids: list of uuids of newly added properties. Only returned if write=True.
@@ -4948,8 +5006,7 @@ class WellLogCollection(PropertyCollection):
       # Add to the "import list"
       self.add_cached_array_to_imported_list(
          cached_array = np.array(data),
-         source_info = '',
-         # TODO: put the curve.descr somewhere
+         source_info = source_info,
          keyword = title,
          discrete = discrete,
          uom = uom,
