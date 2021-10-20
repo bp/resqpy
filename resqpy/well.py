@@ -24,7 +24,7 @@ Example::
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '15th September 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -4424,10 +4424,8 @@ def add_wells_from_ascii_file(model,
    y_col = str(y_col)
    z_col = str(z_col)
    if crs_uuid is None:
-      crs_root = model.crs_root
-   else:
-      crs_root = model.root_for_uuid(crs_uuid)
-   assert crs_root is not None, 'coordinate reference system not found when trying to add wells'
+      crs_uuid = model.crs_uuid
+   assert crs_uuid is not None, 'coordinate reference system not found when trying to add wells'
 
    try:
       df = pd.read_csv(trajectory_file, comment = comment_character, delim_whitespace = space_separated_instead_of_csv)
@@ -4452,7 +4450,10 @@ def add_wells_from_ascii_file(model,
       log.warning('no well data found in ascii trajectory file: ' + str(trajectory_file))
       # note: empty lists will be returned, below
 
-   feature_list = interpretation_list = trajectory_list = md_datum_list = []
+   feature_list = []
+   interpretation_list = []
+   trajectory_list = []
+   md_datum_list = []
 
    for well_name in unique_wells:
 
@@ -4463,10 +4464,10 @@ def add_wells_from_ascii_file(model,
       first_row = well_df.iloc[0]
       if first_row[md_col] == 0.0:
          md_datum = MdDatum(model,
-                            crs_root = crs_root,
+                            crs_uuid = crs_uuid,
                             location = (first_row[x_col], first_row[y_col], first_row[z_col]))
       else:
-         md_datum = MdDatum(model, crs_root = crs_root,
+         md_datum = MdDatum(model, crs_uuid = crs_uuid,
                             location = (first_row[x_col], first_row[y_col], 0.0))  # sea level datum
       md_datum.create_xml(title = str(well_name))
       md_datum_list.append(md_datum)

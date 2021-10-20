@@ -478,7 +478,7 @@ def add_wells_from_ascii_file(epc_file,
                               drilled = False,
                               z_inc_down = True,
                               new_epc_file = None):
-   """Adds new md datum, trajectory, interpretation and feature objects for each well in an ascii file..
+   """Adds new md datum, trajectory, interpretation and feature objects for each well in a tabular ascii file..
 
    arguments:
       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)

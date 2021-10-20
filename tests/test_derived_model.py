@@ -2,8 +2,10 @@ import pytest
 import os
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+import pandas as pd
 
 import resqpy.model as rq
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.property as rqp
 import resqpy.well as rqw
@@ -394,3 +396,49 @@ def test_add_one_blocked_well_property(example_model_with_well):
    assert prop.minimum_value() is not None and prop.maximum_value() is not None
    assert prop.minimum_value() > grid.xyz_box(lazy = True)[0, 2]  # minimum z
    assert prop.maximum_value() < grid.xyz_box(lazy = True)[1, 2]  # maximum z
+
+
+def test_add_wells_from_ascii_file(tmp_path):
+   # create an empty model and add a crs
+   tmp_path = '/users/andy/bifröst/bc'  # DEBUG only
+   epc = os.path.join(tmp_path, 'well_model.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+   model.store_epc()
+   # fabricate some test data as an ascii table
+   well_file = os.path.join(tmp_path, 'well_table.txt')
+   df = pd.DataFrame(columns = ['WELL', 'MD', 'X', 'Y', 'Z'])
+   well_count = 3
+   for wi in range(well_count):
+      well_name = 'Hole_' + str(wi + 1)
+      wdf = pd.DataFrame(columns = ['WELL', 'MD', 'X', 'Y', 'Z'])
+      row_count = 3 + wi
+      wdf['MD'] = np.linspace(0.0, 1000.0, num = row_count)
+      wdf['X'] = np.linspace(100.0 * wi, 100.0 * wi + 10.0 * row_count, num = row_count)
+      wdf['Y'] = np.linspace(500.0 * wi, 500.0 * wi - 15.0 * row_count, num = row_count)
+      wdf['Z'] = np.linspace(0.0, 1000.0 + 5.0 * row_count, num = row_count)
+      wdf['WELL'] = well_name
+      df = df.append(wdf)
+   df.to_csv(well_file, sep = ' ', index = False)
+   # call the derived model function to add the wells
+   added = rqdm.add_wells_from_ascii_file(epc,
+                                          crs.uuid,
+                                          well_file,
+                                          space_separated_instead_of_csv = True,
+                                          length_uom = 'ft',
+                                          md_domain = ['driller', 'logger'][wi % 2],
+                                          drilled = True,
+                                          z_inc_down = True)
+   assert added == well_count
+   # re-open the model and check that all expected objects have appeared
+   model = rq.Model(epc)
+   assert len(model.parts(obj_type = 'WellboreTrajectoryRepresentation')) == well_count
+   assert len(model.parts(obj_type = 'MdDatum')) == well_count
+   assert len(model.parts(obj_type = 'WellboreInterpretation')) == well_count
+   assert len(model.parts(obj_type = 'WellboreFeature')) == well_count
+   for wi in range(well_count):
+      well_name = 'Hole_' + str(wi + 1)
+      traj = rqw.Trajectory(model, uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = well_name))
+      assert traj is not None
+      assert traj.knot_count == 3 + wi

@@ -1,6 +1,6 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '14th September 2021'
+version = '20th October 2021'
 
 # following should be kept in line with major.minor tag values in repository
 citation_format = 'bp:resqpy:1.3'
@@ -2141,6 +2141,8 @@ class Model():
          do not use this function for the main rels extension part: use create_rels_part() instead
       """
 
+      if content_type[0].isupper():
+         content_type = 'obj_' + content_type
       use_other = (content_type == 'docProps')
       if use_other:
          if rqet.pretend_to_be_fesapi or rqet.use_fesapi_quirks:
@@ -2156,16 +2158,13 @@ class Model():
          else:
             ct = 'application/x-resqml+xml;version=2.0;type=' + content_type
 
-
-#      log.debug('adding part: ' + part_name)
+      # log.debug('adding part: ' + part_name)
       if isinstance(uuid, str):
          uuid = bu.uuid_from_string(uuid)
       part_tree = rqet.ElementTree(element = root)
       if use_other:
          self.other_forest[part_name] = (content_type, part_tree)
       else:
-         if content_type[0].isupper():
-            content_type = 'obj_' + content_type
          self.parts_forest[part_name] = (content_type, uuid, part_tree)
          self._set_uuid_to_part(part_name)
       main_ref = rqet.SubElement(self.main_root, ns['content_types'] + 'Override')
