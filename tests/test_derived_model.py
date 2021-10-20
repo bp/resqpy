@@ -400,7 +400,6 @@ def test_add_one_blocked_well_property(example_model_with_well):
 
 def test_add_wells_from_ascii_file(tmp_path):
    # create an empty model and add a crs
-   tmp_path = '/users/andy/bifröst/bc'  # DEBUG only
    epc = os.path.join(tmp_path, 'well_model.epc')
    model = rq.new_model(epc)
    crs = rqc.Crs(model)
