@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '18th October 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -4341,6 +4341,16 @@ class GridPropertyCollection(PropertyCollection):
                i_ratio_vector = refinement.coarse_for_fine_axial_vector(2)
                a = np.empty(tuple(refinement.fine_extent_kji), dtype = a.dtype)
                a[:, :, :] = a_refined_kj[:, :, i_ratio_vector]
+               # for cell length properties, scale down the values in accordance with refinement
+               if info[4] and info[7] == 'cell length' and info[8] == 'direction' and info[5] == 1:
+                  dir_ch = info[9].upper()
+                  log.debug(f'refining cell lengths for axis {dir_ch}')
+                  if dir_ch == 'K':
+                     a *= refinement.proportions_for_axis(0).reshape((-1, 1, 1))
+                  elif dir_ch == 'J':
+                     a *= refinement.proportions_for_axis(1).reshape((1, -1, 1))
+                  elif dir_ch == 'I':
+                     a *= refinement.proportions_for_axis(2).reshape((1, 1, -1))
 
             self.add_cached_array_to_imported_list(
                a,

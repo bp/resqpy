@@ -532,13 +532,14 @@ def test_refined_grid(tmp_path):
    crs = rqc.Crs(model)
    crs.create_xml()
    # create a pair of grids to act as boundary case geometries
+   c_dxyz = (100.0, 150.0, 50.0)
    c_grid = grr.RegularGrid(model,
                             crs_uuid = model.crs_uuid,
                             extent_kji = (5, 3, 4),
-                            dxyz = (100.0, 150.0, 50.0),
+                            dxyz = c_dxyz,
                             as_irregular_grid = True)
    c_grid.write_hdf5()
-   c_grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+   c_grid.create_xml(write_geometry = True, add_cell_length_properties = True, expand_const_arrays = True)
    model.store_epc()
    # set up a coarse to fine mapping
    fine_extent = np.array(c_grid.extent_kji)
@@ -573,3 +574,12 @@ def test_refined_grid(tmp_path):
    assert np.all(p[:-1, :, :, 2] < p[1:, :, :, 2])
    assert np.all(p[:, :-1, :, 1] < p[:, 1:, :, 1])
    assert np.all(p[:, :, :-1, 0] < p[:, :, 1:, 0])
+   # check property inheritance of cell lengths
+   pc = f_grid.extract_property_collection()
+   assert pc is not None and pc.number_of_parts() >= 3
+   lpc = rqp.selective_version_of_collection(pc, property_kind = 'cell length')
+   assert lpc.number_of_parts() == 3
+   for axis in range(3):
+      length_array = lpc.single_array_ref(facet_type = 'direction', facet = 'KJI'[axis])
+      assert length_array is not None
+      assert np.allclose(length_array, c_dxyz[2 - axis] / (2, 4, 3)[axis])
