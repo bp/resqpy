@@ -1797,20 +1797,20 @@ class BlockedWell(BaseResqpy):
       :meta common:
       """
 
-      self.trajectory = trajectory
+      self.trajectory = trajectory  #: trajectory object associated with the wellbore
       self.trajectory_to_be_written = False
       self.feature_to_be_written = False
       self.interpretation_to_be_written = False
-      self.node_count = None  # number of measured depth nodes, each being an entry or exit point of trajectory with a cell
-      self.node_mds = None  # node_count measured depths (in same units and datum as trajectory) of cell entry and/or exit points
-      self.cell_count = None  # number of blocked intervals (<= node_count - 1)
-      self.cell_indices = None  # cell_count natural cell indices, paired with non-null grid_indices
-      self.grid_indices = None  # node_count-1 indices into grid list for each interval in node_mds; -1 for unblocked interval
-      self.face_pair_indices = None  # entry, exit face per cell indices, -1 for Target Depth termination within a cell
+      self.node_count = None  #: number of measured depth nodes, each being an entry or exit point of trajectory with a cell
+      self.node_mds = None  #: node_count measured depths (in same units and datum as trajectory) of cell entry and/or exit points
+      self.cell_count = None  #: number of blocked intervals (<= node_count - 1)
+      self.cell_indices = None  #: cell_count natural cell indices, paired with non-null grid_indices
+      self.grid_indices = None  #: node_count-1 indices into grid list for each interval in node_mds; -1 for unblocked interval
+      self.face_pair_indices = None  #: entry, exit face per cell indices, -1 for Target Depth termination within a cell
       self.grid_list = [
-      ]  # list of grid objects indexed by grid_indices; for now only 1 grid supported unless loading from xml
-      self.wellbore_interpretation = None
-      self.wellbore_feature = None
+      ]  #: list of grid objects indexed by grid_indices; for now only handles 1 grid unless loading from xml
+      self.wellbore_interpretation = None  #: associated wellbore interpretation object
+      self.wellbore_feature = None  #: associated wellbore feature object
 
       #: All logs associated with the blockedwellbore; an instance of :class:`resqpy.property.WellIntervalPropertyCollection`
       self.logs = None

@@ -1586,7 +1586,7 @@ class PropertyCollection():
          part (string): the part name for which the minimum value is required
 
       returns:
-         minimum value (as string or float or int!) for this part
+         minimum value (as float or int) for this part, or None if metadata item is not set
 
       note:
          this method merely returns the minimum value recorded in the xml for the property, it does not check
@@ -1595,7 +1595,13 @@ class PropertyCollection():
       :meta common:
       """
 
-      return self.element_for_part(part, 13)
+      mini = self.element_for_part(part, 13)
+      if mini:
+         if self.continuous_for_part(part):
+            mini = float(mini)
+         else:
+            mini = int(mini)
+      return mini
 
    def maximum_value_for_part(self, part):
       """Returns the maximum value for the property part, as stored in the xml.
@@ -1604,7 +1610,7 @@ class PropertyCollection():
          part (string): the part name for which the maximum value is required
 
       returns:
-         maximum value (as string or float ir int!) for this part
+         maximum value (as float ir int) for this part, or None if metadata item is not set
 
       note:
          this method merely returns the maximum value recorded in the xml for the property, it does not check
@@ -1613,7 +1619,13 @@ class PropertyCollection():
       :meta common:
       """
 
-      return self.element_for_part(part, 14)
+      maxi = self.element_for_part(part, 14)
+      if maxi:
+         if self.continuous_for_part(part):
+            maxi = float(maxi)
+         else:
+            maxi = int(maxi)
+      return maxi
 
    def patch_min_max_for_part(self, part, minimum = None, maximum = None, model = None):
       """Updates the minimum and/ox maximum values stored in the metadata, optionally updating xml tree too.

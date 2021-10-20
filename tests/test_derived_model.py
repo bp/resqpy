@@ -344,3 +344,53 @@ def test_add_edges_per_column_property_array(tmp_path):
    assert edge_property.uom() == 'm3/m3'
    assert edge_property.property_kind() == 'multiplier'
    assert edge_property.facet() is None
+
+
+def test_add_one_blocked_well_property(example_model_with_well):
+   model, well_interp, datum, traj = example_model_with_well
+   epc = model.epc_file
+   # make a grid positioned in the area of the well
+   grid = grr.RegularGrid(model,
+                          crs_uuid = model.crs_uuid,
+                          origin = (-150.0, -150.0, 1500.0),
+                          extent_kji = (5, 3, 3),
+                          dxyz = (100.0, 100.0, 50.0),
+                          set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+   # create a blocked well
+   bw = rqw.BlockedWell(model, grid = grid, trajectory = traj)
+   bw.write_hdf5()
+   bw.create_xml()
+   model.store_epc()
+   assert bw is not None
+   assert bw.cell_count == grid.nk
+   # fabricate a blocked well property holding the depths of the centres of penetrated cells
+   wb_prop = np.zeros(grid.nk,)
+   cells_kji = bw.cell_indices_kji0()
+   for i, cell_kji in enumerate(cells_kji):
+      wb_prop[i] = grid.centre_point(cell_kji)[2]
+   # add the property
+   p_uuid = rqdm.add_one_blocked_well_property(epc,
+                                               wb_prop,
+                                               'depth',
+                                               bw.uuid,
+                                               source_info = 'unit test',
+                                               title = 'DEPTH',
+                                               discrete = False,
+                                               uom = 'm',
+                                               indexable_element = 'cells')
+   assert p_uuid is not None
+   # re-open the model and check the wellbore property
+   model = rq.Model(epc)
+   prop = rqp.Property(model, uuid = p_uuid)
+   assert prop is not None
+   assert bu.matching_uuids(model.supporting_representation_for_part(model.part(uuid = prop.uuid)), bw.uuid)
+   assert prop.title == 'DEPTH'
+   assert prop.property_kind() == 'depth'
+   assert prop.uom() == 'm'
+   assert prop.is_continuous()
+   assert not prop.is_categorical()
+   assert prop.minimum_value() is not None and prop.maximum_value() is not None
+   assert prop.minimum_value() > grid.xyz_box(lazy = True)[0, 2]  # minimum z
+   assert prop.maximum_value() < grid.xyz_box(lazy = True)[1, 2]  # maximum z

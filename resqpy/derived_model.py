@@ -429,9 +429,8 @@ def add_one_blocked_well_property(epc_file,
    # open up model and establish grid object
    model = rq.Model(epc_file)
 
-   bw_root = model.root(obj_type = '', uuid = blocked_well_uuid)
-   assert bw_root is not None, f'no blocked well object found with uuid {blocked_well_uuid}'
-   blocked_well = rqw.BlockedWell(model, blocked_well_root = bw_root)
+   blocked_well = rqw.BlockedWell(model, uuid = blocked_well_uuid)
+   assert blocked_well is not None, f'no blocked well object found with uuid {blocked_well_uuid}'
 
    if not discrete:
       string_lookup_uuid = None
@@ -1707,9 +1706,9 @@ def extract_box_for_well(epc_file = None,
 
    if not new_grid_title:
       if trajectory is not None:
-         new_grid_title = 'local grid extracted for well: ' + rqet.citation_title_for_node(trajectory_root)
+         new_grid_title = 'local grid extracted for well: ' + str(rqet.citation_title_for_node(trajectory_root))
       elif blocked_well is not None:
-         new_grid_title = 'local grid extracted for blocked well: ' + rqet.citation_title_for_node(bw_root)
+         new_grid_title = 'local grid extracted for blocked well: ' + str(rqet.citation_title_for_node(bw_root))
       elif column_ji0 is not None:
          new_grid_title = 'local grid extracted around column i, j (1 based): ' +  \
                           str(column_ji0[1] + 1) + ', ' + str(column_ji0[0] + 1)
