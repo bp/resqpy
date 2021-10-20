@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '18th October 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -525,6 +525,8 @@ class PropertyCollection():
          self.set_support(support_uuid)
       elif not bu.matching_uuids(support_uuid, self.support.uuid):  # multi-support collection
          self.set_support(None)
+      if isinstance(support_uuid, str):
+         support_uuid = bu.uuid_from_string(support_uuid)
       if continuous:
          uom_node = rqet.find_tag(xml_node, 'UOM')
          if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
@@ -1630,7 +1632,7 @@ class PropertyCollection():
          part (string): the part name for which the minimum value is required
 
       returns:
-         minimum value (as string or float or int!) for this part
+         minimum value (as float or int) for this part, or None if metadata item is not set
 
       note:
          this method merely returns the minimum value recorded in the xml for the property, it does not check
@@ -1639,7 +1641,13 @@ class PropertyCollection():
       :meta common:
       """
 
-      return self.element_for_part(part, 13)
+      mini = self.element_for_part(part, 13)
+      if mini:
+         if self.continuous_for_part(part):
+            mini = float(mini)
+         else:
+            mini = int(mini)
+      return mini
 
    def maximum_value_for_part(self, part):
       """Returns the maximum value for the property part, as stored in the xml.
@@ -1648,7 +1656,7 @@ class PropertyCollection():
          part (string): the part name for which the maximum value is required
 
       returns:
-         maximum value (as string or float ir int!) for this part
+         maximum value (as float ir int) for this part, or None if metadata item is not set
 
       note:
          this method merely returns the maximum value recorded in the xml for the property, it does not check
@@ -1657,7 +1665,13 @@ class PropertyCollection():
       :meta common:
       """
 
-      return self.element_for_part(part, 14)
+      maxi = self.element_for_part(part, 14)
+      if maxi:
+         if self.continuous_for_part(part):
+            maxi = float(maxi)
+         else:
+            maxi = int(maxi)
+      return maxi
 
    def patch_min_max_for_part(self, part, minimum = None, maximum = None, model = None):
       """Updates the minimum and/ox maximum values stored in the metadata, optionally updating xml tree too.
@@ -4327,6 +4341,16 @@ class GridPropertyCollection(PropertyCollection):
                i_ratio_vector = refinement.coarse_for_fine_axial_vector(2)
                a = np.empty(tuple(refinement.fine_extent_kji), dtype = a.dtype)
                a[:, :, :] = a_refined_kj[:, :, i_ratio_vector]
+               # for cell length properties, scale down the values in accordance with refinement
+               if info[4] and info[7] == 'cell length' and info[8] == 'direction' and info[5] == 1:
+                  dir_ch = info[9].upper()
+                  log.debug(f'refining cell lengths for axis {dir_ch}')
+                  if dir_ch == 'K':
+                     a *= refinement.proportions_for_axis(0).reshape((-1, 1, 1))
+                  elif dir_ch == 'J':
+                     a *= refinement.proportions_for_axis(1).reshape((1, -1, 1))
+                  elif dir_ch == 'I':
+                     a *= refinement.proportions_for_axis(2).reshape((1, 1, -1))
 
             self.add_cached_array_to_imported_list(
                a,
@@ -5961,7 +5985,7 @@ def property_collection_for_keyword(collection, keyword):
 
 def reformat_column_edges_to_resqml_format(array):
    """Converts an array of shape (nj,ni,2,2) to shape (nj,ni,4) in RESQML edge ordering"""
-   newarray = np.empty((array.shape[0], array.shape[1], 4))
+   newarray = np.empty((array.shape[0], array.shape[1], 4), dtype = array.dtype)
    newarray[:, :, 0] = array[:, :, 1, 0]
    newarray[:, :, 1] = array[:, :, 0, 1]
    newarray[:, :, 2] = array[:, :, 1, 1]
@@ -5971,7 +5995,7 @@ def reformat_column_edges_to_resqml_format(array):
 
 def reformat_column_edges_from_resqml_format(array):
    """Converts an array of shape (nj,ni,4) in RESQML edge ordering to shape (nj,ni,2,2)"""
-   newarray = np.empty((array.shape[0], array.shape[1], 2, 2))
+   newarray = np.empty((array.shape[0], array.shape[1], 2, 2), dtype = array.dtype)
    newarray[:, :, 0, 0] = array[:, :, 3]
    newarray[:, :, 0, 1] = array[:, :, 1]
    newarray[:, :, 1, 0] = array[:, :, 0]

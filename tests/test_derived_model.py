@@ -2,13 +2,16 @@ import pytest
 import os
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+import pandas as pd
 
 import resqpy.model as rq
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.property as rqp
 import resqpy.well as rqw
 import resqpy.derived_model as rqdm
 import resqpy.olio.uuid as bu
+import resqpy.olio.fine_coarse as rqfc
 import resqpy.olio.box_utilities as bx
 
 
@@ -49,8 +52,9 @@ def test_add_zone_by_layer_property(tmp_path):
    model = rq.new_model(epc)
 
    # create a basic block grid
-   grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'In The Zone')
-   grid.create_xml()
+   grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'In The Zone', set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True)
    grid_uuid = grid.uuid
 
    model.store_epc()
@@ -72,6 +76,7 @@ def test_add_zone_by_layer_property(tmp_path):
                  dtype = int).reshape(grid.extent_kji)
    za_uuid = rqdm.add_one_grid_property_array(epc,
                                               za,
+                                              discrete = True,
                                               property_kind = 'code',
                                               title = 'clean zone',
                                               grid_uuid = grid_uuid,
@@ -93,6 +98,7 @@ def test_add_zone_by_layer_property(tmp_path):
    za[1, 2, :] = 3
    za_uuid = rqdm.add_one_grid_property_array(epc,
                                               za,
+                                              discrete = True,
                                               property_kind = 'code',
                                               title = 'messy zone',
                                               grid_uuid = grid_uuid,
@@ -101,22 +107,42 @@ def test_add_zone_by_layer_property(tmp_path):
 
    # fail to add a zone by layer property based on the messy cells property
    with pytest.raises(Exception):
-      v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
-                                                  zone_by_cell_property_uuid = za_uuid,
-                                                  use_dominant_zone = False,
-                                                  title = 'should fail')
+      v, z2_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
+                                                   zone_by_cell_property_uuid = za_uuid,
+                                                   use_dominant_zone = False,
+                                                   title = 'should fail')
 
    # add a zone by layer property based on the neat cells property
-   v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
-                                               zone_by_cell_property_uuid = za_uuid,
-                                               use_dominant_zone = True,
-                                               title = 'from messy cells array')
+   v, z3_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
+                                                zone_by_cell_property_uuid = za_uuid,
+                                                use_dominant_zone = True,
+                                                title = 'from messy cells array')
    assert tuple(v) == (1, 2, 3, 5)
 
    # check that zone property looks okay
    model = rq.Model(epc)
-   z_prop = rqp.Property(model, uuid = z_uuid)
+   grid = model.grid()
+   z_prop = rqp.Property(model, uuid = z3_uuid)
    check_zone_prop(z_prop)
+
+   # create a zonal grid based on a (neat) zone property array
+   z_grid = rqdm.zonal_grid(epc,
+                            source_grid = grid,
+                            zone_uuid = z_uuid,
+                            use_dominant_zone = False,
+                            inactive_laissez_faire = True,
+                            new_grid_title = 'zonal grid')
+   assert z_grid is not None
+   assert z_grid.nk == 4
+
+   # and another zonal grid based on the dominant zone
+   z3_grid = rqdm.zonal_grid(epc,
+                             source_grid = grid,
+                             zone_uuid = za_uuid,
+                             use_dominant_zone = True,
+                             new_grid_title = 'dominant zone grid')
+   assert z3_grid is not None
+   assert z3_grid.nk == 4
 
 
 def test_single_layer_grid(tmp_path):
@@ -300,3 +326,260 @@ def test_add_grid_points_property(tmp_path):
    assert len(pc.selective_parts_list(points = True)) == 1
    diag = pc.single_array_ref(points = True)
    assert_array_almost_equal(diag, diagonal_array)
+
+
+def test_add_edges_per_column_property_array(tmp_path):
+
+   # create a new model with a grid
+   epc = os.path.join(tmp_path, 'edges_per_column.epc')
+   model = rq.new_model(epc)
+   grid = grr.RegularGrid(model, extent_kji = (2, 3, 4))
+   grid.write_hdf5()
+   grid.create_xml()
+   model.store_epc()
+
+   # fabricate an edges per column property
+   edge_prop = np.zeros((grid.nj, grid.ni, 2, 2))
+   edge_prop[:] = np.linspace(0.1, 0.9, num = edge_prop.size).reshape(edge_prop.shape)
+
+   # add the edges per column property
+   prop_uuid = rqdm.add_edges_per_column_property_array(epc,
+                                                        edge_prop,
+                                                        property_kind = 'multiplier',
+                                                        grid_uuid = grid.uuid,
+                                                        source_info = 'unit testing',
+                                                        title = 'test property on column edges',
+                                                        discrete = False,
+                                                        uom = 'm3/m3')
+   assert prop_uuid is not None
+
+   # re-open the model and inspect the property
+   model = rq.Model(epc)
+   assert len(model.parts(obj_type = 'ContinuousProperty')) > 0
+   edge_property = rqp.Property(model, uuid = prop_uuid)
+   assert edge_property is not None
+   ep_array = edge_property.array_ref()
+   # RESQML holds array with last two dimensions flattened and reordered
+   assert ep_array.shape == (grid.nj, grid.ni, 4)
+   # restore logical resqpy order and shape
+   ep_restored = rqp.reformat_column_edges_from_resqml_format(ep_array)
+   assert_array_almost_equal(ep_restored, edge_prop)
+   assert edge_property.is_continuous()
+   assert not edge_property.is_categorical()
+   assert edge_property.indexable_element() == 'edges per column'
+   assert edge_property.uom() == 'm3/m3'
+   assert edge_property.property_kind() == 'multiplier'
+   assert edge_property.facet() is None
+
+
+def test_add_one_blocked_well_property(example_model_with_well):
+   model, well_interp, datum, traj = example_model_with_well
+   epc = model.epc_file
+   # make a grid positioned in the area of the well
+   grid = grr.RegularGrid(model,
+                          crs_uuid = model.crs_uuid,
+                          origin = (-150.0, -150.0, 1500.0),
+                          extent_kji = (5, 3, 3),
+                          dxyz = (100.0, 100.0, 50.0),
+                          set_points_cached = True)
+   grid.write_hdf5()
+   grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+   # create a blocked well
+   bw = rqw.BlockedWell(model, grid = grid, trajectory = traj)
+   bw.write_hdf5()
+   bw.create_xml()
+   model.store_epc()
+   assert bw is not None
+   assert bw.cell_count == grid.nk
+   # fabricate a blocked well property holding the depths of the centres of penetrated cells
+   wb_prop = np.zeros(grid.nk,)
+   cells_kji = bw.cell_indices_kji0()
+   for i, cell_kji in enumerate(cells_kji):
+      wb_prop[i] = grid.centre_point(cell_kji)[2]
+   # add the property
+   p_uuid = rqdm.add_one_blocked_well_property(epc,
+                                               wb_prop,
+                                               'depth',
+                                               bw.uuid,
+                                               source_info = 'unit test',
+                                               title = 'DEPTH',
+                                               discrete = False,
+                                               uom = 'm',
+                                               indexable_element = 'cells')
+   assert p_uuid is not None
+   # re-open the model and check the wellbore property
+   model = rq.Model(epc)
+   prop = rqp.Property(model, uuid = p_uuid)
+   assert prop is not None
+   assert bu.matching_uuids(model.supporting_representation_for_part(model.part(uuid = prop.uuid)), bw.uuid)
+   assert prop.title == 'DEPTH'
+   assert prop.property_kind() == 'depth'
+   assert prop.uom() == 'm'
+   assert prop.is_continuous()
+   assert not prop.is_categorical()
+   assert prop.minimum_value() is not None and prop.maximum_value() is not None
+   assert prop.minimum_value() > grid.xyz_box(lazy = True)[0, 2]  # minimum z
+   assert prop.maximum_value() < grid.xyz_box(lazy = True)[1, 2]  # maximum z
+
+
+def test_add_wells_from_ascii_file(tmp_path):
+   # create an empty model and add a crs
+   epc = os.path.join(tmp_path, 'well_model.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+   model.store_epc()
+   # fabricate some test data as an ascii table
+   well_file = os.path.join(tmp_path, 'well_table.txt')
+   df = pd.DataFrame(columns = ['WELL', 'MD', 'X', 'Y', 'Z'])
+   well_count = 3
+   for wi in range(well_count):
+      well_name = 'Hole_' + str(wi + 1)
+      wdf = pd.DataFrame(columns = ['WELL', 'MD', 'X', 'Y', 'Z'])
+      row_count = 3 + wi
+      wdf['MD'] = np.linspace(0.0, 1000.0, num = row_count)
+      wdf['X'] = np.linspace(100.0 * wi, 100.0 * wi + 10.0 * row_count, num = row_count)
+      wdf['Y'] = np.linspace(500.0 * wi, 500.0 * wi - 15.0 * row_count, num = row_count)
+      wdf['Z'] = np.linspace(0.0, 1000.0 + 5.0 * row_count, num = row_count)
+      wdf['WELL'] = well_name
+      df = df.append(wdf)
+   df.to_csv(well_file, sep = ' ', index = False)
+   # call the derived model function to add the wells
+   added = rqdm.add_wells_from_ascii_file(epc,
+                                          crs.uuid,
+                                          well_file,
+                                          space_separated_instead_of_csv = True,
+                                          length_uom = 'ft',
+                                          md_domain = ['driller', 'logger'][wi % 2],
+                                          drilled = True,
+                                          z_inc_down = True)
+   assert added == well_count
+   # re-open the model and check that all expected objects have appeared
+   model = rq.Model(epc)
+   assert len(model.parts(obj_type = 'WellboreTrajectoryRepresentation')) == well_count
+   assert len(model.parts(obj_type = 'MdDatum')) == well_count
+   assert len(model.parts(obj_type = 'WellboreInterpretation')) == well_count
+   assert len(model.parts(obj_type = 'WellboreFeature')) == well_count
+   for wi in range(well_count):
+      well_name = 'Hole_' + str(wi + 1)
+      traj = rqw.Trajectory(model, uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = well_name))
+      assert traj is not None
+      assert traj.knot_count == 3 + wi
+
+
+def test_interpolated_grid(tmp_path):
+   # create an empty model and add a crs
+   epc = os.path.join(tmp_path, 'interpolation.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+   # create a pair of grids to act as boundary case geometries
+   grid0 = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           origin = (0.0, 0.0, 1000.0),
+                           extent_kji = (5, 4, 3),
+                           dxyz = (100.0, 150.0, 50.0),
+                           set_points_cached = True)
+   grid0.grid_representation = 'IjkGrid'  # overwrite block grid setting
+   grid0.write_hdf5()
+   grid0.create_xml(write_geometry = True, add_cell_length_properties = False)
+   grid1 = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           origin = (15.0, 35.0, 1030.0),
+                           extent_kji = (5, 4, 3),
+                           dxyz = (97.0, 145.0, 47.0),
+                           set_points_cached = True)
+   grid1.grid_representation = 'IjkGrid'  # overwrite block grid setting
+   grid1.write_hdf5()
+   grid1.create_xml(write_geometry = True, add_cell_length_properties = False)
+   model.store_epc()
+   # interpolate between the two grids
+   between_grid_uuids = []
+   for f in [0.0, 0.23, 0.5, 1.0]:
+      grid = rqdm.interpolated_grid(epc,
+                                    grid0,
+                                    grid1,
+                                    a_to_b_0_to_1 = f,
+                                    split_tolerance = 0.01,
+                                    inherit_properties = False,
+                                    inherit_realization = None,
+                                    inherit_all_realizations = False,
+                                    new_grid_title = 'between_' + str(f))
+      assert grid is not None
+      between_grid_uuids.append(grid.uuid)
+   # re-open model and check interpolated grid geometries
+   model = rq.Model(epc)
+   for i, g_uuid in enumerate(between_grid_uuids):
+      grid = grr.Grid(model, uuid = g_uuid)
+      assert grid is not None
+      grid.cache_all_geometry_arrays()
+      assert hasattr(grid, 'points_cached') and grid.points_cached is not None
+      assert np.all(grid.points_cached >= grid0.points_cached)
+      assert np.all(grid.points_cached <= grid1.points_cached)
+      if i == 0:
+         assert_array_almost_equal(grid.points_cached, grid0.points_cached)
+      elif i == len(between_grid_uuids) - 1:
+         assert_array_almost_equal(grid.points_cached, grid1.points_cached)
+      else:
+         assert not np.any(np.isclose(grid.points_cached, grid0.points_cached))
+         assert not np.any(np.isclose(grid.points_cached, grid1.points_cached))
+
+
+def test_refined_grid(tmp_path):
+   # create a model and a coarse grid
+   epc = os.path.join(tmp_path, 'refinement.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+   # create a pair of grids to act as boundary case geometries
+   c_dxyz = (100.0, 150.0, 50.0)
+   c_grid = grr.RegularGrid(model,
+                            crs_uuid = model.crs_uuid,
+                            extent_kji = (5, 3, 4),
+                            dxyz = c_dxyz,
+                            as_irregular_grid = True)
+   c_grid.write_hdf5()
+   c_grid.create_xml(write_geometry = True, add_cell_length_properties = True, expand_const_arrays = True)
+   model.store_epc()
+   # set up a coarse to fine mapping
+   fine_extent = np.array(c_grid.extent_kji)
+   fine_extent[0] *= 2
+   fine_extent[1] *= 4
+   fine_extent[2] *= 3
+   fc = rqfc.FineCoarse(fine_extent, c_grid.extent_kji)
+   fc.set_all_ratios_constant()
+   # make the refinement
+   f_grid = rqdm.refined_grid(epc,
+                              source_grid = None,
+                              fine_coarse = fc,
+                              inherit_properties = True,
+                              inherit_realization = None,
+                              inherit_all_realizations = False,
+                              source_grid_uuid = c_grid.uuid,
+                              set_parent_window = None,
+                              infill_missing_geometry = True,
+                              new_grid_title = 'fine grid')
+   assert f_grid is not None
+   # check some things about the refined grid
+   model = rq.Model(epc)
+   f_grid = grr.Grid(model, uuid = f_grid.uuid)
+   assert tuple(f_grid.extent_kji) == tuple(fine_extent)
+   f_grid.cache_all_geometry_arrays()
+   assert_array_almost_equal(c_grid.xyz_box(lazy = False), f_grid.xyz_box(lazy = False))
+   assert not f_grid.has_split_coordinate_lines
+   assert f_grid.points_cached is not None
+   assert f_grid.points_cached.shape == (c_grid.nk * 2 + 1, c_grid.nj * 4 + 1, c_grid.ni * 3 + 1, 3)
+   # check that refined grid geometry is monotonic in each of the three axes
+   p = f_grid.points_ref(masked = False)
+   assert np.all(p[:-1, :, :, 2] < p[1:, :, :, 2])
+   assert np.all(p[:, :-1, :, 1] < p[:, 1:, :, 1])
+   assert np.all(p[:, :, :-1, 0] < p[:, :, 1:, 0])
+   # check property inheritance of cell lengths
+   pc = f_grid.extract_property_collection()
+   assert pc is not None and pc.number_of_parts() >= 3
+   lpc = rqp.selective_version_of_collection(pc, property_kind = 'cell length')
+   assert lpc.number_of_parts() == 3
+   for axis in range(3):
+      length_array = lpc.single_array_ref(facet_type = 'direction', facet = 'KJI'[axis])
+      assert length_array is not None
+      assert np.allclose(length_array, c_dxyz[2 - axis] / (2, 4, 3)[axis])

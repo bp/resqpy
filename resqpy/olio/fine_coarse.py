@@ -1,6 +1,6 @@
 """fine_coarse.py: Module providing support for grid refinement and coarsening."""
 
-version = '29th April 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -172,6 +172,15 @@ class FineCoarse:
          fraction = 1.0 / float(count)
          return np.full((count,), fraction)
       return self.vector_proportions[axis][c0]
+
+   def proportions_for_axis(self, axis):
+      """Return a numpy vector of floats for fine (summing to one for each coarse slice) being the axial relative proportions."""
+
+      if self.equal_proportions[axis]:
+         count = self.constant_ratios[axis]
+         fraction = 1.0 / float(count)
+         return np.full((self.fine_extent_kji[axis],), fraction)
+      return np.concatenate(self.vector_proportions[axis])
 
    def interpolation(self, axis, c0):
       """Return a numpy vector of floats starting at zero and increasing monotonically to less than one, ready for interpolation."""

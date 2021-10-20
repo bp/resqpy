@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '15th September 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -429,9 +429,8 @@ def add_one_blocked_well_property(epc_file,
    # open up model and establish grid object
    model = rq.Model(epc_file)
 
-   bw_root = model.root(obj_type = '', uuid = blocked_well_uuid)
-   assert bw_root is not None, f'no blocked well object found with uuid {blocked_well_uuid}'
-   blocked_well = rqw.BlockedWell(model, blocked_well_root = bw_root)
+   blocked_well = rqw.BlockedWell(model, uuid = blocked_well_uuid)
+   assert blocked_well is not None, f'no blocked well object found with uuid {blocked_well_uuid}'
 
    if not discrete:
       string_lookup_uuid = None
@@ -479,7 +478,7 @@ def add_wells_from_ascii_file(epc_file,
                               drilled = False,
                               z_inc_down = True,
                               new_epc_file = None):
-   """Adds new md datum, trajectory, interpretation and feature objects for each well in an ascii file..
+   """Adds new md datum, trajectory, interpretation and feature objects for each well in a tabular ascii file..
 
    arguments:
       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
@@ -595,7 +594,7 @@ def zonal_grid(epc_file,
       new grid object (grid.Grid) with one layer per zone of the source grid
 
    notes:
-      usually one of zone_title or zone_uuid or zone_layer_range_list should be passed, if noe are passed then a
+      usually one of zone_title or zone_uuid or zone_layer_range_list should be passed, if none are passed then a
       single layer grid is generated; zone_layer_range_list will take precendence if present
    """
 
@@ -603,25 +602,23 @@ def zonal_grid(epc_file,
       properties = grid.extract_property_collection()
       assert properties is not None and properties.number_of_parts() > 0, 'no properties found in relation to grid'
       properties = rqp.selective_version_of_collection(properties, continuous = False)
-      assert properties is not None and properties.number_of_parts(
-      ) > 0, 'no discreet properties found in relation to grid'
+      assert properties is not None and properties.number_of_parts() > 0,  \
+         'no discreet properties found in relation to grid'
       if zone_title:
          properties = rqp.selective_version_of_collection(properties,
                                                           citation_title = zone_title)  # could make case insensitive?
-         assert properties is not None and properties.number_of_parts(
-         ) > 0, 'no discreet property found with title ' + zone_title
+         assert properties is not None and properties.number_of_parts() > 0,  \
+            'no discreet property found with title ' + zone_title
       if zone_uuid:
+         if isinstance(zone_uuid, str):
+            zone_uuid = bu.uuid_from_string(zone_uuid)
          zone_uuid_str = str(zone_uuid)
-         part_name = None
-         for part in properties.parts():
-            if zone_uuid_str == str(properties.uuid_for_part(part)):
-               part_name = part
-               break
          if zone_title:
             postamble = ' (and title ' + zone_title + ')'
          else:
             postamble = ''
-         assert part_name, 'no property found with uuid ' + zone_uuid_str + postamble
+         assert zone_uuid in properties.uuids(), 'no property found with uuid ' + zone_uuid_str + postamble
+         part_name = grid.model.part(uuid = zone_uuid)
       else:
          part_name = properties.singleton()
       return properties.cached_part_array_ref(part_name, masked = masked)  # .copy() needed?
@@ -1707,9 +1704,9 @@ def extract_box_for_well(epc_file = None,
 
    if not new_grid_title:
       if trajectory is not None:
-         new_grid_title = 'local grid extracted for well: ' + rqet.citation_title_for_node(trajectory_root)
+         new_grid_title = 'local grid extracted for well: ' + str(rqet.citation_title_for_node(trajectory_root))
       elif blocked_well is not None:
-         new_grid_title = 'local grid extracted for blocked well: ' + rqet.citation_title_for_node(bw_root)
+         new_grid_title = 'local grid extracted for blocked well: ' + str(rqet.citation_title_for_node(bw_root))
       elif column_ji0 is not None:
          new_grid_title = 'local grid extracted around column i, j (1 based): ' +  \
                           str(column_ji0[1] + 1) + ', ' + str(column_ji0[0] + 1)
@@ -3822,7 +3819,7 @@ def add_edges_per_column_property_array(epc_file,
 
    arguments:
       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
-      a (3D numpy array): the property array to be added to the model (expected shape nj,ni,2,2)
+      a (3D numpy array): the property array to be added to the model; expected shape (nj,ni,2,2) or (nj,ni,4)
       property_kind (string): the resqml property kind
       grid_uuid (uuid object or string, optional): the uuid of the grid to which the property relates;
          if None, the property is attached to the 'main' grid
@@ -3849,10 +3846,24 @@ def add_edges_per_column_property_array(epc_file,
 
    returns:
       uuid.UUID - the uuid of the newly created property
+
+   notes:
+      the RESQML protocol for saving edges per column properties uses a clockwise ordering of the 4 edges
+      of a column; the resqpy protocol uses 2 dimensions of extent 2, being the axis (J, I) and face (-, +);
+      this function assumes the array is in RESQML protocol if it has shape (nj, ni, 4) and resqpy protocol
+      if it has shape (nj, ni, 2, 2); when reloading the property it will be presented in RESQML protocol;
+      calling code can use property module functions reformat_column_edges_from_resqml_format() and
+      reformat_column_edges_to_resqml_format() to convert between the protocols if needed
    """
 
-   assert a.ndim == 4 and a.shape[2] == 2 and a.shape[3] == 2, 'Wrong shape! Expected shape (nj, ni, 2, 2)'
-   array_rq = rqp.reformat_column_edges_to_resqml_format(a)
+   assert a.ndim in [3, 4]
+   if a.ndim == 4:  # resqpy protocol
+      assert a.shape[2] == 2 and a.shape[3] == 2, 'Wrong shape! Expected shape (nj, ni, 2, 2)'
+      array_rq = rqp.reformat_column_edges_to_resqml_format(a)
+   else:  # RESQML protocol
+      assert a.shape[2] == 4, 'Wrong shape! Expected shape (nj, ni, 4)'
+      array_rq = a
+
    property_uuid = add_one_grid_property_array(epc_file,
                                                array_rq,
                                                property_kind,
