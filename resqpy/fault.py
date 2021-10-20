@@ -1,6 +1,6 @@
 """fault.py: Module providing resqml classes relating to fault representation and other grid connection sets."""
 
-version = '19th October 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -1332,6 +1332,8 @@ class GridConnectionSet(BaseResqpy):
          list of cell faces for the feature (j_col, i_col, face_axis, face_polarity)
       """
       subgcs = self.filtered_by_layer_range(min_k0 = min_k, max_k0 = max_k, pare_down = False)
+      if subgcs is None:
+         return None
 
       cell_face_details = subgcs.list_of_cell_face_pairs_for_feature_index(feature)
 
@@ -1378,8 +1380,9 @@ class GridConnectionSet(BaseResqpy):
 
       fault_by_column_edge_mask = np.zeros((self.grid_list[gridindex].nj, self.grid_list[gridindex].ni, 2, 2),
                                            dtype = bool)
-      for i in cell_face_list:
-         fault_by_column_edge_mask[tuple(i)] = True
+      if cell_face_list is not None:
+         for i in cell_face_list:
+            fault_by_column_edge_mask[tuple(i)] = True
 
       return fault_by_column_edge_mask
 
@@ -1403,7 +1406,7 @@ class GridConnectionSet(BaseResqpy):
       """
 
       if feature_index_list is None:
-         feature_index_list = range(self.feature_list)
+         feature_index_list = range(len(self.feature_list))
       value_list = []
       for feature_index in feature_index_list:
          _, feature_uuid, _ = self.feature_list[feature_index]
