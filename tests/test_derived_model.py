@@ -464,3 +464,61 @@ def test_add_wells_from_ascii_file(tmp_path):
       traj = rqw.Trajectory(model, uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = well_name))
       assert traj is not None
       assert traj.knot_count == 3 + wi
+
+
+def test_interpolated_grid(tmp_path):
+   # create an empty model and add a crs
+   epc = os.path.join(tmp_path, 'interpolation.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+   # create a pair of grids to act as boundary case geometries
+   grid0 = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           origin = (0.0, 0.0, 1000.0),
+                           extent_kji = (5, 4, 3),
+                           dxyz = (100.0, 150.0, 50.0),
+                           set_points_cached = True)
+   grid0.grid_representation = 'IjkGrid'  # overwrite block grid setting
+   grid0.write_hdf5()
+   grid0.create_xml(write_geometry = True, add_cell_length_properties = False)
+   grid1 = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           origin = (15.0, 35.0, 1030.0),
+                           extent_kji = (5, 4, 3),
+                           dxyz = (97.0, 145.0, 47.0),
+                           set_points_cached = True)
+   grid1.grid_representation = 'IjkGrid'  # overwrite block grid setting
+   grid1.write_hdf5()
+   grid1.create_xml(write_geometry = True, add_cell_length_properties = False)
+   model.store_epc()
+   # interpolate between the two grids
+   between_grid_uuids = []
+   for f in [0.0, 0.23, 0.5, 1.0]:
+      grid = rqdm.interpolated_grid(epc,
+                                    grid0,
+                                    grid1,
+                                    a_to_b_0_to_1 = f,
+                                    split_tolerance = 0.01,
+                                    inherit_properties = False,
+                                    inherit_realization = None,
+                                    inherit_all_realizations = False,
+                                    new_grid_title = 'between_' + str(f))
+      assert grid is not None
+      between_grid_uuids.append(grid.uuid)
+   # re-open model and check interpolated grid geometries
+   model = rq.Model(epc)
+   for i, g_uuid in enumerate(between_grid_uuids):
+      grid = grr.Grid(model, uuid = g_uuid)
+      assert grid is not None
+      grid.cache_all_geometry_arrays()
+      assert hasattr(grid, 'points_cached') and grid.points_cached is not None
+      assert np.all(grid.points_cached >= grid0.points_cached)
+      assert np.all(grid.points_cached <= grid1.points_cached)
+      if i == 0:
+         assert_array_almost_equal(grid.points_cached, grid0.points_cached)
+      elif i == len(between_grid_uuids) - 1:
+         assert_array_almost_equal(grid.points_cached, grid1.points_cached)
+      else:
+         assert not np.any(np.isclose(grid.points_cached, grid0.points_cached))
+         assert not np.any(np.isclose(grid.points_cached, grid1.points_cached))
