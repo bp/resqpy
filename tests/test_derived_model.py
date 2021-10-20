@@ -11,6 +11,7 @@ import resqpy.property as rqp
 import resqpy.well as rqw
 import resqpy.derived_model as rqdm
 import resqpy.olio.uuid as bu
+import resqpy.olio.fine_coarse as rqfc
 import resqpy.olio.box_utilities as bx
 
 
@@ -522,3 +523,53 @@ def test_interpolated_grid(tmp_path):
       else:
          assert not np.any(np.isclose(grid.points_cached, grid0.points_cached))
          assert not np.any(np.isclose(grid.points_cached, grid1.points_cached))
+
+
+def test_refined_grid(tmp_path):
+   # create a model and a coarse grid
+   epc = os.path.join(tmp_path, 'refinement.epc')
+   model = rq.new_model(epc)
+   crs = rqc.Crs(model)
+   crs.create_xml()
+   # create a pair of grids to act as boundary case geometries
+   c_grid = grr.RegularGrid(model,
+                            crs_uuid = model.crs_uuid,
+                            extent_kji = (5, 3, 4),
+                            dxyz = (100.0, 150.0, 50.0),
+                            as_irregular_grid = True)
+   c_grid.write_hdf5()
+   c_grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+   model.store_epc()
+   # set up a coarse to fine mapping
+   fine_extent = np.array(c_grid.extent_kji)
+   fine_extent[0] *= 2
+   fine_extent[1] *= 4
+   fine_extent[2] *= 3
+   fc = rqfc.FineCoarse(fine_extent, c_grid.extent_kji)
+   fc.set_all_ratios_constant()
+   # make the refinement
+   f_grid = rqdm.refined_grid(epc,
+                              source_grid = None,
+                              fine_coarse = fc,
+                              inherit_properties = True,
+                              inherit_realization = None,
+                              inherit_all_realizations = False,
+                              source_grid_uuid = c_grid.uuid,
+                              set_parent_window = None,
+                              infill_missing_geometry = True,
+                              new_grid_title = 'fine grid')
+   assert f_grid is not None
+   # check some things about the refined grid
+   model = rq.Model(epc)
+   f_grid = grr.Grid(model, uuid = f_grid.uuid)
+   assert tuple(f_grid.extent_kji) == tuple(fine_extent)
+   f_grid.cache_all_geometry_arrays()
+   assert_array_almost_equal(c_grid.xyz_box(lazy = False), f_grid.xyz_box(lazy = False))
+   assert not f_grid.has_split_coordinate_lines
+   assert f_grid.points_cached is not None
+   assert f_grid.points_cached.shape == (c_grid.nk * 2 + 1, c_grid.nj * 4 + 1, c_grid.ni * 3 + 1, 3)
+   # check that refined grid geometry is monotonic in each of the three axes
+   p = f_grid.points_ref(masked = False)
+   assert np.all(p[:-1, :, :, 2] < p[1:, :, :, 2])
+   assert np.all(p[:, :-1, :, 1] < p[:, 1:, :, 1])
+   assert np.all(p[:, :, :-1, 0] < p[:, :, 1:, 0])

@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '19th September 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -5369,6 +5369,7 @@ class RegularGrid(Grid):
                 mesh_dz_dk = 1.0,
                 uuid = None,
                 set_points_cached = False,
+                as_irregular_grid = False,
                 find_properties = True,
                 title = None,
                 originator = None,
@@ -5398,7 +5399,9 @@ class RegularGrid(Grid):
          uuid (optional): the root of the xml tree for the grid part; if present, the RegularGrid object is
             based on existing data or a mix of that data and other arguments where present
          set_points_cached (boolean, default False): if True, an explicit geometry is created for the regular grid
-            in the form of the cached points array
+            in the form of the cached points array; will be treated as True if as_irregular_grid is True
+         as_irregular_grid (boolean, default False): if True, the grid is setup such that it will appear as a Grid
+            object when next loaded from disc
          find_properties (boolean, default True): if True and grid_root is not None, a grid property collection is
             instantiated as an attribute, holding properties for which this grid is the supporting representation
          title (str, optional): citation title for new grid; ignored if loading from xml
@@ -5424,9 +5427,12 @@ class RegularGrid(Grid):
       :meta common:
       """
 
+      if as_irregular_grid:
+         set_points_cached = True
+
       if uuid is None:
          super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
-         self.grid_representation = 'IjkBlockGrid'  # this is not RESQML and might cause issues elsewhere; revert to IjkGrid if needed
+         self.grid_representation = 'IjkGrid' if as_irregular_grid else 'IjkBlockGrid'
          self.extent_kji = np.array(extent_kji).copy()
          self.nk, self.nj, self.ni = self.extent_kji
          self.k_direction_is_down = True  # assumed direction
@@ -5468,8 +5474,6 @@ class RegularGrid(Grid):
                dzk = self.property_collection.constant_value_for_part(dzk_part)
                if dxi is not None and dyj is not None and dzk is not None:
                   dxyz = (float(dxi), float(dyj), float(dzk))
-         if crs_uuid is None:
-            self.crs_uuid
 
       if mesh is not None:
          assert mesh.flavour == 'regular'
@@ -5500,9 +5504,11 @@ class RegularGrid(Grid):
          self.make_regular_points_cached()
 
       if crs_uuid is None:
+         crs_uuid = parent_model.crs_uuid
+      if crs_uuid is None:
          new_crs = rqc.Crs(parent_model)
-         self.crs_uuid = new_crs.uuid
          self.crs_root = new_crs.create_xml(reuse = True)
+         self.crs_uuid = new_crs.uuid
       else:
          self.crs_uuid = crs_uuid
          self.crs_root = parent_model.root_for_uuid(crs_uuid)
@@ -5726,7 +5732,7 @@ class RegularGrid(Grid):
                   title = None,
                   originator = None,
                   write_active = True,
-                  write_geometry = False,
+                  write_geometry = None,
                   extra_metadata = {},
                   expand_const_arrays = False,
                   add_cell_length_properties = True):
@@ -5741,6 +5747,9 @@ class RegularGrid(Grid):
 
       :meta common:
       """
+
+      if write_geometry is None:
+         write_geometry = (self.grid_representation == 'IjkGrid')
 
       node = super().create_xml(ext_uuid = ext_uuid,
                                 add_as_part = add_as_part,

@@ -1,6 +1,6 @@
 """derived_model.py: Functions creating a derived resqml model from an existing one; mostly grid manipulations."""
 
-version = '15th September 2021'
+version = '20th October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 

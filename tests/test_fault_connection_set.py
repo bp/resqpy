@@ -15,7 +15,9 @@ def test_fault_connection_set(tmp_path):
 
    gm = os.path.join(tmp_path, 'resqpy_test_fgcs.epc')
 
-   model = rq.Model(gm, new_epc = True, create_basics = True, create_hdf5_ext = True)
+   model = rq.new_model(gm)
+   crs = rqc.Crs(model)
+   crs.create_xml()
 
    # unsplit grid
 
