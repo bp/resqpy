@@ -1,6 +1,6 @@
 """property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '20th October 2021'
+version = '21st October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -4116,6 +4116,8 @@ class GridPropertyCollection(PropertyCollection):
          the box argument must be used to effect a local grid coarsening or refinement
       """
 
+      # todo: optional use of active cell mask in coarsening
+
       def array_box(collection, part, box = None, uncache_other_arrays = True):
          full_array = collection.cached_part_array_ref(part)
          if box is None:
@@ -4127,7 +4129,21 @@ class GridPropertyCollection(PropertyCollection):
             other.uncache_part_array(part)
          return a
 
-      def coarsening_sum(coarsening, a):
+      def coarsening_sample(coarsening, a):
+         # for now just take value from first cell in box
+         # todo: find most common element in box
+         a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji), dtype = a.dtype)
+         assert a.shape == tuple(coarsening.fine_extent_kji)
+         # todo: try to figure out some numpy slice operations to avoid use of for loops
+         for k in range(coarsening.coarse_extent_kji[0]):
+            for j in range(coarsening.coarse_extent_kji[1]):
+               for i in range(coarsening.coarse_extent_kji[2]):
+                  # local box within lgc space of fine cells, for 1 coarse cell
+                  cell_box = coarsening.fine_box_for_coarse((k, j, i))
+                  a_coarsened[k, j, i] = a[tuple(cell_box[0])]
+         return a_coarsened
+
+      def coarsening_sum(coarsening, a, axis = None):
          a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
          assert a.shape == tuple(coarsening.fine_extent_kji)
          # todo: try to figure out some numpy slice operations to avoid use of for loops
@@ -4136,9 +4152,19 @@ class GridPropertyCollection(PropertyCollection):
                for i in range(coarsening.coarse_extent_kji[2]):
                   cell_box = coarsening.fine_box_for_coarse(
                      (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
+                  # yapf: disable
                   a_coarsened[k, j, i] = np.nansum(a[cell_box[0, 0]:cell_box[1, 0] + 1,
-                                                     cell_box[0, 1]:cell_box[1, 1] + 1, cell_box[0,
-                                                                                                 2]:cell_box[1, 2] + 1])
+                                                     cell_box[0, 1]:cell_box[1, 1] + 1,
+                                                     cell_box[0, 2]:cell_box[1, 2] + 1])
+                  # yapf: enable
+                  if axis is not None:
+                     axis_1 = (axis + 1) % 3
+                     axis_2 = (axis + 2) % 3
+                     # yapf: disable
+                     divisor = ((cell_box[1, axis_1] + 1 - cell_box[0, axis_1]) *
+                                (cell_box[1, axis_2] + 1 - cell_box[0, axis_2]))
+                     # yapf: enable
+                     a_coarsened[k, j, i] = a_coarsened[k, j, i] / float(divisor)
          return a_coarsened
 
       def coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, zero_weight_result = np.NaN):
@@ -4301,8 +4327,37 @@ class GridPropertyCollection(PropertyCollection):
                                                          zero_weight_result = 0.0)
             add_to_imported(self, coarse_perm_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
-         # TODO: all other supported property kinds
-         # default behaviour simply sample the first fine cell in the coarse cell box
+         # cell lengths
+         source_cell_lengths = selective_version_of_collection(other,
+                                                               realization = realization,
+                                                               property_kind = 'cell length')
+         for (part, info) in source_cell_lengths.dict.items():
+            if not copy_all_realizations and info[0] != realization:
+               continue
+            fine_cl_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+            assert info[5] == 1 and info[8] == 'direction'
+            axis = 'KJI'.index(info[9][0].upper())
+            coarse_cl_array = coarsening_sum(coarsening, fine_cl_array, axis = axis)
+            add_to_imported(self, coarse_cl_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+         # TODO: all other supported property kinds requiring special treatment
+         # default behaviour is bulk volume weighted mean for continuous data, first cell in box for discrete
+         handled_kinds = ('rock volume', 'net to gross ratio', 'porosity', 'saturation', 'permeability rock',
+                          'rock permeability', 'cell length')
+         for (part, info) in other.dict.items():
+            if not copy_all_realizations and info[0] != realization:
+               continue
+            if info[7] in handled_kinds:
+               continue
+            fine_ordinary_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+            if info[4]:
+               coarse_ordinary_array = coarsening_weighted_mean(coarsening,
+                                                                fine_ordinary_array,
+                                                                fine_rv_array,
+                                                                coarse_weight = coarse_rv_array)
+            else:
+               coarse_ordinary_array = coarsening_sample(coarsening, fine_ordinary_array)
+            add_to_imported(self, coarse_ordinary_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
       else:
 
