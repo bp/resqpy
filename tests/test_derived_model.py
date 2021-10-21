@@ -525,13 +525,15 @@ def test_interpolated_grid(tmp_path):
          assert not np.any(np.isclose(grid.points_cached, grid1.points_cached))
 
 
-def test_refined_grid(tmp_path):
+def test_refined_and_coarsened_grid(tmp_path):
+
    # create a model and a coarse grid
    epc = os.path.join(tmp_path, 'refinement.epc')
    model = rq.new_model(epc)
    crs = rqc.Crs(model)
    crs.create_xml()
-   # create a pair of grids to act as boundary case geometries
+
+   # create a coarse grid
    c_dxyz = (100.0, 150.0, 50.0)
    c_grid = grr.RegularGrid(model,
                             crs_uuid = model.crs_uuid,
@@ -541,6 +543,7 @@ def test_refined_grid(tmp_path):
    c_grid.write_hdf5()
    c_grid.create_xml(write_geometry = True, add_cell_length_properties = True, expand_const_arrays = True)
    model.store_epc()
+
    # set up a coarse to fine mapping
    fine_extent = np.array(c_grid.extent_kji)
    fine_extent[0] *= 2
@@ -548,6 +551,7 @@ def test_refined_grid(tmp_path):
    fine_extent[2] *= 3
    fc = rqfc.FineCoarse(fine_extent, c_grid.extent_kji)
    fc.set_all_ratios_constant()
+
    # make the refinement
    f_grid = rqdm.refined_grid(epc,
                               source_grid = None,
@@ -560,7 +564,8 @@ def test_refined_grid(tmp_path):
                               infill_missing_geometry = True,
                               new_grid_title = 'fine grid')
    assert f_grid is not None
-   # check some things about the refined grid
+
+   # re-open model and check some things about the refined grid
    model = rq.Model(epc)
    f_grid = grr.Grid(model, uuid = f_grid.uuid)
    assert tuple(f_grid.extent_kji) == tuple(fine_extent)
@@ -574,6 +579,7 @@ def test_refined_grid(tmp_path):
    assert np.all(p[:-1, :, :, 2] < p[1:, :, :, 2])
    assert np.all(p[:, :-1, :, 1] < p[:, 1:, :, 1])
    assert np.all(p[:, :, :-1, 0] < p[:, :, 1:, 0])
+
    # check property inheritance of cell lengths
    pc = f_grid.extract_property_collection()
    assert pc is not None and pc.number_of_parts() >= 3
@@ -583,3 +589,35 @@ def test_refined_grid(tmp_path):
       length_array = lpc.single_array_ref(facet_type = 'direction', facet = 'KJI'[axis])
       assert length_array is not None
       assert np.allclose(length_array, c_dxyz[2 - axis] / (2, 4, 3)[axis])
+
+   # make a (re-)coarsened version of the fine grid
+   cfc_grid = rqdm.coarsened_grid(epc,
+                                  f_grid,
+                                  fc,
+                                  inherit_properties = True,
+                                  set_parent_window = None,
+                                  infill_missing_geometry = True,
+                                  new_grid_title = 're-coarsened grid')
+   assert cfc_grid is not None
+
+   # re-open the model and re-load the new grid
+   model = rq.Model(epc)
+   assert len(model.parts(obj_type = 'IjkGridRepresentation')) == 3
+   cfc_grid = grr.Grid(model, uuid = cfc_grid.uuid)
+
+   # compare the re-coarsened grid with the original coarse grid
+   assert tuple(cfc_grid.extent_kji) == tuple(c_grid.extent_kji)
+   assert not cfc_grid.has_split_coordinate_lines
+   cfc_grid.cache_all_geometry_arrays()
+   assert_array_almost_equal(c_grid.points_cached, cfc_grid.points_cached)
+
+   # see how the cell length properties have fared
+   cfc_pc = cfc_grid.extract_property_collection()
+   assert cfc_grid is not None
+   assert cfc_pc.number_of_parts() >= 3
+   cfc_lpc = rqp.selective_version_of_collection(cfc_pc, property_kind = 'cell length')
+   assert cfc_lpc.number_of_parts() == 3
+   for axis in range(3):
+      length_array = cfc_lpc.single_array_ref(facet_type = 'direction', facet = 'KJI'[axis])
+      assert length_array is not None
+      assert np.allclose(length_array, c_dxyz[2 - axis])
