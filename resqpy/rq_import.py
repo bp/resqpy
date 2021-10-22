@@ -1,8 +1,9 @@
 """rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
-version = '5th August 2021'
+version = '22nd October 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
+# RMS and GOCAD are trademarks of Emerson
 
 import logging
 

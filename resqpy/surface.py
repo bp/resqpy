@@ -1,8 +1,9 @@
 """surface.py: surface class based on resqml standard."""
 
-version = '4th October 2021'
+version = '22nd October 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
+# GOCAD is also a trademark of Emerson
 
 import logging
 import warnings
