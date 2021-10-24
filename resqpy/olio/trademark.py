@@ -12,10 +12,10 @@ nexus_tm_level = None
 
 
 def log_nexus_tm(level = lg.INFO):
-   global nexus_tm_level
-   if isinstance(level, str):
-      level = lg.__dict__[level.upper()]
-   if nexus_tm_level is None or level > nexus_tm_level:
-      preamble = '(ignore severity) ' if level > 20 else ''
-      log.log(level, preamble + 'Nexus is a registered trademark of the Halliburton Company')
-      nexus_tm_level = level
+    global nexus_tm_level
+    if isinstance(level, str):
+        level = lg.__dict__[level.upper()]
+    if nexus_tm_level is None or level > nexus_tm_level:
+        preamble = '(ignore severity) ' if level > 20 else ''
+        log.log(level, preamble + 'Nexus is a registered trademark of the Halliburton Company')
+        nexus_tm_level = level

@@ -26,10 +26,10 @@ author = 'BP'
 # Version from git tag
 # See https://github.com/pypa/setuptools_scm/#usage-from-sphinx
 try:
-   from importlib import metadata
-   release = metadata.version('resqpy')
+    from importlib import metadata
+    release = metadata.version('resqpy')
 except Exception:
-   release = '0.0.0-version-not-available'
+    release = '0.0.0-version-not-available'
 
 # Take major/minor
 version = '.'.join(release.split('.')[:2])
@@ -51,11 +51,11 @@ autodoc_member_order = 'bysource'
 # napoleon_numpy_docstring = False  # Force consistency, leave only Google
 
 extensions = [
-   'sphinx.ext.autodoc',
-   'sphinx.ext.autosummary',
-   'sphinx.ext.napoleon',
-   'sphinx.ext.viewcode',
-   'autoclasstoc',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.viewcode',
+    'autoclasstoc',
 ]
 
 templates_path = ['_templates']
@@ -70,25 +70,25 @@ from autoclasstoc import PublicMethods
 
 
 class CommomMethods(PublicMethods):
-   key = "common-methods"
-   title = "Commonly Used Methods:"
+    key = "common-methods"
+    title = "Commonly Used Methods:"
 
-   def predicate(self, name, attr, meta):
-      return super().predicate(name, attr, meta) and 'common' in meta
+    def predicate(self, name, attr, meta):
+        return super().predicate(name, attr, meta) and 'common' in meta
 
 
 class OtherMethods(PublicMethods):
-   key = "other-methods"
-   title = "Methods:"
+    key = "other-methods"
+    title = "Methods:"
 
-   def predicate(self, name, attr, meta):
-      return super().predicate(name, attr, meta) and 'common' not in meta
+    def predicate(self, name, attr, meta):
+        return super().predicate(name, attr, meta) and 'common' not in meta
 
 
 autoclasstoc_sections = [
-   "public-attrs",
-   "common-methods",
-   "other-methods",
+    "public-attrs",
+    "common-methods",
+    "other-methods",
 ]
 
 # -- Options for HTML output -------------------------------------------------
@@ -99,7 +99,7 @@ html_theme = 'sphinx_rtd_theme'
 # See https://rackerlabs.github.io/docs-rackspace/tools/rtd-tables.html
 html_static_path = ['_static']
 html_context = {
-   'css_files': [
-      '_static/theme_overrides.css',  # override wide tables in RTD theme
-   ],
+    'css_files': [
+        '_static/theme_overrides.css',  # override wide tables in RTD theme
+    ],
 }

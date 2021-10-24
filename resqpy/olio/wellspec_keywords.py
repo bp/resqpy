@@ -127,79 +127,79 @@ wellspec_dtype['DZ']       = float
 
 
 def increment_complaints(keyword):
-   global wellspec_dict
-   assert (keyword.upper() in wellspec_dict.keys())
-   old_entry = wellspec_dict[keyword.upper()]
-   wellspec_dict[keyword.upper()] = (old_entry[0] + 1, old_entry[1], old_entry[2], old_entry[3], old_entry[4])
+    global wellspec_dict
+    assert (keyword.upper() in wellspec_dict.keys())
+    old_entry = wellspec_dict[keyword.upper()]
+    wellspec_dict[keyword.upper()] = (old_entry[0] + 1, old_entry[1], old_entry[2], old_entry[3], old_entry[4])
 
 
 def known_keyword(keyword):
-   return keyword.upper() in wellspec_dict.keys()
+    return keyword.upper() in wellspec_dict.keys()
 
 
 def add_unknown_keyword(keyword):
-   global wellspec_dict
-   assert (not known_keyword(keyword))
-   wellspec_dict[keyword.upper()] = (1, wk_unknown, wk_banned, None, False)  # assumes warning or error already given
+    global wellspec_dict
+    assert (not known_keyword(keyword))
+    wellspec_dict[keyword.upper()] = (1, wk_unknown, wk_banned, None, False)  # assumes warning or error already given
 
 
 def default_value(keyword):
-   assert (known_keyword(keyword))
-   return wellspec_dict[keyword][3]
+    assert (known_keyword(keyword))
+    return wellspec_dict[keyword][3]
 
 
 def complaints(keyword):
-   assert (known_keyword(keyword))
-   return wellspec_dict[keyword][0]
+    assert (known_keyword(keyword))
+    return wellspec_dict[keyword][0]
 
 
 def check_value(keyword, value):
-   try:
-      key = keyword.upper()
-      if not known_keyword(key):
-         return False
-      if key in ['IW', 'JW', 'L', 'LAYER', 'IRELPM', 'CELL', 'SECT', 'FLOWSECT', 'ZONE', 'IPTN']:
-         return int(value) > 0
-      elif key == 'GRID':
-         return len(str(value)) > 0
-      elif key == 'STAT':
-         return (str(value)).upper() in ['ON', 'OFF']
-      elif key == 'ANGLA':
-         return -360.0 <= float(value) and float(value) <= 360.0
-      elif key == 'ANGLV':
-         return 0.0 <= float(value) and float(value) <= 180.0
-      elif key in ['RADW', 'RADB', 'RADWP', 'RADBP']:
-         return float(value) > 0.0
-      elif key in ['WI', 'LENGTH', 'KH', 'KHMULT', 'K', 'DZ']:
-         return float(value) >= 0.0
-      elif key == 'PPERF':
-         return 0.0 <= float(value) and float(value) <= 1.0
-      elif key == 'ANGLE':
-         return 0.0 <= float(value) and float(value) <= 360.0
-      elif key in ['SKIN', 'DEPTH', 'X', 'Y', 'TEMP']:
-         float(value)
-         return True
-      else:
-         return True
-   except Exception:
-      return False
+    try:
+        key = keyword.upper()
+        if not known_keyword(key):
+            return False
+        if key in ['IW', 'JW', 'L', 'LAYER', 'IRELPM', 'CELL', 'SECT', 'FLOWSECT', 'ZONE', 'IPTN']:
+            return int(value) > 0
+        elif key == 'GRID':
+            return len(str(value)) > 0
+        elif key == 'STAT':
+            return (str(value)).upper() in ['ON', 'OFF']
+        elif key == 'ANGLA':
+            return -360.0 <= float(value) and float(value) <= 360.0
+        elif key == 'ANGLV':
+            return 0.0 <= float(value) and float(value) <= 180.0
+        elif key in ['RADW', 'RADB', 'RADWP', 'RADBP']:
+            return float(value) > 0.0
+        elif key in ['WI', 'LENGTH', 'KH', 'KHMULT', 'K', 'DZ']:
+            return float(value) >= 0.0
+        elif key == 'PPERF':
+            return 0.0 <= float(value) and float(value) <= 1.0
+        elif key == 'ANGLE':
+            return 0.0 <= float(value) and float(value) <= 360.0
+        elif key in ['SKIN', 'DEPTH', 'X', 'Y', 'TEMP']:
+            float(value)
+            return True
+        else:
+            return True
+    except Exception:
+        return False
 
 
 def required_out_list():
-   list = []
-   for key in wellspec_dict.keys():
-      if wellspec_dict[key][2] == wk_required:
-         list.append(key)
-   return list
+    list = []
+    for key in wellspec_dict.keys():
+        if wellspec_dict[key][2] == wk_required:
+            list.append(key)
+    return list
 
 
 def length_unit_conversion_applicable(keyword):
-   assert (known_keyword(keyword))
-   return wellspec_dict[keyword][4]
+    assert (known_keyword(keyword))
+    return wellspec_dict[keyword][4]
 
 
 def load_wellspecs(wellspec_file, well = None, column_list = []):
-   """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
+    """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
    args:
       wellspec_file (string): file path of ascii input file containing wellspec keywords
@@ -216,83 +216,84 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
          to a dataframe containing the wellspec data
    """
 
-   assert wellspec_file, 'no wellspec file specified'
+    assert wellspec_file, 'no wellspec file specified'
 
-   if column_list is not None:
-      for column in column_list:
-         assert column.upper() in wellspec_dict, 'unrecognized wellspec column name ' + str(column)
-   selecting = bool(column_list)
+    if column_list is not None:
+        for column in column_list:
+            assert column.upper() in wellspec_dict, 'unrecognized wellspec column name ' + str(column)
+    selecting = bool(column_list)
 
-   well_dict = {}  # maps from well name to pandas data frame with column_list as columns
+    well_dict = {}  # maps from well name to pandas data frame with column_list as columns
 
-   with open(wellspec_file, 'r') as fp:
-      while True:
-         found = kf.find_keyword(fp, 'WELLSPEC')
-         if not found:
-            break
-         line = fp.readline()
-         words = line.split()
-         assert len(words) >= 2, 'missing well name after WELLSPEC keyword'
-         well_name = words[1]
-         if well and well_name.upper() != well.upper():
-            continue
-         if column_list is None:
-            well_dict[well_name] = None
-            continue
-         kf.skip_blank_lines_and_comments(fp)
-         line = kf.strip_trailing_comment(fp.readline()).upper()
-         columns_present = line.split()
-         if selecting:
-            column_map = np.full((len(column_list),), -1, dtype = int)
-            for i in range(len(column_list)):
-               column = column_list[i].upper()
-               if column in columns_present:
-                  column_map[i] = columns_present.index(column)
-            df = pd.DataFrame(columns = column_list)
-         else:
-            df = pd.DataFrame(columns = columns_present)
-         while True:
-            kf.skip_comments(fp)
-            if kf.blank_line(fp):
-               break  # unclear from Nexus doc what marks end of table
-            if kf.specific_keyword_next(fp, 'WELLSPEC') or kf.specific_keyword_next(fp, 'WELLMOD'):
-               break
-            line = kf.strip_trailing_comment(fp.readline())
+    with open(wellspec_file, 'r') as fp:
+        while True:
+            found = kf.find_keyword(fp, 'WELLSPEC')
+            if not found:
+                break
+            line = fp.readline()
             words = line.split()
-            assert len(words) >= len(columns_present), f'insufficient data in line of wellspec table {well} [{line}]'
-            row_dict = {}
+            assert len(words) >= 2, 'missing well name after WELLSPEC keyword'
+            well_name = words[1]
+            if well and well_name.upper() != well.upper():
+                continue
+            if column_list is None:
+                well_dict[well_name] = None
+                continue
+            kf.skip_blank_lines_and_comments(fp)
+            line = kf.strip_trailing_comment(fp.readline()).upper()
+            columns_present = line.split()
             if selecting:
-               for col_index in range(len(column_list)):
-                  column = column_list[col_index]
-                  if column_map[col_index] < 0:
-                     if column_list[col_index].upper() == 'GRID':
-                        row_dict[column] = 'ROOT'
-                     else:
-                        row_dict[column] = np.NaN
-                  else:
-                     v = words[column_map[col_index]]
-                     if v == 'NA':
-                        row_dict[column] = np.NaN
-                     elif v == '#':
-                        row_dict[column] = v
-                     else:
-                        row_dict[column] = wellspec_dtype[column.upper()](v)
+                column_map = np.full((len(column_list),), -1, dtype = int)
+                for i in range(len(column_list)):
+                    column = column_list[i].upper()
+                    if column in columns_present:
+                        column_map[i] = columns_present.index(column)
+                df = pd.DataFrame(columns = column_list)
             else:
-               for column, v in zip(columns_present, words[:len(columns_present)]):
-                  if v == 'NA':
-                     row_dict[column] = np.NaN
-                  elif v == '#':
-                     row_dict[column] = v
-                  else:
-                     row_dict[column] = wellspec_dtype[column](v)
-            df = df.append(row_dict, ignore_index = True)
+                df = pd.DataFrame(columns = columns_present)
+            while True:
+                kf.skip_comments(fp)
+                if kf.blank_line(fp):
+                    break  # unclear from Nexus doc what marks end of table
+                if kf.specific_keyword_next(fp, 'WELLSPEC') or kf.specific_keyword_next(fp, 'WELLMOD'):
+                    break
+                line = kf.strip_trailing_comment(fp.readline())
+                words = line.split()
+                assert len(words) >= len(
+                    columns_present), f'insufficient data in line of wellspec table {well} [{line}]'
+                row_dict = {}
+                if selecting:
+                    for col_index in range(len(column_list)):
+                        column = column_list[col_index]
+                        if column_map[col_index] < 0:
+                            if column_list[col_index].upper() == 'GRID':
+                                row_dict[column] = 'ROOT'
+                            else:
+                                row_dict[column] = np.NaN
+                        else:
+                            v = words[column_map[col_index]]
+                            if v == 'NA':
+                                row_dict[column] = np.NaN
+                            elif v == '#':
+                                row_dict[column] = v
+                            else:
+                                row_dict[column] = wellspec_dtype[column.upper()](v)
+                else:
+                    for column, v in zip(columns_present, words[:len(columns_present)]):
+                        if v == 'NA':
+                            row_dict[column] = np.NaN
+                        elif v == '#':
+                            row_dict[column] = v
+                        else:
+                            row_dict[column] = wellspec_dtype[column](v)
+                df = df.append(row_dict, ignore_index = True)
 
-         if well:
-            well_dict[well] = df
-            break  # NB. if more than one table for a well, this function returns first, Nexus uses last
-         well_dict[well_name] = df
+            if well:
+                well_dict[well] = df
+                break  # NB. if more than one table for a well, this function returns first, Nexus uses last
+            well_dict[well_name] = df
 
 
 #   log.debug(f'load-wellspecs returning:\n{well_dict}')
 
-   return well_dict
+    return well_dict

@@ -30,15 +30,15 @@ namespace['dc'] = 'http://purl.org/dc/elements/1.1/'
 
 curly_namespace = {}
 for key, url in namespace.items():
-   curly_namespace[key] = '{' + url + '}'
+    curly_namespace[key] = '{' + url + '}'
 
 inverse_namespace = {}
 for key, url in namespace.items():
-   if url not in inverse_namespace:
-      inverse_namespace[url] = key
+    if url not in inverse_namespace:
+        inverse_namespace[url] = key
 
 
 def colon_namespace(url):
-   if url[0] == '{':
-      return inverse_namespace[url[1:-1]] + ':'
-   return inverse_namespace[url] + ':'
+    if url[0] == '{':
+        return inverse_namespace[url[1:-1]] + ':'
+    return inverse_namespace[url] + ':'
