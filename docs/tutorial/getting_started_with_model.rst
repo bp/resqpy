@@ -28,13 +28,22 @@ The rest of this tutorial assumes the import statement shown above. However, you
 
 Opening an existing RESQML dataset
 ----------------------------------
-The dataset is access via the epc file. It is opened with:
+The dataset is accessed via the epc file. It is opened with:
 
 .. code-block:: python
 
     model = rq.Model('/path/to/my_file.epc')
 
 Tip: the ``Model`` initialiser method has some optional arguments which are needed when creating a new dataset or copying an existing dataset before opening the duplicate.
+
+As a convenient shorthand, models can be opened using the :class:`resqpy.model.ModelContext` context manager:
+
+.. code-block:: python
+
+    with rq.ModelContext("my_model.epc", mode="read/write") as model:
+        print(model.uuids())
+
+When a RESQML dataset is opened in this way, file handles are safely closed when the "with" clause exits and optionally changes can be written to disk.
 
 A ``Model`` object is almost always the starting point for code using resqpy. The other resqpy object classes require a Model object which is treated as a 'parent'. The resqpy Model class is not equivalent to any of the RESQML classes, rather it should be thought of as equivalent to a whole epc file.
 
