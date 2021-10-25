@@ -17,17 +17,17 @@ import resqpy.olio.simple_lines as sl
 def pip_cn(p, poly):
     """2D point inclusion: returns True if point is inside polygon (uses crossing number algorithm).
 
-   arguments:
-      p (numpy array, tuple or list of at least 2 floats): xy point to test for inclusion in polygon
-      poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
-         defining a polygon
+    arguments:
+       p (numpy array, tuple or list of at least 2 floats): xy point to test for inclusion in polygon
+       poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
+          defining a polygon
 
-   returns:
-      boolean: True if point is within the polygon
+    returns:
+       boolean: True if point is within the polygon
 
-   note:
-      if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
-   """
+    note:
+       if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
+    """
 
     # p should be a tuple-like object with first two elements x, y
     # poly should be a numpy array with first axis being the different vertices
@@ -50,17 +50,17 @@ def pip_cn(p, poly):
 def pip_wn(p, poly):
     """2D point inclusion: returns True if point is inside polygon (uses winding number algorithm).
 
-   arguments:
-      p (numpy array, tuple or list of at least 2 floats): xy point to test for inclusion in polygon
-      poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
-         defining a polygon
+    arguments:
+       p (numpy array, tuple or list of at least 2 floats): xy point to test for inclusion in polygon
+       poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
+          defining a polygon
 
-   returns:
-      boolean: True if point is within the polygon
+    returns:
+       boolean: True if point is within the polygon
 
-   note:
-      if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
-   """
+    note:
+       if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
+    """
 
     winding = 0
 
@@ -84,19 +84,20 @@ def pip_wn(p, poly):
 
 
 def pip_array_cn(p_a, poly):
-    """array of 2D points inclusion: returns bool array True where point is inside polygon (uses crossing number algorithm).
+    """array of 2D points inclusion: returns bool array True where point is inside polygon (uses crossing number
+    algorithm).
 
-   arguments:
-      p_a (2D numpy float array): set of xy points to test for inclusion in polygon
-      poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
-         defining a polygon
+    arguments:
+       p_a (2D numpy float array): set of xy points to test for inclusion in polygon
+       poly (2D numpy array, tuple or list of tuples or lists of at least 2 floats): the xy points
+          defining a polygon
 
-   returns:
-      numpy boolean vector: True where corresponding point in p_a is within the polygon
+    returns:
+       numpy boolean vector: True where corresponding point in p_a is within the polygon
 
-   note:
-      if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
-   """
+    note:
+       if the polygon is represented by a closed resqpy Polyline, pass Polyline.coordinates as poly
+    """
 
     # p_array should be a numpy array of 2 or more axes; the final axis has extent at least 2, being x, y, ...
     # returned boolean array has shape of p_array less the final axis

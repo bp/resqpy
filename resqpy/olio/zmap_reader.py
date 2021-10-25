@@ -145,9 +145,9 @@ def read_zmapplusgrid(inputfile, dtype = np.float64):
 def read_roxar_mesh(inputfile, dtype = np.float64):
     """Read RMS text format surface mesh; returns triple (x, y, z) 2D arrays.
 
-   note:
-      the RMS text format was previously known as the Roxar format
-   """
+    note:
+       the RMS text format was previously known as the Roxar format
+    """
 
     return read_mesh(inputfile, dtype = dtype, format = 'rms')
 
@@ -155,8 +155,8 @@ def read_roxar_mesh(inputfile, dtype = np.float64):
 def read_rms_text_mesh(inputfile, dtype = np.float64):
     """Read RMS text format surface mesh; returns triple (x, y, z) 2D arrays.
 
-   note:
-      the RMS text format was previously known as the Roxar format
-   """
+    note:
+       the RMS text format was previously known as the Roxar format
+    """
 
     return read_roxar_mesh(inputfile, dtype = dtype)

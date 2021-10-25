@@ -88,35 +88,35 @@ class MdDatum(BaseResqpy):
             extra_metadata = None):
         """Initialises a new MdDatum object.
 
-      arguments:
-         parent_model (model.Model object): the model which the new md datum belongs to
-         uuid: If not None, load from existing object. Else, create new.
-         md_datum_root (optional): DEPRECATED: the root node of the xml tree representing the md datum;
-            if not None, the new md datum object is initialised based on data in the tree;
-            if None, the new object is initialised from the remaining arguments
-         crs_uuid (uuid.UUID): required if initialising from values
-         crs_root: DEPRECATED, use crs_uuid instead; the root node of the coordinate reference system
-            xml tree; ignored if uuid or md_datum_root is not None or crs_uuid is not None
-         location: (triple float): the x, y, z location of the new measured depth datum;
-            ignored if uuid or md_datum_root is not None
-         md_reference (string): human readable resqml standard string indicating the real
-            world nature of the datum, eg. 'kelly bushing'; the full list of options is
-            available as the global variable valid_md_reference_list in this module;
-            ignored if uuid or md_datum_root is not None
-         title (str, optional): the citation title to use for a new datum;
-            ignored if uuid or md_datum_root is not None
-         originator (str, optional): the name of the person creating the datum, defaults to login id;
-            ignored if uuid or md_datum_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
-            ignored if uuid or md_datum_root is not None
+        arguments:
+           parent_model (model.Model object): the model which the new md datum belongs to
+           uuid: If not None, load from existing object. Else, create new.
+           md_datum_root (optional): DEPRECATED: the root node of the xml tree representing the md datum;
+              if not None, the new md datum object is initialised based on data in the tree;
+              if None, the new object is initialised from the remaining arguments
+           crs_uuid (uuid.UUID): required if initialising from values
+           crs_root: DEPRECATED, use crs_uuid instead; the root node of the coordinate reference system
+              xml tree; ignored if uuid or md_datum_root is not None or crs_uuid is not None
+           location: (triple float): the x, y, z location of the new measured depth datum;
+              ignored if uuid or md_datum_root is not None
+           md_reference (string): human readable resqml standard string indicating the real
+              world nature of the datum, eg. 'kelly bushing'; the full list of options is
+              available as the global variable valid_md_reference_list in this module;
+              ignored if uuid or md_datum_root is not None
+           title (str, optional): the citation title to use for a new datum;
+              ignored if uuid or md_datum_root is not None
+           originator (str, optional): the name of the person creating the datum, defaults to login id;
+              ignored if uuid or md_datum_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
+              ignored if uuid or md_datum_root is not None
 
-      returns:
-         the newly instantiated measured depth datum object
+        returns:
+           the newly instantiated measured depth datum object
 
-      note:
-         this function does not create an xml node for the md datum; call the create_xml() method afterwards
-         if initialising from data other than an existing RESQML object
-      """
+        note:
+           this function does not create an xml node for the md datum; call the create_xml() method afterwards
+           if initialising from data other than an existing RESQML object
+        """
 
         if crs_root is not None:
             warnings.warn("Attribute 'crs_root' is deprecated. Use 'crs_uuid'", DeprecationWarning)
@@ -156,7 +156,7 @@ class MdDatum(BaseResqpy):
 
     @property
     def crs_root(self):
-        """XML node corresponding to self.crs_uuid"""
+        """XML node corresponding to self.crs_uuid."""
 
         return self.model.root_for_uuid(self.crs_uuid)
 
@@ -190,18 +190,18 @@ class MdDatum(BaseResqpy):
     def create_xml(self, add_as_part = True, add_relationships = True, title = None, originator = None):
         """Creates xml for a measured depth datum element; crs node must already exist; optionally adds as part.
 
-         arguments:
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-               in the model
-            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-               new md datum part to the crs
-            title (string): used as the citation Title text for the new md datum node
-            originator (string, optional): the name of the human being who created the md datum part;
-               default is to use the login name
+        arguments:
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+              new md datum part to the crs
+           title (string): used as the citation Title text for the new md datum node
+           originator (string, optional): the name of the human being who created the md datum part;
+              default is to use the login name
 
-         returns:
-            the newly created measured depth datum xml node
-      """
+        returns:
+           the newly created measured depth datum xml node
+        """
 
         md_reference = self.md_reference.lower()
         assert md_reference in valid_md_reference_list, 'invalid measured depth reference: ' + md_reference
@@ -244,22 +244,22 @@ class MdDatum(BaseResqpy):
 class DeviationSurvey(BaseResqpy):
     """Class for RESQML wellbore deviation survey.
 
-   RESQML documentation:
+    RESQML documentation:
 
-      Specifies the station data from a deviation survey.
+       Specifies the station data from a deviation survey.
 
-      The deviation survey does not provide a complete specification of the
-      geometry of a wellbore trajectory. Although a minimum-curvature
-      algorithm is used in most cases, the implementation varies sufficiently
-      that no single algorithmic specification is available as a data transfer
-      standard.
+       The deviation survey does not provide a complete specification of the
+       geometry of a wellbore trajectory. Although a minimum-curvature
+       algorithm is used in most cases, the implementation varies sufficiently
+       that no single algorithmic specification is available as a data transfer
+       standard.
 
-      Instead, the geometry of a RESQML wellbore trajectory is represented by
-      a parametric line, parameterized by the MD.
+       Instead, the geometry of a RESQML wellbore trajectory is represented by
+       a parametric line, parameterized by the MD.
 
-      CRS and units of measure do not need to be consistent with the CRS and
-      units of measure for wellbore trajectory representation.
-   """
+       CRS and units of measure do not need to be consistent with the CRS and
+       units of measure for wellbore trajectory representation.
+    """
 
     resqml_type = 'DeviationSurveyRepresentation'
 
@@ -282,35 +282,35 @@ class DeviationSurvey(BaseResqpy):
                  extra_metadata = None):
         """Load or create a DeviationSurvey object.
 
-      If uuid is given, loads from XML. Else, create new. If loading from disk, other
-      parameters will be overwritten.
+        If uuid is given, loads from XML. Else, create new. If loading from disk, other
+        parameters will be overwritten.
 
-      Args:
-         parent_model (model.Model): the model which the new survey belongs to
-         uuid (uuid.UUID): If given, loads from disk. Else, creates new.
-         title (str): Citation title
-         deviation_survey_root: DEPCRECATED. If given, load from disk.
-         represented_interp (wellbore interpretation): if present, is noted as the wellbore
-            interpretation object which this deviation survey relates to
-         md_datum (MdDatum): the datum that the depths for this survey are measured from
-         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
-            measured depths; should be 'm' or 'ft'
-         angle_uom (string): a resqml angle unit; should be 'dega' or 'rad'
-         measured_depths (np.array): 1d array
-         azimuths (np.array): 1d array
-         inclindations (np.array): 1d array
-         station_count (int): length of measured_depths, azimuths & inclinations
-         first_station (tuple): (x, y, z) of first point in survey, in crs for md datum
-         is_final (bool): whether survey is a finalised deviation survey
-         originator (str): name of author
-         extra_metadata (dict, optional): extra metadata key, value pairs
+        Args:
+           parent_model (model.Model): the model which the new survey belongs to
+           uuid (uuid.UUID): If given, loads from disk. Else, creates new.
+           title (str): Citation title
+           deviation_survey_root: DEPCRECATED. If given, load from disk.
+           represented_interp (wellbore interpretation): if present, is noted as the wellbore
+              interpretation object which this deviation survey relates to
+           md_datum (MdDatum): the datum that the depths for this survey are measured from
+           md_uom (string, default 'm'): a resqml length unit of measure applicable to the
+              measured depths; should be 'm' or 'ft'
+           angle_uom (string): a resqml angle unit; should be 'dega' or 'rad'
+           measured_depths (np.array): 1d array
+           azimuths (np.array): 1d array
+           inclindations (np.array): 1d array
+           station_count (int): length of measured_depths, azimuths & inclinations
+           first_station (tuple): (x, y, z) of first point in survey, in crs for md datum
+           is_final (bool): whether survey is a finalised deviation survey
+           originator (str): name of author
+           extra_metadata (dict, optional): extra metadata key, value pairs
 
-      Returns:
-         DeviationSurvey
+        Returns:
+           DeviationSurvey
 
-      Notes:
-         this method does not create an xml node, nor write hdf5 arrays
-      """
+        Notes:
+           this method does not create an xml node, nor write hdf5 arrays
+        """
 
         self.is_final = is_final
         self.md_uom = bwam.rq_length_unit(md_uom)
@@ -356,28 +356,28 @@ class DeviationSurvey(BaseResqpy):
                         angle_uom = 'dega'):
         """Load MD, aximuth & inclination data from a pandas data frame.
 
-      Args:
-         parent_model (model.Model): the parent resqml model
-         data_frame: a pandas dataframe holding the deviation survey data
-         md_datum (MdDatum object): the datum that the depths for this survey are measured from
-         md_col (string, default 'MD'): the name of the column holding measured depth values
-         azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
-            to the north direction (+ve y axis) of the coordinate reference system
-         inclination_col (string, default 'INCL'): the name of the column holding inclination values
-         x_col (string, default 'X'): the name of the column holding an x value in the first row
-         y_col (string, default 'Y'): the name of the column holding an Y value in the first row
-         z_col (string, default 'Z'): the name of the column holding an z value in the first row
-         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
-            measured depths; should be 'm' or 'ft'
-         angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
-            the azimuth and inclination data
+        Args:
+           parent_model (model.Model): the parent resqml model
+           data_frame: a pandas dataframe holding the deviation survey data
+           md_datum (MdDatum object): the datum that the depths for this survey are measured from
+           md_col (string, default 'MD'): the name of the column holding measured depth values
+           azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
+              to the north direction (+ve y axis) of the coordinate reference system
+           inclination_col (string, default 'INCL'): the name of the column holding inclination values
+           x_col (string, default 'X'): the name of the column holding an x value in the first row
+           y_col (string, default 'Y'): the name of the column holding an Y value in the first row
+           z_col (string, default 'Z'): the name of the column holding an z value in the first row
+           md_uom (string, default 'm'): a resqml length unit of measure applicable to the
+              measured depths; should be 'm' or 'ft'
+           angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
+              the azimuth and inclination data
 
-      Returns:
-         DeviationSurvey
+        Returns:
+           DeviationSurvey
 
-      Note:
-         The X, Y & Z columns are only used to set the first station location (from the first row)
-      """
+        Note:
+           The X, Y & Z columns are only used to set the first station location (from the first row)
+        """
 
         for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
             assert col in data_frame.columns
@@ -415,31 +415,31 @@ class DeviationSurvey(BaseResqpy):
                         md_datum = None):
         """Load MD, aximuth & inclination data from an ascii deviation survey file.
 
-      Arguments:
-         parent_model (model.Model): the parent resqml model
-         deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
-         comment_character (string): the character to be treated as introducing comments
-         space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
-            if True, columns are expected to be seperated by white space
-         md_col (string, default 'MD'): the name of the column holding measured depth values
-         azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
-            to the north direction (+ve y axis) of the coordinate reference system
-         inclination_col (string, default 'INCL'): the name of the column holding inclination values
-         x_col (string, default 'X'): the name of the column holding an x value in the first row
-         y_col (string, default 'Y'): the name of the column holding an Y value in the first row
-         z_col (string, default 'Z'): the name of the column holding an z value in the first row
-         md_uom (string, default 'm'): a resqml length unit of measure applicable to the
-            measured depths; should be 'm' or 'ft'
-         angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
-            the azimuth and inclination data
-         md_datum (MdDatum object): the datum that the depths for this survey are measured from
+        Arguments:
+           parent_model (model.Model): the parent resqml model
+           deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
+           comment_character (string): the character to be treated as introducing comments
+           space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
+              if True, columns are expected to be seperated by white space
+           md_col (string, default 'MD'): the name of the column holding measured depth values
+           azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
+              to the north direction (+ve y axis) of the coordinate reference system
+           inclination_col (string, default 'INCL'): the name of the column holding inclination values
+           x_col (string, default 'X'): the name of the column holding an x value in the first row
+           y_col (string, default 'Y'): the name of the column holding an Y value in the first row
+           z_col (string, default 'Z'): the name of the column holding an z value in the first row
+           md_uom (string, default 'm'): a resqml length unit of measure applicable to the
+              measured depths; should be 'm' or 'ft'
+           angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
+              the azimuth and inclination data
+           md_datum (MdDatum object): the datum that the depths for this survey are measured from
 
-      Returns:
-         DeviationSurvey
+        Returns:
+           DeviationSurvey
 
-      Note:
-         The X, Y & Z columns are only used to set the first station location (from the first row)
-      """
+        Note:
+           The X, Y & Z columns are only used to set the first station location (from the first row)
+        """
 
         try:
             df = pd.read_csv(deviation_survey_file,
@@ -466,11 +466,11 @@ class DeviationSurvey(BaseResqpy):
     def _load_from_xml(self):
         """Load attributes from xml and associated hdf5 data.
 
-      This is invoked as part of the init method when an existing uuid is given.
-      
-      Returns:
-         [bool]: True if sucessful
-      """
+        This is invoked as part of the init method when an existing uuid is given.
+
+        Returns:
+           [bool]: True if sucessful
+        """
 
         # Get node from self.uuid
         node = self.root
@@ -511,23 +511,23 @@ class DeviationSurvey(BaseResqpy):
                    originator = None):
         """Creates a deviation survey representation xml element from this DeviationSurvey object.
 
-      arguments:
-         ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the deviation survey arrays
-         md_datum_root: the root xml node for the measured depth datum that the deviation survey depths
-            are based on
-         md_datum_xyz: TODO: document this
-         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-            in the model
-         add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-            new deviation survey part to the measured depth datum part
-         title (string): used as the citation Title text; should usually refer to the well name in a
-            human readable way
-         originator (string, optional): the name of the human being who created the deviation survey part;
-            default is to use the login name
+        arguments:
+           ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the deviation survey arrays
+           md_datum_root: the root xml node for the measured depth datum that the deviation survey depths
+              are based on
+           md_datum_xyz: TODO: document this
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+              new deviation survey part to the measured depth datum part
+           title (string): used as the citation Title text; should usually refer to the well name in a
+              human readable way
+           originator (string, optional): the name of the human being who created the deviation survey part;
+              default is to use the login name
 
-      returns:
-         the newly created deviation survey xml node
-      """
+        returns:
+           the newly created deviation survey xml node
+        """
 
         assert self.station_count > 0
 
@@ -635,7 +635,7 @@ class DeviationSurvey(BaseResqpy):
         h5_reg.write(file = file_name, mode = mode)
 
     def _load_related_datum(self):
-        """Return related MdDatum object from XML if present"""
+        """Return related MdDatum object from XML if present."""
 
         md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(self.root, 'MdDatum'), 'UUID'))
         if md_datum_uuid is not None:
@@ -646,7 +646,7 @@ class DeviationSurvey(BaseResqpy):
         return md_datum
 
     def _load_related_wellbore_interp(self):
-        """Return related wellbore interp object from XML if present"""
+        """Return related wellbore interp object from XML if present."""
 
         interp_uuid = rqet.find_nested_tags_text(self.root, ['RepresentedInterpretation', 'UUID'])
         if interp_uuid is None:
@@ -659,10 +659,10 @@ class DeviationSurvey(BaseResqpy):
 class Trajectory(BaseResqpy):
     """Class for RESQML Wellbore Trajectory Representation (Geometry).
 
-   note:
-      resqml allows trajectory to have different crs to the measured depth datum crs;
-      however, this code requires the trajectory to be in the same crs as the md datum
-   """
+    note:
+       resqml allows trajectory to have different crs to the measured depth datum crs;
+       however, this code requires the trajectory to be in the same crs as the md datum
+    """
 
     resqml_type = 'WellboreTrajectoryRepresentation'
     well_name = rqo._alias_for_attribute("title")
@@ -689,60 +689,61 @@ class Trajectory(BaseResqpy):
             hdf5_source_model = None,
             originator = None,
             extra_metadata = None):
-        """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or ascii file.
+        """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or
+        ascii file.
 
-      arguments:
-         parent_model (model.Model object): the model which the new trajectory belongs to
-         trajectory_root (DEPRECATED): use uuid instead; the root node of an xml tree representing the trajectory;
-            if not None, the new trajectory object is initialised based on the data in the tree;
-            if None, one of the other arguments is used
-         md_datum (MdDatum object): the datum that the depths for this trajectory are measured from;
-            not used if uuid or trajectory_root is not None
-         deviation_survey (DeviationSurvey object, optional): if present and uuid and trajectory_root are None
-            then the trajectory is derived from the deviation survey based on minimum curvature
-         data_frame (optional): a pandas dataframe with columns 'MD', 'X', 'Y' and 'Z', holding
-            the measured depths, and corresponding node locations; ignored if uuid or trajectory_root is not None
-         grid (grid.Grid object, optional): only required if initialising from a list of cell indices;
-            ignored otherwise
-         cell_kji0_list (numpy int array of shape (N, 3)): ordered list of cell indices to be visited by
-            the trajectory; ignored if uuid or trajectory_root is not None
-         wellspec_file (string, optional): name of an ascii file containing Nexus WELLSPEC data; well_name
-            and length_uom arguments must be passed
-         spline_mode (string, default 'cube'): one of 'none', 'linear', 'square', or 'cube'; affects spline
-            tangent generation; only relevant if initialising from list of cells
-         deviation_survey_file (string): filename of an ascii file holding the trajectory
-            in a tabular form; ignored if uuid or trajectory_root is not None
-         survey_file_space_separated (boolean, default False): if True, deviation survey file is
-            space separated; if False, comma separated (csv); ignored unless loading from survey file
-         length_uom (string, default 'm'): a resqml length unit of measure applicable to the
-            measured depths; should be 'm' or 'ft'
-         md_domain (string, optional): if present, must be 'logger' or 'driller'; the source of the original
-            deviation data; ignored if uuid or trajectory_root is not None
-         represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-            interpretation object which this trajectory relates to; ignored if uuid or trajectory_root is not None
-         well_name (string, optional): used as citation title
-         set_tangent_vectors (boolean, default False): if True and tangent vectors are not loaded then they will
-            be computed from the control points
-         hdf5_source_model (model.Model, optional): if present this model is used to determine the hdf5 file
-            name from which to load the trajectory's array data; if None, the parent_model is used as usual
-         originator (str, optional): the name of the person creating the trajectory, defaults to login id;
-            ignored if uuid or trajectory_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the trajectory;
-            ignored if uuid or trajectory_root is not None
+        arguments:
+           parent_model (model.Model object): the model which the new trajectory belongs to
+           trajectory_root (DEPRECATED): use uuid instead; the root node of an xml tree representing the trajectory;
+              if not None, the new trajectory object is initialised based on the data in the tree;
+              if None, one of the other arguments is used
+           md_datum (MdDatum object): the datum that the depths for this trajectory are measured from;
+              not used if uuid or trajectory_root is not None
+           deviation_survey (DeviationSurvey object, optional): if present and uuid and trajectory_root are None
+              then the trajectory is derived from the deviation survey based on minimum curvature
+           data_frame (optional): a pandas dataframe with columns 'MD', 'X', 'Y' and 'Z', holding
+              the measured depths, and corresponding node locations; ignored if uuid or trajectory_root is not None
+           grid (grid.Grid object, optional): only required if initialising from a list of cell indices;
+              ignored otherwise
+           cell_kji0_list (numpy int array of shape (N, 3)): ordered list of cell indices to be visited by
+              the trajectory; ignored if uuid or trajectory_root is not None
+           wellspec_file (string, optional): name of an ascii file containing Nexus WELLSPEC data; well_name
+              and length_uom arguments must be passed
+           spline_mode (string, default 'cube'): one of 'none', 'linear', 'square', or 'cube'; affects spline
+              tangent generation; only relevant if initialising from list of cells
+           deviation_survey_file (string): filename of an ascii file holding the trajectory
+              in a tabular form; ignored if uuid or trajectory_root is not None
+           survey_file_space_separated (boolean, default False): if True, deviation survey file is
+              space separated; if False, comma separated (csv); ignored unless loading from survey file
+           length_uom (string, default 'm'): a resqml length unit of measure applicable to the
+              measured depths; should be 'm' or 'ft'
+           md_domain (string, optional): if present, must be 'logger' or 'driller'; the source of the original
+              deviation data; ignored if uuid or trajectory_root is not None
+           represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
+              interpretation object which this trajectory relates to; ignored if uuid or trajectory_root is not None
+           well_name (string, optional): used as citation title
+           set_tangent_vectors (boolean, default False): if True and tangent vectors are not loaded then they will
+              be computed from the control points
+           hdf5_source_model (model.Model, optional): if present this model is used to determine the hdf5 file
+              name from which to load the trajectory's array data; if None, the parent_model is used as usual
+           originator (str, optional): the name of the person creating the trajectory, defaults to login id;
+              ignored if uuid or trajectory_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the trajectory;
+              ignored if uuid or trajectory_root is not None
 
-      returns:
-         the newly created wellbore trajectory object
+        returns:
+           the newly created wellbore trajectory object
 
-      notes:
-         if starting from a deviation survey file, there are two routes: create a deviation survey object first,
-         using the azimuth and inclination data, then generate a trajectory from that based on minimum curvature;
-         or, create a trajectory directly using X, Y, Z data from the deviation survey file (ie. minimum
-         curvature or other algorithm already applied externally);
-         if not loading from xml, then the crs is set to that used by the measured depth datum, or if that is not
-         available then the default crs for the model
+        notes:
+           if starting from a deviation survey file, there are two routes: create a deviation survey object first,
+           using the azimuth and inclination data, then generate a trajectory from that based on minimum curvature;
+           or, create a trajectory directly using X, Y, Z data from the deviation survey file (ie. minimum
+           curvature or other algorithm already applied externally);
+           if not loading from xml, then the crs is set to that used by the measured depth datum, or if that is not
+           available then the default crs for the model
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         self.crs_uuid = None
         self.title = well_name
@@ -817,18 +818,18 @@ class Trajectory(BaseResqpy):
 
     @property
     def crs_root(self):
-        """XML node corresponding to self.crs_uuid"""
+        """XML node corresponding to self.crs_uuid."""
 
         return self.model.root_for_uuid(self.crs_uuid)
 
     def iter_wellbore_frames(self):
-        """ Iterable of all WellboreFrames associated with a trajectory
+        """Iterable of all WellboreFrames associated with a trajectory.
 
-      Yields:
-         frame: instance of :class:`resqpy.organize.WellboreFrame`
+        Yields:
+           frame: instance of :class:`resqpy.organize.WellboreFrame`
 
-      :meta common:
-      """
+        :meta common:
+        """
         uuids = self.model.uuids(obj_type = "WellboreFrameRepresentation", related_uuid = self.uuid)
         for uuid in uuids:
             yield WellboreFrame(self.model, uuid = uuid)
@@ -1080,23 +1081,23 @@ class Trajectory(BaseResqpy):
     def set_tangents(self, force = False, write_hdf5 = False, weight = 'cube'):
         """Calculates tangent vectors based on control points.
 
-      arguments:
-         force (boolean, default False): if False and tangent vectors already exist then the existing ones are used;
-            if True or no tangents vectors exist then they are computed
-         write_hdf5 (boolean, default False): if True and new tangent vectors are computed then the array is also written
-            directly to the hdf5 file
-         weight (string, default 'linear'): one of 'linear', 'square', 'cube'; if linear, each tangent is the mean of the
-            direction vectors of the two trjectory segments which meet at the knot; the square and cube options give
-            increased weight to the direction vector of shorter segments (usually better)
+        arguments:
+           force (boolean, default False): if False and tangent vectors already exist then the existing ones are used;
+              if True or no tangents vectors exist then they are computed
+           write_hdf5 (boolean, default False): if True and new tangent vectors are computed then the array is also written
+              directly to the hdf5 file
+           weight (string, default 'linear'): one of 'linear', 'square', 'cube'; if linear, each tangent is the mean of the
+              direction vectors of the two trjectory segments which meet at the knot; the square and cube options give
+              increased weight to the direction vector of shorter segments (usually better)
 
-      returns:
-         numpy float array of shape (knot_count, 3) being the tangents in xyz, 'pointing' in the direction of increased
-         knot index; the tangents are also stored as an attribute of the object
+        returns:
+           numpy float array of shape (knot_count, 3) being the tangents in xyz, 'pointing' in the direction of increased
+           knot index; the tangents are also stored as an attribute of the object
 
-      note:
-         the write_hdf5() method writes all the array data for the trajectory, including the tangent vectors; only set
-         the write_hdf5 argument to this method to True if the other arrays for the trajectory already exist in the hdf5 file
-      """
+        note:
+           the write_hdf5() method writes all the array data for the trajectory, including the tangent vectors; only set
+           the write_hdf5 argument to this method to True if the other arrays for the trajectory already exist in the hdf5 file
+        """
 
         if self.tangent_vectors is not None and not force:
             return self.tangent_vectors
@@ -1115,11 +1116,11 @@ class Trajectory(BaseResqpy):
     def dataframe(self, md_col = 'MD', x_col = 'X', y_col = 'Y', z_col = 'Z'):
         """Returns a pandas data frame containing MD and control points (xyz) data.
 
-      note:
-         set md_col to None for a dataframe containing only X, Y & Z data
+        note:
+           set md_col to None for a dataframe containing only X, Y & Z data
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if md_col:
             column_list = [md_col, x_col, y_col, z_col]
@@ -1144,30 +1145,31 @@ class Trajectory(BaseResqpy):
                             z_col = 'Z'):
         """Writes trajectory to an ascii file.
 
-      note:
-         set md_col to None for a dataframe containing only X, Y & Z data
-      """
+        note:
+           set md_col to None for a dataframe containing only X, Y & Z data
+        """
 
         df = self.dataframe(md_col = md_col, x_col = x_col, y_col = y_col, z_col = z_col)
         sep = ' ' if space_separated_instead_of_csv else ','
         df.to_csv(trajectory_file, sep = sep, index = False, mode = mode)
 
     def xyz_for_md(self, md):
-        """Returns an xyz triplet corresponding to the given measured depth; uses simple linear interpolation between knots.
+        """Returns an xyz triplet corresponding to the given measured depth; uses simple linear interpolation between
+        knots.
 
-      args:
-         md (float): measured depth for which xyz location is required; units must be those of self.md_uom
+        args:
+           md (float): measured depth for which xyz location is required; units must be those of self.md_uom
 
-      returns:
-         triple float being x, y, z coordinates of point on trajectory corresponding to given measured depth
+        returns:
+           triple float being x, y, z coordinates of point on trajectory corresponding to given measured depth
 
-      note:
-         the algorithm uses a simple linear interpolation between neighbouring knots (control points) on the trajectory;
-         if the measured depth is less than zero or greater than the finish md, a single None is returned; if the md is
-         less than the start md then a linear interpolation between the md datum location and the first knot is returned
+        note:
+           the algorithm uses a simple linear interpolation between neighbouring knots (control points) on the trajectory;
+           if the measured depth is less than zero or greater than the finish md, a single None is returned; if the md is
+           less than the start md then a linear interpolation between the md datum location and the first knot is returned
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         def interpolate(p1, p2, f):
             return f * p2 + (1.0 - f) * p1
@@ -1201,38 +1203,38 @@ class Trajectory(BaseResqpy):
                            store_tangents_if_calculated = True):
         """Creates and returns a new Trajectory derived as a cubic spline of this trajectory.
 
-      arguments:
-         well_name (string): the name to use as the citation title for the new trajectory
-         min_subdivisions (+ve integer, default 1): the minimum number of segments in the trajectory for each
-            segment in this trajectory
-         max_segment_length (float, optional): if present, each segment of this trajectory is subdivided so
-            that the naive subdivided length is not greater than the specified length
-         max_degrees_per_knot (float, default 5.0): the maximum number of degrees
-         use_tangents_if_present (boolean, default False): if True, any tangent vectors in this trajectory
-            are used during splining
-         store_tangents_if_calculated (boolean, default True): if True any tangents calculated by the method
-            are stored in the object (causing any previous tangents to be discarded); however, the new tangents
-            are not written to the hdf5 file by this method
+        arguments:
+           well_name (string): the name to use as the citation title for the new trajectory
+           min_subdivisions (+ve integer, default 1): the minimum number of segments in the trajectory for each
+              segment in this trajectory
+           max_segment_length (float, optional): if present, each segment of this trajectory is subdivided so
+              that the naive subdivided length is not greater than the specified length
+           max_degrees_per_knot (float, default 5.0): the maximum number of degrees
+           use_tangents_if_present (boolean, default False): if True, any tangent vectors in this trajectory
+              are used during splining
+           store_tangents_if_calculated (boolean, default True): if True any tangents calculated by the method
+              are stored in the object (causing any previous tangents to be discarded); however, the new tangents
+              are not written to the hdf5 file by this method
 
-      returns:
-         Trajectory object with control points lying on a cubic spline of the points of this trajectory
+        returns:
+           Trajectory object with control points lying on a cubic spline of the points of this trajectory
 
-      notes:
-         this method is typically used to smoothe an artificial or simulator trajectory;
-         measured depths are re-calculated and will differ from those in this trajectory;
-         unexpected behaviour may occur if the z units are different from the xy units in the crs;
-         if tangent vectors for neighbouring points in this trajectory are pointing in opposite directions,
-         the resulting spline is likely to be bad;
-         the max_segment_length is applied when deciding how many subdivisions to make for a segment in this
-         trajectory, based on the stright line segment length; segments in the resulting spline may exceed this
-         length;
-         similarly max_degrees_per_knot assumes a simply bend between neighbouring knots; if the position of the
-         control points results in a loop, the value may be exceeded in the spline;
-         the hdf5 data for the splined trajectory is not written by this method, neither is the xml created;
-         no interpretation object is created by this method
-         NB: direction of tangent vectors affects results, set use_tangents_if_present = False to
-         ensure locally calculated tangent vectors are used
-      """
+        notes:
+           this method is typically used to smoothe an artificial or simulator trajectory;
+           measured depths are re-calculated and will differ from those in this trajectory;
+           unexpected behaviour may occur if the z units are different from the xy units in the crs;
+           if tangent vectors for neighbouring points in this trajectory are pointing in opposite directions,
+           the resulting spline is likely to be bad;
+           the max_segment_length is applied when deciding how many subdivisions to make for a segment in this
+           trajectory, based on the stright line segment length; segments in the resulting spline may exceed this
+           length;
+           similarly max_degrees_per_knot assumes a simply bend between neighbouring knots; if the position of the
+           control points results in a loop, the value may be exceeded in the spline;
+           the hdf5 data for the splined trajectory is not written by this method, neither is the xml created;
+           no interpretation object is created by this method
+           NB: direction of tangent vectors affects results, set use_tangents_if_present = False to
+           ensure locally calculated tangent vectors are used
+        """
 
         assert self.knot_count > 1 and self.control_points is not None
         assert min_subdivisions >= 1
@@ -1281,10 +1283,11 @@ class Trajectory(BaseResqpy):
         return self.measured_depths
 
     def create_feature_and_interpretation(self):
-        """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does not already exist.
-      
-      Uses the trajectory citation title as the well name
-      """
+        """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does
+        not already exist.
+
+        Uses the trajectory citation title as the well name
+        """
 
         log.debug("Creating a new WellboreInterpretation..")
         log.debug(f"WellboreFeature exists: {self.wellbore_feature is not None}")
@@ -1310,14 +1313,14 @@ class Trajectory(BaseResqpy):
                    originator = None):
         """Create a wellbore trajectory representation node from a Trajectory object, optionally add as part.
 
-         notes:
-            measured depth datum xml node must be in place before calling this function;
-            branching well structures (multi-laterals) are supported by the resqml standard but not yet by
-            this code;
-            optional witsml trajectory reference not yet supported here
+           notes:
+              measured depth datum xml node must be in place before calling this function;
+              branching well structures (multi-laterals) are supported by the resqml standard but not yet by
+              this code;
+              optional witsml trajectory reference not yet supported here
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if title:
             self.title = title
@@ -1459,10 +1462,11 @@ class Trajectory(BaseResqpy):
         return wbt_node
 
     def write_hdf5(self, file_name = None, mode = 'a'):
-        """Create or append to an hdf5 file, writing datasets for the measured depths, control points and tangent vectors.
+        """Create or append to an hdf5 file, writing datasets for the measured depths, control points and tangent
+        vectors.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # NB: array data must all have been set up prior to calling this function
         if self.uuid is None:
@@ -1476,7 +1480,10 @@ class Trajectory(BaseResqpy):
         h5_reg.write(file = file_name, mode = mode)
 
     def __eq__(self, other):
-        """Implements equals operator. Compares class type and uuid"""
+        """Implements equals operator.
+
+        Compares class type and uuid
+        """
 
         # TODO: more detailed equality comparison
         other_uuid = getattr(other, "uuid", None)
@@ -1486,17 +1493,16 @@ class Trajectory(BaseResqpy):
 class WellboreFrame(BaseResqpy):
     """Class for RESQML WellboreFrameRepresentation objects (supporting well log Properties)
 
-   RESQML documentation:
+    RESQML documentation:
 
-      Representation of a wellbore that is organized along a wellbore trajectory by its MD values.
-      RESQML uses MD values to associate properties on points and to organize association of
-      properties on intervals between MD points.
+       Representation of a wellbore that is organized along a wellbore trajectory by its MD values.
+       RESQML uses MD values to associate properties on points and to organize association of
+       properties on intervals between MD points.
 
-   Roughly equivalent to a Techlog "dataset" object with a given depth reference.
+    Roughly equivalent to a Techlog "dataset" object with a given depth reference.
 
-   The `logs` attribute is a :class:`resqpy.property.WellLogCollection` of all logs in the frame.
-
-   """
+    The `logs` attribute is a :class:`resqpy.property.WellLogCollection` of all logs in the frame.
+    """
 
     resqml_type = 'WellboreFrameRepresentation'
 
@@ -1512,30 +1518,30 @@ class WellboreFrame(BaseResqpy):
                  extra_metadata = None):
         """Creates a new wellbore frame object and optionally loads it from xml or list of measured depths.
 
-      arguments:
-         parent_model (model.Model object): the model which the new wellbore frame belongs to
-         frame_root (optional): DEPRECATED. the root node of an xml tree representing the wellbore frame;
-            if not None, the new wellbore frame object is initialised based on the data in the tree;
-            if None, an empty wellbore frame object is returned
-         trajectory (Trajectory object, optional): the trajectory of the well; required if loading from
-            list of measured depths
-         mds (optional numpy 1D array, tuple or list of floats): ordered list of measured depths which
-            will constitute the frame; ignored if frame_root is not None
-         represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-            interpretation object which this frame relates to; ignored if frame_root is not None
-         title (str, optional): the citation title to use for a new wellbore frame;
-            ignored if uuid or frame_root is not None
-         originator (str, optional): the name of the person creating the wellbore frame, defaults to login id;
-            ignored if uuid or frame_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore frame;
-            ignored if uuid or frame_root is not None
+        arguments:
+           parent_model (model.Model object): the model which the new wellbore frame belongs to
+           frame_root (optional): DEPRECATED. the root node of an xml tree representing the wellbore frame;
+              if not None, the new wellbore frame object is initialised based on the data in the tree;
+              if None, an empty wellbore frame object is returned
+           trajectory (Trajectory object, optional): the trajectory of the well; required if loading from
+              list of measured depths
+           mds (optional numpy 1D array, tuple or list of floats): ordered list of measured depths which
+              will constitute the frame; ignored if frame_root is not None
+           represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
+              interpretation object which this frame relates to; ignored if frame_root is not None
+           title (str, optional): the citation title to use for a new wellbore frame;
+              ignored if uuid or frame_root is not None
+           originator (str, optional): the name of the person creating the wellbore frame, defaults to login id;
+              ignored if uuid or frame_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore frame;
+              ignored if uuid or frame_root is not None
 
-      returns:
-         the newly created wellbore frame object
+        returns:
+           the newly created wellbore frame object
 
-      note:
-         if initialising from a list of measured depths, the wellbore trajectory object must already exist
-      """
+        note:
+           if initialising from a list of measured depths, the wellbore trajectory object must already exist
+        """
 
         #: Associated wellbore trajectory, an instance of :class:`resqpy.well.Trajectory`.
         self.trajectory = trajectory
@@ -1613,10 +1619,11 @@ class WellboreFrame(BaseResqpy):
         return self.trajectory.crs_root
 
     def create_feature_and_interpretation(self):
-        """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does not already exist.
-      
-      Uses the wellboreframe citation title as the well name
-      """
+        """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does
+        not already exist.
+
+        Uses the wellboreframe citation title as the well name
+        """
         if self.wellbore_interpretation is not None:
             log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
             self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, feature_name = self.title)
@@ -1646,9 +1653,9 @@ class WellboreFrame(BaseResqpy):
                    originator = None):
         """Create a wellbore frame representation node from this WellboreFrame object, optionally add as part.
 
-      note:
-         trajectory xml node must be in place before calling this function
-      """
+        note:
+           trajectory xml node must be in place before calling this function
+        """
 
         assert self.trajectory is not None, 'trajectory object missing'
         assert self.trajectory.root is not None, 'trajectory xml not established'
@@ -1722,15 +1729,15 @@ class WellboreFrame(BaseResqpy):
 class BlockedWell(BaseResqpy):
     """Class for RESQML Blocked Wellbore Representation (Wells), ie cells visited by wellbore.
 
-   RESQML documentation:
+    RESQML documentation:
 
-      The information that allows you to locate, on one or several grids (existing or planned),
-      the intersection of volume (cells) and surface (faces) elements with a wellbore trajectory
-      (existing or planned).
+       The information that allows you to locate, on one or several grids (existing or planned),
+       the intersection of volume (cells) and surface (faces) elements with a wellbore trajectory
+       (existing or planned).
 
-   note:
-      measured depth data must be in same crs as those for the related trajectory
-   """
+    note:
+       measured depth data must be in same crs as those for the related trajectory
+    """
 
     resqml_type = 'BlockedWellboreRepresentation'
     well_name = rqo._alias_for_attribute("title")
@@ -1753,57 +1760,57 @@ class BlockedWell(BaseResqpy):
                  add_wellspec_properties = False):
         """Creates a new blocked well object and optionally loads it from xml, or trajectory, or Nexus wellspec file.
 
-      arguments:
-         parent_model (model.Model object): the model which the new blocked well belongs to
-         blocked_well_root (DEPRECATED): the root node of an xml tree representing the blocked well;
-            if not None, the new blocked well object is initialised based on the data in the tree;
-            if None, the other arguments are used
-         grid (optional, grid.Grid object): required if intialising from a trajectory or wellspec file;
-            not used if blocked_well_root is not None
-         trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
-            not used if blocked_well_root is not None
-         wellspec_file (optional, string): filename of an ascii file holding the Nexus wellspec data;
-            ignored if blocked_well_root is not None or trajectory is not None
-         cellio_file (optional, string): filename of an ascii file holding the RMS exported blocked well data;
-            ignored if blocked_well_root is not None or trajectory is not None or wellspec_file is not None
-         column_ji0 (optional, pair of ints): column indices (j0, i0) for a 'vertical' well; ignored if
-            blocked_well_root is not None or trajectory is not None or wellspec_file is not None or
-            cellio_file is not None
-         well_name (string): the well name as given in the wellspec or cellio file; required if loading from
-            one of those files; or the name to be used as citation title for a column well
-         check_grid_name (boolean, default False): if True, the GRID column of the wellspec data will be checked
-            for a match with the citation title of the grid object; perforations for other grids will be skipped;
-            if False, all wellspec data is assumed to relate to the grid; only relevant when loading from wellspec
-         use_face_centres (boolean, default False): if True, cell face centre points are used for the entry and
-            exit points when constructing the simulation trajectory; if False and ANGLA & ANGLV data are available
-            then entry and exit points are constructed based on a straight line at those angles passing through
-            the centre of the cell; only relevant when loading from wellspec
-         represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-            interpretation object which this frame relates to; ignored if blocked_well_root is not None
-         originator (str, optional): the name of the person creating the blocked well, defaults to login id;
-            ignored if uuid or blocked_well_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the blocked well;
-            ignored if uuid or blocked_well_root is not None
-         add_wellspec_properties (boolean or list of str, default False): if not False, and initialising from
-            a wellspec file, the blocked well has its hdf5 data written and xml created and properties are
-            fully created; if a list is provided the elements must be numerical wellspec column names;
-            if True, all numerical columns other than the cell indices are added as properties
+        arguments:
+           parent_model (model.Model object): the model which the new blocked well belongs to
+           blocked_well_root (DEPRECATED): the root node of an xml tree representing the blocked well;
+              if not None, the new blocked well object is initialised based on the data in the tree;
+              if None, the other arguments are used
+           grid (optional, grid.Grid object): required if intialising from a trajectory or wellspec file;
+              not used if blocked_well_root is not None
+           trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
+              not used if blocked_well_root is not None
+           wellspec_file (optional, string): filename of an ascii file holding the Nexus wellspec data;
+              ignored if blocked_well_root is not None or trajectory is not None
+           cellio_file (optional, string): filename of an ascii file holding the RMS exported blocked well data;
+              ignored if blocked_well_root is not None or trajectory is not None or wellspec_file is not None
+           column_ji0 (optional, pair of ints): column indices (j0, i0) for a 'vertical' well; ignored if
+              blocked_well_root is not None or trajectory is not None or wellspec_file is not None or
+              cellio_file is not None
+           well_name (string): the well name as given in the wellspec or cellio file; required if loading from
+              one of those files; or the name to be used as citation title for a column well
+           check_grid_name (boolean, default False): if True, the GRID column of the wellspec data will be checked
+              for a match with the citation title of the grid object; perforations for other grids will be skipped;
+              if False, all wellspec data is assumed to relate to the grid; only relevant when loading from wellspec
+           use_face_centres (boolean, default False): if True, cell face centre points are used for the entry and
+              exit points when constructing the simulation trajectory; if False and ANGLA & ANGLV data are available
+              then entry and exit points are constructed based on a straight line at those angles passing through
+              the centre of the cell; only relevant when loading from wellspec
+           represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
+              interpretation object which this frame relates to; ignored if blocked_well_root is not None
+           originator (str, optional): the name of the person creating the blocked well, defaults to login id;
+              ignored if uuid or blocked_well_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the blocked well;
+              ignored if uuid or blocked_well_root is not None
+           add_wellspec_properties (boolean or list of str, default False): if not False, and initialising from
+              a wellspec file, the blocked well has its hdf5 data written and xml created and properties are
+              fully created; if a list is provided the elements must be numerical wellspec column names;
+              if True, all numerical columns other than the cell indices are added as properties
 
-      returns:
-         the newly created blocked well object
+        returns:
+           the newly created blocked well object
 
-      notes:
-         if starting from a wellspec file or column indices, a 'simulation' trajectory and md datum objects are
-         constructed to go with the blocked well;
-         column wells might not be truly vertical - the trajectory will consist of linear segments joining the
-         centres of the k faces in the column;
-         optional RESQML attributes are not handled by this code (WITSML log reference, interval stratigraphic units,
-         cell fluid phase units);
-         mysterious RESQML WellboreFrameIndexableElements is not used in any other RESQML classes and is therefore
-         not used here
+        notes:
+           if starting from a wellspec file or column indices, a 'simulation' trajectory and md datum objects are
+           constructed to go with the blocked well;
+           column wells might not be truly vertical - the trajectory will consist of linear segments joining the
+           centres of the k faces in the column;
+           optional RESQML attributes are not handled by this code (WITSML log reference, interval stratigraphic units,
+           cell fluid phase units);
+           mysterious RESQML WellboreFrameIndexableElements is not used in any other RESQML classes and is therefore
+           not used here
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         self.trajectory = trajectory  #: trajectory object associated with the wellbore
         self.trajectory_to_be_written = False
@@ -1969,9 +1976,9 @@ class BlockedWell(BaseResqpy):
     def map_cell_and_grid_indices(self):
         """Returns a list of index values linking the grid_indices to cell_indices.
 
-      note:
-         length will match grid_indices, and will show -1 where cell is unblocked
-      """
+        note:
+           length will match grid_indices, and will show -1 where cell is unblocked
+        """
 
         indexmap = []
         j = 0
@@ -1986,9 +1993,9 @@ class BlockedWell(BaseResqpy):
     def compressed_grid_indices(self):
         """Returns a list of grid indices excluding the -1 elements (unblocked intervals).
 
-      note:
-         length will match that of cell_indices
-      """
+        note:
+           length will match that of cell_indices
+        """
 
         compressed = []
         for i in self.grid_indices:
@@ -2013,8 +2020,8 @@ class BlockedWell(BaseResqpy):
     def grid_uuid_list(self):
         """Returns a list of the uuids of the grids referenced by the blocked well object.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         uuid_list = []
         if self.grid_list is None:
@@ -2026,8 +2033,8 @@ class BlockedWell(BaseResqpy):
     def cell_indices_kji0(self):
         """Returns a numpy int array of shape (N, 3) of cells visited by well, for a single grid situation.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         grid = self.single_grid()
         return grid.denaturalized_cell_indices(self.cell_indices)
@@ -2035,8 +2042,8 @@ class BlockedWell(BaseResqpy):
     def cell_indices_and_grid_list(self):
         """Returns a numpy int array of shape (N, 3) of cells visited by well, and a list of grid objects of length N.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         grid_for_cell_list = []
         grid_indices = self.compressed_grid_indices()
@@ -2051,8 +2058,8 @@ class BlockedWell(BaseResqpy):
     def cell_indices_for_grid_uuid(self, grid_uuid):
         """Returns a numpy int array of shape (N, 3) of cells visited by well in specified grid.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if isinstance(grid_uuid, str):
             grid_uuid = bu.uuid_from_string(grid_uuid)
@@ -2079,18 +2086,19 @@ class BlockedWell(BaseResqpy):
         return well_box
 
     def face_pair_array(self):
-        """Returns numpy int array of shape (N, 2, 2) being pairs of face (axis, polarity) pairs, to go with cell_kji0_array().
+        """Returns numpy int array of shape (N, 2, 2) being pairs of face (axis, polarity) pairs, to go with
+        cell_kji0_array().
 
-      note:
+        note:
 
-         each of the N rows in the returned array is of the form:
+           each of the N rows in the returned array is of the form:
 
-            ((entry_face_axis, entry_face_polarity), (exit_face_axis, exit_face_polarity))
+              ((entry_face_axis, entry_face_polarity), (exit_face_axis, exit_face_polarity))
 
-         where the axis values are in the range 0 to 2 for k, j & i respectively, and
-         the polarity values are zero for the 'negative' face and 1 for the 'positive' face;
-         exit values may be -1 to indicate TD within the cell (ie. no exit point)
-      """
+           where the axis values are in the range 0 to 2 for k, j & i respectively, and
+           the polarity values are zero for the 'negative' face and 1 for the 'positive' face;
+           exit values may be -1 to indicate TD within the cell (ie. no exit point)
+        """
         return self.face_pair_indices
 
     def compute_from_trajectory(self,
@@ -2101,23 +2109,23 @@ class BlockedWell(BaseResqpy):
                                 use_single_layer_tactics = True):
         """Populate this blocked wellbore object based on intersection of trajectory with cells of grid.
 
-      arguments:
-         trajectory (Trajectory object): the trajectory to intersect with the grid; control_points and crs_root attributes must
-            be populated
-         grid (grid.Grid object): the grid with which to intersect the trajectory
-         active_only (boolean, default False): if True, only active cells are included as blocked intervals
-         quad_triangles (boolean, default True): if True, 4 triangles per cell face are used for the intersection calculations;
-            if False, only 2 triangles per face are used
-         use_single_layer_tactics (boolean, default True): if True and the grid does not have k gaps, initial intersection
-            calculations with fault planes or the outer IK & JK skin of the grid are calculated as if the grid is a single
-            layer (and only after an intersection is thus found is the actual layer identified); this significantly speeds up
-            computation but may cause failure in the presence of significantly non-straight pillars and could (rarely) cause
-            problems where a fault plane is significantly skewed (non-planar) even if individual pillars are straight
+        arguments:
+           trajectory (Trajectory object): the trajectory to intersect with the grid; control_points and crs_root attributes must
+              be populated
+           grid (grid.Grid object): the grid with which to intersect the trajectory
+           active_only (boolean, default False): if True, only active cells are included as blocked intervals
+           quad_triangles (boolean, default True): if True, 4 triangles per cell face are used for the intersection calculations;
+              if False, only 2 triangles per face are used
+           use_single_layer_tactics (boolean, default True): if True and the grid does not have k gaps, initial intersection
+              calculations with fault planes or the outer IK & JK skin of the grid are calculated as if the grid is a single
+              layer (and only after an intersection is thus found is the actual layer identified); this significantly speeds up
+              computation but may cause failure in the presence of significantly non-straight pillars and could (rarely) cause
+              problems where a fault plane is significantly skewed (non-planar) even if individual pillars are straight
 
-      note:
-         this method is computationally intensive and might take ~30 seconds for a tyipical grid and trajectory; large grids,
-         grids with k gaps, or setting use_single_layer_tactics False will typically result in significantly longer processing time
-      """
+        note:
+           this method is computationally intensive and might take ~30 seconds for a tyipical grid and trajectory; large grids,
+           grids with k gaps, or setting use_single_layer_tactics False will typically result in significantly longer processing time
+        """
 
         import resqpy.grid_surface as rgs  # was causing circular import issue when at global level
 
@@ -2150,7 +2158,8 @@ class BlockedWell(BaseResqpy):
         assert bw is self
 
     def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True):
-        """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md datum."""
+        """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md
+        datum."""
 
         if well_name:
             self.well_name = well_name
@@ -2179,28 +2188,28 @@ class BlockedWell(BaseResqpy):
                              add_properties = True):
         """Populates empty blocked well from Nexus WELLSPEC data; creates simulation trajectory and md datum.
 
-      args:
-         wellspec_file (string): path of Nexus ascii file holding WELLSPEC keyword
-         well_name (string): the name of the well as used in the wellspec data
-         grid (grid.Grid object): the grid object which the cell indices in the wellspec data relate to
-         check_grid_name (boolean, default False): if True, the GRID column of the wellspec data will be checked
-            for a match with the citation title of the grid object; perforations for other grids will be skipped;
-            if False, all wellspec data is assumed to relate to the grid
-         use_face_centres (boolean, default False): if True, cell face centre points are used for the entry and
-            exit points when constructing the simulation trajectory; if False and ANGLA & ANGLV data are available
-            then entry and exit points are constructed based on a straight line at those angles passing through
-            the centre of the cell
-         add_properties (bool or list of str, default True): if True, WELLSPEC columns (other than IW, JW, L & GRID)
-            are added as property parts for the blocked well; if a list is passed, it must contain a subset of the
-            columns in the WELLSPEC data
+        args:
+           wellspec_file (string): path of Nexus ascii file holding WELLSPEC keyword
+           well_name (string): the name of the well as used in the wellspec data
+           grid (grid.Grid object): the grid object which the cell indices in the wellspec data relate to
+           check_grid_name (boolean, default False): if True, the GRID column of the wellspec data will be checked
+              for a match with the citation title of the grid object; perforations for other grids will be skipped;
+              if False, all wellspec data is assumed to relate to the grid
+           use_face_centres (boolean, default False): if True, cell face centre points are used for the entry and
+              exit points when constructing the simulation trajectory; if False and ANGLA & ANGLV data are available
+              then entry and exit points are constructed based on a straight line at those angles passing through
+              the centre of the cell
+           add_properties (bool or list of str, default True): if True, WELLSPEC columns (other than IW, JW, L & GRID)
+              are added as property parts for the blocked well; if a list is passed, it must contain a subset of the
+              columns in the WELLSPEC data
 
-      returns:
-         self if successful; None otherwise
+        returns:
+           self if successful; None otherwise
 
-      note:
-         if add_properties is True or present as a list, this method will write the hdf5, create the xml and add
-         parts to the model for this blocked well and the properties
-      """
+        note:
+           if add_properties is True or present as a list, this method will write the hdf5, create the xml and add
+           parts to the model for this blocked well and the properties
+        """
 
         if well_name:
             self.well_name = well_name
@@ -2255,10 +2264,10 @@ class BlockedWell(BaseResqpy):
                               add_as_properties = False):
         """Populate empty blocked well from WELLSPEC-like dataframe; first columns must be IW, JW, L (i, j, k).
 
-      note:
-         if add_as_properties is True or present as a list of wellspec column names, both the blocked well and
-         the properties will have their hdf5 data written, xml created and be added as parts to the model
-      """
+        note:
+           if add_as_properties is True or present as a list of wellspec column names, both the blocked well and
+           the properties will have their hdf5 data written, xml created and be added as parts to the model
+        """
 
         def cell_kji0_from_df(df, df_row):
             row = df.iloc[df_row]
@@ -2456,15 +2465,15 @@ class BlockedWell(BaseResqpy):
     def import_from_rms_cellio(self, cellio_file, well_name, grid, include_overburden_unblocked_interval = False):
         """Populates empty blocked well from RMS cell I/O data; creates simulation trajectory and md datum.
 
-      args:
-         cellio_file (string): path of RMS ascii export file holding blocked well cell I/O data; cell entry and
-            exit points are expected
-         well_name (string): the name of the well as used in the cell I/O file
-         grid (grid.Grid object): the grid object which the cell indices in the cell I/O data relate to
+        args:
+           cellio_file (string): path of RMS ascii export file holding blocked well cell I/O data; cell entry and
+              exit points are expected
+           well_name (string): the name of the well as used in the cell I/O file
+           grid (grid.Grid object): the grid object which the cell indices in the cell I/O data relate to
 
-      returns:
-         self if successful; None otherwise
-      """
+        returns:
+           self if successful; None otherwise
+        """
 
         if well_name:
             self.well_name = well_name
@@ -2632,114 +2641,114 @@ class BlockedWell(BaseResqpy):
                   use_properties = False):
         """Returns a pandas data frame containing WELLSPEC style data.
 
-      arguments:
-         i_col (string, default 'IW'): the column name to use for cell I index values
-         j_col (string, default 'JW'): the column name to use for cell J index values
-         k_col (string, default 'L'): the column name to use for cell K index values
-         one_based (boolean, default True): if True, simulator protocol i, j & k values are placed in I, J & K columns;
-            if False, resqml zero based values; this does not affect the interpretation of min_k0 & max_k0 arguments
-         extra_columns_list (list of string, optional): list of WELLSPEC column names to include in the dataframe, from currently
-            recognised values: 'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'RADW', 'SKIN', 'PPERF', 'RADB', 'WI', 'WBC'
-         ntg_uuid (uuid.UUID, optional): the uuid of the net to gross ratio property; if present is used to downgrade the i & j
-            permeabilities in the calculation of KH; ignored if 'KH' not in the extra column list and min_kh is not specified;
-            the argument may also be a dictionary mapping from grid uuid to ntg uuid; if no net to gross data is provided, it
-            is effectively assumed to be one (or, equivalently, the I & J permeability data is applicable to the gross rock); see
-            also preferential_perforation argument which can cause adjustment of effective ntg in partially perforated cells
-         perm_i_uuid (uuid.UUID or dictionary, optional): the uuid of the permeability property in the I direction;
-            required if 'KH' is included in the extra columns list and min_kh is not specified; ignored otherwise;
-            the argument may also be a dictionary mapping from grid uuid to perm I uuid
-         perm_j_uuid (uuid.UUID, optional): the uuid (or dict) of the permeability property in the J direction;
-            defaults to perm_i_uuid
-         perm_k_uuid (uuid.UUID, optional): the uuid (or dict) of the permeability property in the K direction;
-            defaults to perm_i_uuid
-         satw_uuid (uuid.UUID, optional): the uuid of a water saturation property; required if max_satw is specified; may also
-            be a dictionary mapping from grid uuid to satw uuid; ignored if max_satw is None
-         sato_uuid (uuid.UUID, optional): the uuid of an oil saturation property; required if min_sato is specified; may also
-            be a dictionary mapping from grid uuid to sato uuid; ignored if min_sato is None
-         satg_uuid (uuid.UUID, optional): the uuid of a gas saturation property; required if max_satg is specified; may also
-            be a dictionary mapping from grid uuid to satg uuid; ignored if max_satg is None
-         region_uuid (uuid.UUID, optional): the uuid of a discrete or categorical property, required if region_list is not None;
-            may also be a dictionary mapping from grid uuid to region uuid; ignored if region_list is None
-         radw (float, optional): if present, the wellbore radius used for all perforations; must be in correct units for intended
-            use of the WELLSPEC style dataframe; will default to 0.25 if 'RADW' is included in the extra column list
-         skin (float, optional): if present, a skin column is included with values set to this constant
-         stat (string, optional): if present, should be 'ON' or 'OFF' and is used for all perforations; will default to 'ON' if
-            'STAT' is included in the extra column list
-         active_only (boolean, default False): if True, only cells that are flagged in the grid object as active are included;
-            if False, cells are included whether active or not
-         min_k0 (int, optional): if present, perforations in layers above this are excluded (layer number will be applied
-            naively to all grids – not recommended when working with more than one grid with different layering)
-         max_k0 (int, optional): if present, perforations in layers below this are excluded (layer number will be applied
-            naively to all grids – not recommended when working with more than one grid with different layering)
-         k0_list (list of int, optional): if present, only perforations in cells in these layers are included (layer numbers
-            will be applied naively to all grids – not recommended when working with more than one grid with different layering)
-         min_length (float, optional): if present, a minimum length for an individual perforation interval to be included;
-            units are the length units of the trajectory object unless length_uom argument is set
-         min_kh (float, optional): if present, the minimum permeability x length value for which an individual interval is
-            included; permeabilty uuid(s) must be supplied for the kh calculation; units of the length component are those
-            of the trajectory object unless length_uom argument is set
-         max_depth (float, optional): if present, rows are excluded for cells with a centre point depth greater than this value;
-            max_depth should be positive downwards, with units of measure those of the grid z coordinates
-         max_satw (float, optional): if present, perforations in cells where the water saturation exceeds this value will
-            be excluded; satw_uuid must be supplied if this argument is present
-         min_sato (float, optional): if present, perforations in cells where the oil saturation is less than this value will
-            be excluded; sato_uuid must be supplied if this argument is present
-         max_satg (float, optional): if present, perforations in cells where the gas saturation exceeds this value will
-            be excluded; satg_uuid must be supplied if this argument is present
-         perforation_list (list of (float, float), optional): if present, a list of perforated intervals; each entry is the
-            start and end measured depths for a perforation; these do not need to align with cell boundaries
-         region_list (list of int, optional): if present, a list of region numbers for which rows are to be included; the
-            property holding the region data is identified by the region_uuid argument
-         depth_inc_down (boolean, optional): if present and True, the depth values will increase with depth; if False or None,
-            the direction of the depth values will be determined by the z increasing downwards indicator in the trajectory crs
-         set_k_face_intervals_vertical (boolean, default False): if True, intervals with entry through K- and exit through K+
-            will have angla and anglv set to 0.0 (vertical); if False angles will be computed depending on geometry
-         anglv_ref (string, default 'normal ij down'): either 'gravity', 'z down' (same as gravity), 'z+', 'k down', 'k+',
-            'normal ij', or 'normal ij down';
-            the ANGLV angles are relative to a local (per cell) reference vector selected by this keyword
-         angla_plane_ref (string, optional): string indicating normal vector defining plane onto which trajectory and I axis are
-            projected for the calculation of ANGLA; options as for anglv_ref, or 'normal well i+' which results in no projection;
-            defaults to the same as anglv_ref
-         length_mode (string, default 'MD'): 'MD' or 'straight' indicating which length to use; 'md' takes measured depth
-            difference between exit and entry; 'straight' uses a naive straight line length between entry and exit;
-            this will affect values for LENGTH, KH, DEPTH, X & Y
-         length_uom (string, optional): if present, either 'm' or 'ft': the length units to use for the LENGTH, KH, MD, DEPTH,
-            X & Y columns if they are present in extra_columns_list; also used to interpret min_length and min_kh; if None, the
-            length units of the trajectory attribute are used LENGTH, KH & MD and those of the grid are used for DEPTH, X & Y;
-            RADW value, if present, is assumed to be in the correct units and is not changed; also used implicitly to determine
-            conversion constant used in calculation of wellbore constant (WBC)
-         use_face_centres (boolean, default False): if True, the centre points of the entry and exit faces will determine the
-            vector used as the basis of ANGLA and ANGLV calculations; if False, the trajectory locations for the entry and exit
-            measured depths will be used
-         preferential_perforation (boolean, default True): if perforation_list is given, and KH is requested or a min_kh given,
-            the perforated intervals are assumed to penetrate pay rock preferentially: an effective ntg weighting is computed
-            to account for any residual non-pay perforated interval; ignored if perforation_list is None or kh values are not
-            being computed
-         add_as_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
-            GRID and STAT) is added as a property with the blocked well as supporting representation and 'cells' as the
-            indexable element; any cell that is excluded from the dataframe will have corresponding entries of NaN in all the
-            properties; if a list is provided it must be a subset of extra_columns_list
-         use_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
-            GRID and STAT) is populated from a property with citation title matching the column name, if it exists
+        arguments:
+           i_col (string, default 'IW'): the column name to use for cell I index values
+           j_col (string, default 'JW'): the column name to use for cell J index values
+           k_col (string, default 'L'): the column name to use for cell K index values
+           one_based (boolean, default True): if True, simulator protocol i, j & k values are placed in I, J & K columns;
+              if False, resqml zero based values; this does not affect the interpretation of min_k0 & max_k0 arguments
+           extra_columns_list (list of string, optional): list of WELLSPEC column names to include in the dataframe, from currently
+              recognised values: 'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'RADW', 'SKIN', 'PPERF', 'RADB', 'WI', 'WBC'
+           ntg_uuid (uuid.UUID, optional): the uuid of the net to gross ratio property; if present is used to downgrade the i & j
+              permeabilities in the calculation of KH; ignored if 'KH' not in the extra column list and min_kh is not specified;
+              the argument may also be a dictionary mapping from grid uuid to ntg uuid; if no net to gross data is provided, it
+              is effectively assumed to be one (or, equivalently, the I & J permeability data is applicable to the gross rock); see
+              also preferential_perforation argument which can cause adjustment of effective ntg in partially perforated cells
+           perm_i_uuid (uuid.UUID or dictionary, optional): the uuid of the permeability property in the I direction;
+              required if 'KH' is included in the extra columns list and min_kh is not specified; ignored otherwise;
+              the argument may also be a dictionary mapping from grid uuid to perm I uuid
+           perm_j_uuid (uuid.UUID, optional): the uuid (or dict) of the permeability property in the J direction;
+              defaults to perm_i_uuid
+           perm_k_uuid (uuid.UUID, optional): the uuid (or dict) of the permeability property in the K direction;
+              defaults to perm_i_uuid
+           satw_uuid (uuid.UUID, optional): the uuid of a water saturation property; required if max_satw is specified; may also
+              be a dictionary mapping from grid uuid to satw uuid; ignored if max_satw is None
+           sato_uuid (uuid.UUID, optional): the uuid of an oil saturation property; required if min_sato is specified; may also
+              be a dictionary mapping from grid uuid to sato uuid; ignored if min_sato is None
+           satg_uuid (uuid.UUID, optional): the uuid of a gas saturation property; required if max_satg is specified; may also
+              be a dictionary mapping from grid uuid to satg uuid; ignored if max_satg is None
+           region_uuid (uuid.UUID, optional): the uuid of a discrete or categorical property, required if region_list is not None;
+              may also be a dictionary mapping from grid uuid to region uuid; ignored if region_list is None
+           radw (float, optional): if present, the wellbore radius used for all perforations; must be in correct units for intended
+              use of the WELLSPEC style dataframe; will default to 0.25 if 'RADW' is included in the extra column list
+           skin (float, optional): if present, a skin column is included with values set to this constant
+           stat (string, optional): if present, should be 'ON' or 'OFF' and is used for all perforations; will default to 'ON' if
+              'STAT' is included in the extra column list
+           active_only (boolean, default False): if True, only cells that are flagged in the grid object as active are included;
+              if False, cells are included whether active or not
+           min_k0 (int, optional): if present, perforations in layers above this are excluded (layer number will be applied
+              naively to all grids – not recommended when working with more than one grid with different layering)
+           max_k0 (int, optional): if present, perforations in layers below this are excluded (layer number will be applied
+              naively to all grids – not recommended when working with more than one grid with different layering)
+           k0_list (list of int, optional): if present, only perforations in cells in these layers are included (layer numbers
+              will be applied naively to all grids – not recommended when working with more than one grid with different layering)
+           min_length (float, optional): if present, a minimum length for an individual perforation interval to be included;
+              units are the length units of the trajectory object unless length_uom argument is set
+           min_kh (float, optional): if present, the minimum permeability x length value for which an individual interval is
+              included; permeabilty uuid(s) must be supplied for the kh calculation; units of the length component are those
+              of the trajectory object unless length_uom argument is set
+           max_depth (float, optional): if present, rows are excluded for cells with a centre point depth greater than this value;
+              max_depth should be positive downwards, with units of measure those of the grid z coordinates
+           max_satw (float, optional): if present, perforations in cells where the water saturation exceeds this value will
+              be excluded; satw_uuid must be supplied if this argument is present
+           min_sato (float, optional): if present, perforations in cells where the oil saturation is less than this value will
+              be excluded; sato_uuid must be supplied if this argument is present
+           max_satg (float, optional): if present, perforations in cells where the gas saturation exceeds this value will
+              be excluded; satg_uuid must be supplied if this argument is present
+           perforation_list (list of (float, float), optional): if present, a list of perforated intervals; each entry is the
+              start and end measured depths for a perforation; these do not need to align with cell boundaries
+           region_list (list of int, optional): if present, a list of region numbers for which rows are to be included; the
+              property holding the region data is identified by the region_uuid argument
+           depth_inc_down (boolean, optional): if present and True, the depth values will increase with depth; if False or None,
+              the direction of the depth values will be determined by the z increasing downwards indicator in the trajectory crs
+           set_k_face_intervals_vertical (boolean, default False): if True, intervals with entry through K- and exit through K+
+              will have angla and anglv set to 0.0 (vertical); if False angles will be computed depending on geometry
+           anglv_ref (string, default 'normal ij down'): either 'gravity', 'z down' (same as gravity), 'z+', 'k down', 'k+',
+              'normal ij', or 'normal ij down';
+              the ANGLV angles are relative to a local (per cell) reference vector selected by this keyword
+           angla_plane_ref (string, optional): string indicating normal vector defining plane onto which trajectory and I axis are
+              projected for the calculation of ANGLA; options as for anglv_ref, or 'normal well i+' which results in no projection;
+              defaults to the same as anglv_ref
+           length_mode (string, default 'MD'): 'MD' or 'straight' indicating which length to use; 'md' takes measured depth
+              difference between exit and entry; 'straight' uses a naive straight line length between entry and exit;
+              this will affect values for LENGTH, KH, DEPTH, X & Y
+           length_uom (string, optional): if present, either 'm' or 'ft': the length units to use for the LENGTH, KH, MD, DEPTH,
+              X & Y columns if they are present in extra_columns_list; also used to interpret min_length and min_kh; if None, the
+              length units of the trajectory attribute are used LENGTH, KH & MD and those of the grid are used for DEPTH, X & Y;
+              RADW value, if present, is assumed to be in the correct units and is not changed; also used implicitly to determine
+              conversion constant used in calculation of wellbore constant (WBC)
+           use_face_centres (boolean, default False): if True, the centre points of the entry and exit faces will determine the
+              vector used as the basis of ANGLA and ANGLV calculations; if False, the trajectory locations for the entry and exit
+              measured depths will be used
+           preferential_perforation (boolean, default True): if perforation_list is given, and KH is requested or a min_kh given,
+              the perforated intervals are assumed to penetrate pay rock preferentially: an effective ntg weighting is computed
+              to account for any residual non-pay perforated interval; ignored if perforation_list is None or kh values are not
+              being computed
+           add_as_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
+              GRID and STAT) is added as a property with the blocked well as supporting representation and 'cells' as the
+              indexable element; any cell that is excluded from the dataframe will have corresponding entries of NaN in all the
+              properties; if a list is provided it must be a subset of extra_columns_list
+           use_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
+              GRID and STAT) is populated from a property with citation title matching the column name, if it exists
 
-      notes:
-         units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
-         the length_uom argument is used;
-         the constraints are applied independently for each row and a row is excluded if it fails any constraint;
-         the min_k0 and max_k0 arguments do not stop later rows within the layer range from being included;
-         the min_length and min_kh limits apply to individual cell intervals and thus depend on cell size;
-         the water and oil saturation limits are for saturations at a single time and affect whether the interval
-         is included in the dataframe – there is no functionality to support turning perforations off and on over time;
-         the saturation limits do not stop deeper intervals with qualifying saturations from being included;
-         the k0_list, perforation_list and region_list arguments should be set to None to disable the corresponding functionality,
-         if set to an empty list, no rows will be included in the dataframe;
-         if add_as_properties is True, the blocked well must already have been added as a part to the model;
-         at add_as_properties and use_properties cannot both be True;
-         add_as_properties and use_properties are only currently functional for single grid blocked wells;
-         at present, unit conversion is not handled when using properties
+        notes:
+           units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
+           the length_uom argument is used;
+           the constraints are applied independently for each row and a row is excluded if it fails any constraint;
+           the min_k0 and max_k0 arguments do not stop later rows within the layer range from being included;
+           the min_length and min_kh limits apply to individual cell intervals and thus depend on cell size;
+           the water and oil saturation limits are for saturations at a single time and affect whether the interval
+           is included in the dataframe – there is no functionality to support turning perforations off and on over time;
+           the saturation limits do not stop deeper intervals with qualifying saturations from being included;
+           the k0_list, perforation_list and region_list arguments should be set to None to disable the corresponding functionality,
+           if set to an empty list, no rows will be included in the dataframe;
+           if add_as_properties is True, the blocked well must already have been added as a part to the model;
+           at add_as_properties and use_properties cannot both be True;
+           add_as_properties and use_properties are only currently functional for single grid blocked wells;
+           at present, unit conversion is not handled when using properties
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         def prop_array(uuid_or_dict, grid):
             assert uuid_or_dict is not None and grid is not None
@@ -3343,11 +3352,12 @@ class BlockedWell(BaseResqpy):
                   length_uom = None,
                   use_face_centres = False,
                   preferential_perforation = True):
-        """Returns the total static K.H (permeability x height); length units are those of trajectory md_uom unless length_upm is set.
+        """Returns the total static K.H (permeability x height); length units are those of trajectory md_uom unless
+        length_upm is set.
 
-      note:
-         see doc string for dataframe() method for argument descriptions; perm_i_uuid required
-      """
+        note:
+           see doc string for dataframe() method for argument descriptions; perm_i_uuid required
+        """
 
         df = self.dataframe(i_col = 'I',
                             j_col = 'J',
@@ -3428,13 +3438,13 @@ class BlockedWell(BaseResqpy):
                        float_format = '5.3'):
         """Writes Nexus WELLSPEC keyword to an ascii file.
 
-      returns:
-         pandas DataFrame containing data that has been written to the wellspec file
+        returns:
+           pandas DataFrame containing data that has been written to the wellspec file
 
-      note:
-         see doc string for dataframe() method for most of the argument descriptions;
-         align_columns and float_format arguments are deprecated and no longer used
-      """
+        note:
+           see doc string for dataframe() method for most of the argument descriptions;
+           align_columns and float_format arguments are deprecated and no longer used
+        """
 
         def tidy_well_name(well_name):
             nexus_friendly = ''
@@ -3585,10 +3595,10 @@ class BlockedWell(BaseResqpy):
     def xyz_marker(self, active_only = True):
         """Convenience method returning (x, y, z), crs_uuid of perforation in first blocked interval.
 
-      notes:
-         active_only argument not yet in use;
-         returns None, None if no blocked interval found
-      """
+        notes:
+           active_only argument not yet in use;
+           returns None, None if no blocked interval found
+        """
 
         cells, grids = self.cell_indices_and_grid_list()
         if cells is None or grids is None or len(grids) == 0:
@@ -3603,10 +3613,10 @@ class BlockedWell(BaseResqpy):
         return xyz, rqet.uuid_for_part_root(self.trajectory.crs_root)
 
     def create_feature_and_interpretation(self, shared_interpretation = True):
-        """Instantiate new empty WellboreFeature and WellboreInterpretation objects
-      
-      Uses the Blocked well citation title as the well name
-      """
+        """Instantiate new empty WellboreFeature and WellboreInterpretation objects.
+
+        Uses the Blocked well citation title as the well name
+        """
         if self.trajectory is not None:
             traj_interp_uuid = self.model.uuid(obj_type = 'WellboreInterpretation', related_uuid = self.trajectory.uuid)
             if traj_interp_uuid is not None:
@@ -3637,9 +3647,9 @@ class BlockedWell(BaseResqpy):
                                        create_feature_and_interp = True):
         """Creates an Md Datum object and a (simulation) Trajectory object for this blocked well.
 
-      note:
-         not usually called directly; used by import methods
-      """
+        note:
+           not usually called directly; used by import methods
+        """
 
         # create md datum node for synthetic trajectory, using crs for grid
         datum_location = trajectory_points[0].copy()
@@ -3679,12 +3689,12 @@ class BlockedWell(BaseResqpy):
                    originator = None):
         """Create a blocked wellbore representation node from this BlockedWell object, optionally add as part.
 
-      note:
-         trajectory xml node must be in place before calling this function;
-         witsml log reference, interval stratigraphic units, and cell fluid phase units not yet supported
+        note:
+           trajectory xml node must be in place before calling this function;
+           witsml log reference, interval stratigraphic units, and cell fluid phase units not yet supported
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         assert self.trajectory is not None, 'trajectory object missing'
 
@@ -3833,8 +3843,8 @@ class BlockedWell(BaseResqpy):
     def write_hdf5(self, file_name = None, mode = 'a', create_for_trajectory_if_needed = True):
         """Create or append to an hdf5 file, writing datasets for the measured depths, grid, cell & face indices.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # NB: array data must all have been set up prior to calling this function
 
@@ -3867,9 +3877,9 @@ class BlockedWell(BaseResqpy):
 class WellboreMarkerFrame(BaseResqpy):
     """Class to handle RESQML WellBoreMarkerFrameRepresentation objects.
 
-   note:
-      measured depth data must be in same crs as those for the related trajectory
-   """
+    note:
+       measured depth data must be in same crs as those for the related trajectory
+    """
 
     resqml_type = 'WellboreMarkerFrameRepresentation'
 
@@ -3883,21 +3893,21 @@ class WellboreMarkerFrame(BaseResqpy):
                  extra_metadata = None):
         """Creates a new wellbore marker object and optionally loads it from xml, or trajectory, or Nexus wellspec file.
 
-      arguments:
-         parent_model (model.Model object): the model which the new blocked well belongs to
-         wellbore_marker_root (DEPRECATED): the root node of an xml tree representing the wellbore marker;
-         trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
-            not used if wellbore_marker_root is not None;
-         title (str, optional): the citation title to use for a new wellbore marker frame;
-            ignored if uuid or wellbore_marker_frame_root is not None
-         originator (str, optional): the name of the person creating the wellbore marker frame, defaults to login id;
-            ignored if uuid or wellbore_marker_frame_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore marker frame;
-            ignored if uuid or wellbore_marker_frame_root is not None
+        arguments:
+           parent_model (model.Model object): the model which the new blocked well belongs to
+           wellbore_marker_root (DEPRECATED): the root node of an xml tree representing the wellbore marker;
+           trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
+              not used if wellbore_marker_root is not None;
+           title (str, optional): the citation title to use for a new wellbore marker frame;
+              ignored if uuid or wellbore_marker_frame_root is not None
+           originator (str, optional): the name of the person creating the wellbore marker frame, defaults to login id;
+              ignored if uuid or wellbore_marker_frame_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore marker frame;
+              ignored if uuid or wellbore_marker_frame_root is not None
 
-      returns:
-         the newly created wellbore framework marker object
-      """
+        returns:
+           the newly created wellbore framework marker object
+        """
 
         self.trajectory = None
         self.node_count = None  # number of measured depth nodes, each being for a marker
@@ -3917,15 +3927,15 @@ class WellboreMarkerFrame(BaseResqpy):
     def get_trajectory_obj(self, trajectory_uuid):
         """Returns a trajectory object.
 
-      arguments:
-         trajectory_uuid (string or uuid.UUID): the uuid of the trajectory for which a Trajectory object is required
+        arguments:
+           trajectory_uuid (string or uuid.UUID): the uuid of the trajectory for which a Trajectory object is required
 
-      returns:
-         well.Trajectory object
+        returns:
+           well.Trajectory object
 
-      note:
-         this method is not usually called directly
-      """
+        note:
+           this method is not usually called directly
+        """
 
         if trajectory_uuid is None:
             log.error('no trajectory was found')
@@ -3939,17 +3949,17 @@ class WellboreMarkerFrame(BaseResqpy):
     def get_interpretation_obj(self, interpretation_uuid, interp_type = None):
         """Creates an interpretation object; returns a horizon or fault interpretation object.
 
-      arguments:
-         interpretation_uiud (string or uuid.UUID): the uuid of the required interpretation object
-         interp_type (string, optional): 'HorizonInterpretation' or 'FaultInterpretation' (optionally
-            prefixed with `obj_`); if None, the type is inferred from the xml for the given uuid
+        arguments:
+           interpretation_uiud (string or uuid.UUID): the uuid of the required interpretation object
+           interp_type (string, optional): 'HorizonInterpretation' or 'FaultInterpretation' (optionally
+              prefixed with `obj_`); if None, the type is inferred from the xml for the given uuid
 
-      returns:
-         organization.HorizonInterpretation or organization.FaultInterpretation object
+        returns:
+           organization.HorizonInterpretation or organization.FaultInterpretation object
 
-      note:
-         this method is not usually called directly
-      """
+        note:
+           this method is not usually called directly
+        """
 
         assert interpretation_uuid is not None, 'interpretation uuid argument missing'
 
@@ -3980,9 +3990,9 @@ class WellboreMarkerFrame(BaseResqpy):
     def _load_from_xml(self):
         """Loads the wellbore marker frame object from an xml node (and associated hdf5 data).
 
-      note:
-         this method is not usually called directly
-      """
+        note:
+           this method is not usually called directly
+        """
 
         wellbore_marker_frame_root = self.root
         assert wellbore_marker_frame_root is not None
@@ -4144,10 +4154,10 @@ class WellboreMarkerFrame(BaseResqpy):
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Writes the hdf5 array associated with this object (the measured depth data).
 
-      arguments:
-         file_name (string): the name of the hdf5 file, or None, in which case the model's default will be used
-         mode (string, default 'a'): the write mode for the hdf5, either 'w' or 'a'
-      """
+        arguments:
+           file_name (string): the name of the hdf5 file, or None, in which case the model's default will be used
+           mode (string, default 'a'): the write mode for the hdf5, either 'w' or 'a'
+        """
 
         h5_reg = rwh5.H5Register(self.model)
         h5_reg.register_dataset(self.uuid, 'Mds', self.node_mds)
@@ -4156,19 +4166,19 @@ class WellboreMarkerFrame(BaseResqpy):
     def find_marker_from_interp(self, interpetation_obj = None, uuid = None):
         """Find wellbore marker by interpretation; can pass object or uuid.
 
-      arguments:
-         interpretation_obj (organize.HorizonInterpretation or organize.FaultInterpretation object, optional):
-            if present, the first (smallest md) marker relating to this interpretation object is returned
-         uuid (string or uuid.UUID): if present, the uuid of the interpretation object of interest; ignored if
-            interpretation_obj is not None
+        arguments:
+           interpretation_obj (organize.HorizonInterpretation or organize.FaultInterpretation object, optional):
+              if present, the first (smallest md) marker relating to this interpretation object is returned
+           uuid (string or uuid.UUID): if present, the uuid of the interpretation object of interest; ignored if
+              interpretation_obj is not None
 
-      returns:
-         tuple, list of tuples or None; tuple is (marker UUID, geologic boundary, marker citation title, interp. object)
+        returns:
+           tuple, list of tuples or None; tuple is (marker UUID, geologic boundary, marker citation title, interp. object)
 
-      note:
-         if no arguments are passed, then a list of wellbore markers is returned;
-         if no marker is found for the interpretation object, None is returned
-      """
+        note:
+           if no arguments are passed, then a list of wellbore markers is returned;
+           if no marker is found for the interpretation object, None is returned
+        """
 
         if interpetation_obj is None and uuid is None:
             return self.wellbore_marker_list
@@ -4183,12 +4193,12 @@ class WellboreMarkerFrame(BaseResqpy):
         return None
 
     def get_marker_count(self):
-        '''Retruns number of wellbore markers'''
+        """Retruns number of wellbore markers."""
 
         return len(self.wellbore_marker_list)
 
     def find_marker_from_index(self, idx):
-        '''Returns wellbore marker by index'''
+        """Returns wellbore marker by index."""
 
         return self.wellbore_marker_list[idx - 1]
 
@@ -4196,23 +4206,22 @@ class WellboreMarkerFrame(BaseResqpy):
 def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, check_well_name = False):
     """Creates a WellLogCollection and WellboreFrame from a LAS file.
 
-   Note:
-      In this current implementation, the first curve in the las object must be
-      Measured Depths, not e.g. TVDSS.
+    Note:
+       In this current implementation, the first curve in the las object must be
+       Measured Depths, not e.g. TVDSS.
 
-   Arguments:
-      las: an lasio.LASFile object
-      trajectory: an instance of :class:`resqpy.well.Trajectory` .
-      realization (integer): if present, the single realisation (within an ensemble)
-         that this collection is for
-      check_well_name (bool): if True, raise warning if LAS well name does not match
-         existing wellborefeature citation title
+    Arguments:
+       las: an lasio.LASFile object
+       trajectory: an instance of :class:`resqpy.well.Trajectory` .
+       realization (integer): if present, the single realisation (within an ensemble)
+          that this collection is for
+       check_well_name (bool): if True, raise warning if LAS well name does not match
+          existing wellborefeature citation title
 
-   Returns:
-      collection, well_frame: instances of :class:`resqpy.property.WellLogCollection`
-         and :class:`resqpy.well.WellboreFrame`
-
-   """
+    Returns:
+       collection, well_frame: instances of :class:`resqpy.property.WellLogCollection`
+          and :class:`resqpy.well.WellboreFrame`
+    """
 
     # Lookup relevant related resqml parts
     model = trajectory.model
@@ -4262,10 +4271,10 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, ch
 def add_logs_from_cellio(blockedwell, cellio):
     """Creates a WellIntervalPropertyCollection for a given BlockedWell, using a given cell I/O file.
 
-   Arguments:
-      blockedwell: a resqml blockedwell object
-      cellio: an ascii file exported from RMS containing blocked well geometry and logs. Must contain columns i_index, j_index and k_index, plus additional columns for logs to be imported.
-   """
+    Arguments:
+       blockedwell: a resqml blockedwell object
+       cellio: an ascii file exported from RMS containing blocked well geometry and logs. Must contain columns i_index, j_index and k_index, plus additional columns for logs to be imported.
+    """
     # Get the initial variables from the blocked well
     assert isinstance(blockedwell, BlockedWell), 'Not a blocked wellbore object'
     collection = rqp.WellIntervalPropertyCollection(frame = blockedwell)
@@ -4356,12 +4365,13 @@ def add_logs_from_cellio(blockedwell, cellio):
 
 def lookup_from_cellio(line, model):
     """Create a StringLookup Object from a cell I/O row containing a categorical column name and details.
-   Arguments:
-      line: a string from a cell I/O file, containing the column (log) name, type and categorical information
-      model: the model to add the StringTableLookup to
-   Returns:
-      uuid: the uuid of a StringTableLookup, either for a newly created table, or for an existing table if an identical one exists
-   """
+
+    Arguments:
+       line: a string from a cell I/O file, containing the column (log) name, type and categorical information
+       model: the model to add the StringTableLookup to
+    Returns:
+       uuid: the uuid of a StringTableLookup, either for a newly created table, or for an existing table if an identical one exists
+    """
     lookup_dict = {}
     value, string = None, None
     # Generate a dictionary of values and strings
@@ -4408,35 +4418,35 @@ def add_wells_from_ascii_file(model,
                               drilled = False):
     """Creates new md datum, trajectory, interpretation and feature objects for each well in an ascii file.
 
-   arguments:
-      crs_uuid (uuid.UUID): the unique identifier of the coordinate reference system applicable to the x,y,z data;
-         if None, a default crs will be created, making use of the length_uom and z_inc_down arguments
-      trajectory_file (string): the path of the ascii file holding the well trajectory data to be loaded
-      comment_character (string, default '#'): character deemed to introduce a comment in the trajectory file
-      space_separated_instead_of_csv (boolean, default False): if True, the columns in the trajectory file are space
-         separated; if False, comma separated
-      well_col (string, default 'WELL'): the heading for the column containing well names
-      md_col (string, default 'MD'): the heading for the column containing measured depths
-      x_col (string, default 'X'): the heading for the column containing X (usually easting) data
-      y_col (string, default 'Y'): the heading for the column containing Y (usually northing) data
-      z_col (string, default 'Z'): the heading for the column containing Z (depth or elevation) data
-      length_uom (string, default 'm'): the units of measure for the measured depths; should be 'm' or 'ft'
-      md_domain (string, optional): the source of the original deviation data; may be 'logger' or 'driller'
-      drilled (boolean, default False): True should be used for wells that have been drilled; False otherwise (planned,
-         proposed, or a location being studied)
-      z_inc_down (boolean, default True): indicates whether z values increase with depth; only used in the creation
-         of a default coordinate reference system; ignored if crs_uuid is not None
+    arguments:
+       crs_uuid (uuid.UUID): the unique identifier of the coordinate reference system applicable to the x,y,z data;
+          if None, a default crs will be created, making use of the length_uom and z_inc_down arguments
+       trajectory_file (string): the path of the ascii file holding the well trajectory data to be loaded
+       comment_character (string, default '#'): character deemed to introduce a comment in the trajectory file
+       space_separated_instead_of_csv (boolean, default False): if True, the columns in the trajectory file are space
+          separated; if False, comma separated
+       well_col (string, default 'WELL'): the heading for the column containing well names
+       md_col (string, default 'MD'): the heading for the column containing measured depths
+       x_col (string, default 'X'): the heading for the column containing X (usually easting) data
+       y_col (string, default 'Y'): the heading for the column containing Y (usually northing) data
+       z_col (string, default 'Z'): the heading for the column containing Z (depth or elevation) data
+       length_uom (string, default 'm'): the units of measure for the measured depths; should be 'm' or 'ft'
+       md_domain (string, optional): the source of the original deviation data; may be 'logger' or 'driller'
+       drilled (boolean, default False): True should be used for wells that have been drilled; False otherwise (planned,
+          proposed, or a location being studied)
+       z_inc_down (boolean, default True): indicates whether z values increase with depth; only used in the creation
+          of a default coordinate reference system; ignored if crs_uuid is not None
 
-   returns:
-      tuple of lists of objects: (feature_list, interpretation_list, trajectory_list, md_datum_list),
+    returns:
+       tuple of lists of objects: (feature_list, interpretation_list, trajectory_list, md_datum_list),
 
-   notes:
-      ascii file must be table with first line being column headers, with columns for WELL, MD, X, Y & Z;
-      actual column names can be set with optional arguments;
-      all the objects are added to the model, with array data being written to the hdf5 file for the trajectories;
-      the md_domain and drilled values are stored in the RESQML metadata but are only for human information and do not
-      generally affect computations
-   """
+    notes:
+       ascii file must be table with first line being column headers, with columns for WELL, MD, X, Y & Z;
+       actual column names can be set with optional arguments;
+       all the objects are added to the model, with array data being written to the hdf5 file for the trajectories;
+       the md_domain and drilled values are stored in the RESQML metadata but are only for human information and do not
+       generally affect computations
+    """
 
     assert md_col and x_col and y_col and z_col
     md_col = str(md_col)
@@ -4522,18 +4532,18 @@ def add_wells_from_ascii_file(model,
 def well_name(well_object, model = None):
     """Returns the 'best' citation title from the object or related well objects.
 
-   arguments:
-      well_object (object, uuid or root): Object for which a well name is required. Can be a
-         Trajectory, WellboreInterpretation, WellboreFeature, BlockedWell, WellboreMarkerFrame,
-         WellboreFrame, DeviationSurvey or MdDatum object
-      model (model.Model, optional): required if passing a uuid or root; not recommended otherwise
+    arguments:
+       well_object (object, uuid or root): Object for which a well name is required. Can be a
+          Trajectory, WellboreInterpretation, WellboreFeature, BlockedWell, WellboreMarkerFrame,
+          WellboreFrame, DeviationSurvey or MdDatum object
+       model (model.Model, optional): required if passing a uuid or root; not recommended otherwise
 
-   returns:
-      string being the 'best' citation title to serve as a well name, form the object or some related objects
+    returns:
+       string being the 'best' citation title to serve as a well name, form the object or some related objects
 
-   note:
-      xml and relationships must be established for this function to work
-   """
+    note:
+       xml and relationships must be established for this function to work
+    """
 
     def better_root(model, root_a, root_b):
         a = rqet.citation_title_for_node(root_a)
@@ -4672,18 +4682,18 @@ def well_name(well_object, model = None):
 def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
     """Add a blocked well for each well in a Nexus WELLSPEC file.
 
-   arguments:
-      model (model.Model object): model to which blocked wells are added
-      grid (grid.Grid object): grid against which wellspec data will be interpreted
-      wellspec_file (string): path of ascii file holding Nexus WELLSPEC keyword and data
+    arguments:
+       model (model.Model object): model to which blocked wells are added
+       grid (grid.Grid object): grid against which wellspec data will be interpreted
+       wellspec_file (string): path of ascii file holding Nexus WELLSPEC keyword and data
 
-   returns:
-      int: count of number of blocked wells created
+    returns:
+       int: count of number of blocked wells created
 
-   notes:
-      this function appends to the hdf5 file and creates xml for the blocked wells (but does not store epc);
-      'simulation' trajectory and measured depth datum objects will also be created
-   """
+    notes:
+       this function appends to the hdf5 file and creates xml for the blocked wells (but does not store epc);
+       'simulation' trajectory and measured depth datum objects will also be created
+    """
 
     well_list_dict = wsk.load_wellspecs(wellspec_file, column_list = None)
 
@@ -4709,12 +4719,12 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
 def extract_xyz(xyz_node):
     """Extracts an x,y,z coordinate from a solitary point xml node.
 
-      argument:
-         xyz_node: the xml node representing the solitary point (in 3D space)
+    argument:
+       xyz_node: the xml node representing the solitary point (in 3D space)
 
-      returns:
-         triple float: (x, y, z) coordinates as a tuple
-   """
+    returns:
+       triple float: (x, y, z) coordinates as a tuple
+    """
 
     if xyz_node is None:
         return None
@@ -4749,8 +4759,8 @@ def well_names_in_cellio_file(cellio_file):
 def load_hdf5_array(object, node, array_attribute, tag = 'Values', dtype = 'float', model = None):
     """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
 
-      :meta private:
-   """
+    :meta private:
+    """
 
     assert (rqet.node_type(node) in ['DoubleHdf5Array', 'IntegerHdf5Array', 'Point3dHdf5Array'])
     if model is None:
@@ -4769,8 +4779,8 @@ def load_hdf5_array(object, node, array_attribute, tag = 'Values', dtype = 'floa
 def find_entry_and_exit(cp, entry_vector, exit_vector, well_name):
     """Returns (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz).
 
-      :meta private:
-   """
+    :meta private:
+    """
 
     cell_centre = np.mean(cp, axis = (0, 1, 2))
     face_triangles = gf.triangles_for_cell_faces(cp).reshape(-1, 3, 3)  # flattened first index 4 values per face
@@ -4799,9 +4809,9 @@ def find_entry_and_exit(cp, entry_vector, exit_vector, well_name):
 def _as_optional_array(arr):
     """If not None, cast as numpy array.
 
-   Casting directly to an array can be problematic:
-   np.array(None) creates an unsized array, which is potentially confusing.
-   """
+    Casting directly to an array can be problematic: np.array(None) creates an unsized array, which is potentially
+    confusing.
+    """
     if arr is None:
         return None
     else:

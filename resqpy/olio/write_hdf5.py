@@ -36,21 +36,21 @@ class H5Register():
     def register_dataset(self, object_uuid, group_tail, a, dtype = None, hdf5_path = None):
         """Register an array to be included as a dataset in the hdf5 file.
 
-      arguments:
-         object_uuid (uuid.UUID): the uuid of the object (part) that this array is for
-         group_tail (string): the remainder of the hdf5 internal path (following RESQML and
-            uuid elements)
-         a (numpy array): the dataset (array) to be registered for writing
-         dtype (type or string): the type of the individual elements within the dataset
-         hdf5_path (string, optional): if present, a full hdf5 internal path to use instead of
-            the default generated from the uuid
+        arguments:
+           object_uuid (uuid.UUID): the uuid of the object (part) that this array is for
+           group_tail (string): the remainder of the hdf5 internal path (following RESQML and
+              uuid elements)
+           a (numpy array): the dataset (array) to be registered for writing
+           dtype (type or string): the type of the individual elements within the dataset
+           hdf5_path (string, optional): if present, a full hdf5 internal path to use instead of
+              the default generated from the uuid
 
-      returns:
-         None
+        returns:
+           None
 
-      note:
-         several arrays might belong to the same object
-      """
+        note:
+           several arrays might belong to the same object
+        """
 
         #     print('registering dataset with uuid ' + str(object_uuid) + ' and group tail ' + group_tail)
         assert (len(group_tail) > 0)
@@ -69,15 +69,15 @@ class H5Register():
     def write_fp(self, fp):
         """Write or append to an hdf5 file, writing the pre-registered datasets (arrays).
 
-      arguments:
-         fp: an already open h5py._hl.files.File object
+        arguments:
+           fp: an already open h5py._hl.files.File object
 
-      returns:
-         None
+        returns:
+           None
 
-      note:
-         the file handle fp must have been opened with mode 'w' or 'a'
-      """
+        note:
+           the file handle fp must have been opened with mode 'w' or 'a'
+        """
 
         # note: in resqml, an established hdf5 file has a uuid and should therefore be immutable
         #       this function allows appending to any hdf5 file; calling code should set a new uuid when needed
@@ -100,16 +100,16 @@ class H5Register():
     def write(self, file = None, mode = 'w', release_after = True):
         """Create or append to an hdf5 file, writing the pre-registered datasets (arrays).
 
-      arguments:
-         file: either a string being the file path, or an already open h5py._hl.files.File object;
-            if None (recommended), the file is opened through the model object's hdf5 management
-            functions
-         mode (string, default 'w'): the mode to open the file in; only relevant if file is a path;
-            must be 'w' or 'a' for (over)write or append
+        arguments:
+           file: either a string being the file path, or an already open h5py._hl.files.File object;
+              if None (recommended), the file is opened through the model object's hdf5 management
+              functions
+           mode (string, default 'w'): the mode to open the file in; only relevant if file is a path;
+              must be 'w' or 'a' for (over)write or append
 
-      returns:
-         None
-      """
+        returns:
+           None
+        """
 
         # note: in resqml, an established hdf5 file has a uuid and should therefore be immutable
         #       this function allows appending to any hdf5 file;
@@ -131,24 +131,24 @@ class H5Register():
 def copy_h5(file_in, file_out, uuid_inclusion_list = None, uuid_exclusion_list = None, mode = 'w'):
     """Create a copy of an hdf5, optionally including or excluding arrays with specified uuids.
 
-   arguments:
-      file_in (string): path of existing hdf5 file to be duplicated
-      file_out (string): path of output hdf5 file to be created or appended to (see mode)
-      uuid_inclusion_list (list of uuid.UUID, optional): if present, the uuids to be included
-         in the output file
-      uuid_exclusion_list (list of uuid.UUID, optional): if present, the uuids to be excluded
-         from the output file
-      mode (string, default 'w'): mode to open output file with; must be 'w' or 'a' for
-         (over)write or append respectively
+    arguments:
+       file_in (string): path of existing hdf5 file to be duplicated
+       file_out (string): path of output hdf5 file to be created or appended to (see mode)
+       uuid_inclusion_list (list of uuid.UUID, optional): if present, the uuids to be included
+          in the output file
+       uuid_exclusion_list (list of uuid.UUID, optional): if present, the uuids to be excluded
+          from the output file
+       mode (string, default 'w'): mode to open output file with; must be 'w' or 'a' for
+          (over)write or append respectively
 
-   returns:
-      number of hdf5 groups (uuid's) copied
+    returns:
+       number of hdf5 groups (uuid's) copied
 
-   notes:
-      at most one of uuid_inclusion_list and uuid_exclusion_list should be passed;
-      if neither are passed, all the datasets (arrays) in the input file are copied to the
-      output file
-   """
+    notes:
+       at most one of uuid_inclusion_list and uuid_exclusion_list should be passed;
+       if neither are passed, all the datasets (arrays) in the input file are copied to the
+       output file
+    """
 
     #  note: if both inclusion and exclusion lists are present, exclusion list is ignored
     assert file_out != file_in, 'identical input and output files specified for hdf5 copy'
@@ -202,16 +202,16 @@ def copy_h5(file_in, file_out, uuid_inclusion_list = None, uuid_exclusion_list =
 def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w'):
     """Create a copy of some hdf5 datasets (or groups), identified as a list of hdf5 internal paths.
 
-   arguments:
-      file_in (string): path of existing hdf5 file to be copied from
-      file_out (string): path of output hdf5 file to be created or appended to (see mode)
-      hdf5_path_list (list of string): the hdf5 internal paths of the datasets (or groups) to be copied
-      mode (string, default 'w'): mode to open output file with; must be 'w' or 'a' for
-         (over)write or append respectively
+    arguments:
+       file_in (string): path of existing hdf5 file to be copied from
+       file_out (string): path of output hdf5 file to be created or appended to (see mode)
+       hdf5_path_list (list of string): the hdf5 internal paths of the datasets (or groups) to be copied
+       mode (string, default 'w'): mode to open output file with; must be 'w' or 'a' for
+          (over)write or append respectively
 
-   returns:
-      number of hdf5 datasets (or groups) copied
-   """
+    returns:
+       number of hdf5 datasets (or groups) copied
+    """
 
     #  note: if both inclusion and exclusion lists are present, exclusion list is ignored
     assert file_out != file_in, 'identical input and output files specified for hdf5 copy'
@@ -246,11 +246,11 @@ def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w'):
 def change_uuid(file, old_uuid, new_uuid):
     """Changes hdf5 internal path (group name) for part, switching from old to new uuid.
 
-   notes:
-      this is low level functionality not usually called directly;
-      the function assumes that hdf5 internal path names conform to the format that resqpy uses
-      when writing data, namely /RESQML/uuid/tail...
-   """
+    notes:
+       this is low level functionality not usually called directly;
+       the function assumes that hdf5 internal path names conform to the format that resqpy uses
+       when writing data, namely /RESQML/uuid/tail...
+    """
 
     assert file, 'hdf5 file name missing'
     assert old_uuid is not None and new_uuid is not None, 'missing uuid'

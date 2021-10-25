@@ -201,20 +201,20 @@ def length_unit_conversion_applicable(keyword):
 def load_wellspecs(wellspec_file, well = None, column_list = []):
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
-   args:
-      wellspec_file (string): file path of ascii input file containing wellspec keywords
-      well (optional, string): if present, only the data for the named well are loaded;
-         if None, data for all wells are loaded
-      column_list (list of strings, optional): if present, each dataframe returned contains
-         these columns, in this order; if None, the resulting dictionary contains only
-         well names as keys (each mapping to None rather than a dataframe); if an empty list,
-         each dataframe contains the columns listed in the corresponding wellspec header, in
-         the order found in the file
+    args:
+       wellspec_file (string): file path of ascii input file containing wellspec keywords
+       well (optional, string): if present, only the data for the named well are loaded;
+          if None, data for all wells are loaded
+       column_list (list of strings, optional): if present, each dataframe returned contains
+          these columns, in this order; if None, the resulting dictionary contains only
+          well names as keys (each mapping to None rather than a dataframe); if an empty list,
+          each dataframe contains the columns listed in the corresponding wellspec header, in
+          the order found in the file
 
-   returns:
-      dictionary (string: pandas dataframe) mapping each well name found in the wellspec file
-         to a dataframe containing the wellspec data
-   """
+    returns:
+       dictionary (string: pandas dataframe) mapping each well name found in the wellspec file
+          to a dataframe containing the wellspec data
+    """
 
     assert wellspec_file, 'no wellspec file specified'
 

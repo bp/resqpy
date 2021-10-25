@@ -12,15 +12,15 @@ def _pyr(ra, ab, ac, ad, db):  # returns 6 * volume of one quad pyramid, defined
 def pyramid_volume(apex, a, b, c, d, crs_is_right_handed = False):
     """Returns volume of a quadrilateral pyramid.
 
-   arguments:
-      apex (triple float): location of the apex of the pyramid
-      a, b, c, d (each triple float): locations of corners of base of pyramid; clockwise viewed from apex
-         for a left handed crs
-      crs_is_right_handed (boolean, default False): set True if xyz axes of crs are right handed
+    arguments:
+       apex (triple float): location of the apex of the pyramid
+       a, b, c, d (each triple float): locations of corners of base of pyramid; clockwise viewed from apex
+          for a left handed crs
+       crs_is_right_handed (boolean, default False): set True if xyz axes of crs are right handed
 
-   returns:
-      float, being the volume of the pyramid; units are implied by crs units in use by the vertices
-   """
+    returns:
+       float, being the volume of the pyramid; units are implied by crs units in use by the vertices
+    """
 
     apex = np.array(apex)
     a = np.array(a)
@@ -36,13 +36,13 @@ def pyramid_volume(apex, a, b, c, d, crs_is_right_handed = False):
 def tetrahedron_volume(a, b, c, d):
     """Returns volume of a tetrahedron.
 
-   arguments:
-      a, b, c, d (each triple float): locations of corners of tetrahedron
-      crs_is_right_handed (boolean, default False): set True if xyz axes of crs are right handed
+    arguments:
+       a, b, c, d (each triple float): locations of corners of tetrahedron
+       crs_is_right_handed (boolean, default False): set True if xyz axes of crs are right handed
 
-   returns:
-      float, being the volume of the tetrahedron; units are implied by crs units in use by the vertices
-   """
+    returns:
+       float, being the volume of the tetrahedron; units are implied by crs units in use by the vertices
+    """
 
     a = np.array(a)
     b = np.array(b)
@@ -102,19 +102,19 @@ def tetra_volumes_slow(cp, centres = None, off_hand = False):
 def tetra_volumes(cp, centres = None, off_hand = False):
     """Returns volume array for all hexahedral cells assuming bilinear faces, using numpy operations.
 
-   arguments:
-      cp (7D numpy array of floats): cell corner point data in Pagoda 7D format [nk, nj, ni, kp, jp, ip, xyz]
-      centres (optional, 4D numpy array of floats): cell centre points [nk, nj, ni, xyz]; calculated if None
-      off_hand (boolean, default False): if True, the handedness of IJK space is the opposite of that for xyz
-         space; if this argument is not set correctly, negative volumes will be returned
+    arguments:
+       cp (7D numpy array of floats): cell corner point data in Pagoda 7D format [nk, nj, ni, kp, jp, ip, xyz]
+       centres (optional, 4D numpy array of floats): cell centre points [nk, nj, ni, xyz]; calculated if None
+       off_hand (boolean, default False): if True, the handedness of IJK space is the opposite of that for xyz
+          space; if this argument is not set correctly, negative volumes will be returned
 
-   returns:
-      numpy 3D array of floats being the cell volumes [nk, nj, ni]
+    returns:
+       numpy 3D array of floats being the cell volumes [nk, nj, ni]
 
-   note:
-      length units are assumed to be consistent in x, y & z; and untis of returned volumes are implicitly
-      those length units cubed
-   """
+    note:
+       length units are assumed to be consistent in x, y & z; and untis of returned volumes are implicitly
+       those length units cubed
+    """
 
     def pyrs(ra, ab, ac, ad, db):  # returns 6 * volume of one quad pyramid (for each cell)
         return np.sum(ra * np.cross(db, ac), axis = -1) + 0.5 * np.sum(ac * np.cross(ad, ab), axis = -1)

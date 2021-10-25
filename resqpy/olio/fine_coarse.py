@@ -21,26 +21,26 @@ class FineCoarse:
     def __init__(self, fine_extent_kji, coarse_extent_kji, within_fine_box = None, within_coarse_box = None):
         """Partial initialisation function, call other methods to assign ratios and proportions.
 
-      arguments:
-         fine_extent_kji (triple int): the local extent of the fine grid in k, j, i axes, ie (nk, nj, ni).
-         coarse_extent_kji (triple int): the local extent of the coarse grid in k, j, i axes.
-         within_fine_box (numpy int array of shape (2, 3), optional): if present, the subset of a larger
-            fine grid that the mapping refers to; axes are min,max and k,j,i; values are zero based indices;
-            max values are included in box (un-pythonesque); use this in the case of a local grid coarsening
-         within_coarse_box (numpy int array of shape (2, 3), optional): if present, the subset of a larger
-            coarse grid that the mapping refers to; axes are min,max and k,j,i; values are zero based indices;
-            max values are included in box (un-pythonesque); use this in the case of a local grid refinement;
-            required for write_cartref() method to work
+        arguments:
+           fine_extent_kji (triple int): the local extent of the fine grid in k, j, i axes, ie (nk, nj, ni).
+           coarse_extent_kji (triple int): the local extent of the coarse grid in k, j, i axes.
+           within_fine_box (numpy int array of shape (2, 3), optional): if present, the subset of a larger
+              fine grid that the mapping refers to; axes are min,max and k,j,i; values are zero based indices;
+              max values are included in box (un-pythonesque); use this in the case of a local grid coarsening
+           within_coarse_box (numpy int array of shape (2, 3), optional): if present, the subset of a larger
+              coarse grid that the mapping refers to; axes are min,max and k,j,i; values are zero based indices;
+              max values are included in box (un-pythonesque); use this in the case of a local grid refinement;
+              required for write_cartref() method to work
 
-      returns:
-         newly formed FineCoarse object awaiting determination of ratios and proportions by axes.
+        returns:
+           newly formed FineCoarse object awaiting determination of ratios and proportions by axes.
 
-      notes:
-         at most one of within_fine_box and within_coarse_box may be passed; this information is not really
-         used internally by the FineCoarse class but is noted in order to support local grid refinement and
-         local grid coarsening applications;
-         after intialisation, set_* methods should be called to establish the mapping
-      """
+        notes:
+           at most one of within_fine_box and within_coarse_box may be passed; this information is not really
+           used internally by the FineCoarse class but is noted in order to support local grid refinement and
+           local grid coarsening applications;
+           after intialisation, set_* methods should be called to establish the mapping
+        """
 
         assert len(fine_extent_kji) == 3 and len(coarse_extent_kji) == 3
         assert within_fine_box is None or within_coarse_box is None
@@ -158,7 +158,8 @@ class FineCoarse:
         return tuple(base)
 
     def fine_box_for_coarse(self, c_kji0):
-        """Returns a numpy int array of shape (2, 3) being the min, max for k, j, i0 in fine grid for given coarse cell."""
+        """Returns a numpy int array of shape (2, 3) being the min, max for k, j, i0 in fine grid for given coarse
+        cell."""
 
         box = np.empty((2, 3), dtype = int)
         box[0] = self.fine_base_for_coarse(c_kji0)
@@ -166,7 +167,8 @@ class FineCoarse:
         return box
 
     def proportion(self, axis, c0):
-        """Return a numpy vector of floats (summing to one) being the axial relative proportions of fine within coarse."""
+        """Return a numpy vector of floats (summing to one) being the axial relative proportions of fine within
+        coarse."""
 
         if self.equal_proportions[axis]:
             count = self.ratio(axis, c0)
@@ -175,7 +177,8 @@ class FineCoarse:
         return self.vector_proportions[axis][c0]
 
     def proportions_for_axis(self, axis):
-        """Return a numpy vector of floats for fine (summing to one for each coarse slice) being the axial relative proportions."""
+        """Return a numpy vector of floats for fine (summing to one for each coarse slice) being the axial relative
+        proportions."""
 
         if self.equal_proportions[axis]:
             count = self.constant_ratios[axis]
@@ -184,7 +187,8 @@ class FineCoarse:
         return np.concatenate(self.vector_proportions[axis])
 
     def interpolation(self, axis, c0):
-        """Return a numpy vector of floats starting at zero and increasing monotonically to less than one, ready for interpolation."""
+        """Return a numpy vector of floats starting at zero and increasing monotonically to less than one, ready for
+        interpolation."""
 
         count = self.ratio(axis, c0)
         fractions = np.zeros((count,))
@@ -380,34 +384,34 @@ def tartan_refinement(coarse_extent_kji,
                       within_coarse_box = None):
     """Returns a new FineCoarse object set to a tartan grid refinement; fine extent is determined from arguments.
 
-   arguments:
-      coarse_extent_kji (triple int): the extent of the coarse grid being refined
-      coarse_fovea_box (numpy int array of shape (2, 3)): the central box within the coarse grid to receive maximum refinement
-      fovea_ratios_kji (triple int): the maximum refinement ratios, to be applied in the coarse_fovea_box
-      decay_rates_kji (triple float or triple int, optional): controls how quickly refinement ratio reduces in slices away from fovea;
-         if None then default values will be generated; see notes for more details
-      decay_mode (str, default 'exponential'): 'exponential' or 'linear'; see notes
-      within_coarse_box (numpy int array of shape (2, 3), optional): if present, is preserved in FineCoarse for possible use
-         in setting resqml ParentWindow or generating Nexus CARTREF
+    arguments:
+       coarse_extent_kji (triple int): the extent of the coarse grid being refined
+       coarse_fovea_box (numpy int array of shape (2, 3)): the central box within the coarse grid to receive maximum refinement
+       fovea_ratios_kji (triple int): the maximum refinement ratios, to be applied in the coarse_fovea_box
+       decay_rates_kji (triple float or triple int, optional): controls how quickly refinement ratio reduces in slices away from fovea;
+          if None then default values will be generated; see notes for more details
+       decay_mode (str, default 'exponential'): 'exponential' or 'linear'; see notes
+       within_coarse_box (numpy int array of shape (2, 3), optional): if present, is preserved in FineCoarse for possible use
+          in setting resqml ParentWindow or generating Nexus CARTREF
 
-   returns:
-      FineCoarse object holding the tartan refinement mapping
+    returns:
+       FineCoarse object holding the tartan refinement mapping
 
-   notes:
-      each axis is treated independently;
-      the fovea (box of maximum refinement) may be a column of cells (for a vertical well) or any other logical cuboid;
-      the refinement factor is reduced monotonically in slices moving away from the fovea;
-      two refinement factor decay functions are available: 'exponential' and 'linear', with different meaning to decay_rates_kji;
-      for exponential decay, each decay rate should be a float in the range 0.0 to 1.0, with 0.0 causing immediate change
-      to no refinement (factor 1), and 1.0 causing no decay (constant refinement at fovea factor);
-      for linear decay, each decay rate should typically be a non-negative integer (though float is also okay), with 0 causing
-      no decay, 1 causing a reduction in refinement factor of 1 per coarse slice, 2 meaning refinement factor reduces by 2 with
-      each coarse slice etc.;
-      in all cases, the refinement factor is given a lower limit of 1;
-      the factor is rounded to an int for each slice, when working with floats;
-      if decay rates are not passed as arguments, suitable values are generated to give a gradual reduction in refinement to a
-      ratio of one at the boundary of the grid
-   """
+    notes:
+       each axis is treated independently;
+       the fovea (box of maximum refinement) may be a column of cells (for a vertical well) or any other logical cuboid;
+       the refinement factor is reduced monotonically in slices moving away from the fovea;
+       two refinement factor decay functions are available: 'exponential' and 'linear', with different meaning to decay_rates_kji;
+       for exponential decay, each decay rate should be a float in the range 0.0 to 1.0, with 0.0 causing immediate change
+       to no refinement (factor 1), and 1.0 causing no decay (constant refinement at fovea factor);
+       for linear decay, each decay rate should typically be a non-negative integer (though float is also okay), with 0 causing
+       no decay, 1 causing a reduction in refinement factor of 1 per coarse slice, 2 meaning refinement factor reduces by 2 with
+       each coarse slice etc.;
+       in all cases, the refinement factor is given a lower limit of 1;
+       the factor is rounded to an int for each slice, when working with floats;
+       if decay rates are not passed as arguments, suitable values are generated to give a gradual reduction in refinement to a
+       ratio of one at the boundary of the grid
+    """
 
     assert box.valid_box(coarse_fovea_box, coarse_extent_kji)
     assert decay_mode in ['exponential', 'linear']

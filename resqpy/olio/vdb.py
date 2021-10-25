@@ -37,8 +37,8 @@ init_not_packed = ['DAD', 'KID', 'UID', 'UNPACK']
 def coerce(a, dtype):
     """Returns a version of numpy array a with elements coerced to dtype.
 
-      :meta private:
-   """
+    :meta private:
+    """
     if dtype is None or a.dtype == dtype:
         return a
     b = np.empty(a.shape, dtype = dtype)
@@ -64,7 +64,7 @@ def ensemble_vdb_list(run_dir, sort_list = True):
             recursive_vdb_list(entry.path)
 
     def cmp_to_key(mycmp):
-        'Convert a cmp= function into a key= function'
+        """Convert a cmp= function into a key= function."""
 
         class K:
 

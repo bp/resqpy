@@ -209,27 +209,27 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
 def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
     """Returns the Delauney Triangulation of 2D point set p.
 
-   arguments:
-      p (numpy float array of shape (N, 2): the x,y coordinates of the points
-      algorithm (string, optional): selects which algorithm to use; current options: ['simple'];
-         if None, the current best algorithm is selected
-      plot_fn (function of form f(p, t), optional): if present, this function is called each time the
-         algorithm feels it is worth refreshing a plot of the progress; p is a copy of the point set,
-         depending on the algorithm with 3 extra points added to form an enveloping triangle
-      progress_fn (function of form f(x), optional): if present, this function is called at regulat
-         intervals by the algorithm, passing increasing values in the range 0.0 to 1.0 as x
-      container_size_factor (float, default 100.0): the larger this number, the more likely the
-         resulting triangulation is to be convex; reduce to 1.0 to allow slight concavities
-      return_hull (boolean, default False): if True, a pair is returned with the second item being
-         a clockwise ordered list of indices into p identifying the points on the boundary of the
-         returned triangulation
+    arguments:
+       p (numpy float array of shape (N, 2): the x,y coordinates of the points
+       algorithm (string, optional): selects which algorithm to use; current options: ['simple'];
+          if None, the current best algorithm is selected
+       plot_fn (function of form f(p, t), optional): if present, this function is called each time the
+          algorithm feels it is worth refreshing a plot of the progress; p is a copy of the point set,
+          depending on the algorithm with 3 extra points added to form an enveloping triangle
+       progress_fn (function of form f(x), optional): if present, this function is called at regulat
+          intervals by the algorithm, passing increasing values in the range 0.0 to 1.0 as x
+       container_size_factor (float, default 100.0): the larger this number, the more likely the
+          resulting triangulation is to be convex; reduce to 1.0 to allow slight concavities
+       return_hull (boolean, default False): if True, a pair is returned with the second item being
+          a clockwise ordered list of indices into p identifying the points on the boundary of the
+          returned triangulation
 
-   returns:
-      numpy int array of shape (M, 3) - being the indices into the first axis of p of the 3 points
-         per triangle in the Delauney Triangulation - and if return_hull is True, another int array
-         of shape (B,) - being indices into p of the clockwise ordered points on the boundary of
-         the triangulation
-   """
+    returns:
+       numpy int array of shape (M, 3) - being the indices into the first axis of p of the 3 points
+          per triangle in the Delauney Triangulation - and if return_hull is True, another int array
+          of shape (B,) - being indices into p of the clockwise ordered points on the boundary of
+          the triangulation
+    """
     assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delauney Triangulation'
 
     if not algorithm:
@@ -270,26 +270,26 @@ def ccc(p1, p2, p3):
 def voronoi(p, t, b, aoi):
     """Returns dual Voronoi diagram for a Delauney triangulation.
 
-   arguments:
-      p (numpy float array of shape (N, 2)): seed points used in the Delauney triangulation
-      t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
-      b (numpy int array of shape (B,)): clockwise sorted list of indices into p of the boundary
-         points of the triangulation t
-      aoi (lines.Polyline): area of interest; a closed clockwise polyline that must strictly contain
-         all p (no points exactly on or outside the polyline)
+    arguments:
+       p (numpy float array of shape (N, 2)): seed points used in the Delauney triangulation
+       t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
+       b (numpy int array of shape (B,)): clockwise sorted list of indices into p of the boundary
+          points of the triangulation t
+       aoi (lines.Polyline): area of interest; a closed clockwise polyline that must strictly contain
+          all p (no points exactly on or outside the polyline)
 
-   returns:
-      c, v where: c is a numpy float array of shape (M+E, 2) being the circumcircle centres of
-      the M triangles and E boundary points from the aoi polygon line; and v is a list of
-      N Voronoi cell lists of clockwise ints, each int being an index into c
+    returns:
+       c, v where: c is a numpy float array of shape (M+E, 2) being the circumcircle centres of
+       the M triangles and E boundary points from the aoi polygon line; and v is a list of
+       N Voronoi cell lists of clockwise ints, each int being an index into c
 
-   notes:
-      the aoi polyline forms the outer boundary for the Voronoi polygons for points on the
-      outer edge of the triangulation; all points p must lie strictly within the aoi, which
-      must be convex; the triangulation t, of points p, must also have a convex hull; note
-      that the dt() function can produce a triangulation with slight concavities on the hull,
-      especially for smaller values of its container_size_factor argument
-   """
+    notes:
+       the aoi polyline forms the outer boundary for the Voronoi polygons for points on the
+       outer edge of the triangulation; all points p must lie strictly within the aoi, which
+       must be convex; the triangulation t, of points p, must also have a convex hull; note
+       that the dt() function can produce a triangulation with slight concavities on the hull,
+       especially for smaller values of its container_size_factor argument
+    """
 
     # this code assumes that the Voronoi polygon for a seed point visits the circumcentres of
     # all the triangles that make use of the point – currently understood to be always the case
@@ -617,26 +617,26 @@ def voronoi(p, t, b, aoi):
 def triangulated_polygons(p, v, centres = None):
     """Returns triangulation of polygons using centres as extra points.
 
-   arguments:
-      p (2D numpy float array): points used as vertices of polygons
-      v (list of list of ints): ordered indices into p for each polygon
-      centres (2D numpy float array, optional): the points to use as the centre for each polygon
+    arguments:
+       p (2D numpy float array): points used as vertices of polygons
+       v (list of list of ints): ordered indices into p for each polygon
+       centres (2D numpy float array, optional): the points to use as the centre for each polygon
 
-   returns:
-      points, triangles where: points is a copy of p extended with the centre points of polygons;
-      and triangles is a numpy int array of shape (N, 3) being the triangulation of points, where N is
-      equal to the overall length of v
+    returns:
+       points, triangles where: points is a copy of p extended with the centre points of polygons;
+       and triangles is a numpy int array of shape (N, 3) being the triangulation of points, where N is
+       equal to the overall length of v
 
-   notes:
-      if no centres are provided, balanced centre points are computed for the polygons;
-      the polygons must be convex (at least from the perspective of the centre points);
-      the clockwise/anti-clockwise order of the triangle edges will match that of the polygon;
-      the centre point is the first point in each triangle;
-      the order of triangles will match the order of vertices in a flattened view of list v;
-      p and centres may have a shape of 2 or 3 in the second dimension (xy or xyz data);
-      p & v could be the values (c, v) returned by the voronoi() function, in which case the
-      original seed points p passed into voronoi() can be passed as centres here
-   """
+    notes:
+       if no centres are provided, balanced centre points are computed for the polygons;
+       the polygons must be convex (at least from the perspective of the centre points);
+       the clockwise/anti-clockwise order of the triangle edges will match that of the polygon;
+       the centre point is the first point in each triangle;
+       the order of triangles will match the order of vertices in a flattened view of list v;
+       p and centres may have a shape of 2 or 3 in the second dimension (xy or xyz data);
+       p & v could be the values (c, v) returned by the voronoi() function, in which case the
+       original seed points p passed into voronoi() can be passed as centres here
+    """
 
     assert p.ndim == 2 and p.shape[1] in [2, 3]
     assert len(v) > 0

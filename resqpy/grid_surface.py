@@ -192,27 +192,28 @@ class GridSkin:
                                               start_xyz = None,
                                               nudge = None,
                                               exclude_kji0 = None):
-        """Returns the x,y,z and K,J,I and axis, polarity & segment of the first intersection of the trajectory with the torn skin.
+        """Returns the x,y,z and K,J,I and axis, polarity & segment of the first intersection of the trajectory with the
+        torn skin.
 
-      arguments:
-         trajectory (well.Trajectory object): the trajectory to be intersected with the skin
-         start (int, default 0): the trajectory segment number to start the search from
-         start_xyz (triple float, optional): if present, this point should lie on the start segment and search continues from
-            this point
-         nudge (float, optional): if present and positive, the start point is nudged forward by this distance (grid uom);
-            if present and negative (more typical for skin entry search), the start point is nudged back a little
-         exclude_kji0 (triple int, optional): if present, the indices of a cell to exclude as a possible result
+        arguments:
+           trajectory (well.Trajectory object): the trajectory to be intersected with the skin
+           start (int, default 0): the trajectory segment number to start the search from
+           start_xyz (triple float, optional): if present, this point should lie on the start segment and search continues from
+              this point
+           nudge (float, optional): if present and positive, the start point is nudged forward by this distance (grid uom);
+              if present and negative (more typical for skin entry search), the start point is nudged back a little
+           exclude_kji0 (triple int, optional): if present, the indices of a cell to exclude as a possible result
 
-      returns:
-         5-tuple (triple float, triple int, int, int, int): the first element is the xyz coordinates of the intersection point
-         in the crs of the grid; second element is the kji0 of the cell that is intersected, which might be a pinched out
-         or otherwise inactive cell; 3rd element is 0, 1 or 2 for K, J or I axis of cell face; 4th element is 0 for -ve
-         face, 1 for +ve face; 5th element is the trajectory knot prior to the intersection (also the segment number)
+        returns:
+           5-tuple (triple float, triple int, int, int, int): the first element is the xyz coordinates of the intersection point
+           in the crs of the grid; second element is the kji0 of the cell that is intersected, which might be a pinched out
+           or otherwise inactive cell; 3rd element is 0, 1 or 2 for K, J or I axis of cell face; 4th element is 0 for -ve
+           face, 1 for +ve face; 5th element is the trajectory knot prior to the intersection (also the segment number)
 
-      note:
-         if the GridSkin object has been initialised using single layer tactics, then the k0 value will be zero for any
-         initial entry through a sidewall of the grid or through a fault face
-      """
+        note:
+           if the GridSkin object has been initialised using single layer tactics, then the k0 value will be zero for any
+           initial entry through a sidewall of the grid or through a fault face
+        """
 
         if exclude_kji0 is not None:
             xyz_1, segment_1, tri_index_1, xyz_2, segment_2, tri_index_2 =  \
@@ -367,25 +368,25 @@ def generate_untorn_surface_for_layer_interface(grid,
                                                 border = None):
     """Returns a Surface object generated from the grid layer interface points after any faults are 'healed'.
 
-   arguments:
-      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
-      k0 (int): the layer number (zero based) to be used
-      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
-         interface of the layer is to be used
-      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
-         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
-      border (float, optional): If given, an extra border row of quadrangles is added around the grid mesh
+    arguments:
+       grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
+       k0 (int): the layer number (zero based) to be used
+       ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
+          interface of the layer is to be used
+       quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
+          which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+          the face; if False, only 2 triangles are used, which gives a non-unique solution
+       border (float, optional): If given, an extra border row of quadrangles is added around the grid mesh
 
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
+    returns:
+       a resqml_surface.Surface object with a single triangulated patch
 
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      If a border is specified and the outer grid cells have non-parallel edges, the resulting mesh might be
-      messed up.
-   """
+    notes:
+       The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+       written.
+       If a border is specified and the outer grid cells have non-parallel edges, the resulting mesh might be
+       messed up.
+    """
 
     surf = rqs.Surface(grid.model)
     kp = 1 if ref_k_faces == 'base' else 0
@@ -422,26 +423,26 @@ def generate_untorn_surface_for_layer_interface(grid,
 def generate_torn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top', quad_triangles = True):
     """Returns a Surface object generated from the grid layer interface points.
 
-   arguments:
-      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
-      k0 (int): the layer number (zero based) to be used
-      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
-         interface of the layer is to be used
-      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
-         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
+    arguments:
+       grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
+       k0 (int): the layer number (zero based) to be used
+       ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
+          interface of the layer is to be used
+       quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
+          which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+          the face; if False, only 2 triangles are used, which gives a non-unique solution
 
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
+    returns:
+       a resqml_surface.Surface object with a single triangulated patch
 
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
-      surface which are not joined; therefore, if fault tears cut off one area of the surface (eg. a fault running
-      fully across the grid), then more than one patch should be generated; however, at present the code uses a
-      single patch regardless.
-   """
+    notes:
+       The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+       written.
+       Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
+       surface which are not joined; therefore, if fault tears cut off one area of the surface (eg. a fault running
+       fully across the grid), then more than one patch should be generated; however, at present the code uses a
+       single patch regardless.
+    """
 
     surf = rqs.Surface(grid.model)
     kp = 1 if ref_k_faces == 'base' else 0
@@ -459,27 +460,27 @@ def generate_torn_surface_for_x_section(grid,
                                         as_single_layer = False):
     """Returns a Surface object generated from the grid cross section points.
 
-   arguments:
-      grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
-      axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-      ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-      plus_face (boolean, default False): if False, negative face is used; if True, positive
-      quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
-         gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
-      as_single_layer (boolean, default False): if True, the top points from the top layer are used together
-         with the basal points from the base layer, to effect a single layer equivalent cross section surface
+    arguments:
+       grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
+       axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+       ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+       plus_face (boolean, default False): if False, negative face is used; if True, positive
+       quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
+          gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+          the face; if False, only 2 triangles are used, which gives a non-unique solution
+       as_single_layer (boolean, default False): if True, the top points from the top layer are used together
+          with the basal points from the base layer, to effect a single layer equivalent cross section surface
 
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
+    returns:
+       a resqml_surface.Surface object with a single triangulated patch
 
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
-      surface which are not joined; therefore, a fault running down through the grid should result in separate
-      patches; however, at present the code uses a single patch regardless.
-   """
+    notes:
+       The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+       written.
+       Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
+       surface which are not joined; therefore, a fault running down through the grid should result in separate
+       patches; however, at present the code uses a single patch regardless.
+    """
 
     assert axis.upper() in ['I', 'J']
 
@@ -511,27 +512,27 @@ def generate_untorn_surface_for_x_section(grid,
                                           as_single_layer = False):
     """Returns a Surface object generated from the grid cross section points for an unfaulted grid.
 
-   arguments:
-      grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
-      axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-      ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-      plus_face (boolean, default False): if False, negative face is used; if True, positive
-      quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
-         gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
-      as_single_layer (boolean, default False): if True, the top points from the top layer are used together
-         with the basal points from the base layer, to effect a single layer equivalent cross section surface
+    arguments:
+       grid (grid.Grid object): the grid object from which a cross section is to be converted to a surface
+       axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+       ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+       plus_face (boolean, default False): if False, negative face is used; if True, positive
+       quad_triangles (boolean, default True): if True, 4 triangles are used to represent each cell face, which
+          gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+          the face; if False, only 2 triangles are used, which gives a non-unique solution
+       as_single_layer (boolean, default False): if True, the top points from the top layer are used together
+          with the basal points from the base layer, to effect a single layer equivalent cross section surface
 
-   returns:
-      a resqml_surface.Surface object with a single triangulated patch
+    returns:
+       a resqml_surface.Surface object with a single triangulated patch
 
-   notes:
-      The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
-      written.
-      Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
-      surface which are not joined; therefore, a fault running down through the grid should result in separate
-      patches; however, at present the code uses a single patch regardless.
-   """
+    notes:
+       The resulting surface is assigned to the same model as grid, though xml is not generated and hdf5 is not
+       written.
+       Strictly, the RESQML business rules for a triangulated surface require a separate patch for areas of the
+       surface which are not joined; therefore, a fault running down through the grid should result in separate
+       patches; however, at present the code uses a single patch regardless.
+    """
 
     assert axis.upper() in ['I', 'J']
 
@@ -556,22 +557,22 @@ def generate_untorn_surface_for_x_section(grid,
 def find_intersections_of_trajectory_with_surface(trajectory, surface):
     """Returns an array of triangle indices and an array of xyz of intersections of well trajectory with surface.
 
-   arguments:
-      trajectory (well.Trajectory object; or list thereof): the wellbore trajectory object(s) to find the intersections for;
-         if a list of trajectories is provided then the return value is a corresponding list
-      surface (surface.Surface object): the triangulated surface with which to intersect the trajectory
+    arguments:
+       trajectory (well.Trajectory object; or list thereof): the wellbore trajectory object(s) to find the intersections for;
+          if a list of trajectories is provided then the return value is a corresponding list
+       surface (surface.Surface object): the triangulated surface with which to intersect the trajectory
 
-   returns:
-      (numpy int array of shape (N,), numpy float array of shape (N, 3)): the first array is a list of surface
-      triangle indices containing an intersection and the second array is the corresponding list of (x, y, z)
-      intersection points; if the trajectory argument is a list of trajectories, then a correponding list of numpy
-      array pairs is returned
+    returns:
+       (numpy int array of shape (N,), numpy float array of shape (N, 3)): the first array is a list of surface
+       triangle indices containing an intersection and the second array is the corresponding list of (x, y, z)
+       intersection points; if the trajectory argument is a list of trajectories, then a correponding list of numpy
+       array pairs is returned
 
-   notes:
-      interseections are found based on straight line segments between the trajectory control points, this will result
-      in errors where there is significant curvature between neighbouring control points;
-      a given triangle index might appear more than once in the first returned array
-   """
+    notes:
+       interseections are found based on straight line segments between the trajectory control points, this will result
+       in errors where there is significant curvature between neighbouring control points;
+       a given triangle index might appear more than once in the first returned array
+    """
 
     if isinstance(trajectory, list):
         trajectory_list = trajectory
@@ -604,31 +605,31 @@ def find_intersections_of_trajectory_with_layer_interface(trajectory,
                                                           quad_triangles = True):
     """Returns an array of column indices and an array of xyz of intersections of well trajectory with layer interface.
 
-   arguments:
-      trajectory (well.Trajectory object; or list thereof): the wellbore trajectory object(s) to find the intersections for;
-         if a list of trajectories is provided then the return value is a corresponding list
-      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
-      k0 (int): the layer number (zero based) to be used
-      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
-         interface of the layer is to be used
-      heal_faults (boolean, default True): if True, faults will be 'healed' to give an untorn surface before looking
-         for intersections; if False and the trajectory passes through a fault plane without intersecting the layer
-         interface then no intersection will be identified; makes no difference if the grid is unfaulted
-      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
-         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
+    arguments:
+       trajectory (well.Trajectory object; or list thereof): the wellbore trajectory object(s) to find the intersections for;
+          if a list of trajectories is provided then the return value is a corresponding list
+       grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
+       k0 (int): the layer number (zero based) to be used
+       ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
+          interface of the layer is to be used
+       heal_faults (boolean, default True): if True, faults will be 'healed' to give an untorn surface before looking
+          for intersections; if False and the trajectory passes through a fault plane without intersecting the layer
+          interface then no intersection will be identified; makes no difference if the grid is unfaulted
+       quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
+          which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+          the face; if False, only 2 triangles are used, which gives a non-unique solution
 
-   returns:
-      (numpy int array of shape (N, 2), numpy float array of shape (N, 3)): the first array is a list of (j0, i0)
-      indices of columns containing an intersection and the second array is the corresponding list of (x, y, z)
-      intersection points; if the trajectory argument is a list of trajectories, then a correponding list of numpy
-      array pairs is returned
+    returns:
+       (numpy int array of shape (N, 2), numpy float array of shape (N, 3)): the first array is a list of (j0, i0)
+       indices of columns containing an intersection and the second array is the corresponding list of (x, y, z)
+       intersection points; if the trajectory argument is a list of trajectories, then a correponding list of numpy
+       array pairs is returned
 
-   notes:
-      interseections are found based on straight line segments between the trajectory control points, this will result
-      in errors where there is significant curvature between neighbouring control points;
-      a given (j0, i0) column might appear more than once in the first returned array
-   """
+    notes:
+       interseections are found based on straight line segments between the trajectory control points, this will result
+       in errors where there is significant curvature between neighbouring control points;
+       a given (j0, i0) column might appear more than once in the first returned array
+    """
 
     if isinstance(trajectory, list):
         trajectory_list = trajectory
@@ -673,28 +674,28 @@ def find_first_intersection_of_trajectory_with_surface(trajectory,
                                                        return_second = False):
     """Returns xyz and other info of the first intersection of well trajectory with layer interface.
 
-   arguments:
-      trajectory (well.Trajectory object): the wellbore trajectory object(s) to find the intersection for
-      surface (surface.Surface object): the triangulated surface with which to search for intersections
-      start (int, default 0): an index into the trajectory knots to start the search from
-      start_xyz (triple float, optional): if present, should lie on start segment and search starts from this point
-      nudge (float, optional): if present and positive, starting xyz is nudged forward this distance along segment;
-         if present and negative, starting xyz is nudged backward along segment
-      return_second (boolean, default False): if True, a sextuplet is returned with the last 3 elements identifying
-         the 'runner up' intersection in the same trajectory segment, or None, None, None if only one intersection found
+    arguments:
+       trajectory (well.Trajectory object): the wellbore trajectory object(s) to find the intersection for
+       surface (surface.Surface object): the triangulated surface with which to search for intersections
+       start (int, default 0): an index into the trajectory knots to start the search from
+       start_xyz (triple float, optional): if present, should lie on start segment and search starts from this point
+       nudge (float, optional): if present and positive, starting xyz is nudged forward this distance along segment;
+          if present and negative, starting xyz is nudged backward along segment
+       return_second (boolean, default False): if True, a sextuplet is returned with the last 3 elements identifying
+          the 'runner up' intersection in the same trajectory segment, or None, None, None if only one intersection found
 
-   returns:
-      a triplet if return_second is False; a sextuplet if return_second is True; the first triplet is:
-      (numpy float array of shape (3,), int, int): being the (x, y, z) intersection point, and the trajectory segment number,
-      and the triangle index of the first intersection point; or None, None, None if no intersection found;
-      if return_second is True, the 4th, 5th & 6th return values are similar to the first three, conveying information
-      about the second intersection of the same trajectory segment with the surface, or None, None, None if a no second
-      intersection was found
+    returns:
+       a triplet if return_second is False; a sextuplet if return_second is True; the first triplet is:
+       (numpy float array of shape (3,), int, int): being the (x, y, z) intersection point, and the trajectory segment number,
+       and the triangle index of the first intersection point; or None, None, None if no intersection found;
+       if return_second is True, the 4th, 5th & 6th return values are similar to the first three, conveying information
+       about the second intersection of the same trajectory segment with the surface, or None, None, None if a no second
+       intersection was found
 
-   notes:
-      interseections are found based on straight line segments between the trajectory control points, this will result
-      in errors where there is significant curvature between neighbouring control points
-   """
+    notes:
+       interseections are found based on straight line segments between the trajectory control points, this will result
+       in errors where there is significant curvature between neighbouring control points
+    """
 
     if start >= trajectory.knot_count - 1:
         if return_second:
@@ -766,35 +767,36 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
                                                                start = 0,
                                                                heal_faults = False,
                                                                quad_triangles = True):
-    """Returns xyz and other info of the first intersection of well trajectory (or list of trajectories) with layer interface.
+    """Returns xyz and other info of the first intersection of well trajectory (or list of trajectories) with layer
+    interface.
 
-   arguments:
-      trajectory (well.Trajectory object; or list thereof): the wellbore trajectory object(s) to find the intersection for;
-         if a list of trajectories is provided then the return value is a corresponding list
-      grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
-      k0 (int): the layer number (zero based) to be used
-      ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
-         interface of the layer is to be used
-      start (int, default 0): an index into the trajectory knots to start the search from; is applied naively to all
-         trajectories when a trajectory list is passed
-      heal_faults (boolean, default False): if True, faults will be 'healed' to give an untorn surface before looking
-         for intersections; if False and the trajectory passes through a fault plane without intersecting the layer
-         interface then no intersection will be identified; makes no difference if the grid is unfaulted
-      quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
-         which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
-         the face; if False, only 2 triangles are used, which gives a non-unique solution
+    arguments:
+       trajectory (well.Trajectory object; or list thereof): the wellbore trajectory object(s) to find the intersection for;
+          if a list of trajectories is provided then the return value is a corresponding list
+       grid (grid.Grid object): the grid object from which a layer interface is to be converted to a surface
+       k0 (int): the layer number (zero based) to be used
+       ref_k_faces (string): either 'top' (the default) or 'base', indicating whether the top or the base
+          interface of the layer is to be used
+       start (int, default 0): an index into the trajectory knots to start the search from; is applied naively to all
+          trajectories when a trajectory list is passed
+       heal_faults (boolean, default False): if True, faults will be 'healed' to give an untorn surface before looking
+          for intersections; if False and the trajectory passes through a fault plane without intersecting the layer
+          interface then no intersection will be identified; makes no difference if the grid is unfaulted
+       quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
+          which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
+          the face; if False, only 2 triangles are used, which gives a non-unique solution
 
-   returns:
-      (numpy float array of shape (3,), int, (int, int)): being the (x, y, z) intersection point, and the trajectory segment number,
-      and the (j0, i0) column number of the first intersection point;
-      or None, None, (None, None) if no intersection found;
-      if the trajectory argument is a list of trajectories, then correponding list of numpy array, list of int, list of int pair
-      are returned
+    returns:
+       (numpy float array of shape (3,), int, (int, int)): being the (x, y, z) intersection point, and the trajectory segment number,
+       and the (j0, i0) column number of the first intersection point;
+       or None, None, (None, None) if no intersection found;
+       if the trajectory argument is a list of trajectories, then correponding list of numpy array, list of int, list of int pair
+       are returned
 
-   notes:
-      interseections are found based on straight line segments between the trajectory control points, this will result
-      in errors where there is significant curvature between neighbouring control points
-   """
+    notes:
+       interseections are found based on straight line segments between the trajectory control points, this will result
+       in errors where there is significant curvature between neighbouring control points
+    """
 
     if isinstance(trajectory, list):
         trajectory_list = trajectory
@@ -837,7 +839,8 @@ def find_first_intersection_of_trajectory_with_cell_surface(trajectory,
                                                             start_xyz = None,
                                                             nudge = 0.001,
                                                             quad_triangles = True):
-    """Searches along the trajectory from a starting point until the first intersection with the cell's surface is encountered."""
+    """Searches along the trajectory from a starting point until the first intersection with the cell's surface is
+    encountered."""
 
     cp = grid.corner_points(kji0)
     cell_surface = rqs.Surface(grid.model)
@@ -900,18 +903,18 @@ def point_is_within_cell(xyz, grid, kji0, cell_surface = None, false_on_pinchout
 def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_triangles = True, as_single_layer = False):
     """Creates a Mesh and corresponding Surface representing a column face.
 
-   arguments:
-      grid (grid.Grid object)
-      col_ji0 (int pair): the column indices, zero based
-      axis (int): 1 for J face, 2 fo I face
-      polarity (int): 0 for negative face, 1 for positive
-      quad_triangles (boolean, default True): if True, 4 triangles are used per cell face; if False, 2 triangles
-      as_single_layer (boolean, default False): if True, only the top and basal points are used, with the results being
-         equivalent to the grid being treated as a single layer
+    arguments:
+       grid (grid.Grid object)
+       col_ji0 (int pair): the column indices, zero based
+       axis (int): 1 for J face, 2 fo I face
+       polarity (int): 0 for negative face, 1 for positive
+       quad_triangles (boolean, default True): if True, 4 triangles are used per cell face; if False, 2 triangles
+       as_single_layer (boolean, default False): if True, only the top and basal points are used, with the results being
+          equivalent to the grid being treated as a single layer
 
-   returns:
-      surface.Mesh, surface.Surface (or None, surface.Surface if grid has k gaps)
-   """
+    returns:
+       surface.Mesh, surface.Surface (or None, surface.Surface if grid has k gaps)
+    """
 
     assert axis in (1, 2)
 
@@ -967,12 +970,12 @@ def find_intersection_of_trajectory_interval_with_column_face(trajectory,
                                                               quad_triangles = True):
     """Searches for intersection of a single trajectory segment with an I or J column face.
 
-   returns:
-      xyz, k0
+    returns:
+       xyz, k0
 
-   note:
-      does not support k gaps
-   """
+    note:
+       does not support k gaps
+    """
 
     # build a set of faces for the column face
     # extract column face points into a shape ready to become a mesh
@@ -1197,10 +1200,10 @@ def generate_surface_for_blocked_well_cells(blocked_well,
 def trajectory_grid_overlap(trajectory, grid, lazy = False):
     """Returns True if there is some overlap of the xyz boxes for the trajectory and grid, False otherwise.
 
-   notes:
-      overlap of the xyz boxes does not guarantee that the trajectory intersects the grid;
-      a return value of False guarantees that the trajectory does not intersect the grid
-   """
+    notes:
+       overlap of the xyz boxes does not guarantee that the trajectory intersects the grid;
+       a return value of False guarantees that the trajectory does not intersect the grid
+    """
 
     traj_box = np.empty((2, 3))
     traj_box[0] = np.amin(trajectory.control_points, axis = 0)
@@ -1222,37 +1225,37 @@ def populate_blocked_well_from_trajectory(blocked_well,
                                           check_for_reentry = True):
     """Populate an empty blocked well object based on the intersection of its trajectory with a grid.
 
-   arguments:
-      blocked_well (resqpy.well.BlockedWell object): a largely empty blocked well object to be populated by this
-         function; note that the trajectory attribute must be set before calling this function
-      grid (resqpy.grid.Grid object): the grid to intersect the well trajectory with
-      active_only (boolean, default False): if True, intervals which cover inactive cells will be set as
-         unblocked intervals; if False, intervals covering any cell will be set as blocked intervals
-      quad_triangles (boolean, default True): if True, each cell face is represented by 4 triangles when
-         calculating intersections; if False, only 2 triangles are used
-      lazy (boolean, default False): if True, initial penetration must be through a top K face and blocking
-         will cease as soon as the trajectory first leaves the gridded volume; if False, initial entry may be
-         through any external face or a fault face and re-entry will be handled
-      use_single_layer_tactics (boolean, default True): if True and not lazy and the grid does not have k gaps,
-         fault planes and grid sidewall are initially treated as if the grid were a single layer, when looking
-         for penetrations from outwith the grid
-      check_for_reentry (boolean, default True): if True, the trajectory is tracked after leaving the grid through
-         the outer skin (eg. base reservoir) in case of re-entry; if False, blocking stops upon the first exit
-         of the trajectory through the skin; ignored (treated as False) if lazy is True
+    arguments:
+       blocked_well (resqpy.well.BlockedWell object): a largely empty blocked well object to be populated by this
+          function; note that the trajectory attribute must be set before calling this function
+       grid (resqpy.grid.Grid object): the grid to intersect the well trajectory with
+       active_only (boolean, default False): if True, intervals which cover inactive cells will be set as
+          unblocked intervals; if False, intervals covering any cell will be set as blocked intervals
+       quad_triangles (boolean, default True): if True, each cell face is represented by 4 triangles when
+          calculating intersections; if False, only 2 triangles are used
+       lazy (boolean, default False): if True, initial penetration must be through a top K face and blocking
+          will cease as soon as the trajectory first leaves the gridded volume; if False, initial entry may be
+          through any external face or a fault face and re-entry will be handled
+       use_single_layer_tactics (boolean, default True): if True and not lazy and the grid does not have k gaps,
+          fault planes and grid sidewall are initially treated as if the grid were a single layer, when looking
+          for penetrations from outwith the grid
+       check_for_reentry (boolean, default True): if True, the trajectory is tracked after leaving the grid through
+          the outer skin (eg. base reservoir) in case of re-entry; if False, blocking stops upon the first exit
+          of the trajectory through the skin; ignored (treated as False) if lazy is True
 
-   returns:
-      the blocked well object (same object as passed in) if successful; None if unsuccessful
+    returns:
+       the blocked well object (same object as passed in) if successful; None if unsuccessful
 
-   notes:
-      the blocked_well trajectory attribute must be set before calling this function;
-      grids with k gaps might result in very slow processing;
-      the function represents a cell face as 2 or 4 triangles rather than a bilinear patch; setting quad_triangles
-      False is not recommended as the 2 triangle formulation gives a non-unique representation of a face (though
-      the code is designed to use the same representation for a shared face between neighbouring cells);
-      where non-planar faults exist, the triangulation of faces may result in a small misalignment of abutted faces
-      between the opposing sides of the fault; this could potentially result in an extra, small, unblocked interval
-      being introduced as an artefact between the exit point of one cell and the entry point into the abutted cell
-   """
+    notes:
+       the blocked_well trajectory attribute must be set before calling this function;
+       grids with k gaps might result in very slow processing;
+       the function represents a cell face as 2 or 4 triangles rather than a bilinear patch; setting quad_triangles
+       False is not recommended as the 2 triangle formulation gives a non-unique representation of a face (though
+       the code is designed to use the same representation for a shared face between neighbouring cells);
+       where non-planar faults exist, the triangulation of faces may result in a small misalignment of abutted faces
+       between the opposing sides of the fault; this could potentially result in an extra, small, unblocked interval
+       being introduced as an artefact between the exit point of one cell and the entry point into the abutted cell
+    """
 
     def find_next_cell(grid,
                        previous_kji0,

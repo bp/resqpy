@@ -154,7 +154,7 @@ def infill_block_geometry(extent,
 
 
 def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
-    """Reorders corner point data in situ, to handle bizarre nexus orderings"""
+    """Reorders corner point data in situ, to handle bizarre nexus orderings."""
 
     # undo False for corp to internal; undo True for internal to corp; only relevant in eight_mode
     assert (corner_points.ndim == 7)
@@ -408,16 +408,16 @@ def translate_corp(corner_points, x_shift = None, y_shift = None, min_xy = None,
 def triangles_for_cell_faces(cp):
     """Returns numpy array of shape (3, 2, 4, 3, 3) with axes being kji, -+, triangle within face, triangle corner, xyz.
 
-   args:
-      cp (numpy float array of shape (2, 2, 2, 3)): single cell corner point array in pagoda protocol
+    args:
+       cp (numpy float array of shape (2, 2, 2, 3)): single cell corner point array in pagoda protocol
 
-   returns:
-      numpy float array of shape (3, 2, 4, 3, 3) holding triangle corner coordinates for cell faces represented with
-      quad triangles
+    returns:
+       numpy float array of shape (3, 2, 4, 3, 3) holding triangle corner coordinates for cell faces represented with
+       quad triangles
 
-   note:
-      resqpy.surface also contains methods for working with cell faces as triangulated sets
-   """
+    note:
+       resqpy.surface also contains methods for working with cell faces as triangulated sets
+    """
 
     tri = np.empty((3, 2, 4, 3, 3))
 
@@ -467,7 +467,8 @@ def triangles_for_cell_faces(cp):
 
 
 def actual_pillar_shape(pillar_points, tolerance = 0.001):
-    """Returns 'curved', 'straight' or 'vertical' for shape of fully defined points array of shape (nk + k_gaps + 1, ..., 3)."""
+    """Returns 'curved', 'straight' or 'vertical' for shape of fully defined points array of shape (nk + k_gaps + 1,
+    ..., 3)."""
 
     assert pillar_points.ndim >= 3 and pillar_points.shape[-1] == 3
 
@@ -499,7 +500,8 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
 
 
 def columns_to_nearest_split_face(grid):
-    """Returns a numpy integer array of shape (NJ, NI) being number of cells to nearest split edge (Manhattan distance)."""
+    """Returns a numpy integer array of shape (NJ, NI) being number of cells to nearest split edge (Manhattan
+    distance)."""
 
     if not grid.has_split_coordinate_lines:
         return None

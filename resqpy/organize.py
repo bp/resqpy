@@ -83,7 +83,7 @@ def create_xml_has_occurred_during(model, parent_node, hod_pair, tag = 'HasOccur
 
 
 def _alias_for_attribute(attribute_name):
-    """Return an attribute that is a direct alias for an existing attribute"""
+    """Return an attribute that is a direct alias for an existing attribute."""
 
     def fget(self):
         return getattr(self, attribute_name)
@@ -617,12 +617,11 @@ class WellboreFeature(BaseResqpy):
 class FaultInterpretation(BaseResqpy):
     """Class for RESQML Fault Interpretation organizational objects.
 
-   RESQML documentation:
+    RESQML documentation:
 
-      A type of boundary feature, this class contains the data describing an opinion
-      about the characterization of the fault, which includes the attributes listed below.
-
-   """
+       A type of boundary feature, this class contains the data describing an opinion
+       about the characterization of the fault, which includes the attributes listed below.
+    """
 
     resqml_type = "FaultInterpretation"
     valid_domains = ('depth', 'time', 'mixed')
@@ -1184,7 +1183,8 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
                    originator = None,
                    title_suffix = None,
                    reuse = True):
-        """Creates a geobody boundary interpretation organisational xml node from a geobody boundary interpretation object."""
+        """Creates a geobody boundary interpretation organisational xml node from a geobody boundary interpretation
+        object."""
 
         if not self.title:
             self.title = self.genetic_boundary_feature.feature_name
@@ -1400,19 +1400,18 @@ class GeobodyInterpretation(BaseResqpy):
 class WellboreInterpretation(BaseResqpy):
     """Class for RESQML Wellbore Interpretation organizational objects.
 
-   RESQML documentation:
+    RESQML documentation:
 
-      May refer to one of these:
+       May refer to one of these:
 
-      * **Wellbore**. A unique, oriented path from the bottom of a drilled borehole to the surface of the earth.
-        The path must not overlap or cross itself.
-      * **Borehole**. A hole excavated in the earth as a result of drilling or boring operations. The borehole
-        may represent the hole of an entire wellbore (when no sidetracks are present), or a sidetrack extension.
-        A borehole extends from an originating point (the surface location for the initial borehole or kickoff point
-        for sidetracks) to a terminating (bottomhole) point.
-      * **Sidetrack**. A borehole that originates in another borehole as opposed to originating at the surface.
-
-   """
+       * **Wellbore**. A unique, oriented path from the bottom of a drilled borehole to the surface of the earth.
+         The path must not overlap or cross itself.
+       * **Borehole**. A hole excavated in the earth as a result of drilling or boring operations. The borehole
+         may represent the hole of an entire wellbore (when no sidetracks are present), or a sidetrack extension.
+         A borehole extends from an originating point (the surface location for the initial borehole or kickoff point
+         for sidetracks) to a terminating (bottomhole) point.
+       * **Sidetrack**. A borehole that originates in another borehole as opposed to originating at the surface.
+    """
 
     resqml_type = 'WellboreInterpretation'
     valid_domains = ('depth', 'time', 'mixed')
@@ -1455,7 +1454,7 @@ class WellboreInterpretation(BaseResqpy):
                                                         feature_name = self.model.title_for_root(self.feature_root))
 
     def iter_trajectories(self):
-        """ Iterable of associated trajectories """
+        """Iterable of associated trajectories."""
 
         import resqpy.well
 

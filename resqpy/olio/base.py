@@ -1,4 +1,4 @@
-"""Base class for generic resqml objects """
+"""Base class for generic resqml objects."""
 
 import logging
 import warnings
@@ -11,26 +11,25 @@ logger = logging.getLogger(__name__)
 
 
 class BaseResqpy(metaclass = ABCMeta):
-    """Base class for generic resqpy classes
-    
+    """Base class for generic resqpy classes.
+
     Implements generic attributes such as uuid, root, part, title, originator.
 
     Implements generic magic methods, such as pretty printing and testing for
     equality.
-    
+
     Example use::
 
         class AnotherResqpyObject(BaseResqpy):
-            
-            resqml_type = 'obj_anotherresqmlobjectrepresentation'
 
+            resqml_type = 'obj_anotherresqmlobjectrepresentation'
     """
 
     @property
     @abstractmethod
     def resqml_type(self):
         """Definition of which RESQML object the class represents.
-        
+
         Subclasses must overwrite this abstract attribute.
         """
         raise NotImplementedError
@@ -79,7 +78,7 @@ class BaseResqpy(metaclass = ABCMeta):
 
     @property
     def part(self):
-        """Standard part name corresponding to self.uuid"""
+        """Standard part name corresponding to self.uuid."""
 
         # following caused trouble when resqml_type dynamically determined
         #       return rqet.part_name_for_object(self.resqml_type, self.uuid)
@@ -87,13 +86,13 @@ class BaseResqpy(metaclass = ABCMeta):
 
     @property
     def root(self):
-        """XML node corresponding to self.uuid"""
+        """XML node corresponding to self.uuid."""
 
         return self.model.root_for_uuid(self.uuid)
 
     @property
     def citation_title(self):
-        """Citation block title equivalent to self.title"""
+        """Citation block title equivalent to self.title."""
 
         return self.title
 
@@ -127,8 +126,8 @@ class BaseResqpy(metaclass = ABCMeta):
         return False
 
     def create_xml(self, title = None, originator = None, extra_metadata = None, add_as_part = False):
-        """Write citation block to XML
-        
+        """Write citation block to XML.
+
         Note:
 
             `add_as_part` is False by default in this base method. Derived classes should typically
@@ -191,7 +190,7 @@ class BaseResqpy(metaclass = ABCMeta):
     # Generic magic methods
 
     def __eq__(self, other):
-        """Implements equals operator; uses is_equivalent() otherwise compares class type and uuid"""
+        """Implements equals operator; uses is_equivalent() otherwise compares class type and uuid."""
         if hasattr(self, 'is_equivalent'):
             return self.is_equivalent(other)
         if not isinstance(other, self.__class__):
@@ -200,15 +199,15 @@ class BaseResqpy(metaclass = ABCMeta):
         return bu.matching_uuids(self.uuid, other_uuid)
 
     def __ne__(self, other):
-        """Implements not equal operator"""
+        """Implements not equal operator."""
         return not self.__eq__(other)
 
     def __repr__(self):
-        """String representation"""
+        """String representation."""
         return f"{self.__class__.__name__}(uuid={self.uuid}, title={self.title})"
 
     def _repr_html_(self):
-        """IPython / Jupyter representation"""
+        """IPython / Jupyter representation."""
 
         keys_to_display = ('uuid', 'title', 'originator')
         html = f"<h3>{self.__class__.__name__}</h3>\n"
@@ -221,12 +220,18 @@ class BaseResqpy(metaclass = ABCMeta):
 
     @property
     def root_node(self):
-        """DEPRECATED. Alias for root"""
+        """DEPRECATED.
+
+        Alias for root
+        """
         warnings.warn("Attribute 'root_node' is deprecated. Use 'root'", DeprecationWarning)
         return self.root
 
     @property
     def node(self):
-        """DEPRECATED. Alias for root"""
+        """DEPRECATED.
+
+        Alias for root
+        """
         warnings.warn("Attribute 'node' is deprecated. Use 'root'", DeprecationWarning)
         return self.root

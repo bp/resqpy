@@ -246,8 +246,8 @@ hdf5_dataset_count = 0
 def print_hdf5_line(name, group_or_dataset):
     """Prints information about one dataset (array) in an hdf5 file.
 
-      :meta private:
-   """
+    :meta private:
+    """
 
     global hdf5_dataset_count
     if isinstance(group_or_dataset, h5py.Group):

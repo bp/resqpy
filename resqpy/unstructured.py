@@ -48,36 +48,36 @@ class UnstructuredGrid(BaseResqpy):
                  extra_metadata = {}):
         """Create an Unstructured Grid object and optionally populate from xml tree.
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-         find_properties (boolean, default True): if True and uuid is present, a
-            grid property collection is instantiated as an attribute, holding properties for which
-            this grid is the supporting representation
-         geometry_required (boolean, default True): if True and no geometry node exists in the xml,
-            an assertion error is raised; ignored if uuid is None
-         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
-            are loaded into attributes of the new grid object
-         cell_shape (str, optional): one of 'polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral';
-            ignored if uuid is present
-         title (str, optional): citation title for new grid; ignored if uuid is present
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if uuid is present
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if uuid is present
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+           find_properties (boolean, default True): if True and uuid is present, a
+              grid property collection is instantiated as an attribute, holding properties for which
+              this grid is the supporting representation
+           geometry_required (boolean, default True): if True and no geometry node exists in the xml,
+              an assertion error is raised; ignored if uuid is None
+           cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+              are loaded into attributes of the new grid object
+           cell_shape (str, optional): one of 'polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral';
+              ignored if uuid is present
+           title (str, optional): citation title for new grid; ignored if uuid is present
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if uuid is present
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if uuid is present
 
-      returns:
-         a newly created Unstructured Grid object
+        returns:
+           a newly created Unstructured Grid object
 
-      notes:
-         if not instantiating from an existing RESQML object, then pass a cell_shape here (if geometry is
-         going to be used), then set the cell count and, for geometry, build the points array and other
-         arrays before writing to the hdf5 file and creating the xml;
-         hinge node faces and subnode topology not yet supported at all;
-         setting cache_geometry True is equivalent to calling the cache_all_geometry_arrays() method
+        notes:
+           if not instantiating from an existing RESQML object, then pass a cell_shape here (if geometry is
+           going to be used), then set the cell count and, for geometry, build the points array and other
+           arrays before writing to the hdf5 file and creating the xml;
+           hinge node faces and subnode topology not yet supported at all;
+           setting cache_geometry True is equivalent to calling the cache_all_geometry_arrays() method
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if cell_shape is not None:
             assert cell_shape in valid_cell_shapes, f'invalid cell shape {cell_shape} for unstructured grid'
@@ -143,12 +143,12 @@ class UnstructuredGrid(BaseResqpy):
     def set_cell_count(self, n: int):
         """Set the number of cells in the grid.
 
-      arguments:
-         n (int): the number of cells in the unstructured grid
+        arguments:
+           n (int): the number of cells in the unstructured grid
 
-      note:
-         only call this method when creating a new grid, not when working from an existing RESQML grid
-      """
+        note:
+           only call this method when creating a new grid, not when working from an existing RESQML grid
+        """
         assert self.cell_count is None or self.cell_count == n
         self.cell_count = n
 
@@ -161,17 +161,17 @@ class UnstructuredGrid(BaseResqpy):
     def cache_all_geometry_arrays(self):
         """Loads from hdf5 into memory all the arrays defining the grid geometry.
 
-      returns:
-         None
+        returns:
+           None
 
-      notes:
-         call this method if much grid geometry processing is coming up;
-         the arrays are cached as direct attributes to this grid object;
-         the node and face indices make use of 'jagged' arrays (effectively an array of lists represented as
-         a linear array and a 'cumulative length' index array)
+        notes:
+           call this method if much grid geometry processing is coming up;
+           the arrays are cached as direct attributes to this grid object;
+           the node and face indices make use of 'jagged' arrays (effectively an array of lists represented as
+           a linear array and a 'cumulative length' index array)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         assert self.node_count is not None and self.face_count is not None
 
@@ -223,9 +223,9 @@ class UnstructuredGrid(BaseResqpy):
     def extract_crs_uuid(self):
         """Returns uuid for coordinate reference system, as stored in geometry xml tree.
 
-      returns:
-         uuid.UUID object
-      """
+        returns:
+           uuid.UUID object
+        """
 
         if self.crs_uuid is not None:
             return self.crs_uuid
@@ -240,14 +240,14 @@ class UnstructuredGrid(BaseResqpy):
     def extract_inactive_mask(self):
         """Returns boolean numpy array indicating which cells are inactive, if (in)active property found for this grid.
 
-      returns:
-         numpy array of booleans, of shape (cell_count,) being True for cells which are inactive; False for active
+        returns:
+           numpy array of booleans, of shape (cell_count,) being True for cells which are inactive; False for active
 
-      note:
-         RESQML does not have a built-in concept of inactive (dead) cells, though the usage guide advises to use a
-         discrete property with a local property kind of 'active'; this resqpy code can maintain an 'inactive'
-         attribute for the grid object, which is a boolean numpy array indicating which cells are inactive
-      """
+        note:
+           RESQML does not have a built-in concept of inactive (dead) cells, though the usage guide advises to use a
+           discrete property with a local property kind of 'active'; this resqpy code can maintain an 'inactive'
+           attribute for the grid object, which is a boolean numpy array indicating which cells are inactive
+        """
 
         if self.inactive is not None:
             return self.inactive
@@ -276,14 +276,14 @@ class UnstructuredGrid(BaseResqpy):
     def extract_property_collection(self):
         """Load grid property collection object holding lists of all properties in model that relate to this grid.
 
-      returns:
-         resqml_property.PropertyCollection object
+        returns:
+           resqml_property.PropertyCollection object
 
-      note:
-         a reference to the grid property collection is cached in this grid object; if the properties change,
-         for example by generating some new properties, the property_collection attribute of the grid object
-         would need to be reset to None elsewhere before calling this method again
-      """
+        note:
+           a reference to the grid property collection is cached in this grid object; if the properties change,
+           for example by generating some new properties, the property_collection attribute of the grid object
+           would need to be reset to None elsewhere before calling this method again
+        """
 
         if self.property_collection is not None:
             return self.property_collection
@@ -293,14 +293,14 @@ class UnstructuredGrid(BaseResqpy):
     def set_cells_per_face(self, check_all_faces_used = True):
         """Sets and returns the cells_per_face array showing which cells are using each face.
 
-      arguments:
-         check_all_faces_used (boolean, default True): if True, an assertion error is raised if there are any
-            faces which do not appear in any cells
+        arguments:
+           check_all_faces_used (boolean, default True): if True, an assertion error is raised if there are any
+              faces which do not appear in any cells
 
-      returns:
-         numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
-         null value; if only one cell uses a face, its index is always in position 0 of the second axis
-      """
+        returns:
+           numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
+           null value; if only one cell uses a face, its index is always in position 0 of the second axis
+        """
 
         if self.cells_per_face is not None:
             return self.cells_per_face
@@ -320,17 +320,17 @@ class UnstructuredGrid(BaseResqpy):
     def masked_cells_per_face(self, exclude_cell_mask):
         """Sets and returns the cells_per_face array showing which cells are using each face.
 
-      arguments:
-         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
-         are excluded when populating the result
+        arguments:
+           exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+           are excluded when populating the result
 
-      returns:
-         numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
-         null value; if only one cell uses a face, its index is always in position 0 of the second axis
+        returns:
+           numpy int array of shape (face_count, 2) showing upto 2 cell indices for each face index; -1 is a
+           null value; if only one cell uses a face, its index is always in position 0 of the second axis
 
-      note:
-         this method recomputes the result on every call - nothing extra is cached in the grid
-      """
+        note:
+           this method recomputes the result on every call - nothing extra is cached in the grid
+        """
 
         assert self.face_count is not None
         result = -np.ones((self.face_count, 2), dtype = int)  # -1 is used here as a null value
@@ -348,9 +348,9 @@ class UnstructuredGrid(BaseResqpy):
     def external_face_indices(self):
         """Returns a numpy int vector listing the indices of faces which are only used by one cell.
 
-      note:
-         resulting array is ordered by face index
-      """
+        note:
+           resulting array is ordered by face index
+        """
 
         self.set_cells_per_face()
         return np.where(self.cells_per_face[:, 1] == -1)[0]
@@ -358,13 +358,13 @@ class UnstructuredGrid(BaseResqpy):
     def external_face_indices_for_masked_cells(self, exclude_cell_mask):
         """Returns a numpy int vector listing the indices of faces which are used by exactly one of masked cells.
 
-      arguments:
-         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
-         are excluded when populating the result
+        arguments:
+           exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+           are excluded when populating the result
 
-      note:
-         resulting array is ordered by face index
-      """
+        note:
+           resulting array is ordered by face index
+        """
 
         cpf = self.masked_cells_per_face(exclude_cell_mask)
         return np.where(np.logical_and(cpf[:, 0] >= 0, cpf[:, 1] == -1))[0]
@@ -372,13 +372,13 @@ class UnstructuredGrid(BaseResqpy):
     def internal_face_indices_for_masked_cells(self, exclude_cell_mask):
         """Returns a numpy int vector listing the indices of faces which are used by two of masked cells.
 
-      arguments:
-         exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
-         are excluded when populating the result
+        arguments:
+           exclude_cell_mask (numpy bool array of shape (cell_count,)): cells with a value True in this array
+           are excluded when populating the result
 
-      note:
-         resulting array is ordered by face index
-      """
+        note:
+           resulting array is ordered by face index
+        """
 
         cpf = self.masked_cells_per_face(exclude_cell_mask)
         return np.where(np.logical_and(cpf[:, 0] >= 0, cpf[:, 1] >= 0))[0]
@@ -386,15 +386,15 @@ class UnstructuredGrid(BaseResqpy):
     def points_ref(self):
         """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.
 
-      returns:
-         numpy array of shape (node_count, 3)
+        returns:
+           numpy array of shape (node_count, 3)
 
-      notes:
-         this is the usual way to get at the actual grid geometry points data in the native RESQML layout;
-         the array is cached as an attribute of the grid object
+        notes:
+           this is the usual way to get at the actual grid geometry points data in the native RESQML layout;
+           the array is cached as an attribute of the grid object
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.points_cached is None:
 
@@ -422,11 +422,11 @@ class UnstructuredGrid(BaseResqpy):
     def xyz_box(self):
         """Returns the minimum and maximum xyz for the grid geometry.
 
-      returns:
-         numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
+        returns:
+           numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.xyz_box_cached is None:
             self.xyz_box_cached = np.empty((2, 3), dtype = float)
@@ -439,16 +439,16 @@ class UnstructuredGrid(BaseResqpy):
     def face_centre_point(self, face_index):
         """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
 
-      arguments:
-         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+        arguments:
+           face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
 
-      returns:
-         numpy float array of shape (3,) being the xyz location of the centre point of the face
+        returns:
+           numpy float array of shape (3,) being the xyz location of the centre point of the face
 
-      note:
-         this returns a nominal centre point for a face - the mean position of its nodes - which is not generally
-         its barycentre
-      """
+        note:
+           this returns a nominal centre point for a face - the mean position of its nodes - which is not generally
+           its barycentre
+        """
 
         return np.mean(self.points_cached[self.node_indices_for_face(face_index)], axis = 0)
 
@@ -481,17 +481,17 @@ class UnstructuredGrid(BaseResqpy):
     def node_indices_for_face(self, face_index):
         """Returns numpy list of node indices for a single face.
 
-      arguments:
-         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+        arguments:
+           face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
 
-      returns:
-         numpy int array of shape (N,) being the node indices identifying the vertices of the face
+        returns:
+           numpy int array of shape (N,) being the node indices identifying the vertices of the face
 
-      note:
-         the node indices are used to index the points data (points_cached attribute);
-         ordering of returned nodes is clockwise or anticlockwise when viewed from within the cell,
-         as indicated by the entry in the cell_face_is_right_handed array
-      """
+        note:
+           the node indices are used to index the points data (points_cached attribute);
+           ordering of returned nodes is clockwise or anticlockwise when viewed from within the cell,
+           as indicated by the entry in the cell_face_is_right_handed array
+        """
 
         self.cache_all_geometry_arrays()
         start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
@@ -500,15 +500,15 @@ class UnstructuredGrid(BaseResqpy):
     def distinct_node_indices_for_cell(self, cell):
         """Returns a numpy list of distinct node indices used by the faces of a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which distinct node indices are required
+        arguments:
+           cell (int): the index of the cell for which distinct node indices are required
 
-      returns:
-         numpy int array of shape (N, ) being the indices of N distinct nodes used by the cell's faces
+        returns:
+           numpy int array of shape (N, ) being the indices of N distinct nodes used by the cell's faces
 
-      note:
-         the returned array is sorted by increasing node index
-      """
+        note:
+           the returned array is sorted by increasing node index
+        """
 
         face_indices = self.face_indices_for_cell(cell)
         node_set = self.node_indices_for_face(face_indices[0])
@@ -519,16 +519,16 @@ class UnstructuredGrid(BaseResqpy):
     def face_indices_for_cell(self, cell):
         """Returns numpy list of face indices for a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which face indices are required
+        arguments:
+           cell (int): the index of the cell for which face indices are required
 
-      returns:
-         numpy int array of shape (F,) being the face indices of each of the F faces for the cell
+        returns:
+           numpy int array of shape (F,) being the face indices of each of the F faces for the cell
 
-      note:
-         the face indices are used when accessing the nodes per face data and can also be used to identify
-         shared faces
-      """
+        note:
+           the face indices are used when accessing the nodes per face data and can also be used to identify
+           shared faces
+        """
 
         self.cache_all_geometry_arrays()
         start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
@@ -537,19 +537,19 @@ class UnstructuredGrid(BaseResqpy):
     def face_indices_and_handedness_for_cell(self, cell):
         """Returns numpy list of face indices for a single cell, and numpy boolean list of face right handedness.
 
-      arguments:
-         cell (int): the index of the cell for which face indices are required
+        arguments:
+           cell (int): the index of the cell for which face indices are required
 
-      returns:
-         numpy int array of shape (F,), numpy boolean array of shape (F, ):
-         being the face indices of each of the F faces for the cell, and the right handedness (clockwise order)
-         of the face nodes when viewed from within the cell
+        returns:
+           numpy int array of shape (F,), numpy boolean array of shape (F, ):
+           being the face indices of each of the F faces for the cell, and the right handedness (clockwise order)
+           of the face nodes when viewed from within the cell
 
-      note:
-         the face indices are used when accessing the nodes per face data and can also be used to identify
-         shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
-         some processing of geometry such as volume calculations
-      """
+        note:
+           the face indices are used when accessing the nodes per face data and can also be used to identify
+           shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
+           some processing of geometry such as volume calculations
+        """
 
         self.cache_all_geometry_arrays()
         start = 0 if cell == 0 else self.faces_per_cell_cl[cell - 1]
@@ -559,16 +559,16 @@ class UnstructuredGrid(BaseResqpy):
     def edges_for_face(self, face_index):
         """Returns numpy list of pairs of node indices, each pair being one edge of the face.
 
-      arguments:
-         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+        arguments:
+           face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
 
-      returns:
-         numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
+        returns:
+           numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
 
-      notes:
-         the order of the pairs follows the order of the nodes for the face; within each pair, the
-         order of the two node indices also follows the order of the nodes for the face
-      """
+        notes:
+           the order of the pairs follows the order of the nodes for the face; within each pair, the
+           order of the two node indices also follows the order of the nodes for the face
+        """
 
         face_nodes = self.node_indices_for_face(face_index)
         return np.array([(face_nodes[i - 1], face_nodes[i]) for i in range(len(face_nodes))], dtype = int)
@@ -576,16 +576,16 @@ class UnstructuredGrid(BaseResqpy):
     def edges_for_face_with_node_indices_ordered_within_pairs(self, face_index):
         """Returns numpy list of pairs of node indices, each pair being one edge of the face.
 
-      arguments:
-         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+        arguments:
+           face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
 
-      returns:
-         numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
+        returns:
+           numpy int array of shape (N, 2) being the node indices identifying the N edges of the face
 
-      notes:
-         the order of the pairs follows the order of the nodes for the face; within each pair, the
-         two node indices are ordered with the lower index first
-      """
+        notes:
+           the order of the pairs follows the order of the nodes for the face; within each pair, the
+           two node indices are ordered with the lower index first
+        """
 
         edges = self.edges_for_face(face_index)
         for i in range(len(edges)):
@@ -597,15 +597,15 @@ class UnstructuredGrid(BaseResqpy):
     def distinct_edges_for_cell(self, cell):
         """Returns numpy list of pairs of node indices, each pair being one distinct edge of the cell.
 
-      arguments:
-         cell (int): the index of the cell
+        arguments:
+           cell (int): the index of the cell
 
-      returns:
-         numpy int array of shape (E, 2) being the node indices identifying the E edges of the cell
+        returns:
+           numpy int array of shape (E, 2) being the node indices identifying the E edges of the cell
 
-      note:
-         within each pair, the two node indices are ordered with the lower index first
-      """
+        note:
+           within each pair, the two node indices are ordered with the lower index first
+        """
 
         edge_list = []
         for face_index in self.face_indices_for_cell(cell):
@@ -619,17 +619,17 @@ class UnstructuredGrid(BaseResqpy):
     def cell_face_centre_points(self, cell):
         """Returns a numpy array of centre points of the faces for a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which face centre points are required
+        arguments:
+           cell (int): the index of the cell for which face centre points are required
 
-      returns:
-         numpy array of shape (F, 3) being the xyz location of each of the F faces for the cell
+        returns:
+           numpy array of shape (F, 3) being the xyz location of each of the F faces for the cell
 
-      notes:
-         the order of the returned face centre points matches the faces_per_cell for the cell;
-         the returned values are nominal centre points for the faces - the mean position of their nodes - which
-         are not generally their barycentres
-      """
+        notes:
+           the order of the returned face centre points matches the faces_per_cell for the cell;
+           the returned values are nominal centre points for the faces - the mean position of their nodes - which
+           are not generally their barycentres
+        """
 
         face_indices = self.face_indices_for_cell(cell)
         face_centres = np.empty((len(face_indices), 3))
@@ -640,17 +640,17 @@ class UnstructuredGrid(BaseResqpy):
     def face_normal(self, face_index):
         """Returns a unit vector normal to a planar approximation of the face.
 
-      arguments:
-         face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
+        arguments:
+           face_index (int): the index of the face (as used in faces_per_cell and implicitly in nodes_per_face)
 
-      returns:
-         numpy float array of shape (3,) being the xyz components of a unit length vector normal to the face
+        returns:
+           numpy float array of shape (3,) being the xyz components of a unit length vector normal to the face
 
-      note:
-         in the case of a degenerate face, a zero length vector is returned;
-         the direction of the normal will be into or out of the cell depending on the handedness of the
-         cell face
-      """
+        note:
+           in the case of a degenerate face, a zero length vector is returned;
+           the direction of the normal will be into or out of the cell depending on the handedness of the
+           cell face
+        """
 
         self.cache_all_geometry_arrays()
         vertices = self.points_cached[self.node_indices_for_face(face_index)]
@@ -671,16 +671,16 @@ class UnstructuredGrid(BaseResqpy):
     def planar_face_points(self, face_index, xy_plane = False):
         """Returns points for a planar approximation of a face.
 
-      arguments:
-         face_index (int): the index of the face for which a planar approximation is required
-         xy_plane (boolean, default False): if True, the returned points lie in a horizontal plane with z = 0.0;
-            if False, the plane is located approximately in the position of the original face, with the same
-            normal direction
+        arguments:
+           face_index (int): the index of the face for which a planar approximation is required
+           xy_plane (boolean, default False): if True, the returned points lie in a horizontal plane with z = 0.0;
+              if False, the plane is located approximately in the position of the original face, with the same
+              normal direction
 
-      returns:
-         numpy float array of shape (N, 3) being the xyz points of the planar face nodes corresponding to the
-         N nodes of the original face, in the same order
-      """
+        returns:
+           numpy float array of shape (N, 3) being the xyz points of the planar face nodes corresponding to the
+           N nodes of the original face, in the same order
+        """
 
         self.cache_all_geometry_arrays()
         face_centre = self.face_centre_point(face_index)
@@ -701,16 +701,16 @@ class UnstructuredGrid(BaseResqpy):
     def face_triangulation(self, face_index, local_nodes = False):
         """Returns a Delauney triangulation of (a planar approximation of) a face.
 
-      arguments:
-         face_index (int): the index of the face for which a triangulation is required
-         local_nodes (boolean, default False): if True, the returned node indices are local to the face nodes,
-            ie. can index into node_indices_for_face(); if False, the returned node indices are the global
-            node indices in use by the grid
+        arguments:
+           face_index (int): the index of the face for which a triangulation is required
+           local_nodes (boolean, default False): if True, the returned node indices are local to the face nodes,
+              ie. can index into node_indices_for_face(); if False, the returned node indices are the global
+              node indices in use by the grid
 
-      returns:
-         numpy int array of shape (N - 2, 3) being the node indices of the triangulation, where N is the number
-         of nodes defining the face
-      """
+        returns:
+           numpy int array of shape (N - 2, 3) being the node indices of the triangulation, where N is the number
+           of nodes defining the face
+        """
 
         face_points = self.planar_face_points(face_index, xy_plane = True)
         local_triangulation = tri.dt(face_points)  # returns int array of shape (M, 3)
@@ -723,18 +723,18 @@ class UnstructuredGrid(BaseResqpy):
     def area_of_face(self, face_index, in_plane = False):
         """Returns the area of a face.
 
-      arguments:
-         face_index (int): the index of the face for which the area is required
-         in_plane (boolean, default False): if True, the area returned is the area of the planar approximation
-            of the face; if False, the area is the sum of the areas of the triangulation of the face, which
-            need not be planar
+        arguments:
+           face_index (int): the index of the face for which the area is required
+           in_plane (boolean, default False): if True, the area returned is the area of the planar approximation
+              of the face; if False, the area is the sum of the areas of the triangulation of the face, which
+              need not be planar
 
-      returns:
-         float being the area of the face
+        returns:
+           float being the area of the face
 
-      notes:
-         units of measure of the area is implied by the units of the crs in use by the grid
-      """
+        notes:
+           units of measure of the area is implied by the units of the crs in use by the grid
+        """
 
         if in_plane:
             face_points = self.planar_face_points(face_index, xy_plane = True)
@@ -752,39 +752,40 @@ class UnstructuredGrid(BaseResqpy):
     def cell_centre_point(self, cell):
         """Returns centre point of a single cell calculated as the mean position of the centre points of its faces.
 
-      arguments:
-         cell (int): the index of the cell for which the centre point is required
+        arguments:
+           cell (int): the index of the cell for which the centre point is required
 
-      returns:
-         numpy float array of shape (3,) being the xyz location of the centre point of the cell
+        returns:
+           numpy float array of shape (3,) being the xyz location of the centre point of the cell
 
-      note:
-         this is a nominal centre point - the mean of the nominal face centres - which is not generally
-         the barycentre of the cell
-      """
+        note:
+           this is a nominal centre point - the mean of the nominal face centres - which is not generally
+           the barycentre of the cell
+        """
 
         return np.mean(self.cell_face_centre_points(cell), axis = 0)
 
     def centre_point(self, cell = None, cache_centre_array = False):
-        """Returns centre point of a cell or array of centre points of all cells; optionally cache centre points for all cells.
+        """Returns centre point of a cell or array of centre points of all cells; optionally cache centre points for all
+        cells.
 
-      arguments:
-         cell (optional): if present, the cell number of the individual cell for which the
-            centre point is required; zero based indexing
-         cache_centre_array (boolean, default False): If True, or cell is None, an array of centre points
-            is generated and added as an attribute of the grid, with attribute name array_centre_point
+        arguments:
+           cell (optional): if present, the cell number of the individual cell for which the
+              centre point is required; zero based indexing
+           cache_centre_array (boolean, default False): If True, or cell is None, an array of centre points
+              is generated and added as an attribute of the grid, with attribute name array_centre_point
 
-      returns:
-         (x, y, z) 3 element numpy array of floats holding centre point of a single cell;
-         or numpy 2D array of shape (cell_count, 3) if cell is None
+        returns:
+           (x, y, z) 3 element numpy array of floats holding centre point of a single cell;
+           or numpy 2D array of shape (cell_count, 3) if cell is None
 
-      notes:
-         a simple mean of the nominal centres of the faces is used to calculate the centre point of a cell;
-         this is not generally the barycentre of the cell;
-         resulting coordinates are in the same (local) crs as the grid points
+        notes:
+           a simple mean of the nominal centres of the faces is used to calculate the centre point of a cell;
+           this is not generally the barycentre of the cell;
+           resulting coordinates are in the same (local) crs as the grid points
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if cell is None:
             cache_centre_array = True
@@ -812,15 +813,15 @@ class UnstructuredGrid(BaseResqpy):
     def volume(self, cell):
         """Returns the volume of a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which the volume is required
+        arguments:
+           cell (int): the index of the cell for which the volume is required
 
-      returns:
-         float being the volume of the cell; units of measure is implied by crs units
+        returns:
+           float being the volume of the cell; units of measure is implied by crs units
 
-      note:
-         this is a computationally expensive method
-      """
+        note:
+           this is a computationally expensive method
+        """
 
         tetra = TetraGrid.from_unstructured_cell(self, cell, set_handedness = False)
         assert tetra is not None
@@ -845,24 +846,24 @@ class UnstructuredGrid(BaseResqpy):
     def xy_units(self):
         """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         return rqet.find_tag(self._crs_root(), 'ProjectedUom').text
 
     def z_units(self):
         """Returns the vertical (z) units of measure of the coordinate reference system for the grid.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         return rqet.find_tag(self._crs_root(), 'VerticalUom').text
 
     def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
         """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
         # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
@@ -932,33 +933,33 @@ class UnstructuredGrid(BaseResqpy):
                    extra_metadata = {}):
         """Creates an unstructured grid node and optionally adds as a part in the model.
 
-      arguments:
-         ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the array data for the grid geometry
-         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-            in the model
-         add_relationships (boolean, default True): if True, relationship xml parts are created relating the
-            new grid part to: the crs, and the hdf5 external part
-         title (string): used as the citation title text; careful consideration should be given
-            to this argument when dealing with multiple grids in one model, as it is the means by which a
-            human will distinguish them
-         originator (string, optional): the name of the human being who created the unstructured grid part;
-            default is to use the login name
-         write_active (boolean, default True): if True, xml for an active cell property is also generated, but
-            only if the active_property_uuid is set and no part exists in the model for that uuid
-         write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
-         extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
+        arguments:
+           ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the array data for the grid geometry
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           add_relationships (boolean, default True): if True, relationship xml parts are created relating the
+              new grid part to: the crs, and the hdf5 external part
+           title (string): used as the citation title text; careful consideration should be given
+              to this argument when dealing with multiple grids in one model, as it is the means by which a
+              human will distinguish them
+           originator (string, optional): the name of the human being who created the unstructured grid part;
+              default is to use the login name
+           write_active (boolean, default True): if True, xml for an active cell property is also generated, but
+              only if the active_property_uuid is set and no part exists in the model for that uuid
+           write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
+           extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
 
-      returns:
-         the newly created unstructured grid xml node
+        returns:
+           the newly created unstructured grid xml node
 
-      notes:
-         the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
-         the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
-         the explicit geometry may be omitted for unstructured grids, in which case the arrays should not be written to
-         the hdf5 file either
+        notes:
+           the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
+           the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
+           the explicit geometry may be omitted for unstructured grids, in which case the arrays should not be written to
+           the hdf5 file either
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
@@ -1113,23 +1114,23 @@ class TetraGrid(UnstructuredGrid):
                  extra_metadata = {}):
         """Creates a new resqpy TetraGrid object (RESQML UnstructuredGrid with cell shape tetrahedral)
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-         find_properties (boolean, default True): if True and uuid is present, a
-            grid property collection is instantiated as an attribute, holding properties for which
-            this grid is the supporting representation
-         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
-            are loaded into attributes of the new grid object
-         title (str, optional): citation title for new grid; ignored if uuid is present
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if uuid is present
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if uuid is present
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+           find_properties (boolean, default True): if True and uuid is present, a
+              grid property collection is instantiated as an attribute, holding properties for which
+              this grid is the supporting representation
+           cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+              are loaded into attributes of the new grid object
+           title (str, optional): citation title for new grid; ignored if uuid is present
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if uuid is present
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if uuid is present
 
-      returns:
-         a newly created TetraGrid object
-      """
+        returns:
+           a newly created TetraGrid object
+        """
 
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
@@ -1159,9 +1160,9 @@ class TetraGrid(UnstructuredGrid):
     def face_centre_point(self, face_index):
         """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
 
-      note:
-         this is a nominal centre point for a face and not generally its barycentre
-      """
+        note:
+           this is a nominal centre point for a face and not generally its barycentre
+        """
 
         self.cache_all_geometry_arrays()
         start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
@@ -1170,12 +1171,12 @@ class TetraGrid(UnstructuredGrid):
     def volume(self, cell):
         """Returns the volume of a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which the volume is required
+        arguments:
+           cell (int): the index of the cell for which the volume is required
 
-      returns:
-         float being the volume of the tetrahedral cell; units of measure is implied by crs units
-      """
+        returns:
+           float being the volume of the tetrahedral cell; units of measure is implied by crs units
+        """
 
         self.cache_all_geometry_arrays()
         abcd = self.points_cached[self.distinct_node_indices_for_cell(cell)]
@@ -1185,9 +1186,9 @@ class TetraGrid(UnstructuredGrid):
     def grid_volume(self):
         """Returns the sum of the volumes of all the cells in the grid.
 
-      returns:
-         float being the total volume of the grid; units of measure is implied by crs units
-      """
+        returns:
+           float being the total volume of the grid; units of measure is implied by crs units
+        """
 
         v = 0.0
         for cell in range(self.cell_count):
@@ -1317,23 +1318,23 @@ class PyramidGrid(UnstructuredGrid):
                  extra_metadata = {}):
         """Creates a new resqpy PyramidGrid object (RESQML UnstructuredGrid with cell shape pyramidal)
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-         find_properties (boolean, default True): if True and uuid is present, a
-            grid property collection is instantiated as an attribute, holding properties for which
-            this grid is the supporting representation
-         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
-            are loaded into attributes of the new grid object
-         title (str, optional): citation title for new grid; ignored if uuid is present
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if uuid is present
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if uuid is present
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+           find_properties (boolean, default True): if True and uuid is present, a
+              grid property collection is instantiated as an attribute, holding properties for which
+              this grid is the supporting representation
+           cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+              are loaded into attributes of the new grid object
+           title (str, optional): citation title for new grid; ignored if uuid is present
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if uuid is present
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if uuid is present
 
-      returns:
-         a newly created PyramidGrid object
-      """
+        returns:
+           a newly created PyramidGrid object
+        """
 
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
@@ -1354,10 +1355,10 @@ class PyramidGrid(UnstructuredGrid):
     def check_pyramidal(self):
         """Checks that each cell has 5 faces and each face has 3 or 4 nodes.
 
-      note:
-         currently only performs a cursory check, without checking nodes are shared or that there is exactly one
-         quadrilateral face
-      """
+        note:
+           currently only performs a cursory check, without checking nodes are shared or that there is exactly one
+           quadrilateral face
+        """
 
         assert self.cell_shape == 'pyramidal'
         self.cache_all_geometry_arrays()
@@ -1371,17 +1372,17 @@ class PyramidGrid(UnstructuredGrid):
     def face_indices_for_cell(self, cell):
         """Returns numpy list of face indices for a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which face indices are required
+        arguments:
+           cell (int): the index of the cell for which face indices are required
 
-      returns:
-         numpy int array of shape (5,) being the face indices of each of the 5 faces for the cell; the first
-         index in the array is for the quadrilateral face
+        returns:
+           numpy int array of shape (5,) being the face indices of each of the 5 faces for the cell; the first
+           index in the array is for the quadrilateral face
 
-      note:
-         the face indices are used when accessing the nodes per face data and can also be used to identify
-         shared faces
-      """
+        note:
+           the face indices are used when accessing the nodes per face data and can also be used to identify
+           shared faces
+        """
 
         faces = super().face_indices_for_cell(cell)
         assert len(faces) == 5
@@ -1402,20 +1403,20 @@ class PyramidGrid(UnstructuredGrid):
     def face_indices_and_handedness_for_cell(self, cell):
         """Returns numpy list of face indices for a single cell, and numpy boolean list of face right handedness.
 
-      arguments:
-         cell (int): the index of the cell for which face indices are required
+        arguments:
+           cell (int): the index of the cell for which face indices are required
 
-      returns:
-         numpy int array of shape (5,), numpy boolean array of shape (5, ):
-         being the face indices of each of the 5 faces for the cell, and the right handedness (clockwise order)
-         of the face nodes when viewed from within the cell; the first entry in each list is for the
-         quadrilateral face
+        returns:
+           numpy int array of shape (5,), numpy boolean array of shape (5, ):
+           being the face indices of each of the 5 faces for the cell, and the right handedness (clockwise order)
+           of the face nodes when viewed from within the cell; the first entry in each list is for the
+           quadrilateral face
 
-      note:
-         the face indices are used when accessing the nodes per face data and can also be used to identify
-         shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
-         some processing of geometry such as volume calculations
-      """
+        note:
+           the face indices are used when accessing the nodes per face data and can also be used to identify
+           shared faces; the handedness (clockwise or anti-clockwise ordering of nodes) is significant for
+           some processing of geometry such as volume calculations
+        """
 
         faces, handednesses = super().face_indices_and_handedness_for_cell(cell)
         assert len(faces) == 5 and len(handednesses) == 5
@@ -1439,12 +1440,12 @@ class PyramidGrid(UnstructuredGrid):
     def volume(self, cell):
         """Returns the volume of a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which the volume is required
+        arguments:
+           cell (int): the index of the cell for which the volume is required
 
-      returns:
-         float being the volume of the pyramidal cell; units of measure is implied by crs units
-      """
+        returns:
+           float being the volume of the pyramidal cell; units of measure is implied by crs units
+        """
 
         self._set_crs_handedness()
         self.cache_all_geometry_arrays()
@@ -1473,9 +1474,9 @@ class PyramidGrid(UnstructuredGrid):
 class PrismGrid(UnstructuredGrid):
     """Class for unstructured grids where every cell is a triangular prism.
 
-   note:
-      prism cells are not constrained to have a fixed cross-section, though in practice they often will
-   """
+    note:
+       prism cells are not constrained to have a fixed cross-section, though in practice they often will
+    """
 
     def __init__(self,
                  parent_model,
@@ -1487,23 +1488,23 @@ class PrismGrid(UnstructuredGrid):
                  extra_metadata = {}):
         """Creates a new resqpy PrismGrid object (RESQML UnstructuredGrid with cell shape trisngular prism)
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-         find_properties (boolean, default True): if True and uuid is present, a
-            grid property collection is instantiated as an attribute, holding properties for which
-            this grid is the supporting representation
-         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
-            are loaded into attributes of the new grid object
-         title (str, optional): citation title for new grid; ignored if uuid is present
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if uuid is present
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if uuid is present
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+           find_properties (boolean, default True): if True and uuid is present, a
+              grid property collection is instantiated as an attribute, holding properties for which
+              this grid is the supporting representation
+           cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+              are loaded into attributes of the new grid object
+           title (str, optional): citation title for new grid; ignored if uuid is present
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if uuid is present
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if uuid is present
 
-      returns:
-         a newly created PrismGrid object
-      """
+        returns:
+           a newly created PrismGrid object
+        """
 
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
@@ -1524,10 +1525,10 @@ class PrismGrid(UnstructuredGrid):
     def check_prism(self):
         """Checks that each cell has 5 faces and each face has 3 or 4 nodes.
 
-      note:
-         currently only performs a cursory check, without checking nodes are shared or that there are exactly two
-         triangular faces without shared nodes
-      """
+        note:
+           currently only performs a cursory check, without checking nodes are shared or that there are exactly two
+           triangular faces without shared nodes
+        """
 
         assert self.cell_shape == 'prism'
         self.cache_all_geometry_arrays()
@@ -1544,14 +1545,14 @@ class PrismGrid(UnstructuredGrid):
 class VerticalPrismGrid(PrismGrid):
     """Class for unstructured grids where every cell is a vertical triangular prism.
 
-   notes:
-      vertical prism cells are constrained to have a fixed triangular horzontal cross-section, though top and base
-      triangular faces need not be horizontal; edges not involved in the triangular faces must be vertical;
-      this is not a native RESQML sub-class but is a resqpy concoction to allow optimisation of some methods;
-      face ordering within a cell is also constrained to be top, base, then the three vertical planar quadrilateral
-      faces; node ordering within triangular faces is constrained to ensure correspondence of nodes in triangles
-      within a column
-   """
+    notes:
+       vertical prism cells are constrained to have a fixed triangular horzontal cross-section, though top and base
+       triangular faces need not be horizontal; edges not involved in the triangular faces must be vertical;
+       this is not a native RESQML sub-class but is a resqpy concoction to allow optimisation of some methods;
+       face ordering within a cell is also constrained to be top, base, then the three vertical planar quadrilateral
+       faces; node ordering within triangular faces is constrained to ensure correspondence of nodes in triangles
+       within a column
+    """
 
     def __init__(self,
                  parent_model,
@@ -1563,23 +1564,23 @@ class VerticalPrismGrid(PrismGrid):
                  extra_metadata = {}):
         """Creates a new resqpy VerticalPrismGrid object.
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-         find_properties (boolean, default True): if True and uuid is present, a
-            grid property collection is instantiated as an attribute, holding properties for which
-            this grid is the supporting representation
-         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
-            are loaded into attributes of the new grid object
-         title (str, optional): citation title for new grid; ignored if uuid is present
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if uuid is present
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if uuid is present
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+           find_properties (boolean, default True): if True and uuid is present, a
+              grid property collection is instantiated as an attribute, holding properties for which
+              this grid is the supporting representation
+           cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+              are loaded into attributes of the new grid object
+           title (str, optional): citation title for new grid; ignored if uuid is present
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if uuid is present
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if uuid is present
 
-      returns:
-         a newly created VerticalPrismGrid object
-      """
+        returns:
+           a newly created VerticalPrismGrid object
+        """
 
         self.nk = None  #: number of layers when constructed as a layered grid
 
@@ -1611,36 +1612,36 @@ class VerticalPrismGrid(PrismGrid):
                       set_handedness = False):
         """Create a layered vertical prism grid from an ordered list of untorn surfaces.
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
-            shallowest to deepest; see notes
-         column_points (2D numpy float array, optional): if present, the xy points to use for
-            the grid's triangulation; see notes
-         column_triangles (numpy int array of shape (M, 3), optional): if present, indices into the
-            first dimension of column_points giving the xy triangulation to use for the grid; see notes
-         title (str, optional): citation title for the new grid
-         originator (str, optional): name of person creating the grid; defaults to login id
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
+              shallowest to deepest; see notes
+           column_points (2D numpy float array, optional): if present, the xy points to use for
+              the grid's triangulation; see notes
+           column_triangles (numpy int array of shape (M, 3), optional): if present, indices into the
+              first dimension of column_points giving the xy triangulation to use for the grid; see notes
+           title (str, optional): citation title for the new grid
+           originator (str, optional): name of person creating the grid; defaults to login id
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
 
-      returns:
-         a newly created VerticalPrismGrid object
+        returns:
+           a newly created VerticalPrismGrid object
 
-      notes:
-         this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
-         the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
-         the triangular pattern of the columns (in the xy plane) can be specified with the column_points
-         and column_triangles arguments;
-         if those arguments are None, the first, shallowest, surface is used as a master and determines
-         the triangular pattern of the columns;
-         where a gravity vector from a node above does not intersect a surface, the point is inherited
-         as a copy of the node above and will be NaNs if no surface above has an intersection;
-         the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
-         Grid2dRepresentation), or for a horizontal plane;
-         this class is represented in RESQML as an UnstructuredGridRepresentation – when a resqpy
-         class is written for ColumnLayerGridRepresentation, a method will be added to that class to
-         convert from a resqpy VerticalPrismGrid
-      """
+        notes:
+           this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
+           the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
+           the triangular pattern of the columns (in the xy plane) can be specified with the column_points
+           and column_triangles arguments;
+           if those arguments are None, the first, shallowest, surface is used as a master and determines
+           the triangular pattern of the columns;
+           where a gravity vector from a node above does not intersect a surface, the point is inherited
+           as a copy of the node above and will be NaNs if no surface above has an intersection;
+           the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
+           Grid2dRepresentation), or for a horizontal plane;
+           this class is represented in RESQML as an UnstructuredGridRepresentation – when a resqpy
+           class is written for ColumnLayerGridRepresentation, a method will be added to that class to
+           convert from a resqpy VerticalPrismGrid
+        """
 
         def find_pair(a, pair):
             # for sorted array a of shape (N, 2) returns index in first axis of a pair
@@ -1808,31 +1809,31 @@ class VerticalPrismGrid(PrismGrid):
                                       set_handedness = False):
         """Create a layered vertical prism grid from seed points and an ordered list of untorn surfaces.
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         seed_xy (numpy float array of shape (N, 2 or 3)): the xy locations of seed points
-         surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
-            shallowest to deepest; see notes
-         area_of_interest (closed convex Polyline): the frontier polygon in the xy plane
-         title (str, optional): citation title for the new grid
-         originator (str, optional): name of person creating the grid; defaults to login id
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           seed_xy (numpy float array of shape (N, 2 or 3)): the xy locations of seed points
+           surfaces (list of surface.Surface): list of two or more untorn surfaces ordered from
+              shallowest to deepest; see notes
+           area_of_interest (closed convex Polyline): the frontier polygon in the xy plane
+           title (str, optional): citation title for the new grid
+           originator (str, optional): name of person creating the grid; defaults to login id
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
 
-      returns:
-         a newly created VerticalPrismGrid object
+        returns:
+           a newly created VerticalPrismGrid object
 
-      notes:
-         the triangular pattern of the columns (in the xy plane) is constructed as a re-triangulation
-         of the Voronoi diagram of the Delauney triangulation of the seed points;
-         the seed points may be xy or xyz data but z is ignored;
-         this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
-         the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
-         all the seed points must lie wholly within the area of interest;
-         where a gravity vector from a node above does not intersect a surface, the point is inherited
-         as a copy of the node above (the topmost surface must cover the entire area of interest);
-         the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
-         Grid2dRepresentation), or for a horizontal plane
-      """
+        notes:
+           the triangular pattern of the columns (in the xy plane) is constructed as a re-triangulation
+           of the Voronoi diagram of the Delauney triangulation of the seed points;
+           the seed points may be xy or xyz data but z is ignored;
+           this method will not work for torn (faulted) surfaces, nor for surfaces with recumbent folds;
+           the surfaces may not cross each other, ie. the depth ordering must be consistent over the area;
+           all the seed points must lie wholly within the area of interest;
+           where a gravity vector from a node above does not intersect a surface, the point is inherited
+           as a copy of the node above (the topmost surface must cover the entire area of interest);
+           the Surface class has methods for creating a Surface from a PointSet or a Mesh (RESQML
+           Grid2dRepresentation), or for a horizontal plane
+        """
 
         assert seed_xy.ndim == 2 and seed_xy.shape[1] in [2, 3]
         assert area_of_interest.isclosed and area_of_interest.is_convex()
@@ -1870,12 +1871,12 @@ class VerticalPrismGrid(PrismGrid):
     def cell_centre_point(self, cell = None):
         """Returns centre point of a single cell (or all cells) calculated as the mean position of its 6 nodes.
 
-      arguments:
-         cell (int): the index of the cell for which the centre point is required
+        arguments:
+           cell (int): the index of the cell for which the centre point is required
 
-      returns:
-         numpy float array of shape (3,) being the xyz location of the centre point of the cell
-      """
+        returns:
+           numpy float array of shape (3,) being the xyz location of the centre point of the cell
+        """
 
         cp = self.corner_points(cell = cell)
         return np.mean(cp.reshape((-1, 6, 3)), axis = (1))
@@ -1883,14 +1884,14 @@ class VerticalPrismGrid(PrismGrid):
     def corner_points(self, cell = None):
         """Returns corner points for all cells or for a single cell.
 
-      arguments:
-         cell (int, optional): cell index of single cell for which corner points are required;
-            if None, corner points are returned for all cells
+        arguments:
+           cell (int, optional): cell index of single cell for which corner points are required;
+              if None, corner points are returned for all cells
 
-      returns:
-         numpy float array of shape (2, 3, 3) being xyz points for top & base points for one cell, or
-         numpy float array of shape (N, 2, 3, 3) being xyz points for top & base points for all cells
-      """
+        returns:
+           numpy float array of shape (2, 3, 3) being xyz points for top & base points for one cell, or
+           numpy float array of shape (N, 2, 3, 3) being xyz points for top & base points for all cells
+        """
 
         if hasattr(self, 'array_corner_points'):
             if cell is None:
@@ -1923,9 +1924,9 @@ class VerticalPrismGrid(PrismGrid):
     def thickness(self, cell = None):
         """Returns array of thicknesses of all cells or a single cell.
 
-      note:
-         units are z units of crs used by this grid
-      """
+        note:
+           units are z units of crs used by this grid
+        """
 
         if hasattr(self, 'array_thickness'):
             if cell is None:
@@ -1950,15 +1951,15 @@ class VerticalPrismGrid(PrismGrid):
     def triangulation(self):
         """Returns triangulation used by this vertical prism grid.
 
-      returns:
-         numpy int array of shape (M, 3) being the indices into the grid points of the triangles forming
-         the top faces of the top layer of cells of the grid
+        returns:
+           numpy int array of shape (M, 3) being the indices into the grid points of the triangles forming
+           the top faces of the top layer of cells of the grid
 
-      notes:
-         use points_ref() to access the full points data;
-         the order of the first axis of the returned values will match the order of the columns
-         within cell related data
-      """
+        notes:
+           use points_ref() to access the full points data;
+           the order of the first axis of the returned values will match the order of the columns
+           within cell related data
+        """
 
         n_col = self.column_count()
         top_face_indices = self.top_faces()
@@ -1968,26 +1969,26 @@ class VerticalPrismGrid(PrismGrid):
         return top_nodes
 
     def triple_horizontal_permeability(self, primary_k, orthogonal_k, primary_azimuth = 0.0):
-        """Returns array of triple horizontal permeabilities derived from a pair of permeability properties
+        """Returns array of triple horizontal permeabilities derived from a pair of permeability properties.
 
-      arguments:
-         primary_k (numpy float array of shape (N,) being the primary horizontal permeability for each cell
-         orthogonal_k (numpy float array of shape (N,) being the horizontal permeability for each cell in a
-            direction orthogonal to the primary permeability
-         primary_azimuth (float or numpy float array of shape (N,), default 0.0): the azimuth(s) of the
-            primary permeability, in degrees compass bearing
+        arguments:
+           primary_k (numpy float array of shape (N,) being the primary horizontal permeability for each cell
+           orthogonal_k (numpy float array of shape (N,) being the horizontal permeability for each cell in a
+              direction orthogonal to the primary permeability
+           primary_azimuth (float or numpy float array of shape (N,), default 0.0): the azimuth(s) of the
+              primary permeability, in degrees compass bearing
 
-      returns:
-         numpy float array of shape (N, 3) being the triple horizontal permeabilities applicable to half
-         cell horizontal transmissibilities
+        returns:
+           numpy float array of shape (N, 3) being the triple horizontal permeabilities applicable to half
+           cell horizontal transmissibilities
 
-      notes:
-         this method should be used to generate horizontal permeabilities for use in transmissibility
-         calculations if starting from an anisotropic permeability defined by a pair of locally
-         orthogonal values; resulting values will be locally bounded by the pair of source values;
-         the order of the 3 values per cell follows the node indices for the top triangle, for the
-         opposing vertical face; no net to gross ratio modification is applied here;
-      """
+        notes:
+           this method should be used to generate horizontal permeabilities for use in transmissibility
+           calculations if starting from an anisotropic permeability defined by a pair of locally
+           orthogonal values; resulting values will be locally bounded by the pair of source values;
+           the order of the 3 values per cell follows the node indices for the top triangle, for the
+           opposing vertical face; no net to gross ratio modification is applied here;
+        """
 
         assert primary_k.size == self.cell_count and orthogonal_k.size == self.cell_count
         azimuth_is_constant = isinstance(primary_azimuth, float) or isinstance(primary_azimuth, int)
@@ -2031,25 +2032,25 @@ class VerticalPrismGrid(PrismGrid):
     def half_cell_transmissibility(self, use_property = True, realization = None, tolerance = 1.0e-6):
         """Returns (and caches if realization is None) half cell transmissibilities for this vertical prism grid.
 
-      arguments:
-         use_property (boolean, default True): if True, the grid's property collection is inspected for
-            a possible half cell transmissibility array and if found, it is used instead of calculation
-         realization (int, optional) if present, only a property with this realization number will be used
-         tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
-            will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
-            units are implicitly those of the grid's crs length units
+        arguments:
+           use_property (boolean, default True): if True, the grid's property collection is inspected for
+              a possible half cell transmissibility array and if found, it is used instead of calculation
+           realization (int, optional) if present, only a property with this realization number will be used
+           tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+              will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+              units are implicitly those of the grid's crs length units
 
-      returns:
-         numpy float array of shape (N, 5) where N is the number of cells in the grid and the 5 covers
-         the faces of a cell in the order of the faces_per_cell data;
-         units will depend on the length units of the coordinate reference system for the grid;
-         the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft respectively
+        returns:
+           numpy float array of shape (N, 5) where N is the number of cells in the grid and the 5 covers
+           the faces of a cell in the order of the faces_per_cell data;
+           units will depend on the length units of the coordinate reference system for the grid;
+           the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft respectively
 
-      notes:
-         this method does not write to hdf5, nor create a new property or xml;
-         if realization is None, a grid attribute cached array will be used;
-         tolerance will only be used if the half cell transmissibilities are actually computed
-      """
+        notes:
+           this method does not write to hdf5, nor create a new property or xml;
+           if realization is None, a grid attribute cached array will be used;
+           tolerance will only be used if the half cell transmissibilities are actually computed
+        """
 
         if realization is None and hasattr(self, 'array_half_cell_t'):
             return self.array_half_cell_t
@@ -2156,23 +2157,23 @@ class HexaGrid(UnstructuredGrid):
                  extra_metadata = {}):
         """Creates a new resqpy HexaGrid object (RESQML UnstructuredGrid with cell shape hexahedral)
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-         find_properties (boolean, default True): if True and uuid is present, a
-            grid property collection is instantiated as an attribute, holding properties for which
-            this grid is the supporting representation
-         cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
-            are loaded into attributes of the new grid object
-         title (str, optional): citation title for new grid; ignored if uuid is present
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if uuid is present
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if uuid is present
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+           find_properties (boolean, default True): if True and uuid is present, a
+              grid property collection is instantiated as an attribute, holding properties for which
+              this grid is the supporting representation
+           cache_geometry (boolean, default False): if True and uuid is present, all the geometry arrays
+              are loaded into attributes of the new grid object
+           title (str, optional): citation title for new grid; ignored if uuid is present
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if uuid is present
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if uuid is present
 
-      returns:
-         a newly created HexaGrid object
-      """
+        returns:
+           a newly created HexaGrid object
+        """
 
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
@@ -2200,21 +2201,21 @@ class HexaGrid(UnstructuredGrid):
                           write_active = None):
         """Creates a new (unstructured) HexaGrid from an existing resqpy unsplit (IJK) Grid without K gaps.
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         grid_uuid (uuid.UUID): the uuid of an IjkGridRepresentation from which the hexa grid will be created
-         inherit_properties (boolean, default True): if True, properties will be created for the new grid
-         title (str, optional): citation title for the new grid
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
-         write_active (boolean, optional): if True (or None and inactive property is established) then an
-            active cell property is created (in addition to any inherited properties)
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           grid_uuid (uuid.UUID): the uuid of an IjkGridRepresentation from which the hexa grid will be created
+           inherit_properties (boolean, default True): if True, properties will be created for the new grid
+           title (str, optional): citation title for the new grid
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid
+           write_active (boolean, optional): if True (or None and inactive property is established) then an
+              active cell property is created (in addition to any inherited properties)
 
-      returns:
-         a newly created HexaGrid object
+        returns:
+           a newly created HexaGrid object
 
-      note:
-         this method includes the writing of hdf5 data, creation of xml for the new grid and adding it as a part
-      """
+        note:
+           this method includes the writing of hdf5 data, creation of xml for the new grid and adding it as a part
+        """
 
         import resqpy.grid as grr
 
@@ -2364,10 +2365,10 @@ class HexaGrid(UnstructuredGrid):
     def check_hexahedral(self):
         """Checks that each cell has 6 faces and each face has 4 nodes.
 
-      notes:
-         currently only performs a cursory check, without checking nodes are shared;
-         assumes that degenerate faces still have four nodes identified
-      """
+        notes:
+           currently only performs a cursory check, without checking nodes are shared;
+           assumes that degenerate faces still have four nodes identified
+        """
 
         assert self.cell_shape == 'hexahedral'
         self.cache_all_geometry_arrays()
@@ -2378,16 +2379,16 @@ class HexaGrid(UnstructuredGrid):
     def corner_points(self, cell):
         """Returns corner points (nodes) of a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which the corner points are required
+        arguments:
+           cell (int): the index of the cell for which the corner points are required
 
-      returns:
-         numpy float array of shape (8, 3) being the xyz points of 8 nodes defining a single hexahedral cell
+        returns:
+           numpy float array of shape (8, 3) being the xyz points of 8 nodes defining a single hexahedral cell
 
-      note:
-         if this hexa grid has been created using the from_unsplit_grid class method, then the result can be
-         reshaped to (2, 2, 2, 3) for corner points compatible with those used by the Grid class
-      """
+        note:
+           if this hexa grid has been created using the from_unsplit_grid class method, then the result can be
+           reshaped to (2, 2, 2, 3) for corner points compatible with those used by the Grid class
+        """
 
         self.cache_all_geometry_arrays()
         return self.points_cached[self.distinct_node_indices_for_cell(cell)]
@@ -2395,12 +2396,12 @@ class HexaGrid(UnstructuredGrid):
     def volume(self, cell):
         """Returns the volume of a single cell.
 
-      arguments:
-         cell (int): the index of the cell for which the volume is required
+        arguments:
+           cell (int): the index of the cell for which the volume is required
 
-      returns:
-         float being the volume of the hexahedral cell; units of measure is implied by crs units
-      """
+        returns:
+           float being the volume of the hexahedral cell; units of measure is implied by crs units
+        """
 
         self._set_crs_handedness()
         apex = self.cell_centre_point(cell)

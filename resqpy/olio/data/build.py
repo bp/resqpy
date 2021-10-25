@@ -1,4 +1,4 @@
-""" Script to construct JSON database of UOMs and property kinds.
+"""Script to construct JSON database of UOMs and property kinds.
 
 Expects two files to exist in the same folder:
   - Energistics_Unit_of_Measure_Dictionary_V1.0.xml    (from units of measure standard)
@@ -119,11 +119,10 @@ def parse_prefixes(root):
 
 
 def parse_property_kinds(root):
-    """ Return dict of valid RESQML property kinds
+    """Return dict of valid RESQML property kinds.
 
-   Dict keys are the valid property kinds, e.g. 'angle per time'
-   Dict values are the description, which may be None
-   """
+    Dict keys are the valid property kinds, e.g. 'angle per time' Dict values are the description, which may be None
+    """
 
     kind_list = get_nodes_with_name(root, 'ResqmlPropertyKind')[1]
     kind_dict = {}
@@ -138,7 +137,7 @@ def parse_property_kinds(root):
 
 
 def get_nodes_with_name(root, name):
-    """ Find xml child node with given name """
+    """Find xml child node with given name."""
     for child in root:
         if child.get('name') == name:
             return child

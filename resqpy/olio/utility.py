@@ -44,7 +44,7 @@ def extent_switch_ijk_kji(extent_in):  # reverse order of elements in extent
 
 
 def cell_count_from_extent(extent):
-    """Returns the number of cells in a grid with the given extent"""
+    """Returns the number of cells in a grid with the given extent."""
     result = 1
     for d in range(len(extent)):  # list, tuple or 1D numpy array
         result *= extent[d]
@@ -73,7 +73,10 @@ def string_xyz(xyz):
 
 
 def horizon_float(k0, plus_or_minus):
-    """Returns a floating point representation of k direction face index; eg. 3.5 for face between layers 3 and 4."""
+    """Returns a floating point representation of k direction face index; eg.
+
+    3.5 for face between layers 3 and 4.
+    """
     result = float(k0)
     if plus_or_minus == '+':
         result += 0.5
