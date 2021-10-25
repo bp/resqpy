@@ -58,11 +58,6 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
-
-
-
 valid_md_reference_list = [
     "ground level", "kelly bushing", "mean sea level", "derrick floor", "casing flange", "arbitrary point",
     "crown valve", "rotary bushing", "rotary table", "sea floor", "lowest astronomical tide", "mean higher high water",

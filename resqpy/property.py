@@ -31,11 +31,6 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-#  from lxml import etree as et
-
-
-
-
 # following are loaded dynamically, to avoid circular reference during import (issue for python version < 3.7)
 # import resqpy.grid as grr
 # import resqpy.well as rqw

@@ -34,11 +34,6 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
-
-
-
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
 

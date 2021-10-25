@@ -10,7 +10,6 @@ import resqpy.olio.point_inclusion as pip
 # from numpy.testing import assert_array_almost_equal
 
 
-
 def test_pip_cn_and_wn():
     # unit square polygon
     poly = np.array([(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)])

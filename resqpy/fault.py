@@ -25,11 +25,6 @@ import resqpy.property as rqp
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
-
-
-
 
 class GridConnectionSet(BaseResqpy):
     """Class for obj_GridConnectionSetRepresentation holding pairs of connected faces, usually for faults."""

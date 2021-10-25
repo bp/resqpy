@@ -26,11 +26,6 @@ from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
 
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
-
-
-
 
 class _BaseSurface(BaseResqpy):
     """Base class to implement shared methods for other classes in this module."""
