@@ -25,7 +25,7 @@ import os
 
 
 class _BasePolyline(BaseResqpy):
-    """Base class to implement shared methods for other classes in this module"""
+    """Base class to implement shared methods for other classes in this module."""
 
     def create_interpretation_and_feature(self,
                                           kind = 'horizon',
@@ -67,8 +67,8 @@ class _BasePolyline(BaseResqpy):
 def load_hdf5_array(object, node, array_attribute, tag = 'Values'):
     """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
 
-   :meta private:
-   """
+    :meta private:
+    """
 
     assert (rqet.node_type(node) in ['DoubleHdf5Array', 'IntegerHdf5Array', 'Point3dHdf5Array'])
     # ignore null value
@@ -192,7 +192,7 @@ class Polyline(_BasePolyline):
 
     @property
     def crs_root(self):
-        """XML node corresponding to self.crs_uuid"""
+        """XML node corresponding to self.crs_uuid."""
 
         return self.model.root_for_uuid(self.crs_uuid)
 
@@ -205,24 +205,24 @@ class Polyline(_BasePolyline):
     def from_scaled_polyline(cls, original, scaling, title = None, originator = None, extra_metadata = None):
         """Returns a scaled version of the original polyline.
 
-      arguments:
-         original (Polyline): the polyline from which the new polyline will be sporned
-         scaling (float): the factor by which the original will be scaled
-         title (str, optional): the citation title for the new polyline; inherited from
-            original if None
-         originator (str, optional): the name of the person creating the polyline; inherited
-            from original if None
-         extra_metadata (dict, optional): extra metadata for the new polyline; inherited from
-            original if None
+        arguments:
+           original (Polyline): the polyline from which the new polyline will be sporned
+           scaling (float): the factor by which the original will be scaled
+           title (str, optional): the citation title for the new polyline; inherited from
+              original if None
+           originator (str, optional): the name of the person creating the polyline; inherited
+              from original if None
+           extra_metadata (dict, optional): extra metadata for the new polyline; inherited from
+              original if None
 
-      returns:
-         a new Polyline
+        returns:
+           a new Polyline
 
-      notes:
-         the scaling factor is applied to vectors radiating from the balanced centre of the
-         original polyline to its coordinates; a scaling of 1.0 will result in a copy of the original;
-         if extra_metadata is not None, no extra metadata is inherited from original
-      """
+        notes:
+           the scaling factor is applied to vectors radiating from the balanced centre of the
+           original polyline to its coordinates; a scaling of 1.0 will result in a copy of the original;
+           if extra_metadata is not None, no extra metadata is inherited from original
+        """
 
         if extra_metadata is None:
             extra_metadata = original.extra_metadata
@@ -274,9 +274,9 @@ class Polyline(_BasePolyline):
     def is_clockwise(self, trust_metadata = True):
         """Returns True if first non-straight triplet of nodes is clockwise in the xy plane; False if anti-clockwise.
 
-      note:
-         this method currently assumes that the xy axes are left-handed
-      """
+        note:
+           this method currently assumes that the xy axes are left-handed
+        """
 
         if trust_metadata and self.extra_metadata is not None and 'is_clockwise' in self.extra_metadata.keys():
             return str(self.extra_metadata['is_clockwise']).lower() == 'true'
@@ -305,7 +305,10 @@ class Polyline(_BasePolyline):
         return pip.pip_wn(p, self.coordinates)
 
     def segment_length(self, segment_index, in_xy = False):
-        """Returns the naive length (ie. assuming x,y & z units are the same) of an individual segment of the polyline."""
+        """Returns the naive length (ie.
+
+        assuming x,y & z units are the same) of an individual segment of the polyline.
+        """
 
         successor = self._successor(segment_index)
         d = 2 if in_xy else 3
@@ -318,7 +321,8 @@ class Polyline(_BasePolyline):
         return 0.5 * (self.coordinates[segment_index] + self.coordinates[successor])
 
     def segment_normal(self, segment_index):
-        """For a closed polyline returns a unit vector giving the 2D (xy) direction of an outward facing normal to a segment."""
+        """For a closed polyline returns a unit vector giving the 2D (xy) direction of an outward facing normal to a
+        segment."""
 
         successor = self._successor(segment_index)
         segment_vector = self.coordinates[successor, :2] - self.coordinates[segment_index, :2]
@@ -407,7 +411,8 @@ class Polyline(_BasePolyline):
         return centre
 
     def first_line_intersection(self, x1, y1, x2, y2, half_segment = False):
-        """Returns segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline, or None, None, None."""
+        """Returns segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline, or None,
+        None, None."""
 
         seg_count = len(self.coordinates) - 1
         if self.isclosed:
@@ -908,7 +913,7 @@ class PolylineSet(_BasePolyline):
 
     @property
     def crs_root(self):
-        """XML node corresponding to self.crs_uuid"""
+        """XML node corresponding to self.crs_uuid."""
 
         return self.model.root_for_uuid(self.crs_uuid)
 
@@ -935,7 +940,7 @@ class PolylineSet(_BasePolyline):
                    title = None,
                    originator = None,
                    save_polylines = False):
-        """Create xml from polylineset
+        """Create xml from polylineset.
 
         args:
             save_polylines: If true, polylines are also saved individually
@@ -1087,12 +1092,13 @@ class PolylineSet(_BasePolyline):
 
     def get_bool_array(self, closed_node):
         # TODO: Check if also defined boolean arrays
-        """ Returns a boolean array using details in the node location.
+        """Returns a boolean array using details in the node location.
 
         If type of boolean array is BooleanConstantArray, uses the array value and count to generate the array. If type of boolean array is BooleanArrayFromIndexArray, find the "other" value bool and indices of the "other" values, and insert these into an array opposite to the main bool.
 
         args:
-            closed_node: the node under which the boolean array information sits"""
+            closed_node: the node under which the boolean array information sits
+        """
         if rqet.node_type(closed_node) == 'BooleanConstantArray':
             count = rqet.find_tag_int(closed_node, 'Count')
             value = rqet.bool_from_text(rqet.node_text(rqet.find_tag(closed_node, 'Value')))
@@ -1113,7 +1119,7 @@ class PolylineSet(_BasePolyline):
             crs_uuid = None,
             crs_root = None,  # deprecated
             rep_int_root = None):
-        """Returns a list of Polylines objects from a PolylineSet
+        """Returns a list of Polylines objects from a PolylineSet.
 
         note:
             all arguments are optional and by default the data will be taken from self
@@ -1170,7 +1176,7 @@ class PolylineSet(_BasePolyline):
         return polys
 
     def combine_polylines(self, polylines):
-        """Combines the isclosed boolean array, coordinates and count data for a list of polyline objects
+        """Combines the isclosed boolean array, coordinates and count data for a list of polyline objects.
 
         args:
             polylines: list of polyline objects
@@ -1201,7 +1207,7 @@ class PolylineSet(_BasePolyline):
         assert np.sum(self.count_perpol) == len(self.coordinates)
 
     def bool_array_format(self, closed_array):
-        """Determines an appropriate output boolean array format from an input array of bools
+        """Determines an appropriate output boolean array format from an input array of bools.
 
         self.boolnotconstant - set to True if all are not open or all closed
         self.boolvalue - value of isclosed for all polylines, or for the majority of polylines if mixed
@@ -1229,7 +1235,7 @@ class PolylineSet(_BasePolyline):
             self.boolnotconstant = True
 
     def set_interpretation_root(self, rep_int_root, recursive = True):
-        """Updates the rep_int_root for the polylineset
+        """Updates the rep_int_root for the polylineset.
 
         args:
             rep_int_root: new rep_int_root

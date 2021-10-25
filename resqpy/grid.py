@@ -90,29 +90,29 @@ class Grid(BaseResqpy):
                  extra_metadata = {}):
         """Create a Grid object and optionally populate from xml tree.
 
-      arguments:
-         parent_model (model.Model object): the model which this grid is part of
-         uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-         grid_root (DEPRECATED): use uuid instead; the root of the xml tree for the grid part
-         find_properties (boolean, default True): if True and uuid (or grid_root) is present, a
-            grid property collection is instantiated as an attribute, holding properties for which
-            this grid is the supporting representation
-         geometry_required (boolean, default True): if True and no geometry node exists in the xml,
-            an assertion error is raised; ignored if uuid is None (and grid_root is None)
-         title (str, optional): citation title for new grid; ignored if loading from xml
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if loading from xml
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if loading from xml
+        arguments:
+           parent_model (model.Model object): the model which this grid is part of
+           uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
+           grid_root (DEPRECATED): use uuid instead; the root of the xml tree for the grid part
+           find_properties (boolean, default True): if True and uuid (or grid_root) is present, a
+              grid property collection is instantiated as an attribute, holding properties for which
+              this grid is the supporting representation
+           geometry_required (boolean, default True): if True and no geometry node exists in the xml,
+              an assertion error is raised; ignored if uuid is None (and grid_root is None)
+           title (str, optional): citation title for new grid; ignored if loading from xml
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if loading from xml
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if loading from xml
 
-      returns:
-         a newly created Grid object
+        returns:
+           a newly created Grid object
 
-      notes:
-         only IJK grids are handled at the moment (the resqml standard also defines 5 other varieties)
+        notes:
+           only IJK grids are handled at the moment (the resqml standard also defines 5 other varieties)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # note: currently only handles IJK grids
         # todo: check grid_root, if passed, is for an IJK grid
@@ -203,31 +203,31 @@ class Grid(BaseResqpy):
 
     @property
     def grid_root(self):
-        """Alias for root"""
+        """Alias for root."""
         return self.root
 
     def set_modified(self, update_xml = False, update_hdf5 = False):
         """Assigns a new uuid to this grid; also calls set_modified() for parent model.
 
-      arguments:
-         update_xml (boolean, default False): if True, the uuid is modified in the xml tree
-            for the grid part
-         update_hdf5: (boolean, default False): if True, the uuid in the hdf5 internal path names
-            for the datasets (arrays) for the grid are updated
+        arguments:
+           update_xml (boolean, default False): if True, the uuid is modified in the xml tree
+              for the grid part
+           update_hdf5: (boolean, default False): if True, the uuid in the hdf5 internal path names
+              for the datasets (arrays) for the grid are updated
 
-      returns:
-         the new uuid for this grid object
+        returns:
+           the new uuid for this grid object
 
-      notes:
-         a resqml object should be thought of as immutable; therefore when modifying an object,
-         it is preferable to assign it a new unique identifer which this method does for a grid;
-         the hdf5 internal path names held in xml are only updated if both update_xml and update_hdf5
-         are True;
-         if the grid object has been created using the Model.copy_part() method, it is not
-         necessary to call this function as a new uuid will already have been assigned;
-         NB: relationships are not updated by this function, including the relationship to the
-         hdf5 external part
-      """
+        notes:
+           a resqml object should be thought of as immutable; therefore when modifying an object,
+           it is preferable to assign it a new unique identifer which this method does for a grid;
+           the hdf5 internal path names held in xml are only updated if both update_xml and update_hdf5
+           are True;
+           if the grid object has been created using the Model.copy_part() method, it is not
+           necessary to call this function as a new uuid will already have been assigned;
+           NB: relationships are not updated by this function, including the relationship to the
+           hdf5 external part
+        """
 
         old_uuid = self.uuid
         self.uuid = bu.new_uuid()
@@ -252,11 +252,11 @@ class Grid(BaseResqpy):
     def extract_extent_kji(self):
         """Returns the grid extent; for IJK grids this is a 3 integer numpy array, order is Nk, Nj, Ni.
 
-      returns:
-         numpy int array of shape (3,) being number of cells in k, j & i axes respectively;
-         the return value is cached in attribute extent_kji, which can alternatively be referenced
-         directly by calling code as the value is set from xml on initialisation
-      """
+        returns:
+           numpy int array of shape (3,) being number of cells in k, j & i axes respectively;
+           the return value is cached in attribute extent_kji, which can alternatively be referenced
+           directly by calling code as the value is set from xml on initialisation
+        """
 
         if self.extent_kji is not None:
             return self.extent_kji
@@ -269,16 +269,16 @@ class Grid(BaseResqpy):
     def cell_count(self, active_only = False, non_pinched_out_only = False, geometry_defined_only = False):
         """Returns number of cells in grid; optionally limited by active, non-pinched-out, or having geometry.
 
-      arguments:
-         active_only (boolean, default False): if True, the count of active cells is returned
-         non_pinched_out_only (boolean, default False): if True, the count of cells with vertical
-            thickness greater than 0.001 (units are crs vertical units) is returned
-         geometry_defined_only (boolean, default False): if True, the count of cells which have a
-            defined geometry is returned (a zero thickness cell may still have a defined geometry)
+        arguments:
+           active_only (boolean, default False): if True, the count of active cells is returned
+           non_pinched_out_only (boolean, default False): if True, the count of cells with vertical
+              thickness greater than 0.001 (units are crs vertical units) is returned
+           geometry_defined_only (boolean, default False): if True, the count of cells which have a
+              defined geometry is returned (a zero thickness cell may still have a defined geometry)
 
-      returns:
-         integer being the number of cells in the grid
-      """
+        returns:
+           integer being the number of cells in the grid
+        """
 
         # todo: elsewhere: setting of active array from boolean array or zero pore volume
         if not (active_only or non_pinched_out_only or geometry_defined_only):
@@ -307,12 +307,12 @@ class Grid(BaseResqpy):
     def natural_cell_indices(self, cell_kji0s):
         """Returns a numpy integer array with a value for each of the cells, being the index into a flattened array.
 
-      argument:
-         cell_kji0s: numpy integer array of shape (..., 3) being a list of cell indices in kji0 protocol
+        argument:
+           cell_kji0s: numpy integer array of shape (..., 3) being a list of cell indices in kji0 protocol
 
-      returns:
-         numpy integer array of shape (...,) being the equivalent natural cell indices (for a flattened array of cells)
-      """
+        returns:
+           numpy integer array of shape (...,) being the equivalent natural cell indices (for a flattened array of cells)
+        """
 
         return (cell_kji0s[..., 0] * self.nj + cell_kji0s[..., 1]) * self.ni + cell_kji0s[..., 2]
 
@@ -324,14 +324,15 @@ class Grid(BaseResqpy):
         return (k0, j0, i0)
 
     def denaturalized_cell_indices(self, c0s):
-        """Returns an integer numpy array of shape (..., 3) holding kji0 indices for the cells with given natural indices.
+        """Returns an integer numpy array of shape (..., 3) holding kji0 indices for the cells with given natural
+        indices.
 
-      argument:
-         c0s: numpy integer array of shape (...,) being natural cell indices (for a flattened array)
+        argument:
+           c0s: numpy integer array of shape (...,) being natural cell indices (for a flattened array)
 
-      returns:
-         numpy integer array of shape (..., 3) being the equivalent kji0 protocol cell indices
-      """
+        returns:
+           numpy integer array of shape (..., 3) being the equivalent kji0 protocol cell indices
+        """
 
         k0s, ji0s = divmod(c0s, self.nj * self.ni)
         j0s, i0s = divmod(ji0s, self.ni)
@@ -340,17 +341,17 @@ class Grid(BaseResqpy):
     def resolve_geometry_child(self, tag, child_node = None):
         """If xml child node is None, looks for tag amongst children of geometry root.
 
-      arguments:
-         tag (string): the tag of the geometry child node of interest
-         child_node (optional): the already resolved xml root of the child, or None
+        arguments:
+           tag (string): the tag of the geometry child node of interest
+           child_node (optional): the already resolved xml root of the child, or None
 
-      returns:
-         xml node of child of geometry node for this grid, which matches tag
+        returns:
+           xml node of child of geometry node for this grid, which matches tag
 
-      note:
-         if child_node argument is not None, it is simply returned;
-         if child_node is None, the geometry node for this grid is scanned for a child with matching tag
-      """
+        note:
+           if child_node argument is not None, it is simply returned;
+           if child_node is None, the geometry node for this grid is scanned for a child with matching tag
+        """
 
         if child_node is not None:
             return child_node
@@ -359,9 +360,9 @@ class Grid(BaseResqpy):
     def extract_crs_uuid(self):
         """Returns uuid for coordinate reference system, as stored in geometry xml tree.
 
-      returns:
-         uuid.UUID object
-      """
+        returns:
+           uuid.UUID object
+        """
 
         if self.crs_uuid is not None:
             return self.crs_uuid
@@ -374,14 +375,14 @@ class Grid(BaseResqpy):
     def extract_crs_root(self):
         """Returns root in parent model xml parts forest of coordinate reference system used by this grid geomwtry.
 
-      returns:
-         root node in xml tree for coordinate reference system
+        returns:
+           root node in xml tree for coordinate reference system
 
-      note:
-         resqml allows a part to refer to another part that is not actually present in the same epc package;
-         in practice, the crs is a tiny part and has always been included in datasets encountered so far;
-         if the crs is not present, this method will return None (I think)
-      """
+        note:
+           resqml allows a part to refer to another part that is not actually present in the same epc package;
+           in practice, the crs is a tiny part and has always been included in datasets encountered so far;
+           if the crs is not present, this method will return None (I think)
+        """
 
         if self.crs_root is not None:
             return self.crs_root
@@ -394,16 +395,16 @@ class Grid(BaseResqpy):
     def extract_grid_is_right_handed(self):
         """Returns boolean indicating whether grid IJK axes are right handed, as stored in xml.
 
-      returns:
-         boolean: True if grid is right handed; False if left handed
+        returns:
+           boolean: True if grid is right handed; False if left handed
 
-      notes:
-         this is the actual handedness of the IJK indexing of grid cells;
-         the coordinate reference system has its own implicit handedness for xyz axes;
-         Nexus requires the IJK space to be righthanded so if it is not, the handedness of the xyz space is
-         falsified when exporting for Nexus (as Nexus allows xyz to be right or lefthanded and it is the
-         handedness of the IJK space with respect to the xyz space that matters)
-      """
+        notes:
+           this is the actual handedness of the IJK indexing of grid cells;
+           the coordinate reference system has its own implicit handedness for xyz axes;
+           Nexus requires the IJK space to be righthanded so if it is not, the handedness of the xyz space is
+           falsified when exporting for Nexus (as Nexus allows xyz to be right or lefthanded and it is the
+           handedness of the IJK space with respect to the xyz space that matters)
+        """
 
         if self.grid_is_right_handed is not None:
             return self.grid_is_right_handed
@@ -416,16 +417,16 @@ class Grid(BaseResqpy):
     def extract_k_direction_is_down(self):
         """Returns boolean indicating whether increasing K indices are generally for deeper cells, as stored in xml.
 
-      returns:
-         boolean: True if increasing K generally indicates increasing depth
+        returns:
+           boolean: True if increasing K generally indicates increasing depth
 
-      notes:
-         resqml allows layers to fold back over themselves, so the relationship between k and depth might not
-         be monotonic;
-         higher level code sometimes requires k to increase with depth;
-         independently of this, z values may increase upwards or downwards in a coordinate reference system;
-         this method does not modify the grid_is_righthanded indicator
-      """
+        notes:
+           resqml allows layers to fold back over themselves, so the relationship between k and depth might not
+           be monotonic;
+           higher level code sometimes requires k to increase with depth;
+           independently of this, z values may increase upwards or downwards in a coordinate reference system;
+           this method does not modify the grid_is_righthanded indicator
+        """
 
         if self.k_direction_is_down is not None:
             return self.k_direction_is_down
@@ -438,10 +439,10 @@ class Grid(BaseResqpy):
     def extract_geometry_time_index(self):
         """Returns integer time index, or None, for the grid geometry, as stored in xml for dynamic geometries.
 
-      notes:
-         if the value is not None, it represents the time index as stored in the xml, or the time index as
-         updated when setting the node points from a points property
-      """
+        notes:
+           if the value is not None, it represents the time index as stored in the xml, or the time index as
+           updated when setting the node points from a points property
+        """
         if self.time_index is not None and self.time_series_uuid is not None:
             return self.time_index
         self.time_index = None
@@ -456,9 +457,9 @@ class Grid(BaseResqpy):
     def set_k_direction_from_points(self):
         """Sets the K direction indicator based on z direction and mean z values for top and base.
 
-      note:
-         this method does not modify the grid_is_righthanded indicator
-      """
+        note:
+           this method does not modify the grid_is_righthanded indicator
+        """
 
         p = self.points_ref(masked = False)
         self.k_direction_is_down = True  # arbitrary default
@@ -471,13 +472,13 @@ class Grid(BaseResqpy):
     def extract_pillar_shape(self):
         """Returns string indicating whether whether pillars are curved, straight, or vertical as stored in xml.
 
-      returns:
-         string: either 'curved', 'straight' or 'vertical'
+        returns:
+           string: either 'curved', 'straight' or 'vertical'
 
-      note:
-         resqml datasets often have 'curved', even when the pillars are actually 'vertical' or 'straight';
-         use actual_pillar_shape() method to determine the shape from the actual xyz points data
-      """
+        note:
+           resqml datasets often have 'curved', even when the pillars are actually 'vertical' or 'straight';
+           use actual_pillar_shape() method to determine the shape from the actual xyz points data
+        """
 
         if self.pillar_shape is not None:
             return self.pillar_shape
@@ -490,16 +491,16 @@ class Grid(BaseResqpy):
     def extract_has_split_coordinate_lines(self):
         """Returns boolean indicating whether grid geometry has any split coordinate lines (split pillars, ie. faults).
 
-      returns:
-         boolean: True if the grid has one or more split pillars; False if all pillars are unsplit
+        returns:
+           boolean: True if the grid has one or more split pillars; False if all pillars are unsplit
 
-      notes:
-         the return value is based on the array elements present in the xml tree, unless it has already been
-         determined;
-         resqml ijk grids with split coordinate lines have extra arrays compared to unfaulted grids, and the main
-         Points array is indexed differently: [k', pillar_index, xyz] instead of [k', j', i', xyz] (where k', j', i'
-         range of nk+k_gaps+1, nj+1, ni+1 respectively)
-      """
+        notes:
+           the return value is based on the array elements present in the xml tree, unless it has already been
+           determined;
+           resqml ijk grids with split coordinate lines have extra arrays compared to unfaulted grids, and the main
+           Points array is indexed differently: [k', pillar_index, xyz] instead of [k', j', i', xyz] (where k', j', i'
+           range of nk+k_gaps+1, nj+1, ni+1 respectively)
+        """
 
         if self.has_split_coordinate_lines is not None:
             return self.has_split_coordinate_lines
@@ -512,18 +513,18 @@ class Grid(BaseResqpy):
     def extract_k_gaps(self):
         """Returns information about gaps (voids) between layers in the grid.
 
-      returns:
-         (int, numpy bool array, numpy int array) being the number of gaps between layers;
-         a 1D bool array of extent nk-1 set True where there is a gap below the layer; and
-         a 1D int array being the k index to actually use in the points data for each layer k0
+        returns:
+           (int, numpy bool array, numpy int array) being the number of gaps between layers;
+           a 1D bool array of extent nk-1 set True where there is a gap below the layer; and
+           a 1D int array being the k index to actually use in the points data for each layer k0
 
-      notes:
-         all returned elements are stored as attributes in the grid object; int and bool array elements
-         will be None if there are no k gaps; each k gap implies an extra element in the points data for
-         each pillar; when wanting to index k interfaces (horizons) rather than layers, the last of the
-         returned values can be used to index the k axis of the points data to yield the top face of the
-         layer and the successor in k will always index the basal face of the same layer
-      """
+        notes:
+           all returned elements are stored as attributes in the grid object; int and bool array elements
+           will be None if there are no k gaps; each k gap implies an extra element in the points data for
+           each pillar; when wanting to index k interfaces (horizons) rather than layers, the last of the
+           returned values can be used to index the k axis of the points data to yield the top face of the
+           layer and the successor in k will always index the basal face of the same layer
+        """
 
         if self.k_gaps is not None:
             return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
@@ -778,13 +779,13 @@ class Grid(BaseResqpy):
     def set_parent(self, parent_grid_uuid, self_is_refinement, parent_window):
         """Set relationship with respect to a parent grid.
 
-      arguments:
-         parent_grid_uuid (uuid.UUID): the uuid of the parent grid
-         self_is_refinement (boolean): if True, this grid is a refinement of the subset of the parent grid;
-            if False, this grid is a coarsening
-         parent_window: (olio.fine_coarse.FineCoarse object): slice mapping information in K, j & I axes; note
-            that self_is_refinement determines which of the 2 grids is fine and which is coarse
-      """
+        arguments:
+           parent_grid_uuid (uuid.UUID): the uuid of the parent grid
+           self_is_refinement (boolean): if True, this grid is a refinement of the subset of the parent grid;
+              if False, this grid is a coarsening
+           parent_window: (olio.fine_coarse.FineCoarse object): slice mapping information in K, j & I axes; note
+              that self_is_refinement determines which of the 2 grids is fine and which is coarse
+        """
 
         if self.parent_grid_uuid is not None:
             log.warning('overwriting parent grid information')
@@ -816,14 +817,14 @@ class Grid(BaseResqpy):
     def extract_property_collection(self):
         """Load grid property collection object holding lists of all properties in model that relate to this grid.
 
-      returns:
-         resqml_property.GridPropertyCollection object
+        returns:
+           resqml_property.GridPropertyCollection object
 
-      note:
-         a reference to the grid property collection is cached in this grid object; if the properties change,
-         for example by generating some new properties, the property_collection attribute of the grid object
-         would need to be reset to None elsewhere before calling this method again
-      """
+        note:
+           a reference to the grid property collection is cached in this grid object; if the properties change,
+           for example by generating some new properties, the property_collection attribute of the grid object
+           would need to be reset to None elsewhere before calling this method again
+        """
 
         if self.property_collection is not None:
             return self.property_collection
@@ -833,14 +834,14 @@ class Grid(BaseResqpy):
     def extract_inactive_mask(self, check_pinchout = False):
         """Returns boolean numpy array indicating which cells are inactive, if (in)active property found in this grid.
 
-      returns:
-         numpy array of booleans, of shape (nk, nj, ni) being True for cells which are inactive; False for active
+        returns:
+           numpy array of booleans, of shape (nk, nj, ni) being True for cells which are inactive; False for active
 
-      note:
-         RESQML does not have a built-in concept of inactive (dead) cells, though the usage guide advises to use a
-         discrete property with a local property kind of 'active'; this resqpy code can maintain an 'inactive'
-         attribute for the grid object, which is a boolean numpy array indicating which cells are inactive
-      """
+        note:
+           RESQML does not have a built-in concept of inactive (dead) cells, though the usage guide advises to use a
+           discrete property with a local property kind of 'active'; this resqpy code can maintain an 'inactive'
+           attribute for the grid object, which is a boolean numpy array indicating which cells are inactive
+        """
 
         if self.inactive is not None and not check_pinchout:
             return self.inactive
@@ -899,20 +900,21 @@ class Grid(BaseResqpy):
         return self.inactive
 
     def cell_geometry_is_defined(self, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
-        """Returns True if the geometry of the specified cell is defined; can also be used to cache (load) the boolean array.
+        """Returns True if the geometry of the specified cell is defined; can also be used to cache (load) the boolean
+        array.
 
-      arguments:
-         cell_kji0 (triplet of integer, optional): if present, the index of the cell of interest, in kji0 protocol;
-            if False, None is returned but the boolean array can still be cached
-         cell_geometry_is_defined_root (optional): if present, the root of the 'cell geometry is defined' xml tree for
-            this grid; this optional argument is to allow for speed optimisation, to save searching for the node
-         cache_array (boolean, default True): if True, the 'cell geometry is defined' array is cached in memory, unless
-            the xml tree indicates that geometry is defined for all cells, in which case that is noted
+        arguments:
+           cell_kji0 (triplet of integer, optional): if present, the index of the cell of interest, in kji0 protocol;
+              if False, None is returned but the boolean array can still be cached
+           cell_geometry_is_defined_root (optional): if present, the root of the 'cell geometry is defined' xml tree for
+              this grid; this optional argument is to allow for speed optimisation, to save searching for the node
+           cache_array (boolean, default True): if True, the 'cell geometry is defined' array is cached in memory, unless
+              the xml tree indicates that geometry is defined for all cells, in which case that is noted
 
-      returns:
-         if cell_kji0 is not None, a boolean is returned indicating whether geometry is defined for that cell;
-         if cell_kji0 is None, None is returned (but the array caching logic will have been applied)
-      """
+        returns:
+           if cell_kji0 is not None, a boolean is returned indicating whether geometry is defined for that cell;
+           if cell_kji0 is None, None is returned (but the array caching logic will have been applied)
+        """
 
         if self.geometry_defined_for_all_cells_cached:
             return True
@@ -956,20 +958,21 @@ class Grid(BaseResqpy):
             return result
 
     def pillar_geometry_is_defined(self, pillar_ji0 = None, pillar_geometry_is_defined_root = None, cache_array = True):
-        """Returns True if the geometry of the specified pillar is defined; False otherwise; can also be used to cache (load) the boolean array.
+        """Returns True if the geometry of the specified pillar is defined; False otherwise; can also be used to cache
+        (load) the boolean array.
 
-      arguments:
-         pillar_ji0 (pair of integers, optional): if present, the index of the pillar of interest, in ji0 protocol;
-            if False, None is returned but the boolean array can still be cached
-         pillar_geometry_is_defined_root (optional): if present, the root of the 'pillar geometry is defined' xml tree for
-            this grid; this optional argument is to allow for speed optimisation, to save searching for the node
-         cache_array (boolean, default True): if True, the 'pillar geometry is defined' array is cached in memory, unless
-            the xml tree indicates that geometry is defined for all pillars, in which case that is noted
+        arguments:
+           pillar_ji0 (pair of integers, optional): if present, the index of the pillar of interest, in ji0 protocol;
+              if False, None is returned but the boolean array can still be cached
+           pillar_geometry_is_defined_root (optional): if present, the root of the 'pillar geometry is defined' xml tree for
+              this grid; this optional argument is to allow for speed optimisation, to save searching for the node
+           cache_array (boolean, default True): if True, the 'pillar geometry is defined' array is cached in memory, unless
+              the xml tree indicates that geometry is defined for all pillars, in which case that is noted
 
-      returns:
-         if pillar_ji0 is not None, a boolean is returned indicating whether geometry is defined for that pillar;
-         if pillar_ji0 is None, None is returned unless geometry is defined for all pillars in which case True is returned
-      """
+        returns:
+           if pillar_ji0 is not None, a boolean is returned indicating whether geometry is defined for that pillar;
+           if pillar_ji0 is None, None is returned unless geometry is defined for all pillars in which case True is returned
+        """
 
         if self.geometry_defined_for_all_pillars_cached:
             return True
@@ -1008,13 +1011,13 @@ class Grid(BaseResqpy):
     def geometry_defined_for_all_cells(self, cache_array = True):
         """Returns True if geometry is defined for all cells; False otherwise.
 
-      argument:
-         cache_array (boolean, default True): if True, the 'cell geometry is defined' array is cached in memory,
-            unless the xml indicates that geometry is defined for all cells, in which case that is noted
+        argument:
+           cache_array (boolean, default True): if True, the 'cell geometry is defined' array is cached in memory,
+              unless the xml indicates that geometry is defined for all cells, in which case that is noted
 
-      returns:
-         boolean: True if geometry is defined for all cells; False otherwise
-      """
+        returns:
+           boolean: True if geometry is defined for all cells; False otherwise
+        """
 
         if self.geometry_defined_for_all_cells_cached is not None:
             return self.geometry_defined_for_all_cells_cached
@@ -1038,15 +1041,15 @@ class Grid(BaseResqpy):
     def geometry_defined_for_all_pillars(self, cache_array = True, pillar_geometry_is_defined_root = None):
         """Returns True if geometry is defined for all pillars; False otherwise.
 
-      arguments:
-         cache_array (boolean, default True): if True, the 'pillar geometry is defined' array is cached in memory,
-            unless the xml indicates that geometry is defined for all pillars, in which case that is noted
-         pillar_geometry_is_defined_root (optional): if present, the root of the 'pillar geometry is defined' xml tree for
-            this grid; this optional argument is to allow for speed optimisation, to save searching for the node
+        arguments:
+           cache_array (boolean, default True): if True, the 'pillar geometry is defined' array is cached in memory,
+              unless the xml indicates that geometry is defined for all pillars, in which case that is noted
+           pillar_geometry_is_defined_root (optional): if present, the root of the 'pillar geometry is defined' xml tree for
+              this grid; this optional argument is to allow for speed optimisation, to save searching for the node
 
-      returns:
-         boolean: True if the geometry is defined for all pillars; False otherwise
-      """
+        returns:
+           boolean: True if the geometry is defined for all pillars; False otherwise
+        """
 
         if self.geometry_defined_for_all_pillars_cached is not None:
             return self.geometry_defined_for_all_pillars_cached
@@ -1070,14 +1073,14 @@ class Grid(BaseResqpy):
     def cell_geometry_is_defined_ref(self):
         """Returns an in-memory numpy array containing the boolean data indicating which cells have geometry defined.
 
-      returns:
-         numpy array of booleans of shape (nk, nj, ni); True value indicates cell has geometry defined; False
-         indicates that the cell's geometry (points xyz values) cannot be used
+        returns:
+           numpy array of booleans of shape (nk, nj, ni); True value indicates cell has geometry defined; False
+           indicates that the cell's geometry (points xyz values) cannot be used
 
-      note:
-         if geometry is flagged in the xml as being defined for all cells, then this function returns None;
-         geometry_defined_for_all_cells() can be used to test for that situation
-      """
+        note:
+           if geometry is flagged in the xml as being defined for all cells, then this function returns None;
+           geometry_defined_for_all_cells() can be used to test for that situation
+        """
 
         # todo: treat this array like any other property?; handle constant array seamlessly?
         self.cell_geometry_is_defined(cache_array = True)
@@ -1088,15 +1091,15 @@ class Grid(BaseResqpy):
     def pillar_geometry_is_defined_ref(self):
         """Returns an in-memory numpy array containing the boolean data indicating which pillars have geometry defined.
 
-      returns:
-         numpy array of booleans of shape (nj + 1, ni + 1); True value indicates pillar has geometry defined (at
-         least for some points); False indicates that the pillar's geometry (points xyz values) cannot be used;
-         the resulting array only covers primary pillars; extra pillars for split pillars always have geometry
-         defined
+        returns:
+           numpy array of booleans of shape (nj + 1, ni + 1); True value indicates pillar has geometry defined (at
+           least for some points); False indicates that the pillar's geometry (points xyz values) cannot be used;
+           the resulting array only covers primary pillars; extra pillars for split pillars always have geometry
+           defined
 
-      note:
-         if geometry is flagged in the xml as being defined for all pillars, then this function returns None
-      """
+        note:
+           if geometry is flagged in the xml as being defined for all pillars, then this function returns None
+        """
 
         # todo: double-check behaviour in presence of split pillars
         # todo: treat this array like any other property?; handle constant array seamlessly?
@@ -1111,31 +1114,32 @@ class Grid(BaseResqpy):
                                 complete_partial_pillars = False,
                                 nullify_partial_pillars = False,
                                 complete_all = False):
-        """Sets cached flags and/or arrays indicating which primary pillars have any points defined and which cells all points.
+        """Sets cached flags and/or arrays indicating which primary pillars have any points defined and which cells all
+        points.
 
-      arguments:
-         treat_as_nan (float, optional): if present, any point with this value as x, y or z is changed
-            to hold NaN values, which is the correct RESQML representation of undefined values
-         treat_dots_as_nan (boolean, default False): if True, the points around any inactive cell which has zero length along
-            all its I and J edges will be set to NaN (which can intentionally invalidate the geometry of neighbouring cells)
-         complete_partial_pillars (boolean, default False): if True, pillars which have some but not all points defined will
-            have values generated for the undefined (NaN) points
-         nullify_partial_pillars (boolean, default False): if True, pillars which have some undefined (NaN) points will be
-            treated as if all the points on the pillar are undefined
-         complete_all (boolean, default False): if True, values will be generated for all undefined points (includes
-            completion of partial pillars if both partial pillar arguments are False)
+        arguments:
+           treat_as_nan (float, optional): if present, any point with this value as x, y or z is changed
+              to hold NaN values, which is the correct RESQML representation of undefined values
+           treat_dots_as_nan (boolean, default False): if True, the points around any inactive cell which has zero length along
+              all its I and J edges will be set to NaN (which can intentionally invalidate the geometry of neighbouring cells)
+           complete_partial_pillars (boolean, default False): if True, pillars which have some but not all points defined will
+              have values generated for the undefined (NaN) points
+           nullify_partial_pillars (boolean, default False): if True, pillars which have some undefined (NaN) points will be
+              treated as if all the points on the pillar are undefined
+           complete_all (boolean, default False): if True, values will be generated for all undefined points (includes
+              completion of partial pillars if both partial pillar arguments are False)
 
-      notes:
-         this method discards any previous information about which pillars and cells have geometry defined; the new settings
-         are based solely on where points data is NaN (or has the value supplied as treat_as_nan etc.);
-         the inactive attribute is also updated by this method, though any cells previously flagged as inactive will still be
-         inactive;
-         if points are generated due to either complete... argument being set True, the inactive mask is set prior to
-         generating points, so all cells making use of generated points will be inactive; however, the geometry will show
-         as defined where points have been generated;
-         at most one of complete_partial_pillars and nullify_partial_pillars may be True;
-         although the method modifies the cached (attribute) copies of various arrays, they are not written to hdf5 here
-      """
+        notes:
+           this method discards any previous information about which pillars and cells have geometry defined; the new settings
+           are based solely on where points data is NaN (or has the value supplied as treat_as_nan etc.);
+           the inactive attribute is also updated by this method, though any cells previously flagged as inactive will still be
+           inactive;
+           if points are generated due to either complete... argument being set True, the inactive mask is set prior to
+           generating points, so all cells making use of generated points will be inactive; however, the geometry will show
+           as defined where points have been generated;
+           at most one of complete_partial_pillars and nullify_partial_pillars may be True;
+           although the method modifies the cached (attribute) copies of various arrays, they are not written to hdf5 here
+        """
 
         def infill_partial_pillar(grid, pillar_index):
             points = grid.points_ref(masked = False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
@@ -1494,18 +1498,18 @@ class Grid(BaseResqpy):
     def actual_pillar_shape(self, patch_metadata = False, tolerance = 0.001):
         """Returns actual shape of pillars.
 
-      arguments:
-         patch_metadata (boolean, default False): if True, the actual shape replaces whatever was in the metadata
-         tolerance (float, default 0.001): a length value (in units of grid xy units) used as a Manhattan distance
-            limit in the xy plane when considering whether a point lies 'on' a straight line
+        arguments:
+           patch_metadata (boolean, default False): if True, the actual shape replaces whatever was in the metadata
+           tolerance (float, default 0.001): a length value (in units of grid xy units) used as a Manhattan distance
+              limit in the xy plane when considering whether a point lies 'on' a straight line
 
-      returns:
-         string: 'vertical', 'straight' or 'curved'
+        returns:
+           string: 'vertical', 'straight' or 'curved'
 
-      note:
-         setting patch_metadata True will affect the attribute in this Grid object; however, it will not be
-         preserved unless the create_xml() method is called, followed at some point with model.store_epc()
-      """
+        note:
+           setting patch_metadata True will affect the attribute in this Grid object; however, it will not be
+           preserved unless the create_xml() method is called, followed at some point with model.store_epc()
+        """
 
         pillar_shape = gf.actual_pillar_shape(self.points_ref(masked = False), tolerance = tolerance)
         if patch_metadata:
@@ -1515,27 +1519,27 @@ class Grid(BaseResqpy):
     def cache_all_geometry_arrays(self):
         """Loads from hdf5 into memory all the arrays defining the grid geometry.
 
-      returns:
-         None
+        returns:
+           None
 
-      notes:
-         call this method if much grid geometry processing is coming up, to save having to worry about
-         individual caching arguments to many other methods;
-         this method does not create a column to pillar mapping which will often also be needed;
-         the arrays are cached as direct attributes to this grid object;
-         the names, shapes and types of the attributes are:
-            array_cell_geometry_is_defined   (nk, nj, ni)  bool
-            array_pillar_geometry_is_defined (nj + 1, ni + 1)  bool
-            points_cached  (nk + 1, nj + 1, ni + 1, 3) or (nk + 1, np, 3)  float  (np = number of primary pillars)
-            split_pillar_indices_cached  (nps)  int  (nps = number of primary pillars that are split)
-            cols_for_split_pillars  (npxc)  int  (npxc = number of column corners using extra pillars due to splitting)
-            cols_for_split_pillars_cl  (npx)  int  (npx = number of extra pillars due to splitting)
-         the last 3 are only present when the grid has one or more split pillars;
-         the split pillar data includes the use of a 'jagged' array (effectively an array of lists represented as
-         a linear array and a 'cumulative length' index array)
+        notes:
+           call this method if much grid geometry processing is coming up, to save having to worry about
+           individual caching arguments to many other methods;
+           this method does not create a column to pillar mapping which will often also be needed;
+           the arrays are cached as direct attributes to this grid object;
+           the names, shapes and types of the attributes are:
+              array_cell_geometry_is_defined   (nk, nj, ni)  bool
+              array_pillar_geometry_is_defined (nj + 1, ni + 1)  bool
+              points_cached  (nk + 1, nj + 1, ni + 1, 3) or (nk + 1, np, 3)  float  (np = number of primary pillars)
+              split_pillar_indices_cached  (nps)  int  (nps = number of primary pillars that are split)
+              cols_for_split_pillars  (npxc)  int  (npxc = number of column corners using extra pillars due to splitting)
+              cols_for_split_pillars_cl  (npx)  int  (npx = number of extra pillars due to splitting)
+           the last 3 are only present when the grid has one or more split pillars;
+           the split pillar data includes the use of a 'jagged' array (effectively an array of lists represented as
+           a linear array and a 'cumulative length' index array)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # todo: recheck the description of split pillar arrays given in the doc string
         self.cell_geometry_is_defined(cache_array = True)
@@ -1586,44 +1590,44 @@ class Grid(BaseResqpy):
                                         active_collection = None):
         """Modifies the cached points (geometry), setting the values from a points property.
 
-      arguments:
-         points_property_uuid (uuid, optional): the uuid of the points property; if present the
-            remaining arguments are ignored except for inactive & active arguments
-         property_collection (PropertyCollection, optional): defaults to property collection
-            for the grid; should only contain one set of points properties (but may also contain
-            other non-points properties)
-         realization (int, optional): if present, the property in the collection with this
-            realization number is used
-         time_index (int, optional): if present, the property in the collection with this
-            time index is used
-         set_grid_time_index (bool, default True): if True, the grid's time index will be set
-            to the time_index argument and the grid's time series uuid will be set to that
-            referred to by the points property; if False, the grid's time index will not be
-            modified
-         set_inactive (bool, default True): if True, the grid's inactive mask will be set
-            based on an active cell property
-         active_property_uuid (uuid, optional): if present, the uuid of an active cell property
-            to base the inactive mask on; ignored if set_inactive is False
-         active_collection (uuid, optional): default's to property_collection if present, or
-            the grid's property collection otherwise; only used if set_inactive is True and
-            active_property_uuid is None
+        arguments:
+           points_property_uuid (uuid, optional): the uuid of the points property; if present the
+              remaining arguments are ignored except for inactive & active arguments
+           property_collection (PropertyCollection, optional): defaults to property collection
+              for the grid; should only contain one set of points properties (but may also contain
+              other non-points properties)
+           realization (int, optional): if present, the property in the collection with this
+              realization number is used
+           time_index (int, optional): if present, the property in the collection with this
+              time index is used
+           set_grid_time_index (bool, default True): if True, the grid's time index will be set
+              to the time_index argument and the grid's time series uuid will be set to that
+              referred to by the points property; if False, the grid's time index will not be
+              modified
+           set_inactive (bool, default True): if True, the grid's inactive mask will be set
+              based on an active cell property
+           active_property_uuid (uuid, optional): if present, the uuid of an active cell property
+              to base the inactive mask on; ignored if set_inactive is False
+           active_collection (uuid, optional): default's to property_collection if present, or
+              the grid's property collection otherwise; only used if set_inactive is True and
+              active_property_uuid is None
 
-      notes:
-         the points property must have indexable element 'nodes' and be the same shape as the
-         official points array for the grid;
-         note that the shape of the points array is quite different between grids with split
-         pillars and those without;
-         the uom of the points property must be a length uom and match that used by the grid's crs;
-         the inactive mask of the grid will only be updated if the set_inactive argument is True;
-         if points_property_uuid has been provided, and set_inactive is True, the active property
-         must be identified with the active_property_uuid argument;
-         if set_inactive is True and active_property_uuid is None and points_property_uuid is None and
-         realization and/or time_index is in use, the active property collection must contain one
-         series of active properties with the same variants (realizations and time indices) as the
-         points property series;
-         the active cell properties should be discrete and have a local property kind titled 'active';
-         various cached data are invalidated and cleared by this method
-      """
+        notes:
+           the points property must have indexable element 'nodes' and be the same shape as the
+           official points array for the grid;
+           note that the shape of the points array is quite different between grids with split
+           pillars and those without;
+           the uom of the points property must be a length uom and match that used by the grid's crs;
+           the inactive mask of the grid will only be updated if the set_inactive argument is True;
+           if points_property_uuid has been provided, and set_inactive is True, the active property
+           must be identified with the active_property_uuid argument;
+           if set_inactive is True and active_property_uuid is None and points_property_uuid is None and
+           realization and/or time_index is in use, the active property collection must contain one
+           series of active properties with the same variants (realizations and time indices) as the
+           points property series;
+           the active cell properties should be discrete and have a local property kind titled 'active';
+           various cached data are invalidated and cleared by this method
+        """
 
         if points_property_uuid is None:
             if property_collection is None:
@@ -1692,12 +1696,12 @@ class Grid(BaseResqpy):
     def column_is_inactive(self, col_ji0):
         """Returns True if all the cells in the specified column are inactive.
 
-      arguments:
-         col_ji0 (int pair): the (j0, i0) column indices
+        arguments:
+           col_ji0 (int pair): the (j0, i0) column indices
 
-      returns:
-         boolean: True if all the cells in the column are inactive; False if at least one cell is active
-      """
+        returns:
+           boolean: True if all the cells in the column are inactive; False if at least one cell is active
+        """
 
         self.extract_inactive_mask()
         if self.inactive is None:
@@ -1707,23 +1711,23 @@ class Grid(BaseResqpy):
     def create_column_pillar_mapping(self):
         """Creates an array attribute holding set of 4 pillar indices for each I, J column of cells.
 
-      returns:
-         numpy integer array of shape (nj, ni, 2, 2) where the last two indices are jp, ip;
-         the array contains the pillar index for each of the 4 corners of each column of cells
+        returns:
+           numpy integer array of shape (nj, ni, 2, 2) where the last two indices are jp, ip;
+           the array contains the pillar index for each of the 4 corners of each column of cells
 
-      notes:
-         the array is also cached as an attribute of the grid object: self.pillars_for_column
-         for grids with split coordinates lines (faults), this array allows for fast access to
-         the correct pillar data for the corner of a column of cells;
-         here and elsewhere, ip & jp (& kp) refer to a 0 or 1 index which determines the side
-         of a cell, ip & jp together select one of the four corners of a column;
-         the pillar index is a single integer, which is used as the second index into the points
-         array for a grid geometry with split pillars;
-         for unsplit grid geometries, such a pillar index must be converted back into a j', i'
-         pair of indices (or the points array must be reshaped to combine the two indices into one)
+        notes:
+           the array is also cached as an attribute of the grid object: self.pillars_for_column
+           for grids with split coordinates lines (faults), this array allows for fast access to
+           the correct pillar data for the corner of a column of cells;
+           here and elsewhere, ip & jp (& kp) refer to a 0 or 1 index which determines the side
+           of a cell, ip & jp together select one of the four corners of a column;
+           the pillar index is a single integer, which is used as the second index into the points
+           array for a grid geometry with split pillars;
+           for unsplit grid geometries, such a pillar index must be converted back into a j', i'
+           pair of indices (or the points array must be reshaped to combine the two indices into one)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if hasattr(self, 'pillars_for_column') and self.pillars_for_column is not None:
             return self.pillars_for_column
@@ -1761,19 +1765,20 @@ class Grid(BaseResqpy):
         return self.pillars_for_column
 
     def pillar_foursome(self, ji0, none_if_unsplit = False):
-        """Returns a numpy int array of shape (2, 2) being the natural pillar indices applicable to each column around primary.
+        """Returns a numpy int array of shape (2, 2) being the natural pillar indices applicable to each column around
+        primary.
 
-      arguments:
-         ji0 (pair of ints): the pillar indices (j0, i0) of the primary pillar of interest
-         none_if_unsplit (boolean, default False): if True and the primary pillar is unsplit, None is returned; if False,
-            a foursome is returned full of the natural index of the primary pillar
+        arguments:
+           ji0 (pair of ints): the pillar indices (j0, i0) of the primary pillar of interest
+           none_if_unsplit (boolean, default False): if True and the primary pillar is unsplit, None is returned; if False,
+              a foursome is returned full of the natural index of the primary pillar
 
-      returns:
-         numpy int array of shape (2, 2) being the natural pillar indices (second axis index in raw points array)
-         applicable to each of the four columns around the primary pillar; axes of foursome are (jp, ip); if the
-         primary pillar is unsplit, None is returned if none_if_unsplit is set to True, otherwise the foursome as
-         usual
-      """
+        returns:
+           numpy int array of shape (2, 2) being the natural pillar indices (second axis index in raw points array)
+           applicable to each of the four columns around the primary pillar; axes of foursome are (jp, ip); if the
+           primary pillar is unsplit, None is returned if none_if_unsplit is set to True, otherwise the foursome as
+           usual
+        """
 
         j0, i0 = ji0
 
@@ -1874,10 +1879,10 @@ class Grid(BaseResqpy):
     def find_faults(self, set_face_sets = False, create_organizing_objects_where_needed = False):
         """Searches for column-faces that are faulted and assigns fault ids; creates list of column-faces per fault id.
 
-      note:
-         this method is deprecated, or due for overhaul to make compatible with resqml_fault module and the
-         GridConnectionSet class
-      """
+        note:
+           this method is deprecated, or due for overhaul to make compatible with resqml_fault module and the
+           GridConnectionSet class
+        """
 
         # note:the logic to group kelp into distinct fault ids is simplistic and won't always give the right grouping
 
@@ -1966,10 +1971,10 @@ class Grid(BaseResqpy):
     def fault_throws(self):
         """Finds mean throw of each J and I face; adds throw arrays as attributes to this grid and returns them.
 
-      note:
-         this method is deprecated, or due for overhaul to make compatible with resqml_fault module and the
-         GridConnectionSet class
-      """
+        note:
+           this method is deprecated, or due for overhaul to make compatible with resqml_fault module and the
+           GridConnectionSet class
+        """
 
         if hasattr(self, 'fault_throw_j') and self.fault_throw_j is not None and hasattr(
                 self, 'fault_throw_i') and self.fault_throw_i is not None:
@@ -1994,34 +1999,35 @@ class Grid(BaseResqpy):
         return (self.fault_throw_j, self.fault_throw_i)
 
     def fault_throws_per_edge_per_column(self, mode = 'maximum', simple_z = False, axis_polarity_mode = True):
-        """Returns numpy array of shape (nj, ni, 2, 2) or (nj, ni, 4) holding max, mean or min throw based on split node separations.
+        """Returns numpy array of shape (nj, ni, 2, 2) or (nj, ni, 4) holding max, mean or min throw based on split node
+        separations.
 
-      arguments:
-         mode (string, default 'maximum'): one of 'minimum', 'mean', 'maximum'; determines how to resolve variation in throw for
-            each column edge
-         simple_z (boolean, default False): if True, the returned throw values are vertical offsets; if False, the displacement
-            in xyz space between split points is the basis of the returned values and may include a lateral offset component as
-            well as xy displacement due to sloping pillars
-         axis_polarity (boolean, default True): determines shape and ordering of returned array; if True, the returned array has
-            shape (nj, ni, 2, 2); if False the shape is (nj, ni, 4); see return value notes for more information
+        arguments:
+           mode (string, default 'maximum'): one of 'minimum', 'mean', 'maximum'; determines how to resolve variation in throw for
+              each column edge
+           simple_z (boolean, default False): if True, the returned throw values are vertical offsets; if False, the displacement
+              in xyz space between split points is the basis of the returned values and may include a lateral offset component as
+              well as xy displacement due to sloping pillars
+           axis_polarity (boolean, default True): determines shape and ordering of returned array; if True, the returned array has
+              shape (nj, ni, 2, 2); if False the shape is (nj, ni, 4); see return value notes for more information
 
-      returns:
-         numpy float array of shape (nj, ni, 2, 2) or (nj, ni, 4) holding fault throw values for each column edge; units are
-            z units of crs for this grid; if simple_z is False, xy units and z units must be the same; positive values indicate
-            greater depth if z is increasing downwards (or shallower if z is increasing upwards); negative values indicate the
-            opposite; the shape and ordering of the returned array is determined by axis_polarity_mode; if axis_polarity_mode is
-            True, the returned array has shape (nj, ni, 2, 2) with the third index being axis (0 = J, 1 = I) and the final index
-            being polarity (0 = minus face edge, 1 = plus face edge); if axis_polarity_mode is False, the shape is (nj, ni, 4)
-            and the face edges are ordered I-, J+, I+, J-, as required by the resqml standard for a property with indexable
-            element 'edges per column'
+        returns:
+           numpy float array of shape (nj, ni, 2, 2) or (nj, ni, 4) holding fault throw values for each column edge; units are
+              z units of crs for this grid; if simple_z is False, xy units and z units must be the same; positive values indicate
+              greater depth if z is increasing downwards (or shallower if z is increasing upwards); negative values indicate the
+              opposite; the shape and ordering of the returned array is determined by axis_polarity_mode; if axis_polarity_mode is
+              True, the returned array has shape (nj, ni, 2, 2) with the third index being axis (0 = J, 1 = I) and the final index
+              being polarity (0 = minus face edge, 1 = plus face edge); if axis_polarity_mode is False, the shape is (nj, ni, 4)
+              and the face edges are ordered I-, J+, I+, J-, as required by the resqml standard for a property with indexable
+              element 'edges per column'
 
-      notes:
-         the throws calculated by this method are based merely on grid geometry and do not refer to grid connection sets;
-         NB: the same absolute value is returned, with opposite sign, for the edges on opposing sides of a fault; either one of
-         these alone indicates the full throw;
-         the property module contains a pair of reformatting functions for moving an array between the two axis polarity modes;
-         minimum and maximum modes work on the absolute throws
-      """
+        notes:
+           the throws calculated by this method are based merely on grid geometry and do not refer to grid connection sets;
+           NB: the same absolute value is returned, with opposite sign, for the edges on opposing sides of a fault; either one of
+           these alone indicates the full throw;
+           the property module contains a pair of reformatting functions for moving an array between the two axis polarity modes;
+           minimum and maximum modes work on the absolute throws
+        """
 
         assert mode in ['maximum', 'mean', 'minimum']
         if not simple_z:
@@ -2109,10 +2115,10 @@ class Grid(BaseResqpy):
     def make_face_set_from_dataframe(self, df):
         """Creates a curtain face set for each named fault in dataframe.
 
-      note:
-         this method is deprecated, or due for overhaul to make compatible with resqml_fault module and the
-         GridConnectionSet class
-      """
+        note:
+           this method is deprecated, or due for overhaul to make compatible with resqml_fault module and the
+           GridConnectionSet class
+        """
 
         # df columns: name, i1, i2, j1, j2, k1, k2, face
         self.clear_face_sets()
@@ -2175,12 +2181,12 @@ class Grid(BaseResqpy):
                                          projection = 'xy'):
         """Creates a curtain face set for each pillar (or rod) list.
 
-      returns:
-         (face_set_dict, full_pillar_list_dict)
+        returns:
+           (face_set_dict, full_pillar_list_dict)
 
-      note:
-         'xz' and 'yz' projections currently only supported for unsplit grids
-      """
+        note:
+           'xz' and 'yz' projections currently only supported for unsplit grids
+        """
 
         # NB. this code was originally written for axis K and projection xy, working with horizon points
         # it has since been reworked for the cross sectional cases, so variables named 'pillar...' may refer to rods
@@ -2300,15 +2306,15 @@ class Grid(BaseResqpy):
         return local_face_set_dict, full_pillar_list_dict
 
     def check_top_and_base_cell_edge_directions(self):
-        """checks grid top face I & J edge vectors (in x,y) against basal equivalents: max 90 degree angle tolerated
+        """checks grid top face I & J edge vectors (in x,y) against basal equivalents: max 90 degree angle tolerated.
 
-      returns: boolean: True if all checks pass; False if one or more checks fail
+        returns: boolean: True if all checks pass; False if one or more checks fail
 
-      notes:
-         similarly checks cell edge directions in neighbouring cells in top (and separately in base)
-         currently requires geometry to be defined for all pillars
-         logs a warning if a check is not passed
-      """
+        notes:
+           similarly checks cell edge directions in neighbouring cells in top (and separately in base)
+           currently requires geometry to be defined for all pillars
+           logs a warning if a check is not passed
+        """
 
         log.debug('deriving cell edge vectors at top and base (for checking)')
         self.point(cache_array = True)
@@ -2376,22 +2382,22 @@ class Grid(BaseResqpy):
     def point_raw(self, index = None, points_root = None, cache_array = True):
         """Returns element from points data, indexed as in the hdf5 file; can optionally be used to cache points data.
 
-      arguments:
-         index (2 or 3 integers, optional): if not None, the index into the raw points data for the point of interest
-         points_root (optional): the xml node holding the points data
-         cache_array (boolean, default True): if True, the raw points data is cached in memory as a side effect
+        arguments:
+           index (2 or 3 integers, optional): if not None, the index into the raw points data for the point of interest
+           points_root (optional): the xml node holding the points data
+           cache_array (boolean, default True): if True, the raw points data is cached in memory as a side effect
 
-      returns:
-         (x, y, z) of selected point as a 3 element numpy vector, or None if index is None
+        returns:
+           (x, y, z) of selected point as a 3 element numpy vector, or None if index is None
 
-      notes:
-         this function is typically called either to cache the points data in memory, or to fetch the coordinates of
-         a single point; the details of the indexing depend upon whether the grid has split coordinate lines: if not,
-         the index should be a triple kji0 with axes ranging over the shared corners nk+k_gaps+1, nj+1, ni+1; if there
-         are split pillars, index should be a pair, being the k0 in range nk+k_gaps+1 and a pillar index; note that if
-         index is passed, the k0 element must already have been mapped to the raw index value taking into consideration
-         any k gaps; if the grid object does not include geometry then None is returned
-      """
+        notes:
+           this function is typically called either to cache the points data in memory, or to fetch the coordinates of
+           a single point; the details of the indexing depend upon whether the grid has split coordinate lines: if not,
+           the index should be a triple kji0 with axes ranging over the shared corners nk+k_gaps+1, nj+1, ni+1; if there
+           are split pillars, index should be a pair, being the k0 in range nk+k_gaps+1 and a pillar index; note that if
+           index is passed, the k0 element must already have been mapped to the raw index value taking into consideration
+           any k gaps; if the grid object does not include geometry then None is returned
+        """
 
         # NB: shape of index depends on whether grid has split pillars
         if index is not None and not self.geometry_defined_for_all_pillars(cache_array = cache_array):
@@ -2438,19 +2444,19 @@ class Grid(BaseResqpy):
               cache_array = True):
         """Return a cell corner point xyz; can optionally be used to cache points data.
 
-      arguments:
-         cell_kji0 (3 integers, optional): if not None, the index of the cell for the point of interest, in kji0 protocol
-         corner_index (3 integers, default zeros): the kp, jp, ip corner-within-cell indices (each 0 or 1)
-         points_root (optional): the xml node holding the points data
-         cache_array (boolean, default True): if True, the raw points data is cached in memory as a side effect
+        arguments:
+           cell_kji0 (3 integers, optional): if not None, the index of the cell for the point of interest, in kji0 protocol
+           corner_index (3 integers, default zeros): the kp, jp, ip corner-within-cell indices (each 0 or 1)
+           points_root (optional): the xml node holding the points data
+           cache_array (boolean, default True): if True, the raw points data is cached in memory as a side effect
 
-      returns:
-         (x, y, z) of selected point as a 3 element numpy vector, or None if cell_kji0 is None
+        returns:
+           (x, y, z) of selected point as a 3 element numpy vector, or None if cell_kji0 is None
 
-      note:
-         if cell_kji0 is passed, the k0 value should be the layer index before adjustment for k_gaps, which this
-         method will apply
-      """
+        note:
+           if cell_kji0 is passed, the k0 value should be the layer index before adjustment for k_gaps, which this
+           method will apply
+        """
 
         if cache_array and self.points_cached is None:
             self.point_raw(points_root = points_root, cache_array = True)
@@ -2479,23 +2485,23 @@ class Grid(BaseResqpy):
     def points_ref(self, masked = True):
         """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.
 
-      argument:
-         masked (boolean, default True): if True, a masked array is returned with NaN points masked out;
-            if False, a simple (unmasked) numpy array is returned
+        argument:
+           masked (boolean, default True): if True, a masked array is returned with NaN points masked out;
+              if False, a simple (unmasked) numpy array is returned
 
-      returns:
-         numpy array or masked array of float, of shape (nk + k_gaps + 1, nj + 1, ni + 1, 3) or (nk + k_gaps + 1, np, 3)
-         where np is the total number of pillars (primary pillars + extras for split pillars)
+        returns:
+           numpy array or masked array of float, of shape (nk + k_gaps + 1, nj + 1, ni + 1, 3) or (nk + k_gaps + 1, np, 3)
+           where np is the total number of pillars (primary pillars + extras for split pillars)
 
-      notes:
-         this is the usual way to get at the actual grid geometry points data in the native resqml layout;
-         the has_split_coordinate_lines boolean attribute can be used to determine which shape to expect;
-         the shape is (nk + k_gaps + 1, nj + 1, ni + 1, 3) if there are no split coordinate lines (unfaulted);
-         otherwise it is (nk + k_gaps + 1, np, 3), where np > (nj + 1) * (ni + 1), due to extra pillar data for
-         the split pillars
+        notes:
+           this is the usual way to get at the actual grid geometry points data in the native resqml layout;
+           the has_split_coordinate_lines boolean attribute can be used to determine which shape to expect;
+           the shape is (nk + k_gaps + 1, nj + 1, ni + 1, 3) if there are no split coordinate lines (unfaulted);
+           otherwise it is (nk + k_gaps + 1, np, 3), where np > (nj + 1) * (ni + 1), due to extra pillar data for
+           the split pillars
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.points_cached is None:
             self.point_raw(cache_array = True)
@@ -2508,10 +2514,10 @@ class Grid(BaseResqpy):
     def uncache_points(self):
         """Frees up memory by removing the cached copy of the grid's points data.
 
-      note:
-         the memory will only actually become free when any other references to it pass out of scope
-         or are deleted
-      """
+        note:
+           the memory will only actually become free when any other references to it pass out of scope
+           or are deleted
+        """
 
         if self.points_cached is not None:
             del self.points_cached
@@ -2520,20 +2526,20 @@ class Grid(BaseResqpy):
     def unsplit_points_ref(self, cache_array = False, masked = False):
         """Returns a copy of the points array that has split pillars merged back into an unsplit configuration.
 
-      arguments:
-         cache_array (boolean, default False): if True, a copy of the unsplit points array is added as
-            attribute array_unsplit_points to this grid object
-         masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
-            if False, a simple (unmasked) numpy array is returned
+        arguments:
+           cache_array (boolean, default False): if True, a copy of the unsplit points array is added as
+              attribute array_unsplit_points to this grid object
+           masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
+              if False, a simple (unmasked) numpy array is returned
 
-      returns:
-         numpy array of float of shape (nk + k_gaps + 1, nj + 1, ni + 1, 3)
+        returns:
+           numpy array of float of shape (nk + k_gaps + 1, nj + 1, ni + 1, 3)
 
-      note:
-         for grids without split pillars, this function simply returns the points array in its native form;
-         for grids with split pillars, an unsplit equivalent points array is calculated as the average of
-         contributions to each pillar from the surrounding cell columns
-      """
+        note:
+           for grids without split pillars, this function simply returns the points array in its native form;
+           for grids with split pillars, an unsplit equivalent points array is calculated as the average of
+           contributions to each pillar from the surrounding cell columns
+        """
 
         if hasattr(self, 'array_unsplit_points'):
             return self.array_unsplit_points
@@ -2582,22 +2588,22 @@ class Grid(BaseResqpy):
     def xyz_box(self, points_root = None, lazy = True, local = False):
         """Returns the minimum and maximum xyz for the grid geometry.
 
-      arguments:
-         points_root (optional): if not None, the xml root node for the points data (speed optimization)
-         lazy (boolean, default True): if True, only the 8 outermost logical corners of the grid are used
-            to determine the ranges of xyz; if False, all the points in the entire grid are scanned to
-            determine the xyz ranges in an exhaustive manner
-         local (boolean, default False): if True, the xyz ranges that are returned are in the local
-            coordinate space, otherwise the global (crs parent) coordinate space
+        arguments:
+           points_root (optional): if not None, the xml root node for the points data (speed optimization)
+           lazy (boolean, default True): if True, only the 8 outermost logical corners of the grid are used
+              to determine the ranges of xyz; if False, all the points in the entire grid are scanned to
+              determine the xyz ranges in an exhaustive manner
+           local (boolean, default False): if True, the xyz ranges that are returned are in the local
+              coordinate space, otherwise the global (crs parent) coordinate space
 
-      returns:
-         numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
+        returns:
+           numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
 
-      note:
-         if the lazy argument is True, the results are likely to under-report the ranges, especially for z
+        note:
+           if the lazy argument is True, the results are likely to under-report the ranges, especially for z
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.xyz_box_cached is None or (not lazy and not self.xyz_box_cached_thoroughly):
             self.xyz_box_cached = np.zeros((2, 3))
@@ -2633,49 +2639,49 @@ class Grid(BaseResqpy):
     def xyz_box_centre(self, points_root = None, lazy = False, local = False):
         """Returns the (x,y,z) point (as 3 element numpy) at the centre of the xyz box for the grid.
 
-      arguments:
-         points_root (optional): if not None, the xml root node for the points data (speed optimization)
-         lazy (boolean, default True): if True, only the 8 outermost logical corners of the grid are used
-            to determine the ranges of xyz and hence the centre; if False, all the points in the entire
-            grid are scanned to determine the xyz ranges in an exhaustive manner
-         local (boolean, default False): if True, the xyz values that are returned are in the local
-            coordinate space, otherwise the global (crs parent) coordinate space
+        arguments:
+           points_root (optional): if not None, the xml root node for the points data (speed optimization)
+           lazy (boolean, default True): if True, only the 8 outermost logical corners of the grid are used
+              to determine the ranges of xyz and hence the centre; if False, all the points in the entire
+              grid are scanned to determine the xyz ranges in an exhaustive manner
+           local (boolean, default False): if True, the xyz values that are returned are in the local
+              coordinate space, otherwise the global (crs parent) coordinate space
 
-      returns:
-         numpy array of float of shape (3,) being the x, y, z coordinates of the centre of the grid
+        returns:
+           numpy array of float of shape (3,) being the x, y, z coordinates of the centre of the grid
 
-      note:
-         the centre point returned is simply the midpoint of the x, y & z ranges of the grid
-      """
+        note:
+           the centre point returned is simply the midpoint of the x, y & z ranges of the grid
+        """
 
         return np.nanmean(self.xyz_box(points_root = points_root, lazy = lazy, local = local), axis = 0)
 
     def horizon_points(self, ref_k0 = 0, heal_faults = False, kp = 0):
         """Returns reference to a points layer array of shape ((nj + 1), (ni + 1), 3) based on primary pillars.
 
-      arguments:
-         ref_k0 (integer): the horizon layer number, in the range 0 to nk (or layer number in range 0..nk-1
-            in the case of grids with k gaps)
-         heal_faults (boolean, default False): if True and the grid has split coordinate lines, an unsplit
-            equivalent of the grid points is generated first and the returned points are based on that data;
-            otherwise, the primary pillar data is used, which effectively gives a point from one side or
-            another of any faults, rather than an averaged point
-         kp (integer, default 0): set to 1 to specify the base of layer ref_k0, in case of grids with k gaps
+        arguments:
+           ref_k0 (integer): the horizon layer number, in the range 0 to nk (or layer number in range 0..nk-1
+              in the case of grids with k gaps)
+           heal_faults (boolean, default False): if True and the grid has split coordinate lines, an unsplit
+              equivalent of the grid points is generated first and the returned points are based on that data;
+              otherwise, the primary pillar data is used, which effectively gives a point from one side or
+              another of any faults, rather than an averaged point
+           kp (integer, default 0): set to 1 to specify the base of layer ref_k0, in case of grids with k gaps
 
-      returns:
-         a numpy array of floats of shape ((nj + 1), (ni + 1), 3) being the (shared) cell corner point
-         locations for the plane of points, based on the primary pillars or unsplit equivalent pillars
+        returns:
+           a numpy array of floats of shape ((nj + 1), (ni + 1), 3) being the (shared) cell corner point
+           locations for the plane of points, based on the primary pillars or unsplit equivalent pillars
 
-      notes:
-         the primary pillars are the 'first' set of points for a pillar; a split pillar will have one to
-         three other sets of point data but those are ignored by this function unless heal_faults is True,
-         in which case an averaged point will be used for the split pillars;
-         to get full unhealed representation of split horizon points, use split_horizon_points() function
-         instead;
-         for grids without k gaps, ref_k0 can be used alone, in the range 0..nk, to identify the horizon;
-         alternatively, or for grids with k gaps, the ref_k0 can specify the layer in the range 0..nk-1,
-         with kp being passed the value 0 (default) for the top of the layer, or 1 for the base of the layer
-      """
+        notes:
+           the primary pillars are the 'first' set of points for a pillar; a split pillar will have one to
+           three other sets of point data but those are ignored by this function unless heal_faults is True,
+           in which case an averaged point will be used for the split pillars;
+           to get full unhealed representation of split horizon points, use split_horizon_points() function
+           instead;
+           for grids without k gaps, ref_k0 can be used alone, in the range 0..nk, to identify the horizon;
+           alternatively, or for grids with k gaps, the ref_k0 can specify the layer in the range 0..nk-1,
+           with kp being passed the value 0 (default) for the top of the layer, or 1 for the base of the layer
+        """
 
         # note: if heal_faults is False, primary pillars only are used
         pe_j = self.nj + 1
@@ -2697,23 +2703,23 @@ class Grid(BaseResqpy):
     def split_horizon_points(self, ref_k0 = 0, masked = False, kp = 0):
         """Returns reference to a corner points for a horizon, of shape (nj, ni, 2, 2, 3).
 
-      arguments:
-         ref_k0 (integer): the horizon layer number, in the range 0 to nk (or layer number in range 0..nk-1
-            in the case of grids with k gaps)
-         masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
-            if False, a simple (unmasked) numpy array is returned
-         kp (integer, default 0): set to 1 to specify the base of layer ref_k0, in case of grids with k gaps
+        arguments:
+           ref_k0 (integer): the horizon layer number, in the range 0 to nk (or layer number in range 0..nk-1
+              in the case of grids with k gaps)
+           masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
+              if False, a simple (unmasked) numpy array is returned
+           kp (integer, default 0): set to 1 to specify the base of layer ref_k0, in case of grids with k gaps
 
-      returns:
-         numpy array of shape (nj, ni, 2, 2, 3) being corner point x,y,z values for cell corners (j, i, jp, ip)
+        returns:
+           numpy array of shape (nj, ni, 2, 2, 3) being corner point x,y,z values for cell corners (j, i, jp, ip)
 
-      notes:
-         if split points are needed for a range of horizons, it is more efficient to call split_horizons_points()
-         than repeatedly call this function;
-         for grids without k gaps, ref_k0 can be used alone, in the range 0..nk, to identify the horizon;
-         alternatively, or for grids with k gaps, the ref_k0 can specify the layer in the range 0..nk-1,
-         with kp being passed the value 0 (default) for the top of the layer, or 1 for the base of the layer
-      """
+        notes:
+           if split points are needed for a range of horizons, it is more efficient to call split_horizons_points()
+           than repeatedly call this function;
+           for grids without k gaps, ref_k0 can be used alone, in the range 0..nk, to identify the horizon;
+           alternatively, or for grids with k gaps, the ref_k0 can specify the layer in the range 0..nk-1,
+           with kp being passed the value 0 (default) for the top of the layer, or 1 for the base of the layer
+        """
 
         if self.k_gaps:
             ref_k0 = self.k_raw_index_array[ref_k0]
@@ -2742,20 +2748,20 @@ class Grid(BaseResqpy):
     def split_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
         """Returns an array of points representing cell corners from an I or J interface slice for a faulted grid.
 
-      arguments:
-         axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-         ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-         plus_face (boolean, default False): if False, negative face is used; if True, positive
-         masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
+        arguments:
+           axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+           ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+           plus_face (boolean, default False): if False, negative face is used; if True, positive
+           masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
 
-      returns:
-         a numpy array of shape (nk + 1, nj, 2, 3) or (nk + 1, ni, 2, 3) being the xyz points of the cell corners
-         on the interfacial cross section; 3rd axis is jp or ip; final axis is xyz
+        returns:
+           a numpy array of shape (nk + 1, nj, 2, 3) or (nk + 1, ni, 2, 3) being the xyz points of the cell corners
+           on the interfacial cross section; 3rd axis is jp or ip; final axis is xyz
 
-      note:
-         this function will only work for grids with no k gaps; it is intended for split grids though will also
-         function for unsplit grids; use split_gap_x_section_points() if k gaps are present
-      """
+        note:
+           this function will only work for grids with no k gaps; it is intended for split grids though will also
+           function for unsplit grids; use split_gap_x_section_points() if k gaps are present
+        """
 
         log.debug(f'x-sect: axis {axis}; ref_slice0 {ref_slice0}; plus_face {plus_face}; masked {masked}')
         assert axis.upper() in ['I', 'J']
@@ -2772,22 +2778,23 @@ class Grid(BaseResqpy):
             return points[:, cpm[ref_slice0, :, ij_p, :], :]
 
     def split_gap_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
-        """Returns an array of points representing cell corners from an I or J interface slice for a faulted grid with k gaps.
+        """Returns an array of points representing cell corners from an I or J interface slice for a faulted grid with k
+        gaps.
 
-      arguments:
-         axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-         ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-         plus_face (boolean, default False): if False, negative face is used; if True, positive
-         masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
+        arguments:
+           axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+           ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+           plus_face (boolean, default False): if False, negative face is used; if True, positive
+           masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
 
-      returns:
-         a numpy array of shape (nk, nj, 2, 2, 3) or (nk, ni, 2, 2, 3) being the xyz points of the cell corners
-         on the interfacial cross section; 3rd axis is kp; 4th axis is jp or ip; final axis is xyz
+        returns:
+           a numpy array of shape (nk, nj, 2, 2, 3) or (nk, ni, 2, 2, 3) being the xyz points of the cell corners
+           on the interfacial cross section; 3rd axis is kp; 4th axis is jp or ip; final axis is xyz
 
-      note:
-         this function is intended for split grids with k gaps though will also function for split grids
-         without k gaps
-      """
+        note:
+           this function is intended for split grids with k gaps though will also function for split grids
+           without k gaps
+        """
 
         log.debug(f'k gap x-sect: axis {axis}; ref_slice0 {ref_slice0}; plus_face {plus_face}; masked {masked}')
         assert axis.upper() in ['I', 'J']
@@ -2818,21 +2825,21 @@ class Grid(BaseResqpy):
     def unsplit_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
         """Returns a 2D (+1 for xyz) array of points representing cell corners from an I or J interface slice.
 
-      arguments:
-         axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-         ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-         plus_face (boolean, default False): if False, negative face is used; if True, positive
-         masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
+        arguments:
+           axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+           ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+           plus_face (boolean, default False): if False, negative face is used; if True, positive
+           masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
 
-      returns:
-         a 2+1D numpy array being the xyz points of the cell corners on the interfacial cross section;
-         the 2D axes are K,J or K,I - whichever does not involve axis; shape is (nk + 1, nj + 1, 3) or
-         (nk + 1, ni + 1, 3)
+        returns:
+           a 2+1D numpy array being the xyz points of the cell corners on the interfacial cross section;
+           the 2D axes are K,J or K,I - whichever does not involve axis; shape is (nk + 1, nj + 1, 3) or
+           (nk + 1, ni + 1, 3)
 
-      note:
-         restricted to unsplit grids with no k gaps; use split_x_section_points() for split grids with no k gaps
-         or split_gap_x_section_points() for split grids with k gaps or x_section_corner_points() for any grid
-      """
+        note:
+           restricted to unsplit grids with no k gaps; use split_x_section_points() for split grids with no k gaps
+           or split_gap_x_section_points() for split grids with k gaps or x_section_corner_points() for any grid
+        """
 
         log.debug(f'x-sect: axis {axis}; ref_slice0 {ref_slice0}; plus_face {plus_face}; masked {masked}')
         assert axis.upper() in ['I', 'J']
@@ -2863,27 +2870,27 @@ class Grid(BaseResqpy):
                                 azimuth = None):
         """Returns a fully expanded array of points representing cell corners from an I or J interface slice.
 
-      arguments:
-         axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
-         ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
-         plus_face (boolean, default False): if False, negative face is used; if True, positive
-         masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
-         rotate (boolean, default False): if True, the cross section points are rotated around the z axis so that
-            an azimuthal direction is mapped onto the positive x axis
-         aximuth (float, optional): the compass bearing in degrees to map onto the positive x axis if rotating;
-            if None, the mean direction of the cross sectional points, along axis, is used; ignored if rotate
-            is False
+        arguments:
+           axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
+           ref_slice0 (int, default 0): the reference value for indices in I or J (as defined in axis)
+           plus_face (boolean, default False): if False, negative face is used; if True, positive
+           masked (boolean, default False): if True, a masked numpy array is returned with NaN values masked out
+           rotate (boolean, default False): if True, the cross section points are rotated around the z axis so that
+              an azimuthal direction is mapped onto the positive x axis
+           aximuth (float, optional): the compass bearing in degrees to map onto the positive x axis if rotating;
+              if None, the mean direction of the cross sectional points, along axis, is used; ignored if rotate
+              is False
 
-      returns:
-         a numpy float array of shape (nk, nj, 2, 2, 3) or (nk, ni, 2, 2, 3) being the xyz points of the cell
-         corners on the interfacial cross section; the 3rd index (1st 2) is kp, the 4th index is jp or ip
+        returns:
+           a numpy float array of shape (nk, nj, 2, 2, 3) or (nk, ni, 2, 2, 3) being the xyz points of the cell
+           corners on the interfacial cross section; the 3rd index (1st 2) is kp, the 4th index is jp or ip
 
-      note:
-         this method will work for unsplit or split grids, with or without k gaps; use rotate argument to yield
-         points with predominant variation in xz, suitable for plotting cross sections; if rotate is True then
-         the absolute values of x & y will not be very meaningful though the units will still be the grid's xy
-         units for relative purposes
-      """
+        note:
+           this method will work for unsplit or split grids, with or without k gaps; use rotate argument to yield
+           points with predominant variation in xz, suitable for plotting cross sections; if rotate is True then
+           the absolute values of x & y will not be very meaningful though the units will still be the grid's xy
+           units for relative purposes
+        """
 
         assert axis.upper() in ['I', 'J']
         nj_or_ni = self.nj if axis.upper() == 'I' else self.ni
@@ -2927,19 +2934,19 @@ class Grid(BaseResqpy):
     def pixel_map_for_split_horizon_points(self, horizon_points, origin, width, height, dx, dy = None):
         """Makes a mapping from pixels to cell j, i indices, based on split horizon points for a single horizon.
 
-      args:
-         horizon_points (numpy array of shape (nj, ni, 2, 2, 2+)): corner point x,y,z values for cell
-            corners (j, i, jp, ip); as returned by split_horizon_points()
-         origin (float pair): x, y of south west corner of area covered by pixel rectangle, in local crs
-         width (int): the width of the pixel rectangle (number of pixels)
-         height (int): the height of the pixel rectangle (number of pixels)
-         dx (float): the size (west to east) of a pixel, in locel crs
-         dx (float, optional): the size (south to north) of a pixel, in locel crs; defaults to dx
+        args:
+           horizon_points (numpy array of shape (nj, ni, 2, 2, 2+)): corner point x,y,z values for cell
+              corners (j, i, jp, ip); as returned by split_horizon_points()
+           origin (float pair): x, y of south west corner of area covered by pixel rectangle, in local crs
+           width (int): the width of the pixel rectangle (number of pixels)
+           height (int): the height of the pixel rectangle (number of pixels)
+           dx (float): the size (west to east) of a pixel, in locel crs
+           dx (float, optional): the size (south to north) of a pixel, in locel crs; defaults to dx
 
-      returns:
-         numpy int array of shape (height, width, 2), being the j, i indices of cells that the pixel centres lie within;
-         values of -1 are used as null (ie. pixel not within any cell)
-      """
+        returns:
+           numpy int array of shape (height, width, 2), being the j, i indices of cells that the pixel centres lie within;
+           values of -1 are used as null (ie. pixel not within any cell)
+        """
 
         if dy is None:
             dy = dx
@@ -2989,20 +2996,20 @@ class Grid(BaseResqpy):
     def pixel_maps(self, origin, width, height, dx, dy = None, k0 = None, vertical_ref = 'top'):
         """Makes a mapping from pixels to cell j, i indices, based on split horizon points for a single horizon.
 
-      args:
-         origin (float pair): x, y of south west corner of area covered by pixel rectangle, in local crs
-         width (int): the width of the pixel rectangle (number of pixels)
-         height (int): the height of the pixel rectangle (number of pixels)
-         dx (float): the size (west to east) of a pixel, in locel crs
-         dy (float, optional): the size (south to north) of a pixel, in locel crs; defaults to dx
-         k0 (int, default None): if present, the single layer to create a 2D pixel map for; if None, a 3D map
-            is created with one layer per layer of the grid
-         vertical_ref (string, default 'top'): 'top' or 'base'
+        args:
+           origin (float pair): x, y of south west corner of area covered by pixel rectangle, in local crs
+           width (int): the width of the pixel rectangle (number of pixels)
+           height (int): the height of the pixel rectangle (number of pixels)
+           dx (float): the size (west to east) of a pixel, in locel crs
+           dy (float, optional): the size (south to north) of a pixel, in locel crs; defaults to dx
+           k0 (int, default None): if present, the single layer to create a 2D pixel map for; if None, a 3D map
+              is created with one layer per layer of the grid
+           vertical_ref (string, default 'top'): 'top' or 'base'
 
-      returns:
-         numpy int array of shape (height, width, 2), or (nk, height, width, 2), being the j, i indices of cells
-         that the pixel centres lie within; values of -1 are used as null (ie. pixel not within any cell)
-      """
+        returns:
+           numpy int array of shape (height, width, 2), or (nk, height, width, 2), being the j, i indices of cells
+           that the pixel centres lie within; values of -1 are used as null (ie. pixel not within any cell)
+        """
 
         if len(origin) == 3:
             origin = tuple(origin[0:2])
@@ -3031,23 +3038,23 @@ class Grid(BaseResqpy):
     def split_horizons_points(self, min_k0 = None, max_k0 = None, masked = False):
         """Returns reference to a corner points layer of shape (nh, nj, ni, 2, 2, 3) where nh is number of horizons.
 
-      arguments:
-         min_k0 (integer): the lowest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to zero
-         max_k0 (integer): the highest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to nk + k_gaps
-         masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
-            if False, a simple (unmasked) numpy array is returned
+        arguments:
+           min_k0 (integer): the lowest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to zero
+           max_k0 (integer): the highest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to nk + k_gaps
+           masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
+              if False, a simple (unmasked) numpy array is returned
 
-      returns:
-         numpy array of shape (nh, nj, ni, 2, 2, 3) where nh = max_k0 - min_k0 + 1, being corner point x,y,z values
-         for horizon corners (h, j, i, jp, ip) where h is the horizon (layer interface) index in the range
-         0 .. max_k0 - min_k0
+        returns:
+           numpy array of shape (nh, nj, ni, 2, 2, 3) where nh = max_k0 - min_k0 + 1, being corner point x,y,z values
+           for horizon corners (h, j, i, jp, ip) where h is the horizon (layer interface) index in the range
+           0 .. max_k0 - min_k0
 
-      notes:
-         data for horizon max_k0 is included in the result (unlike with python ranges);
-         in the case of a grid with k gaps, the horizons points returned will follow the k indexing of the points data
-         and calling code will need to keep track of the min_k0 offset when using k_raw_index_array to select a slice
-         of the horizons points array
-      """
+        notes:
+           data for horizon max_k0 is included in the result (unlike with python ranges);
+           in the case of a grid with k gaps, the horizons points returned will follow the k indexing of the points data
+           and calling code will need to keep track of the min_k0 offset when using k_raw_index_array to select a slice
+           of the horizons points array
+        """
 
         if min_k0 is None:
             min_k0 = 0
@@ -3078,12 +3085,12 @@ class Grid(BaseResqpy):
     def pillar_distances_sqr(self, xy, ref_k0 = 0, kp = 0, horizon_points = None):
         """Returns array of the square of the distances of primary pillars in x,y plane to point xy.
 
-      arguments:
-         xy (float pair): the xy coordinate to compute the pillar distances to
-         ref_k0 (int, default 0): the horizon layer number to use
-         horizon_points (numpy array, optional): if present, should be array as returned by
-            horizon_points() method; pass for efficiency in case of multiple calls
-      """
+        arguments:
+           xy (float pair): the xy coordinate to compute the pillar distances to
+           ref_k0 (int, default 0): the horizon layer number to use
+           horizon_points (numpy array, optional): if present, should be array as returned by
+              horizon_points() method; pass for efficiency in case of multiple calls
+        """
 
         # note: currently works with unmasked data and using primary pillars only
         pe_j = self.extent_kji[1] + 1
@@ -3108,9 +3115,9 @@ class Grid(BaseResqpy):
     def nearest_rod(self, xyz, projection, axis, ref_slice0 = 0, plus_face = False):
         """Returns the (k0, j0) or (k0 ,i0) indices of the closest point(s) to xyz(s); projection is 'xy', 'xz' or 'yz'.
 
-      note:
-         currently only for unsplit grids
-      """
+        note:
+           currently only for unsplit grids
+        """
 
         x_sect = self.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
         if type(xyz) is np.ndarray and xyz.ndim > 1:
@@ -3127,9 +3134,9 @@ class Grid(BaseResqpy):
     def coordinate_line_end_points(self):
         """Returns xyz of top and bottom of each primary pillar.
 
-      returns:
-         numpy float array of shape (nj + 1, ni + 1, 2, 3)
-      """
+        returns:
+           numpy float array of shape (nj + 1, ni + 1, 2, 3)
+        """
 
         points = self.points_ref(masked = False).reshape((self.nk + 1, -1, 3))
         primary_pillar_count = (self.nj + 1) * (self.ni + 1)
@@ -3141,16 +3148,16 @@ class Grid(BaseResqpy):
     def z_corner_point_depths(self, order = 'cellular'):
         """Returns the z (depth) values of each corner of each cell.
 
-      arguments:
-         order (string, default 'cellular'): either 'cellular' or 'linear'; if 'cellular' the resulting array has
-            shape (nk, nj, ni, 2, 2, 2); if 'linear', the shape is (nk, 2, nj, 2, ni, 2)
+        arguments:
+           order (string, default 'cellular'): either 'cellular' or 'linear'; if 'cellular' the resulting array has
+              shape (nk, nj, ni, 2, 2, 2); if 'linear', the shape is (nk, 2, nj, 2, ni, 2)
 
-      returns:
-         numpy array of shape (nk, nj, ni, 2, 2, 2) or (nk, 2, nj, 2, ni, 2); for the cellular ordering, the
-         result can be indexed with [k, j, i, kp, jp, ip] (where kp, for example, is 0 for the K- face and 1 for K+);
-         for the linear ordering, the equivalent indexing is [k, kp, j, jp, i, ip], as used by some common simulator
-         keyword formats
-      """
+        returns:
+           numpy array of shape (nk, nj, ni, 2, 2, 2) or (nk, 2, nj, 2, ni, 2); for the cellular ordering, the
+           result can be indexed with [k, j, i, kp, jp, ip] (where kp, for example, is 0 for the K- face and 1 for K+);
+           for the linear ordering, the equivalent indexing is [k, kp, j, jp, i, ip], as used by some common simulator
+           keyword formats
+        """
 
         assert order in ['cellular', 'linear']
 
@@ -3212,17 +3219,17 @@ class Grid(BaseResqpy):
     def corner_points(self, cell_kji0 = None, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns a numpy array of corner points for a single cell or the whole grid.
 
-      notes:
-         if cell_kji0 is not None, a 4D array of shape (2, 2, 2, 3) holding single cell corner points in logical order
-         [kp, jp, ip, xyz] is returned; if cell_kji0 is None, a pagoda style 7D array [k, j, i, kp, jp, ip, xyz] is
-         cached and returned;
-         the ordering of the corner points is in the logical order, which is not the same as that used by Nexus CORP data;
-         olio.grid_functions.resequence_nexus_corp() can be used to switch back and forth between this pagoda ordering
-         and Nexus corp ordering;
-         this is the usual way to access full corner points for cells where working with native resqml data is undesirable
+        notes:
+           if cell_kji0 is not None, a 4D array of shape (2, 2, 2, 3) holding single cell corner points in logical order
+           [kp, jp, ip, xyz] is returned; if cell_kji0 is None, a pagoda style 7D array [k, j, i, kp, jp, ip, xyz] is
+           cached and returned;
+           the ordering of the corner points is in the logical order, which is not the same as that used by Nexus CORP data;
+           olio.grid_functions.resequence_nexus_corp() can be used to switch back and forth between this pagoda ordering
+           and Nexus corp ordering;
+           this is the usual way to access full corner points for cells where working with native resqml data is undesirable
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # note: this function returns a derived object rather than a native resqml object
 
@@ -3340,29 +3347,31 @@ class Grid(BaseResqpy):
         return cp
 
     def invalidate_corner_points(self):
-        """Deletes cached copy of corner points, if present; use if any pillar geometry changes, or to reclaim memory."""
+        """Deletes cached copy of corner points, if present; use if any pillar geometry changes, or to reclaim
+        memory."""
 
         if hasattr(self, 'array_corner_points'):
             delattr(self, 'array_corner_points')
 
     def centre_point(self, cell_kji0 = None, cache_centre_array = False):
-        """Returns centre point of a cell or array of centre points of all cells; optionally cache centre points for all cells.
+        """Returns centre point of a cell or array of centre points of all cells; optionally cache centre points for all
+        cells.
 
-      arguments:
-         cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
-            centre point is required; zero based indexing
-         cache_centre_array (boolean, default False): If True, or cell_kji0 is None, an array of centre points
-            is generated and added as an attribute of the grid, with attribute name array_centre_point
+        arguments:
+           cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
+              centre point is required; zero based indexing
+           cache_centre_array (boolean, default False): If True, or cell_kji0 is None, an array of centre points
+              is generated and added as an attribute of the grid, with attribute name array_centre_point
 
-      returns:
-         (x, y, z) 3 element numpy array of floats holding centre point of cell;
-         or numpy 3+1D array if cell_kji0 is None
+        returns:
+           (x, y, z) 3 element numpy array of floats holding centre point of cell;
+           or numpy 3+1D array if cell_kji0 is None
 
-      note:
-         resulting coordinates are in the same (local) crs as the grid points
+        note:
+           resulting coordinates are in the same (local) crs as the grid points
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if cell_kji0 is None:
             cache_centre_array = True
@@ -3434,16 +3443,16 @@ class Grid(BaseResqpy):
     def centre_point_list(self, cell_kji0s):
         """Returns centre points for a list of cells; caches centre points for all cells.
 
-      arguments:
-         cell_kji0s (numpy int array of shape (N, 3)): the (k, j, i) indices of the individual cells for which the
-            centre points are required; zero based indexing
+        arguments:
+           cell_kji0s (numpy int array of shape (N, 3)): the (k, j, i) indices of the individual cells for which the
+              centre points are required; zero based indexing
 
-      returns:
-         numpy float array of shape (N, 3) being the (x, y, z) centre points of the cells
+        returns:
+           numpy float array of shape (N, 3) being the (x, y, z) centre points of the cells
 
-      note:
-         resulting coordinates are in the same (local) crs as the grid points
-      """
+        note:
+           resulting coordinates are in the same (local) crs as the grid points
+        """
 
         assert cell_kji0s.ndim == 2 and cell_kji0s.shape[1] == 3
         centres_list = np.empty(cell_kji0s.shape)
@@ -3460,34 +3469,34 @@ class Grid(BaseResqpy):
                   property_collection = None):
         """Returns vertical (z) thickness of cell and/or caches thicknesses for all cells.
 
-      arguments:
-         cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
-                               thickness is required; zero based indexing
-         cache_resqml_array (boolean, default True): If True, the raw points array from the hdf5 file
-                               is cached in memory, but only if it is needed to generate the thickness
-         cache_cp_array (boolean, default True): If True, an array of corner points is generated and
-                               added as an attribute of the grid, with attribute name corner_points, but only
-                               if it is needed in order to generate the thickness
-         cache_thickness_array (boolean, default False): if True, thicknesses are generated for all cells in
-                               the grid and added as an attribute named array_thickness
-         property_collection (property:GridPropertyCollection, optional): If not None, this collection
-                               is probed for a suitable thickness or cell length property which is used
-                               preferentially to calculating thickness; if no suitable property is found,
-                               the calculation is made as if the collection were None
+        arguments:
+           cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
+                                 thickness is required; zero based indexing
+           cache_resqml_array (boolean, default True): If True, the raw points array from the hdf5 file
+                                 is cached in memory, but only if it is needed to generate the thickness
+           cache_cp_array (boolean, default True): If True, an array of corner points is generated and
+                                 added as an attribute of the grid, with attribute name corner_points, but only
+                                 if it is needed in order to generate the thickness
+           cache_thickness_array (boolean, default False): if True, thicknesses are generated for all cells in
+                                 the grid and added as an attribute named array_thickness
+           property_collection (property:GridPropertyCollection, optional): If not None, this collection
+                                 is probed for a suitable thickness or cell length property which is used
+                                 preferentially to calculating thickness; if no suitable property is found,
+                                 the calculation is made as if the collection were None
 
-      returns:
-         float, being the thickness of cell identified by cell_kji0; or numpy float array if cell_kji0 is None
+        returns:
+           float, being the thickness of cell identified by cell_kji0; or numpy float array if cell_kji0 is None
 
-      notes:
-         the function can be used to find the thickness of a single cell, or cache thickness for all cells, or both;
-         if property_collection is not None, a suitable thickness or cell length property will be used if present;
-         if calculated, thickness is defined as z difference between centre points of top and base faces (TVT);
-         at present, assumes K increases with same polarity as z; if not, negative thickness will be calculated;
-         units of result are implicitly those of z coordinates in grid's coordinate reference system, or units of
-         measure of property array if the result is based on a suitable property
+        notes:
+           the function can be used to find the thickness of a single cell, or cache thickness for all cells, or both;
+           if property_collection is not None, a suitable thickness or cell length property will be used if present;
+           if calculated, thickness is defined as z difference between centre points of top and base faces (TVT);
+           at present, assumes K increases with same polarity as z; if not, negative thickness will be calculated;
+           units of result are implicitly those of z coordinates in grid's coordinate reference system, or units of
+           measure of property array if the result is based on a suitable property
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         def load_from_property(collection):
             if collection is None:
@@ -3570,11 +3579,12 @@ class Grid(BaseResqpy):
         return abs(np.mean(cp[1, :, :, 2]) - np.mean(cp[0, :, :, 2]))
 
     def point_areally(self, tolerance = 0.001):
-        """Returns a numpy boolean array of shape extent_kji indicating which cells are reduced to a point in both I & J axes.
+        """Returns a numpy boolean array of shape extent_kji indicating which cells are reduced to a point in both I & J
+        axes.
 
-      Note:
-         Any NaN point values will yield True for a cell
-      """
+        Note:
+           Any NaN point values will yield True for a cell
+        """
 
         points = self.points_ref(masked = False)
         # todo: turn off NaN warning for numpy > ?
@@ -3616,35 +3626,35 @@ class Grid(BaseResqpy):
                property_collection = None):
         """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
 
-      arguments:
-         cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
-                               volume is required; zero based indexing
-         cache_resqml_array (boolean, default True): If True, the raw points array from the hdf5 file
-                               is cached in memory, but only if it is needed to generate the volume
-         cache_cp_array (boolean, default False): If True, an array of corner points is generated and
-                               added as an attribute of the grid, with attribute name corner_points, but only
-                               if it is needed in order to generate the volume
-         cache_volume_array (boolean, default False): if True, volumes are generated for all cells in
-                               the grid and added as an attribute named array_volume
-         property_collection (property:GridPropertyCollection, optional): If not None, this collection
-                               is probed for a suitable volume property which is used preferentially
-                               to calculating volume; if no suitable property is found,
-                               the calculation is made as if the collection were None
+        arguments:
+           cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
+                                 volume is required; zero based indexing
+           cache_resqml_array (boolean, default True): If True, the raw points array from the hdf5 file
+                                 is cached in memory, but only if it is needed to generate the volume
+           cache_cp_array (boolean, default False): If True, an array of corner points is generated and
+                                 added as an attribute of the grid, with attribute name corner_points, but only
+                                 if it is needed in order to generate the volume
+           cache_volume_array (boolean, default False): if True, volumes are generated for all cells in
+                                 the grid and added as an attribute named array_volume
+           property_collection (property:GridPropertyCollection, optional): If not None, this collection
+                                 is probed for a suitable volume property which is used preferentially
+                                 to calculating volume; if no suitable property is found,
+                                 the calculation is made as if the collection were None
 
-      returns:
-         float, being the volume of cell identified by cell_kji0;
-         or numpy float array of shape (nk, nj, ni) if cell_kji0 is None
+        returns:
+           float, being the volume of cell identified by cell_kji0;
+           or numpy float array of shape (nk, nj, ni) if cell_kji0 is None
 
-      notes:
-         the function can be used to find the volume of a single cell, or cache volumes for all cells, or both;
-         if property_collection is not None, a suitable volume property will be used if present;
-         if calculated, volume is computed using 6 tetras each with a non-planar bilinear base face;
-         at present, grid's coordinate reference system must use same units in z as xy (projected);
-         units of result are implicitly those of coordinates in grid's coordinate reference system, or units of
-         measure of property array if the result is based on a suitable property
+        notes:
+           the function can be used to find the volume of a single cell, or cache volumes for all cells, or both;
+           if property_collection is not None, a suitable volume property will be used if present;
+           if calculated, volume is computed using 6 tetras each with a non-planar bilinear base face;
+           at present, grid's coordinate reference system must use same units in z as xy (projected);
+           units of result are implicitly those of coordinates in grid's coordinate reference system, or units of
+           measure of property array if the result is based on a suitable property
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         def load_from_property(collection):
             if collection is None:
@@ -3715,10 +3725,11 @@ class Grid(BaseResqpy):
                     cache_cp_array = False,
                     cache_thickness_array = False,
                     cache_pinchout_array = None):
-        """Returns boolean or boolean array indicating whether cell is pinched out; ie. has a thickness less than tolerance.
+        """Returns boolean or boolean array indicating whether cell is pinched out; ie. has a thickness less than
+        tolerance.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # note: this function returns a derived object rather than a native resqml object
         # note: returns True for cells without geometry
@@ -3754,26 +3765,26 @@ class Grid(BaseResqpy):
     def half_cell_transmissibility(self, use_property = True, realization = None, tolerance = 1.0e-6):
         """Returns (and caches if realization is None) half cell transmissibilities for this grid.
 
-      arguments:
-         use_property (boolean, default True): if True, the grid's property collection is inspected for
-            a possible half cell transmissibility array and if found, it is used instead of calculation
-         realization (int, optional) if present, only a property with this realization number will be used
-         tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
-            will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
-            units are implicitly those of the grid's crs length units
+        arguments:
+           use_property (boolean, default True): if True, the grid's property collection is inspected for
+              a possible half cell transmissibility array and if found, it is used instead of calculation
+           realization (int, optional) if present, only a property with this realization number will be used
+           tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+              will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+              units are implicitly those of the grid's crs length units
 
-      returns:
-         numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
-            face polarity: - (0) and + (1); units will depend on the length units of the coordinate reference
-            system for the grid; the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m
-            and ft respectively
+        returns:
+           numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
+              face polarity: - (0) and + (1); units will depend on the length units of the coordinate reference
+              system for the grid; the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m
+              and ft respectively
 
-      notes:
-         the returned array is in the logical resqpy arrangement; it must be discombobulated before being
-         added as a property; this method does not write to hdf5, nor create a new property or xml;
-         if realization is None, a grid attribute cached array will be used; tolerance will only be
-         used if the half cell transmissibilities are actually computed
-      """
+        notes:
+           the returned array is in the logical resqpy arrangement; it must be discombobulated before being
+           added as a property; this method does not write to hdf5, nor create a new property or xml;
+           if realization is None, a grid attribute cached array will be used; tolerance will only be
+           used if the half cell transmissibilities are actually computed
+        """
 
         # todo: allow passing of property uuids for ntg, k_k, j, i
 
@@ -3805,49 +3816,49 @@ class Grid(BaseResqpy):
     def transmissibility(self, tolerance = 1.0e-6, use_tr_properties = True, realization = None, modifier_mode = None):
         """Returns transmissibilities for standard (IJK neighbouring) connections within this grid.
 
-      arguments:
-         tolerance (float, default 1.0e-6): the minimum half cell transmissibility below which zero inter-cell
-            transmissibility will be set; units are as for returned values (see notes)
-         use_tr_properties (boolean, default True): if True, the grid's property collection is inspected for
-            possible transmissibility arrays and if found, they are used instead of calculation; note that
-            when this argument is False, the property collection is still used for the feed arrays to the
-            calculation
-         realization (int, optional) if present, only properties with this realization number will be used;
-            applies to pre-computed transmissibility properties or permeability and net to gross ratio
-            properties when computing
-         modifier_mode (string, optional): if None, no transmissibility modifiers are applied; other
-            options are: 'faces multiplier', for which directional transmissibility properties with indexable
-            element of 'faces' will be used; 'faces per cell multiplier', in which case a transmissibility
-            property with 'faces per cell' as the indexable element will be used to modify the half cell
-            transmissibilities prior to combination; or 'absolute' in which case directional properties
-            of local property kind 'fault transmissibility' (or 'mat transmissibility') and indexable
-            element of 'faces' will be used as a third transmissibility term along with the two half
-            cell transmissibilities at each face; see also the notes below
+        arguments:
+           tolerance (float, default 1.0e-6): the minimum half cell transmissibility below which zero inter-cell
+              transmissibility will be set; units are as for returned values (see notes)
+           use_tr_properties (boolean, default True): if True, the grid's property collection is inspected for
+              possible transmissibility arrays and if found, they are used instead of calculation; note that
+              when this argument is False, the property collection is still used for the feed arrays to the
+              calculation
+           realization (int, optional) if present, only properties with this realization number will be used;
+              applies to pre-computed transmissibility properties or permeability and net to gross ratio
+              properties when computing
+           modifier_mode (string, optional): if None, no transmissibility modifiers are applied; other
+              options are: 'faces multiplier', for which directional transmissibility properties with indexable
+              element of 'faces' will be used; 'faces per cell multiplier', in which case a transmissibility
+              property with 'faces per cell' as the indexable element will be used to modify the half cell
+              transmissibilities prior to combination; or 'absolute' in which case directional properties
+              of local property kind 'fault transmissibility' (or 'mat transmissibility') and indexable
+              element of 'faces' will be used as a third transmissibility term along with the two half
+              cell transmissibilities at each face; see also the notes below
 
-      returns:
-         3 numpy float arrays of shape (nk + 1, nj, ni), (nk, nj + 1, ni), (nk, nj, ni + 1) being the
-         neighbourly transmissibilities in K, J & I axes respectively
+        returns:
+           3 numpy float arrays of shape (nk + 1, nj, ni), (nk, nj + 1, ni), (nk, nj, ni + 1) being the
+           neighbourly transmissibilities in K, J & I axes respectively
 
-      notes:
-         the 3 permeability arrays (and net to gross ratio if in use) must be identifiable in the property
-         collection as they are used for the calculation;
-         implicit units of measure of returned values will be m3.cP/(kPa.d) if grid crs length units are metres,
-         bbl.cP/(psi.d) if length units are feet; the computation is compatible with the Nexus NEWTRAN formulation;
-         values will be zero at pinchouts, and at column edges where there is a split pillar, even if there is
-         juxtapostion of faces; the same is true of K gap faces (even where the gap is zero); NaNs in any of
-         the feed properties also result in transmissibility values of zero;
-         outer facing values will always be zero (included to be in accordance with RESQML faces properties);
-         array caching in the grid object will only be used if realization is None; if a modifier mode of
-         'faces multiplier' or 'faces per cell multiplier' is specified, properties will be searched for with
-         local property kind 'transmissibility multiplier' and the appropriate indexable element (and direction
-         facet in the case of 'faces multiplier'); the modifier mode of 'absolute' can be used to model the
-         effect of faults and thin shales, tar mats etc. in a way which is independent of cell size;
-         for 'aboslute' directional properties with indexable element of 'faces' and local property kind
-         'fault transmissibility' (or 'mat transmissibility') will be used; such absolute faces transmissibilities
-         should have a value of np.inf or np.nan where no modification is required; note that this method is only
-         dealing with logically neighbouring cells and will not compute values for faces with a split pillar,
-         which should be handled elsewhere
-      """
+        notes:
+           the 3 permeability arrays (and net to gross ratio if in use) must be identifiable in the property
+           collection as they are used for the calculation;
+           implicit units of measure of returned values will be m3.cP/(kPa.d) if grid crs length units are metres,
+           bbl.cP/(psi.d) if length units are feet; the computation is compatible with the Nexus NEWTRAN formulation;
+           values will be zero at pinchouts, and at column edges where there is a split pillar, even if there is
+           juxtapostion of faces; the same is true of K gap faces (even where the gap is zero); NaNs in any of
+           the feed properties also result in transmissibility values of zero;
+           outer facing values will always be zero (included to be in accordance with RESQML faces properties);
+           array caching in the grid object will only be used if realization is None; if a modifier mode of
+           'faces multiplier' or 'faces per cell multiplier' is specified, properties will be searched for with
+           local property kind 'transmissibility multiplier' and the appropriate indexable element (and direction
+           facet in the case of 'faces multiplier'); the modifier mode of 'absolute' can be used to model the
+           effect of faults and thin shales, tar mats etc. in a way which is independent of cell size;
+           for 'aboslute' directional properties with indexable element of 'faces' and local property kind
+           'fault transmissibility' (or 'mat transmissibility') will be used; such absolute faces transmissibilities
+           should have a value of np.inf or np.nan where no modification is required; note that this method is only
+           dealing with logically neighbouring cells and will not compute values for faces with a split pillar,
+           which should be handled elsewhere
+        """
 
         # todo: improve handling of units: check uom for half cell transmissibility property and for absolute modifiers
 
@@ -4085,25 +4096,25 @@ class Grid(BaseResqpy):
                              title = 'fault juxtaposition set'):
         """Returns (and caches) a GridConnectionSet representing juxtaposition across faces with split pillars.
 
-      arguments:
-         skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
-            be omitted from the results
-         compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
-            for the cell face pairs (unless already existing as a cached attribute of the grid)
-         add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
-            if compute_transmissibilty is True then the transmissibility property is also added
-         realization (int, optional): if present, is used as the realization number when adding transmissibility
-            property to model; ignored if compute_transmissibility is False
-         inherit_features_from (GridConnectionSet, optional): if present, the features (named faults) are
-            inherited from this grid connection set based on a match of either cell face in a juxtaposed pair
-         title (string, default 'fault juxtaposition set'): the citation title to use if adding to model
+        arguments:
+           skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
+              be omitted from the results
+           compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
+              for the cell face pairs (unless already existing as a cached attribute of the grid)
+           add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
+              if compute_transmissibilty is True then the transmissibility property is also added
+           realization (int, optional): if present, is used as the realization number when adding transmissibility
+              property to model; ignored if compute_transmissibility is False
+           inherit_features_from (GridConnectionSet, optional): if present, the features (named faults) are
+              inherited from this grid connection set based on a match of either cell face in a juxtaposed pair
+           title (string, default 'fault juxtaposition set'): the citation title to use if adding to model
 
-      returns:
-         GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
-         number of cell face pairs in the grid connection set, which contains entries for all juxtaposed faces
-         with a split pillar as an edge; if the grid does not have split pillars (ie. is unfaulted) or there
-         are no qualifying connections, (None, None) is returned
-      """
+        returns:
+           GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
+           number of cell face pairs in the grid connection set, which contains entries for all juxtaposed faces
+           with a split pillar as an edge; if the grid does not have split pillars (ie. is unfaulted) or there
+           are no qualifying connections, (None, None) is returned
+        """
 
         if not hasattr(self, 'fgcs') or self.fgcs_skip_inactive != skip_inactive:
             self.fgcs, self.fgcs_fractional_area = rqtr.fault_connection_set(self, skip_inactive = skip_inactive)
@@ -4151,22 +4162,22 @@ class Grid(BaseResqpy):
                                 realization = None):
         """Returns (and caches) a GridConnectionSet representing juxtaposition across pinched out cells.
 
-      arguments:
-         skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
-            be omitted from the results
-         compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
-            for the cell face pairs (unless already existing as a cached attribute of the grid)
-         add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
-            if compute_transmissibilty is True then the transmissibility property is also added
-         realization (int, optional): if present, is used as the realization number when adding transmissibility
-            property to model; ignored if compute_transmissibility is False
+        arguments:
+           skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
+              be omitted from the results
+           compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
+              for the cell face pairs (unless already existing as a cached attribute of the grid)
+           add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
+              if compute_transmissibilty is True then the transmissibility property is also added
+           realization (int, optional): if present, is used as the realization number when adding transmissibility
+              property to model; ignored if compute_transmissibility is False
 
-      returns:
-         GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
-         number of cell face pairs in the grid connection set, which contains entries for all juxtaposed K faces
-         separated logically by pinched out (zero thickness) cells; if there are no pinchouts (or no qualifying
-         connections) then (None, None) will be returned
-      """
+        returns:
+           GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
+           number of cell face pairs in the grid connection set, which contains entries for all juxtaposed K faces
+           separated logically by pinched out (zero thickness) cells; if there are no pinchouts (or no qualifying
+           connections) then (None, None) will be returned
+        """
 
         if not hasattr(self, 'pgcs') or self.pgcs_skip_inactive != skip_inactive:
             self.pgcs = rqf.pinchout_connection_set(self, skip_inactive = skip_inactive)
@@ -4212,27 +4223,27 @@ class Grid(BaseResqpy):
                              tolerance = 0.001):
         """Returns (and caches) a GridConnectionSet representing juxtaposition across zero thickness K gaps.
 
-      arguments:
-         skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
-            be omitted from the results
-         compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
-            for the cell face pairs (unless already existing as a cached attribute of the grid)
-         add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
-            if compute_transmissibilty is True then the transmissibility property is also added
-         realization (int, optional): if present, is used as the realization number when adding transmissibility
-            property to model; ignored if compute_transmissibility is False
-         tolerance (float, default 0.001): the maximum K gap thickness that will be 'bridged' by a connection;
-            units are implicitly those of the z units in the grid's coordinate reference system
+        arguments:
+           skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
+              be omitted from the results
+           compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
+              for the cell face pairs (unless already existing as a cached attribute of the grid)
+           add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
+              if compute_transmissibilty is True then the transmissibility property is also added
+           realization (int, optional): if present, is used as the realization number when adding transmissibility
+              property to model; ignored if compute_transmissibility is False
+           tolerance (float, default 0.001): the maximum K gap thickness that will be 'bridged' by a connection;
+              units are implicitly those of the z units in the grid's coordinate reference system
 
-      returns:
-         GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
-         number of cell face pairs in the grid connection set, which contains entries for all juxtaposed K faces
-         separated logically by pinched out (zero thickness) cells; if there are no pinchouts (or no qualifying
-         connections) then (None, None) will be returned
+        returns:
+           GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
+           number of cell face pairs in the grid connection set, which contains entries for all juxtaposed K faces
+           separated logically by pinched out (zero thickness) cells; if there are no pinchouts (or no qualifying
+           connections) then (None, None) will be returned
 
-      note:
-         if cached values are found they are returned regardless of the specified tolerance
-      """
+        note:
+           if cached values are found they are returned regardless of the specified tolerance
+        """
 
         if not hasattr(self, 'kgcs') or self.kgcs_skip_inactive != skip_inactive:
             self.kgcs = rqf.k_gap_connection_set(self, skip_inactive = skip_inactive, tolerance = tolerance)
@@ -4308,7 +4319,8 @@ class Grid(BaseResqpy):
                            points_root = None,
                            cache_resqml_array = True,
                            cache_cp_array = False):
-        """Returns xyz point interpolated from corners of cell depending on 3 interpolation fractions in range 0 to 1."""
+        """Returns xyz point interpolated from corners of cell depending on 3 interpolation fractions in range 0 to
+        1."""
 
         # todo: think about best ordering of axes operations given high aspect ratio of cells (for best accuracy)
         fp = np.empty(3)
@@ -4335,25 +4347,26 @@ class Grid(BaseResqpy):
                             points_root = None,
                             cache_resqml_array = True,
                             cache_cp_array = False):
-        """Returns xyz points interpolated from corners of cell depending on 3 interpolation fraction numpy vectors, each value in range 0 to 1.
+        """Returns xyz points interpolated from corners of cell depending on 3 interpolation fraction numpy vectors,
+        each value in range 0 to 1.
 
-      arguments:
-         cell_kji0 (triple int): indices of individual cell whose corner points are to be interpolated
-         interpolation_fractions (list of three numpy vectors of floats): k, j & i interpolation fraction vectors, each element in range 0 to 1
-         points_root (xml node, optional): for efficiency when making multiple calls, this can be set to the xml node of the points data
-         cache_resqml_array (boolean, default True): if True, the resqml points data will be cached as an attribute of this grid object
-         cache_cp_array (boolean, default False): if True a fully expanded 7D corner points array will be established for this grid and
-            cached as an attribute (recommended if looping over many or all the cells and if memory space allows)
+        arguments:
+           cell_kji0 (triple int): indices of individual cell whose corner points are to be interpolated
+           interpolation_fractions (list of three numpy vectors of floats): k, j & i interpolation fraction vectors, each element in range 0 to 1
+           points_root (xml node, optional): for efficiency when making multiple calls, this can be set to the xml node of the points data
+           cache_resqml_array (boolean, default True): if True, the resqml points data will be cached as an attribute of this grid object
+           cache_cp_array (boolean, default False): if True a fully expanded 7D corner points array will be established for this grid and
+              cached as an attribute (recommended if looping over many or all the cells and if memory space allows)
 
-      returns:
-         4D numpy float array of shape (nik, nij, nii, 3) being the interpolated points; nik is the number of elements in the first of the
-         interpolation fraction lists (ie. for k); similarly for nij and nii; the final axis covers xyz
+        returns:
+           4D numpy float array of shape (nik, nij, nii, 3) being the interpolated points; nik is the number of elements in the first of the
+           interpolation fraction lists (ie. for k); similarly for nij and nii; the final axis covers xyz
 
-      notea:
-         this method returns a lattice of trilinear interpolations of the corner point of the host cell; the returned points are in 'shared'
-         arrangement (like resqml points data for an IjkGrid without split pillars or k gaps), not a fully expanded 7D array; calling code
-         must redistribute to corner points of individual fine cells if that is the intention
-      """
+        notea:
+           this method returns a lattice of trilinear interpolations of the corner point of the host cell; the returned points are in 'shared'
+           arrangement (like resqml points data for an IjkGrid without split pillars or k gaps), not a fully expanded 7D array; calling code
+           must redistribute to corner points of individual fine cells if that is the intention
+        """
 
         assert len(interpolation_fractions) == 3
         fp = interpolation_fractions
@@ -4440,9 +4453,9 @@ class Grid(BaseResqpy):
     def interface_length(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns the length between centres of an opposite pair of faces of the cell.
 
-      note:
-         assumes that x,y and z units are the same
-      """
+        note:
+           assumes that x,y and z units are the same
+        """
 
         assert cell_kji0 is not None
         return vec.naive_length(
@@ -4467,9 +4480,9 @@ class Grid(BaseResqpy):
     def interface_lengths_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns 3 interface centre point separation lengths for axes k, j, i.
 
-      note:
-         assumes that x,y and z units are the same
-      """
+        note:
+           assumes that x,y and z units are the same
+        """
         result = np.zeros(3)
         for axis in range(3):
             result[axis] = self.interface_length(cell_kji0,
@@ -4523,10 +4536,11 @@ class Grid(BaseResqpy):
                 bwam.convert_lengths(flat_a[:, 2], crs_z_units_text, global_z_units)  # z
 
     def z_inc_down(self):
-        """Returns True if z increases downwards in the coordinate reference system used by the grid geometry, False otherwise.
+        """Returns True if z increases downwards in the coordinate reference system used by the grid geometry, False
+        otherwise.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         assert self.crs_root is not None
         return rqet.find_tag_bool(self.crs_root, 'ZIncreasingDownward')
@@ -4580,7 +4594,8 @@ class Grid(BaseResqpy):
                                write_active = None,
                                stratigraphy = True,
                                expand_const_arrays = False):
-        """Create or append to an hdf5 file, writing datasets for the grid geometry (and parent grid mapping) and properties from cached arrays."""
+        """Create or append to an hdf5 file, writing datasets for the grid geometry (and parent grid mapping) and
+        properties from cached arrays."""
 
         # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
         # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
@@ -4695,8 +4710,8 @@ class Grid(BaseResqpy):
     def write_hdf5(self, expand_const_arrays = False):
         """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches().
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         self.write_hdf5_from_caches(mode = 'a',
                                     geometry = True,
@@ -4825,8 +4840,8 @@ class Grid(BaseResqpy):
     def xy_units(self):
         """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         crs_root = self.extract_crs_root()
         if crs_root is None:
@@ -4836,8 +4851,8 @@ class Grid(BaseResqpy):
     def z_units(self):
         """Returns the vertical (z) units of measure of the coordinate reference system for the grid.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         crs_root = self.extract_crs_root()
         if crs_root is None:
@@ -4845,7 +4860,8 @@ class Grid(BaseResqpy):
         return rqet.find_tag(crs_root, 'VerticalUom').text
 
     def poly_line_for_cell(self, cell_kji0, vertical_ref = 'top'):
-        """Returns a numpy array of shape (4, 3) being the 4 corners in order J-I-, J-I+, J+I+, J+I-; from the top or base face."""
+        """Returns a numpy array of shape (4, 3) being the 4 corners in order J-I-, J-I+, J+I+, J+I-; from the top or
+        base face."""
 
         if vertical_ref == 'top':
             kp = 0
@@ -4901,18 +4917,18 @@ class Grid(BaseResqpy):
     def find_cell_for_x_sect_xz(self, x_sect, x, z):
         """Returns the (k0, j0) or (k0, i0) indices of the cell containing point x,z in the cross section.
 
-      arguments:
-         x_sect (numpy float array of shape (nk, nj or ni, 2, 2, 2 or 3): the cross section x,z or x,y,z data
-         x, z (floats): the point of interest in the cross section space
+        arguments:
+           x_sect (numpy float array of shape (nk, nj or ni, 2, 2, 2 or 3): the cross section x,z or x,y,z data
+           x, z (floats): the point of interest in the cross section space
 
-      note:
-         the x_sect data is in the form returned by x_section_corner_points() or split_gap_x_section_points();
-         the 2nd of the returned pair is either a J index or I index, whichever was not the axis specified
-         when generating the x_sect data; returns (None, None) if point inclusion not detected; if xyz data is
-         provided, the y values are ignored; note that the point of interest x,z coordinates are in the space of
-         x_sect, so if rotation has occurred, the x value is no longer an easting and is typically picked off a
-         cross section plot
-      """
+        note:
+           the x_sect data is in the form returned by x_section_corner_points() or split_gap_x_section_points();
+           the 2nd of the returned pair is either a J index or I index, whichever was not the axis specified
+           when generating the x_sect data; returns (None, None) if point inclusion not detected; if xyz data is
+           provided, the y values are ignored; note that the point of interest x,z coordinates are in the space of
+           x_sect, so if rotation has occurred, the x value is no longer an easting and is typically picked off a
+           cross section plot
+        """
 
         def test_cell(p, x_sect, k0, ji0):
             poly = np.array([
@@ -4996,37 +5012,37 @@ class Grid(BaseResqpy):
                    extra_metadata = {}):
         """Creates an IJK grid node from a grid object and optionally adds as child of root and/or to parts forest.
 
-      arguments:
-         ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the array data for the grid geometry
-         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-            in the model
-         add_relationships (boolean, default True): if True, relationship xml parts are created relating the
-            new grid part to: the crs, and the hdf5 external part
-         set_as_grid_root (boolean, default True): if True, the new grid node is noted as being the 'main' grid
-            for the model
-         title (string, default 'ROOT'): used as the citation Title text; careful consideration should be given
-            to this argument when dealing with multiple grids in one model, as it is the means by which a
-            human will distinguish them
-         originator (string, optional): the name of the human being who created the ijk grid part;
-            default is to use the login name
-         write_active (boolean, default True): if True, xml for an active cell property is also generated, but
-            only if the active_property_uuid is set and no part exists in the model for that uuid
-         write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
-         extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
+        arguments:
+           ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the array data for the grid geometry
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           add_relationships (boolean, default True): if True, relationship xml parts are created relating the
+              new grid part to: the crs, and the hdf5 external part
+           set_as_grid_root (boolean, default True): if True, the new grid node is noted as being the 'main' grid
+              for the model
+           title (string, default 'ROOT'): used as the citation Title text; careful consideration should be given
+              to this argument when dealing with multiple grids in one model, as it is the means by which a
+              human will distinguish them
+           originator (string, optional): the name of the human being who created the ijk grid part;
+              default is to use the login name
+           write_active (boolean, default True): if True, xml for an active cell property is also generated, but
+              only if the active_property_uuid is set and no part exists in the model for that uuid
+           write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
+           extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
 
-      returns:
-         the newly created ijk grid xml node
+        returns:
+           the newly created ijk grid xml node
 
-      notes:
-         this code has the concept of a 'main' grid for a model, which resqml does not; it is vaguely
-            equivalent to a 'root' grid in a simulation model
-         the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
-         the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
-         the explicit geometry may be omitted for regular grids, in which case the arrays should not be written to the hdf5
-         file either
+        notes:
+           this code has the concept of a 'main' grid for a model, which resqml does not; it is vaguely
+              equivalent to a 'root' grid in a simulation model
+           the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
+           the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
+           the explicit geometry may be omitted for regular grids, in which case the arrays should not be written to the hdf5
+           file either
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
@@ -5436,56 +5452,56 @@ class RegularGrid(Grid):
                  extra_metadata = {}):
         """Creates a regular grid object based on dxyz, or derived from a Mesh object.
 
-      arguments:
-         parent_model (model.Model object): the model to which the new grid will be assigned
-         extent_kji (triple positive integers, optional): the number of cells in the grid (nk, nj, ni);
-            required unless grid_root is present
-         dxyz (triple float, optional): use when the I,J,K axes align with the x,y,z axes (possible with inverted
-            directions); the size of each cell (dx, dy, dz); values may be negative
-         dxyz_dkji (numpy float array of shape (3, 3), optional): how x,y,z values increase with each step in each
-            direction K,J,I; first index is KJI, second index is xyz; only one of dxyz, dxyz_dkji and mesh should be
-            present; NB axis ordering is different to that used in Mesh class for dxyz_dij
-         origin (triple float, default (0.0, 0.0, 0.0)): the location in the local coordinate space of the crs of
-            the 'first' corner point of the grid
-         crs_uuid (uuid.UUID, optional): the uuid of the coordinate reference system for the grid
-         use_vertical (boolean, default False): if True and the pillars of the regular grid are vertical then a
-            pillar shape of 'vertical' is used; if False (or the pillars are not vertical), then a pillar shape of
-            'straight' is used
-         mesh (surface.Mesh object, optional): if present, the I,J layout of the grid is based on the mesh, which
-            must be regular, and the K cell size is given by the mesh_dz_dk argument; if present, then dxyz and
-            dxyz_dkji must be None
-         mesh_dz_dk (float, default 1.0): the size of cells in the K axis, which is aligned with the z axis, when
-            starting from a mesh; ignored if mesh is None
-         uuid (optional): the root of the xml tree for the grid part; if present, the RegularGrid object is
-            based on existing data or a mix of that data and other arguments where present
-         set_points_cached (boolean, default False): if True, an explicit geometry is created for the regular grid
-            in the form of the cached points array; will be treated as True if as_irregular_grid is True
-         as_irregular_grid (boolean, default False): if True, the grid is setup such that it will appear as a Grid
-            object when next loaded from disc
-         find_properties (boolean, default True): if True and grid_root is not None, a grid property collection is
-            instantiated as an attribute, holding properties for which this grid is the supporting representation
-         title (str, optional): citation title for new grid; ignored if loading from xml
-         originator (str, optional): name of person creating the grid; defaults to login id;
-            ignored if loading from xml
-         extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
-            ignored if loading from xml
+        arguments:
+           parent_model (model.Model object): the model to which the new grid will be assigned
+           extent_kji (triple positive integers, optional): the number of cells in the grid (nk, nj, ni);
+              required unless grid_root is present
+           dxyz (triple float, optional): use when the I,J,K axes align with the x,y,z axes (possible with inverted
+              directions); the size of each cell (dx, dy, dz); values may be negative
+           dxyz_dkji (numpy float array of shape (3, 3), optional): how x,y,z values increase with each step in each
+              direction K,J,I; first index is KJI, second index is xyz; only one of dxyz, dxyz_dkji and mesh should be
+              present; NB axis ordering is different to that used in Mesh class for dxyz_dij
+           origin (triple float, default (0.0, 0.0, 0.0)): the location in the local coordinate space of the crs of
+              the 'first' corner point of the grid
+           crs_uuid (uuid.UUID, optional): the uuid of the coordinate reference system for the grid
+           use_vertical (boolean, default False): if True and the pillars of the regular grid are vertical then a
+              pillar shape of 'vertical' is used; if False (or the pillars are not vertical), then a pillar shape of
+              'straight' is used
+           mesh (surface.Mesh object, optional): if present, the I,J layout of the grid is based on the mesh, which
+              must be regular, and the K cell size is given by the mesh_dz_dk argument; if present, then dxyz and
+              dxyz_dkji must be None
+           mesh_dz_dk (float, default 1.0): the size of cells in the K axis, which is aligned with the z axis, when
+              starting from a mesh; ignored if mesh is None
+           uuid (optional): the root of the xml tree for the grid part; if present, the RegularGrid object is
+              based on existing data or a mix of that data and other arguments where present
+           set_points_cached (boolean, default False): if True, an explicit geometry is created for the regular grid
+              in the form of the cached points array; will be treated as True if as_irregular_grid is True
+           as_irregular_grid (boolean, default False): if True, the grid is setup such that it will appear as a Grid
+              object when next loaded from disc
+           find_properties (boolean, default True): if True and grid_root is not None, a grid property collection is
+              instantiated as an attribute, holding properties for which this grid is the supporting representation
+           title (str, optional): citation title for new grid; ignored if loading from xml
+           originator (str, optional): name of person creating the grid; defaults to login id;
+              ignored if loading from xml
+           extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
+              ignored if loading from xml
 
-      returns:
-         a newly created RegularGrid object with inheritance from the Grid class
+        returns:
+           a newly created RegularGrid object with inheritance from the Grid class
 
-      notes:
-         the RESQML standard allows for regular grid geometry pillars to be stored as parametric lines
-         but that is not yet supported by this code base; however, constant dx, dy, dz arrays are supported;
-         alternatively, regular meshes (Grid2d) may be stored in parameterized form and used to generate a
-         regular grid here;
-         if root_grid, dxyz, dxyz_dkji and mesh arguments are all None then unit cube cells aligned with
-         the x,y,z axes will be generated;
-         to store the geometry explicitly use the following methods: make_regular_points_cached(), write_hdf5(),
-         create_xml(..., write_geometry = True);
-         otherwise, avoid write_hdf5() and call create_xml(..., write_geometry = False)
+        notes:
+           the RESQML standard allows for regular grid geometry pillars to be stored as parametric lines
+           but that is not yet supported by this code base; however, constant dx, dy, dz arrays are supported;
+           alternatively, regular meshes (Grid2d) may be stored in parameterized form and used to generate a
+           regular grid here;
+           if root_grid, dxyz, dxyz_dkji and mesh arguments are all None then unit cube cells aligned with
+           the x,y,z axes will be generated;
+           to store the geometry explicitly use the following methods: make_regular_points_cached(), write_hdf5(),
+           create_xml(..., write_geometry = True);
+           otherwise, avoid write_hdf5() and call create_xml(..., write_geometry = False)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if as_irregular_grid:
             set_points_cached = True
@@ -5599,21 +5615,22 @@ class RegularGrid(Grid):
     # override of Grid methods
 
     def point_raw(self, index = None, points_root = None, cache_array = True):
-        """Returns element from points data, indexed as corner point (k0, j0, i0); can optionally be used to cache points data.
+        """Returns element from points data, indexed as corner point (k0, j0, i0); can optionally be used to cache
+        points data.
 
-      arguments:
-         index (3 integers, optional): if not None, the index into the raw points data for the point of interest
-         points_root (ignored)
-         cache_array (boolean, default True): if True, the raw points data is cached in memory as a side effect
+        arguments:
+           index (3 integers, optional): if not None, the index into the raw points data for the point of interest
+           points_root (ignored)
+           cache_array (boolean, default True): if True, the raw points data is cached in memory as a side effect
 
-      returns:
-         (x, y, z) of selected point as a 3 element numpy vector, or None if index is None
+        returns:
+           (x, y, z) of selected point as a 3 element numpy vector, or None if index is None
 
-      notes:
-         this function is typically called either to cache the points data in memory, or to fetch the coordinates of
-         a single corner point;
-         the index should be a triple kji0 with axes ranging over the shared corners nk+1, nj+1, ni+1
-      """
+        notes:
+           this function is typically called either to cache the points data in memory, or to fetch the coordinates of
+           a single corner point;
+           the index should be a triple kji0 with axes ranging over the shared corners nk+1, nj+1, ni+1
+        """
 
         assert cache_array or index is not None
 
@@ -5630,24 +5647,24 @@ class RegularGrid(Grid):
     def half_cell_transmissibility(self, use_property = None, realization = None, tolerance = None):
         """Returns (and caches if realization is None) half cell transmissibilities for this regular grid.
 
-      arguments:
-         use_property (ignored)
-         realization (int, optional) if present, only a property with this realization number will be used
-         tolerance (ignored)
+        arguments:
+           use_property (ignored)
+           realization (int, optional) if present, only a property with this realization number will be used
+           tolerance (ignored)
 
-      returns:
-         numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
-            face polarity: - (0) and + (1); units will depend on the length units of the coordinate reference
-            system for the grid; the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m
-            and ft respectively
+        returns:
+           numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
+              face polarity: - (0) and + (1); units will depend on the length units of the coordinate reference
+              system for the grid; the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m
+              and ft respectively
 
-      notes:
-         the values for - and + polarity will always be equal, the data is duplicated for compatibility with
-         parent Grid class;
-         the returned array is in the logical resqpy arrangement; it must be discombobulated before being
-         added as a property; this method does not write to hdf5, nor create a new property or xml;
-         if realization is None, a grid attribute cached array will be used
-      """
+        notes:
+           the values for - and + polarity will always be equal, the data is duplicated for compatibility with
+           parent Grid class;
+           the returned array is in the logical resqpy arrangement; it must be discombobulated before being
+           added as a property; this method does not write to hdf5, nor create a new property or xml;
+           if realization is None, a grid attribute cached array will be used
+        """
 
         # todo: allow passing of property uuids for ntg, k_k, j, i
 
@@ -5670,19 +5687,19 @@ class RegularGrid(Grid):
     def centre_point(self, cell_kji0 = None, cache_centre_array = False):
         """Returns centre point of a cell or array of centre points of all cells.
 
-      arguments:
-         cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
-            centre point is required; zero based indexing
-         cache_centre_array (boolean, default False): If True, or cell_kji0 is None, an array of centre points
-            is generated and added as an attribute of the grid, with attribute name array_centre_point
+        arguments:
+           cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
+              centre point is required; zero based indexing
+           cache_centre_array (boolean, default False): If True, or cell_kji0 is None, an array of centre points
+              is generated and added as an attribute of the grid, with attribute name array_centre_point
 
-      returns:
-         (x, y, z) 3 element numpy array of floats holding centre point of cell;
-         or numpy 3+1D array if cell_kji0 is None
+        returns:
+           (x, y, z) 3 element numpy array of floats holding centre point of cell;
+           or numpy 3+1D array if cell_kji0 is None
 
-      note:
-         resulting coordinates are in the same (local) crs as the grid points
-      """
+        note:
+           resulting coordinates are in the same (local) crs as the grid points
+        """
 
         if cell_kji0 is None:
             cache_centre_array = True
@@ -5712,20 +5729,20 @@ class RegularGrid(Grid):
     def volume(self, cell_kji0 = None):
         """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
 
-      arguments:
-         cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
-                               volume is required; zero based indexing
+        arguments:
+           cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
+                                 volume is required; zero based indexing
 
-      returns:
-         float, being the volume of cell identified by cell_kji0;
-         or numpy float array of shape (nk, nj, ni) if cell_kji0 is None
+        returns:
+           float, being the volume of cell identified by cell_kji0;
+           or numpy float array of shape (nk, nj, ni) if cell_kji0 is None
 
-      notes:
-         the function can be used to find the volume of a single cell, or all cells;
-         grid's coordinate reference system must use same units in z as xy (projected);
-         units of result are implicitly determined by coordinates in grid's coordinate reference system;
-         the method currently assumes that the primary i, j, k axes are mutually orthogonal
-      """
+        notes:
+           the function can be used to find the volume of a single cell, or all cells;
+           grid's coordinate reference system must use same units in z as xy (projected);
+           units of result are implicitly determined by coordinates in grid's coordinate reference system;
+           the method currently assumes that the primary i, j, k axes are mutually orthogonal
+        """
 
         vol = np.product(vec.naive_lengths(self.block_dxyz_dkji))
         if cell_kji0 is not None:
@@ -5735,14 +5752,14 @@ class RegularGrid(Grid):
     def thickness(self, cell_kji0 = None, **kwargs):
         """Returns cell thickness (K axial length) for a single cell or full array.
 
-      arguments:
-         cell_kji0 (triple int, optional): if present, the thickness for a single cell is returned;
-            if None, an array is returned
-         all other arguments ignored; present for compatibility with same method in Grid()
+        arguments:
+           cell_kji0 (triple int, optional): if present, the thickness for a single cell is returned;
+              if None, an array is returned
+           all other arguments ignored; present for compatibility with same method in Grid()
 
-      returns:
-         float, or numpy float array filled with a constant
-      """
+        returns:
+           float, or numpy float array filled with a constant
+        """
 
         thick = self.axial_lengths_kji()[0]
         if cell_kji0 is not None:
@@ -5752,14 +5769,14 @@ class RegularGrid(Grid):
     def pinched_out(self, cell_kji0 = None, **kwargs):
         """Returns pinched out boolean (always False) for a single cell or full array.
 
-      arguments:
-         cell_kji0 (triple int, optional): if present, the pinched out flag for a single cell is returned;
-            if None, an array is returned
-         all other arguments ignored; present for compatibility with same method in Grid()
+        arguments:
+           cell_kji0 (triple int, optional): if present, the pinched out flag for a single cell is returned;
+              if None, an array is returned
+           all other arguments ignored; present for compatibility with same method in Grid()
 
-      returns:
-         False, or numpy array filled with False
-      """
+        returns:
+           False, or numpy array filled with False
+        """
 
         if cell_kji0 is not None:
             return False
@@ -5768,17 +5785,17 @@ class RegularGrid(Grid):
     def actual_pillar_shape(self, patch_metadata = False, tolerance = 0.001):
         """Returns actual shape of pillars.
 
-      arguments:
-         patch_metadata (boolean, default False): if True, the actual shape replaces whatever was in the metadata
-         tolerance (float, ignored)
+        arguments:
+           patch_metadata (boolean, default False): if True, the actual shape replaces whatever was in the metadata
+           tolerance (float, ignored)
 
-      returns:
-         string: 'vertical', 'straight' or 'curved'
+        returns:
+           string: 'vertical', 'straight' or 'curved'
 
-      note:
-         setting patch_metadata True will affect the attribute in this Grid object; however, it will not be
-         preserved unless the create_xml() method is called, followed at some point with model.store_epc()
-      """
+        note:
+           setting patch_metadata True will affect the attribute in this Grid object; however, it will not be
+           preserved unless the create_xml() method is called, followed at some point with model.store_epc()
+        """
 
         if np.all(self.block_dxyz_dkji[0, :2] == 0.0):
             return 'vertical'
@@ -5799,15 +5816,15 @@ class RegularGrid(Grid):
                    add_cell_length_properties = True):
         """Creates xml for this RegularGrid object; by default the explicit geometry is not included.
 
-      see docstring for Grid.create_xml()
+        see docstring for Grid.create_xml()
 
-      additional argument:
-         add_cell_length_properties (boolean, default True): if True, 3 constant property arrays with cells as
-            indexable element are created to hold the lengths of the primary axes of the cells; the xml is
-            created for the properties and they are added to the model (no hdf5 write needed)
+        additional argument:
+           add_cell_length_properties (boolean, default True): if True, 3 constant property arrays with cells as
+              indexable element are created to hold the lengths of the primary axes of the cells; the xml is
+              created for the properties and they are added to the model (no hdf5 write needed)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')

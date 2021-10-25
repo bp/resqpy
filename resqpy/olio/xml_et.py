@@ -30,8 +30,8 @@ else:
 def strip_path(full_path):
     """Returns the filename part of full_path with any directory path removed.
 
-      :meta private:
-   """
+    :meta private:
+    """
 
     return os.path.basename(full_path)
 
@@ -144,10 +144,9 @@ def find_nested_tags(root, tag_list):
 
 def find_nested_tags_cast(root, tag_list, dtype = None):
     """Return value of nested tags as desired dtype.
-   
-   Follows a list of tags in a nested xml hierarchy, returning the stripped text
-   of the node at the deepest level.
-   """
+
+    Follows a list of tags in a nested xml hierarchy, returning the stripped text of the node at the deepest level.
+    """
 
     cast_func = {
         int: node_int,
@@ -162,14 +161,16 @@ def find_nested_tags_cast(root, tag_list, dtype = None):
 
 
 def find_nested_tags_text(root, tag_list):
-    """Follows a list of tags in a nested xml hierarchy, returning the stripped text of the node at the deepest level."""
+    """Follows a list of tags in a nested xml hierarchy, returning the stripped text of the node at the deepest
+    level."""
 
     node = find_nested_tags(root, tag_list)
     return node_text(node)
 
 
 def find_nested_tags_bool(root, tag_list):
-    """Follows a list of tags in a nested xml hierarchy, returning the text of the node at the deepest level, as bool."""
+    """Follows a list of tags in a nested xml hierarchy, returning the text of the node at the deepest level, as
+    bool."""
 
     node = find_nested_tags(root, tag_list)
     return node_bool(node)
@@ -183,7 +184,8 @@ def find_nested_tags_int(root, tag_list):
 
 
 def find_nested_tags_float(root, tag_list):
-    """Follows a list of tags in a nested xml hierarchy, returning the text of the node at the deepest level, as float."""
+    """Follows a list of tags in a nested xml hierarchy, returning the text of the node at the deepest level, as
+    float."""
 
     node = find_nested_tags(root, tag_list)
     return node_float(node)
@@ -576,7 +578,8 @@ def time_units_from_node(node):
 
 
 def xyz_handedness(xy_axes, z_inc_down):
-    """Returns xyz true handedness as 'left', 'right' or 'unknown', based on xy_axes (string) and z_inc_down (boolean)."""
+    """Returns xyz true handedness as 'left', 'right' or 'unknown', based on xy_axes (string) and z_inc_down
+    (boolean)."""
 
     if xy_axes is None or z_inc_down is None:
         return 'unknown'
@@ -602,7 +605,8 @@ def xyz_handedness(xy_axes, z_inc_down):
 
 
 def ijk_handedness(geom_node):
-    """Returns ijk true handedness as 'left', 'right' or 'unknown', based on GridIsRightHanded node in grid geometry node."""
+    """Returns ijk true handedness as 'left', 'right' or 'unknown', based on GridIsRightHanded node in grid geometry
+    node."""
 
     if geom_node is None:
         return 'unknown'
@@ -734,7 +738,7 @@ def write_xml(xml_fp, tree, standalone = None):
 
 
 def load_metadata_from_xml(node):
-    """Loads the ExtraMetaData stored in a RESQML part as a dictionary"""
+    """Loads the ExtraMetaData stored in a RESQML part as a dictionary."""
 
     if node is None:
         return None
@@ -748,7 +752,7 @@ def load_metadata_from_xml(node):
 
 
 def create_metadata_xml(node, extra_metadata):
-    """Writes the xml for the given metadata dictionary"""
+    """Writes the xml for the given metadata dictionary."""
 
     if extra_metadata:
         for data in extra_metadata.keys():

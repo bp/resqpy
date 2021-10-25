@@ -28,16 +28,16 @@ import resqpy.olio.xml_et as rqet
 class DataFrame:
     """Class for storing and retrieving a pandas dataframe of numerical data as a RESQML property.
 
-   notes:
-      actual values are stored either as z values in a Mesh (Grid2d) object, or as a property on
-      such a mesh when multiple raalizations are in use; a regular Mesh object is created to act
-      as a supporting representation; columns are mapped onto I and rows onto J; if a property is
-      used then the indexable elements are 'nodes'; column titles are stored in a related StringLookup
-      object, indexed by column number; column units are optionally treated in the same way (uom for
-      the property is generally set to Euc); all values are stored as floats; use the derived TimeTable
-      class if rows relate to steps in a TimeSeries; use the derived RelPerm class if the rows relate to
-      relative permeability data
-   """
+    notes:
+       actual values are stored either as z values in a Mesh (Grid2d) object, or as a property on
+       such a mesh when multiple raalizations are in use; a regular Mesh object is created to act
+       as a supporting representation; columns are mapped onto I and rows onto J; if a property is
+       used then the indexable elements are 'nodes'; column titles are stored in a related StringLookup
+       object, indexed by column number; column units are optionally treated in the same way (uom for
+       the property is generally set to Euc); all values are stored as floats; use the derived TimeTable
+       class if rows relate to steps in a TimeSeries; use the derived RelPerm class if the rows relate to
+       relative permeability data
+    """
 
     def __init__(
             self,
@@ -53,40 +53,40 @@ class DataFrame:
             extra_metadata = None):
         """Create a new Dataframe object from either a previously stored property or a pandas dataframe.
 
-      arguments:
-         model (model.Model): the model to which the new Dataframe will be attached
-         support_root (lxml.Element, DEPRECATED): use uuid instead
-         uuid (uuid.UUID, optional): the uuid of an existing Grid2dRepresentation
-            object acting as support for a dataframe property (or holding the dataframe as z values)
-         df (pandas.DataFrame, optional): a dataframe from which the new Dataframe is to be created;
-            if both uuid (or support_root) and df are supplied, realization must not be None and a new
-            realization property will be created
-         uom_list (list of str, optional): a list holding the units of measure for each
-            column; if present, length of list must match number of columns in df; ignored if
-            uuid or support_root is not None
-         realization (int, optional): if present, the realization number of the RESQML property
-            holding the dataframe
-         title (str, default 'dataframe'): used as the citation title for the Mesh (and property);
-            ignored if uuid or support_root is not None
-         column_lookup_uuid (uuid, optional): if present, the uuid of a string lookup table holding
-            the column names; if present, the contents and order of the table must match the columns
-            in the dataframe; if absent, a new lookup table will be created; ignored if support_root
-            is not None
-         uom_lookup_uuid (uuid, optional): if present, the uuid of a string lookup table holding
-            the units of measure for each column; if None and uom_list is present, a new table
-            will be created; if both uom_list and uom_lookup_uuid are present, their contents
-            must match; ignored if support_root is not None
-         extra_metadata (dict, optional): if present, a dictionary of extra metadata items, str: str;
-            ignored if uuid (or support_root) is not None
+        arguments:
+           model (model.Model): the model to which the new Dataframe will be attached
+           support_root (lxml.Element, DEPRECATED): use uuid instead
+           uuid (uuid.UUID, optional): the uuid of an existing Grid2dRepresentation
+              object acting as support for a dataframe property (or holding the dataframe as z values)
+           df (pandas.DataFrame, optional): a dataframe from which the new Dataframe is to be created;
+              if both uuid (or support_root) and df are supplied, realization must not be None and a new
+              realization property will be created
+           uom_list (list of str, optional): a list holding the units of measure for each
+              column; if present, length of list must match number of columns in df; ignored if
+              uuid or support_root is not None
+           realization (int, optional): if present, the realization number of the RESQML property
+              holding the dataframe
+           title (str, default 'dataframe'): used as the citation title for the Mesh (and property);
+              ignored if uuid or support_root is not None
+           column_lookup_uuid (uuid, optional): if present, the uuid of a string lookup table holding
+              the column names; if present, the contents and order of the table must match the columns
+              in the dataframe; if absent, a new lookup table will be created; ignored if support_root
+              is not None
+           uom_lookup_uuid (uuid, optional): if present, the uuid of a string lookup table holding
+              the units of measure for each column; if None and uom_list is present, a new table
+              will be created; if both uom_list and uom_lookup_uuid are present, their contents
+              must match; ignored if support_root is not None
+           extra_metadata (dict, optional): if present, a dictionary of extra metadata items, str: str;
+              ignored if uuid (or support_root) is not None
 
-      returns:
-         a newly created Dataframe object
+        returns:
+           a newly created Dataframe object
 
-      notes:
-         when initialising from an existing RESQML object, the supporting mesh and its property should
-         have been originally created using this class; when working with ensembles, each object of this
-         class will only handle the data for one realization, though they may share a common support_root
-      """
+        notes:
+           when initialising from an existing RESQML object, the supporting mesh and its property should
+           have been originally created using this class; when working with ensembles, each object of this
+           class will only handle the data for one realization, though they may share a common support_root
+        """
 
         assert uuid is not None or support_root is not None or df is not None
         assert (uuid is None and support_root is None) or df is None or realization is not None
@@ -275,9 +275,9 @@ class DataFrame:
 class TimeTable(DataFrame):
     """Class for storing and retrieving a pandas dataframe where rows relate to steps in a time series.
 
-   note:
-      inherits from DataFrame class
-   """
+    note:
+       inherits from DataFrame class
+    """
 
     def __init__(
             self,
@@ -293,13 +293,13 @@ class TimeTable(DataFrame):
             uom_lookup_uuid = None):
         """Create a new TimeTable object from either a previously stored property or a pandas dataframe.
 
-      arguments:
-         time_series (resqpy.time_series.TimeSeries): the time series which rows in the dataframe relate to;
-            required if initialising from a dataframe, ignored otherwise
+        arguments:
+           time_series (resqpy.time_series.TimeSeries): the time series which rows in the dataframe relate to;
+              required if initialising from a dataframe, ignored otherwise
 
-      note:
-         see DataFrame class docstring for details of other arguments
-      """
+        note:
+           see DataFrame class docstring for details of other arguments
+        """
 
         # todo: add option to set up time series from a column in the dataframe?
 
@@ -339,19 +339,19 @@ class TimeTable(DataFrame):
 def dataframe_parts_in_model(model, timetables = None, title = None, related_uuid = None):
     """Returns list of part names within model that are representing DataFrame support objects.
 
-   arguments:
-      model (model.Model): the model to be inspected for dataframes
-      timetables (boolean or None): if True, only TimeTable dataframe parts will be included; if False
-         only DataFrame parts that are not representing TimeTable objects will be included; if None,
-         both parts for both types of dataframe will be included
-      title (str, optional): if present, only parts with a citation title exactly matching will be
-         included
-      related_uuid (uuid, optional): if present, only parts relating to this uuid are included
+    arguments:
+       model (model.Model): the model to be inspected for dataframes
+       timetables (boolean or None): if True, only TimeTable dataframe parts will be included; if False
+          only DataFrame parts that are not representing TimeTable objects will be included; if None,
+          both parts for both types of dataframe will be included
+       title (str, optional): if present, only parts with a citation title exactly matching will be
+          included
+       related_uuid (uuid, optional): if present, only parts relating to this uuid are included
 
-   returns:
-      list of str, each element in the list is a part name, within model, which is representing the
-      support for a DataFrame object
-   """
+    returns:
+       list of str, each element in the list is a part name, within model, which is representing the
+       support for a DataFrame object
+    """
 
     df_parts_list = model.parts(obj_type = 'Grid2dRepresentation',
                                 title = title,
@@ -372,16 +372,16 @@ def dataframe_parts_in_model(model, timetables = None, title = None, related_uui
 def timetable_parts_in_model(model, title = None, related_uuid = None):
     """Returns list of part names within model that are representing TimeTable dataframe support objects.
 
-   arguments:
-      model (model.Model): the model to be inspected for dataframes
-      title (str, optional): if present, only parts with a citation title exactly matching will be
-         included
-      related_uuid (uuid, optional): if present, only parts relating to this uuid are included
+    arguments:
+       model (model.Model): the model to be inspected for dataframes
+       title (str, optional): if present, only parts with a citation title exactly matching will be
+          included
+       related_uuid (uuid, optional): if present, only parts relating to this uuid are included
 
-   returns:
-      list of str, each element in the list is a part name, within model, which is representing the support
-      for a TimeTable object
-   """
+    returns:
+       list of str, each element in the list is a part name, within model, which is representing the support
+       for a TimeTable object
+    """
 
     return dataframe_parts_in_model(model, timetables = True, title = title, related_uuid = related_uuid)
 

@@ -60,25 +60,25 @@ def _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_r
 def zone_layer_ranges_from_array(zone_array, min_k0 = 0, max_k0 = None, use_dominant_zone = False):
     """Returns a list of (zone_min_k0, zone_max_k0, zone_index) derived from zone_array.
 
-   arguments:
-      zone_array (3D numpy int array or masked array): array holding zone index value per cell
-      min_k0 (int, default 0): the minimum layer number (0 based) to be included in the ranges
-      max_k0 (int, default None): the maximum layer number (0 based) to be included in the ranges;
-         note that this layer is included (unlike in python ranges); if None, the maximum layer
-         number in zone_array is used
-      use_dominant_zone (boolean, default False): if True, the most common zone value in each layer is used for the whole
-         layer; if False, then variation of zone values in active cells in a layer will raise an assertion error
+    arguments:
+       zone_array (3D numpy int array or masked array): array holding zone index value per cell
+       min_k0 (int, default 0): the minimum layer number (0 based) to be included in the ranges
+       max_k0 (int, default None): the maximum layer number (0 based) to be included in the ranges;
+          note that this layer is included (unlike in python ranges); if None, the maximum layer
+          number in zone_array is used
+       use_dominant_zone (boolean, default False): if True, the most common zone value in each layer is used for the whole
+          layer; if False, then variation of zone values in active cells in a layer will raise an assertion error
 
-   returns:
-      a list of (int, int, int) being (zone_min_k0, zone_max_k0, zone_index) for each zone index value present
+    returns:
+       a list of (int, int, int) being (zone_min_k0, zone_max_k0, zone_index) for each zone index value present
 
-   notes:
-      the function requires zone indices (for active cells, if zone_array is masked) within a layer
-      to be consistent: an assertion error is raised otherwise; the returned list is sorted by layer
-      ranges rather than zone index; if use_dominant_zone is True then a side effect of the function is
-      to modify the values in zone_array to be consistent across each layer, effectively reassigning some
-      cells to a different zone!
-   """
+    notes:
+       the function requires zone indices (for active cells, if zone_array is masked) within a layer
+       to be consistent: an assertion error is raised otherwise; the returned list is sorted by layer
+       ranges rather than zone index; if use_dominant_zone is True then a side effect of the function is
+       to modify the values in zone_array to be consistent across each layer, effectively reassigning some
+       cells to a different zone!
+    """
 
     def dominant_zone(zone_array):
         # modifies data in zone_array such that each layer has a single (most common) value
@@ -148,30 +148,30 @@ def add_zone_by_layer_property(epc_file,
                                extra_metadata = {}):
     """Adds a discrete zone property (and local property kind) with indexable element of layers.
 
-   arguments:
-      epc_file (string): file name to load resqml model from and to update with the zonal property
-      grid_uuid (uuid.UUID or str, optional): required unless the model has only one grid, or one named ROOT
-      zone_by_layer_vector (nk integers, optional): either this or zone_by_cell_property_uuid must be given;
-         a 1D numpy array, tuple or list of ints, being the zone number to which each layer belongs
-      zone_by_cell_property_uuid (uuid.UUID or str, optional): either this or zone_by_layer_vector must be given;
-         the uuid of a discrete property with grid as supporting representation and cells as indexable elements,
-         holidng the zone to which the cell belongs
-      use_dominant_zone (boolean, default False): if True and more than one zone is represented within the cells
-         of a layer, then the whole layer is assigned to the zone with the biggest count of cells in the layer;
-         if False, an exception is raised if more than one zone is represented by the cells of a layer; ignored
-         if zone_by_cell_property_uuid is None
-      use_local_property_kind (boolean, default True): if True, the new zone by layer property is given a
-         local property kind titled 'zone'; if False, the property kind will be set to 'discrete'
-      null_value (int, default -1): the value to use if a layer does not belong to any zone (rarely used)
-      title (str, default 'ZONE'): the citation title of the new zone by layer property
-      realization (int, optional): if present the new zone by layer property is marked as belonging to this
-         realization
-      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
-         property
+    arguments:
+       epc_file (string): file name to load resqml model from and to update with the zonal property
+       grid_uuid (uuid.UUID or str, optional): required unless the model has only one grid, or one named ROOT
+       zone_by_layer_vector (nk integers, optional): either this or zone_by_cell_property_uuid must be given;
+          a 1D numpy array, tuple or list of ints, being the zone number to which each layer belongs
+       zone_by_cell_property_uuid (uuid.UUID or str, optional): either this or zone_by_layer_vector must be given;
+          the uuid of a discrete property with grid as supporting representation and cells as indexable elements,
+          holidng the zone to which the cell belongs
+       use_dominant_zone (boolean, default False): if True and more than one zone is represented within the cells
+          of a layer, then the whole layer is assigned to the zone with the biggest count of cells in the layer;
+          if False, an exception is raised if more than one zone is represented by the cells of a layer; ignored
+          if zone_by_cell_property_uuid is None
+       use_local_property_kind (boolean, default True): if True, the new zone by layer property is given a
+          local property kind titled 'zone'; if False, the property kind will be set to 'discrete'
+       null_value (int, default -1): the value to use if a layer does not belong to any zone (rarely used)
+       title (str, default 'ZONE'): the citation title of the new zone by layer property
+       realization (int, optional): if present the new zone by layer property is marked as belonging to this
+          realization
+       extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+          property
 
-   returns:
-      numpy vector of zone numbers (by layer), uuid of newly created property
-   """
+    returns:
+       numpy vector of zone numbers (by layer), uuid of newly created property
+    """
 
     assert zone_by_layer_vector is not None or zone_by_cell_property_uuid is not None
     assert zone_by_layer_vector is None or zone_by_cell_property_uuid is None
@@ -259,43 +259,43 @@ def add_one_grid_property_array(epc_file,
                                 new_epc_file = None):
     """Adds a grid property from a numpy array to an existing resqml dataset.
 
-   arguments:
-      epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
-      a (3D numpy array): the property array to be added to the model; for a constant array set this None
-         and use the const_value argument, otherwise this array is required
-      property_kind (string): the resqml property kind
-      grid_uuid (uuid object or string, optional): the uuid of the grid to which the property relates;
-         if None, the property is attached to the 'main' grid
-      source_info (string): typically the name of a file from which the array has been read but can be any
-         information regarding the source of the data
-      title (string): this will be used as the citation title when a part is generated for the array; for simulation
-         models it is desirable to use the simulation keyword when appropriate
-      discrete (boolean, default False): if True, the array should contain integer (or boolean) data; if False, float
-      uom (string, default None): the resqml units of measure for the data; not relevant to discrete data
-      time_index (integer, default None): if not None, the time index to be used when creating a part for the array
-      time_series_uuid (uuid object or string, default None): required if time_index is not None
-      string_lookup_uuid (uuid object or string, optional): required if the array is to be stored as a categorical
-         property; set to None for non-categorical discrete data; only relevant if discrete is True
-      null_value (int, default None): if present, this is used in the metadata to indicate that this value
-         is to be interpreted as a null value wherever it appears in the data (use for discrete data only)
-      indexable_element (string, default 'cells'): the indexable element in the supporting representation (the grid)
-      facet_type (string): resqml facet type, or None
-      facet (string): resqml facet, or None
-      realization (int): realization number, or None
-      local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
-      count_per_element (int, default 1): the number of values per indexable element; if greater than one then this
-         must be the fastest cycling axis in the cached array, ie last index
-      const_value (float or int, optional): if present, a constant array is added 'filled' with this value, in which
-         case argument a should be None
-      points (bool, default False): if True, this is a points property with an extra dimension of extent 3
-      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
-         property
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
-         a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
+    arguments:
+       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
+       a (3D numpy array): the property array to be added to the model; for a constant array set this None
+          and use the const_value argument, otherwise this array is required
+       property_kind (string): the resqml property kind
+       grid_uuid (uuid object or string, optional): the uuid of the grid to which the property relates;
+          if None, the property is attached to the 'main' grid
+       source_info (string): typically the name of a file from which the array has been read but can be any
+          information regarding the source of the data
+       title (string): this will be used as the citation title when a part is generated for the array; for simulation
+          models it is desirable to use the simulation keyword when appropriate
+       discrete (boolean, default False): if True, the array should contain integer (or boolean) data; if False, float
+       uom (string, default None): the resqml units of measure for the data; not relevant to discrete data
+       time_index (integer, default None): if not None, the time index to be used when creating a part for the array
+       time_series_uuid (uuid object or string, default None): required if time_index is not None
+       string_lookup_uuid (uuid object or string, optional): required if the array is to be stored as a categorical
+          property; set to None for non-categorical discrete data; only relevant if discrete is True
+       null_value (int, default None): if present, this is used in the metadata to indicate that this value
+          is to be interpreted as a null value wherever it appears in the data (use for discrete data only)
+       indexable_element (string, default 'cells'): the indexable element in the supporting representation (the grid)
+       facet_type (string): resqml facet type, or None
+       facet (string): resqml facet, or None
+       realization (int): realization number, or None
+       local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
+       count_per_element (int, default 1): the number of values per indexable element; if greater than one then this
+          must be the fastest cycling axis in the cached array, ie last index
+       const_value (float or int, optional): if present, a constant array is added 'filled' with this value, in which
+          case argument a should be None
+       points (bool, default False): if True, this is a points property with an extra dimension of extent 3
+       extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+          property
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
+          a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
 
-   returns:
-      uuid.UUID of newly created property object
-   """
+    returns:
+       uuid.UUID of newly created property object
+    """
 
     if new_epc_file and epc_file and (
         (new_epc_file == epc_file) or
@@ -387,40 +387,40 @@ def add_one_blocked_well_property(epc_file,
                                   new_epc_file = None):
     """Adds a blocked well property from a numpy array to an existing resqml dataset.
 
-   arguments:
-      epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
-      a (1D numpy array): the blocked well property array to be added to the model
-      property_kind (string): the resqml property kind
-      blocked_well_uuid (uuid object or string): the uuid of the blocked well to which the property relates
-      source_info (string): typically the name of a file from which the array has been read but can be any
-         information regarding the source of the data
-      title (string): this will be used as the citation title when a part is generated for the array
-      discrete (boolean, default False): if True, the array should contain integer (or boolean) data; if False, float
-      uom (string, default None): the resqml units of measure for the data; not relevant to discrete data
-      time_index (integer, default None): if not None, the time index to be used when creating a part for the array
-      time_series_uuid (uuid object or string, default None): required if time_index is not None
-      string_lookup_uuid (uuid object or string, optional): required if the array is to be stored as a categorical
-         property; set to None for non-categorical discrete data; only relevant if discrete is True
-      null_value (int, default None): if present, this is used in the metadata to indicate that this value
-         is to be interpreted as a null value wherever it appears in the data (use for discrete data only)
-      indexable_element (string, default 'cells'): the indexable element in the supporting representation (the blocked well);
-         valid values are 'cells', 'intervals' (which includes unblocked intervals), or 'nodes'
-      facet_type (string): resqml facet type, or None
-      facet (string): resqml facet, or None
-      realization (int): realization number, or None
-      local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
-      count_per_element (int, default 1): the number of values per indexable element; if greater than one then this
-         must be the fastest cycling axis in the cached array, ie last index; if greater than 1 then a must be a 2D array
-      points (bool, default False): if True, this is a points property with an extra dimension of extent 3
-      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
-         property
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
-         a new epc file (& associated h5 file) is created to contain a copy of the blocked well (and dependencies) and
-         the new property
+    arguments:
+       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
+       a (1D numpy array): the blocked well property array to be added to the model
+       property_kind (string): the resqml property kind
+       blocked_well_uuid (uuid object or string): the uuid of the blocked well to which the property relates
+       source_info (string): typically the name of a file from which the array has been read but can be any
+          information regarding the source of the data
+       title (string): this will be used as the citation title when a part is generated for the array
+       discrete (boolean, default False): if True, the array should contain integer (or boolean) data; if False, float
+       uom (string, default None): the resqml units of measure for the data; not relevant to discrete data
+       time_index (integer, default None): if not None, the time index to be used when creating a part for the array
+       time_series_uuid (uuid object or string, default None): required if time_index is not None
+       string_lookup_uuid (uuid object or string, optional): required if the array is to be stored as a categorical
+          property; set to None for non-categorical discrete data; only relevant if discrete is True
+       null_value (int, default None): if present, this is used in the metadata to indicate that this value
+          is to be interpreted as a null value wherever it appears in the data (use for discrete data only)
+       indexable_element (string, default 'cells'): the indexable element in the supporting representation (the blocked well);
+          valid values are 'cells', 'intervals' (which includes unblocked intervals), or 'nodes'
+       facet_type (string): resqml facet type, or None
+       facet (string): resqml facet, or None
+       realization (int): realization number, or None
+       local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
+       count_per_element (int, default 1): the number of values per indexable element; if greater than one then this
+          must be the fastest cycling axis in the cached array, ie last index; if greater than 1 then a must be a 2D array
+       points (bool, default False): if True, this is a points property with an extra dimension of extent 3
+       extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+          property
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
+          a new epc file (& associated h5 file) is created to contain a copy of the blocked well (and dependencies) and
+          the new property
 
-   returns:
-      uuid.UUID of newly created property object
-   """
+    returns:
+       uuid.UUID of newly created property object
+    """
 
     if new_epc_file and epc_file and (
         (new_epc_file == epc_file) or
@@ -481,38 +481,38 @@ def add_wells_from_ascii_file(epc_file,
                               new_epc_file = None):
     """Adds new md datum, trajectory, interpretation and feature objects for each well in a tabular ascii file..
 
-   arguments:
-      epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
-      crs_uuid (uuid.UUID): the unique identifier of the coordinate reference system applicable to the x,y,z data;
-         if None, a default crs will be created, making use of the length_uom and z_inc_down arguments
-      trajectory_file (string): the path of the ascii file holding the well trajectory data to be loaded
-      comment_character (string, default '#'): character deemed to introduce a comment in the trajectory file
-      space_separated_instead_of_csv (boolean, default False): if True, the columns in the trajectory file are space
-         separated; if False, comma separated
-      well_col (string, default 'WELL'): the heading for the column containing well names
-      md_col (string, default 'MD'): the heading for the column containing measured depths
-      x_col (string, default 'X'): the heading for the column containing X (usually easting) data
-      y_col (string, default 'Y'): the heading for the column containing Y (usually northing) data
-      z_col (string, default 'Z'): the heading for the column containing Z (depth or elevation) data
-      length_uom (string, default 'm'): the units of measure for the measured depths; should be 'm' or 'ft'
-      md_domain (string, optional): the source of the original deviation data; may be 'logger' or 'driller'
-      drilled (boolean, default False): True should be used for wells that have been drilled; False otherwise (planned,
-         proposed, or a location being studied)
-      z_inc_down (boolean, default True): indicates whether z values increase with depth; only used in the creation
-         of a default coordinate reference system; ignored if crs_uuid is not None
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
-         a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
+    arguments:
+       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
+       crs_uuid (uuid.UUID): the unique identifier of the coordinate reference system applicable to the x,y,z data;
+          if None, a default crs will be created, making use of the length_uom and z_inc_down arguments
+       trajectory_file (string): the path of the ascii file holding the well trajectory data to be loaded
+       comment_character (string, default '#'): character deemed to introduce a comment in the trajectory file
+       space_separated_instead_of_csv (boolean, default False): if True, the columns in the trajectory file are space
+          separated; if False, comma separated
+       well_col (string, default 'WELL'): the heading for the column containing well names
+       md_col (string, default 'MD'): the heading for the column containing measured depths
+       x_col (string, default 'X'): the heading for the column containing X (usually easting) data
+       y_col (string, default 'Y'): the heading for the column containing Y (usually northing) data
+       z_col (string, default 'Z'): the heading for the column containing Z (depth or elevation) data
+       length_uom (string, default 'm'): the units of measure for the measured depths; should be 'm' or 'ft'
+       md_domain (string, optional): the source of the original deviation data; may be 'logger' or 'driller'
+       drilled (boolean, default False): True should be used for wells that have been drilled; False otherwise (planned,
+          proposed, or a location being studied)
+       z_inc_down (boolean, default True): indicates whether z values increase with depth; only used in the creation
+          of a default coordinate reference system; ignored if crs_uuid is not None
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
+          a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
 
-   returns:
-      int: the number of wells added
+    returns:
+       int: the number of wells added
 
-   notes:
-      ascii file must be table with first line being column headers, with columns for WELL, MD, X, Y & Z;
-      actual column names can be set with optional arguments;
-      all the objects are added to the model, with array data being written to the hdf5 file for the trajectories;
-      the md_domain and drilled values are stored in the RESQML metadata but are only for human information and do not
-      generally affect computations
-   """
+    notes:
+       ascii file must be table with first line being column headers, with columns for WELL, MD, X, Y & Z;
+       actual column names can be set with optional arguments;
+       all the objects are added to the model, with array data being written to the hdf5 file for the trajectories;
+       the md_domain and drilled values are stored in the RESQML metadata but are only for human information and do not
+       generally affect computations
+    """
 
     assert trajectory_file and os.path.exists(trajectory_file)
     if md_domain:
@@ -570,34 +570,34 @@ def zonal_grid(epc_file,
                new_epc_file = None):
     """Extends an existing model with a new version of the source grid converted to a single, thick, layer per zone.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): a multi-layer RESQML grid object; if None, the epc_file is loaded
-         and it should contain one ijk grid object (or one 'ROOT' grid) which is used as the source grid
-      zone_title (string): if not None, a discrete property with this as the citation title is used as the zone property
-      zone_uuid (string or uuid): if not None, a discrete property with this uuid is used as the zone property (see notes)
-      zone_layer_range_list (list of (int, int, int)): each entry being (min_k0, max_k0, zone_index); alternative to
-         working from a zone array
-      k0_min (int, optional): the minimum layer number in the source grid (zero based) to include in the zonal version;
-         default is zero (ie. top layer in source grid)
-      k0_max (int, optional): the maximum layer number in the source grid (zero based) to include in the zonal version;
-         default is nk - 1 (ie. bottom layer in source grid)
-      use_dominant_zone (boolean, default False): if True, the most common zone value in each layer is used for the whole
-         layer; if False, then variation of zone values in active cells in a layer will raise an assertion error
-      inactive_laissez_faire (boolean, optional): if True, a cell in the zonal grid will be set active if any of the
-         corresponding cells in the source grid are active; otherwise all corresponding cells in the source grid
-         must be active for the zonal cell to be active; default is True
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the zonal grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): a multi-layer RESQML grid object; if None, the epc_file is loaded
+          and it should contain one ijk grid object (or one 'ROOT' grid) which is used as the source grid
+       zone_title (string): if not None, a discrete property with this as the citation title is used as the zone property
+       zone_uuid (string or uuid): if not None, a discrete property with this uuid is used as the zone property (see notes)
+       zone_layer_range_list (list of (int, int, int)): each entry being (min_k0, max_k0, zone_index); alternative to
+          working from a zone array
+       k0_min (int, optional): the minimum layer number in the source grid (zero based) to include in the zonal version;
+          default is zero (ie. top layer in source grid)
+       k0_max (int, optional): the maximum layer number in the source grid (zero based) to include in the zonal version;
+          default is nk - 1 (ie. bottom layer in source grid)
+       use_dominant_zone (boolean, default False): if True, the most common zone value in each layer is used for the whole
+          layer; if False, then variation of zone values in active cells in a layer will raise an assertion error
+       inactive_laissez_faire (boolean, optional): if True, a cell in the zonal grid will be set active if any of the
+          corresponding cells in the source grid are active; otherwise all corresponding cells in the source grid
+          must be active for the zonal cell to be active; default is True
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the zonal grid (& crs)
 
-   returns:
-      new grid object (grid.Grid) with one layer per zone of the source grid
+    returns:
+       new grid object (grid.Grid) with one layer per zone of the source grid
 
-   notes:
-      usually one of zone_title or zone_uuid or zone_layer_range_list should be passed, if none are passed then a
-      single layer grid is generated; zone_layer_range_list will take precendence if present
-   """
+    notes:
+       usually one of zone_title or zone_uuid or zone_layer_range_list should be passed, if none are passed then a
+       single layer grid is generated; zone_layer_range_list will take precendence if present
+    """
 
     def fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True):
         properties = grid.extract_property_collection()
@@ -830,24 +830,24 @@ def single_layer_grid(epc_file,
                       new_epc_file = None):
     """Extends an existing model with a new version of the source grid converted to a single, thick, layer.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): a multi-layer RESQML grid object; if None, the epc_file is loaded
-         and it should contain one ijk grid object (or one 'ROOT' grid) which is used as the source grid
-      k0_min (int, optional): the minimum layer number in the source grid (zero based) to include in the single layer version;
-         default is zero (ie. top layer in source grid)
-      k0_max (int, optional): the maximum layer number in the source grid (zero based) to include in the single layer version;
-         default is nk - 1 (ie. bottom layer in source grid)
-      inactive_laissez_faire (boolean, optional): if True, a cell in the single layer grid will be set active if any of the
-         corresponding cells in the source grid are active; otherwise all corresponding cells in the source grid
-         must be active for the single layer cell to be active; default is True
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the single layer grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): a multi-layer RESQML grid object; if None, the epc_file is loaded
+          and it should contain one ijk grid object (or one 'ROOT' grid) which is used as the source grid
+       k0_min (int, optional): the minimum layer number in the source grid (zero based) to include in the single layer version;
+          default is zero (ie. top layer in source grid)
+       k0_max (int, optional): the maximum layer number in the source grid (zero based) to include in the single layer version;
+          default is nk - 1 (ie. bottom layer in source grid)
+       inactive_laissez_faire (boolean, optional): if True, a cell in the single layer grid will be set active if any of the
+          corresponding cells in the source grid are active; otherwise all corresponding cells in the source grid
+          must be active for the single layer cell to be active; default is True
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the single layer grid (& crs)
 
-   returns:
-      new grid object (grid.Grid) with a single layer representation of the source grid
-   """
+    returns:
+       new grid object (grid.Grid) with a single layer representation of the source grid
+    """
 
     return zonal_grid(epc_file,
                       source_grid = source_grid,
@@ -870,33 +870,33 @@ def interpolated_grid(epc_file,
                       new_epc_file = None):
     """Extends an existing model with a new grid geometry linearly interpolated between the two source_grids.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to
-      grid_a, grid_b (grid.Grid objects): a pair of RESQML grid objects representing the end cases, between
-         which the new grid will be interpolated
-      a_to_b_0_to_1 (float, default 0.5): the interpolation factor in the range zero to one; a value of 0.0 will yield
-         a copy of grid a, a value of 1.0 will yield a copy of grid b, intermediate values will yield a grid with all
-         points interpolated
-      split_tolerance (float, default 0.01): maximum offset of corner points for shared point to be generated; units
-         are same as those in grid crs; only relevant if working from corner points, ignored otherwise
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with grid_a
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the interpolated grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to
+       grid_a, grid_b (grid.Grid objects): a pair of RESQML grid objects representing the end cases, between
+          which the new grid will be interpolated
+       a_to_b_0_to_1 (float, default 0.5): the interpolation factor in the range zero to one; a value of 0.0 will yield
+          a copy of grid a, a value of 1.0 will yield a copy of grid b, intermediate values will yield a grid with all
+          points interpolated
+       split_tolerance (float, default 0.01): maximum offset of corner points for shared point to be generated; units
+          are same as those in grid crs; only relevant if working from corner points, ignored otherwise
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with grid_a
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the interpolated grid (& crs)
 
-   returns:
-      new grid object (grid.Grid) with geometry interpolated between grid a and grid b
+    returns:
+       new grid object (grid.Grid) with geometry interpolated between grid a and grid b
 
-   notes:
-      the hdf5 file used by the grid_a model is appended to, so it is recommended that the grid_a model's epc is specified
-      as the first argument (unless a new epc file is required, sharing the hdf5 file)
-   """
+    notes:
+       the hdf5 file used by the grid_a model is appended to, so it is recommended that the grid_a model's epc is specified
+       as the first argument (unless a new epc file is required, sharing the hdf5 file)
+    """
 
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
@@ -1162,34 +1162,34 @@ def extract_box(epc_file = None,
                 new_epc_file = None):
     """Extends an existing model with a new grid extracted as a logical IJK box from the source grid.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      box (numpy int array of shape (2, 3)): the minimum and maximum kji0 indices in the source grid (zero based) to include
-         in the extracted grid; note that cells with index equal to maximum value are included (unlike with python ranges)
-      box_inactive (numpy bool array, optional): if present, shape must match box and values will be or'ed in with the
-         inactive mask inherited from the source grid; if None, inactive mask will be as inherited from source grid
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid, with values taken from the specified box
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      set_parent_window (boolean, optional): if True, the extracted grid has its parent window attribute set; if False,
-         the parent window is not set; if None, the default will be True if new_epc_file is None or False otherwise
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the extracted grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       box (numpy int array of shape (2, 3)): the minimum and maximum kji0 indices in the source grid (zero based) to include
+          in the extracted grid; note that cells with index equal to maximum value are included (unlike with python ranges)
+       box_inactive (numpy bool array, optional): if present, shape must match box and values will be or'ed in with the
+          inactive mask inherited from the source grid; if None, inactive mask will be as inherited from source grid
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid, with values taken from the specified box
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       set_parent_window (boolean, optional): if True, the extracted grid has its parent window attribute set; if False,
+          the parent window is not set; if None, the default will be True if new_epc_file is None or False otherwise
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the extracted grid (& crs)
 
-   returns:
-      new grid object with extent as implied by the box argument
+    returns:
+       new grid object with extent as implied by the box argument
 
-   note:
-      the epc file and associated hdf5 file are appended to (extended) with the new grid, unless a new_epc_file is specified,
-      in which case the grid and inherited properties are written there instead
-   """
+    note:
+       the epc file and associated hdf5 file are appended to (extended) with the new grid, unless a new_epc_file is specified,
+       in which case the grid and inherited properties are written there instead
+    """
 
     def array_box(a, box):
         return a[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1].copy()
@@ -1471,61 +1471,61 @@ def extract_box_for_well(epc_file = None,
                          new_epc_file = None):
     """Extends an existing model with a new grid extracted as an IJK box around a well trajectory in the source grid.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      min_k0, max_k0 (integers, optional): layer range to include; default is full vertical range of source grid
-      trajectory_epc (string, optional): the source file for the trajectory or blocked well, if different to that for
-         the source grid
-      trajectory_uuid (uuid.UUID): the uuid of the trajectory object for the well, if working from a trajectory
-      blocked_well_uuid (uuid.UUID): the uuid of the blocked well object, an alternative to working from a trajectory;
-         must include blocking against source_grid
-      column_ji0 (integer pair, optional): an alternative to providing a trajectory: the column indices of a 'vertical' well
-      column_xy (float pair, optional): an alternative to column_ji0: the x, y location used to determine the column
-      well_name (string, optional): name to use for column well, ignored if trajectory_uuid is not None
-      radius (float, optional): the radius around the wellbore to include in the box; units are those of grid xy values;
-         radial distances are applied horizontally regardless of well inclination; if not present, only cells penetrated
-         by the trajectory are included
-      outer_radius (float, optional): an outer radius around the wellbore, beyond which an inactive cell mask for the
-         source_grid will be set to True (inactive); units are those of grid xy values
-      active_cells_shape (string, default 'tube'): the logical shape of cells marked as active in the extracted box;
-         'tube' results in an active shape with circular cross section in IJ planes, that follows the trajectory; 'prism'
-         activates all cells in IJ columns where any cell is within the tube; 'box' leaves the entire IJK cuboid active
-      quad_triangles (boolean, default True): if True, cell K faces are treated as 4 triangles (with a common face
-         centre point) when computing the intersection of the trajectory with layer interfaces (horizons); if False,
-         the K faces are treated as 2 triangles
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid, with values taken from the extracted box
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      inherit_well (boolean, default False): if True, the new model will have a copy of the well trajectory, its crs (if
-         different from that of the grid), and any related wellbore interpretation and feature
-      set_parent_window (boolean, optional): if True, the extracted grid has its parent window attribute set; if False,
-         the parent window is not set; if None, the default will be True if new_epc_file is None or False otherwise
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the extracted grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       min_k0, max_k0 (integers, optional): layer range to include; default is full vertical range of source grid
+       trajectory_epc (string, optional): the source file for the trajectory or blocked well, if different to that for
+          the source grid
+       trajectory_uuid (uuid.UUID): the uuid of the trajectory object for the well, if working from a trajectory
+       blocked_well_uuid (uuid.UUID): the uuid of the blocked well object, an alternative to working from a trajectory;
+          must include blocking against source_grid
+       column_ji0 (integer pair, optional): an alternative to providing a trajectory: the column indices of a 'vertical' well
+       column_xy (float pair, optional): an alternative to column_ji0: the x, y location used to determine the column
+       well_name (string, optional): name to use for column well, ignored if trajectory_uuid is not None
+       radius (float, optional): the radius around the wellbore to include in the box; units are those of grid xy values;
+          radial distances are applied horizontally regardless of well inclination; if not present, only cells penetrated
+          by the trajectory are included
+       outer_radius (float, optional): an outer radius around the wellbore, beyond which an inactive cell mask for the
+          source_grid will be set to True (inactive); units are those of grid xy values
+       active_cells_shape (string, default 'tube'): the logical shape of cells marked as active in the extracted box;
+          'tube' results in an active shape with circular cross section in IJ planes, that follows the trajectory; 'prism'
+          activates all cells in IJ columns where any cell is within the tube; 'box' leaves the entire IJK cuboid active
+       quad_triangles (boolean, default True): if True, cell K faces are treated as 4 triangles (with a common face
+          centre point) when computing the intersection of the trajectory with layer interfaces (horizons); if False,
+          the K faces are treated as 2 triangles
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid, with values taken from the extracted box
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       inherit_well (boolean, default False): if True, the new model will have a copy of the well trajectory, its crs (if
+          different from that of the grid), and any related wellbore interpretation and feature
+       set_parent_window (boolean, optional): if True, the extracted grid has its parent window attribute set; if False,
+          the parent window is not set; if None, the default will be True if new_epc_file is None or False otherwise
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the extracted grid (& crs)
 
-   returns:
-      (grid, box) where: grid is the new Grid object with extent as determined by source grid geometry, trajectory and
-      radius arguments; and box is a numpy int array of shape (2, 3) with first axis covering min, max and second axis
-      covering k,j,i; the box array holds the minimum and maximum indices (zero based) in the source grid that have
-      been included in the extraction (nb. maximum indices are included, unlike the usual python protocol)
+    returns:
+       (grid, box) where: grid is the new Grid object with extent as determined by source grid geometry, trajectory and
+       radius arguments; and box is a numpy int array of shape (2, 3) with first axis covering min, max and second axis
+       covering k,j,i; the box array holds the minimum and maximum indices (zero based) in the source grid that have
+       been included in the extraction (nb. maximum indices are included, unlike the usual python protocol)
 
-   notes:
-      this function is designed to work fully for vertical and deviated wells; for horizontal wells use blocked well mode;
-      the extracted box includes all layers between the specified min and max horizons, even if the trajectory terminates
-      above the deeper horizon or does not intersect horizon(s) for other reasons;
-      when specifying a column well by providing x,y the IJ column with the centre of the topmost k face closest to the
-      given point is selected;
-      if an outer_radius is given, a boolean property will be created for the source grid with values set True where the
-      centres of the cells are beyond this distance from the well, measured horizontally; if outer_radius and new_epc_file
-      are both given, the source grid will be copied to the new epc
-   """
+    notes:
+       this function is designed to work fully for vertical and deviated wells; for horizontal wells use blocked well mode;
+       the extracted box includes all layers between the specified min and max horizons, even if the trajectory terminates
+       above the deeper horizon or does not intersect horizon(s) for other reasons;
+       when specifying a column well by providing x,y the IJ column with the centre of the topmost k face closest to the
+       given point is selected;
+       if an outer_radius is given, a boolean property will be created for the source grid with values set True where the
+       centres of the cells are beyond this distance from the well, measured horizontally; if outer_radius and new_epc_file
+       are both given, the source grid will be copied to the new epc
+    """
 
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
@@ -1785,41 +1785,41 @@ def refined_grid(epc_file,
                  new_epc_file = None):
     """Generates a refined version of the source grid, optionally inheriting properties.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid unless source_grid_uuid is specified to identify the grid
-      fine_coarse (resqpy.olio.fine_coarse.FineCoarse object): the mapping between cells in the fine (output) and
-         coarse (source) grids
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid, with values resampled in the simplest way onto the finer grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      source_grid_uuid (uuid.UUID, optional): the uuid of the source grid – an alternative to the source_grid argument
-         as a way of identifying the grid
-      set_parent_window (boolean or str, optional): if True or 'parent', the refined grid has its parent window attribute
-         set; if False, the parent window is not set; if None, the default will be True if new_epc_file is None or False
-         otherwise; if 'grandparent' then an intervening parent window with no refinement or coarsening will be skipped
-         and its box used in the parent window for the new grid, relating directly to the original grid
-      infill_missing_geometry (boolean, default True): if True, an attempt is made to generate grid geometry in the
-         source grid wherever it is undefined; if False, any undefined geometry will result in an assertion failure
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the refined grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid unless source_grid_uuid is specified to identify the grid
+       fine_coarse (resqpy.olio.fine_coarse.FineCoarse object): the mapping between cells in the fine (output) and
+          coarse (source) grids
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid, with values resampled in the simplest way onto the finer grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       source_grid_uuid (uuid.UUID, optional): the uuid of the source grid – an alternative to the source_grid argument
+          as a way of identifying the grid
+       set_parent_window (boolean or str, optional): if True or 'parent', the refined grid has its parent window attribute
+          set; if False, the parent window is not set; if None, the default will be True if new_epc_file is None or False
+          otherwise; if 'grandparent' then an intervening parent window with no refinement or coarsening will be skipped
+          and its box used in the parent window for the new grid, relating directly to the original grid
+       infill_missing_geometry (boolean, default True): if True, an attempt is made to generate grid geometry in the
+          source grid wherever it is undefined; if False, any undefined geometry will result in an assertion failure
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the refined grid (& crs)
 
-   returns:
-      new grid object being the refined grid; the epc and hdf5 files are written to as an intentional side effect
+    returns:
+       new grid object being the refined grid; the epc and hdf5 files are written to as an intentional side effect
 
-   notes:
-      this function refines an entire grid; to refine a local area of a grid, first use the extract_box function
-      and then use this function on the extracted grid; in such a case, using a value of 'grandparent' for the
-      set_parent_window argument will relate the refined grid back to the original;
-      if geometry infilling takes place, cached geometry and mask arrays within the source grid object will be
-      modified as a side-effect of the function (but not written to hdf5 or changed in xml)
-   """
+    notes:
+       this function refines an entire grid; to refine a local area of a grid, first use the extract_box function
+       and then use this function on the extracted grid; in such a case, using a value of 'grandparent' for the
+       set_parent_window argument will relate the refined grid back to the original;
+       if geometry infilling takes place, cached geometry and mask arrays within the source grid object will be
+       modified as a side-effect of the function (but not written to hdf5 or changed in xml)
+    """
 
     assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
     if not epc_file:
@@ -2124,37 +2124,37 @@ def coarsened_grid(epc_file,
                    new_epc_file = None):
     """Generates a coarsened version of an unsplit source grid, todo: optionally inheriting properties.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      fine_coarse (resqpy.olio.fine_coarse.FineCoarse object): the mapping between cells in the fine (source) and
-         coarse (output) grids
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid, with values upscaled or sampled
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      set_parent_window (boolean or str, optional): if True or 'parent', the coarsened grid has its parent window attribute
-         set; if False, the parent window is not set; if None, the default will be True if new_epc_file is None or False
-         otherwise; if 'grandparent' then an intervening parent window with no refinement or coarsening will be skipped
-         and its box used in the parent window for the new grid, relating directly to the original grid
-      infill_missing_geometry (boolean, default True): if True, an attempt is made to generate grid geometry in the
-         source grid wherever it is undefined; if False, any undefined geometry will result in an assertion failure
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the refined grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       fine_coarse (resqpy.olio.fine_coarse.FineCoarse object): the mapping between cells in the fine (source) and
+          coarse (output) grids
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid, with values upscaled or sampled
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       set_parent_window (boolean or str, optional): if True or 'parent', the coarsened grid has its parent window attribute
+          set; if False, the parent window is not set; if None, the default will be True if new_epc_file is None or False
+          otherwise; if 'grandparent' then an intervening parent window with no refinement or coarsening will be skipped
+          and its box used in the parent window for the new grid, relating directly to the original grid
+       infill_missing_geometry (boolean, default True): if True, an attempt is made to generate grid geometry in the
+          source grid wherever it is undefined; if False, any undefined geometry will result in an assertion failure
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the refined grid (& crs)
 
-   returns:
-      new grid object being the coarsened grid; the epc and hdf5 files are written to as an intentional side effect
+    returns:
+       new grid object being the coarsened grid; the epc and hdf5 files are written to as an intentional side effect
 
-   note:
-      this function coarsens an entire grid; to coarsen a local area of a grid, first use the extract_box function
-      and then use this function on the extracted grid; in such a case, using a value of 'grandparent' for the
-      set_parent_window argument will relate the coarsened grid back to the original
-   """
+    note:
+       this function coarsens an entire grid; to coarsen a local area of a grid, first use the extract_box function
+       and then use this function on the extracted grid; in such a case, using a value of 'grandparent' for the
+       set_parent_window argument will relate the coarsened grid back to the original
+    """
 
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
@@ -2311,37 +2311,37 @@ def local_depth_adjustment(epc_file,
                            new_epc_file = None):
     """Applies a local depth adjustment to the grid, adding as a new grid part in the model.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): a multi-layer RESQML grid object; if None, the epc_file is loaded
-         and it should contain one ijk grid object (or one 'ROOT' grid) which is used as the source grid
-      centre_x, centre_y (floats): the centre of the depth adjustment, corresponding to the location of maximum change
-         in depth; crs is implicitly that of the grid but see also use_local_coords argument
-      radius (float): the radius of adjustment of depths; units are implicitly xy (projected) units of grid crs
-      centre_shift (float): the maximum vertical depth adjustment; units are implicily z (vertical) units of grid crs;
-         use positive value to increase depth, negative to make shallower
-      use_local_coords (boolean): if True, centre_x & centre_y are taken to be in the local coordinates of the grid's
-         crs; otherwise the global coordinates
-      decay_shape (string): 'linear' yields a cone shaped change in depth values; 'quadratic' (the default) yields a
-         bell shaped change
-      ref_k0 (integer, default 0): the layer in the grid to use as reference for determining the distance of a pillar
-         from the centre of the depth adjustment; the corners of the top face of the reference layer are used
-      store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
-         displacement of cells' centres brought about by the local depth shift
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the adjusted grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): a multi-layer RESQML grid object; if None, the epc_file is loaded
+          and it should contain one ijk grid object (or one 'ROOT' grid) which is used as the source grid
+       centre_x, centre_y (floats): the centre of the depth adjustment, corresponding to the location of maximum change
+          in depth; crs is implicitly that of the grid but see also use_local_coords argument
+       radius (float): the radius of adjustment of depths; units are implicitly xy (projected) units of grid crs
+       centre_shift (float): the maximum vertical depth adjustment; units are implicily z (vertical) units of grid crs;
+          use positive value to increase depth, negative to make shallower
+       use_local_coords (boolean): if True, centre_x & centre_y are taken to be in the local coordinates of the grid's
+          crs; otherwise the global coordinates
+       decay_shape (string): 'linear' yields a cone shaped change in depth values; 'quadratic' (the default) yields a
+          bell shaped change
+       ref_k0 (integer, default 0): the layer in the grid to use as reference for determining the distance of a pillar
+          from the centre of the depth adjustment; the corners of the top face of the reference layer are used
+       store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
+          displacement of cells' centres brought about by the local depth shift
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the adjusted grid (& crs)
 
-   returns:
-      new grid object which is a copy of the source grid with the local depth adjustment applied
-   """
+    returns:
+       new grid object which is a copy of the source grid with the local depth adjustment applied
+    """
 
     def decayed_shift(centre_shift, distance, radius, decay_shape):
         norm_dist = min(distance / radius, 1.0)  # 0..1
@@ -2497,29 +2497,29 @@ def tilted_grid(epc_file,
                 new_epc_file = None):
     """Extends epc file with a new grid which is a version of the source grid tilted.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      pivot_xyz (triple float): a point in 3D space on the pivot axis, which is horizontal and orthogonal to azimuth
-      azimuth: the direction of tilt (orthogonal to tilt axis), as a compass bearing in degrees
-      dip: the angle to tilt the grid by, in degrees; a positive value tilts points in direction azimuth downwards (needs checking!)
-      store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
-         displacement of cells' centres brought about by the tilting
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the tilted grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       pivot_xyz (triple float): a point in 3D space on the pivot axis, which is horizontal and orthogonal to azimuth
+       azimuth: the direction of tilt (orthogonal to tilt axis), as a compass bearing in degrees
+       dip: the angle to tilt the grid by, in degrees; a positive value tilts points in direction azimuth downwards (needs checking!)
+       store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
+          displacement of cells' centres brought about by the tilting
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the tilted grid (& crs)
 
-   returns:
-      a new grid (grid.Grid object) which is a copy of the source grid tilted in 3D space
-   """
+    returns:
+       a new grid (grid.Grid object) which is a copy of the source grid tilted in 3D space
+    """
 
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
@@ -2588,28 +2588,28 @@ def unsplit_grid(epc_file,
                  new_epc_file = None):
     """Extends epc file with a new grid which is a version of the source grid with all faults healed.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the unsplit grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the unsplit grid (& crs)
 
-   returns:
-      a new grid (grid.Grid object) which is an unfaulted copy of the source grid
+    returns:
+       a new grid (grid.Grid object) which is an unfaulted copy of the source grid
 
-   notes:
-      the faults are healed by shifting the thrown sides up and down to the midpoint, only along the line of the fault;
-      to smooth the adjustments away from the line of the fault, use the global_fault_throw_scaling() function first
-   """
+    notes:
+       the faults are healed by shifting the thrown sides up and down to the midpoint, only along the line of the fault;
+       to smooth the adjustments away from the line of the fault, use the global_fault_throw_scaling() function first
+    """
 
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
@@ -2684,49 +2684,49 @@ def add_faults(epc_file,
                new_epc_file = None):
     """Extends epc file with a new grid which is a version of the source grid with new curtain fault(s) added.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      polylines (lines.PolylineSet or list of lines.Polyline, optional): list of poly lines for which curtain faults
-         are to be added; either this or lines_file_list or full_pillar_list_dict must be present
-      lines_file_list (list of str, optional): a list of file paths, each containing one or more poly lines in simple
-         ascii format§; see notes; either this or polylines or full_pillar_list_dicr must be present
-      lines_crs_uuid (uuid, optional): if present, the uuid of a coordinate reference system with which to interpret
-         the contents of the lines files; if None, the crs used by the grid will be assumed
-      full_pillar_list_dict (dict mapping str to list of pairs of ints, optional): dictionary mapping from a fault name
-         to a list of pairs of ints being the ordered neigbouring primary pillar (j0, i0) defining the curtain fault;
-         either this or polylines or lines_file_list must be present
-      left_right_throw_dict (dict mapping str to pair of floats, optional): dictionary mapping from a fault name to a
-         pair of floats being the semi-throw adjustment on the left and the right of the fault (see notes); semi-throw
-         values default to (+0.5, -0.5)
-      create_gcs (boolean, default True): if True, and faults are being defined by lines, a grid connection set is
-         created with one feature per new fault and associated organisational objects are also created; ignored if
-         lines_file_list is None
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the unsplit grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       polylines (lines.PolylineSet or list of lines.Polyline, optional): list of poly lines for which curtain faults
+          are to be added; either this or lines_file_list or full_pillar_list_dict must be present
+       lines_file_list (list of str, optional): a list of file paths, each containing one or more poly lines in simple
+          ascii format§; see notes; either this or polylines or full_pillar_list_dicr must be present
+       lines_crs_uuid (uuid, optional): if present, the uuid of a coordinate reference system with which to interpret
+          the contents of the lines files; if None, the crs used by the grid will be assumed
+       full_pillar_list_dict (dict mapping str to list of pairs of ints, optional): dictionary mapping from a fault name
+          to a list of pairs of ints being the ordered neigbouring primary pillar (j0, i0) defining the curtain fault;
+          either this or polylines or lines_file_list must be present
+       left_right_throw_dict (dict mapping str to pair of floats, optional): dictionary mapping from a fault name to a
+          pair of floats being the semi-throw adjustment on the left and the right of the fault (see notes); semi-throw
+          values default to (+0.5, -0.5)
+       create_gcs (boolean, default True): if True, and faults are being defined by lines, a grid connection set is
+          created with one feature per new fault and associated organisational objects are also created; ignored if
+          lines_file_list is None
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the unsplit grid (& crs)
 
-   returns:
-      a new grid (grid.Grid object) which is a copy of the source grid with the structure modified to incorporate
-      the new faults
+    returns:
+       a new grid (grid.Grid object) which is a copy of the source grid with the structure modified to incorporate
+       the new faults
 
-   notes:
-      full_pillar_list_dict is typically generated by Grid.make_face_sets_from_pillar_lists();
-      pillars will be split as needed to model the new faults, though existing splits will be used as appropriate, so
-      this function may also be used to add a constant to the throw of existing faults;
-      the left_right_throw_dict contains a pair of floats for each fault name (as found in keys of full_pillar_list_dict);
-      these throw values are lengths in the uom of the crs used by the grid (which must have the same xy units as z units);
+    notes:
+       full_pillar_list_dict is typically generated by Grid.make_face_sets_from_pillar_lists();
+       pillars will be split as needed to model the new faults, though existing splits will be used as appropriate, so
+       this function may also be used to add a constant to the throw of existing faults;
+       the left_right_throw_dict contains a pair of floats for each fault name (as found in keys of full_pillar_list_dict);
+       these throw values are lengths in the uom of the crs used by the grid (which must have the same xy units as z units);
 
-      this function does not add a GridConnectionSet to the model – calling code may wish to do that
-   """
+       this function does not add a GridConnectionSet to the model – calling code may wish to do that
+    """
 
     def make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict):
         """Adds entries to full_pillar_list_dict & composite_face_set_dict for new lines."""
@@ -2740,17 +2740,17 @@ def add_faults(epc_file,
     def fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_throw_right):
         """Creates and/or adjusts throw on a single fault defined by a full pillar list, in memory.
 
-      arguments:
-         grid (grid.Grid): the grid object to be adjusted in memory (should have originally been copied
-            without the hdf5 arrays having been written yet, nor xml created)
-         full_pillar_list (list of pairs of ints (j0, i0)): the full list of primary pillars defining
-            the fault; neighbouring pairs must differ by exactly one in either j0 or i0 but not both
-         delta_throw_left (float): the amount to add to the 'depth' of points to the left of the line
-            when viewed from above, looking along the line in the direction of the pillar list entries;
-            units are implicitly the length units of the crs used by the grid; see notes about 'depth'
-         delta_throw_right (float): as for delta_throw_left but applied to points to the right of the
-            line
-      """
+        arguments:
+           grid (grid.Grid): the grid object to be adjusted in memory (should have originally been copied
+              without the hdf5 arrays having been written yet, nor xml created)
+           full_pillar_list (list of pairs of ints (j0, i0)): the full list of primary pillars defining
+              the fault; neighbouring pairs must differ by exactly one in either j0 or i0 but not both
+           delta_throw_left (float): the amount to add to the 'depth' of points to the left of the line
+              when viewed from above, looking along the line in the direction of the pillar list entries;
+              units are implicitly the length units of the crs used by the grid; see notes about 'depth'
+           delta_throw_right (float): as for delta_throw_left but applied to points to the right of the
+              line
+        """
 
         def pillar_vector(grid, p_index):
             # return a unit vector for direction of pillar, in direction of increasing k
@@ -3014,48 +3014,48 @@ def fault_throw_scaling(epc_file,
                         new_epc_file = None):
     """Extends epc with a new grid with fault throws multiplied by scaling factors.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      scaling_factor (float, optional): if present, the default scaling factor to apply to split pillars which do not
-         appear in any of the faults in the scaling dictionary; if None, such pillars are left unchanged
-      connection_set (fault.GridConnectionSet object): the connection set with associated fault feature list, used to
-         identify which faces (and hence pillars) belong to which named fault
-      scaling_dict (dictionary mapping string to float): the scaling factor to apply to each named fault; any faults not
-         included in the dictionary will be left unadjusted (unless a default scaling factor is given as scaling_factor arg)
-      ref_k0 (integer, default 0): the reference layer (zero based) to use when determining the pre-existing throws
-      ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
-      cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
-         smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
-      offset_decay (float, default 0.5): DEPRECATED; ignored
-      store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
-         displacement of cells' centres brought about by the fault throw scaling
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
-         inherited by the modified grid
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       scaling_factor (float, optional): if present, the default scaling factor to apply to split pillars which do not
+          appear in any of the faults in the scaling dictionary; if None, such pillars are left unchanged
+       connection_set (fault.GridConnectionSet object): the connection set with associated fault feature list, used to
+          identify which faces (and hence pillars) belong to which named fault
+       scaling_dict (dictionary mapping string to float): the scaling factor to apply to each named fault; any faults not
+          included in the dictionary will be left unadjusted (unless a default scaling factor is given as scaling_factor arg)
+       ref_k0 (integer, default 0): the reference layer (zero based) to use when determining the pre-existing throws
+       ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
+       cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
+          smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
+       offset_decay (float, default 0.5): DEPRECATED; ignored
+       store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
+          displacement of cells' centres brought about by the fault throw scaling
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
+          inherited by the modified grid
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
 
-   returns:
-      new grid (grid.Grid object), with fault throws scaled according to values in the scaling dictionary
+    returns:
+       new grid (grid.Grid object), with fault throws scaled according to values in the scaling dictionary
 
-   notes:
-      grid points are moved along pillar lines;
-      stretch is towards or away from mid-point of throw;
-      same shift is applied to all layers along pillar;
-      pillar lines assumed to be straight;
-      the offset decay argument might be changed in a future version to give improved smoothing;
-      if a large fault is represented by a series of parallel minor faults 'stepping' down, each minor fault will have the
-      scaling factor applied independently, leading to some unrealistic results
-   """
+    notes:
+       grid points are moved along pillar lines;
+       stretch is towards or away from mid-point of throw;
+       same shift is applied to all layers along pillar;
+       pillar lines assumed to be straight;
+       the offset decay argument might be changed in a future version to give improved smoothing;
+       if a large fault is represented by a series of parallel minor faults 'stepping' down, each minor fault will have the
+       scaling factor applied independently, leading to some unrealistic results
+    """
 
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
@@ -3295,38 +3295,38 @@ def global_fault_throw_scaling(epc_file,
                                new_epc_file = None):
     """Rewrites epc with a new grid with all the fault throws multiplied by the same scaling factor.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      scaling_factor (float): the scaling factor to apply to the throw across all split pillars
-      ref_k0 (integer, default 0): the reference layer (zero based) to use when determining the pre-existing throws
-      ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
-      cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
-         smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
-      offset_decay (float, default 0.5): DEPRECATED; ignored
-      store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
-         displacement of cells' centres brought about by the fault throw scaling
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
-         inherited by the modified grid
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       scaling_factor (float): the scaling factor to apply to the throw across all split pillars
+       ref_k0 (integer, default 0): the reference layer (zero based) to use when determining the pre-existing throws
+       ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
+       cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
+          smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
+       offset_decay (float, default 0.5): DEPRECATED; ignored
+       store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
+          displacement of cells' centres brought about by the fault throw scaling
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       inherit_gcs (boolean, default True): if True, any grid connection set objects related to the source grid will be
+          inherited by the modified grid
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the derived grid (& crs)
 
-   returns:
-      new grid (grid.Grid object), with all fault throws scaled by the scaling factor
+    returns:
+       new grid (grid.Grid object), with all fault throws scaled by the scaling factor
 
-   notes:
-      a scaling factor of 1 implies no change;
-      calls fault_throw_scaling(), see also documentation for that function
-   """
+    notes:
+       a scaling factor of 1 implies no change;
+       calls fault_throw_scaling(), see also documentation for that function
+    """
 
     return fault_throw_scaling(epc_file,
                                source_grid = source_grid,
@@ -3359,51 +3359,52 @@ def drape_to_surface(epc_file,
                      inherit_all_realizations = False,
                      new_grid_title = None,
                      new_epc_file = None):
-    """Extends a resqml model with a new grid where the reference layer boundary of the source grid has been re-draped to a surface.
+    """Extends a resqml model with a new grid where the reference layer boundary of the source grid has been re-draped
+    to a surface.
 
-   arguments:
-      epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
-      source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
-         (or one 'ROOT' grid) which is used as the source grid
-      surface (surface.Surface object, optional): the surface to drape the grid to; if None, a surface is generated from
-         the reference layer boundary (which can then be scaled with the scaling_factor)
-      scaling_factor (float, optional): if not None, prior to draping, the surface is stretched vertically by this factor,
-         away from a horizontal plane located at the surface's shallowest depth
-      ref_k0 (integer, default 0): the reference layer (zero based) to drape to the surface
-      ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
-      quad_triangles (boolean, default True): if True and surface is None, each cell face in the reference boundary layer
-         is represented by 4 triangles (with a common vertex at the face centre) in the generated surface; if False,
-         only 2 trianges are used for each cell face (which gives a non-unique solution)
-      cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
-         smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
-      offset_decay (float, default 0.5): the factor to reduce depth shifts by with each cell step away from faults (used
-         in conjunction with cell_range)
-      store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
-         displacement of cells' centres brought about by the local depth shift
-      inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
-         with the source grid
-      inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
-         inherit_properties is False
-      inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
-         realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
-         inherit_properties is False or inherit_realization is not None
-      new_grid_title (string): used as the citation title text for the new grid object
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
-         a new epc file (& associated h5 file) is created to contain the draped grid (& crs)
+    arguments:
+       epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file
+       source_grid (grid.Grid object, optional): if None, the epc_file is loaded and it should contain one ijk grid object
+          (or one 'ROOT' grid) which is used as the source grid
+       surface (surface.Surface object, optional): the surface to drape the grid to; if None, a surface is generated from
+          the reference layer boundary (which can then be scaled with the scaling_factor)
+       scaling_factor (float, optional): if not None, prior to draping, the surface is stretched vertically by this factor,
+          away from a horizontal plane located at the surface's shallowest depth
+       ref_k0 (integer, default 0): the reference layer (zero based) to drape to the surface
+       ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
+       quad_triangles (boolean, default True): if True and surface is None, each cell face in the reference boundary layer
+          is represented by 4 triangles (with a common vertex at the face centre) in the generated surface; if False,
+          only 2 trianges are used for each cell face (which gives a non-unique solution)
+       cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
+          smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
+       offset_decay (float, default 0.5): the factor to reduce depth shifts by with each cell step away from faults (used
+          in conjunction with cell_range)
+       store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
+          displacement of cells' centres brought about by the local depth shift
+       inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
+          with the source grid
+       inherit_realization (int, optional): realization number for which properties will be inherited; ignored if
+          inherit_properties is False
+       inherit_all_realizations (boolean, default False): if True (and inherit_realization is None), properties for all
+          realizations will be inherited; if False, only properties with a realization of None are inherited; ignored if
+          inherit_properties is False or inherit_realization is not None
+       new_grid_title (string): used as the citation title text for the new grid object
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new grid object; if present,
+          a new epc file (& associated h5 file) is created to contain the draped grid (& crs)
 
-   returns:
-      new grid (grid.Grid object), with geometry draped to surface
+    returns:
+       new grid (grid.Grid object), with geometry draped to surface
 
-   notes:
-      at least one of a surface or a scaling factor must be given;
-      if no surface is given, one is created from the fault-healed grid points for the reference layer interface;
-      if a scaling factor other than 1.0 is given, the surface is flexed vertically, relative to its shallowest point;
-      layer thicknesses measured along pillars are maintained; cell volumes may change;
-      the coordinate reference systems for the surface and the grid are assumed to be the same;
-      this function currently uses an exhaustive, computationally and memory intensive algorithm;
-      setting quad_triangles argument to False should give a factor of 2 speed up and reduction in memory requirement;
-      the epc file and associated hdf5 file are appended to (extended) with the new grid, as a side effect of this function
-   """
+    notes:
+       at least one of a surface or a scaling factor must be given;
+       if no surface is given, one is created from the fault-healed grid points for the reference layer interface;
+       if a scaling factor other than 1.0 is given, the surface is flexed vertically, relative to its shallowest point;
+       layer thicknesses measured along pillars are maintained; cell volumes may change;
+       the coordinate reference systems for the surface and the grid are assumed to be the same;
+       this function currently uses an exhaustive, computationally and memory intensive algorithm;
+       setting quad_triangles argument to False should give a factor of 2 speed up and reduction in memory requirement;
+       the epc file and associated hdf5 file are appended to (extended) with the new grid, as a side effect of this function
+    """
 
     log.info('draping grid to surface')
 
@@ -3535,7 +3536,8 @@ def drape_to_surface(epc_file,
 
 
 def add_single_cell_grid(points, new_grid_title = None, new_epc_file = None):
-    """Creates a model with a single cell IJK Grid, with a cuboid cell aligned with x,y,z axes, enclosing the range of points."""
+    """Creates a model with a single cell IJK Grid, with a cuboid cell aligned with x,y,z axes, enclosing the range of
+    points."""
 
     # determine range of points
     min_xyz = np.nanmin(points.reshape((-1, 3)), axis = 0)
@@ -3578,11 +3580,11 @@ def add_single_cell_grid(points, new_grid_title = None, new_epc_file = None):
 def copy_grid(source_grid, target_model = None, copy_crs = True):
     """Creates a copy of the IJK grid object in the target model (usually prior to modifying points in situ).
 
-   note:
-      this function is not usually called directly by application code; it does not write to the hdf5
-      file nor create xml for the copied grid;
-      the copy will be a resqpy Grid even if the source grid is a RegularGrid
-   """
+    note:
+       this function is not usually called directly by application code; it does not write to the hdf5
+       file nor create xml for the copied grid;
+       the copy will be a resqpy Grid even if the source grid is a RegularGrid
+    """
 
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
 
@@ -3649,9 +3651,9 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
 def displacement_properties(new_grid, old_grid):
     """Computes cell centre differences in x, y, & z, between old & new grids, and returns a collection of 3 properties.
 
-   note:
-      this function is not usually called directly by application code
-   """
+    note:
+       this function is not usually called directly by application code
+    """
 
     displacement_collection = rqp.GridPropertyCollection()
     displacement_collection.set_grid(new_grid)
@@ -3697,33 +3699,33 @@ def write_grid(epc_file,
                extra_metadata = {}):
     """Append to or create epc and h5 files, with grid and optionally property collection.
 
-   arguments:
-      epc_file (string): name of existing epc file (if appending) or new epc file to be created (if writing)
-      grid (grid.Grid object): the grid object to be written to the epc & h5 files
-      ext_uuid (uuid.UUID object, optional): if present and the mode is 'a', the arrays are appended to
-         the hdf5 file that has this uuid; if None or mode is 'w', the hdf5 file is determined automatically
-      property_collection (property.GridPropertyCollection object, optional): if present, a collection of
-         grid properties to write and relate to the grid
-      grid_title (string): used as the citation title for the grid object
-      mode (string, default 'a'): 'a' or 'w'; if 'a', epc_file should be an existing file which is extended
-         (appended to) with the new grid and properties; if 'w', epc_file is created along with an h5 file
-         and will be populated with the grid, crs and properties
-      geometry (boolean, default True): if True, the grid object is included in the write; if False, only the
-         property collection is written, in which case grid must be fully established with xml in place
-      time_series_uuid (uuid.UUID, optional): the uuid of a time series object; required if property_collection
-         contains any recurrent properties in its import list
-      string_lookup_uuid (optional): if present, the uuid of the string table lookup which any non-continuous
-         properties relate to (ie. they are all taken to be categorical); leave as None if discrete property
-         objects are required rather than categorical
-      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to any new
-         properties
+    arguments:
+       epc_file (string): name of existing epc file (if appending) or new epc file to be created (if writing)
+       grid (grid.Grid object): the grid object to be written to the epc & h5 files
+       ext_uuid (uuid.UUID object, optional): if present and the mode is 'a', the arrays are appended to
+          the hdf5 file that has this uuid; if None or mode is 'w', the hdf5 file is determined automatically
+       property_collection (property.GridPropertyCollection object, optional): if present, a collection of
+          grid properties to write and relate to the grid
+       grid_title (string): used as the citation title for the grid object
+       mode (string, default 'a'): 'a' or 'w'; if 'a', epc_file should be an existing file which is extended
+          (appended to) with the new grid and properties; if 'w', epc_file is created along with an h5 file
+          and will be populated with the grid, crs and properties
+       geometry (boolean, default True): if True, the grid object is included in the write; if False, only the
+          property collection is written, in which case grid must be fully established with xml in place
+       time_series_uuid (uuid.UUID, optional): the uuid of a time series object; required if property_collection
+          contains any recurrent properties in its import list
+       string_lookup_uuid (optional): if present, the uuid of the string table lookup which any non-continuous
+          properties relate to (ie. they are all taken to be categorical); leave as None if discrete property
+          objects are required rather than categorical
+       extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to any new
+          properties
 
-   returns:
-      list of uuid.UUID, being the uuids of property parts added from the property_collection, if any
+    returns:
+       list of uuid.UUID, being the uuids of property parts added from the property_collection, if any
 
-   note:
-      this function is not usually called directly by application code
-   """
+    note:
+       this function is not usually called directly by application code
+    """
 
     log.debug('write_grid(): epc_file: ' + str(epc_file) + '; mode: ' + str(mode) + '; grid extent: ' +
               str(grid.extent_kji))
@@ -3827,44 +3829,44 @@ def add_edges_per_column_property_array(epc_file,
                                         new_epc_file = None):
     """Adds an edges per column grid property from a numpy array to an existing resqml dataset.
 
-   arguments:
-      epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
-      a (3D numpy array): the property array to be added to the model; expected shape (nj,ni,2,2) or (nj,ni,4)
-      property_kind (string): the resqml property kind
-      grid_uuid (uuid object or string, optional): the uuid of the grid to which the property relates;
-         if None, the property is attached to the 'main' grid
-      source_info (string): typically the name of a file from which the array has been read but can be any
-         information regarding the source of the data
-      title (string): this will be used as the citation title when a part is generated for the array; for simulation
-         models it is desirable to use the simulation keyword when appropriate
-      discrete (boolean, default False): if True, the array should contain integer (or boolean) data; if False, float
-      uom (string, default None): the resqml units of measure for the data; not relevant to discrete data
-      time_index (integer, default None): if not None, the time index to be used when creating a part for the array
-      time_series_uuid (uuid object or string, default None): required if time_index is not None
-      string_lookup_uuid (uuid object or string, optional): required if the array is to be stored as a categorical
-         property; set to None for non-categorical discrete data; only relevant if discrete is True
-      null_value (int, default None): if present, this is used in the metadata to indicate that this value
-         is to be interpreted as a null value wherever it appears in the data (use for discrete data only)
-      facet_type (string): resqml facet type, or None
-      facet (string): resqml facet, or None
-      realization (int): realization number, or None
-      local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
-      extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
-         property
-      new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
-         a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
+    arguments:
+       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
+       a (3D numpy array): the property array to be added to the model; expected shape (nj,ni,2,2) or (nj,ni,4)
+       property_kind (string): the resqml property kind
+       grid_uuid (uuid object or string, optional): the uuid of the grid to which the property relates;
+          if None, the property is attached to the 'main' grid
+       source_info (string): typically the name of a file from which the array has been read but can be any
+          information regarding the source of the data
+       title (string): this will be used as the citation title when a part is generated for the array; for simulation
+          models it is desirable to use the simulation keyword when appropriate
+       discrete (boolean, default False): if True, the array should contain integer (or boolean) data; if False, float
+       uom (string, default None): the resqml units of measure for the data; not relevant to discrete data
+       time_index (integer, default None): if not None, the time index to be used when creating a part for the array
+       time_series_uuid (uuid object or string, default None): required if time_index is not None
+       string_lookup_uuid (uuid object or string, optional): required if the array is to be stored as a categorical
+          property; set to None for non-categorical discrete data; only relevant if discrete is True
+       null_value (int, default None): if present, this is used in the metadata to indicate that this value
+          is to be interpreted as a null value wherever it appears in the data (use for discrete data only)
+       facet_type (string): resqml facet type, or None
+       facet (string): resqml facet, or None
+       realization (int): realization number, or None
+       local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
+       extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
+          property
+       new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
+          a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
 
-   returns:
-      uuid.UUID - the uuid of the newly created property
+    returns:
+       uuid.UUID - the uuid of the newly created property
 
-   notes:
-      the RESQML protocol for saving edges per column properties uses a clockwise ordering of the 4 edges
-      of a column; the resqpy protocol uses 2 dimensions of extent 2, being the axis (J, I) and face (-, +);
-      this function assumes the array is in RESQML protocol if it has shape (nj, ni, 4) and resqpy protocol
-      if it has shape (nj, ni, 2, 2); when reloading the property it will be presented in RESQML protocol;
-      calling code can use property module functions reformat_column_edges_from_resqml_format() and
-      reformat_column_edges_to_resqml_format() to convert between the protocols if needed
-   """
+    notes:
+       the RESQML protocol for saving edges per column properties uses a clockwise ordering of the 4 edges
+       of a column; the resqpy protocol uses 2 dimensions of extent 2, being the axis (J, I) and face (-, +);
+       this function assumes the array is in RESQML protocol if it has shape (nj, ni, 4) and resqpy protocol
+       if it has shape (nj, ni, 2, 2); when reloading the property it will be presented in RESQML protocol;
+       calling code can use property module functions reformat_column_edges_from_resqml_format() and
+       reformat_column_edges_to_resqml_format() to convert between the protocols if needed
+    """
 
     assert a.ndim in [3, 4]
     if a.ndim == 4:  # resqpy protocol
@@ -3905,25 +3907,25 @@ def gather_ensemble(case_epc_list,
                     create_epc_lookup = True):
     """Creates a composite resqml dataset by merging all parts from all models in list, assigning realization numbers.
 
-   arguments:
-      case_epc_list (list of strings): paths of individual realization epc files
-      new_epc_file (string): path of new composite epc to be created (with paired hdf5 file)
-      consolidate (boolean, default True): if True, simple parts are tested for equivalence and where similar enough
-         a single shared object is established in the composite dataset
-      shared_grids (boolean, default True): if True and consolidate is True, then grids are also consolidated
-         with equivalence based on extent of grids (and citation titles if grid extents within the first case
-         are not distinct); ignored if consolidate is False
-      shared_time_series (boolean, default False): if True and consolidate is True, then time series are consolidated
-         with equivalence based on title, without checking that timestamp lists are the same
-      create_epc_lookup (boolean, default True): if True, a StringLookupTable is created to map from realization
-         number to case epc path
+    arguments:
+       case_epc_list (list of strings): paths of individual realization epc files
+       new_epc_file (string): path of new composite epc to be created (with paired hdf5 file)
+       consolidate (boolean, default True): if True, simple parts are tested for equivalence and where similar enough
+          a single shared object is established in the composite dataset
+       shared_grids (boolean, default True): if True and consolidate is True, then grids are also consolidated
+          with equivalence based on extent of grids (and citation titles if grid extents within the first case
+          are not distinct); ignored if consolidate is False
+       shared_time_series (boolean, default False): if True and consolidate is True, then time series are consolidated
+          with equivalence based on title, without checking that timestamp lists are the same
+       create_epc_lookup (boolean, default True): if True, a StringLookupTable is created to map from realization
+          number to case epc path
 
-   notes:
-      property objects will have an integer realization number assigned, which matches the corresponding index into
-      the case_epc_list;
-      if consolidating with shared grids, then only properties will be gathered from realisations after the first and
-      an exception will be raised if the grids are not matched between realisations
-   """
+    notes:
+       property objects will have an integer realization number assigned, which matches the corresponding index into
+       the case_epc_list;
+       if consolidating with shared grids, then only properties will be gathered from realisations after the first and
+       an exception will be raised if the grids are not matched between realisations
+    """
 
     if not consolidate:
         shared_grids = False

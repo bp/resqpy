@@ -293,19 +293,19 @@ def rotate_array(rotation_matrix, a):
 def rotate_xyz_array_around_z_axis(a, target_xy_vector):
     """Returns a copy of array a suitable for presenting a cross-section using the resulting x,z values.
 
-   arguments:
-      a (numpy float array of shape (..., 3)): the xyz points to be rotated
-      target_xy_vector (2 (or 3) floats): a vector indicating which direction in source xy space will end up
-         being mapped to the positive x axis in the returned data
+    arguments:
+       a (numpy float array of shape (..., 3)): the xyz points to be rotated
+       target_xy_vector (2 (or 3) floats): a vector indicating which direction in source xy space will end up
+          being mapped to the positive x axis in the returned data
 
-   returns:
-      numpy float array of same shape as a
+    returns:
+       numpy float array of same shape as a
 
-   notes:
-      if the input points of a lie in a vertical plane parallel to the target xy vector, then the resulting
-      points will have constant y values; in general, a full rotation of the points is applied, so resulting
-      y values will indicate distance 'into the page' for non-planar or unaligned data
-   """
+    notes:
+       if the input points of a lie in a vertical plane parallel to the target xy vector, then the resulting
+       points will have constant y values; in general, a full rotation of the points is applied, so resulting
+       y values will indicate distance 'into the page' for non-planar or unaligned data
+    """
 
     target_v = np.zeros(3)
     target_v[:2] = target_xy_vector[:2]
@@ -324,10 +324,10 @@ def unit_vector_from_azimuth_and_inclination(azimuth, inclination):
 def tilt_3d_matrix(azimuth, dip):
     """Returns a 3D rotation matrix for applying a dip in a certain azimuth.
 
-   note:
-      if azimuth is compass bearing in degrees, and dip is in degrees, the resulting matrix can be used
-      to rotate xyz points where x values are eastings, y values are northings and z increases downwards
-   """
+    note:
+       if azimuth is compass bearing in degrees, and dip is in degrees, the resulting matrix can be used
+       to rotate xyz points where x values are eastings, y values are northings and z increases downwards
+    """
 
     matrix = rotation_matrix_3d_axial(2, -azimuth)  # will yield rotation around z axis so azimuth goes north
     matrix = np.dot(matrix, rotation_matrix_3d_axial(0, dip))  # adjust for dip
@@ -389,9 +389,9 @@ def determinant_3x3(a):
 def clockwise(a, b, c):
     """Returns a +ve value if 2D points a,b,c are in clockwise order, 0.0 if in line, -ve for ccw.
 
-   note:
-      assumes positive y-axis is anticlockwise from positive x-axis
-   """
+    note:
+       assumes positive y-axis is anticlockwise from positive x-axis
+    """
 
     return (c[0] - a[0]) * (b[1] - a[1]) - ((c[1] - a[1]) * (b[0] - a[0]))
 
@@ -399,9 +399,9 @@ def clockwise(a, b, c):
 def in_triangle(a, b, c, d):
     """Returns True if point d lies wholly within the triangle pf ccw points a, b, c, projected onto xy plane.
 
-   note:
-      a, b & c must be sorted into anti-clockwise order before calling this function
-   """
+    note:
+       a, b & c must be sorted into anti-clockwise order before calling this function
+    """
 
     return clockwise(a, b, d) < 0.0 and clockwise(b, c, d) < 0.0 and clockwise(c, a, d) < 0.0
 
@@ -409,9 +409,9 @@ def in_triangle(a, b, c, d):
 def in_triangle_edged(a, b, c, d):
     """Returns True if d lies within or on the boudnary of triangle of ccw points a,b,c projected onto xy plane.
 
-   note:
-      a, b & c must be sorted into anti-clockwise order before calling this function
-   """
+    note:
+       a, b & c must be sorted into anti-clockwise order before calling this function
+    """
 
     return clockwise(a, b, d) <= 0.0 and clockwise(b, c, d) <= 0.0 and clockwise(c, a, d) <= 0.0
 
@@ -419,9 +419,9 @@ def in_triangle_edged(a, b, c, d):
 def in_circumcircle(a, b, c, d):
     """Returns True if point d lies within the circumcircle pf ccw points a, b, c, projected onto xy plane.
 
-   note:
-      a, b & c must be sorted into anti-clockwise order before calling this function
-   """
+    note:
+       a, b & c must be sorted into anti-clockwise order before calling this function
+    """
 
     m = np.empty((3, 3))
     m[0, :2] = a[:2] - d[:2]
@@ -438,7 +438,10 @@ def point_distance_to_line_2d(p, l1, l2):
 
 
 def isclose(a, b, tolerance = 1.0e-6):
-    """Returns True if the two points are extremely close to one another (ie. the same point)."""
+    """Returns True if the two points are extremely close to one another (ie.
+
+    the same point).
+    """
 
     #   return np.all(np.isclose(a, b, atol = tolerance))
     # cheap and cheerful alternative to thorough numpy version commented out above
@@ -446,7 +449,10 @@ def isclose(a, b, tolerance = 1.0e-6):
 
 
 def is_close(a, b, tolerance = 1.0e-6):
-    """Returns True if the two points are extremely close to one another (ie. the same point)."""
+    """Returns True if the two points are extremely close to one another (ie.
+
+    the same point).
+    """
 
     return isclose(a, b, tolerance = tolerance)
 
@@ -505,11 +511,11 @@ def area_of_triangles(p, t, xy_projection = False):
 def clockwise_sorted_indices(p, b):
     """Returns a clockwise sorted numpy list of indices b into the points p.
 
-   note:
-      this function is designed for preparing a list of points defining a convex polygon when projected in
-      the xy plane, starting from a subset of the unsorted points; more specifically, it assumes that the
-      mean of p (over axis 0) lies within the polygon and the clockwise ordering is relative to that mean point
-   """
+    note:
+       this function is designed for preparing a list of points defining a convex polygon when projected in
+       the xy plane, starting from a subset of the unsorted points; more specifically, it assumes that the
+       mean of p (over axis 0) lies within the polygon and the clockwise ordering is relative to that mean point
+    """
 
     # note: this function currently assumes that the mean of points bp lies within the hull of bp
     # and that the points form a convex polygon from the perspective of the mean point

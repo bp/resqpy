@@ -1,4 +1,4 @@
-""" RESQML manipulation library
+"""RESQML manipulation library.
 
 .. autosummary::
     :toctree: _autosummary
@@ -23,7 +23,6 @@
     weights_and_measures
     well
     olio
-
 """
 
 try:

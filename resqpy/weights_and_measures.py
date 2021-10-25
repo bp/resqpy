@@ -86,19 +86,19 @@ CASE_INSENSITIVE_UOMS = {'m', 'ft', 'm3', 'ft3', 'm3/m3', 'ft3/ft3', 'bbl', 'bar
 
 @lru_cache(None)
 def rq_uom(units, quantity = None):
-    """Returns RESQML uom string equivalent to units
-   
-   Args:
-      units (str): unit to coerce
-      quantity (str, optional): if given, raise an exception if the uom is not supported
-         for this quantity
+    """Returns RESQML uom string equivalent to units.
 
-   Returns:
-      str: unit of measure
+    Args:
+       units (str): unit to coerce
+       quantity (str, optional): if given, raise an exception if the uom is not supported
+          for this quantity
 
-   Raises:
-      InvalidUnitError: if units cannot be coerced into RESQML units for the given quantity
-   """
+    Returns:
+       str: unit of measure
+
+    Raises:
+       InvalidUnitError: if units cannot be coerced into RESQML units for the given quantity
+    """
     if not units:
         raise InvalidUnitError("Must provide non-empty unit")
 
@@ -116,23 +116,23 @@ def rq_uom(units, quantity = None):
 
 
 def convert(x, unit_from, unit_to, quantity = None, inplace = False):
-    """Convert value between two compatible units
+    """Convert value between two compatible units.
 
-   Args:
-      x (numeric or np.array): value(s) to convert
-      unit_from (str): resqml uom
-      unit_to (str): resqml uom
-      quantity (str, optional): If provided, raise an exception if units are not supported
-         by this quantity
-      inplace (bool): if True, convert arrays in-place. Else, return new value
+    Args:
+       x (numeric or np.array): value(s) to convert
+       unit_from (str): resqml uom
+       unit_to (str): resqml uom
+       quantity (str, optional): If provided, raise an exception if units are not supported
+          by this quantity
+       inplace (bool): if True, convert arrays in-place. Else, return new value
 
-   Returns:
-      Converted value(s)
+    Returns:
+       Converted value(s)
 
-   Raises:
-      InvalidUnitError: if units cannot be coerced into RESQML units
-      IncompatibleUnitsError: if units do not have compatible base units
-   """
+    Raises:
+       InvalidUnitError: if units cannot be coerced into RESQML units
+       IncompatibleUnitsError: if units do not have compatible base units
+    """
 
     # conversion data assume the formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
     # Backwards formula: x=(A-Cy)/(Dy-B)
@@ -172,17 +172,17 @@ def convert(x, unit_from, unit_to, quantity = None, inplace = False):
 
 @lru_cache(None)
 def valid_uoms(quantity = None, return_attributes = False):
-    """Return set of valid RESQML units of measure
-   
-   Args:
-      quantity (str): If given, filter to uoms supported by this quanitity.
-      return_attributes (bool): If True, return a dict of all uoms and their
-         attributes, such as the full name and dimension. Else, simply return
-         the set of valid uoms.
+    """Return set of valid RESQML units of measure.
 
-   Returns
-      set or dict
-   """
+    Args:
+       quantity (str): If given, filter to uoms supported by this quanitity.
+       return_attributes (bool): If True, return a dict of all uoms and their
+          attributes, such as the full name and dimension. Else, simply return
+          the set of valid uoms.
+
+    Returns
+       set or dict
+    """
     uoms = _properties_data()['units']
     if quantity:
         all_quantities = _properties_data()['quantities']
@@ -196,16 +196,16 @@ def valid_uoms(quantity = None, return_attributes = False):
 
 @lru_cache(None)
 def valid_quantities(return_attributes = False):
-    """Return set of valid RESQML quantities
-   
-   Args:
-      return_attributes (bool): If True, return a dict of all quantities and their
-         attributes, such as the supported units of measure. Else, simply return
-         the set of valid properties.
-   
-   Returns
-      set or dict
-   """
+    """Return set of valid RESQML quantities.
+
+    Args:
+       return_attributes (bool): If True, return a dict of all quantities and their
+          attributes, such as the supported units of measure. Else, simply return
+          the set of valid properties.
+
+    Returns
+       set or dict
+    """
     quantities = _properties_data()['quantities']
     if return_attributes:
         return quantities
@@ -214,7 +214,7 @@ def valid_quantities(return_attributes = False):
 
 
 def valid_property_kinds():
-    """Return set of valid property kinds"""
+    """Return set of valid property kinds."""
 
     return set(_properties_data()['property_kinds'].keys())
 
@@ -239,10 +239,10 @@ def rq_time_unit(units):
 
 def convert_times(a, from_units, to_units, invert = False):
     """Converts values in numpy array (or a scalar) from one time unit to another, in situ if array.
-   
-   note:
-      To see supported units, use: `valid_uoms(quantity='time')`
-   """
+
+    note:
+       To see supported units, use: `valid_uoms(quantity='time')`
+    """
 
     if invert:
         from_units, to_units = to_units, from_units
@@ -253,17 +253,17 @@ def convert_times(a, from_units, to_units, invert = False):
 def convert_lengths(a, from_units, to_units):
     """Converts values in numpy array (or a scalar) from one length unit to another, in situ if array.
 
-   arguments:
-      a (numpy float array, or float): array of length values to undergo unit conversion in situ, or a scalar
-      from_units (string): the units of the data before conversion
-      to_units (string): the required units
+    arguments:
+       a (numpy float array, or float): array of length values to undergo unit conversion in situ, or a scalar
+       from_units (string): the units of the data before conversion
+       to_units (string): the required units
 
-   returns:
-      a after unit conversion
+    returns:
+       a after unit conversion
 
-   note:
-      To see supported units, use: `valid_uoms(quantity='length')`
-   """
+    note:
+       To see supported units, use: `valid_uoms(quantity='length')`
+    """
 
     return convert(a, from_units, to_units, quantity = 'length', inplace = True)
 
@@ -271,67 +271,66 @@ def convert_lengths(a, from_units, to_units):
 def convert_pressures(a, from_units, to_units):
     """Converts values in numpy array (or a scalar) from one pressure unit to another, in situ if array.
 
-   arguments:
-      a (numpy float array, or float): array of pressure values to undergo unit conversion in situ, or a scalar
-      from_units (string): the units of the data before conversion
-      to_units (string): the required units
+    arguments:
+       a (numpy float array, or float): array of pressure values to undergo unit conversion in situ, or a scalar
+       from_units (string): the units of the data before conversion
+       to_units (string): the required units
 
-   returns:
-      a after unit conversion
+    returns:
+       a after unit conversion
 
-   note:
-      To see supported units, use: `valid_uoms(quantity='pressure')`
-   """
+    note:
+       To see supported units, use: `valid_uoms(quantity='pressure')`
+    """
     return convert(a, from_units, to_units, quantity = 'pressure', inplace = True)
 
 
 def convert_volumes(a, from_units, to_units):
     """Converts values in numpy array (or a scalar) from one volume unit to another, in situ if array.
 
-   arguments:
-      a (numpy float array, or float): array of volume values to undergo unit conversion in situ, or a scalar
-      from_units (string): units of the data before conversion; see note for accepted units
-      to_units (string): the required units; see note for accepted units
+    arguments:
+       a (numpy float array, or float): array of volume values to undergo unit conversion in situ, or a scalar
+       from_units (string): units of the data before conversion; see note for accepted units
+       to_units (string): the required units; see note for accepted units
 
-   returns:
-      a after unit conversion
+    returns:
+       a after unit conversion
 
-   note:
-      To see supported units, use: `valid_uoms(quantity='volume')`
-
-   """
+    note:
+       To see supported units, use: `valid_uoms(quantity='volume')`
+    """
     return convert(a, from_units, to_units, quantity = 'volume', inplace = True)
 
 
 def convert_flow_rates(a, from_units, to_units):
     """Converts values in numpy array (or a scalar) from one volume flow rate unit to another, in situ if array.
 
-   arguments:
-      a (numpy float array, or float): array of volume flow rate values to undergo unit conversion in situ, or a scalar
-      from_units (string): units of the data before conversion, eg. 'm3/d'; see notes for acceptable units
-      to_units (string): required units of the data after conversion, eg. 'ft3/d'; see notes for acceptable units
+    arguments:
+       a (numpy float array, or float): array of volume flow rate values to undergo unit conversion in situ, or a scalar
+       from_units (string): units of the data before conversion, eg. 'm3/d'; see notes for acceptable units
+       to_units (string): required units of the data after conversion, eg. 'ft3/d'; see notes for acceptable units
 
-   returns:
-      a after unit conversion
+    returns:
+       a after unit conversion
 
-   note:
-      To see supported units, use: `valid_uoms(quantity='volume per time')`
-   """
+    note:
+       To see supported units, use: `valid_uoms(quantity='volume per time')`
+    """
     return convert(a, from_units, to_units, quantity = 'volume per time', inplace = True)
 
 
 @lru_cache(None)
 def get_conversion_factors(uom):
     """Return base unit and conversion factors (A, B, C, D) for a given uom.
-   
-   The formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
 
-   Returns:
-      3-tuple of (base_unit, dimension, factors). Factors is a 4-tuple of conversion factors
+    The formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
 
-   Raises:
-      ValueError if either uom is not a valid resqml uom
-   """
+    Returns:
+       3-tuple of (base_unit, dimension, factors). Factors is a 4-tuple of conversion factors
+
+    Raises:
+       ValueError if either uom is not a valid resqml uom
+    """
     if uom not in valid_uoms():
         raise ValueError(f"{uom} is not a valid uom")
     uoms_data = _properties_data()["units"][uom]
@@ -351,21 +350,20 @@ def get_conversion_factors(uom):
 
 @lru_cache(None)
 def _properties_data():
-    """ Return a data structure that represents resqml unit system.
+    """Return a data structure that represents resqml unit system.
 
-   The dict is loaded directly from a JSON file which is bundled with resqpy.
-   The unit system is represented as a dict with the following keys:
+    The dict is loaded directly from a JSON file which is bundled with resqpy.
+    The unit system is represented as a dict with the following keys:
 
-   - dimensions
-   - quantities
-   - units
-   - prefixes
-   - property_kinds
+    - dimensions
+    - quantities
+    - units
+    - prefixes
+    - property_kinds
 
-   Returns:
-      dict: resqml unit system
-      
-   """
+    Returns:
+       dict: resqml unit system
+    """
     json_path = Path(__file__).parent / 'olio/data/properties.json'
     with open(json_path) as f:
         data = json.load(f)
@@ -373,7 +371,7 @@ def _properties_data():
 
 
 def _try_parse_unit(units):
-    """Try to match unit against known uoms and aliases, else return None"""
+    """Try to match unit against known uoms and aliases, else return None."""
 
     uom_list = valid_uoms()
     ul = units.casefold()

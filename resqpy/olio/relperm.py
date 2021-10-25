@@ -23,9 +23,9 @@ log.debug(f'dataframe.py version {version}')
 class RelPerm(DataFrame):
     """Class for storing and retrieving a pandas dataframe of relative permeability data.
 
-   note:
-      inherits from DataFrame class
-   """
+    note:
+       inherits from DataFrame class
+    """
 
     def __init__(self,
                  model,
@@ -41,17 +41,17 @@ class RelPerm(DataFrame):
                  uom_lookup_uuid = None):
         """Create a new RelPerm object from either a previously stored object or a pandas dataframe.
 
-      arguments:
-         phase_combo (str, optional): the combination of phases whose relative permeability behaviour is described.
-            Options include 'water-oil', 'gas-oil' and 'gas-water'
-         low_sal (boolean, optional): if True, indicates that the water-oil table contains the low-salinity data for
-            relative permeability and capillary pressure
-         table_index (int, optional): the index of the relative permeability
-         table when multiple relative permeability tables are present. Note, indices should start at 1.
+        arguments:
+           phase_combo (str, optional): the combination of phases whose relative permeability behaviour is described.
+              Options include 'water-oil', 'gas-oil' and 'gas-water'
+           low_sal (boolean, optional): if True, indicates that the water-oil table contains the low-salinity data for
+              relative permeability and capillary pressure
+           table_index (int, optional): the index of the relative permeability
+           table when multiple relative permeability tables are present. Note, indices should start at 1.
 
-      note:
-         see DataFrame class docstring for details of other arguments
-      """
+        note:
+           see DataFrame class docstring for details of other arguments
+        """
 
         # check that either a uuid OR dataframe has been provided
         if df is None and uuid is None:
@@ -170,16 +170,16 @@ class RelPerm(DataFrame):
     def interpolate_point(self, saturation, kr_or_pc_col):
         """Returns a tuple of the saturation value and the corresponding interpolated rel. perm. or cap. pressure value.
 
-      arguments:
-         saturation (float): the saturation at which the relative permeability or cap. pressure will be interpolated
-         kr_or_pc_col (str): the column name of the parameter to be interpolated
+        arguments:
+           saturation (float): the saturation at which the relative permeability or cap. pressure will be interpolated
+           kr_or_pc_col (str): the column name of the parameter to be interpolated
 
-      returns:
-         tuple of float, the first element is the saturation and the second element is the interpolated value
+        returns:
+           tuple of float, the first element is the saturation and the second element is the interpolated value
 
-      note:
-         A simple linear interpolation is performed.
-      """
+        note:
+           A simple linear interpolation is performed.
+        """
         df = self.df.copy()
         if kr_or_pc_col.capitalize() not in df.columns or kr_or_pc_col.capitalize() == df.columns[0]:
             raise ValueError('incorrect column name provided for interpolation')
@@ -199,17 +199,17 @@ class RelPerm(DataFrame):
     def df_to_text(self, filepath, filename):
         """Creates a text file from a dataframe of relative permeability and capillary pressure data.
 
-      arguments:
-         filepath (str): location where new text file is written to
-         filename (str): name of the new text file
+        arguments:
+           filepath (str): location where new text file is written to
+           filename (str): name of the new text file
 
-      returns:
-         tuple of float, the first element is the saturation and the second element is the interpolated value
+        returns:
+           tuple of float, the first element is the saturation and the second element is the interpolated value
 
-      note:
-         Only Nexus compatible text files are currently supported. Text files that are compatible with other reservoir
-            simulators may be supported in the future.
-      """
+        note:
+           Only Nexus compatible text files are currently supported. Text files that are compatible with other reservoir
+              simulators may be supported in the future.
+        """
         df = self.df.copy()
         ascii_file = os.path.join(filepath, filename + '.dat')
         df.columns = map(str.upper, df.columns)
@@ -245,9 +245,8 @@ class RelPerm(DataFrame):
                 print(f'Appended to DAT file: {filename} at {filepath}')
 
     def write_hdf5_and_create_xml(self):
-        """Write relative permeability table data to hdf5 file and create xml for RESQML objects to represent dataframe.
-
-      """
+        """Write relative permeability table data to hdf5 file and create xml for RESQML objects to represent
+        dataframe."""
         super().write_hdf5_and_create_xml()
         mesh_root = self.mesh.root
         # create an xml of extra metadata to indicate that this is a relative permeability table
@@ -255,20 +254,21 @@ class RelPerm(DataFrame):
 
 
 def text_to_relperm_dict(relperm_data, is_file = True):
-    """Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and phase combinations.
+    """Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and phase
+    combinations.
 
-   arguments:
-      relperm_data (str): relative or full path of the text file to be processed or string of relative permeability data
-      is_file (boolean): if True, indicates that a text file of relative permeability data has been provided. Default value is True
+    arguments:
+       relperm_data (str): relative or full path of the text file to be processed or string of relative permeability data
+       is_file (boolean): if True, indicates that a text file of relative permeability data has been provided. Default value is True
 
-   returns:
-      dict, each element in the dictionary contains a dataframe, with saturation and rel. permeability/capillary pressure
-      data, and the phase combination being described
+    returns:
+       dict, each element in the dictionary contains a dataframe, with saturation and rel. permeability/capillary pressure
+       data, and the phase combination being described
 
-   note:
-      Only Nexus compatible text files are currently supported. Text files from other reservoir simulators may be
-         supported in the future.
-   """
+    note:
+       Only Nexus compatible text files are currently supported. Text files from other reservoir simulators may be
+          supported in the future.
+    """
     if is_file:
         with open(relperm_data) as f:
             string_original = f.read()
@@ -336,20 +336,20 @@ def relperm_parts_in_model(model,
                            related_uuid = None):
     """Returns list of part names within model that are representing RelPerm dataframe support objects.
 
-   arguments:
-      model (model.Model): the model to be inspected for dataframes
-      phase_combo (str, optional): the combination of phases whose relative permeability behaviour is described.
-         Options include 'water-oil', 'gas-oil', 'gas-water', 'oil-water', 'oil-gas' and 'water-gas'
-      low_sal (boolean, optional): if True, indicates that the water-oil table contains the low-salinity data for
-         relative permeability and capillary pressure
-      table_index (int, optional): the index of the relative permeability table when multiple relative permeability
-         tables are present. Note, indices should start at 1.
-      title (str, optional): if present, only parts with a citation title exactly matching will be included
-      related_uuid (uuid, optional): if present, only parts relating to this uuid are included
+    arguments:
+       model (model.Model): the model to be inspected for dataframes
+       phase_combo (str, optional): the combination of phases whose relative permeability behaviour is described.
+          Options include 'water-oil', 'gas-oil', 'gas-water', 'oil-water', 'oil-gas' and 'water-gas'
+       low_sal (boolean, optional): if True, indicates that the water-oil table contains the low-salinity data for
+          relative permeability and capillary pressure
+       table_index (int, optional): the index of the relative permeability table when multiple relative permeability
+          tables are present. Note, indices should start at 1.
+       title (str, optional): if present, only parts with a citation title exactly matching will be included
+       related_uuid (uuid, optional): if present, only parts relating to this uuid are included
 
-   returns:
-      list of str, each element in the list is a part name, within model, which is representing the support for a RelPerm object
-   """
+    returns:
+       list of str, each element in the list is a part name, within model, which is representing the support for a RelPerm object
+    """
     extra_metadata_orig = {
         'relperm_table': 'true',
         'phase_combo': phase_combo,

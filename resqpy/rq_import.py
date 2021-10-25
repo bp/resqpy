@@ -75,10 +75,11 @@ def import_nexus(
         grid_title = 'ROOT',
         mode = 'w',
         progress_fn = None):
-    """Read a simulation grid geometry and optionally grid properties and return a resqml model in memory & written to disc.
+    """Read a simulation grid geometry and optionally grid properties and return a resqml model in memory & written to
+    disc.
 
-      Input may be from nexus ascii input files, or nexus vdb output.
-   """
+    Input may be from nexus ascii input files, or nexus vdb output.
+    """
 
     if resqml_file_root.endswith('.epc'):
         resqml_file_root = resqml_file_root[:-4]
@@ -637,71 +638,72 @@ def import_vdb_ensemble(
         split_pillars = True,
         split_tolerance = 0.01,  # applies to each of x, y, z differences
         progress_fn = None):
-    """Adds properties from all vdb's within an ensemble directory tree to a single RESQML dataset, referencing a shared grid.
+    """Adds properties from all vdb's within an ensemble directory tree to a single RESQML dataset, referencing a shared
+    grid.
 
-   args:
-      epc_file (string): filename of epc file to be extended with ensemble properties
-      ensemble_run_dir (string): path of main ensemble run directory; vdb's within this directory tree are source of import
-      existing_epc (boolean, default False): if True, the epc_file must already exist and contain the compatible grid
-      keyword_list (list of strings, optional): if present, only properties for keywords within the list are included
-      property_kind_list (list of strings, optional): if present, only properties which are mapped to these resqml property
-         kinds are included in the import
-      vdb_static_properties (boolean, default True): if False, no static properties are included, regardless of keyword and/or
-         property kind matches
-      vdb_recurrent_properties (boolean, default True): if False, no recurrent properties are included, regardless of keyword
-         and/or property kind matches
-      decoarsen (boolean, default True): if True and ICOARSE property exists for a grid in a case, the associated property
-         data is decoarsened; if False, the property data is as stored in the vdb
-      timestep_selection (string, default 'all'): may be 'first', 'last', 'first and last', or 'all', controlling which
-         reporting timesteps are included when loading recurrent data
-      create_property_set_per_realization (boolean, default True): if True, a property set object is created for each realization
-      create_property_set_per_timestep (boolean, default True): if True, a property set object is created for each timestep
-         included in the recurrent data import
-      create_complete_property_set (boolean, default False): if True, a property set object is created containing all the
-         properties imported; only really useful to differentiate from other properties related to the grid
-      extent_ijk (triple int, optional): this and remaining arguments are only used if existing_epc is False; the extent
-         is only needed in case automatic determination of the extent fails
-      corp_xy_units (string, default 'metres'): the units of x & y values in the vdb corp data; should be 'metres' or 'feet'
-      corp_z_units (string, default 'metres'): the units of z values in the vdb corp data; should be 'metres' or 'feet'
-      corp_z_inc_down (boolean, default True): set to True if corp z values are depth; False if elevation
-      ijk_handedness (string, default 'right'): set to the handedness of the IJK axes in the Nexus model; 'right' or 'left'
-      geometry_defined_everywhere (boolean, default True): set to False if inactive cells do not have valid geometry;
-         deprecated - use treat_as_nan argument instead
-      treat_as_nan (string, optional): if not None, one of 'dots', 'ij_dots', 'inactive'; controls which inactive cells
-         have their geometry set to undefined
-      resqml_xy_units (string, default 'metres'): the units of x & y values to use in the generated resqml grid;
-         should be 'metres' or 'feet'
-      resqml_z_units (string, default 'metres'): the units of z values to use in the generated resqml grid;
-         should be 'metres' or 'feet'
-      resqml_z_inc_down (boolean, default True): set to True if resqml z values are to be depth; False for elevations
-      shift_to_local (boolean, default True): if True, the resqml coordinate reference system will use a local origin
-      local_origin_place (string, default 'centre'): where to place the local origin; 'centre' or 'minimum'; only
-         relevant if shift_to_local is True
-      max_z_void (float, default 0.1): the tolerance of voids between layers, in z direction; voids greater than this
-         will cause the grid import to fail
-      split_pillars (boolean, default True): if False, a grid is generated without split pillars
-      split_tolerance (float, default 0.01): the tolerance applied to each of x, y, & z values, beyond which a corner
-         point (and hence pillar) will be split
-      progress_fn (function(float), optional): if present, this function is called at intervals during processing; it
-         must accept one floating point argument which will range from 0.0 to 1.0
+    args:
+       epc_file (string): filename of epc file to be extended with ensemble properties
+       ensemble_run_dir (string): path of main ensemble run directory; vdb's within this directory tree are source of import
+       existing_epc (boolean, default False): if True, the epc_file must already exist and contain the compatible grid
+       keyword_list (list of strings, optional): if present, only properties for keywords within the list are included
+       property_kind_list (list of strings, optional): if present, only properties which are mapped to these resqml property
+          kinds are included in the import
+       vdb_static_properties (boolean, default True): if False, no static properties are included, regardless of keyword and/or
+          property kind matches
+       vdb_recurrent_properties (boolean, default True): if False, no recurrent properties are included, regardless of keyword
+          and/or property kind matches
+       decoarsen (boolean, default True): if True and ICOARSE property exists for a grid in a case, the associated property
+          data is decoarsened; if False, the property data is as stored in the vdb
+       timestep_selection (string, default 'all'): may be 'first', 'last', 'first and last', or 'all', controlling which
+          reporting timesteps are included when loading recurrent data
+       create_property_set_per_realization (boolean, default True): if True, a property set object is created for each realization
+       create_property_set_per_timestep (boolean, default True): if True, a property set object is created for each timestep
+          included in the recurrent data import
+       create_complete_property_set (boolean, default False): if True, a property set object is created containing all the
+          properties imported; only really useful to differentiate from other properties related to the grid
+       extent_ijk (triple int, optional): this and remaining arguments are only used if existing_epc is False; the extent
+          is only needed in case automatic determination of the extent fails
+       corp_xy_units (string, default 'metres'): the units of x & y values in the vdb corp data; should be 'metres' or 'feet'
+       corp_z_units (string, default 'metres'): the units of z values in the vdb corp data; should be 'metres' or 'feet'
+       corp_z_inc_down (boolean, default True): set to True if corp z values are depth; False if elevation
+       ijk_handedness (string, default 'right'): set to the handedness of the IJK axes in the Nexus model; 'right' or 'left'
+       geometry_defined_everywhere (boolean, default True): set to False if inactive cells do not have valid geometry;
+          deprecated - use treat_as_nan argument instead
+       treat_as_nan (string, optional): if not None, one of 'dots', 'ij_dots', 'inactive'; controls which inactive cells
+          have their geometry set to undefined
+       resqml_xy_units (string, default 'metres'): the units of x & y values to use in the generated resqml grid;
+          should be 'metres' or 'feet'
+       resqml_z_units (string, default 'metres'): the units of z values to use in the generated resqml grid;
+          should be 'metres' or 'feet'
+       resqml_z_inc_down (boolean, default True): set to True if resqml z values are to be depth; False for elevations
+       shift_to_local (boolean, default True): if True, the resqml coordinate reference system will use a local origin
+       local_origin_place (string, default 'centre'): where to place the local origin; 'centre' or 'minimum'; only
+          relevant if shift_to_local is True
+       max_z_void (float, default 0.1): the tolerance of voids between layers, in z direction; voids greater than this
+          will cause the grid import to fail
+       split_pillars (boolean, default True): if False, a grid is generated without split pillars
+       split_tolerance (float, default 0.01): the tolerance applied to each of x, y, & z values, beyond which a corner
+          point (and hence pillar) will be split
+       progress_fn (function(float), optional): if present, this function is called at intervals during processing; it
+          must accept one floating point argument which will range from 0.0 to 1.0
 
-   returns:
-      resqpy.Model object containing properties for all the realisations; hdf5 and epc files having been updated
+    returns:
+       resqpy.Model object containing properties for all the realisations; hdf5 and epc files having been updated
 
-   note:
-      if existing_epc is True, the epc file must already exist and contain one grid (or one grid named ROOT) which must
-      have the correct extent for all realisations within the ensemble; if existing_epc is False, the resqml dataset is
-      created afresh with a grid extracted from the first realisation in the ensemble; either way, the single grid is used
-      as the representative grid in the ensemble resqml dataset being generated;
-      all vdb directories within the directory tree headed by ensemble_run_dir are included in the import; by
-      default all properties will be imported; the keyword_list, property_kind_list, vdb_static_properties,
-      vdb_recurrent_properties and timestep_selection arguments can be used to filter the required properties;
-      if both keyword_list and property_kind_list are provided, a property must match an item in both lists in order
-      to be included; if recurrent properties are being included then all vdb's should contain the same number of reporting
-      steps in their recurrent data and these should relate to the same set of timestamps; timestamp data is extracted from a
-      summary file for the first realisation; no check is made to ensure that reporting timesteps in different realisations
-      are actually for the same date.
-   """
+    note:
+       if existing_epc is True, the epc file must already exist and contain one grid (or one grid named ROOT) which must
+       have the correct extent for all realisations within the ensemble; if existing_epc is False, the resqml dataset is
+       created afresh with a grid extracted from the first realisation in the ensemble; either way, the single grid is used
+       as the representative grid in the ensemble resqml dataset being generated;
+       all vdb directories within the directory tree headed by ensemble_run_dir are included in the import; by
+       default all properties will be imported; the keyword_list, property_kind_list, vdb_static_properties,
+       vdb_recurrent_properties and timestep_selection arguments can be used to filter the required properties;
+       if both keyword_list and property_kind_list are provided, a property must match an item in both lists in order
+       to be included; if recurrent properties are being included then all vdb's should contain the same number of reporting
+       steps in their recurrent data and these should relate to the same set of timestamps; timestamp data is extracted from a
+       summary file for the first realisation; no check is made to ensure that reporting timesteps in different realisations
+       are actually for the same date.
+    """
 
     assert epc_file.endswith('.epc')
     assert vdb_static_properties or vdb_recurrent_properties, 'no properties selected for ensemble import'
@@ -953,7 +955,8 @@ def add_ab_properties(
     ab_property_list = None
 ):  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value,
     #          discrete, realization)
-    """Process a list of pure binary property array files, adding as parts of model, related to grid (hdf5 file is appended to)."""
+    """Process a list of pure binary property array files, adding as parts of model, related to grid (hdf5 file is
+    appended to)."""
 
     assert ab_property_list, 'property list is empty or missing'
 
@@ -1143,10 +1146,10 @@ def grid_from_cp(model,
                  known_to_be_straight = False):
     """Create a resqpy.grid.Grid object from a 7D corner point array.
 
-   notes:
-      this function sets up all the geometry arrays in memory but does not write to hdf5 nor create xml: use Grid methods;
-      geometry_defined_everywhere is deprecated, use treat_as_nan instead
-   """
+    notes:
+       this function sets up all the geometry arrays in memory but does not write to hdf5 nor create xml: use Grid methods;
+       geometry_defined_everywhere is deprecated, use treat_as_nan instead
+    """
 
     if treat_as_nan is None:
         if not geometry_defined_everywhere:

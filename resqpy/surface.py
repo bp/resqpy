@@ -30,7 +30,7 @@ import resqpy.organize as rqo
 
 
 class _BaseSurface(BaseResqpy):
-    """Base class to implement shared methods for other classes in this module"""
+    """Base class to implement shared methods for other classes in this module."""
 
     def create_interpretation_and_feature(self,
                                           kind = 'horizon',
@@ -75,9 +75,9 @@ class TriangulatedPatch:
     def __init__(self, parent_model, patch_index = None, patch_node = None, crs_uuid = None):
         """Create an empty TriangulatedPatch (TrianglePatch) node and optionally load from xml.
 
-      note:
-         not usually instantiated directly by application code
-      """
+        note:
+           not usually instantiated directly by application code
+        """
 
         self.model = parent_model
         self.node = patch_node
@@ -118,14 +118,13 @@ class TriangulatedPatch:
     def triangles_and_points(self):
         """Returns arrays representing the patch.
 
-      Returns:
-         Tuple (triangles, points):
+        Returns:
+           Tuple (triangles, points):
 
-         * triangles (int array of shape[:, 3]): integer indices into points array,
-           being the nodes of the corners of the triangles
-         * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
-
-      """
+           * triangles (int array of shape[:, 3]): integer indices into points array,
+             being the nodes of the corners of the triangles
+           * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
+        """
         if self.triangles is not None:
             return (self.triangles, self.points)
         assert self.triangle_count is not None and self.node_count is not None
@@ -166,11 +165,11 @@ class TriangulatedPatch:
     def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
         """Populate this (empty) patch with two triangles defining a flat, horizontal plane at a given depth.
 
-         arguments:
-            depth (float): z value to use in all points in the triangulated patch
-            box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
-            border (float): an optional border width added around the x,y area defined by box_xyz
-      """
+        arguments:
+           depth (float): z value to use in all points in the triangulated patch
+           box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
+           border (float): an optional border width added around the x,y area defined by box_xyz
+        """
 
         # expand area by border
         box = box_xyz.copy()
@@ -405,19 +404,19 @@ class TriangulatedPatch:
     def column_from_triangle_index(self, triangle_index):
         """For patch freshly built from fully defined mesh, returns (j, i) for given triangle index.
 
-      argument:
-         triangle_index (int or numpy int array): the triangle index (or array of indices) for which column(s) are being
-         sought
+        argument:
+           triangle_index (int or numpy int array): the triangle index (or array of indices) for which column(s) are being
+           sought
 
-      returns:
-         pair of ints or pair of numpy int arrays: the (j0, i0) indices of the column(s) which the triangle(s) is/are
-         part of
+        returns:
+           pair of ints or pair of numpy int arrays: the (j0, i0) indices of the column(s) which the triangle(s) is/are
+           part of
 
-      notes:
-         this function will only work if the surface has been freshly constructed with data from a mesh without NaNs,
-         otherwise (None, None) will be returned;
-         if triangle_index is a numpy int array, a pair of similarly shaped numpy arrays is returned
-      """
+        notes:
+           this function will only work if the surface has been freshly constructed with data from a mesh without NaNs,
+           otherwise (None, None) will be returned;
+           if triangle_index is a numpy int array, a pair of similarly shaped numpy arrays is returned
+        """
 
         if self.quad_triangles is None or self.ni is None:
             return (None, None)
@@ -505,7 +504,8 @@ class TriangulatedPatch:
         return axis, polarity
 
     def vertical_rescale_points(self, ref_depth, scaling_factor):
-        """Modify the z values of points for this patch by stretching the distance from reference depth by scaling factor."""
+        """Modify the z values of points for this patch by stretching the distance from reference depth by scaling
+        factor."""
 
         _, _ = self.triangles_and_points()  # ensure points are loaded
         z_values = self.points[:, 2].copy()
@@ -532,54 +532,55 @@ class Surface(_BaseSurface):
                  crs_uuid = None,
                  originator = None,
                  extra_metadata = {}):
-        """Create an empty Surface object (RESQML TriangulatedSetRepresentation) and optionally populates from xml, point set or mesh.
+        """Create an empty Surface object (RESQML TriangulatedSetRepresentation) and optionally populates from xml,
+        point set or mesh.
 
-      arguments:
-         parent_model (model.Model object): the model to which this surface belongs
-         uuid (uuid.UUID, optional): if present, the surface is initialised from an existing RESQML object with this uuid
-         surface_root (xml tree root node, optional): DEPRECATED: alternative to using uuid
-         point_set (PointSet object, optional): if present, the surface is initialised as a Delaunay
-            triangulation of the points in the point set; ignored if extracting from xml
-         mesh (Mesh object, optional): if present, the surface is initialised as a triangulation of
-            the mesh; ignored if extracting from xml or if point_set is present
-         mesh_file (string, optional): the path of an ascii file holding a mesh in RMS text or zmap+ format;
-            ignored if extracting from xml or point_set or mesh is present
-         mesh_format (string, optional): 'rms' or 'zmap'; required if initialising from mesh_file
-         tsurf_file (string, optional): the path of an ascii file holding details of triangles and points in GOCAD-Tsurf format;
-            ignored if extraction from xml or point_set or mesh is present
-         quad_triangles (boolean, default False): if initialising from mesh or mesh_file, each 'square'
-            is represented by 2 triangles if quad_triangles is False, 4 triangles if True
-         title (string, optional): used as the citation title for the new object, ignored if
-            extracting from xml
-         surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
-         crs_uuid (uuid.UUID, optional): if present and not extracting from xml, is set as the crs uuid
-            applicable to mesh etc. data
-         originator (str, optional): the name of the person creating the object; defaults to login id; ignored
-            when initialising from an existing RESQML object
-         extra_metadata (dict): items in this dictionary are added as extra metadata; ignored
-            when initialising from an existing RESQML object
+        arguments:
+           parent_model (model.Model object): the model to which this surface belongs
+           uuid (uuid.UUID, optional): if present, the surface is initialised from an existing RESQML object with this uuid
+           surface_root (xml tree root node, optional): DEPRECATED: alternative to using uuid
+           point_set (PointSet object, optional): if present, the surface is initialised as a Delaunay
+              triangulation of the points in the point set; ignored if extracting from xml
+           mesh (Mesh object, optional): if present, the surface is initialised as a triangulation of
+              the mesh; ignored if extracting from xml or if point_set is present
+           mesh_file (string, optional): the path of an ascii file holding a mesh in RMS text or zmap+ format;
+              ignored if extracting from xml or point_set or mesh is present
+           mesh_format (string, optional): 'rms' or 'zmap'; required if initialising from mesh_file
+           tsurf_file (string, optional): the path of an ascii file holding details of triangles and points in GOCAD-Tsurf format;
+              ignored if extraction from xml or point_set or mesh is present
+           quad_triangles (boolean, default False): if initialising from mesh or mesh_file, each 'square'
+              is represented by 2 triangles if quad_triangles is False, 4 triangles if True
+           title (string, optional): used as the citation title for the new object, ignored if
+              extracting from xml
+           surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
+           crs_uuid (uuid.UUID, optional): if present and not extracting from xml, is set as the crs uuid
+              applicable to mesh etc. data
+           originator (str, optional): the name of the person creating the object; defaults to login id; ignored
+              when initialising from an existing RESQML object
+           extra_metadata (dict): items in this dictionary are added as extra metadata; ignored
+              when initialising from an existing RESQML object
 
-      returns:
-         a newly created surface object
+        returns:
+           a newly created surface object
 
-      notes:
-         there are 6 ways to initialise a surface object, in order of precendence:
-         1. extracting from xml
-         2. as a Delaunay triangulation of points in a PointSet
-         3. as a simple triangulation of a Mesh object
-         4. as a simple triangulation of a mesh in an ascii file
-         5. from a GOCAD-TSurf format file
-         5. as an empty surface
-         if an empty surface is created, 'set_from_...' methods are available to then set for one of:
-         - a horizontal plane
-         - a single triangle
-         - a 'sail' (a triangle wrapped onto a sphere)
-         - etc.
-         the quad_triangles option is only applied if initialising from a mesh or mesh_file that is fully
-         defined (ie. no NaN's)
+        notes:
+           there are 6 ways to initialise a surface object, in order of precendence:
+           1. extracting from xml
+           2. as a Delaunay triangulation of points in a PointSet
+           3. as a simple triangulation of a Mesh object
+           4. as a simple triangulation of a mesh in an ascii file
+           5. from a GOCAD-TSurf format file
+           5. as an empty surface
+           if an empty surface is created, 'set_from_...' methods are available to then set for one of:
+           - a horizontal plane
+           - a single triangle
+           - a 'sail' (a triangle wrapped onto a sphere)
+           - etc.
+           the quad_triangles option is only applied if initialising from a mesh or mesh_file that is fully
+           defined (ie. no NaN's)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         assert surface_role in ['map', 'pick']
 
@@ -660,15 +661,15 @@ class Surface(_BaseSurface):
     def triangles_and_points(self):
         """Returns arrays representing combination of all the patches in the surface.
 
-      Returns:
-         Tuple (triangles, points):
+        Returns:
+           Tuple (triangles, points):
 
-         * triangles (int array of shape[:, 3]): integer indices into points array,
-           being the nodes of the corners of the triangles
-         * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
+           * triangles (int array of shape[:, 3]): integer indices into points array,
+             being the nodes of the corners of the triangles
+           * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.triangles is not None:
             return (self.triangles, self.points)
@@ -708,12 +709,12 @@ class Surface(_BaseSurface):
     def set_from_point_set(self, point_set, convexity_parameter = 5.0):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
-      arguments:
-         point_set (PointSet): the set of points to be triangulated to form a surface
-         convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
-            convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
-            chance of even a slight concavity
-      """
+        arguments:
+           point_set (PointSet): the set of points to be triangulated to form a surface
+           convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
+              convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
+              chance of even a slight concavity
+        """
 
         p = point_set.full_array_ref()
         log.debug('number of points going into dt: ' + str(len(p)))
@@ -725,13 +726,13 @@ class Surface(_BaseSurface):
     def set_from_irregular_mesh(self, mesh_xyz, quad_triangles = False):
         """Populate this (empty) Surface object from an untorn mesh array of shape (N, M, 3).
 
-         arguments:
-            mesh_xyz (numpy float array of shape (N, M, 3)): a 2D lattice of points in 3D space
-            quad_triangles: (boolean, optional, default False): if True, each quadrangle is represented by
-               4 triangles in the surface, with the mean of the 4 corner points used as a common centre node;
-               if False (the default), only 2 triangles are used for each quadrangle; note that the 2 triangle
-               mode gives a non-unique triangulated result
-      """
+        arguments:
+           mesh_xyz (numpy float array of shape (N, M, 3)): a 2D lattice of points in 3D space
+           quad_triangles: (boolean, optional, default False): if True, each quadrangle is represented by
+              4 triangles in the surface, with the mean of the 4 corner points used as a common centre node;
+              if False (the default), only 2 triangles are used for each quadrangle; note that the 2 triangle
+              mode gives a non-unique triangulated result
+        """
 
         mesh_shape = mesh_xyz.shape
         assert len(mesh_shape) == 3 and mesh_shape[2] == 3
@@ -743,9 +744,9 @@ class Surface(_BaseSurface):
     def set_from_sparse_mesh(self, mesh_xyz):
         """Populate this (empty) Surface object from a mesh array of shape (N, M, 3) with NaNs.
 
-         arguments:
-            mesh_xyz (numpy float array of shape (N, M, 3)): a 2D lattice of points in 3D space, with NaNs in z
-      """
+        arguments:
+           mesh_xyz (numpy float array of shape (N, M, 3)): a 2D lattice of points in 3D space, with NaNs in z
+        """
 
         mesh_shape = mesh_xyz.shape
         assert len(mesh_shape) == 3 and mesh_shape[2] == 3
@@ -766,13 +767,13 @@ class Surface(_BaseSurface):
     def set_from_torn_mesh(self, mesh_xyz, quad_triangles = False):
         """Populate this (empty) Surface object from a torn mesh array of shape (nj, ni, 2, 2, 3).
 
-         arguments:
-            mesh_xyz (numpy float array of shape (nj, ni, 2, 2, 3)): corner points of 2D faces in 3D space
-            quad_triangles: (boolean, optional, default False): if True, each quadrangle (face) is represented
-               by 4 triangles in the surface, with the mean of the 4 corner points used as a common centre node;
-               if False (the default), only 2 triangles are used for each quadrangle; note that the 2 triangle
-               mode gives a non-unique triangulated result
-      """
+        arguments:
+           mesh_xyz (numpy float array of shape (nj, ni, 2, 2, 3)): corner points of 2D faces in 3D space
+           quad_triangles: (boolean, optional, default False): if True, each quadrangle (face) is represented
+              by 4 triangles in the surface, with the mean of the 4 corner points used as a common centre node;
+              if False (the default), only 2 triangles are used for each quadrangle; note that the 2 triangle
+              mode gives a non-unique triangulated result
+        """
 
         mesh_shape = mesh_xyz.shape
         assert len(mesh_shape) == 5 and mesh_shape[2:] == (2, 2, 3)
@@ -784,22 +785,22 @@ class Surface(_BaseSurface):
     def column_from_triangle_index(self, triangle_index):
         """For surface freshly built from fully defined mesh, returns (j, i) for given triangle index.
 
-      argument:
-         triangle_index (int or numpy int array): the triangle index (or array of indices) for which column(s) is/are
-         being sought
+        argument:
+           triangle_index (int or numpy int array): the triangle index (or array of indices) for which column(s) is/are
+           being sought
 
-      returns:
-         pair of ints or pair of numpy int arrays: the (j0, i0) indices of the column(s) which the triangle(s) is/are
-         part of
+        returns:
+           pair of ints or pair of numpy int arrays: the (j0, i0) indices of the column(s) which the triangle(s) is/are
+           part of
 
-      notes:
-         this function will only work if the surface has been freshly constructed with data from a mesh without NaNs,
-         otherwise (None, None) will be returned;
-         the information needed to map from triangle to column is not persistently stored as part of a resqml surface;
-         if triangle_index is a numpy int array, a pair of similarly shaped numpy arrays is returned
+        notes:
+           this function will only work if the surface has been freshly constructed with data from a mesh without NaNs,
+           otherwise (None, None) will be returned;
+           the information needed to map from triangle to column is not persistently stored as part of a resqml surface;
+           if triangle_index is a numpy int array, a pair of similarly shaped numpy arrays is returned
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         assert len(self.patch_list) == 1
         return self.patch_list[0].column_from_triangle_index(triangle_index)
@@ -814,7 +815,8 @@ class Surface(_BaseSurface):
         self.uuid = bu.new_uuid()
 
     def set_to_multi_cell_faces_from_corner_points(self, cp, quad_triangles = True):
-        """Populates this (empty) surface to represent faces of a set of cells, from corner points of shape (N, 2, 2, 2, 3)."""
+        """Populates this (empty) surface to represent faces of a set of cells, from corner points of shape (N, 2, 2, 2,
+        3)."""
 
         assert cp.size % 24 == 0
         cp = cp.reshape((-1, 2, 2, 2, 3))
@@ -828,18 +830,19 @@ class Surface(_BaseSurface):
         self.uuid = bu.new_uuid()
 
     def cell_axis_and_polarity_from_triangle_index(self, triangle_index):
-        """For surface freshly built for cell faces, returns (cell_number, face_axis, polarity) for given triangle index.
+        """For surface freshly built for cell faces, returns (cell_number, face_axis, polarity) for given triangle
+        index.
 
-      argument:
-         triangle_index (int or numpy int array): the triangle index (or array of indices) for which cell face
-            information is required
+        argument:
+           triangle_index (int or numpy int array): the triangle index (or array of indices) for which cell face
+              information is required
 
-      returns:
-         triple int: (cell_number, axis, polarity)
+        returns:
+           triple int: (cell_number, axis, polarity)
 
-      note:
-         if the surface was built for a single cell, the returned cell number will be zero
-      """
+        note:
+           if the surface was built for a single cell, the returned cell number will be zero
+        """
 
         triangles_per_face = 4 if self.patch_list[0].quad_triangles else 2
         face_index = triangle_index // triangles_per_face
@@ -848,15 +851,16 @@ class Surface(_BaseSurface):
         return cell_number, axis, polarity
 
     def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
-        """Populate this (empty) surface with a patch of two triangles defining a flat, horizontal plane at a given depth.
+        """Populate this (empty) surface with a patch of two triangles defining a flat, horizontal plane at a given
+        depth.
 
-         arguments:
-            depth (float): z value to use in all points in the triangulated patch
-            box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
-            border (float): an optional border width added around the x,y area defined by box_xyz
+           arguments:
+              depth (float): z value to use in all points in the triangulated patch
+              box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
+              border (float): an optional border width added around the x,y area defined by box_xyz
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border)
@@ -924,7 +928,8 @@ class Surface(_BaseSurface):
         self.set_from_mesh_file(filename, 'rms', quad_triangles = quad_triangles)
 
     def vertical_rescale_points(self, ref_depth = None, scaling_factor = 1.0):
-        """Modify the z values of points for this surface by stretching the distance from reference depth by scaling factor."""
+        """Modify the z values of points for this surface by stretching the distance from reference depth by scaling
+        factor."""
 
         if scaling_factor == 1.0:
             return
@@ -942,8 +947,8 @@ class Surface(_BaseSurface):
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.uuid is None:
             self.uuid = bu.new_uuid()
@@ -965,23 +970,23 @@ class Surface(_BaseSurface):
                    originator = None):
         """Creates a triangulated surface xml node from this surface object and optionally adds as part of model.
 
-         arguments:
-            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the surface arrays
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-               in the model
-            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-               new triangulated representation part to the crs part (and optional interpretation part)
-            crs_uuid (optional): the uuid of the coordinate reference system applicable to the surface points data;
-               if None, the main crs for the model is assumed to apply
-            title (string): used as the citation Title text; should be meaningful to a human
-            originator (string, optional): the name of the human being who created the triangulated representation part;
-               default is to use the login name
+           arguments:
+              ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the surface arrays
+              add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+                 in the model
+              add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+                 new triangulated representation part to the crs part (and optional interpretation part)
+              crs_uuid (optional): the uuid of the coordinate reference system applicable to the surface points data;
+                 if None, the main crs for the model is assumed to apply
+              title (string): used as the citation Title text; should be meaningful to a human
+              originator (string, optional): the name of the human being who created the triangulated representation part;
+                 default is to use the login name
 
-         returns:
-            the newly created triangulated representation (surface) xml node
+           returns:
+              the newly created triangulated representation (surface) xml node
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
@@ -1092,20 +1097,21 @@ class Surface(_BaseSurface):
 
 
 class CombinedSurface:
-    """Class allowing a collection of Surface objects to be treated as a single surface (not a RESQML class in its own right)."""
+    """Class allowing a collection of Surface objects to be treated as a single surface (not a RESQML class in its own
+    right)."""
 
     def __init__(self, surface_list, crs_uuid = None):
         """Initialise a CombinedSurface object from a list of Surface (and/or CombinedSurface) objects.
 
-      arguments:
-         surface_list (list of Surface and/or CombinedSurface objects): the new object is the combination of these surfaces
-         crs_uuid (uuid.UUID, optional): if present, all contributing surfaces must refer to this crs
+        arguments:
+           surface_list (list of Surface and/or CombinedSurface objects): the new object is the combination of these surfaces
+           crs_uuid (uuid.UUID, optional): if present, all contributing surfaces must refer to this crs
 
-      note:
-         all contributing surfaces should be established before initialising this object;
-         all contributing surfaces must refer to the same crs; this class of object is not part of the RESQML
-         standard and cannot be saved in a RESQML dataset - it is a high level derived object class
-      """
+        note:
+           all contributing surfaces should be established before initialising this object;
+           all contributing surfaces must refer to the same crs; this class of object is not part of the RESQML
+           standard and cannot be saved in a RESQML dataset - it is a high level derived object class
+        """
 
         assert len(surface_list) > 0
         self.surface_list = surface_list
@@ -1130,7 +1136,8 @@ class CombinedSurface:
             self.points_count_list.append(len(p))
 
     def surface_index_for_triangle_index(self, tri_index):
-        """For a triangle index in the combined surface, returns the index of the surface containing rhe triangle and local triangle index."""
+        """For a triangle index in the combined surface, returns the index of the surface containing rhe triangle and
+        local triangle index."""
 
         for s_i in range(len(self.surface_list)):
             if tri_index < self.triangle_count_list[s_i]:
@@ -1178,39 +1185,39 @@ class PointSet(_BaseSurface):
                  extra_metadata = None):
         """Creates an empty Point Set object and optionally populates from xml or other source.
 
-      arguments:
-         parent_model (model.Model object): the model to which the new point set belongs
-         point_set_root (xml node, optional): DEPRECATED, use uuid instead;
-            if present, the new point set is created based on the xml
-         uuid (uuid.UUID, optional): if present, the object is populated from the RESQML PointSetRepresentation
-            with this uuid
-         load_hdf5 (boolean, default False): if True and point_set_root is present, the actual points are
-            pre-loaded into a numpy array; otherwise the points will be loaded on demand
-         points_array (numpy float array of shape (..., 2 or 3), optional): if present, the xy(&z) data which
-            will constitute the point set; missing z will be set to zero; ignored if point_set_root is not None
-         crs_uuid (uuid.UUID, optional): if present, identifies the coordinate reference system for the points;
-            ignored if point_set_root is not None; if None, 'imported' points will be associated with the
-            default crs of the parent model
-         polyset (optional): if present, creates a pointset from points in a polylineset
-         polyline (optional): if present and random_point_count is None or zero, creates a pointset from
-            points in a polyline; if present and random_point_count is set, creates random points within
-            the (closed, convex) polyline
-         random_point_count (int, optional): if present and polyline is present then the number of random
-            points to generate within the (closed) polyline in the xy plane, with z set to 0.0
-         charisma_file (optional): if present, creates a pointset from a charisma 3d interpretation file
-         irap_file (optional): if present, creates a pointset from an IRAP classic points format file
-         title (str, optional): the citation title to use for a new point set;
-            ignored if uuid or point_set_root is not None
-         originator (str, optional): the name of the person creating the point set, defaults to login id;
-            ignored if uuid or point_set_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the point set;
-            ignored if uuid or point_set_root is not None
+        arguments:
+           parent_model (model.Model object): the model to which the new point set belongs
+           point_set_root (xml node, optional): DEPRECATED, use uuid instead;
+              if present, the new point set is created based on the xml
+           uuid (uuid.UUID, optional): if present, the object is populated from the RESQML PointSetRepresentation
+              with this uuid
+           load_hdf5 (boolean, default False): if True and point_set_root is present, the actual points are
+              pre-loaded into a numpy array; otherwise the points will be loaded on demand
+           points_array (numpy float array of shape (..., 2 or 3), optional): if present, the xy(&z) data which
+              will constitute the point set; missing z will be set to zero; ignored if point_set_root is not None
+           crs_uuid (uuid.UUID, optional): if present, identifies the coordinate reference system for the points;
+              ignored if point_set_root is not None; if None, 'imported' points will be associated with the
+              default crs of the parent model
+           polyset (optional): if present, creates a pointset from points in a polylineset
+           polyline (optional): if present and random_point_count is None or zero, creates a pointset from
+              points in a polyline; if present and random_point_count is set, creates random points within
+              the (closed, convex) polyline
+           random_point_count (int, optional): if present and polyline is present then the number of random
+              points to generate within the (closed) polyline in the xy plane, with z set to 0.0
+           charisma_file (optional): if present, creates a pointset from a charisma 3d interpretation file
+           irap_file (optional): if present, creates a pointset from an IRAP classic points format file
+           title (str, optional): the citation title to use for a new point set;
+              ignored if uuid or point_set_root is not None
+           originator (str, optional): the name of the person creating the point set, defaults to login id;
+              ignored if uuid or point_set_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the point set;
+              ignored if uuid or point_set_root is not None
 
-      returns:
-         newly created PointSet object
+        returns:
+           newly created PointSet object
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         self.crs_uuid = crs_uuid
         self.patch_count = None
@@ -1379,8 +1386,8 @@ class PointSet(_BaseSurface):
     def full_array_ref(self):
         """Return a single numpy float array of shape (N, 3) containing all points from all patches.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.full_array is not None:
             return self.full_array
@@ -1420,8 +1427,8 @@ class PointSet(_BaseSurface):
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if not file_name:
             file_name = self.model.h5_file_name()
@@ -1443,23 +1450,23 @@ class PointSet(_BaseSurface):
                    originator = None):
         """Creates a point set representation xml node from this point set object and optionally adds as part of model.
 
-         arguments:
-            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the points array(s)
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-               in the model
-            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-               new point set part to the crs part (and optional interpretation part)
-            root (optional, usually None): if not None, the newly created point set representation node is appended
-               as a child to this node
-            title (string): used as the citation Title text; should be meaningful to a human
-            originator (string, optional): the name of the human being who created the point set representation part;
-               default is to use the login name
+           arguments:
+              ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the points array(s)
+              add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+                 in the model
+              add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+                 new point set part to the crs part (and optional interpretation part)
+              root (optional, usually None): if not None, the newly created point set representation node is appended
+                 as a child to this node
+              title (string): used as the citation Title text; should be meaningful to a human
+              originator (string, optional): the name of the human being who created the point set representation part;
+                 default is to use the login name
 
-         returns:
-            the newly created point set representation xml node
+           returns:
+              the newly created point set representation xml node
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
@@ -1533,13 +1540,13 @@ class PointSet(_BaseSurface):
         return ps_node
 
     def convert_to_charisma(self, file_name):
-        """Output to Charisma 3D interepretation format from a pointset
+        """Output to Charisma 3D interepretation format from a pointset.
 
-      If file_name exists, it will be overwritten.
+        If file_name exists, it will be overwritten.
 
-      args:
-          file_name: output file name to save to
-      """
+        args:
+            file_name: output file name to save to
+        """
         #      hznname = self.title.replace(" ","_")
         lines = []
         self.load_all_patches()
@@ -1551,13 +1558,13 @@ class PointSet(_BaseSurface):
                 f.write(item)
 
     def convert_to_irap(self, file_name):
-        """Output to IRAP simple points format from a pointset
+        """Output to IRAP simple points format from a pointset.
 
-      If file_name exists, it will be overwritten.
+        If file_name exists, it will be overwritten.
 
-      args:
-          file_name: output file name to save to
-      """
+        args:
+            file_name: output file name to save to
+        """
         #      hznname = self.title.replace(" ","_")
         lines = []
         self.load_all_patches()
@@ -1595,57 +1602,57 @@ class Mesh(_BaseSurface):
                  extra_metadata = None):
         """Initialises a Mesh object from xml, or a regular mesh from arguments.
 
-      arguments:
-         parent_model (model.Model object): the model to which this Mesh object will be associated
-         root_node (optional): DEPRECATED, use uuid instead; the root node for an obj_Grid2dRepresentation part;
-            remaining arguments are ignored if uuid or root_node is not None
-         uuid (uuid.UUID, optional): the uuid of an existing RESQML obj_Grid2dRepresentation object from which
-            this resqpy Mesh object is populated
-         mesh_file (string, optional): file name, required if initialising from an RMS text or zmap+ ascii file
-         mesh_format (string, optional): 'rms' or 'zmap', required if initialising from an ascii file
-         mesh_flavour (string, default 'explicit'): required flavour when reading from a mesh file; one of:
-            'explicit', 'regular' (z values discarded), 'reg&z', 'ref&z'
-         xyz_values (numpy int array of shape (nj, ni, 3), optional): can be used to create an explicit
-            mesh directly from the full array of points
-         nj (int, optional): when generating a regular or 'ref&z' mesh, the number of nodes (NB. not 'cells')
-            in the j axis of the regular mesh
-         ni (int, optional): the number of nodes in the i axis of the regular or ref&z mesh
-         origin (triple float, optional): the xyz origin of the regular mesh; use z value of zero if irrelevant
-         dxyz_dij (numpy float array of shape (2, 3), optional): the xyz increment for each step in i and j axes;
-            use z increments of zero if not applicable; eg. [[50.0, 0.0, 0.0], [0.0, 50.0, 0.0]] for mesh with
-            50 (m or ft) spacing where the I axis aligns with x axis and the J axis aligns with y axis; first of
-            the two triplets relates to the I axis
-         z_values (numpy int array of shape (nj, ni), optional): z values used when creating a ref&z flavour
-            mesh; z_supporting_mesh_uuid must also be supplied
-         z_supporting_mesh_uuid (uuid.UUID, optional): used to specify the supporting mesh when creating a
-            ref&z or reg&z flavour mesh; z_values must also be supplied
-         surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
-         crs_uuid (uuid.Uuid or string, optional): required if generating a regular mesh, the uuid of the crs
-         title (str, optional): the citation title to use for a new mesh;
-            ignored if uuid or root_node is not None
-         originator (str, optional): the name of the person creating the mesh, defaults to login id;
-            ignored if uuid or root_node is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the mesh;
-            ignored if uuid or root_node is not None
+        arguments:
+           parent_model (model.Model object): the model to which this Mesh object will be associated
+           root_node (optional): DEPRECATED, use uuid instead; the root node for an obj_Grid2dRepresentation part;
+              remaining arguments are ignored if uuid or root_node is not None
+           uuid (uuid.UUID, optional): the uuid of an existing RESQML obj_Grid2dRepresentation object from which
+              this resqpy Mesh object is populated
+           mesh_file (string, optional): file name, required if initialising from an RMS text or zmap+ ascii file
+           mesh_format (string, optional): 'rms' or 'zmap', required if initialising from an ascii file
+           mesh_flavour (string, default 'explicit'): required flavour when reading from a mesh file; one of:
+              'explicit', 'regular' (z values discarded), 'reg&z', 'ref&z'
+           xyz_values (numpy int array of shape (nj, ni, 3), optional): can be used to create an explicit
+              mesh directly from the full array of points
+           nj (int, optional): when generating a regular or 'ref&z' mesh, the number of nodes (NB. not 'cells')
+              in the j axis of the regular mesh
+           ni (int, optional): the number of nodes in the i axis of the regular or ref&z mesh
+           origin (triple float, optional): the xyz origin of the regular mesh; use z value of zero if irrelevant
+           dxyz_dij (numpy float array of shape (2, 3), optional): the xyz increment for each step in i and j axes;
+              use z increments of zero if not applicable; eg. [[50.0, 0.0, 0.0], [0.0, 50.0, 0.0]] for mesh with
+              50 (m or ft) spacing where the I axis aligns with x axis and the J axis aligns with y axis; first of
+              the two triplets relates to the I axis
+           z_values (numpy int array of shape (nj, ni), optional): z values used when creating a ref&z flavour
+              mesh; z_supporting_mesh_uuid must also be supplied
+           z_supporting_mesh_uuid (uuid.UUID, optional): used to specify the supporting mesh when creating a
+              ref&z or reg&z flavour mesh; z_values must also be supplied
+           surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
+           crs_uuid (uuid.Uuid or string, optional): required if generating a regular mesh, the uuid of the crs
+           title (str, optional): the citation title to use for a new mesh;
+              ignored if uuid or root_node is not None
+           originator (str, optional): the name of the person creating the mesh, defaults to login id;
+              ignored if uuid or root_node is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the mesh;
+              ignored if uuid or root_node is not None
 
-      returns:
-         the newly created Mesh object
+        returns:
+           the newly created Mesh object
 
-      notes:
-         a mesh is a set of x,y,z (or x,y) points organised into a 2D lattice indexed by j,i; the z values are
-         sometimes not applicable and then can be set to zero; 3 flavours of mesh are supported (the RESQML
-         standard might allow for others): regular, where a constant xyz delta is applied with each step in i
-         and j, starting from an origin, to yield a planar surface; explicit, where the full xyz (or xy) data
-         is held as an array; 'ref & z', where another mesh is referred to for xy data, and z values are held
-         in an array;
-         there are 5 ways to initialise a Mesh object, in order of precedence:
-         1. pass root_node to initialise from xml
-         2. pass mesh_file, mesh_format and crs_uuid to load an explicit mesh from an ascii file
-         3. pass xyz_values and crs_uuid to create an explicit mesh from a numpy array
-         4. pass nj, ni, origin, dxyz_dij and crs_uuid to initialise a regular mesh directly
-         5. pass z_values, z_supporting_mesh_uuid and crs_uuid to initialise a 'ref & z' mesh
-         6. leave all optional arguments as None for an empty Mesh object
-      """
+        notes:
+           a mesh is a set of x,y,z (or x,y) points organised into a 2D lattice indexed by j,i; the z values are
+           sometimes not applicable and then can be set to zero; 3 flavours of mesh are supported (the RESQML
+           standard might allow for others): regular, where a constant xyz delta is applied with each step in i
+           and j, starting from an origin, to yield a planar surface; explicit, where the full xyz (or xy) data
+           is held as an array; 'ref & z', where another mesh is referred to for xy data, and z values are held
+           in an array;
+           there are 5 ways to initialise a Mesh object, in order of precedence:
+           1. pass root_node to initialise from xml
+           2. pass mesh_file, mesh_format and crs_uuid to load an explicit mesh from an ascii file
+           3. pass xyz_values and crs_uuid to create an explicit mesh from a numpy array
+           4. pass nj, ni, origin, dxyz_dij and crs_uuid to initialise a regular mesh directly
+           5. pass z_values, z_supporting_mesh_uuid and crs_uuid to initialise a 'ref & z' mesh
+           6. leave all optional arguments as None for an empty Mesh object
+        """
 
         assert surface_role in ['map', 'pick']
 
@@ -1892,9 +1899,9 @@ class Mesh(_BaseSurface):
     def full_array_ref(self):
         """Populates a full 2D(+1) numpy array of shape (nj, ni, 3) with xyz values, caches and returns.
 
-      note:
-         z values may be zero or not applicable when using the mesh as support for properties.
-      """
+        note:
+           z values may be zero or not applicable when using the mesh as support for properties.
+        """
 
         if self.full_array is not None:
             return self.full_array
@@ -1997,25 +2004,25 @@ class Mesh(_BaseSurface):
                    originator = None):
         """Creates a grid 2d representation xml node from this mesh object and optionally adds as part of model.
 
-         arguments:
-            ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the mesh array
-            crs_root (DEPRECATED): ignored, crs must now be established at time of initialisation
-            use_xy_only (boolean, default False): if True and the flavour of this mesh is explicit, only
-               the xy coordinates are stored in the hdf5 dataset, otherwise xyz are stored
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-               in the model
-            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-               new grid 2d part to the crs part (and optional interpretation part), and to the represented
-               interpretation if present
-            root (optional, usually None): if not None, the newly created grid 2d representation node is appended
-               as a child to this node
-            title (string, optional): used as the citation Title text; should be meaningful to a human
-            originator (string, optional): the name of the human being who created the grid 2d representation part;
-               default is to use the login name
+        arguments:
+           ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the mesh array
+           crs_root (DEPRECATED): ignored, crs must now be established at time of initialisation
+           use_xy_only (boolean, default False): if True and the flavour of this mesh is explicit, only
+              the xy coordinates are stored in the hdf5 dataset, otherwise xyz are stored
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+              new grid 2d part to the crs part (and optional interpretation part), and to the represented
+              interpretation if present
+           root (optional, usually None): if not None, the newly created grid 2d representation node is appended
+              as a child to this node
+           title (string, optional): used as the citation Title text; should be meaningful to a human
+           originator (string, optional): the name of the human being who created the grid 2d representation part;
+              default is to use the login name
 
-         returns:
-            the newly created grid 2d representation (mesh) xml node
-      """
+        returns:
+           the newly created grid 2d representation (mesh) xml node
+        """
 
         if crs_root is not None:
             warnings.warn('crs_root argument is deprecated and ignored in Mesh.create_xml()')

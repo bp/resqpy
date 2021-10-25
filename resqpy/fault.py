@@ -51,59 +51,60 @@ class GridConnectionSet(BaseResqpy):
                  title = None,
                  originator = None,
                  extra_metadata = None):
-        """Initializes a new GridConnectionSet and optionally loads it from xml or a list of simulator format ascii files.
+        """Initializes a new GridConnectionSet and optionally loads it from xml or a list of simulator format ascii
+        files.
 
-      arguments:
-         parent_model (model.Model object): the resqml model that this grid connection set will be part of
-         uuid (uuid.UUID, optional): the uuid of an existing RESQML GridConnectionSetRepresentation from which
-               this resqpy object is populated
-         connection_set_root (DEPRECATED): use uuid instead; the root node of the xml tree for the
-               obj_GridConnectionSet part; ignored if uuid is present
-         find_properties (boolean, default True): if True and uuid is present, the property collection
-               relating to the grid connection set is prepared
-         grid (grid.Grid object, optional): If present, the grid object that this connection set relates to;
-               if absent, the main grid for the parent model is assumed; only used if connection set root is
-               None; see also notes
-         ascii_load_format (string, optional): If present, must be 'nexus'; ignored if loading from xml;
-               otherwise required if ascii_file is present
-         ascii_file (string, optional): the full path of an ascii file holding fault definition data in
-               nexus keyword format; ignored if loading from xml; otherwise, if present, ascii_load_format
-               must also be set
-         k_faces, j_faces, i_faces (boolean arrays, optional): if present, these arrays are used to identify
-               which faces between logically neighbouring cells to include in the new grid connection set
-         create_organizing_objects_where_needed (boolean, default False): if True when loading from ascii or
-               face masks, a fault interpretation object and tectonic boundary feature object will be created
-               for any named fault for which such objects do not exist; if False, missing organizational objects
-               will cause an error to be logged; ignored when loading from xml
-         create_transmissibility_multiplier_property (boolean, default True): if True when loading from ascii,
-               a transmissibility multiplier property is created for the connection set
-         fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
-               multiplier; only used if initialising from ascii and creating a multiplier property
-         title (str, optional): the citation title to use for a new grid connection set;
-            ignored if uuid or connection_set_root is not None
-         originator (str, optional): the name of the person creating the new grid connection set, defaults to login id;
-            ignored if uuid or connection_set_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the grid connection set
-            ignored if uuid or connection_set_root is not None
+        arguments:
+           parent_model (model.Model object): the resqml model that this grid connection set will be part of
+           uuid (uuid.UUID, optional): the uuid of an existing RESQML GridConnectionSetRepresentation from which
+                 this resqpy object is populated
+           connection_set_root (DEPRECATED): use uuid instead; the root node of the xml tree for the
+                 obj_GridConnectionSet part; ignored if uuid is present
+           find_properties (boolean, default True): if True and uuid is present, the property collection
+                 relating to the grid connection set is prepared
+           grid (grid.Grid object, optional): If present, the grid object that this connection set relates to;
+                 if absent, the main grid for the parent model is assumed; only used if connection set root is
+                 None; see also notes
+           ascii_load_format (string, optional): If present, must be 'nexus'; ignored if loading from xml;
+                 otherwise required if ascii_file is present
+           ascii_file (string, optional): the full path of an ascii file holding fault definition data in
+                 nexus keyword format; ignored if loading from xml; otherwise, if present, ascii_load_format
+                 must also be set
+           k_faces, j_faces, i_faces (boolean arrays, optional): if present, these arrays are used to identify
+                 which faces between logically neighbouring cells to include in the new grid connection set
+           create_organizing_objects_where_needed (boolean, default False): if True when loading from ascii or
+                 face masks, a fault interpretation object and tectonic boundary feature object will be created
+                 for any named fault for which such objects do not exist; if False, missing organizational objects
+                 will cause an error to be logged; ignored when loading from xml
+           create_transmissibility_multiplier_property (boolean, default True): if True when loading from ascii,
+                 a transmissibility multiplier property is created for the connection set
+           fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
+                 multiplier; only used if initialising from ascii and creating a multiplier property
+           title (str, optional): the citation title to use for a new grid connection set;
+              ignored if uuid or connection_set_root is not None
+           originator (str, optional): the name of the person creating the new grid connection set, defaults to login id;
+              ignored if uuid or connection_set_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the grid connection set
+              ignored if uuid or connection_set_root is not None
 
-      returns:
-         a new GridConnectionSet object, initialised from xml or ascii file, or left empty
+        returns:
+           a new GridConnectionSet object, initialised from xml or ascii file, or left empty
 
-      notes:
-         in the resqml standard, a grid connection set can be used to identify connections between different
-         grids (eg. parent grid to LGR); however, many of the methods in this code currently only handle
-         connections within a single grid;
-         when loading from an ascii file, cell faces are paired on a simplistic logical neighbour basis (as if
-         there is no throw on the fault); this is because the simulator input does not include the full
-         juxtaposition information; the simple mode is adequate for identifying which faces are involved in a
-         fault but not for matters of juxtaposition or absolute transmissibility calculations;
-         if uuid is None and connection_set_root is None and ascii_file is None and k_faces, j_faces & i_faces are None,
-         then an empty connection set is returned;
-         if a transmissibility multiplier property is generated, it will only appear in the property collection
-         for the grid connection set after the create_xml() method has been called
+        notes:
+           in the resqml standard, a grid connection set can be used to identify connections between different
+           grids (eg. parent grid to LGR); however, many of the methods in this code currently only handle
+           connections within a single grid;
+           when loading from an ascii file, cell faces are paired on a simplistic logical neighbour basis (as if
+           there is no throw on the fault); this is because the simulator input does not include the full
+           juxtaposition information; the simple mode is adequate for identifying which faces are involved in a
+           fault but not for matters of juxtaposition or absolute transmissibility calculations;
+           if uuid is None and connection_set_root is None and ascii_file is None and k_faces, j_faces & i_faces are None,
+           then an empty connection set is returned;
+           if a transmissibility multiplier property is generated, it will only appear in the property collection
+           for the grid connection set after the create_xml() method has been called
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         log.debug('initialising grid connection set')
         self.count = None  #: number of face-juxtaposition pairs in this connection set
@@ -230,7 +231,8 @@ class GridConnectionSet(BaseResqpy):
         return self.property_collection
 
     def set_pairs_from_kelp(self, kelp_0, kelp_1, feature_name, create_organizing_objects_where_needed, axis = 'K'):
-        """Sets cell_index_pairs and face_index_pairs based on j and i face kelp strands, using simple no throw pairing."""
+        """Sets cell_index_pairs and face_index_pairs based on j and i face kelp strands, using simple no throw
+        pairing."""
 
         # note: this method has been reworked to allow 'kelp' to be 'horizontal' strands when working in cross section
 
@@ -395,20 +397,20 @@ class GridConnectionSet(BaseResqpy):
                                 one_based_indexing = True):
         """Sets cell_index_pairs and face_index_pairs based on pandas dataframe, using simple no throw pairing.
 
-      arguments:
-         faces (pandas.DataFrame): dataframe with columns 'name', 'face', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult'
-         create_organizing_objects_where_needed (bool, default False): if True, FaultInterpretation and
-            TectonicBoundaryFeature objects are created (including xml creation) where needed
-         create_mult_prop (bool, default True): if True, a transmissibility multiplier property is added to the
-            collection for this grid connection set
-         fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
-               multiplier; if present, is combined with multiplier values from the dataframe
-         one_based_indexing (bool, default True): if True, the i, j & k values in the dataframe are taken to be
-            in simulator protocol and 1 is subtracted to yield the RESQML cell indices
+        arguments:
+           faces (pandas.DataFrame): dataframe with columns 'name', 'face', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult'
+           create_organizing_objects_where_needed (bool, default False): if True, FaultInterpretation and
+              TectonicBoundaryFeature objects are created (including xml creation) where needed
+           create_mult_prop (bool, default True): if True, a transmissibility multiplier property is added to the
+              collection for this grid connection set
+           fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
+                 multiplier; if present, is combined with multiplier values from the dataframe
+           one_based_indexing (bool, default True): if True, the i, j & k values in the dataframe are taken to be
+              in simulator protocol and 1 is subtracted to yield the RESQML cell indices
 
-      note:
-         as a side effect, this method will set the cell indices in faces to be zero based
-      """
+        note:
+           as a side effect, this method will set the cell indices in faces to be zero based
+        """
 
         if len(self.grid_list) > 1:
             log.warning('setting grid connection set pairs from dataframe for first grid in list only')
@@ -525,9 +527,9 @@ class GridConnectionSet(BaseResqpy):
     def write_hdf5_and_create_xml_for_new_properties(self):
         """Wites any new property arrays to hdf5, creates xml for the properties and adds them to model.
 
-      note:
-         this method is usually called by the create_xml() method for the grid connection set
-      """
+        note:
+           this method is usually called by the create_xml() method for the grid connection set
+        """
 
         if self.property_collection is not None:
             self.property_collection.write_hdf5_for_imported_list()
@@ -562,12 +564,12 @@ class GridConnectionSet(BaseResqpy):
     def single_feature(self, feature_index = None, feature_name = None):
         """Returns a new GridConnectionSet object containing the single feature copied from this set.
 
-      note:
-         the single feature connection set is established in memory but this method does not write
-         to the hdf5 nor create xml or add as a part to the model
+        note:
+           the single feature connection set is established in memory but this method does not write
+           to the hdf5 nor create xml or add as a part to the model
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         assert feature_index is not None or feature_name is not None
 
@@ -588,25 +590,25 @@ class GridConnectionSet(BaseResqpy):
     def filtered_by_layer_range(self, min_k0 = None, max_k0 = None, pare_down = True, return_indices = False):
         """Returns a new GridConnectionSet, being a copy with cell faces whittled down to a layer range.
 
-      arguments:
-         min_k0 (int, optional): if present, the minimum layer number to be included (zero based)
-         max_k0 (int, optional): if present, the maximum layer number to be included (zero based)
-         pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
-            and the feature indices adjusted appropriately; if False, unused features will be left in the list for
-            the new connection set, meaning that the feature indices will be compatible with those for self
-         return_indices (bool, default False): if True, a numpy list of the selected indices is also returned (see notes)
+        arguments:
+           min_k0 (int, optional): if present, the minimum layer number to be included (zero based)
+           max_k0 (int, optional): if present, the maximum layer number to be included (zero based)
+           pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
+              and the feature indices adjusted appropriately; if False, unused features will be left in the list for
+              the new connection set, meaning that the feature indices will be compatible with those for self
+           return_indices (bool, default False): if True, a numpy list of the selected indices is also returned (see notes)
 
-      returns:
-         a new GridConnectionSet or (GridConnectionSet, numpy int array of shape (N,)) depending on return_indices argument,
-         where the array is a list of selected indices (see notes)
+        returns:
+           a new GridConnectionSet or (GridConnectionSet, numpy int array of shape (N,)) depending on return_indices argument,
+           where the array is a list of selected indices (see notes)
 
-      notes:
-         cells in layer max_k0 are included in the filtered set (not pythonesque);
-         currently only works for single grid connection sets;
-         if return_indices is True, a second item is returned which is a 1D numpy int array holding the indices of
-         cell face pairs that have been selected from the original grid connection set; these values can be used to
-         select equivalent entries from associated properties
-      """
+        notes:
+           cells in layer max_k0 are included in the filtered set (not pythonesque);
+           currently only works for single grid connection sets;
+           if return_indices is True, a second item is returned which is a 1D numpy int array holding the indices of
+           cell face pairs that have been selected from the original grid connection set; these values can be used to
+           select equivalent entries from associated properties
+        """
 
         self.cache_arrays()
         assert len(self.grid_list) == 1, 'attempt to filter multi-grid connection set by layer range'
@@ -631,25 +633,25 @@ class GridConnectionSet(BaseResqpy):
     def filtered_by_cell_mask(self, mask, both_cells_required = True, pare_down = True, return_indices = False):
         """Returns a new GridConnectionSet, being a copy with cell faces whittled down by a boolean mask array.
 
-      arguments:
-         mask (numpy bool array of shape grid.extent_kji): connections will be kept for cells where this mask is True
-         both_cells_required (bool, default True): if True, both cells involved in a connection must have a mask value
-            of True to be included; if False, any connection where either cell has a True mask value will be included
-         pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
-            and the feature indices adjusted appropriately; if False, unused features will be left in the list for
-            the new connection set, meaning that the feature indices will be compatible with those for self
-         return_indices (bool, default False): if True, a numpy list of the selected indices is also returned (see notes)
+        arguments:
+           mask (numpy bool array of shape grid.extent_kji): connections will be kept for cells where this mask is True
+           both_cells_required (bool, default True): if True, both cells involved in a connection must have a mask value
+              of True to be included; if False, any connection where either cell has a True mask value will be included
+           pare_down (bool, default True): if True, any unused features in the new grid connection set will be removed
+              and the feature indices adjusted appropriately; if False, unused features will be left in the list for
+              the new connection set, meaning that the feature indices will be compatible with those for self
+           return_indices (bool, default False): if True, a numpy list of the selected indices is also returned (see notes)
 
-      returns:
-         a new GridConnectionSet or (GridConnectionSet, numpy int array of shape (N,)) depending on return_indices argument,
-         where the array is a list of selected indices (see notes)
+        returns:
+           a new GridConnectionSet or (GridConnectionSet, numpy int array of shape (N,)) depending on return_indices argument,
+           where the array is a list of selected indices (see notes)
 
-      note:
-         currently only works for single grid connection sets;
-         if return_indices is True, a second item is returned which is a 1D numpy int array holding the indices of
-         cell face pairs that have been selected from the original grid connection set; these values can be used to
-         select equivalent entries from associated properties
-      """
+        note:
+           currently only works for single grid connection sets;
+           if return_indices is True, a second item is returned which is a 1D numpy int array holding the indices of
+           cell face pairs that have been selected from the original grid connection set; these values can be used to
+           select equivalent entries from associated properties
+        """
 
         assert len(self.grid_list) == 1, 'attempt to filter multi-grid connection set by cell mask'
         grid = self.grid_list[0]
@@ -692,8 +694,8 @@ class GridConnectionSet(BaseResqpy):
     def cache_arrays(self):
         """Checks that the connection set array data is loaded and loads from hdf5 if not.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.cell_index_pairs is None or self.face_index_pairs is None or (self.feature_list is not None and
                                                                               self.feature_indices is None):
@@ -767,8 +769,8 @@ class GridConnectionSet(BaseResqpy):
     def number_of_grids(self):
         """Returns the number of grids involved in the connection set.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         return len(self.grid_list)
 
@@ -781,8 +783,8 @@ class GridConnectionSet(BaseResqpy):
     def number_of_features(self):
         """Returns the number of features (faults) in the connection set.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.feature_list is None:
             return 0
@@ -791,8 +793,8 @@ class GridConnectionSet(BaseResqpy):
     def list_of_feature_names(self, strip = True):
         """Returns a list of the feature (fault) names for which the connection set has cell face data.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.feature_list is None:
             return None
@@ -812,15 +814,15 @@ class GridConnectionSet(BaseResqpy):
     def feature_index_and_uuid_for_fault_name(self, fault_name):
         """Returns the index into the feature (fault) list for the named fault.
 
-      arguments:
-         fault_name (string): the name of the fault of interest
+        arguments:
+           fault_name (string): the name of the fault of interest
 
-      returns:
-         (index, uuid) where index is an integer which can be used to index the feature_list and is compatible
-            with the elements of feature_indices (connection interpretations elements in xml);
-            uuid is the uuid.UUID of the feature interpretation for the fault;
-            (None, None) is returned if the named fault is not found in the feature list
-      """
+        returns:
+           (index, uuid) where index is an integer which can be used to index the feature_list and is compatible
+              with the elements of feature_indices (connection interpretations elements in xml);
+              uuid is the uuid.UUID of the feature interpretation for the fault;
+              (None, None) is returned if the named fault is not found in the feature list
+        """
 
         if self.feature_list is None:
             return (None, None)
@@ -835,16 +837,16 @@ class GridConnectionSet(BaseResqpy):
     def feature_name_for_feature_index(self, feature_index, strip = True):
         """Returns the fault name corresponding to the given index into the feature (fault) list.
 
-      arguments:
-         feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
-         strip (boolean, default True): if True, the citation title for the feature interpretation is split
-            and the first word is returned (stripped of leading and trailing whitespace); if False, the
-            citation title is returned unaltered
+        arguments:
+           feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
+           strip (boolean, default True): if True, the citation title for the feature interpretation is split
+              and the first word is returned (stripped of leading and trailing whitespace); if False, the
+              citation title is returned unaltered
 
-      returns:
-         string being the citation title of the indexed fault interpretation part, optionally stripped
-         down to the first word; by convention this is the name of the fault
-      """
+        returns:
+           string being the citation title of the indexed fault interpretation part, optionally stripped
+           down to the first word; by convention this is the name of the fault
+        """
 
         if self.feature_list is None:
             return None
@@ -860,10 +862,10 @@ class GridConnectionSet(BaseResqpy):
     def feature_index_for_cell_face(self, cell_kji0, axis, p01):
         """Returns the index into the feature (fault) list for the given face of the given cell, or None.
 
-      note:
-         where the cell face appears in more than one feature, the result will arbitrarily be the first
-         occurrence in the cell_index_pair ordering of the grid connection set
-      """
+        note:
+           where the cell face appears in more than one feature, the result will arbitrarily be the first
+           occurrence in the cell_index_pair ordering of the grid connection set
+        """
 
         self.cache_arrays()
         if self.feature_indices is None:
@@ -888,16 +890,16 @@ class GridConnectionSet(BaseResqpy):
     def raw_list_of_cell_face_pairs_for_feature_index(self, feature_index):
         """Returns list of cell face pairs contributing to feature (fault) with given index, in raw form.
 
-      arguments:
-         feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
+        arguments:
+           feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
 
-      returns:
-         (cell_index_pairs, face_index_pairs) or (cell_index_pairs, face_index_pairs, grid_index_pairs)
-         where each is an integer numpy array of shape (N, 2);
-         if the connection set is for a single grid, the returned value is a pair, otherwise a triplet;
-         the returned data is in raw form: normalized cell indices (for flattened array) and face indices
-         in range 0..5; grid indices can be used to index the grid_list attribute for relevant Grid object
-      """
+        returns:
+           (cell_index_pairs, face_index_pairs) or (cell_index_pairs, face_index_pairs, grid_index_pairs)
+           where each is an integer numpy array of shape (N, 2);
+           if the connection set is for a single grid, the returned value is a pair, otherwise a triplet;
+           the returned data is in raw form: normalized cell indices (for flattened array) and face indices
+           in range 0..5; grid indices can be used to index the grid_list attribute for relevant Grid object
+        """
 
         matches = self.indices_for_feature_index(feature_index)
         if matches is None:
@@ -910,26 +912,26 @@ class GridConnectionSet(BaseResqpy):
     def inherit_properties_for_selected_indices(self, other, selected_indices):
         """Adds to imported property list by sampling the properties for another grid connection set.
 
-      arguments:
-         other (GridConnectionSet): the source grid connection set whose properties will be sampled
-         selected_indices (1D numpy int array): the indices, into the main arrays of other, of the
-            cell face pairs for which data is to be inherited
+        arguments:
+           other (GridConnectionSet): the source grid connection set whose properties will be sampled
+           selected_indices (1D numpy int array): the indices, into the main arrays of other, of the
+              cell face pairs for which data is to be inherited
 
-      notes:
-         this method is typically called after creating a subset grid connection set using methods
-         such as: filtered_by_layer_range(), filtered_by_cell_mask() or single_feature(); for the
-         first two of those, set the return_indices argument True to acquire the array to pass as
-         selected_indices here; when working with a single_feature() connection set, the indices
-         can be acquired by calling indices_for_feature_index() for the source connection set;
-         this method only adds the inherited property data to the imported list of the property
-         collection for this grid connection set (self); it does not write the data to hdf5 or
-         create the xml; those actions will happen when calling create_xml() with the
-         write_new_properties argument set True; they can also be triggered by calling the
-         write_hdf5_and_create_xml_for_new_properties() method directly;
-         the property collection for the other grid connection set must be established before
-         calling this method, for example by setting find_properties to True when instantiating
-         other
-      """
+        notes:
+           this method is typically called after creating a subset grid connection set using methods
+           such as: filtered_by_layer_range(), filtered_by_cell_mask() or single_feature(); for the
+           first two of those, set the return_indices argument True to acquire the array to pass as
+           selected_indices here; when working with a single_feature() connection set, the indices
+           can be acquired by calling indices_for_feature_index() for the source connection set;
+           this method only adds the inherited property data to the imported list of the property
+           collection for this grid connection set (self); it does not write the data to hdf5 or
+           create the xml; those actions will happen when calling create_xml() with the
+           write_new_properties argument set True; they can also be triggered by calling the
+           write_hdf5_and_create_xml_for_new_properties() method directly;
+           the property collection for the other grid connection set must be established before
+           calling this method, for example by setting find_properties to True when instantiating
+           other
+        """
 
         if other.property_collection is None or other.property_collection.number_of_parts() == 0:
             return
@@ -942,19 +944,19 @@ class GridConnectionSet(BaseResqpy):
     def list_of_cell_face_pairs_for_feature_index(self, feature_index):
         """Returns list of cell face pairs contributing to feature (fault) with given index.
 
-      arguments:
-         feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
+        arguments:
+           feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
 
-      returns:
-         (cell_index_pairs, face_index_pairs) or (cell_index_pairs, face_index_pairs, grid_index_pairs)
-         where cell_index_pairs is a numpy int array of shape (N, 2, 3) being the paired kji0 cell indices;
-         and face_index_pairs is a numpy int array of shape (N, 2, 2) being the paired face indices with the
-         final axis of extent 2 indexed by 0 to give the facial axis (0 = K, 1 = J, 2 = I), and indexed by 1
-         to give the facial polarity (0 = minus face, 1 = plus face);
-         and grid_index_pairs is a numpy int array of shape (N, 2) the values of which can be used to index
-         the grid_list attribute to access relevant Grid objects;
-         if the connection set is for a single grid, the return value is a pair; otherwise a triplet
-      """
+        returns:
+           (cell_index_pairs, face_index_pairs) or (cell_index_pairs, face_index_pairs, grid_index_pairs)
+           where cell_index_pairs is a numpy int array of shape (N, 2, 3) being the paired kji0 cell indices;
+           and face_index_pairs is a numpy int array of shape (N, 2, 2) being the paired face indices with the
+           final axis of extent 2 indexed by 0 to give the facial axis (0 = K, 1 = J, 2 = I), and indexed by 1
+           to give the facial polarity (0 = minus face, 1 = plus face);
+           and grid_index_pairs is a numpy int array of shape (N, 2) the values of which can be used to index
+           the grid_list attribute to access relevant Grid objects;
+           if the connection set is for a single grid, the return value is a pair; otherwise a triplet
+        """
 
         self.cache_arrays()
         if self.feature_indices is None:
@@ -976,18 +978,18 @@ class GridConnectionSet(BaseResqpy):
     def simplified_sets_of_kelp_for_feature_index(self, feature_index):
         """Returns a pair of sets of column indices, one for J+ faces, one for I+ faces, contributing to feature.
 
-      arguments:
-         feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
+        arguments:
+           feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
 
-      returns:
-         (set of numpy pair of integers, set of numpy pair of integers) the first set is those columns where
-         the J+ faces are contributing to the connection (or the J- faces of the neighbouring column); the second
-         set is where the the I+ faces are contributing to the connection (or the I- faces of the neighbouring column)
+        returns:
+           (set of numpy pair of integers, set of numpy pair of integers) the first set is those columns where
+           the J+ faces are contributing to the connection (or the J- faces of the neighbouring column); the second
+           set is where the the I+ faces are contributing to the connection (or the I- faces of the neighbouring column)
 
-      notes:
-         K faces are ignored;
-         this is compatible with the resqml baffle functionality elsewhere
-      """
+        notes:
+           K faces are ignored;
+           this is compatible with the resqml baffle functionality elsewhere
+        """
 
         cell_pairs, face_pairs = self.list_of_cell_face_pairs_for_feature_index(feature_index)
         simple_j_set = set(
@@ -1014,13 +1016,13 @@ class GridConnectionSet(BaseResqpy):
     def rework_face_pairs(self):
         """Overwrites the in-memory array of face pairs to reflect neighbouring I or J columns.
 
-      note:
-         the indexing of faces within a cell is not clearly documented in the RESQML guides;
-         the constant self.face_index_map and its inverse is the best guess at what this mapping is;
-         this function overwrites the faces within cell data where a connected pair are in neighbouring
-         I or J columns, using the face within cell values that fit with the neighbourly relationship;
-         for some implausibly extreme gridding, this might not give the correct result
-      """
+        note:
+           the indexing of faces within a cell is not clearly documented in the RESQML guides;
+           the constant self.face_index_map and its inverse is the best guess at what this mapping is;
+           this function overwrites the faces within cell data where a connected pair are in neighbouring
+           I or J columns, using the face within cell values that fit with the neighbourly relationship;
+           for some implausibly extreme gridding, this might not give the correct result
+        """
 
         self.cache_arrays()
         if self.feature_indices is None:
@@ -1052,8 +1054,8 @@ class GridConnectionSet(BaseResqpy):
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the connection set after caching arrays.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # NB: cell pairs, face pairs, and feature indices arrays must be ready, in memory
         # note: grid pairs not yet supported
@@ -1093,10 +1095,11 @@ class GridConnectionSet(BaseResqpy):
                    write_new_properties = True,
                    title = None,
                    originator = None):
-        """Creates a Grid Connection Set (fault faces) xml node and optionally adds as child of root and/or to parts forest.
+        """Creates a Grid Connection Set (fault faces) xml node and optionally adds as child of root and/or to parts
+        forest.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # NB: only one grid handled for now
         # xml for grid(s) must be created before calling this method
@@ -1327,16 +1330,16 @@ class GridConnectionSet(BaseResqpy):
                         write_row(self, fp, feature_name, i, j, k, k2, axis, polarity)
 
     def get_column_edge_list_for_feature(self, feature, gridindex = 0, min_k = 0, max_k = 0):
-        """Extracts a list of cell faces for a given feature index, over a given range of layers in the grid
+        """Extracts a list of cell faces for a given feature index, over a given range of layers in the grid.
 
-      Args:
-         feature - feature index
-         gridindex - index of grid to be used in grid connection set gridlist, default 0
-         min_k - minimum k layer, default 0
-         max_k - maximum k layer, default 0
-      Returns:
-         list of cell faces for the feature (j_col, i_col, face_axis, face_polarity)
-      """
+        Args:
+           feature - feature index
+           gridindex - index of grid to be used in grid connection set gridlist, default 0
+           min_k - minimum k layer, default 0
+           max_k - maximum k layer, default 0
+        Returns:
+           list of cell faces for the feature (j_col, i_col, face_axis, face_polarity)
+        """
         subgcs = self.filtered_by_layer_range(min_k0 = min_k, max_k0 = max_k, pare_down = False)
         if subgcs is None:
             return None
@@ -1366,22 +1369,22 @@ class GridConnectionSet(BaseResqpy):
         return ij_faces_np
 
     def get_column_edge_bool_array_for_feature(self, feature, gridindex = 0, min_k = 0, max_k = 0):
-        """Generate a boolean aray defining which column edges are present for a given feature and k-layer range
+        """Generate a boolean aray defining which column edges are present for a given feature and k-layer range.
 
-      Args:
-         feature - feature index
-         gridindex - index of grid to be used in grid connection set gridlist, default 0
-         min_k - minimum k layer
-         max_k - maximum k layer
-      Returns:
-         boolean fault_by_column_edge_mask array (shape nj,ni,2,2)
+        Args:
+           feature - feature index
+           gridindex - index of grid to be used in grid connection set gridlist, default 0
+           min_k - minimum k layer
+           max_k - maximum k layer
+        Returns:
+           boolean fault_by_column_edge_mask array (shape nj,ni,2,2)
 
-      Note: the indices for the final two axes define the edges:
-         the first defines j or i (0 or 1)
-         the second negative or positive face (0 or 1)
+        Note: the indices for the final two axes define the edges:
+           the first defines j or i (0 or 1)
+           the second negative or positive face (0 or 1)
 
-         so [[True,False],[False,True]] indicates the -j and +i edges of the column are present
-      """
+           so [[True,False],[False,True]] indicates the -j and +i edges of the column are present
+        """
         cell_face_list = self.get_column_edge_list_for_feature(feature, gridindex, min_k, max_k)
 
         fault_by_column_edge_mask = np.zeros((self.grid_list[gridindex].nj, self.grid_list[gridindex].ni, 2, 2),
@@ -1397,19 +1400,19 @@ class GridConnectionSet(BaseResqpy):
                                            property_name = 'Transmissibility multiplier'):
         """Returns a list of property values by feature based on extra metadata items.
 
-      arguments:
-         feature_index_list (list of int, optional): if present, the feature indices for which property values will be included
-            in the resulting list; if None, values will be included for each feature in the feature_list for this connection set
-         property_name (string, default 'Transmissibility multiplier'): the property name of interest, as used in the features'
-            extra metadata as a key (this not a property collection citation title)
+        arguments:
+           feature_index_list (list of int, optional): if present, the feature indices for which property values will be included
+              in the resulting list; if None, values will be included for each feature in the feature_list for this connection set
+           property_name (string, default 'Transmissibility multiplier'): the property name of interest, as used in the features'
+              extra metadata as a key (this not a property collection citation title)
 
-      returns:
-         list of float being the list of property values for the list of features, in corresponding order
+        returns:
+           list of float being the list of property values for the list of features, in corresponding order
 
-      note:
-         this method does not refer to property collection arrays, it simply looks for a constant extra metadata item
-         for each feature; where no such item is found, a NaN is added to the return list
-      """
+        note:
+           this method does not refer to property collection arrays, it simply looks for a constant extra metadata item
+           for each feature; where no such item is found, a NaN is added to the return list
+        """
 
         if feature_index_list is None:
             feature_index_list = range(len(self.feature_list))
@@ -1432,29 +1435,30 @@ class GridConnectionSet(BaseResqpy):
                                                 property_name = 'Transmissibility multiplier',
                                                 gridindex = 0,
                                                 ref_k = None):
-        """Generate a float value aray defining the property values for different column edges present for a given feature
+        """Generate a float value aray defining the property values for different column edges present for a given
+        feature.
 
-      Args:
-         feature - feature index
-         fault_by_column_edge_mask - fault_by_column_edge_mask with True on edges where feature is present
-         property_name - name of property, should be present within the FaultInterpreation feature metadata;
-            lowercase version is also used as property kind when searching for a property array
-         gridindex - index of grid for which column edge data is required
-         ref_k - reference k_layer to use where property has variable value for a feature;
-            if None, no property array will be used and None will be returned for variable properties
+        Args:
+           feature - feature index
+           fault_by_column_edge_mask - fault_by_column_edge_mask with True on edges where feature is present
+           property_name - name of property, should be present within the FaultInterpreation feature metadata;
+              lowercase version is also used as property kind when searching for a property array
+           gridindex - index of grid for which column edge data is required
+           ref_k - reference k_layer to use where property has variable value for a feature;
+              if None, no property array will be used and None will be returned for variable properties
 
-      Returns:
-         float property_value_by_column_edge array (shape nj,ni,2,2) based on extra metadata
+        Returns:
+           float property_value_by_column_edge array (shape nj,ni,2,2) based on extra metadata
 
-      Note: the indices for the final two axes define the edges:
-         the first defines j or i (0 or 1)
-         the second negative or positive face (0 or 1)
+        Note: the indices for the final two axes define the edges:
+           the first defines j or i (0 or 1)
+           the second negative or positive face (0 or 1)
 
-         so [[1,np.nan],[np.nan,np.nan]] indicates the -j edge of the column are present with a value of 1
+           so [[1,np.nan],[np.nan,np.nan]] indicates the -j edge of the column are present with a value of 1
 
-         this method preferentially uses a constant extra metadata item for the feature, with the property
-         collection being used when the extra metadata is absent
-      """
+           this method preferentially uses a constant extra metadata item for the feature, with the property
+           collection being used when the extra metadata is absent
+        """
 
         single_grid = (self.number_of_grids() == 1)
         if single_grid:
@@ -1514,22 +1518,23 @@ class GridConnectionSet(BaseResqpy):
                                                    property_name = 'Transmissibility multiplier',
                                                    feature_list = None,
                                                    ref_k = None):
-        """Generate a combined mask, index and value arrays for all column edges across a k-layer range, for a defined feature_list
+        """Generate a combined mask, index and value arrays for all column edges across a k-layer range, for a defined
+        feature_list.
 
-      Args:
-         gridindex - index of grid to be used in grid connection set gridlist, default 0
-         min_k - minimum k_layer
-         max_k - maximum k_layer
-         property_name - name of property, should be present within the FaultInterpreation feature metadata;
-            lowercase version is used as property kind when searching for a property array
-         feature_list - list of feature index numbers to run for, default to all features
-         ref_k - reference k_layer to use where property has variable value for a feature;
-            if None defaults to min_k
-      Returns:
-         bool array mask showing all column edges within features (shape nj,ni,2,2)
-         int array showing the feature index for all column edges within features (shape nj,ni,2,2)
-         float array showing the property value for all column edges within features (shape nj,ni,2,2)
-      """
+        Args:
+           gridindex - index of grid to be used in grid connection set gridlist, default 0
+           min_k - minimum k_layer
+           max_k - maximum k_layer
+           property_name - name of property, should be present within the FaultInterpreation feature metadata;
+              lowercase version is used as property kind when searching for a property array
+           feature_list - list of feature index numbers to run for, default to all features
+           ref_k - reference k_layer to use where property has variable value for a feature;
+              if None defaults to min_k
+        Returns:
+           bool array mask showing all column edges within features (shape nj,ni,2,2)
+           int array showing the feature index for all column edges within features (shape nj,ni,2,2)
+           float array showing the property value for all column edges within features (shape nj,ni,2,2)
+        """
         self.cache_arrays()
         #     if feature_list is None: feature_list = np.unique(self.feature_indices)
         if feature_list is None:
@@ -1576,28 +1581,28 @@ class GridConnectionSet(BaseResqpy):
     def tr_property_array(self, fa = None, tol_fa = 0.0001, tol_half_t = 1.0e-5, apply_multipliers = False):
         """Return a transmissibility array with one value per pair in the connection set.
 
-      argument:
-         fa (numpy float array of shape (count, 2), optional): if present, the fractional area for each pair connection,
-            from perspective of each side of connection; if None, a fractional area of one is assumed
-         tol_fa (float, default 0.0001): fractional area tolerance – if the fractional area on either side of a
-            juxtaposition is less than this, then the corresponding transmissibility is set to zero
-         tol_half_t (float, default 1.0e-5): if the half cell transmissibility either side of a juxtaposition is
-            less than this, the corresponding transmissibility is set to zero; units are as for returned values (see
-            notes)
-         apply_multipliers (boolean, default False): if True, a transmissibility multiplier array is fetched from the
-            property collection for the connection set, and failing that a multiplier for each feature is
-            extracted from the feature extra metadata, and applied to the transmissibility calculation
+        argument:
+           fa (numpy float array of shape (count, 2), optional): if present, the fractional area for each pair connection,
+              from perspective of each side of connection; if None, a fractional area of one is assumed
+           tol_fa (float, default 0.0001): fractional area tolerance – if the fractional area on either side of a
+              juxtaposition is less than this, then the corresponding transmissibility is set to zero
+           tol_half_t (float, default 1.0e-5): if the half cell transmissibility either side of a juxtaposition is
+              less than this, the corresponding transmissibility is set to zero; units are as for returned values (see
+              notes)
+           apply_multipliers (boolean, default False): if True, a transmissibility multiplier array is fetched from the
+              property collection for the connection set, and failing that a multiplier for each feature is
+              extracted from the feature extra metadata, and applied to the transmissibility calculation
 
-      returns:
-         numpy float array of shape (count,) being the absolute transmissibilities across the connected cell face pairs;
-         see notes regarding units
+        returns:
+           numpy float array of shape (count,) being the absolute transmissibilities across the connected cell face pairs;
+           see notes regarding units
 
-      notes:
-         implicit units of measure of returned values will be m3.cP/(kPa.d) if grids' crs length units are metres,
-         bbl.cP/(psi.d) if length units are feet; the computation is compatible with the Nexus NEWTRAN formulation;
-         multiple grids are assumed to be in the same units and z units must be the same as xy units; this method
-         does not add the transmissibility array as a property
-      """
+        notes:
+           implicit units of measure of returned values will be m3.cP/(kPa.d) if grids' crs length units are metres,
+           bbl.cP/(psi.d) if length units are feet; the computation is compatible with the Nexus NEWTRAN formulation;
+           multiple grids are assumed to be in the same units and z units must be the same as xy units; this method
+           does not add the transmissibility array as a property
+        """
 
         feature_mult_list = None
         mult_array = None
@@ -1650,17 +1655,17 @@ class GridConnectionSet(BaseResqpy):
     def inherit_features(self, featured):
         """Inherit features from another connection set, reassigning feature indices for matching faces.
 
-      arguments:
-         featured (GridConnectionSet): the other connection set which holds features to be inherited
+        arguments:
+           featured (GridConnectionSet): the other connection set which holds features to be inherited
 
-      notes:
-         the list of cell face pairs in this set remains unchanged; the corresponding feature indices
-         are updated based on individual cell faces that are found in the featured connection set;
-         the feature list is extended with inherited features as required; this method is typically
-         used to populate a fault connection set built from grid geometry with named fault features
-         from a simplistic connection set, thus combining full geometric juxtaposition information
-         with named features; currently restricted to single grid connection sets
-      """
+        notes:
+           the list of cell face pairs in this set remains unchanged; the corresponding feature indices
+           are updated based on individual cell faces that are found in the featured connection set;
+           the feature list is extended with inherited features as required; this method is typically
+           used to populate a fault connection set built from grid geometry with named fault features
+           from a simplistic connection set, thus combining full geometric juxtaposition information
+           with named features; currently restricted to single grid connection sets
+        """
 
         def sorted_paired_cell_face_index_position(cell_face_index, a_or_b):
             # pair one side (a_or_b) of cell_face_index with its position, then sort
@@ -1762,16 +1767,16 @@ class GridConnectionSet(BaseResqpy):
 def pinchout_connection_set(grid, skip_inactive = True, feature_name = 'pinchout'):
     """Returns a new GridConnectionSet representing non-standard K face connections across pinchouts.
 
-   arguments:
-      grid (grid.Grid): the grid for which a pinchout connection set is required
-      skip_inactive (boolean, default True): if True, connections are not included where there is an inactive cell
-         above or below the pinchout; if False, such connections are included
-      feature_name (string, default 'pinchout'): the name to use as citation title in the feature and interpretation
+    arguments:
+       grid (grid.Grid): the grid for which a pinchout connection set is required
+       skip_inactive (boolean, default True): if True, connections are not included where there is an inactive cell
+          above or below the pinchout; if False, such connections are included
+       feature_name (string, default 'pinchout'): the name to use as citation title in the feature and interpretation
 
-   notes:
-      this function does not write to hdf5, nor create xml for the new grid connection set;
-      however, it does create one feature and a corresponding interpretation and creates xml for those
-   """
+    notes:
+       this function does not write to hdf5, nor create xml for the new grid connection set;
+       however, it does create one feature and a corresponding interpretation and creates xml for those
+    """
 
     assert grid is not None
 
@@ -1816,20 +1821,20 @@ def pinchout_connection_set(grid, skip_inactive = True, feature_name = 'pinchout
 def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap connection', tolerance = 0.001):
     """Returns a new GridConnectionSet representing K face connections where a K gap is zero thickness.
 
-   arguments:
-      grid (grid.Grid): the grid for which a K gap connection set is required
-      skip_inactive (boolean, default True): if True, connections are not included where there is an inactive cell
-         above or below the pinchout; if False, such connections are included
-      feature_name (string, default 'pinchout'): the name to use as citation title in the feature and interpretation
-      tolerance (float, default 0.001): the minimum vertical distance below which a K gap is deemed to be zero
-         thickness; units are implicitly the z units of the coordinate reference system used by grid
+    arguments:
+       grid (grid.Grid): the grid for which a K gap connection set is required
+       skip_inactive (boolean, default True): if True, connections are not included where there is an inactive cell
+          above or below the pinchout; if False, such connections are included
+       feature_name (string, default 'pinchout'): the name to use as citation title in the feature and interpretation
+       tolerance (float, default 0.001): the minimum vertical distance below which a K gap is deemed to be zero
+          thickness; units are implicitly the z units of the coordinate reference system used by grid
 
-   notes:
-      this function does not write to hdf5, nor create xml for the new grid connection set;
-      however, it does create one feature and a corresponding interpretation and creates xml for those;
-      note that the entries in the connection set will be for logically K-neighbouring pairs of cells – such pairs
-      are omitted from the standard transmissibilities due to the presence of the K gap layer
-   """
+    notes:
+       this function does not write to hdf5, nor create xml for the new grid connection set;
+       however, it does create one feature and a corresponding interpretation and creates xml for those;
+       note that the entries in the connection set will be for logically K-neighbouring pairs of cells – such pairs
+       are omitted from the standard transmissibilities due to the presence of the K gap layer
+    """
 
     assert grid is not None
     if not grid.k_gaps:
@@ -1870,16 +1875,16 @@ def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap conne
 def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
     """Add a grid connection set to a resqml model, based on a fault include file and a dictionary of fault:tmult pairs.
 
-   Grid connection set added to resqml model, with extra_metadata on the fault interpretation containing the MULTFL values
+    Grid connection set added to resqml model, with extra_metadata on the fault interpretation containing the MULTFL values
 
-   Args:
-      model: resqml model object
-      fault_incl: fullpath to fault include file or list of fullpaths to fault include files
-      tmult_dict: dictionary of fault name/transmissibility multiplier pairs (must align with faults in include file).
-         Optional, if blank values in the fault.include file will be used instead
-   Returns:
-      grid connection set uuid
-   """
+    Args:
+       model: resqml model object
+       fault_incl: fullpath to fault include file or list of fullpaths to fault include files
+       tmult_dict: dictionary of fault name/transmissibility multiplier pairs (must align with faults in include file).
+          Optional, if blank values in the fault.include file will be used instead
+    Returns:
+       grid connection set uuid
+    """
 
     if isinstance(fault_incl, list):
         if len(fault_incl) > 1:

@@ -65,33 +65,33 @@ def load_corp_array_from_file(file_name,
                               use_numbers_only = None):
     """Loads a nexus corner point (CORP) array from a file, returns a 7D numpy array in pagoda ordering.
 
-      arguments:
-         file_name: The name of an ascii file holding the CORP data (no other keywords with numeric data
-                  should be in the file); write access to the directory is likely to be needed if
-                  use_binary is True
-         extent_kji: The extent of the grid as a list or a 3 element numpy array, in the order [NK, NJ, NI].
-                  If extent_kji is None, the extent is figured out from the data.  It must be
-                  given for 1D or 2D models
-         corp_bin (boolean, default False): if True, input file is in bespoke corp binary format, otherwise ascii
-         swap_bytes (boolean, default True): if True, byte ordering of corp bin data is reversed; only relevant
-                  if corp_bin is True
-         max_lines_for_keyword: the maximum number of lines to search for CORP keyword; set to zero if file is
-                  known to be data only
-         comment_char: A single character string which is interpreted as introducing a comment
-         data_free_of_comments: If True, once the numeric data is encountered, it is assumed that there are no
-                  further comments (allowing a faster load)
-         use_binary: If True, a more recent file containing a pure binary copy of the data is looked for first,
-                  in the same directory; if found, the data is loaded directly from that file; if not found, the
-                  binary file is created after the ascii has been loaded (ready for next time)
-         eight_mode: If True, the data is assumed to be in CORP EIGHT ordering; otherwise the normal ordering
-                  (The code does not look for keywords.); this is not automatically determined from any keyword
-                  in the file
-         use_numbers_only: no longer in use, ignored
+    arguments:
+       file_name: The name of an ascii file holding the CORP data (no other keywords with numeric data
+                should be in the file); write access to the directory is likely to be needed if
+                use_binary is True
+       extent_kji: The extent of the grid as a list or a 3 element numpy array, in the order [NK, NJ, NI].
+                If extent_kji is None, the extent is figured out from the data.  It must be
+                given for 1D or 2D models
+       corp_bin (boolean, default False): if True, input file is in bespoke corp binary format, otherwise ascii
+       swap_bytes (boolean, default True): if True, byte ordering of corp bin data is reversed; only relevant
+                if corp_bin is True
+       max_lines_for_keyword: the maximum number of lines to search for CORP keyword; set to zero if file is
+                known to be data only
+       comment_char: A single character string which is interpreted as introducing a comment
+       data_free_of_comments: If True, once the numeric data is encountered, it is assumed that there are no
+                further comments (allowing a faster load)
+       use_binary: If True, a more recent file containing a pure binary copy of the data is looked for first,
+                in the same directory; if found, the data is loaded directly from that file; if not found, the
+                binary file is created after the ascii has been loaded (ready for next time)
+       eight_mode: If True, the data is assumed to be in CORP EIGHT ordering; otherwise the normal ordering
+                (The code does not look for keywords.); this is not automatically determined from any keyword
+                in the file
+       use_numbers_only: no longer in use, ignored
 
-      returns:
-         A numpy array containing the CORP data in 7D pagoda protocol ordering. The extent of the grid, and hence
-         shape of the array is determined from the corner point data unless extent_kji has been specified.
-   """
+    returns:
+       A numpy array containing the CORP data in 7D pagoda protocol ordering. The extent of the grid, and hence
+       shape of the array is determined from the corner point data unless extent_kji has been specified.
+    """
 
     #   assert(extent_kji is not None or data_free_of_comments)   # no longer a requirement
 
@@ -164,8 +164,8 @@ def load_array_from_file(file_name,
                          use_numbers_only = None):
     """Load an array from an ascii (or pure binary) file.
 
-      Arguments are similar to those for load_corp_array_from_file().
-   """
+    Arguments are similar to those for load_corp_array_from_file().
+    """
 
     if not use_binary:
         return load_array_from_ascii_file(file_name,
@@ -250,47 +250,47 @@ def load_array_from_ascii_file(file_name,
                                use_numbers_only = None):
     """Returns a numpy array with data loaded from an ascii file.
 
-   arguments:
-      file_name: string holding name of the existing ascii data file, eg. 'Cell_depth.dat'
-      extent: a python list of integers specifying the extent (shape) of the array, eg. [148, 270, 103];
-         if None, all data is read and returned as a 'flat' 1D array (data must be free from comments)
-      data_type: the type of individual data elements, one of 'real','float','int', 'integer', 'bool' or 'boolean'
-      keyword: if present, an attempt is made to find the keyword before reading data, if keyword is None or is
-         not found, data is read from the start of the file
-      max_lines_for_keyword: can be used to limit the search for keyword (for speed efficiency)
-      comment_char: a single character string being the character used to introduce a comment in the file
-      data_free_of_comments: if set to True, a faster load is used once any header line comments have been
-         skipped
-      skip_c_space: if True then a line starting 'C' followed by white space is skipped as a comment
-      use_numbers_only: this argument is no longer in use and is ignored
+    arguments:
+       file_name: string holding name of the existing ascii data file, eg. 'Cell_depth.dat'
+       extent: a python list of integers specifying the extent (shape) of the array, eg. [148, 270, 103];
+          if None, all data is read and returned as a 'flat' 1D array (data must be free from comments)
+       data_type: the type of individual data elements, one of 'real','float','int', 'integer', 'bool' or 'boolean'
+       keyword: if present, an attempt is made to find the keyword before reading data, if keyword is None or is
+          not found, data is read from the start of the file
+       max_lines_for_keyword: can be used to limit the search for keyword (for speed efficiency)
+       comment_char: a single character string being the character used to introduce a comment in the file
+       data_free_of_comments: if set to True, a faster load is used once any header line comments have been
+          skipped
+       skip_c_space: if True then a line starting 'C' followed by white space is skipped as a comment
+       use_numbers_only: this argument is no longer in use and is ignored
 
-   returns:
-      a numpy array of shape specified in extent argument with dtype matching data_type
+    returns:
+       a numpy array of shape specified in extent argument with dtype matching data_type
 
-   example call:
-      depth_array = load_data.load_array_from_ascii_file('Cell_depth.dat', [148, 270, 103])
+    example call:
+       depth_array = load_data.load_array_from_ascii_file('Cell_depth.dat', [148, 270, 103])
 
-   notes:
-      In all use cases, this function is designed to load a single array of data from an ascii file
-      that DOES NOT CONTAIN OTHER ARRAYS as well, ie. data for a single simulation keyword in the file.
+    notes:
+       In all use cases, this function is designed to load a single array of data from an ascii file
+       that DOES NOT CONTAIN OTHER ARRAYS as well, ie. data for a single simulation keyword in the file.
 
-      If skip_c_space is True, lines starting 'C ' are
-      also treated as comments.  If data_free_of_comments is True, there must be
-      at least one blank line before the data begins, and no further comments are permitted.
-      (This format is designed to handle data files generated by a commonly used geomodelling package.)
+       If skip_c_space is True, lines starting 'C ' are
+       also treated as comments.  If data_free_of_comments is True, there must be
+       at least one blank line before the data begins, and no further comments are permitted.
+       (This format is designed to handle data files generated by a commonly used geomodelling package.)
 
-      Repeat counts must not be present in the ascii data.
+       Repeat counts must not be present in the ascii data.
 
-      The extent, if present, can contain any number of dimensions, typically 3 for reservoir modelling work.
-      The total number of numbers in the file must match the number of elements in the given extent
-      (ie. the product of the list of numbers in the extent argument).
-      The order of indices in extent should be 'slowest changing' first, eg.: k,j,i
+       The extent, if present, can contain any number of dimensions, typically 3 for reservoir modelling work.
+       The total number of numbers in the file must match the number of elements in the given extent
+       (ie. the product of the list of numbers in the extent argument).
+       The order of indices in extent should be 'slowest changing' first, eg.: k,j,i
 
-      The data_type defaults to 'real'
-      'real' and 'float' are synonymous; 'int' and 'integer' are synonymous;
-      'bool' and 'boolean' are synonymous; default is 'real'
-      The numpy data type will be the default 64 bit float or 64 bit int
-   """
+       The data_type defaults to 'real'
+       'real' and 'float' are synonymous; 'int' and 'integer' are synonymous;
+       'bool' and 'boolean' are synonymous; default is 'real'
+       The numpy data type will be the default 64 bit float or 64 bit int
+    """
     # todo: Code enhancement could cater for 32 bit options (and 8 bit for bool) if needed to reduce memory usage
 
     if extent is None:
@@ -440,22 +440,22 @@ def load_array_from_ascii_file(file_name,
 def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
     """Modifies a 3D numpy boolean array representing fault locations on cell faces in i,j or k.
 
-   arguments:
-      file_name: string giving name of existing ascii file holding nexus MULT keywords in input deck format
-      direction: a single character giving direction of interest, must be 'i', 'j' or 'k'
-      fault_mask: an existing 3D boolean numpy array which must have been initialised to False everywhere
-      use_binary: if True, will attempt to load the boolean mask from a pre-written pure binary file,
-                 which will be created if it does not exist
+    arguments:
+       file_name: string giving name of existing ascii file holding nexus MULT keywords in input deck format
+       direction: a single character giving direction of interest, must be 'i', 'j' or 'k'
+       fault_mask: an existing 3D boolean numpy array which must have been initialised to False everywhere
+       use_binary: if True, will attempt to load the boolean mask from a pre-written pure binary file,
+                  which will be created if it does not exist
 
-   returns:
-      None
+    returns:
+       None
 
-   notes :
-      see nexus keyword reference for format of MULT keyword
+    notes :
+       see nexus keyword reference for format of MULT keyword
 
-      fault_mask element is set to True if corresponding face appears in the MULT data set,
-      whatever function is being applied, and whatever value is specified the function returns None (nothing)
-   """
+       fault_mask element is set to True if corresponding face appears in the MULT data set,
+       whatever function is being applied, and whatever value is specified the function returns None (nothing)
+    """
 
     trans_keyword_dict = {'i': 'TX', 'j': 'TY', 'k': 'TZ'}
 

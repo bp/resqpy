@@ -27,7 +27,7 @@ PointType = Union[Tuple[float, float, float], List[float], np.ndarray]
 
 
 class Crs(BaseResqpy):
-    """ Coordinate reference system object """
+    """Coordinate reference system object."""
 
     @property
     def resqml_type(self):
@@ -56,43 +56,43 @@ class Crs(BaseResqpy):
             extra_metadata: Optional[Dict[str, str]] = None):
         """Create a new coordinate reference system object.
 
-      arguments:
-         parent_model (model.Model): the model to which the new Crs object will belong
-         crs_root (xml root node): DEPRECATED – use uuid instead; the xml root node for an existing RESQML crs object
-         crs_uuid (uuid.UUID): the uuid of an existing RESQML crs object in model, from which to instantiate the
-            resqpy Crs object; if present, all the remaining arguments are ignored
-         x_offset, y_offset, z_offset (floats, default zero): the local origin within an implicit parent crs
-         rotation (float, default zero): a projected view rotation (in the xy plane), in radians, relative to an
-            implicit parent crs
-         xy_units (str, default 'm'): the units applicable to x & y values; must be one of the RESQML length uom strings
-         z_units (str, default 'm'): the units applicable to z depth values; must be one of the RESQML length uom strings
-         z_inc_down (boolean, default True): if True, increasing z values indicate greater depth (ie. in direction of
-            gravity); if False, increasing z values indicate greater elevation
-         axis_order (str, default 'easting northing'): the compass directions of the positive x and y axes respectively
-         time_units (str, optional): if present, the time units of the z values (for seismic datasets), in which case the
-            z_units argument is irrelevant
-         epsg_code (str, optional): if present, the EPSG code of the implicit parent crs
-         title (str, optional): the citation title to use for a new crs;
-            ignored if uuid or crs_root is not None
-         originator (str, optional): the name of the person creating the crs, defaults to login id;
-            ignored if uuid or crs_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs;
-            ignored if uuid or crs_root is not None
+        arguments:
+            parent_model (model.Model): the model to which the new Crs object will belong
+            crs_root (xml root node): DEPRECATED – use uuid instead; the xml root node for an existing RESQML crs object
+            crs_uuid (uuid.UUID): the uuid of an existing RESQML crs object in model, from which to instantiate the
+                resqpy Crs object; if present, all the remaining arguments are ignored
+            x_offset, y_offset, z_offset (floats, default zero): the local origin within an implicit parent crs
+            rotation (float, default zero): a projected view rotation (in the xy plane), in radians, relative to an
+                implicit parent crs
+            xy_units (str, default 'm'): the units applicable to x & y values; must be one of the RESQML length uom strings
+            z_units (str, default 'm'): the units applicable to z depth values; must be one of the RESQML length uom strings
+            z_inc_down (boolean, default True): if True, increasing z values indicate greater depth (ie. in direction of
+                gravity); if False, increasing z values indicate greater elevation
+            axis_order (str, default 'easting northing'): the compass directions of the positive x and y axes respectively
+            time_units (str, optional): if present, the time units of the z values (for seismic datasets), in which case the
+                z_units argument is irrelevant
+            epsg_code (str, optional): if present, the EPSG code of the implicit parent crs
+            title (str, optional): the citation title to use for a new crs;
+                ignored if uuid or crs_root is not None
+            originator (str, optional): the name of the person creating the crs, defaults to login id;
+                ignored if uuid or crs_root is not None
+            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs;
+                ignored if uuid or crs_root is not None
 
-      returns:
-         a new resqpy Crs object
+        returns:
+            a new resqpy Crs object
 
-      notes:
-         although resqpy does not have full support for identifying a parent crs, the modifiers such as a local origin
-         may be used on the assumption that all crs objects refer to the same implicit parent crs;
-         there are two equivalent RESQML classes and which one is generated depends on whether the time_units argument
-         is used, when instantiating from values;
-         it is strongly encourage to call the create_xml() method immediately after instantiation (unless the resqpy
-         crs is a temporary object) as the uuid may be modified at that point to re-use any existing equivalent RESQML
-         crs object in the model
+        notes:
+            although resqpy does not have full support for identifying a parent crs, the modifiers such as a local origin
+            may be used on the assumption that all crs objects refer to the same implicit parent crs;
+            there are two equivalent RESQML classes and which one is generated depends on whether the time_units argument
+            is used, when instantiating from values;
+            it is strongly encourage to call the create_xml() method immediately after instantiation (unless the resqpy
+            crs is a temporary object) as the uuid may be modified at that point to re-use any existing equivalent RESQML
+            crs object in the model
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         self.xy_units = xy_units
         self.z_units = z_units
@@ -257,8 +257,8 @@ class Crs(BaseResqpy):
     def convert_to(self, other_crs: 'Crs', xyz: PointType) -> Tuple[float, float, float]:
         """Converts a single xyz point from this coordinate reference system to the other.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self is other_crs:
             return _as_xyz_tuple(xyz)
@@ -273,8 +273,8 @@ class Crs(BaseResqpy):
     def convert_array_to(self, other_crs: 'Crs', xyz: np.ndarray):
         """Converts in situ a numpy array of xyz points from this coordinate reference system to the other.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.is_equivalent(other_crs):
             return
@@ -291,8 +291,8 @@ class Crs(BaseResqpy):
     def convert_from(self, other_crs: 'Crs', xyz: PointType) -> Tuple[float, float, float]:
         """Converts a single xyz point from the other coordinate reference system to this one.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self is other_crs:
             return _as_xyz_tuple(xyz)
@@ -307,8 +307,8 @@ class Crs(BaseResqpy):
     def convert_array_from(self, other_crs: 'Crs', xyz: np.ndarray):
         """Converts in situ a numpy array of xyz points from the other coordinate reference system to this one.
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if self.is_equivalent(other_crs):
             return
@@ -332,30 +332,30 @@ class Crs(BaseResqpy):
             reuse: bool = True):
         """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
-      arguments:
-         title (string, optional): used as the Title text in the citation node
-         originator (string, optional): the name of the human being who created the crs object;
-            default is to use the login name
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs
-         add_as_part (boolean, default True): if True the newly created crs node is added to the model
-            as a part
-         root (optional, usually None): DEPRECATED; if not None, the newly created crs node is appended
-            as a child of this node (rarely used)
-         reuse (boolean, default True): if True and an equivalent crs already exists in the model then
-            the uuid for this Crs is modified to match that of the existing object and the existing
-            xml node is returned without anything new being added
+        arguments:
+            title (string, optional): used as the Title text in the citation node
+            originator (string, optional): the name of the human being who created the crs object;
+                default is to use the login name
+            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs
+            add_as_part (boolean, default True): if True the newly created crs node is added to the model
+                as a part
+            root (optional, usually None): DEPRECATED; if not None, the newly created crs node is appended
+                as a child of this node (rarely used)
+            reuse (boolean, default True): if True and an equivalent crs already exists in the model then
+                the uuid for this Crs is modified to match that of the existing object and the existing
+                xml node is returned without anything new being added
 
-      returns:
-         newly created (or reused) coordinate reference system xml node
+        returns:
+            newly created (or reused) coordinate reference system xml node
 
-      notes:
-         if the reuse argument is True, it is strongly recommended to call this method immediately after
-         a new Crs has been instantiated from explicit values, as the uuid may be modified here;
-         if reuse is True, the title is not regarded as important and a match with an existing object
-         may occur even if the titles differ
+        notes:
+            if the reuse argument is True, it is strongly recommended to call this method immediately after
+            a new Crs has been instantiated from explicit values, as the uuid may be modified here;
+            if reuse is True, the title is not regarded as important and a match with an existing object
+            may occur even if the titles differ
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if reuse and self.try_reuse():
             return self.root  # check for reusable (equivalent) object
@@ -440,12 +440,12 @@ class Crs(BaseResqpy):
 
     @property
     def crs_root(self):
-        """DEPRECATED. Alias for root"""
+        """DEPRECATED alias for root."""
         warnings.warn("Attribute 'crs_root' is deprecated. Use 'root'", DeprecationWarning)
         return self.root
 
 
 def _as_xyz_tuple(xyz):
-    """Coerce into 3-tuple of floats"""
+    """Coerce into 3-tuple of floats."""
 
     return tuple(float(xyz[0]), float(xyz[1]), float(xyz[2]))

@@ -27,33 +27,33 @@ def half_cell_t(grid,
                 tolerance = 1.0e-6):
     """Creates a half cell transmissibilty property array for a regular or irregular IJK grid.
 
-   arguments:
-      grid (grid.Grid or grid.RegularGrid): the grid for which half cell transmissibilities are required
-      perm_k, j, i (float arrays of shape (nk, nj, ni), optional): cell permeability values
-         (for each direction), in mD; if None, the permeabilities are found in the grid's property collection
-      ntg (float array of shape (nk, nj, ni), or float, optional): net to gross values to apply to I & J
-         calculations; if a single float, is treated as a constant; if None, net to gross ratio data in the
-         property collection is used
-      realization (int, optional): if present and the property collection is scanned for perm or ntg
-         arrays, only those properties for this realization will be used; ignored if arrays passed in
-      darcy_constant (float, optional): if present, the value to use for the Darcy constant;
-         if None, the grid's length units will determine the value as expected by Nexus
-      tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
-         will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
-         units are implicitly those of the grid's crs length units; ignored if grid is a RegularGrid
+    arguments:
+       grid (grid.Grid or grid.RegularGrid): the grid for which half cell transmissibilities are required
+       perm_k, j, i (float arrays of shape (nk, nj, ni), optional): cell permeability values
+          (for each direction), in mD; if None, the permeabilities are found in the grid's property collection
+       ntg (float array of shape (nk, nj, ni), or float, optional): net to gross values to apply to I & J
+          calculations; if a single float, is treated as a constant; if None, net to gross ratio data in the
+          property collection is used
+       realization (int, optional): if present and the property collection is scanned for perm or ntg
+          arrays, only those properties for this realization will be used; ignored if arrays passed in
+       darcy_constant (float, optional): if present, the value to use for the Darcy constant;
+          if None, the grid's length units will determine the value as expected by Nexus
+       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+          units are implicitly those of the grid's crs length units; ignored if grid is a RegularGrid
 
-   returns:
-      numpy float array of shape (nk, nj, ni, 3) if grid is a RegularGrid otherwise (nk, nj, ni, 3, 2)
-         where the 3 covers K,J,I and (for irregular grids) the 2 covers the face polarity: - (0) and + (1);
-         units will depend on the length units of the coordinate reference system for
-         the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
-         the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
-         respectively
+    returns:
+       numpy float array of shape (nk, nj, ni, 3) if grid is a RegularGrid otherwise (nk, nj, ni, 3, 2)
+          where the 3 covers K,J,I and (for irregular grids) the 2 covers the face polarity: - (0) and + (1);
+          units will depend on the length units of the coordinate reference system for
+          the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
+          the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
+          respectively
 
-   notes:
-      calls either for half_cell_t_irregular() or half_cell_t_regular() depending on class of grid;
-      see also notes for half_cell_t_irregular() and half_cell_t_regular()
-   """
+    notes:
+       calls either for half_cell_t_irregular() or half_cell_t_regular() depending on class of grid;
+       see also notes for half_cell_t_irregular() and half_cell_t_regular()
+    """
 
     import resqpy.grid as grr
 
@@ -99,34 +99,34 @@ def half_cell_t(grid,
 def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg = None, darcy_constant = None):
     """Creates a half cell transmissibilty property array for a RegularGrid.
 
-   arguments:
-      grid (grid.RegularGrid): the grid for which half cell transmissibilities are required
-      perm_k, j, i (float arrays of shape (nk, nj, ni), required): cell permeability values
-         (for each direction), in mD;
-      ntg (float array of shape (nk, nj, ni), or float, optional): net to gross values to apply to I & J
-         calculations; if a single float, is treated as a constant; if None, a value of 1.0 is used
-      darcy_constant (float, required): the value to use for the Darcy constant
+    arguments:
+       grid (grid.RegularGrid): the grid for which half cell transmissibilities are required
+       perm_k, j, i (float arrays of shape (nk, nj, ni), required): cell permeability values
+          (for each direction), in mD;
+       ntg (float array of shape (nk, nj, ni), or float, optional): net to gross values to apply to I & J
+          calculations; if a single float, is treated as a constant; if None, a value of 1.0 is used
+       darcy_constant (float, required): the value to use for the Darcy constant
 
-   returns:
-      numpy float array of shape (nk, nj, ni, 3) where the 3 covers K,J,I;
-         units will depend on the length units of the coordinate reference system for
-         the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
-         the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
-         respectively
+    returns:
+       numpy float array of shape (nk, nj, ni, 3) where the 3 covers K,J,I;
+          units will depend on the length units of the coordinate reference system for
+          the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
+          the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
+          respectively
 
-   notes:
-      the same half cell transmissibility value is applicable to both - and + polarity faces;
-      the axes of the regular grid are assumed to be orthogonal;
-      the net to gross factor is only applied to I & J transmissibilities, not K; the results
-      include the Darcy Constant factor but not any transmissibility multiplier applied at the
-      face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
-      the two half cell transmissibilities and multiply by any transmissibility multiplier;
-      returned array will need to be re-shaped before storing as a RESQML property
-      with indexable elements of 'faces';
-      the coordinate referemce system for the grid must have the same length units for xy and z;
-      this function is vastly more computationally efficient than the general (irregular grid)
-      function
-   """
+    notes:
+       the same half cell transmissibility value is applicable to both - and + polarity faces;
+       the axes of the regular grid are assumed to be orthogonal;
+       the net to gross factor is only applied to I & J transmissibilities, not K; the results
+       include the Darcy Constant factor but not any transmissibility multiplier applied at the
+       face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
+       the two half cell transmissibilities and multiply by any transmissibility multiplier;
+       returned array will need to be re-shaped before storing as a RESQML property
+       with indexable elements of 'faces';
+       the coordinate referemce system for the grid must have the same length units for xy and z;
+       this function is vastly more computationally efficient than the general (irregular grid)
+       function
+    """
 
     assert perm_k is not None and perm_j is not None and perm_i is not None
     if ntg is None:
@@ -153,40 +153,40 @@ def half_cell_t_irregular(grid,
                           tolerance = 1.0e-6):
     """Creates a half cell transmissibilty property array for an IJK grid.
 
-   arguments:
-      grid (grid.Grid): the grid for which half cell transmissibilities are required
-      perm_k, j, i (float arrays of shape (nk, nj, ni), reqwuired): cell permeability values
-         (for each direction), in mD;
-      ntg (float array of shape (nk, nj, ni), or float, required): net to gross values to apply to I & J
-         calculations; if a single float, is treated as a constant;
-      darcy_constant (float, required): the value to use for the Darcy constant
-      tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
-         will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
-         units are implicitly those of the grid's crs length units
+    arguments:
+       grid (grid.Grid): the grid for which half cell transmissibilities are required
+       perm_k, j, i (float arrays of shape (nk, nj, ni), reqwuired): cell permeability values
+          (for each direction), in mD;
+       ntg (float array of shape (nk, nj, ni), or float, required): net to gross values to apply to I & J
+          calculations; if a single float, is treated as a constant;
+       darcy_constant (float, required): the value to use for the Darcy constant
+       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+          units are implicitly those of the grid's crs length units
 
-   returns:
-      numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
-         face polarity: - (0) and + (1);
-         units will depend on the length units of the coordinate reference system for
-         the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
-         the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
-         respectively
+    returns:
+       numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
+          face polarity: - (0) and + (1);
+          units will depend on the length units of the coordinate reference system for
+          the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
+          the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
+          respectively
 
-   notes:
-      the algorithm is equivalent to the half cell transmissibility element of the Nexus NEWTRAN
-      calculation; each resulting value is effectively for the entire face, so area proportional
-      fractions will be needed at faults with throw, or at grid boundaries; the net to gross
-      factor is only applied to I & J transmissibilities, not K; the results
-      include the Darcy Constant factor but not any transmissibility multiplier applied at the
-      face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
-      the two half cell transmissibilities and multiply by any transmissibility multiplier; if
-      the two cells do not have simple sharing of a common face, first reduce each half cell
-      transmissibility by the proportion of the face that is shared (which may be a different
-      proportion for each of the two juxtaposed cells);
-      returned array will need to be re-ordered and re-shaped before storing as a RESQML property
-      with indexable elements of 'faces per cell';
-      the coordinate referemce system for the grid must have the same length units for xy and z
-   """
+    notes:
+       the algorithm is equivalent to the half cell transmissibility element of the Nexus NEWTRAN
+       calculation; each resulting value is effectively for the entire face, so area proportional
+       fractions will be needed at faults with throw, or at grid boundaries; the net to gross
+       factor is only applied to I & J transmissibilities, not K; the results
+       include the Darcy Constant factor but not any transmissibility multiplier applied at the
+       face; to compute the transmissibilty between neighbouring cells, take the harmonic mean of
+       the two half cell transmissibilities and multiply by any transmissibility multiplier; if
+       the two cells do not have simple sharing of a common face, first reduce each half cell
+       transmissibility by the proportion of the face that is shared (which may be a different
+       proportion for each of the two juxtaposed cells);
+       returned array will need to be re-ordered and re-shaped before storing as a RESQML property
+       with indexable elements of 'faces per cell';
+       the coordinate referemce system for the grid must have the same length units for xy and z
+    """
 
     # NB: axis argument is KJI index; this function also uses axes in xyz space
 
@@ -369,25 +369,25 @@ def half_cell_t_vertical_prism(vpg,
                                tolerance = 1.0e-6):
     """Creates a half cell transmissibilty property array for a vertical prism grid.
 
-   arguments:
-      vpg (VerticalPrismGrid): the grid for which the half cell transmissibilities are required
-      triple_perm_horizontal (numpy float array of shape (N, 3)): the directional permeabilities to apply
-         to each of the three vertical faces per cell
-      perm_k (numpy float array of shape (N,)): the permeability to use for the vertical transmissibilities
-      ntg (numpy float array of shape (N,), optional): if present, acts as a multiplier in the
-         computation of non-vertical transmissibilities
-      darcy_constant (float, optional): the value to use for the Darcy constant; if None, a suitable
-         value will be used depending on the length units of the vpg grid's crs
-      tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
-         will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
-         units are implicitly those of the grid's crs length units
+    arguments:
+       vpg (VerticalPrismGrid): the grid for which the half cell transmissibilities are required
+       triple_perm_horizontal (numpy float array of shape (N, 3)): the directional permeabilities to apply
+          to each of the three vertical faces per cell
+       perm_k (numpy float array of shape (N,)): the permeability to use for the vertical transmissibilities
+       ntg (numpy float array of shape (N,), optional): if present, acts as a multiplier in the
+          computation of non-vertical transmissibilities
+       darcy_constant (float, optional): the value to use for the Darcy constant; if None, a suitable
+          value will be used depending on the length units of the vpg grid's crs
+       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+          units are implicitly those of the grid's crs length units
 
-   returns:
-      numpy float array of shape (N, 5) being the per-face half cell transmissibilities for each cell
+    returns:
+       numpy float array of shape (N, 5) being the per-face half cell transmissibilities for each cell
 
-   note:
-      order of 5 faces matches those of faces per cell, ie. top, base, then the 3 vertical faces
-   """
+    note:
+       order of 5 faces matches those of faces per cell, ie. top, base, then the 3 vertical faces
+    """
 
     assert triple_perm_horizontal is not None
     assert triple_perm_horizontal.shape == (vpg.cell_count, 3)
@@ -432,27 +432,27 @@ def half_cell_t_vertical_prism(vpg,
 def half_cell_t_2d_triangular_precursor(p, t):
     """Creates a precursor to horizontal transmissibility for prism grids (see notes).
 
-   arguments:
-      p (numpy float array of shape (N, 2 or 3)): the xy(&z) locations of cell vertices
-      t (numpy int array of shape (M, 3)): the triangulation of p for which the transmissibility
-         precursor is required
+    arguments:
+       p (numpy float array of shape (N, 2 or 3)): the xy(&z) locations of cell vertices
+       t (numpy int array of shape (M, 3)): the triangulation of p for which the transmissibility
+          precursor is required
 
-   returns:
-      a pair of numpy float arrays, each of shape (M, 3) being the normal length and flow length
-      relevant for flow across the face opposite each vertex as defined by t
+    returns:
+       a pair of numpy float arrays, each of shape (M, 3) being the normal length and flow length
+       relevant for flow across the face opposite each vertex as defined by t
 
-   notes:
-      this function acts as a precursor to the equivalent of the half cell transmissibility
-      functions but for prism grids; for a resqpy VerticalPrismGrid, the triangulation can
-      be shared by many layers with this function only needing to be called once; the first
-      of the returned values (normal length) is the length of the triangle edge, in xy, when
-      projected onto the normal of the flow direction; multiplying the normal length by a cell
-      height will yield the area needed for transmissibility calculations; the second of the
-      returned values (flow length) is the distance from the trangle centre to the midpoint of
-      the edge and can be used as the distance term for a half cell transmissibilty; this
-      function does not account for dip, it only handles the geometric aspects of half
-      cell transmissibility in the xy plane
-   """
+    notes:
+       this function acts as a precursor to the equivalent of the half cell transmissibility
+       functions but for prism grids; for a resqpy VerticalPrismGrid, the triangulation can
+       be shared by many layers with this function only needing to be called once; the first
+       of the returned values (normal length) is the length of the triangle edge, in xy, when
+       projected onto the normal of the flow direction; multiplying the normal length by a cell
+       height will yield the area needed for transmissibility calculations; the second of the
+       returned values (flow length) is the distance from the trangle centre to the midpoint of
+       the edge and can be used as the distance term for a half cell transmissibilty; this
+       function does not account for dip, it only handles the geometric aspects of half
+       cell transmissibility in the xy plane
+    """
 
     assert p.ndim == 2 and p.shape[1] in [2, 3]
     assert t.ndim == 2 and t.shape[1] == 3
@@ -488,22 +488,22 @@ def half_cell_t_2d_triangular_precursor(p, t):
 def fault_connection_set(grid, skip_inactive = False):
     """Builds a GridConnectionSet for juxtaposed faces where there is a split pillar, with fractional area data.
 
-   arguments:
-      grid (grid.Grid object): the grid for which a fault connection set is required
-      skip_inactive (boolean, default False): if True, connections where either cell is inactive will be excluded
+    arguments:
+       grid (grid.Grid object): the grid for which a fault connection set is required
+       skip_inactive (boolean, default False): if True, connections where either cell is inactive will be excluded
 
-   returns:
-      (GridConnectionSet, numpy float array of shape (count, 2)) where the connection set identifies all cell face
-      pairs where there is juxtaposition and the array contains the fraction of the face areas that are juxtaposed;
-      count is the number of cell face pairs in the connection set
+    returns:
+       (GridConnectionSet, numpy float array of shape (count, 2)) where the connection set identifies all cell face
+       pairs where there is juxtaposition and the array contains the fraction of the face areas that are juxtaposed;
+       count is the number of cell face pairs in the connection set
 
-   notes:
-      the current algorithm is designed for faults where slip has occurred along pillars (fault sticks) – sideways
-      slip will currently cause erroneous results; inaccuracies may also arise as pillars become less straight, less
-      co-planar or less parallel; the combination of non-parallel pillars and layers of non-uniform thickness can
-      produce inaccuracies in some situations; if the grid does not have split pillars (ie. is unfaulted), or if
-      there are no qualifying connections across faults, then (None, None) will be returned
-   """
+    notes:
+       the current algorithm is designed for faults where slip has occurred along pillars (fault sticks) – sideways
+       slip will currently cause erroneous results; inaccuracies may also arise as pillars become less straight, less
+       co-planar or less parallel; the combination of non-parallel pillars and layers of non-uniform thickness can
+       produce inaccuracies in some situations; if the grid does not have split pillars (ie. is unfaulted), or if
+       there are no qualifying connections across faults, then (None, None) will be returned
+    """
 
     def all_nan(pillar):
         # return True if no valid points in pillar
@@ -1145,17 +1145,17 @@ def fault_connection_set(grid, skip_inactive = False):
 def projected_tri_area(pa, pb, pc):
     """Return array holding areas of triangles projected onto each of yz, xz, xy.
 
-   arguments:
-      pa, pb, pc (numpy float array of shape (..., 3): the corner points of a set of triangles (one corner
-         in each of pa, pb & pc, for every triangle); last axis in arrays covers x,y,z
+    arguments:
+       pa, pb, pc (numpy float array of shape (..., 3): the corner points of a set of triangles (one corner
+          in each of pa, pb & pc, for every triangle); last axis in arrays covers x,y,z
 
-   returns:
-      numpy float array of same shape as pa, pb & pc, with the last axis covering yz, xz, xy projections;
-      the return values are the areas of the triangles projected in the three principal x,y,z axes
+    returns:
+       numpy float array of same shape as pa, pb & pc, with the last axis covering yz, xz, xy projections;
+       the return values are the areas of the triangles projected in the three principal x,y,z axes
 
-   note:
-      assumes that units for x, y & z are the same; returned area units are those implicit units squared
-   """
+    note:
+       assumes that units for x, y & z are the same; returned area units are those implicit units squared
+    """
 
     assert pa.shape == pb.shape == pc.shape and pa.shape[-1] == 3
 

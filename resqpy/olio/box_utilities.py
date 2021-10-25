@@ -39,13 +39,13 @@ import numpy as np
 def extent_of_box(box):  # returns 3 element extent of box (box can be kji or ijk, 0 or 1 based)
     """Returns a 3 integer numpy array holding the size of the box, with the same ordering as the box.
 
-   input argument (unmodified):
-      box: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+    input argument (unmodified):
+       box: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
 
-   returns: numpy int array of shape (3)
-         the extent (shape) of the cuboid defined by box
-   """
+    returns: numpy int array of shape (3)
+          the extent (shape) of the cuboid defined by box
+    """
 
     assert box.ndim == 2 and box.shape == (2, 3)
     return box[1] - box[0] + 1  # numpy array operation
@@ -54,13 +54,13 @@ def extent_of_box(box):  # returns 3 element extent of box (box can be kji or ij
 def volume_of_box(box):
     """Returns the number of cells in the logical 3D cell space defined by box.
 
-   input argument (unmodified):
-      box: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+    input argument (unmodified):
+       box: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
 
-   returns: int
-         the total number of cells in box
-   """
+    returns: int
+          the total number of cells in box
+    """
 
     return (box[1, 0] - box[0, 0] + 1) * (box[1, 1] - box[0, 1] + 1) * (box[1, 2] - box[0, 2] + 1)
 
@@ -72,14 +72,14 @@ def central_cell(box):
 def string_iijjkk1_for_box_kji0(box_kji0):
     """Returns a string representing the box space in simulator protocol, eg. '[1:5, 3:20, 100:103]'.
 
-   input argument (unmodified):
-      box_kji0: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         with python kji ordering and zero start for indices
+    input argument (unmodified):
+       box_kji0: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          with python kji ordering and zero start for indices
 
-   returns: string
-      human readable representation of box in Fortran/simulator ijk protocol starting 1
-   """
+    returns: string
+       human readable representation of box in Fortran/simulator ijk protocol starting 1
+    """
 
     return '[' + str(box_kji0[0, 2] + 1) + ':' + str(box_kji0[1, 2] + 1) + ', ' +  \
                  str(box_kji0[0, 1] + 1) + ':' + str(box_kji0[1, 1] + 1) + ', ' +  \
@@ -89,16 +89,16 @@ def string_iijjkk1_for_box_kji0(box_kji0):
 def spaced_string_iijjkk1_for_box_kji0(box_kji0, colon_separator = ' '):
     """Returns a string representing the box space in simulator input format, eg. '1 5  3 20  100 103'.
 
-   input arguments (unmodified):
-      box_kji0: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         with python kji ordering and zero start for indices
-      colon_separator: string (typically ':' or ' ')
-         the character(s) included in the return string between lower and upper bounds in each direction
+    input arguments (unmodified):
+       box_kji0: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          with python kji ordering and zero start for indices
+       colon_separator: string (typically ':' or ' ')
+          the character(s) included in the return string between lower and upper bounds in each direction
 
-   returns: string
-      ascii representation of box in Fortran/simulator ijk protocol starting 1, suitable for use in include files
-   """
+    returns: string
+       ascii representation of box in Fortran/simulator ijk protocol starting 1, suitable for use in include files
+    """
 
     return str(box_kji0[0, 2] + 1) + colon_separator + str(box_kji0[1, 2] + 1) + '  ' +  \
            str(box_kji0[0, 1] + 1) + colon_separator + str(box_kji0[1, 1] + 1) + '  ' +  \
@@ -106,20 +106,20 @@ def spaced_string_iijjkk1_for_box_kji0(box_kji0, colon_separator = ' '):
 
 
 def box_kji0_from_words_iijjkk1(words):
-    """Returns an integer array of extent [2, 3] converted from a list of words representing logical box
+    """Returns an integer array of extent [2, 3] converted from a list of words representing logical box.
 
-   input argument (unmodified):
-      words: a list of strings with at least 6 elements castable to int
-         [min_i, max_i, min_j, max_j, min_k, max_k] in Fortran/simulator protocol (indices start at 1)
+    input argument (unmodified):
+       words: a list of strings with at least 6 elements castable to int
+          [min_i, max_i, min_j, max_j, min_k, max_k] in Fortran/simulator protocol (indices start at 1)
 
-   returns: 2D numpy int array of shape (2, 3)
-      [min, max][k, j, i] with cell indices in python protocol (zero base)
+    returns: 2D numpy int array of shape (2, 3)
+       [min, max][k, j, i] with cell indices in python protocol (zero base)
 
-   notes:
-      designed to take string format numbers: minI maxI minJ maxJ minK maxK
-      and convert to a pair of integer cell id triplets: min(k, j, i), max(k, j, i)
-      NB: output indices have been decremented by 1 (for python indexing starting at zero)
-   """
+    notes:
+       designed to take string format numbers: minI maxI minJ maxJ minK maxK
+       and convert to a pair of integer cell id triplets: min(k, j, i), max(k, j, i)
+       NB: output indices have been decremented by 1 (for python indexing starting at zero)
+    """
 
     assert len(words) >= 6  # expecting minI maxI minJ maxJ minK maxK value
     box = np.zeros([2, 3], dtype = 'int')
@@ -137,16 +137,16 @@ def box_kji0_from_words_iijjkk1(words):
 def cell_in_box(cell, box):
     """Returns True if cell is within box, otherwise False.
 
-   input arguments (unmodified):
-      cell: numpy int array of shape (3)
-         index of a cell in a 3D cartesian grid, in the same protocol as box (usually python protocol kji, zero base)
-      box: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         in the same protocol as cell
+    input arguments (unmodified):
+       cell: numpy int array of shape (3)
+          index of a cell in a 3D cartesian grid, in the same protocol as box (usually python protocol kji, zero base)
+       box: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          in the same protocol as cell
 
-   returns: boolean
-      True if cell is within box, False otherwise
-   """
+    returns: boolean
+       True if cell is within box, False otherwise
+    """
 
     return (box[0, 0] <= cell[0] <= box[1, 0]) and (box[0, 1] <= cell[1] <= box[1, 1]) and (box[0, 2] <= cell[2] <=
                                                                                             box[1, 2])
@@ -155,16 +155,16 @@ def cell_in_box(cell, box):
 def valid_box(box, host_extent):
     """Returns True if the entire box is within a grid of size host_extent.
 
-   input arguments (unmodified):
-      box: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         in python protocol of zero base, kji (normally) or ijk ordering same as for host_extent
-      host_extent: triple int
-         the extent (shape) of a 3D cartesian grid
+    input arguments (unmodified):
+       box: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          in python protocol of zero base, kji (normally) or ijk ordering same as for host_extent
+       host_extent: triple int
+          the extent (shape) of a 3D cartesian grid
 
-   returns: boolean
-      True if box is a valid box within a grid of shape host_extent, False otherwise
-   """
+    returns: boolean
+       True if box is a valid box within a grid of shape host_extent, False otherwise
+    """
 
     if box.ndim != 2 or box.shape != (2, 3) or box.dtype != 'int':
         return False
@@ -179,13 +179,13 @@ def valid_box(box, host_extent):
 def single_cell_box(cell):
     """Returns a box containing the single given cell; protocol for box matches that of cell.
 
-   input argument (unmodified):
-      cell: numpy int array of shape (3)
-         indices of a cell within a 3D cartesian grid, usually in python protocol (kji ordering, zero base)
+    input argument (unmodified):
+       cell: numpy int array of shape (3)
+          indices of a cell within a 3D cartesian grid, usually in python protocol (kji ordering, zero base)
 
-   returns: numpy int array of shape (2, 3)
-      indices defining a minimal box containing a single cell; protocol is same as that of cell
-   """
+    returns: numpy int array of shape (2, 3)
+       indices defining a minimal box containing a single cell; protocol is same as that of cell
+    """
 
     assert cell.ndim == 1 and cell.size == 3
     box = np.zeros((2, 3), dtype = 'int')
@@ -197,13 +197,13 @@ def single_cell_box(cell):
 def full_extent_box0(extent):
     """Returns a box containing all the cells in a grid of the given extent.
 
-   input argument (unmodified):
-      extent: numpy int array of shape (3)
-         extent (shape) of a 3D cartesian grid, usually in kji python protocol
+    input argument (unmodified):
+       extent: numpy int array of shape (3)
+          extent (shape) of a 3D cartesian grid, usually in kji python protocol
 
-   returns: numpy int array of shape (2, 3)
-      indices defining a maximal box containing the entire grid; kji ordering is same as that of extent; zero base
-   """
+    returns: numpy int array of shape (2, 3)
+       indices defining a maximal box containing the entire grid; kji ordering is same as that of extent; zero base
+    """
 
     assert extent.ndim == 1 and extent.size == 3
     box = np.zeros((2, 3), dtype = 'int')
@@ -230,20 +230,20 @@ def union(box_1, box_2):
 def parent_cell_from_local_box_cell(box, box_cell, based_0_or_1 = 0):
     """Given a box and a local cell index triplet, converts to the equivalent cell index triplet in the host grid.
 
-   input arguments (unmodified):
-      box: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         indices in the same ordering as box_cell; start value (python or Fortran/simulator) given by based_0_or_1
-      box_cell: numpy int array of shape (3)
-         indices of a cell within box, in coords local to box
-         indices in the same ordering as box; start value (python or Fortran/simulator) given by based_0_or_1
-      based_0_or_1: int, value 0 or 1
-         start value (base) for indices of box and box_cell arguments, and of return value
+    input arguments (unmodified):
+       box: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          indices in the same ordering as box_cell; start value (python or Fortran/simulator) given by based_0_or_1
+       box_cell: numpy int array of shape (3)
+          indices of a cell within box, in coords local to box
+          indices in the same ordering as box; start value (python or Fortran/simulator) given by based_0_or_1
+       based_0_or_1: int, value 0 or 1
+          start value (base) for indices of box and box_cell arguments, and of return value
 
-   returns: numpy int array of shape (3)
-      indices defining the cell in the host grid space equivalent to box_cell
-      ordering of indices is same as that of box and box_cell; base is given by based_0_or_1 argument
-   """
+    returns: numpy int array of shape (3)
+       indices defining the cell in the host grid space equivalent to box_cell
+       ordering of indices is same as that of box and box_cell; base is given by based_0_or_1 argument
+    """
 
     assert box.ndim == 2 and box.shape == (2, 3)
     assert box_cell.ndim == 1 and box_cell.size == 3
@@ -253,20 +253,20 @@ def parent_cell_from_local_box_cell(box, box_cell, based_0_or_1 = 0):
 def local_box_cell_from_parent_cell(box, parent_cell, based_0_or_1 = 0):
     """Given a cell index triplet in the host grid, and a box, returns the equivalent local cell index triplet.
 
-   input arguments (unmodified):
-      box: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         indices in the same ordering as parent_cell; start value (python or Fortran/simulator) given by based_0_or_1
-      parent_cell: numpy int array of shape (3)
-         indices of a cell within host grid
-         indices in the same ordering as box; start value (python or Fortran/simulator) given by based_0_or_1
-      based_0_or_1: int, value 0 or 1
-         start value (base) for indices of box and parent_cell arguments, and of return value
+    input arguments (unmodified):
+       box: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          indices in the same ordering as parent_cell; start value (python or Fortran/simulator) given by based_0_or_1
+       parent_cell: numpy int array of shape (3)
+          indices of a cell within host grid
+          indices in the same ordering as box; start value (python or Fortran/simulator) given by based_0_or_1
+       based_0_or_1: int, value 0 or 1
+          start value (base) for indices of box and parent_cell arguments, and of return value
 
-   returns: numpy int array of shape (3); or None
-      indices defining the parent_cell in coords local to box, if the cell is within the box
-      if parent_cell is not within box, None is returned
-   """
+    returns: numpy int array of shape (3); or None
+       indices defining the parent_cell in coords local to box, if the cell is within the box
+       if parent_cell is not within box, None is returned
+    """
 
     assert box.ndim == 2 and box.shape == (2, 3)
     assert parent_cell.ndim == 1 and parent_cell.size == 3
@@ -279,17 +279,17 @@ def local_box_cell_from_parent_cell(box, parent_cell, based_0_or_1 = 0):
 def boxes_overlap(box_a, box_b):
     """Returns True if the two boxes have any overlap in 3D, otherwise False.
 
-   Arguments:
-      box_a: numpy int or float array of shape (2, 3)
-      box_b: numpy int or float array of shape (2, 3)
+    Arguments:
+       box_a: numpy int or float array of shape (2, 3)
+       box_b: numpy int or float array of shape (2, 3)
 
-   if int arrays, each is lower & upper indices in 3 dimensions defining a logical cuboid
-   subset of a 3D cartesian grid protocol of indices for the two boxes must be the same
-   if float arrays, each is min & max x,y,z triplets
+    if int arrays, each is lower & upper indices in 3 dimensions defining a logical cuboid
+    subset of a 3D cartesian grid protocol of indices for the two boxes must be the same
+    if float arrays, each is min & max x,y,z triplets
 
-   returns: boolean
-      True if box_a and box_b overlap, False otherwise
-   """
+    returns: boolean
+       True if box_a and box_b overlap, False otherwise
+    """
 
     return not ((box_a[1, 0] < box_b[0, 0]) or (box_a[0, 0] > box_b[1, 0]) or (box_a[1, 1] < box_b[0, 1]) or
                 (box_a[0, 1] > box_b[1, 1]) or (box_a[1, 2] < box_b[0, 2]) or (box_a[0, 2] > box_b[1, 2]))
@@ -298,29 +298,29 @@ def boxes_overlap(box_a, box_b):
 def overlapping_boxes(established_box, new_box, trim_box):
     """Checks for 3D overlap of two boxes; returns True and sets trim_box if there is overlap, otherwise False.
 
-   Arguments:
-      established_box: numpy int array of shape (2, 3)
-      new_box: numpy int array of shape (2, 3)
-         each is lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         protocol of indices for the two boxes must be the same
+    Arguments:
+       established_box: numpy int array of shape (2, 3)
+       new_box: numpy int array of shape (2, 3)
+          each is lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          protocol of indices for the two boxes must be the same
 
-   output argument (modified):
-      trim_box: numpy int array of shape (2, 3)
-         set to lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         a subset of new_box such that if removed from new_box, a valid box would remain with no overlap with established_box
-         indices protocol is the same as that used for established_box and new_box (if return value is True)
-         if there is no overlap (return value False), all elements of trim_box are set to 0
+    output argument (modified):
+       trim_box: numpy int array of shape (2, 3)
+          set to lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          a subset of new_box such that if removed from new_box, a valid box would remain with no overlap with established_box
+          indices protocol is the same as that used for established_box and new_box (if return value is True)
+          if there is no overlap (return value False), all elements of trim_box are set to 0
 
-   note:
+    note:
 
-      when there is overlap between the boxes, there can be more than one way to trim the new_box,
-      with trim_box fully covering either ij, jk or ik planes of new_box
-      the function selects the trim_box containing the minimum number of cells (minimum 'loss' to trimming)
-      this function does not actually apply the trimming, ie. new_box is not modified here
+       when there is overlap between the boxes, there can be more than one way to trim the new_box,
+       with trim_box fully covering either ij, jk or ik planes of new_box
+       the function selects the trim_box containing the minimum number of cells (minimum 'loss' to trimming)
+       this function does not actually apply the trimming, ie. new_box is not modified here
 
-   returns: boolean
-      True if established_box and new_box overlap (implies trim_box valid), False otherwise (trim_box elements all 0)
-   """
+    returns: boolean
+       True if established_box and new_box overlap (implies trim_box valid), False otherwise (trim_box elements all 0)
+    """
 
     assert established_box.ndim == 2 and established_box.shape == (2, 3) and established_box.dtype == 'int'
     assert new_box.ndim == 2 and new_box.shape == (2, 3) and new_box.dtype == 'int'
@@ -363,25 +363,25 @@ def overlapping_boxes(established_box, new_box, trim_box):
 def trim_box_by_box_returning_new_mask(box_to_be_trimmed, trim_box, mask_kji0):
     """Reduces box_to_be_trimmed by trim_box; trim_box must be a neat subset box at one face of box_to_be_trimmed.
 
-   input/output argument (modified):
-      box_to_be_trimmed: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         indices protocol is python kji ordering with zero base
-         modified to exclude space occupied by trim_box
+    input/output argument (modified):
+       box_to_be_trimmed: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          indices protocol is python kji ordering with zero base
+          modified to exclude space occupied by trim_box
 
-   input arguments (unmodified):
-      trim_box: numpy int array of shape (2, 3)
-         lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
-         indices protocol is python kji ordering with zero base
-         the volume to be removed from box_to_be_trimmed,
-         must be a subset of box_to_be_trimmed completely covering one face of box_to_be_trimmed
-         (thereby ensuring that after trimming, a valid cuboid box results)
-      mask_kji0: numpy 3D boolean array of shape matching extent of input box_to_be_trimmed
-         indices protocol is python kji ordering with zero base
+    input arguments (unmodified):
+       trim_box: numpy int array of shape (2, 3)
+          lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
+          indices protocol is python kji ordering with zero base
+          the volume to be removed from box_to_be_trimmed,
+          must be a subset of box_to_be_trimmed completely covering one face of box_to_be_trimmed
+          (thereby ensuring that after trimming, a valid cuboid box results)
+       mask_kji0: numpy 3D boolean array of shape matching extent of input box_to_be_trimmed
+          indices protocol is python kji ordering with zero base
 
-   returns: numpy 3D boolean array of shape matching extent of output box_to_be_trimmed
-      the return array is a version of mask_kji0 that has been trimmed in accordance with the box trimming
-   """
+    returns: numpy 3D boolean array of shape matching extent of output box_to_be_trimmed
+       the return array is a version of mask_kji0 that has been trimmed in accordance with the box trimming
+    """
 
     local_box = np.zeros((2, 3), dtype = 'int')
     local_box[1] = extent_of_box(box_to_be_trimmed) - 1
@@ -421,8 +421,8 @@ def trim_box_by_box_returning_new_mask(box_to_be_trimmed, trim_box, mask_kji0):
 
 
 def trim_box_to_mask_returning_new_mask(bounding_box_kji0, mask_kji0):
-    """Reduces the coverage of bounding box to the minimum needed to contain True elements of mask; returns trimmed mask.
-   """
+    """Reduces the coverage of bounding box to the minimum needed to contain True elements of mask; returns trimmed
+    mask."""
 
     # NB: bounding box is modified by this function
     assert bounding_box_kji0.ndim == 2 and bounding_box_kji0.shape == (2, 3) and bounding_box_kji0.dtype == 'int'

@@ -96,12 +96,12 @@ class_dict = {
 def readable_class(class_name):
     """Given a resqml object class name as a string, returns a more human readable string.
 
-      argument:
-         class_name (string): the resqml class name, eg. 'obj_IjkGridRepresentation'
+    argument:
+       class_name (string): the resqml class name, eg. 'obj_IjkGridRepresentation'
 
-      returns:
-         a human readable version of the class name, eg. 'Grid (IJK)'
-   """
+    returns:
+       a human readable version of the class name, eg. 'Grid (IJK)'
+    """
 
     if class_name in class_dict.keys():
         return class_dict[class_name]

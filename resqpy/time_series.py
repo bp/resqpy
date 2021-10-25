@@ -83,13 +83,13 @@ class TimeDuration:
 class AnyTimeSeries(BaseResqpy):
     """Abstract class for a RESQML Time Series; use resqpy TimeSeries or GeologicTimeSeries.
 
-   notes:
-      this class has no direct initialisation method;
-      call the any_time_series() function to generate the appropriate derived class object for a given uuid;
-      the resqpy code differentiates between time series on a human timeframe, where the timestamps are
-      used without a year offset, and those on a geologic timeframe, where the timestamps are ignored and
-      only the year offset is significant
-   """
+    notes:
+       this class has no direct initialisation method;
+       call the any_time_series() function to generate the appropriate derived class object for a given uuid;
+       the resqpy code differentiates between time series on a human timeframe, where the timestamps are
+       used without a year offset, and those on a geologic timeframe, where the timestamps are ignored and
+       only the year offset is significant
+    """
 
     resqml_type = 'TimeSeries'
 
@@ -133,29 +133,29 @@ class AnyTimeSeries(BaseResqpy):
     def number_of_timestamps(self):
         """Returns the number of timestamps in the series.
 
-      :meta common:
-      """
+        :meta common:
+        """
         return len(self.timestamps)
 
     def timestamp(self, index, as_string = True):
         """Returns an individual timestamp, indexed by its position in the series.
 
-      arguments:
-         index (int): the time index for which the timestamp is required
-         as_string (boolean, default True): if True and this is series is on a geologic timeframe, the return
-            value is a string, otherwise an int; for human timeframe series, this argument has no effect
+        arguments:
+           index (int): the time index for which the timestamp is required
+           as_string (boolean, default True): if True and this is series is on a geologic timeframe, the return
+              value is a string, otherwise an int; for human timeframe series, this argument has no effect
 
-      returns:
-         string or int being the selected timestamp
+        returns:
+           string or int being the selected timestamp
 
-      notes:
-         index may be negative in which case it is taken to be relative to the end of the series
-         with the last timestamp being referenced by an index of -1;
-         the string form of a geologic timestamp is a positive number in millions of years,
-         with the suffix Ma
+        notes:
+           index may be negative in which case it is taken to be relative to the end of the series
+           with the last timestamp being referenced by an index of -1;
+           the string form of a geologic timestamp is a positive number in millions of years,
+           with the suffix Ma
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         # individual timestamp is in iso format with a Z appended, eg: 2019-08-23T14:30:00Z
         if not -len(self.timestamps) <= index < len(self.timestamps):
@@ -168,27 +168,27 @@ class AnyTimeSeries(BaseResqpy):
     def iter_timestamps(self, as_string = True):
         """Iterator over timestamps.
 
-      :meta common:
-      """
+        :meta common:
+        """
         for index in len(self.timestamps):
             yield self.timestamp(index, as_string = as_string)
 
     def last_timestamp(self, as_string = True):
         """Returns the last timestamp in the series.
 
-      :meta common:
-      """
+        :meta common:
+        """
         return self.timestamp(-1, as_string = as_string) if self.timestamps else None
 
     def index_for_timestamp(self, timestamp):
         """Returns the index for a given timestamp.
 
-      note:
-         this method uses a simplistic string or int comparison;
-         if the timestamp is not found, None is returned
+        note:
+           this method uses a simplistic string or int comparison;
+           if the timestamp is not found, None is returned
 
-      :meta common:
-      """
+        :meta common:
+        """
         as_string = not isinstance(timestamp, int)
         for index in range(len(self.timestamps)):
             if self.timestamp(index, as_string = as_string) == timestamp:
@@ -198,18 +198,18 @@ class AnyTimeSeries(BaseResqpy):
     def create_xml(self, add_as_part = True, title = None, originator = None, reuse = True):
         """Create a RESQML time series xml node from a TimeSeries or GeologicTimeSeries object, optionally add as part.
 
-      arguments:
-         add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-            in the model
-         title (string): used as the citation Title text for the new time series node
-         originator (string, optional): the name of the human being who created the time series object;
-            default is to use the login name
+        arguments:
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           title (string): used as the citation Title text for the new time series node
+           originator (string, optional): the name of the human being who created the time series object;
+              default is to use the login name
 
-      returns:
-         the newly created time series xml node
+        returns:
+           the newly created time series xml node
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         if reuse and self.try_reuse():
             return self.root  # check for reusable (equivalent) object
@@ -243,22 +243,22 @@ class AnyTimeSeries(BaseResqpy):
     def create_time_index(self, time_index, root = None, check_valid_index = True):
         """Create a time index node, including time series reference, optionally add to root.
 
-      arguments:
-         time_index (int): non-negative integer index into the time series, identifying the datetime
-            being referenced by the new node
-         root (optional): if present, the newly created time index xml node is added
-            as a child to this node
-         check_valid_index (boolean, default True): if True, an assertion error is raised
-            if the time index is out of range for this time series
+        arguments:
+           time_index (int): non-negative integer index into the time series, identifying the datetime
+              being referenced by the new node
+           root (optional): if present, the newly created time index xml node is added
+              as a child to this node
+           check_valid_index (boolean, default True): if True, an assertion error is raised
+              if the time index is out of range for this time series
 
-      returns:
-         the newly created time index xml node
+        returns:
+           the newly created time index xml node
 
-      note:
-         a time index node is typically part of a recurrent property object; it identifies
-         the datetime relevant to the property array (or other data) by indexing into a time series
-         object
-      """
+        note:
+           a time index node is typically part of a recurrent property object; it identifies
+           the datetime relevant to the property array (or other data) by indexing into a time series
+           object
+        """
 
         assert self.uuid is not None
         if check_valid_index:
@@ -282,10 +282,10 @@ class AnyTimeSeries(BaseResqpy):
 class TimeSeries(AnyTimeSeries):
     """Class for RESQML Time Series without year offsets.
 
-   notes:
-      use this class for time series on a human timeframe; use the resqpy GeologicTimeSeries class
-      instead if the time series is on a geological timeframe
-   """
+    notes:
+       use this class for time series on a human timeframe; use the resqpy GeologicTimeSeries class
+       instead if the time series is on a geological timeframe
+    """
 
     def __init__(self,
                  parent_model,
@@ -301,35 +301,35 @@ class TimeSeries(AnyTimeSeries):
                  extra_metadata = None):
         """Create a TimeSeries object, either from a time series node in parent model, or from given data.
 
-      arguments:
-         parent_model (model.Model): the resqpy model to which the time series will belong
-         uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
-         time_series_root (xml node, DEPRECATED): the xml root node; use uuid instead
-         first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
-            this and the remaining arguments are ignored if loading from xml
-         daily (non-negative int, optional): the number of one day interval timesteps to start the series
-         monthly (non-negative int, optional): the number of 30 day interval timesteps to follow the daily
-            timesteps
-         quarterly (non-negative int, optional): the number of 90 day interval timesteps to follow the
-            monthly timesteps
-         yearly (non-negative int, optional): the number of 365 day interval timesteps to follow the
-            quarterly timesteps
-         title (str, optional): the citation title to use for a new time series;
-            ignored if uuid or time_series_root is not None
-         originator (str, optional): the name of the person creating the time series, defaults to login id;
-            ignored if uuid or time_series_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the time series;
-            ignored if uuid or time_series_root is not None
+        arguments:
+           parent_model (model.Model): the resqpy model to which the time series will belong
+           uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
+           time_series_root (xml node, DEPRECATED): the xml root node; use uuid instead
+           first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
+              this and the remaining arguments are ignored if loading from xml
+           daily (non-negative int, optional): the number of one day interval timesteps to start the series
+           monthly (non-negative int, optional): the number of 30 day interval timesteps to follow the daily
+              timesteps
+           quarterly (non-negative int, optional): the number of 90 day interval timesteps to follow the
+              monthly timesteps
+           yearly (non-negative int, optional): the number of 365 day interval timesteps to follow the
+              quarterly timesteps
+           title (str, optional): the citation title to use for a new time series;
+              ignored if uuid or time_series_root is not None
+           originator (str, optional): the name of the person creating the time series, defaults to login id;
+              ignored if uuid or time_series_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the time series;
+              ignored if uuid or time_series_root is not None
 
-      returns:
-         newly instantiated TimeSeries object
+        returns:
+           newly instantiated TimeSeries object
 
-      note:
-         a new bespoke time series can be populated by passing the first timestamp here and using the
-         add_timestamp() and/or extend_by...() methods
+        note:
+           a new bespoke time series can be populated by passing the first timestamp here and using the
+           add_timestamp() and/or extend_by...() methods
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         self.timeframe = 'human'
         self.timestamps = []  # ordered list of timestamp strings in resqml/iso format
@@ -373,8 +373,8 @@ class TimeSeries(AnyTimeSeries):
     def index_for_timestamp_not_later_than(self, timestamp):
         """Returns the index of the latest timestamp that is not later than the specified date.
 
-      :meta common:
-      """
+        :meta common:
+        """
         index = len(self.timestamps) - 1
         while (index >= 0) and (self.timestamps[index] > timestamp):
             index -= 1
@@ -385,8 +385,8 @@ class TimeSeries(AnyTimeSeries):
     def index_for_timestamp_not_earlier_than(self, timestamp):
         """Returns the index of the earliest timestamp that is not earlier than the specified date.
 
-      :meta common:
-      """
+        :meta common:
+        """
         index = 0
         while (index < len(self.timestamps)) and (self.timestamps[index] < timestamp):
             index += 1
@@ -397,8 +397,8 @@ class TimeSeries(AnyTimeSeries):
     def index_for_timestamp_closest_to(self, timestamp):
         """Returns the index of the timestamp that is closest to the specified date.
 
-      :meta common:
-      """
+        :meta common:
+        """
         if not self.timestamps:
             return None
         before = self.index_for_timestamp_not_later_than(self, timestamp)
@@ -414,8 +414,8 @@ class TimeSeries(AnyTimeSeries):
     def duration_between_timestamps(self, earlier_index, later_index):
         """Returns the duration between a pair of timestamps.
 
-      :meta common:
-      """
+        :meta common:
+        """
         if earlier_index < 0 or later_index >= len(self.timestamps) or later_index < earlier_index:
             return None
         return TimeDuration(earlier_timestamp = self.timestamps[earlier_index],
@@ -431,8 +431,8 @@ class TimeSeries(AnyTimeSeries):
     def duration_since_start(self, index):
         """Returns the duration between the start of the time series and the indexed timestamp.
 
-      :meta common:
-      """
+        :meta common:
+        """
         if index < 0 or index >= len(self.timestamps):
             return None
         return self.duration_between_timestamps(0, index)
@@ -444,8 +444,8 @@ class TimeSeries(AnyTimeSeries):
     def step_duration(self, index):
         """Returns the duration of the time step between the indexed timestamp and preceeding one.
 
-      :meta common:
-      """
+        :meta common:
+        """
         if index < 1 or index >= len(self.timestamps):
             return None
         return self.duration_between_timestamps(index - 1, index)
@@ -493,7 +493,10 @@ class TimeSeries(AnyTimeSeries):
 
     @property
     def time_series_root(self):
-        """DEPRECATED. Alias for root"""
+        """DEPRECATED.
+
+        Alias for root
+        """
         warnings.warn("Attribute 'time_series_root' is deprecated. Use 'root'", DeprecationWarning)
         return self.root
 
@@ -510,25 +513,25 @@ class GeologicTimeSeries(AnyTimeSeries):
                  extra_metadata = None):
         """Create a GeologicTimeSeries object, either from a time series node in parent model, or empty.
 
-      arguments:
-         parent_model (model.Model): the resqpy model to which the time series will belong
-         uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
-         title (str, optional): the citation title to use for a new time series;
-            ignored if uuid or time_series_root is not None
-         originator (str, optional): the name of the person creating the time series, defaults to login id;
-            ignored if uuid or time_series_root is not None
-         extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the time series;
-            ignored if uuid or time_series_root is not None
+        arguments:
+           parent_model (model.Model): the resqpy model to which the time series will belong
+           uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
+           title (str, optional): the citation title to use for a new time series;
+              ignored if uuid or time_series_root is not None
+           originator (str, optional): the name of the person creating the time series, defaults to login id;
+              ignored if uuid or time_series_root is not None
+           extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the time series;
+              ignored if uuid or time_series_root is not None
 
-      returns:
-         newly instantiated GeologicTimeSeries object
+        returns:
+           newly instantiated GeologicTimeSeries object
 
-      note:
-         if instantiating from an existing RESQML time series, its Time entries must all have YearOffset data
-         which should be large negative integers
+        note:
+           if instantiating from an existing RESQML time series, its Time entries must all have YearOffset data
+           which should be large negative integers
 
-      :meta common:
-      """
+        :meta common:
+        """
         self.timeframe = 'geologic'
         self.timestamps = []  # ordered list of (large negative) ints being year offsets from present
         super().__init__(model = parent_model,
@@ -544,12 +547,12 @@ class GeologicTimeSeries(AnyTimeSeries):
     def from_year_list(cls, parent_model, year_list, title = None, originator = None, extra_metadata = {}):
         """Creates a new GeologicTimeSeries from a list of large integers representing years before present.
 
-      note:
-         the years will be converted to negative numbers if positive, and sorted from oldest (most negative)
-         to youngest (least negative)
+        note:
+           the years will be converted to negative numbers if positive, and sorted from oldest (most negative)
+           to youngest (least negative)
 
-      :meta common:
-      """
+        :meta common:
+        """
 
         assert isinstance(year_list, list) and len(year_list) > 0
         negative_list = []
@@ -576,7 +579,8 @@ class GeologicTimeSeries(AnyTimeSeries):
 
 
 def selected_time_series(full_series, indices_list, title = None):
-    """Returns a new TimeSeries or GeologicTimeSeries object with timestamps selected from the full series by a list of indices."""
+    """Returns a new TimeSeries or GeologicTimeSeries object with timestamps selected from the full series by a list of
+    indices."""
 
     if isinstance(full_series, TimeSeries):
         selected_ts = TimeSeries(full_series.model, title = title)
@@ -616,10 +620,10 @@ def cleaned_timestamp(timestamp):
 def time_series_from_list(timestamp_list, parent_model = None, title = None):
     """Create a TimeSeries object from a list of timestamps (model and node set to None).
 
-   note:
-      timestamps in the list should be in the correct string format for human timeframe series,
-      or large negative integers for geologic timeframe series
-   """
+    note:
+       timestamps in the list should be in the correct string format for human timeframe series,
+       or large negative integers for geologic timeframe series
+    """
 
     assert (len(timestamp_list) > 0)
     sorted_timestamps = sorted(timestamp_list)
@@ -639,7 +643,12 @@ def time_series_from_list(timestamp_list, parent_model = None, title = None):
 
 
 def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
-    """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries. iterable can be a list, array, or iteratable generator (model must be provided). The new timeseries is sorted in ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to generate the list"""
+    """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries.
+
+    iterable can be a list, array, or iteratable generator (model must be provided). The new timeseries is sorted in
+    ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to
+    generate the list
+    """
 
     reverse = False
 

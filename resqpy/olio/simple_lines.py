@@ -15,18 +15,18 @@ import numpy as np
 def read_lines(filename):
     """Returns a list of line arrays, read from ascii file.
 
-      argument:
-         filename (string): the path of the ascii file holding a set of poly-lines
+    argument:
+       filename (string): the path of the ascii file holding a set of poly-lines
 
-      returns:
-         list of numpy arrays, each array representing one poly-line
+    returns:
+       list of numpy arrays, each array representing one poly-line
 
-      notes:
-         each line in the file must contain 3 floating point numbers: x, y, z;
-         each poly-line must be terminated with a null marker line: 999.0 999.0 999.0
-         there is no handling of units; elsewhere they will implicitly be assumed to be
-         those of a crs for a grid object
-   """
+    notes:
+       each line in the file must contain 3 floating point numbers: x, y, z;
+       each poly-line must be terminated with a null marker line: 999.0 999.0 999.0
+       there is no handling of units; elsewhere they will implicitly be assumed to be
+       those of a crs for a grid object
+    """
 
     lines_list = []
     end_of_line = np.array([999.0, 999.0, 999.0])
@@ -67,16 +67,16 @@ def read_lines(filename):
 def polygon_line(line, tolerance = 0.001):
     """Returns a copy of the line with the last vertex stripped off if it is close to the first vertex.
 
-      arguments:
-         line (numpy array of floats): representation of a poly-line which might be closed (last vertex
-            matches first vertex)
-         tolerance (float, default = 0.001): the maximum Manhatten distance between two points for them
-            to be treated as coincident
+    arguments:
+       line (numpy array of floats): representation of a poly-line which might be closed (last vertex
+          matches first vertex)
+       tolerance (float, default = 0.001): the maximum Manhatten distance between two points for them
+          to be treated as coincident
 
-      returns:
-         numpy array of floats which is either a copy of line, or a copy of line with the last point
-         removed
-   """
+    returns:
+       numpy array of floats which is either a copy of line, or a copy of line with the last point
+       removed
+    """
 
     last = len(line) - 1
     if last < 1:
@@ -93,20 +93,20 @@ def polygon_line(line, tolerance = 0.001):
 def duplicate_vertices_removed(line, tolerance = 0.001):
     """Returns a copy of the line with neighbouring duplicate vertices removed.
 
-      arguments:
-         line (2D numpy array of floats): representation of a poly-line
-         tolerance (float, default = 0.001): the maximum Manhatten distance between two points for them
-            to be treated as coincident
+    arguments:
+       line (2D numpy array of floats): representation of a poly-line
+       tolerance (float, default = 0.001): the maximum Manhatten distance between two points for them
+          to be treated as coincident
 
-      returns:
-         numpy array of floats which is either a copy of line, or a copy of line with some points
-         removed
+    returns:
+       numpy array of floats which is either a copy of line, or a copy of line with some points
+       removed
 
-      notes:
-         does not treat the line as a closed polyline, use polygon_line() function as well to remove
-         duplicated first/last point;
-         always preserves first and last point, even if they are identical and there are no other vertices
-   """
+    notes:
+       does not treat the line as a closed polyline, use polygon_line() function as well to remove
+       duplicated first/last point;
+       always preserves first and last point, even if they are identical and there are no other vertices
+    """
 
     assert line.ndim == 2
     if len(line) < 3:
@@ -131,22 +131,22 @@ def duplicate_vertices_removed(line, tolerance = 0.001):
 def nearest_pillars(line_list, grid, ref_k = 0, ref_kp = 0):
     """Finds pillars nearest to each point on each line; returns list of lists of (j0, i0).
 
-      arguments:
-         line_list (list of numpy arrays of floats): set of poly-lines, the points of which are used
-            to find the nearest pillars in grid
-         grid (grid.Grid object): the grid whose pillars are compared with the poly-line vertices
-         ref_k (integer, default 0): the reference layer in the grid to compare against the vertices;
-            zero based
-         ref_kp (integer, default 0): 0 to indicate the top corners of the reference layer, 1 for the base
+    arguments:
+       line_list (list of numpy arrays of floats): set of poly-lines, the points of which are used
+          to find the nearest pillars in grid
+       grid (grid.Grid object): the grid whose pillars are compared with the poly-line vertices
+       ref_k (integer, default 0): the reference layer in the grid to compare against the vertices;
+          zero based
+       ref_kp (integer, default 0): 0 to indicate the top corners of the reference layer, 1 for the base
 
-      returns:
-         a list of lists of pairs of integers, each being the (j, i) pillar indices of the nearest pillar
-         to the corresponding vertex of the poly-line; zero based indexing
+    returns:
+       a list of lists of pairs of integers, each being the (j, i) pillar indices of the nearest pillar
+       to the corresponding vertex of the poly-line; zero based indexing
 
-      notes:
-         this is a 2D search in the x, y plane; z values are ignored;
-         poly-line x, y values must implicitly be in the same crs as the grid's points data
-   """
+    notes:
+       this is a 2D search in the x, y plane; z values are ignored;
+       poly-line x, y values must implicitly be in the same crs as the grid's points data
+    """
 
     pillar_list_list = []
     for line in line_list:
@@ -163,25 +163,25 @@ def nearest_pillars(line_list, grid, ref_k = 0, ref_kp = 0):
 def nearest_rods(line_list, projection, grid, axis, ref_slice0 = 0, plus_face = False):
     """Finds rods nearest to each point on each line; returns list of lists of (k0, j0) or (k0, i0).
 
-      arguments:
-         line_list (list of numpy arrays of floats): set of poly-lines, the points of which are used
-            to find the nearest rods in grid
-         projection (string): 'xz' or 'yz'
-         grid (grid.Grid object): the grid whose cross section points are compared with the poly-line vertices
-         axis (string): 'I' or 'J' being the axis removed during slicing
-         ref_slice0 (integer, default 0): the reference slice in the grid to compare against the vertices;
-            zero based
-         plus_face (boolean, default False): which face of the reference slice to use
+    arguments:
+       line_list (list of numpy arrays of floats): set of poly-lines, the points of which are used
+          to find the nearest rods in grid
+       projection (string): 'xz' or 'yz'
+       grid (grid.Grid object): the grid whose cross section points are compared with the poly-line vertices
+       axis (string): 'I' or 'J' being the axis removed during slicing
+       ref_slice0 (integer, default 0): the reference slice in the grid to compare against the vertices;
+          zero based
+       plus_face (boolean, default False): which face of the reference slice to use
 
-      returns:
-         a list of numpy arrays of pairs of integers, each being the (k, j) or (k, i) indices of the
-         nearest rod to the corresponding vertex of the poly-line under projection; zero based indexing
+    returns:
+       a list of numpy arrays of pairs of integers, each being the (k, j) or (k, i) indices of the
+       nearest rod to the corresponding vertex of the poly-line under projection; zero based indexing
 
-      notes:
-         this is a 2D search in the x, z or y, z plane;
-         currently limited to unsplit grids without k gaps;
-         poly-line x, y, z values must implicitly be in the same crs as the grid's points data
-   """
+    notes:
+       this is a 2D search in the x, z or y, z plane;
+       currently limited to unsplit grids without k gaps;
+       poly-line x, y, z values must implicitly be in the same crs as the grid's points data
+    """
 
     assert projection in ['xz', 'yz']
     assert axis.upper() in ['J', 'I']
@@ -196,28 +196,28 @@ def nearest_rods(line_list, projection, grid, axis, ref_slice0 = 0, plus_face = 
 def drape_lines(line_list, pillar_list_list, grid, ref_k = 0, ref_kp = 0, offset = -1.0, snap = False):
     """Roughly drapes lines over grid horizon; draped lines are suitable for 3D visualisation.
 
-      arguments:
-         line_list (list of numpy arrays of floats): the undraped poly-lines
-         pillar_list_list: (list of lists of pairs of integers): as returned by nearest_pillars()
-         grid: (grid.Grid object): the grid to which the poly-lines are to be draped
-         ref_k (integer, default 0): the reference layer in the grid to which the lines will be
-            draped; zero based
-         ref_kp (integer, default 0): 0 to indicate the top corners of the reference layer, 1 for the base
-         offset (float, default -1.0): the vertical offset to add to the z value of pillar points; positive
-            drapes lines deeper, negative shallower (assumes grid's crs has z increasing downwards)
-         snap (boolean, default False): if True, the x & y values of each vertex in the lines are moved to
-            match the pillar point; if False, only the z values are adjusted
+    arguments:
+       line_list (list of numpy arrays of floats): the undraped poly-lines
+       pillar_list_list: (list of lists of pairs of integers): as returned by nearest_pillars()
+       grid: (grid.Grid object): the grid to which the poly-lines are to be draped
+       ref_k (integer, default 0): the reference layer in the grid to which the lines will be
+          draped; zero based
+       ref_kp (integer, default 0): 0 to indicate the top corners of the reference layer, 1 for the base
+       offset (float, default -1.0): the vertical offset to add to the z value of pillar points; positive
+          drapes lines deeper, negative shallower (assumes grid's crs has z increasing downwards)
+       snap (boolean, default False): if True, the x & y values of each vertex in the lines are moved to
+          match the pillar point; if False, only the z values are adjusted
 
-      returns:
-         list of numpy arrays of floats, being the draped equivalents of the line_list
+    returns:
+       list of numpy arrays of floats, being the draped equivalents of the line_list
 
-      notes:
-         the units of the line list must implicitly be those of the crs for the grid;
-         for grids with split coordinate lines (faults), only the primary pillars are currently used;
-         the results of this function are intended for 3D visualisation of an indicative nature;
-         resulting draped lines may penetrate the grid layer faces depending on the 3D geometry and
-         the spacing of the vertices compared to cell sizes
-   """
+    notes:
+       the units of the line list must implicitly be those of the crs for the grid;
+       for grids with split coordinate lines (faults), only the primary pillars are currently used;
+       the results of this function are intended for 3D visualisation of an indicative nature;
+       resulting draped lines may penetrate the grid layer faces depending on the 3D geometry and
+       the spacing of the vertices compared to cell sizes
+    """
 
     assert len(line_list) == len(pillar_list_list)
 
@@ -253,27 +253,27 @@ def drape_lines_to_rods(line_list,
                         snap = False):
     """Roughly drapes lines near grid cross section; draped lines are suitable for 3D visualisation.
 
-      arguments:
-         line_list (list of numpy arrays of floats): the undraped poly-lines
-         rod_list_list: (list of arrays of pairs of integers): as returned by nearest_rods()
-         grid: (grid.Grid object): the grid to which the poly-lines are to be draped
-         axis (string): 'I' or 'J' being the axis removed during slicing
-         ref_slice0 (integer, default 0): the reference slice in the grid to drape to; zero based
-         plus_face (boolean, default False): which face of the reference slice to use
-         offset (float, default -1.0): the horzontal offset to add to the y or x value of rod points
-         snap (boolean, default False): if True, the x & z or y & z values of each vertex in the lines
-            are moved to match the rod point; if False, only the y or x values are adjusted
+    arguments:
+       line_list (list of numpy arrays of floats): the undraped poly-lines
+       rod_list_list: (list of arrays of pairs of integers): as returned by nearest_rods()
+       grid: (grid.Grid object): the grid to which the poly-lines are to be draped
+       axis (string): 'I' or 'J' being the axis removed during slicing
+       ref_slice0 (integer, default 0): the reference slice in the grid to drape to; zero based
+       plus_face (boolean, default False): which face of the reference slice to use
+       offset (float, default -1.0): the horzontal offset to add to the y or x value of rod points
+       snap (boolean, default False): if True, the x & z or y & z values of each vertex in the lines
+          are moved to match the rod point; if False, only the y or x values are adjusted
 
-      returns:
-         list of numpy arrays of floats, being the draped equivalents of the line_list
+    returns:
+       list of numpy arrays of floats, being the draped equivalents of the line_list
 
-      notes:
-         the units of the line list must implicitly be those of the crs for the grid;
-         currently limited to unsplit grids with no k gaps;
-         the results of this function are intended for 3D visualisation of an indicative nature;
-         resulting draped lines may penetrate the grid layer faces depending on the 3D geometry and
-         the spacing of the vertices compared to cell sizes
-   """
+    notes:
+       the units of the line list must implicitly be those of the crs for the grid;
+       currently limited to unsplit grids with no k gaps;
+       the results of this function are intended for 3D visualisation of an indicative nature;
+       resulting draped lines may penetrate the grid layer faces depending on the 3D geometry and
+       the spacing of the vertices compared to cell sizes
+    """
 
     assert projection in ['xz', 'yz']
     assert axis.upper() in ['I', 'J']
