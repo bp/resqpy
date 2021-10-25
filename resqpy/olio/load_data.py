@@ -32,17 +32,17 @@ import resqpy.olio.ab_toolbox as abt
 
 
 def file_exists(file_name, must_be_more_recent_than_file = None):
-   """Returns True if the file exists (and is more recent than other file, if given)."""
+    """Returns True if the file exists (and is more recent than other file, if given)."""
 
-   if file_name is None or len(file_name) == 0:
-      return False
-   existe = os.path.exists(file_name)
-   if not existe:
-      return False
-   if not must_be_more_recent_than_file or file_name == must_be_more_recent_than_file or  \
-      not os.path.exists(must_be_more_recent_than_file):
-      return True
-   return os.path.getmtime(file_name) > os.path.getmtime(must_be_more_recent_than_file)
+    if file_name is None or len(file_name) == 0:
+        return False
+    existe = os.path.exists(file_name)
+    if not existe:
+        return False
+    if not must_be_more_recent_than_file or file_name == must_be_more_recent_than_file or  \
+       not os.path.exists(must_be_more_recent_than_file):
+        return True
+    return os.path.getmtime(file_name) > os.path.getmtime(must_be_more_recent_than_file)
 
 
 ######################################################################################################
@@ -63,7 +63,7 @@ def load_corp_array_from_file(file_name,
                               use_binary = False,
                               eight_mode = False,
                               use_numbers_only = None):
-   """Loads a nexus corner point (CORP) array from a file, returns a 7D numpy array in pagoda ordering.
+    """Loads a nexus corner point (CORP) array from a file, returns a 7D numpy array in pagoda ordering.
 
       arguments:
          file_name: The name of an ascii file holding the CORP data (no other keywords with numeric data
@@ -93,56 +93,56 @@ def load_corp_array_from_file(file_name,
          shape of the array is determined from the corner point data unless extent_kji has been specified.
    """
 
-   #   assert(extent_kji is not None or data_free_of_comments)   # no longer a requirement
+    #   assert(extent_kji is not None or data_free_of_comments)   # no longer a requirement
 
-   if extent_kji is None:
-      extent = None
-   else:
-      extent = [extent_kji[0] * extent_kji[1] * extent_kji[2], 8, 3]
+    if extent_kji is None:
+        extent = None
+    else:
+        extent = [extent_kji[0] * extent_kji[1] * extent_kji[2], 8, 3]
 
-   if corp_bin:
-      bin_file_size = os.path.getsize(file_name)
-      bin_cell_count, remainder = divmod(bin_file_size,
-                                         26 * 4)  # corp bin format has records of 24 + 2 (head, tail) 32 bit words
-      if remainder:
-         log.error('corp binary file ' + str(file_name) + ' is not a whole number of records')
-         return None
-      dt = np.dtype('float32')
-      if swap_bytes:
-         dt = dt.newbyteorder()
-      cp_array = np.fromfile(file_name, dtype = dt, count = 26 * bin_cell_count).reshape((-1, 26))[:, 1:25]
-      if extent_kji is not None:
-         if bin_cell_count != (extent_kji[0] * extent_kji[1] * extent_kji[2]):
-            log.error('corp binary file ' + str(file_name) + ' contains data for ' + str(bin_cell_count) +
-                      ' cells; extent requires ' + str(extent_kji[0] * extent_kji[1] * extent_kji[2]))
+    if corp_bin:
+        bin_file_size = os.path.getsize(file_name)
+        bin_cell_count, remainder = divmod(bin_file_size,
+                                           26 * 4)  # corp bin format has records of 24 + 2 (head, tail) 32 bit words
+        if remainder:
+            log.error('corp binary file ' + str(file_name) + ' is not a whole number of records')
+            return None
+        dt = np.dtype('float32')
+        if swap_bytes:
+            dt = dt.newbyteorder()
+        cp_array = np.fromfile(file_name, dtype = dt, count = 26 * bin_cell_count).reshape((-1, 26))[:, 1:25]
+        if extent_kji is not None:
+            if bin_cell_count != (extent_kji[0] * extent_kji[1] * extent_kji[2]):
+                log.error('corp binary file ' + str(file_name) + ' contains data for ' + str(bin_cell_count) +
+                          ' cells; extent requires ' + str(extent_kji[0] * extent_kji[1] * extent_kji[2]))
 
-   else:
-      cp_array = load_array_from_file(file_name,
-                                      extent = extent,
-                                      data_type = 'real',
-                                      keyword = 'CORP',
-                                      max_lines_for_keyword = max_lines_for_keyword,
-                                      comment_char = comment_char,
-                                      data_free_of_comments = data_free_of_comments,
-                                      use_binary = use_binary)
+    else:
+        cp_array = load_array_from_file(file_name,
+                                        extent = extent,
+                                        data_type = 'real',
+                                        keyword = 'CORP',
+                                        max_lines_for_keyword = max_lines_for_keyword,
+                                        comment_char = comment_char,
+                                        data_free_of_comments = data_free_of_comments,
+                                        use_binary = use_binary)
 
-   cell_count, remainder = divmod(cp_array.size, 24)
-   if remainder:
-      log.error('file ' + file_name + ' contains ' + str(cp_array.size) + ' data, which is not a multiple of 24')
-      return None
+    cell_count, remainder = divmod(cp_array.size, 24)
+    if remainder:
+        log.error('file ' + file_name + ' contains ' + str(cp_array.size) + ' data, which is not a multiple of 24')
+        return None
 
-   cp_array = cp_array.reshape(1, 1, cell_count, 2, 2, 2, 3)  # pagoda 7D, temporarily with all cells on I axis
-   log.debug('resequencing corner point data')
-   gf.resequence_nexus_corp(cp_array, eight_mode = eight_mode)  # switches IP points where JP = 1 (unless eight_mode)
+    cp_array = cp_array.reshape(1, 1, cell_count, 2, 2, 2, 3)  # pagoda 7D, temporarily with all cells on I axis
+    log.debug('resequencing corner point data')
+    gf.resequence_nexus_corp(cp_array, eight_mode = eight_mode)  # switches IP points where JP = 1 (unless eight_mode)
 
-   if extent_kji is None:
-      log.info('determining grid extent from corner points')
-      extent_kji = gf.determine_corp_extent(cp_array)
-      if extent_kji is None:
-         log.error('failed to determine extent of grid from corner points')
-         return cp_array
+    if extent_kji is None:
+        log.info('determining grid extent from corner points')
+        extent_kji = gf.determine_corp_extent(cp_array)
+        if extent_kji is None:
+            log.error('failed to determine extent of grid from corner points')
+            return cp_array
 
-   return cp_array.reshape(extent_kji[0], extent_kji[1], extent_kji[2], 2, 2, 2, 3)
+    return cp_array.reshape(extent_kji[0], extent_kji[1], extent_kji[2], 2, 2, 2, 3)
 
 
 ######################################################################################################
@@ -162,13 +162,56 @@ def load_array_from_file(file_name,
                          data_free_of_comments = False,
                          use_binary = False,
                          use_numbers_only = None):
-   """Load an array from an ascii (or pure binary) file.
+    """Load an array from an ascii (or pure binary) file.
 
       Arguments are similar to those for load_corp_array_from_file().
    """
 
-   if not use_binary:
-      return load_array_from_ascii_file(file_name,
+    if not use_binary:
+        return load_array_from_ascii_file(file_name,
+                                          extent = extent,
+                                          data_type = data_type,
+                                          keyword = keyword,
+                                          max_lines_for_keyword = max_lines_for_keyword,
+                                          comment_char = comment_char,
+                                          data_free_of_comments = data_free_of_comments)
+
+    (extension, ab_type) = abt.binary_file_extension_and_np_type_for_data_type(data_type)
+
+    if extent is None:
+        cell_count = -1  # np.fromfile interprets this as 'read everything'
+        log.debug('Loading unknown number of array data elements from file ' + file_name)
+    else:
+        cell_count = pu.cell_count_from_extent(extent)
+        log.debug('Loading %1d array data elements from file %s', cell_count, file_name)
+
+    ascii_file_name = file_name
+    binary_file_name = file_name
+    if len(binary_file_name) < 4 or binary_file_name[-3:] != extension:
+        binary_file_name += extension
+    else:
+        ascii_file_name = ascii_file_name[:-3]  # strip off '.db' or similar
+
+    try:  # tentatively try to read data from an existing binary file, if present
+        if file_exists(binary_file_name, must_be_more_recent_than_file = ascii_file_name):
+            with open(binary_file_name, 'rb') as binary_file_in:
+                result = np.fromfile(binary_file_in, dtype = ab_type, count = cell_count)
+                if extent is not None:
+                    result = result.reshape(extent)
+                # check that end of file has been reached, ie. not too much data in file
+                try:  # expected to return null
+                    c = binary_file_in.read(1)
+                    if len(c):
+                        log.warning('binary file contains more data than expected: ' + binary_file_name)
+                except Exception:
+                    pass
+                log.info('Data loaded from binary file %s', binary_file_name)
+                return result
+    except Exception:
+        pass
+
+    # read from ascii file
+    result = load_array_from_ascii_file(file_name,
                                         extent = extent,
                                         data_type = data_type,
                                         keyword = keyword,
@@ -176,57 +219,14 @@ def load_array_from_file(file_name,
                                         comment_char = comment_char,
                                         data_free_of_comments = data_free_of_comments)
 
-   (extension, ab_type) = abt.binary_file_extension_and_np_type_for_data_type(data_type)
+    # create a binary file (to be used next time)
+    try:
+        wd.write_pure_binary_data(binary_file_name, result)
+    except Exception:
+        log.warn('Failed to write data to binary file %s', binary_file_name)
+        # todo: could delete the binary file in case a corrupt file is left for use next time
 
-   if extent is None:
-      cell_count = -1  # np.fromfile interprets this as 'read everything'
-      log.debug('Loading unknown number of array data elements from file ' + file_name)
-   else:
-      cell_count = pu.cell_count_from_extent(extent)
-      log.debug('Loading %1d array data elements from file %s', cell_count, file_name)
-
-   ascii_file_name = file_name
-   binary_file_name = file_name
-   if len(binary_file_name) < 4 or binary_file_name[-3:] != extension:
-      binary_file_name += extension
-   else:
-      ascii_file_name = ascii_file_name[:-3]  # strip off '.db' or similar
-
-   try:  # tentatively try to read data from an existing binary file, if present
-      if file_exists(binary_file_name, must_be_more_recent_than_file = ascii_file_name):
-         with open(binary_file_name, 'rb') as binary_file_in:
-            result = np.fromfile(binary_file_in, dtype = ab_type, count = cell_count)
-            if extent is not None:
-               result = result.reshape(extent)
-            # check that end of file has been reached, ie. not too much data in file
-            try:  # expected to return null
-               c = binary_file_in.read(1)
-               if len(c):
-                  log.warning('binary file contains more data than expected: ' + binary_file_name)
-            except Exception:
-               pass
-            log.info('Data loaded from binary file %s', binary_file_name)
-            return result
-   except Exception:
-      pass
-
-   # read from ascii file
-   result = load_array_from_ascii_file(file_name,
-                                       extent = extent,
-                                       data_type = data_type,
-                                       keyword = keyword,
-                                       max_lines_for_keyword = max_lines_for_keyword,
-                                       comment_char = comment_char,
-                                       data_free_of_comments = data_free_of_comments)
-
-   # create a binary file (to be used next time)
-   try:
-      wd.write_pure_binary_data(binary_file_name, result)
-   except Exception:
-      log.warn('Failed to write data to binary file %s', binary_file_name)
-      # todo: could delete the binary file in case a corrupt file is left for use next time
-
-   return result
+    return result
 
 
 # end of load_array_from_file() def
@@ -248,7 +248,7 @@ def load_array_from_ascii_file(file_name,
                                data_free_of_comments = False,
                                skip_c_space = True,
                                use_numbers_only = None):
-   """Returns a numpy array with data loaded from an ascii file.
+    """Returns a numpy array with data loaded from an ascii file.
 
    arguments:
       file_name: string holding name of the existing ascii data file, eg. 'Cell_depth.dat'
@@ -291,138 +291,138 @@ def load_array_from_ascii_file(file_name,
       'bool' and 'boolean' are synonymous; default is 'real'
       The numpy data type will be the default 64 bit float or 64 bit int
    """
-   # todo: Code enhancement could cater for 32 bit options (and 8 bit for bool) if needed to reduce memory usage
+    # todo: Code enhancement could cater for 32 bit options (and 8 bit for bool) if needed to reduce memory usage
 
-   if extent is None:
-      cell_count = -1  # np.fromfile interprets this as 'read everything'
-      log.debug('Loading unknown number of array data elements from ascii file ' + file_name)
-   else:
-      cell_count = pu.cell_count_from_extent(extent)
-      log.debug('Loading %1d array data elements from ascii file %s', cell_count, file_name)
+    if extent is None:
+        cell_count = -1  # np.fromfile interprets this as 'read everything'
+        log.debug('Loading unknown number of array data elements from ascii file ' + file_name)
+    else:
+        cell_count = pu.cell_count_from_extent(extent)
+        log.debug('Loading %1d array data elements from ascii file %s', cell_count, file_name)
 
-   if data_type in ['real', 'float', float]:
-      d_type = 'float'
-   elif data_type in ['int', 'integer', int]:
-      d_type = 'int'
-   elif data_type in ['bool', 'boolean', bool]:
-      d_type = 'int'  # read booleans as 0 or 1 and convert after
-   else:
-      assert False, 'Unknown data_type passed to load_array_from_ascii_file' + str(data_type)
+    if data_type in ['real', 'float', float]:
+        d_type = 'float'
+    elif data_type in ['int', 'integer', int]:
+        d_type = 'int'
+    elif data_type in ['bool', 'boolean', bool]:
+        d_type = 'int'  # read booleans as 0 or 1 and convert after
+    else:
+        assert False, 'Unknown data_type passed to load_array_from_ascii_file' + str(data_type)
 
-   read_file_name = file_name
+    read_file_name = file_name
 
-   with open(read_file_name, 'r') as data_file:
+    with open(read_file_name, 'r') as data_file:
 
-      if not comment_char and not data_free_of_comments:
-         comment_char = kf.guess_comment_char(data_file)
-         if not comment_char:
-            comment_char = '!'
+        if not comment_char and not data_free_of_comments:
+            comment_char = kf.guess_comment_char(data_file)
+            if not comment_char:
+                comment_char = '!'
 
-      if keyword:
-         keyword_found = kf.find_keyword(data_file, keyword, max_lines = max_lines_for_keyword)
-         if keyword_found:
-            data_file.readline()  # skip keyword line
+        if keyword:
+            keyword_found = kf.find_keyword(data_file, keyword, max_lines = max_lines_for_keyword)
+            if keyword_found:
+                data_file.readline()  # skip keyword line
 
-      kf.skip_blank_lines_and_comments(data_file, comment_char = comment_char, skip_c_space = skip_c_space)
+        kf.skip_blank_lines_and_comments(data_file, comment_char = comment_char, skip_c_space = skip_c_space)
 
-      result = None
+        result = None
 
-      if data_free_of_comments:  # use numpy fromfile function after passing header comments
+        if data_free_of_comments:  # use numpy fromfile function after passing header comments
 
-         result = np.fromfile(data_file, dtype = d_type, count = cell_count, sep = ' ')
+            result = np.fromfile(data_file, dtype = d_type, count = cell_count, sep = ' ')
 
-         if result is None:
-            data_file.seek(0)
+            if result is None:
+                data_file.seek(0)
 
-      if result is None:
+        if result is None:
 
-         # builds one very big string, stripping trailing comments
+            # builds one very big string, stripping trailing comments
 
-         #         s = ''
-         #         while True:
-         #            r = data_file.readline()
-         #            if len(r) == 0: break
-         #            s += r.partition(comment_char)[0] + ' '
-         #         result = np.fromstring(s, dtype = d_type, count = cell_count, sep = ' ')
-         #         # note: extra data will go unnoticed if cell count known!
-         #         del s
+            #         s = ''
+            #         while True:
+            #            r = data_file.readline()
+            #            if len(r) == 0: break
+            #            s += r.partition(comment_char)[0] + ' '
+            #         result = np.fromstring(s, dtype = d_type, count = cell_count, sep = ' ')
+            #         # note: extra data will go unnoticed if cell count known!
+            #         del s
 
-         b = bytearray(data_file.read().encode())
-         bc = comment_char.encode()
-         nl = b'\n'
-         sp = b' '
-         i = 0
-         while True:
-            i = b.find(bc, i)
-            if i < 0:
-               break
-            eol = b.find(nl, i)
-            if eol < 0:
-               eol = len(b)
-            b[i:eol] = sp * (eol - i)
-
-         result = np.fromstring(b.decode(), dtype = d_type, count = cell_count, sep = ' ')
-         # note: extra data will go unnoticed if cell count known!
-         del b
-
-      if result is None:
-
-         assert (extent is not None)  # TODO: remove this restriction by dynamically extending a flat array
-
-         view_1D = np.zeros(extent, dtype = d_type).flatten()
-         elements = view_1D.size
-         start_of_line = True
-
-         for index in range(elements):
-
+            b = bytearray(data_file.read().encode())
+            bc = comment_char.encode()
+            nl = b'\n'
+            sp = b' '
+            i = 0
             while True:
-               ch = data_file.read(1)
-               assert (ch != '')  # premature end of file
-               if ch == comment_char:
-                  data_file.readline()
-                  start_of_line = True
-                  continue
-               if skip_c_space and start_of_line and ch in ['C', 'c']:
-                  next_ch = data_file.read(1)
-                  if next_ch in ' \t\n':
-                     if next_ch != '\n':
+                i = b.find(bc, i)
+                if i < 0:
+                    break
+                eol = b.find(nl, i)
+                if eol < 0:
+                    eol = len(b)
+                b[i:eol] = sp * (eol - i)
+
+            result = np.fromstring(b.decode(), dtype = d_type, count = cell_count, sep = ' ')
+            # note: extra data will go unnoticed if cell count known!
+            del b
+
+        if result is None:
+
+            assert (extent is not None)  # TODO: remove this restriction by dynamically extending a flat array
+
+            view_1D = np.zeros(extent, dtype = d_type).flatten()
+            elements = view_1D.size
+            start_of_line = True
+
+            for index in range(elements):
+
+                while True:
+                    ch = data_file.read(1)
+                    assert (ch != '')  # premature end of file
+                    if ch == comment_char:
                         data_file.readline()
-                     continue
-                  ch += next_ch
-                  break
-               if ch not in ' \t\n':
-                  break
+                        start_of_line = True
+                        continue
+                    if skip_c_space and start_of_line and ch in ['C', 'c']:
+                        next_ch = data_file.read(1)
+                        if next_ch in ' \t\n':
+                            if next_ch != '\n':
+                                data_file.readline()
+                            continue
+                        ch += next_ch
+                        break
+                    if ch not in ' \t\n':
+                        break
 
-            start_of_line = False
-            word = ch
-            while True:
-               ch = data_file.read(1)
-               if ch == '':  # end of file (this assumes a whitespace character after last datum)
-                  log.error('Not enough data in file %s: %1d of %1d numbers read', file_name, index, elements)
-                  assert False, 'not enough data in file'
-               if ch in ' \t\n':
-                  break
-               word += ch
-            if ch == '\n':
-               start_of_line = True
-            if d_type == 'float':
-               view_1D[index] = float(word)
-            else:
-               view_1D[index] = int(word)
+                start_of_line = False
+                word = ch
+                while True:
+                    ch = data_file.read(1)
+                    if ch == '':  # end of file (this assumes a whitespace character after last datum)
+                        log.error('Not enough data in file %s: %1d of %1d numbers read', file_name, index, elements)
+                        assert False, 'not enough data in file'
+                    if ch in ' \t\n':
+                        break
+                    word += ch
+                if ch == '\n':
+                    start_of_line = True
+                if d_type == 'float':
+                    view_1D[index] = float(word)
+                else:
+                    view_1D[index] = int(word)
 
-         result = view_1D
+            result = view_1D
 
-      kf.skip_blank_lines_and_comments(data_file, comment_char = comment_char, skip_c_space = skip_c_space)
-      if not kf.end_of_file(data_file):
-         assert False, 'too much data in ascii file: ' + file_name
+        kf.skip_blank_lines_and_comments(data_file, comment_char = comment_char, skip_c_space = skip_c_space)
+        if not kf.end_of_file(data_file):
+            assert False, 'too much data in ascii file: ' + file_name
 
-   if result is not None and extent is not None:
-      result = result.reshape(extent)
+    if result is not None and extent is not None:
+        result = result.reshape(extent)
 
-   if data_type in ['bool', 'boolean', bool]:
-      return result != 0  # convert to boolean
-   else:
-      return result
+    if data_type in ['bool', 'boolean', bool]:
+        return result != 0  # convert to boolean
+    else:
+        return result
 
 
 # end of load_array_from_ascii_file() def
@@ -438,7 +438,7 @@ def load_array_from_ascii_file(file_name,
 
 
 def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
-   """Modifies a 3D numpy boolean array representing fault locations on cell faces in i,j or k.
+    """Modifies a 3D numpy boolean array representing fault locations on cell faces in i,j or k.
 
    arguments:
       file_name: string giving name of existing ascii file holding nexus MULT keywords in input deck format
@@ -457,86 +457,86 @@ def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
       whatever function is being applied, and whatever value is specified the function returns None (nothing)
    """
 
-   trans_keyword_dict = {'i': 'TX', 'j': 'TY', 'k': 'TZ'}
+    trans_keyword_dict = {'i': 'TX', 'j': 'TY', 'k': 'TZ'}
 
-   assert (direction in 'ijk')
-   assert (fault_mask.ndim == 3)
-   mask_extent_kji = fault_mask.shape
-   ascii_file_name = file_name
-   binary_file_name = file_name
+    assert (direction in 'ijk')
+    assert (fault_mask.ndim == 3)
+    mask_extent_kji = fault_mask.shape
+    ascii_file_name = file_name
+    binary_file_name = file_name
 
-   face_count = pu.cell_count_from_extent(mask_extent_kji)
-   log.debug('Loading %1d fault mask elements from file %s', face_count, file_name)
+    face_count = pu.cell_count_from_extent(mask_extent_kji)
+    log.debug('Loading %1d fault mask elements from file %s', face_count, file_name)
 
-   if use_binary:
-      # try reading mask from binary file
-      if len(binary_file_name) > 5 and binary_file_name[-5:] == '.' + direction.lower() + '.bb':
-         ascii_file_name = ascii_file_name[:-5]
-      else:
-         binary_file_name = binary_file_name + '.' + direction.lower() + '.bb'
-      try:
-         with open(binary_file_name, 'rb') as binary_data_file:
-            result = np.fromfile(binary_data_file, dtype = 'bool', count = face_count).reshape(mask_extent_kji)
-            fault_mask.data = result.data
-            # todo: check that end of file has been reached, ie. not too much data in file
-            log.info('Fault mask data loaded from binary file %s', binary_file_name)
-            return
-      except Exception:
-         pass
+    if use_binary:
+        # try reading mask from binary file
+        if len(binary_file_name) > 5 and binary_file_name[-5:] == '.' + direction.lower() + '.bb':
+            ascii_file_name = ascii_file_name[:-5]
+        else:
+            binary_file_name = binary_file_name + '.' + direction.lower() + '.bb'
+        try:
+            with open(binary_file_name, 'rb') as binary_data_file:
+                result = np.fromfile(binary_data_file, dtype = 'bool', count = face_count).reshape(mask_extent_kji)
+                fault_mask.data = result.data
+                # todo: check that end of file has been reached, ie. not too much data in file
+                log.info('Fault mask data loaded from binary file %s', binary_file_name)
+                return
+        except Exception:
+            pass
 
-   with open(ascii_file_name, 'r') as data_file:
+    with open(ascii_file_name, 'r') as data_file:
 
-      while kf.find_keyword_pair(data_file, 'MULT', trans_keyword_dict[direction]):
+        while kf.find_keyword_pair(data_file, 'MULT', trans_keyword_dict[direction]):
 
-         line = data_file.readline().upper()
-         line = line.partition('!')[0]  # removes trailing comment
-         plus_minus_offset = [0, 0, 0]  # only possibly set to 1 in direction of interest
-         if ('MINUS' not in line.split()):  # indicates data apply to 'negative' faces of specified cells
-            plus_minus_offset['kji'.index(direction)] = 1
-
-         if not kf.find_keyword(data_file, 'FNAME'):
-            continue  # will mess up if not present for this MULT
-         line = data_file.readline().upper()
-         words = line.split()
-
-         if not kf.find_number(data_file):
-            continue  # will mess up if no numbers before next MULT
-
-         count = 0
-         while kf.number_next(data_file):
-            # fetch a new box from the input file (usually the box contains just one cell)
             line = data_file.readline().upper()
             line = line.partition('!')[0]  # removes trailing comment
+            plus_minus_offset = [0, 0, 0]  # only possibly set to 1 in direction of interest
+            if ('MINUS' not in line.split()):  # indicates data apply to 'negative' faces of specified cells
+                plus_minus_offset['kji'.index(direction)] = 1
+
+            if not kf.find_keyword(data_file, 'FNAME'):
+                continue  # will mess up if not present for this MULT
+            line = data_file.readline().upper()
             words = line.split()
-            box_kji0 = box.box_kji0_from_words_iijjkk1(words)
-            box_kji0[0] = box_kji0[0] + plus_minus_offset  # adjust min indices
-            box_kji0[1] = box_kji0[1] + plus_minus_offset  # adjust max indices
-            # check that box is within extent of fault_mask
-            for dir in range(2):
-               assert (box_kji0[0, dir] >= 0)
-               assert (box_kji0[1, dir] < mask_extent_kji[dir])
-            # set fault_mask to True for face of every cell in box (usually just one cell, or column)
+
+            if not kf.find_number(data_file):
+                continue  # will mess up if no numbers before next MULT
+
+            count = 0
+            while kf.number_next(data_file):
+                # fetch a new box from the input file (usually the box contains just one cell)
+                line = data_file.readline().upper()
+                line = line.partition('!')[0]  # removes trailing comment
+                words = line.split()
+                box_kji0 = box.box_kji0_from_words_iijjkk1(words)
+                box_kji0[0] = box_kji0[0] + plus_minus_offset  # adjust min indices
+                box_kji0[1] = box_kji0[1] + plus_minus_offset  # adjust max indices
+                # check that box is within extent of fault_mask
+                for dir in range(2):
+                    assert (box_kji0[0, dir] >= 0)
+                    assert (box_kji0[1, dir] < mask_extent_kji[dir])
+                # set fault_mask to True for face of every cell in box (usually just one cell, or column)
 #            for k in range(box_kji0[0, 0], box_kji0[1, 0] + 1):
 #               for j in range(box_kji0[0, 1], box_kji0[1, 1] + 1):
 #                  for i in range(box_kji0[0, 2], box_kji0[1, 2] + 1):
 #                     if not fault_mask[k,j,i]:
 #                        fault_mask[k, j, i] = True
 #                        count += 1
-            count += (box.volume_of_box(box_kji0) -
-                      np.count_nonzero(fault_mask[box_kji0[0, 0]:box_kji0[1, 0] + 1, box_kji0[0, 1]:box_kji0[1, 1] + 1,
-                                                  box_kji0[0, 2]:box_kji0[1, 2] + 1]))
-            fault_mask[box_kji0[0, 0]:box_kji0[1, 0] + 1, box_kji0[0, 1]:box_kji0[1, 1] + 1,
-                       box_kji0[0, 2]:box_kji0[1, 2] + 1] = True
+                count += (box.volume_of_box(box_kji0) -
+                          np.count_nonzero(fault_mask[box_kji0[0, 0]:box_kji0[1, 0] + 1, box_kji0[0, 1]:box_kji0[1, 1] +
+                                                      1, box_kji0[0, 2]:box_kji0[1, 2] + 1]))
+                fault_mask[box_kji0[0, 0]:box_kji0[1, 0] + 1, box_kji0[0, 1]:box_kji0[1, 1] + 1,
+                           box_kji0[0, 2]:box_kji0[1, 2] + 1] = True
 
-   if use_binary:
-      # create binary file for use next time
-      try:
-         with open(binary_file_name, 'wb') as binary_file_out:
-            fault_mask.tofile(binary_file_out)
-         log.info('Binary fault mask data file %s created', binary_file_name)
-      except Exception:
-         log.warn('Failed to write data to binary fault mask file %s', binary_file_name)
-         # todo: could delete the binary file in case a corrupt file is left for use next time
+    if use_binary:
+        # create binary file for use next time
+        try:
+            with open(binary_file_name, 'wb') as binary_file_out:
+                fault_mask.tofile(binary_file_out)
+            log.info('Binary fault mask data file %s created', binary_file_name)
+        except Exception:
+            log.warn('Failed to write data to binary fault mask file %s', binary_file_name)
+            # todo: could delete the binary file in case a corrupt file is left for use next time
 
 
 # end of load_fault_mask() def

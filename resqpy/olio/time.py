@@ -6,7 +6,7 @@ import datetime as dt
 
 
 def now(use_utc = False):
-   """Returns an iso format string representation of the current time, to the nearest second.
+    """Returns an iso format string representation of the current time, to the nearest second.
 
       argument:
          use_utc (boolean, default False): if True, the current UTC time is used, otherwise local time
@@ -18,8 +18,8 @@ def now(use_utc = False):
          this is the format used by the resqml standard for representing date-times
    """
 
-   if use_utc:
-      stamp = dt.datetime.utcnow()  # NB: naive use of UTC time
-   else:
-      stamp = dt.datetime.now()
-   return str(stamp.isoformat(sep = 'T', timespec = 'seconds')) + 'Z'
+    if use_utc:
+        stamp = dt.datetime.utcnow()  # NB: naive use of UTC time
+    else:
+        stamp = dt.datetime.now()
+    return str(stamp.isoformat(sep = 'T', timespec = 'seconds')) + 'Z'

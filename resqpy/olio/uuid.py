@@ -17,7 +17,7 @@ max_version_string_length = 10
 
 
 def switch_on_test_mode(seed = 0):
-   """Causes subsequent calls to new_uid() to produce integer sequence starting from successor to seed.
+    """Causes subsequent calls to new_uid() to produce integer sequence starting from successor to seed.
 
    arguments:
       seed (integer, default 0): The predecessor to the first uuid returned by subsequent calls to
@@ -32,25 +32,25 @@ def switch_on_test_mode(seed = 0):
       test mode is intended to allow replicatable behaviour for testing purposes
    """
 
-   global test_mode
-   global test_latest_int
-   test_latest_int = seed
-   test_mode = True
+    global test_mode
+    global test_latest_int
+    test_latest_int = seed
+    test_mode = True
 
 
 def switch_off_test_mode():
-   """Subsequent calls to new_uid() will produce standard uuid values (default behaviour).
+    """Subsequent calls to new_uid() will produce standard uuid values (default behaviour).
 
    note:
       this function will have no effect unless switch_on_test_mode() has previously been called
    """
 
-   global test_mode
-   test_mode = False
+    global test_mode
+    test_mode = False
 
 
 def new_uuid():
-   """Returns a new uuid based on the time (to 100ns) & MAC address option of the iso standard.
+    """Returns a new uuid based on the time (to 100ns) & MAC address option of the iso standard.
 
    returns:
       uuid.UUID object
@@ -61,16 +61,16 @@ def new_uuid():
       an integer sequence is generated when in test mode
    """
 
-   global test_latest_int
-   if test_mode:
-      test_latest_int += 1
-      return uuid.UUID(bytes = test_latest_int.to_bytes(16, byte_order = 'big'))
-   else:
-      return uuid.uuid1()  # time to 100ns & MAC address
+    global test_latest_int
+    if test_mode:
+        test_latest_int += 1
+        return uuid.UUID(bytes = test_latest_int.to_bytes(16, byte_order = 'big'))
+    else:
+        return uuid.uuid1()  # time to 100ns & MAC address
 
 
 def string_from_uuid(uuid_obj):
-   """Returns standard hexadecimal string for uuid; same as str(uuid_obj).
+    """Returns standard hexadecimal string for uuid; same as str(uuid_obj).
 
    arguments:
       uuid_obj (uuid.UUID object): the uuid which is required in hexadecimal string format
@@ -79,11 +79,11 @@ def string_from_uuid(uuid_obj):
       string (40 characters: 36 lowercase hexadecimals and 4 hyphens)
    """
 
-   return str(uuid_obj)
+    return str(uuid_obj)
 
 
 def uuid_from_string(uuid_str):
-   """Returns a uuid object for the given uuid string; hyphens are ignored.
+    """Returns a uuid object for the given uuid string; hyphens are ignored.
 
    arguments:
       uuid_str (string): the hexadecimal representation of the 128 bit uuid integer;
@@ -98,26 +98,26 @@ def uuid_from_string(uuid_str):
       any tail beyond the uuid string is ignored
    """
 
-   if uuid_str is None:
-      return None
-   if isinstance(uuid_str, uuid.UUID):
-      return uuid_str  # resilience to accidentally passing a uuid object
-   try:
-      if uuid_str[0] == '_':  # tolerate one of the fesapi quirks
-         if len(uuid_str) < 37:
-            return None
-         return uuid.UUID(uuid_str[1:37])
-      else:
-         if len(uuid_str) < 36:
-            return None
-         return uuid.UUID(uuid_str[:36])
-   except Exception:
-      # could log or raise an error or warning?
-      return None
+    if uuid_str is None:
+        return None
+    if isinstance(uuid_str, uuid.UUID):
+        return uuid_str  # resilience to accidentally passing a uuid object
+    try:
+        if uuid_str[0] == '_':  # tolerate one of the fesapi quirks
+            if len(uuid_str) < 37:
+                return None
+            return uuid.UUID(uuid_str[1:37])
+        else:
+            if len(uuid_str) < 36:
+                return None
+            return uuid.UUID(uuid_str[:36])
+    except Exception:
+        # could log or raise an error or warning?
+        return None
 
 
 def uuid_as_bytes(uuid_obj):
-   """Returns the uuid as a 16 byte bytes sequence; same as uuid_obj.bytes.
+    """Returns the uuid as a 16 byte bytes sequence; same as uuid_obj.bytes.
 
    arguments:
       uuid_obj (uuid.UUID object): the uuid for which a bytes representation is required
@@ -126,15 +126,15 @@ def uuid_as_bytes(uuid_obj):
       bytes (16 bytes long)
    """
 
-   if uuid_obj is None:
-      return None
-   if isinstance(uuid_obj, str):
-      uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
-   return uuid_obj.bytes
+    if uuid_obj is None:
+        return None
+    if isinstance(uuid_obj, str):
+        uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+    return uuid_obj.bytes
 
 
 def uuid_as_int(uuid_obj):
-   """Returns the uuid as a 128 bit int; same as uuid_obj.int.
+    """Returns the uuid as a 128 bit int; same as uuid_obj.int.
 
    arguments:
       uuid_obj (uuid.UUID object): the uuid for which a bytes representation is required
@@ -143,15 +143,15 @@ def uuid_as_int(uuid_obj):
       bytes (16 bytes long)
    """
 
-   if uuid_obj is None:
-      return None
-   if isinstance(uuid_obj, str):
-      uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
-   return uuid_obj.int
+    if uuid_obj is None:
+        return None
+    if isinstance(uuid_obj, str):
+        uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+    return uuid_obj.int
 
 
 def matching_uuids(uuid_a, uuid_b):
-   """Returns True if the 2 uuid objects are for the same id; False otherwise.
+    """Returns True if the 2 uuid objects are for the same id; False otherwise.
 
    arguments:
       uuid_a, uuid_b (uuid.UUID objects): the two uuids to be compared
@@ -163,17 +163,17 @@ def matching_uuids(uuid_a, uuid_b):
       this function is resilient to uuids being passed in hexadecimal string format
    """
 
-   if isinstance(uuid_a, str):
-      uuid_a = uuid_from_string(uuid_a)  # resilience to accidental string arg
-   if isinstance(uuid_b, str):
-      uuid_b = uuid_from_string(uuid_b)
-   if uuid_a is None or uuid_b is None:
-      return False
-   return uuid_a.int == uuid_b.int
+    if isinstance(uuid_a, str):
+        uuid_a = uuid_from_string(uuid_a)  # resilience to accidental string arg
+    if isinstance(uuid_b, str):
+        uuid_b = uuid_from_string(uuid_b)
+    if uuid_a is None or uuid_b is None:
+        return False
+    return uuid_a.int == uuid_b.int
 
 
 def version_string(uuid_obj):
-   """Returns an integer string rendering of the time element of the uuid.
+    """Returns an integer string rendering of the time element of the uuid.
 
    arguments:
       uuid_obj (uuid.UUID): the uuid for which a string representation of the time component is required
@@ -188,9 +188,9 @@ def version_string(uuid_obj):
       (when the Gregorian calendar was adopted), as a 60 bit integer
    """
 
-   if isinstance(uuid_obj, str):
-      uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
-   v_str = str(uuid_obj.time)
-   if len(v_str) > max_version_string_length:
-      v_str = v_str[:max_version_string_length]
-   return v_str
+    if isinstance(uuid_obj, str):
+        uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+    v_str = str(uuid_obj.time)
+    if len(v_str) > max_version_string_length:
+        v_str = v_str[:max_version_string_length]
+    return v_str

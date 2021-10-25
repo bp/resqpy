@@ -7,7 +7,7 @@ import numpy
 
 
 def seed(seed, package = 'all'):
-   """Set seed for random number generator of one or more packages, to allow for repeatable behaviour.
+    """Set seed for random number generator of one or more packages, to allow for repeatable behaviour.
 
    arguments:
       seed (int or long): the value to use to seed the random number generator(s); a value of None will
@@ -16,20 +16,20 @@ def seed(seed, package = 'all'):
          passing 'all' will cause all packages known to have a random number generator to be re-seeded
    """
 
-   known_list = ['random', 'numpy']
+    known_list = ['random', 'numpy']
 
-   if isinstance(package, str):
-      if package == 'all':
-         package = known_list
-      else:
-         package = [package]
+    if isinstance(package, str):
+        if package == 'all':
+            package = known_list
+        else:
+            package = [package]
 
-   assert isinstance(package, list)
+    assert isinstance(package, list)
 
-   for pack in package:
-      assert pack in known_list, 'unknown package for random number seeding: ' + str(pack)
+    for pack in package:
+        assert pack in known_list, 'unknown package for random number seeding: ' + str(pack)
 
-      if pack == 'random':
-         random.seed(seed)
-      elif pack == 'numpy':
-         numpy.random.seed(seed = seed)
+        if pack == 'random':
+            random.seed(seed)
+        elif pack == 'numpy':
+            numpy.random.seed(seed = seed)
