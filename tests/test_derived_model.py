@@ -1,18 +1,19 @@
-import pytest
 import os
-import numpy as np
-from numpy.testing import assert_array_almost_equal
-import pandas as pd
 
-import resqpy.model as rq
+import numpy as np
+import pandas as pd
+import pytest
+from numpy.testing import assert_array_almost_equal
+
 import resqpy.crs as rqc
+import resqpy.derived_model as rqdm
 import resqpy.grid as grr
+import resqpy.model as rq
+import resqpy.olio.box_utilities as bx
+import resqpy.olio.fine_coarse as rqfc
+import resqpy.olio.uuid as bu
 import resqpy.property as rqp
 import resqpy.well as rqw
-import resqpy.derived_model as rqdm
-import resqpy.olio.uuid as bu
-import resqpy.olio.fine_coarse as rqfc
-import resqpy.olio.box_utilities as bx
 
 
 def test_add_single_cell_grid(tmp_path):

@@ -15,13 +15,13 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('resqml_time_series.py version ' + version)
 
-import os
 import datetime as dt
+import os
 import warnings
 
-from resqpy.olio.base import BaseResqpy
-import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
+import resqpy.olio.xml_et as rqet
+from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 

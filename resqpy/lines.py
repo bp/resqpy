@@ -7,21 +7,22 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('polylines.py version ' + version)
 
-from resqpy.olio.base import BaseResqpy
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.uuid as bu
-import resqpy.olio.vector_utilities as vu
+import math as maths
+import os
+
+import numpy as np
+
+import resqpy.crs as rcrs
 import resqpy.olio.intersection as meet
 import resqpy.olio.point_inclusion as pip
-from resqpy.olio.xml_namespaces import curly_namespace as ns
-import resqpy.olio.write_hdf5 as rwh5
-import resqpy.crs as rcrs
 import resqpy.olio.simple_lines as rsl
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vu
+import resqpy.olio.write_hdf5 as rwh5
+import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
-
-import math as maths
-import numpy as np
-import os
+from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 class _BasePolyline(BaseResqpy):

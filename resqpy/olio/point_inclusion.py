@@ -7,8 +7,9 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('point_inclusion.py version ' + version)
 
-import os
 import math as maths
+import os
+
 import numpy as np
 
 import resqpy.olio.simple_lines as sl

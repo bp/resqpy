@@ -9,14 +9,15 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('vdb.py version ' + version)
 
-import os
 import glob
-import numpy as np
+import os
 import zipfile as zf
 from struct import unpack
 
-import resqpy.olio.xml_et as rqet
+import numpy as np
+
 import resqpy.olio.grid_functions as gf
+import resqpy.olio.xml_et as rqet
 
 null_uint32 = 4294967295  # -1 if interpreted as int32
 

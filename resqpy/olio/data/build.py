@@ -7,10 +7,11 @@ Expects two files to exist in the same folder:
 Creates properties.json containing parsed uoms and property kinds.
 """
 
-from pathlib import Path
-from lxml import etree
 import json
 import math as maths
+from pathlib import Path
+
+from lxml import etree
 
 
 def main():

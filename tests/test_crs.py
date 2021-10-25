@@ -1,9 +1,10 @@
 # test crs creation and conversion from one crs to another
 
-import pytest
 import numpy as np
-import resqpy.model as rq
+import pytest
+
 import resqpy.crs as rqc
+import resqpy.model as rq
 import resqpy.olio.uuid as bu
 
 

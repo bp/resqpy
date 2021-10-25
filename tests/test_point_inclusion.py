@@ -1,11 +1,14 @@
 # test point in polygon functions
 
 import os
+
 # import math as maths
 import numpy as np
-# from numpy.testing import assert_array_almost_equal
 
 import resqpy.olio.point_inclusion as pip
+
+# from numpy.testing import assert_array_almost_equal
+
 
 
 def test_pip_cn_and_wn():

@@ -1,13 +1,13 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-import resqpy.model as rq
-import resqpy.surface
-import resqpy.organize
 import resqpy.grid
-import resqpy.lines as rql
 import resqpy.grid_surface as rqgs
+import resqpy.lines as rql
+import resqpy.model as rq
 import resqpy.olio.uuid as bu
+import resqpy.organize
+import resqpy.surface
 
 
 def test_surface(tmp_model):

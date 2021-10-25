@@ -1,13 +1,14 @@
-import pytest
 import os
-import numpy as np
 
-import resqpy.model as rq
+import numpy as np
+import pytest
+
 import resqpy.crs as rqc
-import resqpy.grid as grr
-import resqpy.fault as rqf
-import resqpy.lines as rql
 import resqpy.derived_model as rqdm
+import resqpy.fault as rqf
+import resqpy.grid as grr
+import resqpy.lines as rql
+import resqpy.model as rq
 import resqpy.olio.transmission as rqtr
 
 

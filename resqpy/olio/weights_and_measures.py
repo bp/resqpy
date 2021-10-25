@@ -1,6 +1,7 @@
 """DEPRECATED, use resqpy.weights_and_measures instead."""
 
 import warnings
+
 from resqpy.weights_and_measures import *  # noqa
 
 warnings.warn(

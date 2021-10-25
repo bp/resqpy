@@ -10,28 +10,31 @@ log = logging.getLogger(__name__)
 log.debug('property.py version ' + version)
 
 import os
-import numpy as np
-import numpy.ma as ma
-import pandas as pd
 # import xml.etree.ElementTree as et
 from datetime import datetime
 from functools import lru_cache
-#  from lxml import etree as et
 
 import lasio
+import numpy as np
+import numpy.ma as ma
+import pandas as pd
 
-from resqpy.olio.base import BaseResqpy
 import resqpy.olio.ab_toolbox as abt
-import resqpy.olio.write_data as wd
+import resqpy.olio.box_utilities as bxu
 import resqpy.olio.load_data as ld
 import resqpy.olio.uuid as bu
+import resqpy.olio.write_data as wd
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.olio.box_utilities as bxu
-from resqpy.olio.xml_namespaces import curly_namespace as ns
-import resqpy.weights_and_measures as bwam
-
 import resqpy.time_series as rts
+import resqpy.weights_and_measures as bwam
+from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
+
+#  from lxml import etree as et
+
+
+
 
 # following are loaded dynamically, to avoid circular reference during import (issue for python version < 3.7)
 # import resqpy.grid as grr
@@ -216,11 +219,11 @@ class PropertyCollection():
         """
 
         # when at global level was causing circular reference loading issues as grid imports this module
+        import resqpy.fault as rqf
         import resqpy.grid as grr
+        import resqpy.surface as rqs
         import resqpy.unstructured as rug
         import resqpy.well as rqw
-        import resqpy.surface as rqs
-        import resqpy.fault as rqf
 
         # todo: check uuid's of individual parts' supports match that of support being set for whole collection
 
@@ -305,11 +308,11 @@ class PropertyCollection():
         """
 
         # when at global level was causing circular reference loading issues as grid imports this module
+        import resqpy.fault as rqf
         import resqpy.grid as grr
+        import resqpy.surface as rqs
         import resqpy.unstructured as rug
         import resqpy.well as rqw
-        import resqpy.surface as rqs
-        import resqpy.fault as rqf
 
         shape_list = None
         support = self.support

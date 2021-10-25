@@ -10,22 +10,25 @@ log = logging.getLogger(__name__)
 log.debug('fault.py version ' + version)
 
 import math as maths
+import os
+
 import numpy as np
 import pandas as pd
-import os
+
+import resqpy.olio.read_nexus_fault as rnf
+import resqpy.olio.trademark as tm
+import resqpy.olio.uuid as bu
+import resqpy.olio.write_hdf5 as rwh5
+import resqpy.olio.xml_et as rqet
+import resqpy.organize as rqo
+import resqpy.property as rqp
+from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
+
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
-from resqpy.olio.base import BaseResqpy
-import resqpy.olio.read_nexus_fault as rnf
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.write_hdf5 as rwh5
-import resqpy.olio.uuid as bu
-import resqpy.olio.trademark as tm
-from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-import resqpy.organize as rqo
-import resqpy.property as rqp
 
 
 class GridConnectionSet(BaseResqpy):

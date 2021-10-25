@@ -1,18 +1,19 @@
-import pytest
-import os
 import math as maths
-import numpy as np
-from numpy.testing import assert_array_almost_equal, assert_allclose
+import os
 
-import resqpy.model as rq
+import numpy as np
+import pytest
+from numpy.testing import assert_allclose, assert_array_almost_equal
+
 import resqpy.crs as rqc
 import resqpy.grid as grr
-import resqpy.surface as rqs
 import resqpy.lines as rql
-import resqpy.unstructured as rug
-import resqpy.olio.uuid as bu
+import resqpy.model as rq
 import resqpy.olio.triangulation as triangulation
+import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
+import resqpy.surface as rqs
+import resqpy.unstructured as rug
 from resqpy.olio.random_seed import seed
 
 

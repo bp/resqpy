@@ -35,30 +35,33 @@ log = logging.getLogger(__name__)
 log.debug('well.py version ' + version)
 
 import math as maths
+import os
+import warnings
+
+import lasio
 import numpy as np
 import pandas as pd
-import lasio
-import warnings
-import os
+
+import resqpy.crs as crs
+import resqpy.lines as rql
+import resqpy.olio.grid_functions as gf
+import resqpy.olio.intersection as intersect
+import resqpy.olio.keyword_files as kf
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
+import resqpy.olio.wellspec_keywords as wsk
+import resqpy.olio.write_hdf5 as rwh5
+import resqpy.olio.xml_et as rqet
+import resqpy.organize as rqo
+import resqpy.property as rqp
+import resqpy.weights_and_measures as bwam
+from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
+
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
 
-import resqpy.crs as crs
-import resqpy.organize as rqo
-import resqpy.property as rqp
-import resqpy.lines as rql
-import resqpy.weights_and_measures as bwam
 
-import resqpy.olio.grid_functions as gf
-import resqpy.olio.vector_utilities as vec
-import resqpy.olio.intersection as intersect
-import resqpy.olio.uuid as bu
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.write_hdf5 as rwh5
-import resqpy.olio.keyword_files as kf
-import resqpy.olio.wellspec_keywords as wsk
-from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.olio.base import BaseResqpy
 
 valid_md_reference_list = [
     "ground level", "kelly bushing", "mean sea level", "derrick floor", "casing flange", "arbitrary point",

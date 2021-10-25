@@ -21,6 +21,7 @@ log.debug('write_data.py version %s', version)
 #                               nan_substitute_value = None):
 
 import math as maths
+
 import numpy as np
 
 import resqpy.olio.ab_toolbox as abt

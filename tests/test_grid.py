@@ -1,10 +1,11 @@
-import pytest
 import os
+
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 
-import resqpy.model as rq
 import resqpy.grid as grr
+import resqpy.model as rq
 
 
 def test_regular_grid_no_geometry(tmp_path):

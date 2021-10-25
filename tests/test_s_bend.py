@@ -2,25 +2,26 @@
 
 version = '29th April 2021'
 
-import pytest
-
 import logging
+
+import pytest
 
 log = logging.getLogger(__name__)
 
-import os
 import math as maths
+import os
+
 import numpy as np
 import pandas as pd
 
-import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
-import resqpy.well as rqw
-import resqpy.rq_import as rqi
-import resqpy.olio.vector_utilities as vec
+import resqpy.model as rq
 import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
+import resqpy.rq_import as rqi
+import resqpy.well as rqw
 
 
 def test_s_bend_fn(tmp_path, epc = None):
