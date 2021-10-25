@@ -24,58 +24,58 @@ s_to_d = 1.0 / d_to_s
 # Nb. No need to write out fractional combinations such as "bbl/day"
 # note: some of the aliases are ambiguous, e.g. 'gm' could mean gigametre or gramme
 UOM_ALIASES = {
-   # Mass
-   'g': {'gm', 'gram', 'gramme', 'grams', 'grammes'},
-   'lbm': {'lb', 'lbs'},  # assumes pounds mass rather than pounds force
+    # Mass
+    'g': {'gm', 'gram', 'gramme', 'grams', 'grammes'},
+    'lbm': {'lb', 'lbs'},  # assumes pounds mass rather than pounds force
 
-   # Length
-   'm': {'m', 'metre', 'metres', 'meter', 'meters'},
-   'ft': {'ft', 'foot', 'feet'},
-   'cm': {'centimetre', 'centimetres', 'centimeter', 'centimeters'},
+    # Length
+    'm': {'m', 'metre', 'metres', 'meter', 'meters'},
+    'ft': {'ft', 'foot', 'feet'},
+    'cm': {'centimetre', 'centimetres', 'centimeter', 'centimeters'},
 
-   # Time
-   'ms': {'ms', 'msec', 'millisecs', 'millisecond', 'milliseconds'},
-   's': {'s', 'sec', 'secs', 'second', 'seconds'},
-   'min': {'min', 'mins', 'minute', 'minutes'},
-   'h': {'h', 'hr', 'hour', 'hours'},
-   'd': {'day', 'days'},
-   'wk': {'wk', 'week', 'weeks'},
-   'a': {'a', 'yr', 'year', 'years'},
+    # Time
+    'ms': {'ms', 'msec', 'millisecs', 'millisecond', 'milliseconds'},
+    's': {'s', 'sec', 'secs', 'second', 'seconds'},
+    'min': {'min', 'mins', 'minute', 'minutes'},
+    'h': {'h', 'hr', 'hour', 'hours'},
+    'd': {'day', 'days'},
+    'wk': {'wk', 'week', 'weeks'},
+    'a': {'a', 'yr', 'year', 'years'},
 
-   # Ratio
-   '%': {'%', 'pu', 'p.u.', 'percent'},
-   'm3/m3': {'m3/m3', 'v/v'},
-   'g/cm3': {'g/cm3', 'g/cc'},
+    # Ratio
+    '%': {'%', 'pu', 'p.u.', 'percent'},
+    'm3/m3': {'m3/m3', 'v/v'},
+    'g/cm3': {'g/cm3', 'g/cc'},
 
-   # Volume
-   'bbl': {'bbl', 'stb', 'rb'},
-   '1000 bbl': {'1000 bbl', 'mstb', 'mbbl', 'mrb'},
-   '1E6 bbl': {'1E6 bbl', 'mmstb', 'mmbbl'},
-   '1E6 ft3': {'1E6 ft3', 'mmscf'},
-   '1000 ft3': {'1000 ft3', 'mscf'},
-   'm3': {'m3', 'sm3', 'stm3', 'rm3'},
-   '1000 m3': {'kstm3', 'krm3', 'msm3', 'mrm3'},
-   'ft3': {'ft3', 'scf', 'cf', 'rcf', 'cu.ft.'},
-   'cm3': {'cc', 'scc', 'stcc'},
-   'L': {'krcc', 'kstcc', 'kscc', 'litre', 'litres', 'liter', 'liters'},
+    # Volume
+    'bbl': {'bbl', 'stb', 'rb'},
+    '1000 bbl': {'1000 bbl', 'mstb', 'mbbl', 'mrb'},
+    '1E6 bbl': {'1E6 bbl', 'mmstb', 'mmbbl'},
+    '1E6 ft3': {'1E6 ft3', 'mmscf'},
+    '1000 ft3': {'1000 ft3', 'mscf'},
+    'm3': {'m3', 'sm3', 'stm3', 'rm3'},
+    '1000 m3': {'kstm3', 'krm3', 'msm3', 'mrm3'},
+    'ft3': {'ft3', 'scf', 'cf', 'rcf', 'cu.ft.'},
+    'cm3': {'cc', 'scc', 'stcc'},
+    'L': {'krcc', 'kstcc', 'kscc', 'litre', 'litres', 'liter', 'liters'},
 
-   # Pressure & Reciprocal Pressure
-   'psi': {'psi', 'psia'},
+    # Pressure & Reciprocal Pressure
+    'psi': {'psi', 'psia'},
 
-   # Thermodynamic Temperature
-   'degC': {'c', 'degrees c', 'degreesc'},
-   'degF': {'f', 'degrees f', 'degreesf'},
+    # Thermodynamic Temperature
+    'degC': {'c', 'degrees c', 'degreesc'},
+    'degF': {'f', 'degrees f', 'degreesf'},
 
-   # Energy
-   'Btu[IT]': {'btu'},  # assumes BTU to refer to ISO standard, rather than older Btu[UK]
-   'kJ': {'kj'},
+    # Energy
+    'Btu[IT]': {'btu'},  # assumes BTU to refer to ISO standard, rather than older Btu[UK]
+    'kJ': {'kj'},
 
-   # Other
-   'gAPI': {'gapi'},
-   'S': {'mho'},
-   'mS': {'mmho'},
-   'mol': {'mole', 'moles'},
-   'Euc': {'count', 'fraction', 'none'},
+    # Other
+    'gAPI': {'gapi'},
+    'S': {'mho'},
+    'mS': {'mmho'},
+    'mol': {'mole', 'moles'},
+    'Euc': {'count', 'fraction', 'none'},
 }
 # Mapping from alias to valid uom
 UOM_ALIAS_MAP = {alias.casefold(): uom for uom, aliases in UOM_ALIASES.items() for alias in aliases}
@@ -86,7 +86,7 @@ CASE_INSENSITIVE_UOMS = {'m', 'ft', 'm3', 'ft3', 'm3/m3', 'ft3/ft3', 'bbl', 'bar
 
 @lru_cache(None)
 def rq_uom(units, quantity = None):
-   """Returns RESQML uom string equivalent to units
+    """Returns RESQML uom string equivalent to units
    
    Args:
       units (str): unit to coerce
@@ -99,24 +99,24 @@ def rq_uom(units, quantity = None):
    Raises:
       InvalidUnitError: if units cannot be coerced into RESQML units for the given quantity
    """
-   if not units:
-      raise InvalidUnitError("Must provide non-empty unit")
+    if not units:
+        raise InvalidUnitError("Must provide non-empty unit")
 
-   uom = _try_parse_unit(units.strip())
+    uom = _try_parse_unit(units.strip())
 
-   if uom is None:
-      raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
+    if uom is None:
+        raise InvalidUnitError(f"Cannot coerce {units} into a valid RESQML unit of measure.")
 
-   if quantity is not None:
-      supported_uoms = valid_uoms(quantity = quantity)
-      if uom not in supported_uoms:
-         raise InvalidUnitError(f"Unit {uom} is not supported for quantity {quantity}.\n"
-                                f"Supported units:\n{supported_uoms}")
-   return uom
+    if quantity is not None:
+        supported_uoms = valid_uoms(quantity = quantity)
+        if uom not in supported_uoms:
+            raise InvalidUnitError(f"Unit {uom} is not supported for quantity {quantity}.\n"
+                                   f"Supported units:\n{supported_uoms}")
+    return uom
 
 
 def convert(x, unit_from, unit_to, quantity = None, inplace = False):
-   """Convert value between two compatible units
+    """Convert value between two compatible units
 
    Args:
       x (numeric or np.array): value(s) to convert
@@ -134,45 +134,45 @@ def convert(x, unit_from, unit_to, quantity = None, inplace = False):
       IncompatibleUnitsError: if units do not have compatible base units
    """
 
-   # conversion data assume the formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
-   # Backwards formula: x=(A-Cy)/(Dy-B)
-   # All current units have D==0
+    # conversion data assume the formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
+    # Backwards formula: x=(A-Cy)/(Dy-B)
+    # All current units have D==0
 
-   uom1 = rq_uom(unit_from, quantity = quantity)
-   uom2 = rq_uom(unit_to, quantity = quantity)
+    uom1 = rq_uom(unit_from, quantity = quantity)
+    uom2 = rq_uom(unit_to, quantity = quantity)
 
-   if uom1 == uom2:
-      return x
+    if uom1 == uom2:
+        return x
 
-   base1, dim1, (A1, B1, C1, D1) = get_conversion_factors(uom1)
-   base2, dim2, (A2, B2, C2, D2) = get_conversion_factors(uom2)
+    base1, dim1, (A1, B1, C1, D1) = get_conversion_factors(uom1)
+    base2, dim2, (A2, B2, C2, D2) = get_conversion_factors(uom2)
 
-   if base1 != base2:
-      if dim1 != dim2:
-         raise IncompatibleUnitsError(f"Cannot convert from '{unit_from}' to '{unit_to}':"
-                                      f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
-                                      f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'.")
-      else:
-         warnings.warn(f"Assuming base units {base1} and {base2} are equivalent as they have the same dimensions:"
-                       f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
-                       f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'.")
+    if base1 != base2:
+        if dim1 != dim2:
+            raise IncompatibleUnitsError(f"Cannot convert from '{unit_from}' to '{unit_to}':"
+                                         f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+                                         f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'.")
+        else:
+            warnings.warn(f"Assuming base units {base1} and {base2} are equivalent as they have the same dimensions:"
+                          f"\n - '{uom1}' has base unit '{base1} and dimension '{dim1}'."
+                          f"\n - '{uom2}' has base unit '{base2} and dimension '{dim2}'.")
 
-   if not inplace:
-      y = (A1 + (B1 * x)) / (C1 + (D1 * x))
-      return (A2 - (C2 * y)) / ((D2 * y) - B2)
+    if not inplace:
+        y = (A1 + (B1 * x)) / (C1 + (D1 * x))
+        return (A2 - (C2 * y)) / ((D2 * y) - B2)
 
-   else:
-      if any(f != 0 for f in [A1, A2, D1, D2]):
-         raise NotImplementedError("In-place conversion not yet implemented for non-trivial conversions")
+    else:
+        if any(f != 0 for f in [A1, A2, D1, D2]):
+            raise NotImplementedError("In-place conversion not yet implemented for non-trivial conversions")
 
-      factor = (B1 * C2) / (C1 * B2)
-      x *= factor
-      return x
+        factor = (B1 * C2) / (C1 * B2)
+        x *= factor
+        return x
 
 
 @lru_cache(None)
 def valid_uoms(quantity = None, return_attributes = False):
-   """Return set of valid RESQML units of measure
+    """Return set of valid RESQML units of measure
    
    Args:
       quantity (str): If given, filter to uoms supported by this quanitity.
@@ -183,20 +183,20 @@ def valid_uoms(quantity = None, return_attributes = False):
    Returns
       set or dict
    """
-   uoms = _properties_data()['units']
-   if quantity:
-      all_quantities = _properties_data()['quantities']
-      supported_members = all_quantities[quantity]['members']
-      uoms = {k: v for k, v in uoms.items() if k in supported_members}
-   if return_attributes:
-      return uoms
-   else:
-      return set(uoms.keys())
+    uoms = _properties_data()['units']
+    if quantity:
+        all_quantities = _properties_data()['quantities']
+        supported_members = all_quantities[quantity]['members']
+        uoms = {k: v for k, v in uoms.items() if k in supported_members}
+    if return_attributes:
+        return uoms
+    else:
+        return set(uoms.keys())
 
 
 @lru_cache(None)
 def valid_quantities(return_attributes = False):
-   """Return set of valid RESQML quantities
+    """Return set of valid RESQML quantities
    
    Args:
       return_attributes (bool): If True, return a dict of all quantities and their
@@ -206,52 +206,52 @@ def valid_quantities(return_attributes = False):
    Returns
       set or dict
    """
-   quantities = _properties_data()['quantities']
-   if return_attributes:
-      return quantities
-   else:
-      return set(quantities.keys())
+    quantities = _properties_data()['quantities']
+    if return_attributes:
+        return quantities
+    else:
+        return set(quantities.keys())
 
 
 def valid_property_kinds():
-   """Return set of valid property kinds"""
+    """Return set of valid property kinds"""
 
-   return set(_properties_data()['property_kinds'].keys())
+    return set(_properties_data()['property_kinds'].keys())
 
 
 def rq_uom_list(units_list):
-   """Returns a list of RESQML uom equivalents for units in list."""
+    """Returns a list of RESQML uom equivalents for units in list."""
 
-   return [rq_uom(u) for u in units_list]
+    return [rq_uom(u) for u in units_list]
 
 
 def rq_length_unit(units):
-   """Returns length units string as expected by resqml."""
+    """Returns length units string as expected by resqml."""
 
-   return rq_uom(units, quantity = 'length')
+    return rq_uom(units, quantity = 'length')
 
 
 def rq_time_unit(units):
-   """Returns time units string as expected by resqml."""
+    """Returns time units string as expected by resqml."""
 
-   return rq_uom(units, quantity = 'time')
+    return rq_uom(units, quantity = 'time')
 
 
 def convert_times(a, from_units, to_units, invert = False):
-   """Converts values in numpy array (or a scalar) from one time unit to another, in situ if array.
+    """Converts values in numpy array (or a scalar) from one time unit to another, in situ if array.
    
    note:
       To see supported units, use: `valid_uoms(quantity='time')`
    """
 
-   if invert:
-      from_units, to_units = to_units, from_units
+    if invert:
+        from_units, to_units = to_units, from_units
 
-   return convert(a, from_units, to_units, quantity = 'time', inplace = True)
+    return convert(a, from_units, to_units, quantity = 'time', inplace = True)
 
 
 def convert_lengths(a, from_units, to_units):
-   """Converts values in numpy array (or a scalar) from one length unit to another, in situ if array.
+    """Converts values in numpy array (or a scalar) from one length unit to another, in situ if array.
 
    arguments:
       a (numpy float array, or float): array of length values to undergo unit conversion in situ, or a scalar
@@ -265,11 +265,11 @@ def convert_lengths(a, from_units, to_units):
       To see supported units, use: `valid_uoms(quantity='length')`
    """
 
-   return convert(a, from_units, to_units, quantity = 'length', inplace = True)
+    return convert(a, from_units, to_units, quantity = 'length', inplace = True)
 
 
 def convert_pressures(a, from_units, to_units):
-   """Converts values in numpy array (or a scalar) from one pressure unit to another, in situ if array.
+    """Converts values in numpy array (or a scalar) from one pressure unit to another, in situ if array.
 
    arguments:
       a (numpy float array, or float): array of pressure values to undergo unit conversion in situ, or a scalar
@@ -282,11 +282,11 @@ def convert_pressures(a, from_units, to_units):
    note:
       To see supported units, use: `valid_uoms(quantity='pressure')`
    """
-   return convert(a, from_units, to_units, quantity = 'pressure', inplace = True)
+    return convert(a, from_units, to_units, quantity = 'pressure', inplace = True)
 
 
 def convert_volumes(a, from_units, to_units):
-   """Converts values in numpy array (or a scalar) from one volume unit to another, in situ if array.
+    """Converts values in numpy array (or a scalar) from one volume unit to another, in situ if array.
 
    arguments:
       a (numpy float array, or float): array of volume values to undergo unit conversion in situ, or a scalar
@@ -300,11 +300,11 @@ def convert_volumes(a, from_units, to_units):
       To see supported units, use: `valid_uoms(quantity='volume')`
 
    """
-   return convert(a, from_units, to_units, quantity = 'volume', inplace = True)
+    return convert(a, from_units, to_units, quantity = 'volume', inplace = True)
 
 
 def convert_flow_rates(a, from_units, to_units):
-   """Converts values in numpy array (or a scalar) from one volume flow rate unit to another, in situ if array.
+    """Converts values in numpy array (or a scalar) from one volume flow rate unit to another, in situ if array.
 
    arguments:
       a (numpy float array, or float): array of volume flow rate values to undergo unit conversion in situ, or a scalar
@@ -317,12 +317,12 @@ def convert_flow_rates(a, from_units, to_units):
    note:
       To see supported units, use: `valid_uoms(quantity='volume per time')`
    """
-   return convert(a, from_units, to_units, quantity = 'volume per time', inplace = True)
+    return convert(a, from_units, to_units, quantity = 'volume per time', inplace = True)
 
 
 @lru_cache(None)
 def get_conversion_factors(uom):
-   """Return base unit and conversion factors (A, B, C, D) for a given uom.
+    """Return base unit and conversion factors (A, B, C, D) for a given uom.
    
    The formula "y=(A + Bx)/(C + Dx)" where "y" represents a value in the base unit.
 
@@ -332,18 +332,18 @@ def get_conversion_factors(uom):
    Raises:
       ValueError if either uom is not a valid resqml uom
    """
-   if uom not in valid_uoms():
-      raise ValueError(f"{uom} is not a valid uom")
-   uoms_data = _properties_data()["units"][uom]
+    if uom not in valid_uoms():
+        raise ValueError(f"{uom} is not a valid uom")
+    uoms_data = _properties_data()["units"][uom]
 
-   dimension = uoms_data["dimension"]
-   try:
-      a, b, c, d = uoms_data["A"], uoms_data["B"], uoms_data["C"], uoms_data["D"]
-      base_unit = uoms_data["baseUnit"]
-   except KeyError:  # Base units do not have factors defined
-      a, b, c, d = 0, 1, 1, 0
-      base_unit = uom
-   return base_unit, dimension, (a, b, c, d)
+    dimension = uoms_data["dimension"]
+    try:
+        a, b, c, d = uoms_data["A"], uoms_data["B"], uoms_data["C"], uoms_data["D"]
+        base_unit = uoms_data["baseUnit"]
+    except KeyError:  # Base units do not have factors defined
+        a, b, c, d = 0, 1, 1, 0
+        base_unit = uom
+    return base_unit, dimension, (a, b, c, d)
 
 
 # Private functions
@@ -351,7 +351,7 @@ def get_conversion_factors(uom):
 
 @lru_cache(None)
 def _properties_data():
-   """ Return a data structure that represents resqml unit system.
+    """ Return a data structure that represents resqml unit system.
 
    The dict is loaded directly from a JSON file which is bundled with resqpy.
    The unit system is represented as a dict with the following keys:
@@ -366,37 +366,37 @@ def _properties_data():
       dict: resqml unit system
       
    """
-   json_path = Path(__file__).parent / 'olio/data/properties.json'
-   with open(json_path) as f:
-      data = json.load(f)
-   return data
+    json_path = Path(__file__).parent / 'olio/data/properties.json'
+    with open(json_path) as f:
+        data = json.load(f)
+    return data
 
 
 def _try_parse_unit(units):
-   """Try to match unit against known uoms and aliases, else return None"""
+    """Try to match unit against known uoms and aliases, else return None"""
 
-   uom_list = valid_uoms()
-   ul = units.casefold()
+    uom_list = valid_uoms()
+    ul = units.casefold()
 
-   uom = None
+    uom = None
 
-   if units in uom_list:
-      uom = units
-   elif ul in CASE_INSENSITIVE_UOMS:
-      uom = ul
-   elif ul in UOM_ALIAS_MAP:
-      uom = UOM_ALIAS_MAP[ul]
-   elif ul in uom_list:
-      uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
-   elif units.startswith('(') and units.endswith(')') and '(' not in units[1:]:  # simplistic
-      uom = _try_parse_unit(units[1:-1])
-   elif '/' in units:  # May be a fraction: match each part against known aliases
-      parts = units.split('/', 1)
-      newpart0 = _try_parse_unit(parts[0])
-      newpart1 = _try_parse_unit(parts[1])
-      if newpart0 and newpart1:
-         ratio = f"{newpart0}/{newpart1}"
-         if ratio in uom_list:
-            uom = ratio
+    if units in uom_list:
+        uom = units
+    elif ul in CASE_INSENSITIVE_UOMS:
+        uom = ul
+    elif ul in UOM_ALIAS_MAP:
+        uom = UOM_ALIAS_MAP[ul]
+    elif ul in uom_list:
+        uom = ul  # dangerous! for example, 'D' means D'Arcy and 'd' means day
+    elif units.startswith('(') and units.endswith(')') and '(' not in units[1:]:  # simplistic
+        uom = _try_parse_unit(units[1:-1])
+    elif '/' in units:  # May be a fraction: match each part against known aliases
+        parts = units.split('/', 1)
+        newpart0 = _try_parse_unit(parts[0])
+        newpart1 = _try_parse_unit(parts[1])
+        if newpart0 and newpart1:
+            ratio = f"{newpart0}/{newpart1}"
+            if ratio in uom_list:
+                uom = ratio
 
-   return uom
+    return uom
