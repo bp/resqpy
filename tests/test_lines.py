@@ -1,12 +1,12 @@
-import pytest
-
-import resqpy.model as rq
-import resqpy.lines
-import resqpy.organize
-import numpy as np
 import os
 
+import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
+
+import resqpy.lines
+import resqpy.model as rq
+import resqpy.organize
 
 
 def test_lines(example_model_and_crs):

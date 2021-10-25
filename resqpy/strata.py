@@ -12,12 +12,12 @@ log.debug('strata.py version ' + version)
 
 import warnings
 
+import resqpy.olio.uuid as bu
+import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.weights_and_measures as wam
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.uuid as bu
-from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 # note: two compositions have a spurious trailing space in the RESQML xsd; resqpy hides this from calling code
 valid_compositions = [

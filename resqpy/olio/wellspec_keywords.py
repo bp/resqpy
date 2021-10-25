@@ -5,7 +5,7 @@ version = '29th April 2021'
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
-from typing import Dict, Tuple, Any, Type
+from typing import Any, Dict, Tuple, Type
 
 log = logging.getLogger(__name__)
 log.debug('wellspec_keywords.py version %s', version)

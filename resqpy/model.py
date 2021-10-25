@@ -10,28 +10,28 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('model.py version ' + version)
 
-import os
 import copy
 import getpass
+import os
 import pathlib
 import shutil
 import warnings
 import zipfile as zf
-from typing import Union, Optional, Iterable
+from typing import Iterable, Optional, Union
 
-import numpy as np
 import h5py
+import numpy as np
 
-import resqpy.olio.xml_et as rqet
+import resqpy.crs as rqc
+import resqpy.fault as rqf
+import resqpy.grid as grr
+import resqpy.olio.consolidation as cons
 import resqpy.olio.time as time
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as whdf5
-import resqpy.olio.consolidation as cons
-from resqpy.olio.xml_namespaces import curly_namespace as ns, namespace as ns_url
-
-import resqpy.crs as rqc
-import resqpy.grid as grr
-import resqpy.fault as rqf
+import resqpy.olio.xml_et as rqet
+from resqpy.olio.xml_namespaces import curly_namespace as ns
+from resqpy.olio.xml_namespaces import namespace as ns_url
 
 use_version_string = False
 

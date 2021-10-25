@@ -1,11 +1,11 @@
 import math as maths
 
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.weights_and_measures as wam
-from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
+from resqpy.olio.exceptions import IncompatibleUnitsError, InvalidUnitError
 
 # ------- Test uoms ------
 

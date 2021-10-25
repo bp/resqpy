@@ -23,10 +23,11 @@ log.debug('grid_functions.py version %s', version)
 
 import math as maths
 import random
+
 import numpy as np
 
-import resqpy.olio.vector_utilities as vec
 import resqpy.olio.factors as factors
+import resqpy.olio.vector_utilities as vec
 
 ##########################################################################################
 # infill_block_geometry():

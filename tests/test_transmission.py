@@ -1,17 +1,17 @@
 # test module for resqpy.olio.transmission.py
 
+import math as maths
+import os
+
+import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
 
-import os
-import math as maths
-import numpy as np
-
-import resqpy.model as rq
 import resqpy.grid as grr
+import resqpy.model as rq
 import resqpy.olio.transmission as rqtr
-import resqpy.olio.vector_utilities as vec
 import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
 
 
 def test_regular_grid_half_cell_transmission(tmp_path):

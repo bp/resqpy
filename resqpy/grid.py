@@ -12,30 +12,27 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('grid.py version ' + version)
 
-import pandas as pd
 import numpy as np
 import numpy.ma as ma
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
-
-from resqpy.olio.base import BaseResqpy
-import resqpy.olio.transmission as rqtr
-import resqpy.olio.fine_coarse as fc
-import resqpy.olio.vector_utilities as vec
-import resqpy.olio.grid_functions as gf
-import resqpy.olio.write_data as wd
-import resqpy.olio.point_inclusion as pip
-import resqpy.olio.volume as vol
-import resqpy.olio.uuid as bu
-import resqpy.weights_and_measures as bwam
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.write_hdf5 as rwh5
-import resqpy.olio.trademark as tm
-from resqpy.olio.xml_namespaces import curly_namespace as ns
+import pandas as pd
 
 import resqpy.crs as rqc
-import resqpy.property as rprop
 import resqpy.fault as rqf
+import resqpy.olio.fine_coarse as fc
+import resqpy.olio.grid_functions as gf
+import resqpy.olio.point_inclusion as pip
+import resqpy.olio.trademark as tm
+import resqpy.olio.transmission as rqtr
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
+import resqpy.olio.volume as vol
+import resqpy.olio.write_data as wd
+import resqpy.olio.write_hdf5 as rwh5
+import resqpy.olio.xml_et as rqet
+import resqpy.property as rprop
+import resqpy.weights_and_measures as bwam
+from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False

@@ -12,21 +12,19 @@ log = logging.getLogger(__name__)
 log.debug('surface.py version ' + version)
 
 import math as maths
-import numpy as np
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
 
-from resqpy.olio.base import BaseResqpy
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.write_hdf5 as rwh5
-import resqpy.olio.uuid as bu
-import resqpy.olio.vector_utilities as vec
+import numpy as np
+
 import resqpy.crs as rcrs
 import resqpy.olio.triangulation as triangulate
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
+import resqpy.olio.write_hdf5 as rwh5
+import resqpy.olio.xml_et as rqet
+import resqpy.organize as rqo
+from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
-
-import resqpy.organize as rqo
 
 
 class _BaseSurface(BaseResqpy):

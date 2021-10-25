@@ -13,6 +13,7 @@ log.debug('vector_utilities.py version %s', version)
 # some functions accept a tuple or list of 3 elements as an alternative to a numpy array
 
 import math as maths
+
 import numpy as np
 
 

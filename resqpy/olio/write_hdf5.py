@@ -13,9 +13,10 @@ log = logging.getLogger(__name__)
 log.debug('write_hdf5.py version ' + version)
 
 import os
-import numpy as np
 
 import h5py
+import numpy as np
+
 import resqpy.olio.uuid as bu
 
 resqml_path_head = '/RESQML/'  # note: latest fesapi code uses RESQML20

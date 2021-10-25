@@ -1,18 +1,18 @@
+import math as maths
 import os
 
-import pytest
-import math as maths
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 
-import resqpy.model as rq
+import resqpy.derived_model as rqdm
 import resqpy.grid as grr
+import resqpy.model as rq
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
 import resqpy.time_series as rqts
-import resqpy.derived_model as rqdm
 import resqpy.weights_and_measures as bwam
-import resqpy.olio.vector_utilities as vec
-import resqpy.olio.uuid as bu
 
 # ---- Test PropertyCollection methods ---
 

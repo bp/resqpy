@@ -7,20 +7,19 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('crs.py version ' + version)
 
-import warnings
-from typing import Union, Optional, Tuple, List, Dict
 import math as maths
-import numpy as np
 import uuid
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
+import warnings
+from typing import Dict, List, Optional, Tuple, Union
+
+import numpy as np
 
 import resqpy.model as rq
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
+import resqpy.olio.xml_et as rqet
 import resqpy.weights_and_measures as wam
 from resqpy.olio.base import BaseResqpy
-import resqpy.olio.uuid as bu
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.vector_utilities as vec
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 PointType = Union[Tuple[float, float, float], List[float], np.ndarray]

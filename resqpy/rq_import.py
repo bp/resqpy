@@ -10,28 +10,28 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('rq_import.py version ' + version)
 
+import glob
 import os
+
 import numpy as np
 import numpy.ma as ma
-import glob
 
-import resqpy.olio.load_data as ld
-# import resqpy.olio.grid_functions as gf
-import resqpy.olio.write_data as wd
-import resqpy.olio.ab_toolbox as abt
-import resqpy.olio.uuid as bu
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.vdb as vdb
-import resqpy.olio.vector_utilities as vec
-import resqpy.olio.trademark as tm
-
-import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
-import resqpy.property as rp
-import resqpy.time_series as rts
-import resqpy.surface as rqs
+import resqpy.model as rq
+import resqpy.olio.ab_toolbox as abt
+import resqpy.olio.load_data as ld
+import resqpy.olio.trademark as tm
+import resqpy.olio.uuid as bu
+import resqpy.olio.vdb as vdb
+import resqpy.olio.vector_utilities as vec
+# import resqpy.olio.grid_functions as gf
+import resqpy.olio.write_data as wd
+import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
+import resqpy.property as rp
+import resqpy.surface as rqs
+import resqpy.time_series as rts
 import resqpy.weights_and_measures as bwam
 
 

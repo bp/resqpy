@@ -1,21 +1,21 @@
 """ Shared fixtures for tests """
 
 import logging
-
-import pytest
+import os
 from pathlib import Path
 from shutil import copytree
+
 import numpy as np
 import pandas as pd
-import os
+import pytest
 
-from resqpy.model import Model, new_model
-from resqpy.organize import WellboreFeature, WellboreInterpretation
-from resqpy.well import Trajectory, MdDatum, WellboreFrame
-from resqpy.crs import Crs
 import resqpy.grid as grr
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
+from resqpy.crs import Crs
+from resqpy.model import Model, new_model
+from resqpy.organize import WellboreFeature, WellboreInterpretation
+from resqpy.well import MdDatum, Trajectory, WellboreFrame
 
 
 @pytest.fixture(autouse = True)

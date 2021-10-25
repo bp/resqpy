@@ -16,11 +16,11 @@ log.debug(f'dataframe.py version {version}')
 import numpy as np
 import pandas as pd
 
+import resqpy.crs as rqc
+import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.surface as rqs
 import resqpy.time_series as rqts
-import resqpy.crs as rqc
-import resqpy.olio.xml_et as rqet
 
 # todo: add support for building an ensemble of dataframes using the same mesh support
 

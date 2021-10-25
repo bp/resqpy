@@ -1,12 +1,13 @@
 # resqpy dataframe storage and retrieval test
 
 import os
+
 import numpy as np
 import pandas as pd
 
 import resqpy.model as rq
-import resqpy.time_series as rqts
 import resqpy.olio.dataframe as rqdf
+import resqpy.time_series as rqts
 
 
 def test_dataframe(tmp_path):

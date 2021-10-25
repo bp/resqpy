@@ -11,11 +11,17 @@ import os
 
 # import xml element tree parse method and classes here to allow single point for switching between lxml and etree
 # alternative to lxml.etree: xml.etree.ElementTree
-from lxml.etree import parse, ElementTree, Element, SubElement, _Element  # noqa
+from lxml.etree import (
+    Element,
+    ElementTree,
+    SubElement,
+    _Element,  # noqa
+    parse)
 
 import resqpy.olio.uuid as bu
-
-from resqpy.olio.xml_namespaces import namespace as ns, inverse_namespace as inv_ns, curly_namespace as cns
+from resqpy.olio.xml_namespaces import curly_namespace as cns
+from resqpy.olio.xml_namespaces import inverse_namespace as inv_ns
+from resqpy.olio.xml_namespaces import namespace as ns
 
 pretend_to_be_fesapi = False
 use_fesapi_quirks = True

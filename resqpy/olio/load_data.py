@@ -21,14 +21,15 @@ log.debug('load_data.py version %s', version)
 #    def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
 
 import os
+
 import numpy as np
 
-import resqpy.olio.utility as pu
-import resqpy.olio.box_utilities as box
-import resqpy.olio.keyword_files as kf
-import resqpy.olio.write_data as wd
-import resqpy.olio.grid_functions as gf
 import resqpy.olio.ab_toolbox as abt
+import resqpy.olio.box_utilities as box
+import resqpy.olio.grid_functions as gf
+import resqpy.olio.keyword_files as kf
+import resqpy.olio.utility as pu
+import resqpy.olio.write_data as wd
 
 
 def file_exists(file_name, must_be_more_recent_than_file = None):

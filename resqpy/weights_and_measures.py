@@ -1,10 +1,11 @@
 """Units of measure module."""
 
-from pathlib import Path
 import json
 import warnings
 from functools import lru_cache
-from resqpy.olio.exceptions import InvalidUnitError, IncompatibleUnitsError
+from pathlib import Path
+
+from resqpy.olio.exceptions import IncompatibleUnitsError, InvalidUnitError
 
 version = '13th September 2021'
 

@@ -1,6 +1,6 @@
-import pytest
-
 import os
+
+import pytest
 
 import resqpy.model as rq
 import resqpy.time_series as rqts

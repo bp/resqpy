@@ -10,15 +10,14 @@ log.debug('grid_surface.py version ' + version)
 import numpy as np
 import pandas as pd
 
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.vector_utilities as vec
-import resqpy.olio.intersection as meet
-import resqpy.olio.box_utilities as bx
-import resqpy.olio.uuid as bu
-
-import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.fault as rqf
+import resqpy.model as rq
+import resqpy.olio.box_utilities as bx
+import resqpy.olio.intersection as meet
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
+import resqpy.olio.xml_et as rqet
 import resqpy.surface as rqs
 import resqpy.well as rqw
 

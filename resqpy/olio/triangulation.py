@@ -8,11 +8,11 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
-import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.lines as rql
-import resqpy.olio.vector_utilities as vec
+import resqpy.model as rq
 import resqpy.olio.intersection as meet
+import resqpy.olio.vector_utilities as vec
 
 # _ccw_t() no longer needed: triangle vertices maintained in anti-clockwise order throughout
 # def _ccw_t(p, t):   # puts triangle vertex indices into anti-clockwise order, in situ

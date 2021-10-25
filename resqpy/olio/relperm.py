@@ -7,10 +7,12 @@ data as RESQML objects.
 
    Nexus is a registered trademark of Halliburton
 """
+import logging
+import os
+
 import numpy as np
 import pandas as pd
-import os
-import logging
+
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.dataframe import DataFrame
 

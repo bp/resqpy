@@ -7,19 +7,18 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('rq_print.py version ' + version)
 
-import numpy as np
 import h5py
-
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.uuid as bu
-import resqpy.olio.class_dict as rcd
+import numpy as np
 
 # todo: redistribute functions to main object class modules and remove circular imports
 import resqpy.crs as rqc
-import resqpy.grid as grr
-import resqpy.time_series as rts
-import resqpy.property as rprop
 import resqpy.fault as rqf
+import resqpy.grid as grr
+import resqpy.olio.class_dict as rcd
+import resqpy.olio.uuid as bu
+import resqpy.olio.xml_et as rqet
+import resqpy.property as rprop
+import resqpy.time_series as rts
 import resqpy.well as rqw
 
 

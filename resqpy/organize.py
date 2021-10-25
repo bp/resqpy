@@ -16,10 +16,10 @@ log.debug('organize.py version ' + version)
 import math as maths
 import warnings
 
-import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
-from resqpy.olio.xml_namespaces import curly_namespace as ns
+import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)

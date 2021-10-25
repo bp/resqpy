@@ -9,30 +9,30 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('derived_model.py version ' + version)
 
-import os
 import copy
 import math as maths
-import numpy as np
+import os
 from time import time  # debug
 
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.vector_utilities as vec
-import resqpy.olio.simple_lines as sl
-import resqpy.olio.intersection as meet
-import resqpy.olio.box_utilities as bx
-import resqpy.olio.grid_functions as gf
-import resqpy.olio.fine_coarse as fc
-import resqpy.olio.uuid as bu
+import numpy as np
 
-import resqpy.model as rq
 import resqpy.crs as rqcrs
+import resqpy.fault as rqf
 import resqpy.grid as grr
 import resqpy.grid_surface as rgs
-import resqpy.property as rqp
-import resqpy.well as rqw
-import resqpy.fault as rqf
 import resqpy.lines as rql
+import resqpy.model as rq
+import resqpy.olio.box_utilities as bx
+import resqpy.olio.fine_coarse as fc
+import resqpy.olio.grid_functions as gf
+import resqpy.olio.intersection as meet
+import resqpy.olio.simple_lines as sl
+import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
+import resqpy.olio.xml_et as rqet
+import resqpy.property as rqp
 import resqpy.rq_import as rqi
+import resqpy.well as rqw
 
 
 def _pl(n, use_es = False):

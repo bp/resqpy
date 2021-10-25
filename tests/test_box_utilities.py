@@ -1,7 +1,7 @@
 # test olio box_utilities functions
 
-import pytest
 import numpy as np
+import pytest
 
 import resqpy.olio.box_utilities as bx
 
