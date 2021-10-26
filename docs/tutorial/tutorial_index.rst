@@ -24,6 +24,7 @@ executed whilst progressing through the material.
    getting_started_with_model
    working_with_coord
    high_level_objects
+   attributes_tutorial
    cellular_grids
    grid_properties
    single_property
