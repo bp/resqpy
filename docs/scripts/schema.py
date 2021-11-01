@@ -51,7 +51,8 @@ def xsd_to_dicts(schema_dirs):
                 for enumeration in enum_list:
                     value = enumeration.attrib['value']
                     v_doc = rqet.find_nested_tags_text(enumeration, ['annotation', 'documentation'])
-                    if v_doc is not None: v_doc = str(v_doc).replace('\n', ' ')
+                    if v_doc is not None:
+                        v_doc = str(v_doc).replace('\n', ' ')
                     value_list.append((value, v_doc))
             simple_types[name] = (restrict, value_list, doc)
 
@@ -69,7 +70,8 @@ def xsd_to_dicts(schema_dirs):
             if content is None:
                 content = completon
             sequence = rqet.find_tag(content, 'sequence')
-            if sequence is None: sequence = content
+            if sequence is None:
+                sequence = content
             element_list = []
             e_nodes = rqet.list_of_tag(sequence, 'element')
             if e_nodes is not None:
@@ -148,16 +150,19 @@ def obj_names(complex_types):
     return sorted([k for k in complex_types.keys() if k.startswith('obj_')])
 
 
-def print_flattened(flattened_types, type_key):
+def print_flattened(complex_types, flattened_types, type_key, max_levels = 99, indent = 0):
     """Recursively prints a list of the (flattened) elements for a complex type.
 
     arguments:
         flattened_types (dict): as returned by expand_complex_types()
         type_key (str): the name of the complex type for which an element list print is required
+        max_levels (int): the maximum number of nested levels to show in printout
+        indent (int, default 0): initial indentation level
     """
 
-    if indent > max_levels: return
-    for e in flattened_types[key]:
+    if indent > max_levels:
+        return
+    for e in flattened_types[type_key]:
         print(' ' * 3 * indent, f'{e[0]}: ({e[1]}) ', end = '')
         if e[2] == '0' and e[3] == '1':
             print('optional')
@@ -170,7 +175,7 @@ def print_flattened(flattened_types, type_key):
         if e[1].startswith('resqml:'):
             ref_key = e[1].split(':')[-1]
             if ref_key in complex_types.keys():
-                pf(ref_key, max_levels = max_levels, indent = indent + 1)
+                print_flattened(complex_types, flattened_types, ref_key, max_levels = max_levels, indent = indent + 1)
 
 
 def manifestations(complex_types, abstract_type, is_obj = False):
@@ -215,16 +220,18 @@ def max_sizes_for_rst(flattened_types, complex_types, key = None):
     def _max_sizes(flattened_types, complex_types, key, indent = 0, max_so_far = [0, 0, 0]):
         for e in flattened_types[key]:
             s0 = 3 * indent + len(e[0])
-            if s0 > max_so_far[0]: max_so_far[0] = s0
+            if s0 > max_so_far[0]:
+                max_so_far[0] = s0
             s1 = len(e[1])
-            if s1 > max_so_far[1]: max_so_far[1] = s1
+            if s1 > max_so_far[1]:
+                max_so_far[1] = s1
             if e[1].startswith('resqml:'):
                 ref_key = e[1].split(':')[-1]
                 if ref_key in complex_types:
                     _max_sizes(flattened_types, complex_types, ref_key, indent = indent + 1, max_so_far = max_so_far)
         return max_so_far
 
-    ms = [0,0,10]
+    ms = [0, 0, 10]
 
     key_list = obj_names(complex_types) if key is None else [key]
     for key in key_list:
@@ -249,9 +256,11 @@ def write_rst_table(fp, flattened_types, complex_types, key, max_sizes, header =
             elements = sorted(elements)
         for e in elements:
             line = '|' + '·' * 3 * indent + e[0]
-            if len(line) < ms[0] + 1: line += ' ' * (ms[0] + 1 - len(line))
+            if len(line) < ms[0] + 1:
+                line += ' ' * (ms[0] + 1 - len(line))
             line += '|' + e[1]
-            if len(line) < ms[0] + ms[1] + 2: line += ' ' * (ms[0] + ms[1] + 2 - len(line))
+            if len(line) < ms[0] + ms[1] + 2:
+                line += ' ' * (ms[0] + ms[1] + 2 - len(line))
             line += '|'
             if e[2] == '0' and e[3] == '1':
                 line += 'optional'
@@ -261,15 +270,22 @@ def write_rst_table(fp, flattened_types, complex_types, key, max_sizes, header =
                 line += 'required'
             else:
                 line += f'{e[2]} to {e[3]}'
-            if len(line) < table_width - 1: line += ' ' * (table_width - 1 - len(line))
+            if len(line) < table_width - 1:
+                line += ' ' * (table_width - 1 - len(line))
             line += '|\n'
             fp.write(line)
             _write_bar(fp, ms)
             if e[1].startswith('resqml:'):
                 ref_key = e[1].split(':')[-1]
                 if ref_key in complex_types.keys():
-                    _pf_table(fp, flattened_types, complex_types, ref_key, ms,
-                              max_levels = max_levels, indent = indent + 1, sort = sort)
+                    _pf_table(fp,
+                              flattened_types,
+                              complex_types,
+                              ref_key,
+                              ms,
+                              max_levels = max_levels,
+                              indent = indent + 1,
+                              sort = sort)
 
     if header:
         fp.write(f'\n{key}\n')
