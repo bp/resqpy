@@ -5871,8 +5871,8 @@ class RegularGrid(Grid):
         """Sets is_aligned attribute True if IJK axes align with +/- xyz respectively."""
         if self.block_dxyz_dkji is None:
             self.is_aligned = None
-        self.is_aligned = (np.count_nonzero(self.block_dxyz_dkji *
-                                            np.array([[1.0, 1, 0], [1, 0, 1], [0, 1, 1]])) == 0)
+        self.is_aligned = (np.count_nonzero(self.block_dxyz_dkji * np.array([[1.0, 1, 0], [1, 0, 1], [0, 1, 1]])) == 0)
+
 
 def establish_zone_property_kind(model):
     """Returns zone local property kind object, creating the xml and adding as part if not found in model."""
