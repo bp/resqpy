@@ -25,6 +25,8 @@
     olio
 """
 
+__all__ = ["surface"]
+
 try:
     # Version dynamically extracted from git tags when package is built
     from .version import version as __version__  # type: ignore

@@ -21,50 +21,9 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.organize as rqo
-from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
-
-
-class _BaseSurface(BaseResqpy):
-    """Base class to implement shared methods for other classes in this module."""
-
-    def create_interpretation_and_feature(self,
-                                          kind = 'horizon',
-                                          name = None,
-                                          interp_title_suffix = None,
-                                          is_normal = True):
-        """Creates xml and objects for a represented interpretaion and interpreted feature, if not already present."""
-
-        assert kind in ['horizon', 'fault', 'fracture', 'geobody boundary']
-        assert name or self.title, 'title missing'
-        if not name:
-            name = self.title
-
-        if self.represented_interpretation_root is not None:
-            log.debug(f'represented interpretation already exisrs for surface {self.title}')
-            return
-        if kind in ['horizon', 'geobody boundary']:
-            feature = rqo.GeneticBoundaryFeature(self.model, kind = kind, feature_name = name)
-            feature.create_xml()
-            if kind == 'horizon':
-                interp = rqo.HorizonInterpretation(self.model, genetic_boundary_feature = feature, domain = 'depth')
-            else:
-                interp = rqo.GeobodyBoundaryInterpretation(self.model,
-                                                           genetic_boundary_feature = feature,
-                                                           domain = 'depth')
-        elif kind in ['fault', 'fracture']:
-            feature = rqo.TectonicBoundaryFeature(self.model, kind = kind, feature_name = name)
-            feature.create_xml()
-            interp = rqo.FaultInterpretation(self.model,
-                                             is_normal = is_normal,
-                                             tectonic_boundary_feature = feature,
-                                             domain = 'depth')  # might need more arguments
-        else:
-            log.critical('code failure')
-        interp_root = interp.create_xml(title_suffix = interp_title_suffix)
-        self.set_represented_interpretation_root(interp_root)
+from resqpy.surface.base_surface import BaseSurface
 
 
 class TriangulatedPatch:
@@ -510,7 +469,7 @@ class TriangulatedPatch:
         self.points[:, 2] = ref_depth + scaling_factor * (z_values - ref_depth)
 
 
-class Surface(_BaseSurface):
+class Surface(BaseSurface):
     """Class for RESQML triangulated set surfaces."""
 
     resqml_type = 'TriangulatedSetRepresentation'
@@ -1161,7 +1120,7 @@ class CombinedSurface:
         return self.triangles, self.points
 
 
-class PointSet(_BaseSurface):
+class PointSet(BaseSurface):
     """Class for RESQML Point Set Representation within resqpy model object."""  # TODO: Work in Progress
 
     resqml_type = 'PointSetRepresentation'
@@ -1574,7 +1533,7 @@ class PointSet(_BaseSurface):
                 f.write(item)
 
 
-class Mesh(_BaseSurface):
+class Mesh(BaseSurface):
     """Class covering meshes (lattices: surfaces where points form a 2D grid; RESQML obj_Grid2dRepresentation)."""
 
     resqml_type = 'Grid2dRepresentation'
