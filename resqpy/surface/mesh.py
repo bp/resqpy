@@ -24,6 +24,7 @@ from resqpy.olio.zmap_reader import read_mesh
 from .base_surface import BaseSurface
 from .surface import Surface
 
+
 class Mesh(BaseSurface):
     """Class covering meshes (lattices: surfaces where points form a 2D grid; RESQML obj_Grid2dRepresentation)."""
 
