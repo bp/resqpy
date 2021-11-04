@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-
+import os
 import resqpy.grid
 import resqpy.grid_surface as rqgs
 import resqpy.lines as rql
@@ -211,16 +211,17 @@ def test_points(example_model_and_crs):
     # check a fully expanded version of the points
     assert_array_almost_equal(saved_points.full_array_ref(), points.full_array_ref())
 
-def test_charisma(example_model_and_crs, test_data_path):
-    # Set up a PointSet
+def test_charisma(example_model_and_crs, test_data_path, tmp_path):
+    # Set up a PointSet and save to resqml file
     model, crs = example_model_and_crs
 
     charisma_file = test_data_path / "Charisma_points.txt"
     points = resqpy.surface.PointSet(parent_model = model, charisma_file = str(charisma_file), crs_uuid=crs.uuid)
     points.write_hdf5()
     points.create_xml()
-
     model.store_epc()
+
+    # Test reload from resqml
     model = rq.Model(epc_file = model.epc_file)
     reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
 
@@ -231,16 +232,25 @@ def test_charisma(example_model_and_crs, test_data_path):
 
     assert coords.shape == (15,3), f'Expected shape (15,3), not {coords.shape}'
 
+    # Test write back to file
+    out_file = str(tmp_path / "Charisma_points_out.txt")
+    reload.convert_to_charisma(out_file)
 
-def test_irap(example_model_and_crs, test_data_path):
-    # Set up a PointSet
+    assert os.path.exists(out_file)
+    with open(out_file, 'r') as f:
+        assert f.readline() == 'INLINE :\t1 XLINE :\t1\t420691.19624\t6292314.22044\t2799.05591\n', 'Output Charisma file does not look as expected'
+
+
+def test_irap(example_model_and_crs, test_data_path, tmp_path):
+    # Set up a PointSet and save to resqml file
     model, crs = example_model_and_crs
     irap_file = test_data_path / "IRAP_points.txt"
     points = resqpy.surface.PointSet(parent_model = model, irap_file = str(irap_file), crs_uuid = crs.uuid)
     points.write_hdf5()
     points.create_xml()
-
     model.store_epc()
+
+    # Test reload from resqml
     model = rq.Model(epc_file = model.epc_file)
     reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
 
@@ -250,3 +260,11 @@ def test_irap(example_model_and_crs, test_data_path):
     assert_array_almost_equal(coords[0],np.array([429450.658333, 6296954.224574, 2403.837646]))
 
     assert coords.shape == (9,3), f'Expected shape (9,3), not {coords.shape}'
+
+    # Test write back to file
+    out_file = str(tmp_path / "IRAP_points_out.txt")
+    reload.convert_to_irap(out_file)
+
+    assert os.path.exists(out_file)
+    with open(out_file, 'r') as f:
+        assert f.readline() == '429450.658333 6296954.224574 2403.837646\n', 'Output IRAP file does not look as expected'
