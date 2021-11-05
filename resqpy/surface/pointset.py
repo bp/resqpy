@@ -115,28 +115,25 @@ class PointSet(BaseSurface):
             self.title = 'point set'
 
     def _load_from_xml(self):
-        root_node = self.root
-        assert root_node is not None
-        self.patch_count = rqet.count_tag(root_node, 'NodePatch')
+        assert self.root is not None
+        self.patch_count = rqet.count_tag(self.root, 'NodePatch')
         assert self.patch_count, 'no patches found in xml for point set'
         self.patch_array_list = [None for _ in range(self.patch_count)]
         patch_index = 0
-        for child in rqet.list_of_tag(root_node, 'NodePatch'):
+        for child in rqet.list_of_tag(self.root, 'NodePatch'):
             point_count = rqet.find_tag_int(child, 'Count')
             geom_node = rqet.find_tag(child, 'Geometry')
             assert geom_node is not None, 'geometry missing in xml for point set patch'
             crs_uuid = rqet.find_nested_tags_text(geom_node, ['LocalCrs', 'UUID'])
             assert crs_uuid, 'crs uuid missing in geometry xml for point set patch'
-            if self.crs_uuid is None:
-                self.crs_uuid = crs_uuid
-            else:
-                assert bu.matching_uuids(crs_uuid, self.crs_uuid), 'mixed coordinate reference systems in point set'
+            self.check_crs_match(crs_uuid)
             ext_uuid = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'HdfProxy', 'UUID'])
-            assert ext_uuid, 'missing hdf5 uuid in goemetry xml for point set patch'
+            assert ext_uuid, 'missing hdf5 uuid in geometry xml for point set patch'
             hdf5_path = rqet.find_nested_tags_text(geom_node, ['Points', 'Coordinates', 'PathInHdfFile'])
-            assert hdf5_path, 'missing internal hdf5 path in goemetry xml for point set patch'
+            assert hdf5_path, 'missing internal hdf5 path in geometry xml for point set patch'
             self.patch_ref_list.append((ext_uuid, hdf5_path, point_count))
             patch_index += 1
+
         ref_node = rqet.find_tag(self.root, 'RepresentedInterpretation')
         if ref_node is not None:
             interp_root = self.model.referenced_node(ref_node)
@@ -198,10 +195,7 @@ class PointSet(BaseSurface):
             self.add_patch(polyline.coordinates)
             if polyline.rep_int_root is not None:
                 self.set_represented_interpretation_root(polyline.rep_int_root)
-        if self.crs_uuid is None:
-            self.crs_uuid = polyline.crs_uuid
-        else:
-            assert bu.matching_uuids(self.crs_uuid, polyline.crs_uuid), 'mismatched crs uuids'
+        self.check_crs_match(polyline.crs_uuid)
         if not self.title:
             self.title = polyline.title
 
@@ -211,40 +205,33 @@ class PointSet(BaseSurface):
         arguments:
             polyset (resqpy.lines.PolylineSet object): a polylineset object to generate the pointset from
         """
-        master_crs = None
-        poly_coords = None
-        for poly in polyset.polys:
-            if poly == polyset.polys[0]:
-                master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
-                self.crs_root = poly.crs_root
-                if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
-                    poly_coords = poly.coordinates[:-1].copy()
-                else:
-                    poly_coords = poly.coordinates.copy()
+        master_crs = rcrs.Crs(self.model, uuid = polyset.polys[0].crs_uuid)
+        if polyset.polys[0].isclosed and vec.isclose(polyset.polys[0].coordinates[0], polyset.polys[0].coordinates[-1]):
+            poly_coords = polyset.polys[0].coordinates[:-1].copy()
+        else:
+            poly_coords = polyset.polys[0].coordinates.copy()
+        for poly in polyset.polys[1:]:
+            curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
+            assert master_crs is not None
+            assert poly_coords is not None
+            if not curr_crs.is_equivalent(master_crs):
+                shifted = curr_crs.convert_array_to(master_crs, poly.coordinates)
+                poly_coords = concat_polyset_points(poly.isclosed, shifted, poly_coords)
             else:
-                curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
-                assert master_crs is not None
-                assert poly_coords is not None
-                if not curr_crs.is_equivalent(master_crs):
-                    shifted = curr_crs.convert_array_to(master_crs, poly.coordinates)
-                    if poly.isclosed and vec.isclose(shifted[0], shifted[-1]):
-                        poly_coords = np.concatenate((poly_coords, shifted[:-1]))
-                    else:
-                        poly_coords = np.concatenate((poly_coords, shifted))
-                else:
-                    if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
-                        poly_coords = np.concatenate((poly_coords, poly.coordinates[:-1]))
-                    else:
-                        poly_coords = np.concatenate((poly_coords, poly.coordinates))
+                poly_coords = concat_polyset_points(poly.isclosed, poly.coordinates, poly_coords)
         self.add_patch(poly_coords)
         if polyset.rep_int_root is not None:
             self.set_represented_interpretation_root(polyset.rep_int_root)
-        if self.crs_uuid is None:
-            self.crs_uuid = polyset.polys[0].crs_uuid
-        else:
-            assert bu.matching_uuids(self.crs_uuid, polyset.polys[0].crs_uuid), 'mismatched crs uuids'
+        self.check_crs_match(master_crs.uuid)
         if not self.title:
             self.title = polyset.title
+
+    def check_crs_match(self, crs_uuid):
+        """Checks if the model crs_uuid matches a given crs_uuid. If the current model crs_uuid is None, the new crs_uuid is used as the model crs_uuid. If a mismatch is found an assertion error is raised."""
+        if self.crs_uuid is None:
+            self.crs_uuid = crs_uuid
+        else:
+            assert bu.matching_uuids(crs_uuid, self.crs_uuid), 'mixed coordinate reference systems in point set'
 
     def set_represented_interpretation_root(self, interp_root):
         """Makes a note of the xml root of the represented interpretation."""
@@ -389,7 +376,6 @@ class PointSet(BaseSurface):
                                        root = ps_node)
 
         for patch_index in range(self.patch_count):
-
             p_node = rqet.SubElement(ps_node, ns['resqml2'] + 'NodePatch')
             p_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'NodePatch')
             p_node.text = '\n'
@@ -470,3 +456,21 @@ class PointSet(BaseSurface):
         with open(file_name, 'w') as f:
             for item in lines:
                 f.write(item)
+
+
+def concat_polyset_points(closed, coordinates, poly_coords):
+    """Concatenates two numpy arrays of coordinates for polylines, omitting the final (duplicated) point in a polyline if the polyline is closed.
+
+    arguments:
+        closed (bool): True if polyline is closed
+        coordinates (np.array): Coordinates to be concatenated
+        poly_coords (np.array): Array to concatenate the given coordinates to
+
+    returns:
+        poly_coords (np.array) with additional coordinates concatenated
+    """
+    if closed and vec.isclose(coordinates[0], coordinates[-1]):
+        poly_coords = np.concatenate((poly_coords, coordinates[:-1]))
+    else:
+        poly_coords = np.concatenate((poly_coords, coordinates))
+    return poly_coords
