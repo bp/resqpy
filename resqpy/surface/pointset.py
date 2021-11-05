@@ -100,81 +100,16 @@ class PointSet(BaseSurface):
             self.add_patch(points_array)
 
         elif polyline is not None:  # Points from or within polyline
-            if random_point_count:
-                assert polyline.is_convex()
-                points = np.zeros((random_point_count, 3))
-                points[:, :2] = np.random.random((random_point_count, 2))
-                for p_i in range(random_point_count):
-                    points[p_i, :2] = polyline.denormalised_xy(points[p_i, 0], points[p_i, 1])
-                self.add_patch(points)
-            else:
-                self.add_patch(polyline.coordinates)
-                if polyline.rep_int_root is not None:
-                    self.set_represented_interpretation_root(polyline.rep_int_root)
-            if self.crs_uuid is None:
-                self.crs_uuid = polyline.crs_uuid
-            else:
-                assert bu.matching_uuids(self.crs_uuid, polyline.crs_uuid), 'mismatched crs uuids'
-            if not self.title:
-                self.title = polyline.title
+            self.from_polyline(polyline, random_point_count)
 
         elif polyset is not None:  # Points from polylineSet
-            for poly in polyset.polys:
-                if poly == polyset.polys[0]:
-                    master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
-                    self.crs_root = poly.crs_root
-                    if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
-                        poly_coords = poly.coordinates[:-1].copy()
-                    else:
-                        poly_coords = poly.coordinates.copy()
-                else:
-                    curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
-                    if not curr_crs.is_equivalent(master_crs):
-                        shifted = curr_crs.convert_array_to(master_crs, poly.coordinates)
-                        if poly.isclosed and vec.isclose(shifted[0], shifted[-1]):
-                            poly_coords = np.concatenate((poly_coords, shifted[:-1]))
-                        else:
-                            poly_coords = np.concatenate((poly_coords, shifted))
-                    else:
-                        if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
-                            poly_coords = np.concatenate((poly_coords, poly.coordinates[:-1]))
-                        else:
-                            poly_coords = np.concatenate((poly_coords, poly.coordinates))
-            self.add_patch(poly_coords)
-            if polyset.rep_int_root is not None:
-                self.set_represented_interpretation_root(polyset.rep_int_root)
-            if self.crs_uuid is None:
-                self.crs_uuid = polyset.polys[0].crs_uuid
-            else:
-                assert bu.matching_uuids(self.crs_uuid, polyset.polys[0].crs_uuid), 'mismatched crs uuids'
-            if not self.title:
-                self.title = polyset.title
+            self.from_polyset(polyset)
 
         elif charisma_file is not None:  # Points from Charisma 3D interpretation lines
-            with open(charisma_file, 'r') as surf:
-                for i, line in enumerate(surf.readlines()):
-                    if i == 0:
-                        cpoints = np.array([[float(x) for x in line.split()[6:]]])
-                    else:
-                        curr = np.array([[float(x) for x in line.split()[6:]]])
-                        cpoints = np.concatenate((cpoints, curr))
-            self.add_patch(cpoints)
-            assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from charisma file'
-            if not self.title:
-                self.title = charisma_file
+            self.from_charisma(charisma_file)
 
         elif irap_file is not None:  # Points from IRAP simple points
-            with open(irap_file, 'r') as points:
-                for i, line in enumerate(points.readlines()):
-                    if i == 0:
-                        cpoints = np.array([[float(x) for x in line.split(" ")]])
-                    else:
-                        curr = np.array([[float(x) for x in line.split(" ")]])
-                        cpoints = np.concatenate((cpoints, curr))
-            self.add_patch(cpoints)
-            assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from irap file'
-            if not self.title:
-                self.title = irap_file
+            self.from_irap(irap_file)
 
         if not self.title:
             self.title = 'point set'
@@ -207,6 +142,109 @@ class PointSet(BaseSurface):
             interp_root = self.model.referenced_node(ref_node)
             self.set_represented_interpretation_root(interp_root)
         # note: load of patches handled elsewhere
+
+    def from_charisma(self, charisma_file):
+        """Instantiates a pointset using points from an input charisma file
+        arguments:
+            charisma_file: a charisma 3d interpretation file
+        """
+        with open(charisma_file, 'r') as surf:
+            for i, line in enumerate(surf.readlines()):
+                if i == 0:
+                    cpoints = np.array([[float(x) for x in line.split()[6:]]])
+                else:
+                    curr = np.array([[float(x) for x in line.split()[6:]]])
+                    cpoints = np.concatenate((cpoints, curr))
+        self.add_patch(cpoints)
+        assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from charisma file'
+        if not self.title:
+            self.title = charisma_file
+
+    def from_irap(self, irap_file):
+        """Instantiates a pointset using points from an input irap file
+        arguments:
+            irap_file: a IRAP classic points format file
+        """
+        with open(irap_file, 'r') as points:
+            for i, line in enumerate(points.readlines()):
+                if i == 0:
+                    cpoints = np.array([[float(x) for x in line.split(" ")]])
+                else:
+                    curr = np.array([[float(x) for x in line.split(" ")]])
+                    cpoints = np.concatenate((cpoints, curr))
+        self.add_patch(cpoints)
+        assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from irap file'
+        if not self.title:
+            self.title = irap_file
+
+    def from_polyline(self, polyline, random_point_count = None):
+        """Instantiates a pointset using points from an input polyline (PolylineRepresentation) object
+
+        arguments:
+            polyline (resqpy.lines.Polyline object): if random_point_count is None or zero, creates a pointset from
+              points in a polyline; if present and random_point_count is set, creates random points within
+              the (closed, convex) polyline
+           random_point_count (int, optional): if present then the number of random
+              points to generate within the (closed) polyline in the xy plane, with z set to 0.0
+            """
+        if random_point_count:
+            assert polyline.is_convex()
+            points = np.zeros((random_point_count, 3))
+            points[:, :2] = np.random.random((random_point_count, 2))
+            for p_i in range(random_point_count):
+                points[p_i, :2] = polyline.denormalised_xy(points[p_i, 0], points[p_i, 1])
+            self.add_patch(points)
+        else:
+            self.add_patch(polyline.coordinates)
+            if polyline.rep_int_root is not None:
+                self.set_represented_interpretation_root(polyline.rep_int_root)
+        if self.crs_uuid is None:
+            self.crs_uuid = polyline.crs_uuid
+        else:
+            assert bu.matching_uuids(self.crs_uuid, polyline.crs_uuid), 'mismatched crs uuids'
+        if not self.title:
+            self.title = polyline.title
+
+    def from_polyset(self, polyset):
+        """Instantiates a pointset using points from an input polylineset (PolylineSetRepresentation) object
+
+        arguments:
+            polyset (resqpy.lines.PolylineSet object): a polylineset object to generate the pointset from
+        """
+        master_crs = None
+        poly_coords = None
+        for poly in polyset.polys:
+            if poly == polyset.polys[0]:
+                master_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
+                self.crs_root = poly.crs_root
+                if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
+                    poly_coords = poly.coordinates[:-1].copy()
+                else:
+                    poly_coords = poly.coordinates.copy()
+            else:
+                curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
+                assert master_crs is not None
+                assert poly_coords is not None
+                if not curr_crs.is_equivalent(master_crs):
+                    shifted = curr_crs.convert_array_to(master_crs, poly.coordinates)
+                    if poly.isclosed and vec.isclose(shifted[0], shifted[-1]):
+                        poly_coords = np.concatenate((poly_coords, shifted[:-1]))
+                    else:
+                        poly_coords = np.concatenate((poly_coords, shifted))
+                else:
+                    if poly.isclosed and vec.isclose(poly.coordinates[0], poly.coordinates[-1]):
+                        poly_coords = np.concatenate((poly_coords, poly.coordinates[:-1]))
+                    else:
+                        poly_coords = np.concatenate((poly_coords, poly.coordinates))
+        self.add_patch(poly_coords)
+        if polyset.rep_int_root is not None:
+            self.set_represented_interpretation_root(polyset.rep_int_root)
+        if self.crs_uuid is None:
+            self.crs_uuid = polyset.polys[0].crs_uuid
+        else:
+            assert bu.matching_uuids(self.crs_uuid, polyset.polys[0].crs_uuid), 'mismatched crs uuids'
+        if not self.title:
+            self.title = polyset.title
 
     def set_represented_interpretation_root(self, interp_root):
         """Makes a note of the xml root of the represented interpretation."""
