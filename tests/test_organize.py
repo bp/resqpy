@@ -1,6 +1,8 @@
 import pytest
 
-import resqpy.organize as rqo
+import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo_new
+import resqpy.organize.OrganizationFeature as OrganizationFeature
 from resqpy.model import Model
 
 
@@ -9,7 +11,7 @@ from resqpy.model import Model
     "cls, data",
     [
         (
-            rqo.OrganizationFeature,
+            rqo_new.OrganizationFeature,
             dict(feature_name = 'hello', organization_kind = 'stratigraphic'),
         ),
         (
@@ -122,7 +124,7 @@ def test_FaultInterp(tmp_model):
 def test_EarthModel(tmp_model):
 
     title = 'gaia'
-    org_feat = rqo.OrganizationFeature(tmp_model, feature_name = 'marie kondo', organization_kind = "earth model")
+    org_feat = rqo_new.OrganizationFeature(tmp_model, feature_name = 'marie kondo', organization_kind = "earth model")
     em1 = rqo.EarthModelInterpretation(tmp_model, title = title, organization_feature = org_feat)
 
     org_feat.create_xml()

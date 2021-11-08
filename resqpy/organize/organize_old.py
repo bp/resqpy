@@ -1,4 +1,4 @@
-"""organize.py: RESQML Feature and Interpretation classes."""
+"""organize_old.py: RESQML Feature and Interpretation classes."""
 
 version = '9th August 2021'
 
@@ -8,7 +8,7 @@ version = '9th August 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('organize.py version ' + version)
+log.debug('organize_old.py version ' + version)
 
 # import xml.etree.ElementTree as et
 # from lxml import etree as et
@@ -20,7 +20,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-
+from .OrganizationFeature import OrganizationFeature
 
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)
     """Extracts UUIDs of chrono bottom and top from xml for has occurred during sub-node, or (None, None)."""
@@ -82,7 +82,7 @@ def create_xml_has_occurred_during(model, parent_node, hod_pair, tag = 'HasOccur
     model.create_ref_node('ChronoTop', model.title_for_root(chrono_top_root), top_chrono_uuid, root = hod_node)
 
 
-def _alias_for_attribute(attribute_name):
+def alias_for_attribute(attribute_name):
     """Return an attribute that is a direct alias for an existing attribute."""
 
     def fget(self):
@@ -94,69 +94,69 @@ def _alias_for_attribute(attribute_name):
     return property(fget, fset, doc = f"Alias for {attribute_name}")
 
 
-class OrganizationFeature(BaseResqpy):
-    """Class for generic RESQML Organization Feature objects."""
-
-    resqml_type = "OrganizationFeature"
-    feature_name = _alias_for_attribute("title")
-
-    def __init__(self,
-                 parent_model,
-                 root_node = None,
-                 uuid = None,
-                 feature_name = None,
-                 organization_kind = None,
-                 originator = None,
-                 extra_metadata = None):
-        """Initialises an organization feature object."""
-
-        self.organization_kind = organization_kind
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = feature_name,
-                         originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
-
-    def is_equivalent(self, other, check_extra_metadata = True):
-        """Returns True if this feature is essentially the same as the other; otherwise False."""
-
-        if not isinstance(other, OrganizationFeature):
-            return False
-        if self is other or bu.matching_uuids(self.uuid, other.uuid):
-            return True
-        return (self.feature_name == other.feature_name and self.organization_kind == other.organization_kind and
-                ((not check_extra_metadata) or equivalent_extra_metadata(self, other)))
-
-    def _load_from_xml(self):
-        self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')
-
-    def create_xml(self, add_as_part = True, originator = None, reuse = True):
-        """Creates an organization feature xml node from this organization feature object."""
-
-        if reuse and self.try_reuse():
-            return self.root  # check for reusable (equivalent) object
-        # create node with citation block
-        ofn = super().create_xml(add_as_part = False, originator = originator)
-
-        # Extra element for organization_kind
-        if self.organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
-            raise ValueError(self.organization_kind)
-        kind_node = rqet.SubElement(ofn, ns['resqml2'] + 'OrganizationKind')
-        kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'OrganizationKind')
-        kind_node.text = self.organization_kind
-
-        if add_as_part:
-            self.model.add_part('obj_OrganizationFeature', self.uuid, ofn)
-
-        return ofn
+# class OrganizationFeature(BaseResqpy):
+#     """Class for generic RESQML Organization Feature objects."""
+#
+#     resqml_type = "OrganizationFeature"
+#     feature_name = alias_for_attribute("title")
+#
+#     def __init__(self,
+#                  parent_model,
+#                  root_node = None,
+#                  uuid = None,
+#                  feature_name = None,
+#                  organization_kind = None,
+#                  originator = None,
+#                  extra_metadata = None):
+#         """Initialises an organization feature object."""
+#
+#         self.organization_kind = organization_kind
+#         super().__init__(model = parent_model,
+#                          uuid = uuid,
+#                          title = feature_name,
+#                          originator = originator,
+#                          extra_metadata = extra_metadata,
+#                          root_node = root_node)
+#
+#     def is_equivalent(self, other, check_extra_metadata = True):
+#         """Returns True if this feature is essentially the same as the other; otherwise False."""
+#
+#         if not isinstance(other, OrganizationFeature):
+#             return False
+#         if self is other or bu.matching_uuids(self.uuid, other.uuid):
+#             return True
+#         return (self.feature_name == other.feature_name and self.organization_kind == other.organization_kind and
+#                 ((not check_extra_metadata) or equivalent_extra_metadata(self, other)))
+#
+#     def _load_from_xml(self):
+#         self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')
+#
+#     def create_xml(self, add_as_part = True, originator = None, reuse = True):
+#         """Creates an organization feature xml node from this organization feature object."""
+#
+#         if reuse and self.try_reuse():
+#             return self.root  # check for reusable (equivalent) object
+#         # create node with citation block
+#         ofn = super().create_xml(add_as_part = False, originator = originator)
+#
+#         # Extra element for organization_kind
+#         if self.organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
+#             raise ValueError(self.organization_kind)
+#         kind_node = rqet.SubElement(ofn, ns['resqml2'] + 'OrganizationKind')
+#         kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'OrganizationKind')
+#         kind_node.text = self.organization_kind
+#
+#         if add_as_part:
+#             self.model.add_part('obj_OrganizationFeature', self.uuid, ofn)
+#
+#         return ofn
 
 
 class GeobodyFeature(BaseResqpy):
     """Class for RESQML Geobody Feature objects (note: definition may be incomplete in RESQML 2.0.1)."""
 
     resqml_type = "GeobodyFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
 
     def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a geobody feature object."""
@@ -189,7 +189,7 @@ class BoundaryFeature(BaseResqpy):
     """Class for RESQML Boudary Feature organizational objects."""
 
     resqml_type = "BoundaryFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
 
     def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a boundary feature organisational object."""
@@ -222,7 +222,7 @@ class FrontierFeature(BaseResqpy):
     """Class for RESQML Frontier Feature organizational objects."""
 
     resqml_type = "FrontierFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
 
     def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a frontier feature organisational object."""
@@ -255,7 +255,7 @@ class GeologicUnitFeature(BaseResqpy):
     """Class for RESQML Geologic Unit Feature organizational objects."""
 
     resqml_type = "GeologicUnitFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
 
     def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a geologic unit feature organisational object."""
@@ -288,7 +288,7 @@ class FluidBoundaryFeature(BaseResqpy):
     """Class for RESQML Fluid Boundary Feature (contact) organizational objects."""
 
     resqml_type = "FluidBoundaryFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
     valid_kinds = ('free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact')
 
     def __init__(self,
@@ -347,7 +347,7 @@ class RockFluidUnitFeature(BaseResqpy):
     """Class for RESQML Rock Fluid Unit Feature organizational objects."""
 
     resqml_type = "RockFluidUnitFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
     valid_phases = ('aquifer', 'gas cap', 'oil column', 'seal')
 
     def __init__(self,
@@ -457,7 +457,7 @@ class TectonicBoundaryFeature(BaseResqpy):
     """Class for RESQML Tectonic Boundary Feature (fault) organizational objects."""
 
     resqml_type = "TectonicBoundaryFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
     valid_kinds = ('fault', 'fracture')
 
     def __init__(self,
@@ -513,7 +513,7 @@ class GeneticBoundaryFeature(BaseResqpy):
     """Class for RESQML Genetic Boundary Feature (horizon) organizational objects."""
 
     resqml_type = "GeneticBoundaryFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
     valid_kinds = ('horizon', 'geobody boundary')
 
     def __init__(self,
@@ -587,7 +587,7 @@ class WellboreFeature(BaseResqpy):
     # note: optional WITSML link not supported
 
     resqml_type = "WellboreFeature"
-    feature_name = _alias_for_attribute("title")
+    feature_name = alias_for_attribute("title")
 
     def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a wellbore feature organisational object."""

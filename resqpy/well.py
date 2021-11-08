@@ -52,7 +52,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.wellspec_keywords as wsk
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.organize as rqo
+import resqpy.organize.organize_old as rqo
 import resqpy.property as rqp
 import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
@@ -663,7 +663,7 @@ class Trajectory(BaseResqpy):
     """
 
     resqml_type = 'WellboreTrajectoryRepresentation'
-    well_name = rqo._alias_for_attribute("title")
+    well_name = rqo.alias_for_attribute("title")
 
     def __init__(
             self,
@@ -1738,7 +1738,7 @@ class BlockedWell(BaseResqpy):
     """
 
     resqml_type = 'BlockedWellboreRepresentation'
-    well_name = rqo._alias_for_attribute("title")
+    well_name = rqo.alias_for_attribute("title")
 
     def __init__(self,
                  parent_model,
