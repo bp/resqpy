@@ -114,6 +114,39 @@ def test_delaunay_triangulation(example_model_and_crs):
         assert_array_almost_equal(np.nanmax(original_points, axis = 0), np.nanmax(points, axis = 0))
 
 
+@pytest.mark.parametrize('mesh_file,mesh_format,firstval', [('Surface_roxartext.txt', 'rms', 0.4229),
+                                                            ('Surface_roxartext.txt', 'roxar', 0.4229),
+                                                            ('Surface_zmap.dat', 'zmap', 0.4648)])
+def test_surface_from_mesh_file(example_model_and_crs, test_data_path, mesh_file, mesh_format, firstval):
+    # Arrange
+    model, crs = example_model_and_crs
+    in_file = test_data_path / mesh_file
+
+    # Act
+    surface = resqpy.surface.Surface(parent_model = model, mesh_file = in_file, mesh_format = mesh_format)
+
+    # Assert
+    assert surface is not None
+    assert surface.patch_list[0].triangle_count == 12
+    assert surface.patch_list[0].points[0][2] == firstval
+
+
+def test_surface_from_tsurf_file(example_model_and_crs, test_data_path):
+    # Arrange
+    model, crs = example_model_and_crs
+    in_file = test_data_path / 'Surface_tsurf.txt'
+
+    # Act
+    surface = resqpy.surface.Surface(parent_model = model, tsurf_file = in_file, title = 'horizon')
+    surface.create_interpretation_and_feature(kind = 'horizon')
+
+    # Assert
+    assert surface is not None
+    assert surface.represented_interpretation_root is not None
+    assert surface.patch_list[0].triangle_count == 12
+    assert surface.patch_list[0].points[0][2] == 0.4228516
+
+
 def test_regular_mesh(example_model_and_crs):
     model, crs = example_model_and_crs
 
