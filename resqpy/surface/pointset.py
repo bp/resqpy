@@ -422,7 +422,7 @@ class PointSet(BaseSurface):
         return ps_node
 
     def convert_to_charisma(self, file_name):
-        """Output to Charisma 3D interepretation format from a pointset.
+        """Output to Charisma 3D interpretation format from a pointset.
 
         If file_name exists, it will be overwritten.
 
