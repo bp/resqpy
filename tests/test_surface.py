@@ -137,10 +137,12 @@ def test_surface_from_tsurf_file(example_model_and_crs, test_data_path):
     in_file = test_data_path / 'Surface_tsurf.txt'
 
     # Act
-    surface = resqpy.surface.Surface(parent_model = model, tsurf_file = in_file)
+    surface = resqpy.surface.Surface(parent_model = model, tsurf_file = in_file, title = 'horizon')
+    surface.create_interpretation_and_feature(kind = 'horizon')
 
     # Assert
     assert surface is not None
+    assert surface.represented_interpretation_root is not None
     assert surface.patch_list[0].triangle_count == 12
     assert surface.patch_list[0].points[0][2] == 0.4228516
 
