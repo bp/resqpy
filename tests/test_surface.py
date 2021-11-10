@@ -570,3 +570,217 @@ def test_pointset_from_polylineset(example_model_and_crs):
     reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
 
     assert_array_almost_equal(reload.full_array_ref(), np.concatenate((coords1, coords2), axis = 0))
+
+
+def test_tripatch_set_to_triangle(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_triangle(corners)
+
+    # Assert
+    assert tripatch is not None
+    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2]]))
+    assert_array_almost_equal(tripatch.points, corners)
+
+
+def test_tripatch_verticalscale(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_triangle(corners)
+
+    # Assert
+    assert tripatch is not None
+    # Scale without a reference depth initially
+    tripatch.vertical_rescale_points(0, 10)
+    assert_array_almost_equal(tripatch.points[:, 2], np.array([0, 10, 10]))
+    # Scale with a reference depth
+    tripatch.vertical_rescale_points(5, 2)
+    assert_array_almost_equal(tripatch.points[:, 2], np.array([-5, 15, 15]))
+
+
+def test_tripatch_set_from_irregularmesh(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 4
+    assert tripatch.points.shape == (4, 3)
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
+    assert_array_almost_equal(tripatch.points[3], mesh_xyz[1, 1])
+    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2], [3, 1, 2]]))
+
+
+def test_tripatch_columnfromindex(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
+    assert tripatch is not None
+    j0, i0 = tripatch.column_from_triangle_index(0)
+    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 3]))
+
+    # Assert
+    assert j0 == 0
+    assert i0 == 0
+    assert_array_almost_equal(j1, np.array([0, 0]))
+    assert_array_almost_equal(i1, np.array([0, 1]))
+
+
+def test_tripatch_columnfromindex_quad(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
+    assert tripatch is not None
+    j0, i0 = tripatch.column_from_triangle_index(0)
+    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 7]))
+    j2, i2 = tripatch.column_from_triangle_index(8)
+    j3, i3 = tripatch.column_from_triangle_index(np.array([0, 8]))
+
+    # Assert
+    assert j0 == 0
+    assert i0 == 0
+    assert_array_almost_equal(j1, np.array([0, 0]))
+    assert_array_almost_equal(i1, np.array([0, 1]))
+    assert j2 is None
+    assert i2 is None
+    assert j3 is None
+    assert i3 is None
+
+
+def test_tripatch_set_from_irregularmesh_quad(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 5
+    assert tripatch.points.shape == (5, 3)
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
+    assert_array_almost_equal(tripatch.points[3], mesh_xyz[1, 1])
+    assert_array_almost_equal(tripatch.triangles, np.array([[4, 0, 1], [4, 1, 3], [4, 3, 2], [4, 2, 0]]))
+
+
+def test_tripatch_set_from_sparse(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, np.nan], [2, 1, 1]],
+                         [[0, 2, 1], [1, 2, 1], [2, 2, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_sparse_mesh(mesh_xyz = mesh_xyz)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 8
+    assert tripatch.points.shape == (8, 3)
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
+    assert_array_almost_equal(tripatch.points[7], mesh_xyz[2, 2])
+    assert_array_almost_equal(tripatch.triangles[0], np.array([1, 3, 0]))
+    assert_array_almost_equal(tripatch.triangles[3], np.array([4, 6, 7]))
+
+
+def test_tripatch_set_from_torn(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, np.nan]]],
+                          [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 8
+    assert tripatch.points.shape == (8, 3)
+    assert tripatch.ni == 2
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], mesh_xyz[0, 0, 1, 0])
+    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2], [3, 1, 2], [4, 5, 6], [7, 5, 6]]))
+
+
+def test_tripatch_set_from_torn_quad(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, np.nan]]],
+                          [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 10
+    assert tripatch.points.shape == (10, 3)
+    assert tripatch.ni == 2
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], mesh_xyz[0, 0, 1, 0])
+    assert_array_almost_equal(
+        tripatch.triangles,
+        np.array([[8, 0, 1], [8, 1, 3], [8, 3, 2], [8, 2, 0], [9, 4, 5], [9, 5, 7], [9, 7, 6], [9, 6, 4]]))
+
+
+def test_tripatch_set_cellface_corp(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_cell_faces_from_corner_points(cp = cp)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 14
+    assert tripatch.points.shape == (14, 3)
+    assert_array_almost_equal(tripatch.points[0], cp[0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
+    assert_array_almost_equal(tripatch.triangles[0], np.array([8, 0, 1]))
+    assert_array_almost_equal(tripatch.triangles[-1], np.array([13, 3, 7]))
+
+
+def test_tripatch_set_cellface_corp_quadfalse(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_cell_faces_from_corner_points(cp = cp, quad_triangles = False)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 8
+    assert tripatch.points.shape == (8, 3)
+    assert_array_almost_equal(tripatch.points[0], cp[0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
+    assert_array_almost_equal(tripatch.triangles[0], np.array([0, 3, 1]))
+    assert_array_almost_equal(tripatch.triangles[-1], np.array([7, 1, 3]))
