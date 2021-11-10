@@ -624,6 +624,44 @@ def test_tripatch_set_from_irregularmesh(example_model_and_crs):
     assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2], [3, 1, 2]]))
 
 
+def test_tripatch_columnfromindex(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
+    assert tripatch is not None
+    j0, i0 = tripatch.column_from_triangle_index(0)
+    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 3]))
+
+    # Assert
+    assert j0 == 0
+    assert i0 == 0
+    assert_array_almost_equal(j1, np.array([0, 0]))
+    assert_array_almost_equal(i1, np.array([0, 1]))
+
+
+def test_tripatch_columnfromindex_quad(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
+    assert tripatch is not None
+    j0, i0 = tripatch.column_from_triangle_index(0)
+    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 7]))
+
+    # Assert
+    assert j0 == 0
+    assert i0 == 0
+    assert_array_almost_equal(j1, np.array([0, 0]))
+    assert_array_almost_equal(i1, np.array([0, 1]))
+
+
 def test_tripatch_set_from_irregularmesh_quad(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
