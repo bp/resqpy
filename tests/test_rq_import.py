@@ -5,7 +5,7 @@ from numpy.testing import assert_array_almost_equal
 
 
 ## TODO: move to a general utilities area once complete
-def simple_grid_corns(k_gap = False, righthanded = True):
+def simple_grid_corns(k_gap = False, righthanded = True, undefined = False):
     """Returns corner points for simple 2x2x2 grid"""
     origin_cell = np.array([
         [
@@ -91,6 +91,8 @@ def simple_grid_corns(k_gap = False, righthanded = True):
 
     if k_gap:
         corns[1, :, :, :, :, :, 2] += 1
+    if undefined:
+        corns[0, 0, 0, :, :, :, :] = np.nan
     return corns
 
 
@@ -110,6 +112,94 @@ def test_grid_from_cp_simple(example_model_and_crs):
     assert grid.k_direction_is_down
     assert grid.pillar_shape == 'curved'
     assert grid.crs_uuid == crs.uuid
+    assert grid.geometry_defined_for_all_cells_cached
+
+
+def test_grid_from_cp_simple_inactive(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    corns = simple_grid_corns()
+    active_mask = np.ones((2, 2, 2))
+    active_mask[1, 1, 1] = 0
+    expected_inactive = ~active_mask.astype(bool)
+
+    # Act
+    grid = rqi.grid_from_cp(model,
+                            cp_array = corns,
+                            crs_uuid = crs.uuid,
+                            ijk_handedness = None,
+                            active_mask = active_mask)
+
+    # Assert
+    assert grid is not None
+    assert_array_almost_equal(grid.extent_kji, (2, 2, 2))
+    assert grid.grid_is_right_handed
+    assert grid.k_gaps is None
+    assert grid.k_direction_is_down
+    assert grid.pillar_shape == 'curved'
+    assert grid.crs_uuid == crs.uuid
+    assert grid.geometry_defined_for_all_cells_cached
+    assert grid.array_cell_geometry_is_defined is None
+    assert_array_almost_equal(grid.inactive, expected_inactive)
+
+
+def test_grid_from_cp_simple_nogeom(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    corns = simple_grid_corns(undefined = True)
+    expected_bool = np.ones((2, 2, 2))
+    expected_bool[0, 0, 0] = 0
+
+    # Act
+    grid = rqi.grid_from_cp(model,
+                            cp_array = corns,
+                            crs_uuid = crs.uuid,
+                            ijk_handedness = None,
+                            geometry_defined_everywhere = False)
+
+    # Assert
+    assert grid is not None
+    assert_array_almost_equal(grid.extent_kji, (2, 2, 2))
+    assert grid.grid_is_right_handed
+    assert grid.k_gaps is None
+    assert grid.k_direction_is_down
+    assert grid.pillar_shape == 'curved'
+    assert grid.crs_uuid == crs.uuid
+    assert not grid.geometry_defined_for_all_cells_cached
+    assert_array_almost_equal(grid.array_cell_geometry_is_defined, expected_bool)
+
+
+def test_grid_from_cp_simple_inactive_nogeom(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    corns = simple_grid_corns(undefined = True)
+    expected_bool = np.ones((2, 2, 2))
+    expected_bool[0, 0, 0] = 0
+    active_mask = np.ones((2, 2, 2))
+    active_mask[1, 1, 1] = 0
+    expected_active = active_mask.copy()
+    expected_active[0, 0, 0] = 0
+    expected_inactive = ~expected_active.astype(bool)
+
+    # Act
+    grid = rqi.grid_from_cp(model,
+                            cp_array = corns,
+                            crs_uuid = crs.uuid,
+                            ijk_handedness = None,
+                            geometry_defined_everywhere = False,
+                            active_mask = active_mask)
+
+    # Assert
+    assert grid is not None
+    assert_array_almost_equal(grid.extent_kji, (2, 2, 2))
+    assert grid.grid_is_right_handed
+    assert grid.k_gaps is None
+    assert grid.k_direction_is_down
+    assert grid.pillar_shape == 'curved'
+    assert grid.crs_uuid == crs.uuid
+    assert not grid.geometry_defined_for_all_cells_cached
+    assert_array_almost_equal(grid.array_cell_geometry_is_defined, expected_active)
+    assert_array_almost_equal(grid.inactive, expected_inactive)
 
 
 def test_grid_from_cp_simple_left(example_model_and_crs):
