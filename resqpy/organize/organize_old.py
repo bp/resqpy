@@ -10,9 +10,6 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('organize_old.py version ' + version)
 
-# import xml.etree.ElementTree as et
-# from lxml import etree as et
-
 import math as maths
 import warnings
 
