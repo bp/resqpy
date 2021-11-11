@@ -4,8 +4,6 @@ version = '29th April 2021'
 
 import logging
 
-import pytest
-
 log = logging.getLogger(__name__)
 
 import math as maths
@@ -21,8 +19,8 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.rq_import as rqi
-import resqpy.well as rqw
-
+import resqpy.well.well_functions as rqw
+import resqpy.well as rqw2
 
 def test_s_bend_fn(tmp_path, epc = None):
 
@@ -150,7 +148,7 @@ def test_s_bend_fn(tmp_path, epc = None):
     datum = rqw.MdDatum(model, crs_uuid = crs.uuid, location = (x[0], y[0], z[0]))
     datum.create_xml()
 
-    trajectory = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
+    trajectory = rqw2.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
 
     rqc.Crs(model, uuid = rqet.uuid_for_part_root(trajectory.crs_root)).uuid == crs.uuid
 
@@ -170,7 +168,7 @@ def test_s_bend_fn(tmp_path, epc = None):
 
     df = df_trajectory(x, y, z)
 
-    traj_2 = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'HORST_WELL')
+    traj_2 = rqw2.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'HORST_WELL')
     traj_2.write_hdf5()
     traj_2.create_xml()
     traj_2.control_points
@@ -181,7 +179,7 @@ def test_s_bend_fn(tmp_path, epc = None):
 
     df = df_trajectory(x, y, z)
 
-    traj_3 = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'VERTICAL_WELL')
+    traj_3 = rqw2.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'VERTICAL_WELL')
     traj_3.write_hdf5()
     traj_3.create_xml()
     traj_3.control_points
@@ -204,33 +202,33 @@ def test_s_bend_fn(tmp_path, epc = None):
 
     df = df_trajectory(x, y, z)
 
-    traj_4 = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'NESSIE_WELL')
+    traj_4 = rqw2.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'NESSIE_WELL')
     traj_4.write_hdf5()
     traj_4.create_xml()
     traj_4.control_points
 
     # block wells against grid geometry
 
-    log.info('unfaulted grid blocking of well ' + str(rqw.well_name(trajectory)))
-    bw = rqw.BlockedWell(model, grid = grid, trajectory = trajectory)
+    log.info('unfaulted grid blocking of well ' + str(rqw2.well_name(trajectory)))
+    bw = rqw2.BlockedWell(model, grid = grid, trajectory = trajectory)
     bw.write_hdf5()
     bw.create_xml()
     assert bw.cell_count == 19
 
-    log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_2)))
-    bw_2 = rqw.BlockedWell(model, grid = grid, trajectory = traj_2)
+    log.info('unfaulted grid blocking of well ' + str(rqw2.well_name(traj_2)))
+    bw_2 = rqw2.BlockedWell(model, grid = grid, trajectory = traj_2)
     bw_2.write_hdf5()
     bw_2.create_xml()
     assert bw_2.cell_count == 33
 
-    log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_3)))
-    bw_3 = rqw.BlockedWell(model, grid = grid, trajectory = traj_3)
+    log.info('unfaulted grid blocking of well ' + str(rqw2.well_name(traj_3)))
+    bw_3 = rqw2.BlockedWell(model, grid = grid, trajectory = traj_3)
     bw_3.write_hdf5()
     bw_3.create_xml()
     assert bw_3.cell_count == 18
 
-    log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_4)))
-    bw_4 = rqw.BlockedWell(model, grid = grid, trajectory = traj_4)
+    log.info('unfaulted grid blocking of well ' + str(rqw2.well_name(traj_4)))
+    bw_4 = rqw2.BlockedWell(model, grid = grid, trajectory = traj_4)
     bw_4.write_hdf5()
     bw_4.create_xml()
     assert bw_4.cell_count == 26
@@ -282,26 +280,26 @@ def test_s_bend_fn(tmp_path, epc = None):
 
     # block wells against faulted grid
 
-    log.info('faulted grid blocking of well ' + str(rqw.well_name(trajectory)))
-    fbw = rqw.BlockedWell(model, grid = faulted_grid, trajectory = trajectory)
+    log.info('faulted grid blocking of well ' + str(rqw2.well_name(trajectory)))
+    fbw = rqw2.BlockedWell(model, grid = faulted_grid, trajectory = trajectory)
     fbw.write_hdf5()
     fbw.create_xml()
     assert fbw.cell_count == 32
 
-    log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_2)))
-    fbw_2 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_2)
+    log.info('faulted grid blocking of well ' + str(rqw2.well_name(traj_2)))
+    fbw_2 = rqw2.BlockedWell(model, grid = faulted_grid, trajectory = traj_2)
     fbw_2.write_hdf5()
     fbw_2.create_xml()
     assert fbw_2.cell_count == 26
 
-    log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_3)))
-    fbw_3 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_3)
+    log.info('faulted grid blocking of well ' + str(rqw2.well_name(traj_3)))
+    fbw_3 = rqw2.BlockedWell(model, grid = faulted_grid, trajectory = traj_3)
     fbw_3.write_hdf5()
     fbw_3.create_xml()
     assert fbw_3.cell_count == 14
 
-    log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_4)))
-    fbw_4 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_4)
+    log.info('faulted grid blocking of well ' + str(rqw2.well_name(traj_4)))
+    fbw_4 = rqw2.BlockedWell(model, grid = faulted_grid, trajectory = traj_4)
     fbw_4.write_hdf5()
     fbw_4.create_xml()
     assert fbw_4.cell_count == 16
@@ -346,36 +344,36 @@ def test_s_bend_fn(tmp_path, epc = None):
 
     # block wells against faulted grid with k gap
 
-    log.info('k gap grid blocking of well ' + str(rqw.well_name(trajectory)))
+    log.info('k gap grid blocking of well ' + str(rqw2.well_name(trajectory)))
     try:
-        gbw = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = trajectory)
+        gbw = rqw2.BlockedWell(model, grid = k_gap_grid, trajectory = trajectory)
         gbw.write_hdf5()
         gbw.create_xml()
         assert gbw.cell_count == 24
     except Exception:
         log.exception('failed to block well against k gap grid')
 
-    log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_2)))
+    log.info('k gap grid blocking of well ' + str(rqw2.well_name(traj_2)))
     try:
-        gbw_2 = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = traj_2)
+        gbw_2 = rqw2.BlockedWell(model, grid = k_gap_grid, trajectory = traj_2)
         gbw_2.write_hdf5()
         gbw_2.create_xml()
         assert gbw_2.cell_count == 20
     except Exception:
         log.exception('failed to block well against k gap grid')
 
-    log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_3)))
+    log.info('k gap grid blocking of well ' + str(rqw2.well_name(traj_3)))
     try:
-        gbw_3 = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = traj_3)
+        gbw_3 = rqw2.BlockedWell(model, grid = k_gap_grid, trajectory = traj_3)
         gbw_3.write_hdf5()
         gbw_3.create_xml()
         assert gbw_3.cell_count == 10
     except Exception:
         log.exception('failed to block well against k gap grid')
 
-    log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_4)))
+    log.info('k gap grid blocking of well ' + str(rqw2.well_name(traj_4)))
     try:
-        gbw_4 = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = traj_4)
+        gbw_4 = rqw2.BlockedWell(model, grid = k_gap_grid, trajectory = traj_4)
         gbw_4.write_hdf5()
         gbw_4.create_xml()
         assert gbw_4.cell_count == 10

@@ -1,7 +1,6 @@
 """ Shared fixtures for tests """
 
 import logging
-import os
 from pathlib import Path
 from shutil import copytree
 
@@ -15,8 +14,8 @@ import resqpy.property as rqp
 from resqpy.crs import Crs
 from resqpy.model import Model, new_model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
-from resqpy.well import MdDatum, Trajectory, WellboreFrame
-
+from resqpy.well.well_functions import MdDatum, WellboreFrame
+from resqpy.well import Trajectory
 
 @pytest.fixture(autouse = True)
 def capture_logs(caplog):

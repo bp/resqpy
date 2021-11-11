@@ -1,20 +1,16 @@
 import os
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 from numpy.testing import assert_array_almost_equal
 from pandas.testing import assert_frame_equal
 
 import resqpy.olio.uuid as bu
-import resqpy.well
-from resqpy.crs import Crs
+import resqpy.well.well_functions
 from resqpy.grid import RegularGrid
 from resqpy.model import Model
-from resqpy.organize import WellboreFeature
 from resqpy.property import Property
-
+import resqpy.well as rqw2
 
 def test_MdDatum(example_model_and_crs):
 
@@ -25,7 +21,7 @@ def test_MdDatum(example_model_and_crs):
         location = (0, -99999, 3.14),
         md_reference = 'mean low water',
     )
-    datum = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
+    datum = resqpy.well.well_functions.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
     uuid = datum.uuid
 
     # Save to disk and reload
@@ -34,14 +30,14 @@ def test_MdDatum(example_model_and_crs):
 
     del model, crs, datum
     model2 = Model(epc_file = epc)
-    datum2 = resqpy.well.MdDatum(parent_model = model2, uuid = uuid)
+    datum2 = resqpy.well.well_functions.MdDatum(parent_model = model2, uuid = uuid)
 
     for key, expected_value in data.items():
         assert getattr(datum2, key) == expected_value, f"Issue with {key}"
 
-    identical = resqpy.well.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
+    identical = resqpy.well.well_functions.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
     data['md_reference'] = 'kelly bushing'
-    different = resqpy.well.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
+    different = resqpy.well.well_functions.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
     assert identical == datum2
     assert different != datum2
 
@@ -133,12 +129,12 @@ def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
     # Prepare an example Trajectory without a well feature
     wellname = "Hullabaloo"
     model, crs = example_model_and_crs
-    datum = resqpy.well.MdDatum(parent_model = model,
-                                crs_uuid = crs.uuid,
-                                location = (0, 0, -100),
-                                md_reference = 'kelly bushing')
+    datum = resqpy.well.well_functions.MdDatum(parent_model = model,
+                                               crs_uuid = crs.uuid,
+                                               location = (0, 0, -100),
+                                               md_reference = 'kelly bushing')
     datum.create_xml()
-    traj = resqpy.well.Trajectory(parent_model = model, md_datum = datum, well_name = wellname)
+    traj = rqw2.Trajectory(parent_model = model, md_datum = datum, well_name = wellname)
 
     # Add the well interp
     assert traj.wellbore_feature is None
@@ -178,7 +174,7 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
         first_station = np.array([0, -1, 999], dtype = float),
     )
 
-    survey = resqpy.well.DeviationSurvey(
+    survey = resqpy.well.well_functions.DeviationSurvey(
         parent_model = model,
         represented_interp = well_interp,
         md_datum = datum,
@@ -194,21 +190,21 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
         df[col] = np.NaN
         df.loc[0, col] = array_data['first_station'][axis]
 
-    survey_b = resqpy.well.DeviationSurvey.from_data_frame(parent_model = model,
-                                                           data_frame = df,
-                                                           md_datum = datum,
-                                                           md_uom = data['md_uom'],
-                                                           angle_uom = data['angle_uom'])
+    survey_b = resqpy.well.well_functions.DeviationSurvey.from_data_frame(parent_model = model,
+                                                                          data_frame = df,
+                                                                          md_datum = datum,
+                                                                          md_uom = data['md_uom'],
+                                                                          angle_uom = data['angle_uom'])
     survey_b_uuid = survey_b.uuid
 
     csv_file = os.path.join(tmp_path, 'survey_c.csv')
     df.to_csv(csv_file)
 
-    survey_c = resqpy.well.DeviationSurvey.from_ascii_file(parent_model = model,
-                                                           deviation_survey_file = csv_file,
-                                                           md_datum = datum,
-                                                           md_uom = data['md_uom'],
-                                                           angle_uom = data['angle_uom'])
+    survey_c = resqpy.well.well_functions.DeviationSurvey.from_ascii_file(parent_model = model,
+                                                                          deviation_survey_file = csv_file,
+                                                                          md_datum = datum,
+                                                                          md_uom = data['md_uom'],
+                                                                          angle_uom = data['angle_uom'])
     survey_c_uuid = survey_c.uuid
 
     # ----------- Act ---------
@@ -229,9 +225,9 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
 
     # Reload from disk
     model2 = Model(epc_file = epc_path)
-    survey2 = resqpy.well.DeviationSurvey(model2, uuid = survey_uuid)
-    survey_b2 = resqpy.well.DeviationSurvey(model2, uuid = survey_b_uuid)
-    survey_c2 = resqpy.well.DeviationSurvey(model2, uuid = survey_c_uuid)
+    survey2 = resqpy.well.well_functions.DeviationSurvey(model2, uuid = survey_uuid)
+    survey_b2 = resqpy.well.well_functions.DeviationSurvey(model2, uuid = survey_b_uuid)
+    survey_c2 = resqpy.well.well_functions.DeviationSurvey(model2, uuid = survey_c_uuid)
 
     # --------- Assert --------------
     # Check all attributes were loaded from disk correctly
@@ -279,11 +275,11 @@ def test_wellspec_properties(example_model_and_crs):
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
-    bw = resqpy.well.BlockedWell(model,
-                                 wellspec_file = wellspec_file,
-                                 well_name = well_name,
-                                 use_face_centres = True,
-                                 add_wellspec_properties = True)
+    bw = rqw2.BlockedWell(model,
+                                                wellspec_file = wellspec_file,
+                                                well_name = well_name,
+                                                use_face_centres = True,
+                                                add_wellspec_properties = True)
     assert bw is not None
     bw_uuid = bw.uuid
     skin_uuid = model.uuid(title = 'SKIN', related_uuid = bw.uuid)
@@ -296,7 +292,7 @@ def test_wellspec_properties(example_model_and_crs):
     model = Model(model.epc_file)
     bw2_uuid = model.uuid(obj_type = 'BlockedWellboreRepresentation', title = 'DOGLEG')
     assert bw2_uuid is not None
-    bw2 = resqpy.well.BlockedWell(model, uuid = bw2_uuid)
+    bw2 = rqw2.BlockedWell(model, uuid = bw2_uuid)
     assert bu.matching_uuids(bw_uuid, bw2_uuid)
     df2 = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'LENGTH', 'SKIN', 'RADW'], use_properties = True)
     assert df2 is not None

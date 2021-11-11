@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pytest
-from numpy.lib.arraysetops import isin
 
 import resqpy.crs as rqc
 import resqpy.model as rq
@@ -10,7 +9,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
-import resqpy.well as rqw
+import resqpy.well.well_functions as rqw
 
 
 def test_model(tmp_path):

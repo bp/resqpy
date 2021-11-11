@@ -13,8 +13,9 @@ import resqpy.olio.box_utilities as bx
 import resqpy.olio.fine_coarse as rqfc
 import resqpy.olio.uuid as bu
 import resqpy.property as rqp
-import resqpy.well as rqw
+import resqpy.well.well_functions as rqw
 
+import resqpy.well as rqw2
 
 def test_add_single_cell_grid(tmp_path):
 
@@ -201,13 +202,13 @@ def test_extract_box_for_well(tmp_path):
 
     # create a couple of well trajectories
     cells_visited = [(0, 1, 2), (1, 1, 2), (1, 1, 3), (1, 2, 3), (1, 2, 4), (2, 2, 4)]
-    traj_1 = rqw.Trajectory(model,
+    traj_1 = rqw2.Trajectory(model,
                             grid = grid,
                             cell_kji0_list = cells_visited,
                             length_uom = 'm',
                             spline_mode = 'linear',
                             well_name = 'well 1')
-    traj_2 = rqw.Trajectory(model,
+    traj_2 = rqw2.Trajectory(model,
                             grid = grid,
                             cell_kji0_list = cells_visited,
                             length_uom = 'm',
@@ -221,7 +222,7 @@ def test_extract_box_for_well(tmp_path):
 
     # create a blocked well for one of the trajectories
     assert traj_2.root is not None
-    bw = rqw.BlockedWell(model, grid = grid, trajectory = traj_2)
+    bw = rqw2.BlockedWell(model, grid = grid, trajectory = traj_2)
     bw.write_hdf5()
     bw.create_xml()
     bw_uuid = bw.uuid
@@ -386,7 +387,7 @@ def test_add_one_blocked_well_property(example_model_with_well):
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, add_cell_length_properties = False)
     # create a blocked well
-    bw = rqw.BlockedWell(model, grid = grid, trajectory = traj)
+    bw = rqw2.BlockedWell(model, grid = grid, trajectory = traj)
     bw.write_hdf5()
     bw.create_xml()
     model.store_epc()
@@ -463,7 +464,7 @@ def test_add_wells_from_ascii_file(tmp_path):
     assert len(model.parts(obj_type = 'WellboreFeature')) == well_count
     for wi in range(well_count):
         well_name = 'Hole_' + str(wi + 1)
-        traj = rqw.Trajectory(model,
+        traj = rqw2.Trajectory(model,
                               uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = well_name))
         assert traj is not None
         assert traj.knot_count == 3 + wi

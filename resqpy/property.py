@@ -12,7 +12,6 @@ log.debug('property.py version ' + version)
 import os
 # import xml.etree.ElementTree as et
 from datetime import datetime
-from functools import lru_cache
 
 import lasio
 import numpy as np
@@ -30,6 +29,8 @@ import resqpy.time_series as rts
 import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
+
+import resqpy.well as rqw2
 
 # following are loaded dynamically, to avoid circular reference during import (issue for python version < 3.7)
 # import resqpy.grid as grr
@@ -218,7 +219,7 @@ class PropertyCollection():
         import resqpy.grid as grr
         import resqpy.surface as rqs
         import resqpy.unstructured as rug
-        import resqpy.well as rqw
+        import resqpy.well.well_functions as rqw
 
         # todo: check uuid's of individual parts' supports match that of support being set for whole collection
 
@@ -257,7 +258,7 @@ class PropertyCollection():
                 elif support_type == 'obj_WellboreFrameRepresentation':
                     self.support = rqw.WellboreFrame(model, uuid = self.support_uuid)
                 elif support_type == 'obj_BlockedWellboreRepresentation':
-                    self.support = rqw.BlockedWell(model, uuid = self.support_uuid)
+                    self.support = rqw2.BlockedWell(model, uuid = self.support_uuid)
                 elif support_type == 'obj_Grid2dRepresentation':
                     self.support = rqs.Mesh(model, uuid = self.support_uuid)
                 elif support_type == 'obj_GridConnectionSetRepresentation':
@@ -271,7 +272,7 @@ class PropertyCollection():
                     raise TypeError('unsupported property supporting representation class: ' + str(support_type))
             else:
                 if type(self.support) in [
-                        grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
+                        grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw2.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
                         rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
                         rug.PyramidGrid
                 ]:
@@ -307,7 +308,7 @@ class PropertyCollection():
         import resqpy.grid as grr
         import resqpy.surface as rqs
         import resqpy.unstructured as rug
-        import resqpy.well as rqw
+        import resqpy.well.well_functions as rqw
 
         shape_list = None
         support = self.support
@@ -349,7 +350,7 @@ class PropertyCollection():
             elif indexable_element == 'intervals':
                 shape_list = [support.node_count - 1]
 
-        elif isinstance(support, rqw.BlockedWell):
+        elif isinstance(support, rqw2.BlockedWell):
             if indexable_element is None or indexable_element == 'intervals':
                 shape_list = [support.node_count - 1]  # all intervals, including unblocked
 
@@ -1323,7 +1324,6 @@ class PropertyCollection():
         """
 
         import resqpy.grid as grr
-        import resqpy.unstructured as rug
 
         support_uuid = self.support_uuid_for_part(part)
         if support_uuid is None:

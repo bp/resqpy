@@ -13,7 +13,6 @@ log.debug('model.py version ' + version)
 import copy
 import getpass
 import os
-import pathlib
 import shutil
 import warnings
 import zipfile as zf
@@ -32,6 +31,8 @@ import resqpy.olio.write_hdf5 as whdf5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.xml_namespaces import namespace as ns_url
+
+# import resqpy.well as rqw2
 
 use_version_string = False
 
@@ -3326,7 +3327,7 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well  # Imported here for speed, module is not always needed
+        import resqpy.well.well_functions  # Imported here for speed, module is not always needed
 
         uuids = self.uuids(obj_type = "WellboreTrajectoryRepresentation")
         for uuid in uuids:
@@ -3340,12 +3341,12 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well  # Imported here to avoid circular imports
+        import resqpy.well.well_functions  # Imported here to avoid circular imports
 
         uuids = self.uuids(obj_type = 'MdDatum')
         if uuids:
             for uuid in uuids:
-                datum = resqpy.well.MdDatum(self, uuid = uuid)
+                datum = resqpy.well.well_functions.MdDatum(self, uuid = uuid)
                 yield datum
 
     def iter_crs(self):

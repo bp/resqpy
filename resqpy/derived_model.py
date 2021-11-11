@@ -32,8 +32,9 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.rq_import as rqi
-import resqpy.well as rqw
+import resqpy.well.well_functions as rqw
 
+import resqpy.well as rqw2
 
 def _pl(n, use_es = False):
     if n == 1:
@@ -430,7 +431,7 @@ def add_one_blocked_well_property(epc_file,
     # open up model and establish grid object
     model = rq.Model(epc_file)
 
-    blocked_well = rqw.BlockedWell(model, uuid = blocked_well_uuid)
+    blocked_well = rqw2.BlockedWell(model, uuid = blocked_well_uuid)
     assert blocked_well is not None, f'no blocked well object found with uuid {blocked_well_uuid}'
 
     if not discrete:
@@ -540,7 +541,7 @@ def add_wells_from_ascii_file(epc_file,
 
     # add all the well related objects to the model, based on data in the ascii file
     (feature_list, interpretation_list, trajectory_list, md_datum_list) =  \
-       rqw.add_wells_from_ascii_file(model, crs_uuid, trajectory_file, comment_character = comment_character,
+       rqw2.add_wells_from_ascii_file(model, crs_uuid, trajectory_file, comment_character = comment_character,
                                      space_separated_instead_of_csv = space_separated_instead_of_csv,
                                      well_col = well_col, md_col = md_col, x_col = x_col, y_col = y_col, z_col = z_col,
                                      length_uom = length_uom, md_domain = md_domain, drilled = drilled)
@@ -1578,8 +1579,8 @@ def extract_box_for_well(epc_file = None,
         # prepare a trajectory object
         trajectory_root = traj_model.root(obj_type = 'WellboreTrajectoryRepresentation', uuid = trajectory_uuid)
         assert trajectory_root is not None, 'trajectory object not found for uuid: ' + str(trajectory_uuid)
-        trajectory = rqw.Trajectory(traj_model, uuid = trajectory_uuid)
-        well_name = rqw.well_name(trajectory)
+        trajectory = rqw2.Trajectory(traj_model, uuid = trajectory_uuid)
+        well_name = rqw2.well_name(trajectory)
         traj_crs = rqcrs.Crs(trajectory.model, uuid = trajectory.crs_uuid)
         grid_crs = rqcrs.Crs(source_grid.model, uuid = source_grid.crs_uuid)
         # modify in-memory trajectory data to be in the same crs as grid
@@ -1596,7 +1597,7 @@ def extract_box_for_well(epc_file = None,
     elif blocked_well_uuid is not None:
         bw_root = traj_model.root(obj_type = 'BlockedWellboreRepresentation', uuid = blocked_well_uuid)
         assert bw_root is not None, 'blocked well object not found for uuid: ' + str(blocked_well_uuid)
-        blocked_well = rqw.BlockedWell(traj_model, uuid = blocked_well_uuid)
+        blocked_well = rqw2.BlockedWell(traj_model, uuid = blocked_well_uuid)
         bw_box = blocked_well.box(grid_uuid = source_grid.uuid)
         assert bw_box is not None, 'blocked well does not include cells in source grid'
         assert bw_box[0, 0] <= max_k0 and bw_box[
@@ -1735,7 +1736,7 @@ def extract_box_for_well(epc_file = None,
         if trajectory is None and blocked_well is None:
             log.info('creating well objects for column')
             box_column_ji0 = (column_ji0[0] - box[0, 1], column_ji0[1] - box[0, 2])
-            bw = rqw.BlockedWell(newer_model,
+            bw = rqw2.BlockedWell(newer_model,
                                  grid = grid,
                                  column_ji0 = box_column_ji0,
                                  well_name = well_name,

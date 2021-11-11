@@ -14,13 +14,13 @@ log.debug('organize.py version ' + version)
 # from lxml import etree as et
 
 import math as maths
-import warnings
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
+# import resqpy.well as rqw2
 
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)
     """Extracts UUIDs of chrono bottom and top from xml for has occurred during sub-node, or (None, None)."""
@@ -1456,7 +1456,7 @@ class WellboreInterpretation(BaseResqpy):
     def iter_trajectories(self):
         """Iterable of associated trajectories."""
 
-        import resqpy.well
+        import resqpy.well.well_functions
 
         uuids = self.model.uuids(obj_type = "WellboreTrajectoryRepresentation", related_uuid = self.uuid)
         for uuid in uuids:
