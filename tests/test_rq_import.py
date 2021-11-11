@@ -1,7 +1,11 @@
 import resqpy.rq_import as rqi
+import resqpy.model as rq
+import os
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
+
+import pytest
 
 
 ## TODO: move to a general utilities area once complete
@@ -270,3 +274,42 @@ def test_grid_from_cp_kgap_zvoid(example_model_and_crs):
     assert grid.grid_is_right_handed
     assert grid.k_gaps is None
     assert grid.k_direction_is_down
+
+
+@pytest.mark.parametrize('surfaces,format,interp_and_feat,role,rqclass,newparts',
+                         [(['Surface_zmap.dat'], 'zmap', False, 'map', 'surface', 2),
+                          (['Surface_zmap.dat'], 'zmap', True, 'map', 'surface', 4),
+                          (['Surface_roxartext.txt'], 'roxar', False, 'map', 'surface', 2),
+                          (['Surface_roxartext.txt'], 'roxar', True, 'map', 'surface', 4),
+                          (['Surface_roxartext.txt'], 'rms', False, 'map', 'surface', 2),
+                          (['Surface_roxartext.txt'], 'rms', True, 'map', 'surface', 4),
+                          (['Surface_tsurf.txt'], 'GOCAD-Tsurf', False, 'map', 'surface', 2),
+                          (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 4),
+                          (['Surface_zmap.dat', 'Surface_zmap.dat'], 'zmap', False, 'map', 'surface', 3),
+                          (['Surface_zmap.dat', 'Surface_zmap.dat'], 'zmap', True, 'map', 'surface', 6),
+                          (['Surface_zmap.dat'], 'zmap', False, 'pick', 'surface', 2),
+                          (['Surface_zmap.dat'], 'zmap', False, 'pick', 'TriangulatedSet', 2)])
+#(['Surface_zmap.dat'],'zmap',False,'pick','Grid2d',2)]) # TODO: Fails due to bug, Mesh.create_xml does not have an argument for crs_uuid
+def test_add_surfaces(example_model_and_crs, test_data_path, surfaces, format, rqclass, interp_and_feat, role,
+                      newparts):
+    model, crs = example_model_and_crs
+    model.store_epc()
+
+    surface_paths = [os.path.join(test_data_path, surf) for surf in surfaces]
+
+    rqi.add_surfaces(epc_file = model.epc_file,
+                     surface_file_format = format,
+                     surface_file_list = surface_paths,
+                     surface_role = role,
+                     rq_class = rqclass,
+                     make_horizon_interpretations_and_features = interp_and_feat)
+
+    model = rq.Model(model.epc_file)
+    assert len(model.parts()) == newparts
+    if rqclass in ['surface', 'TriangulatedSet']:
+        assert len(model.parts_list_of_type('obj_TriangulatedSetRepresentation')) == len(surfaces)
+    else:
+        assert len(model.parts_list_of_type('obj_Grid2dRepresentation')) == len(surfaces)
+
+    if interp_and_feat:
+        assert len(model.parts_list_of_type('obj_HorizonInterpretation')) == len(surfaces)
