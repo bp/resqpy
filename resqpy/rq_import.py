@@ -1408,13 +1408,13 @@ def get_treat_as_nan(treat_as_nan, geometry_defined_everywhere):
 
 def _get_extents(array):
     nk, nj, ni = array.shape[:3]
-    return ni, nj, nk, ni+1, nj+1, nk+1
+    return ni, nj, nk, ni + 1, nj + 1, nk + 1
 
 
 def _get_active_inactive_masks(active_mask, ni, nj, nk):
     if active_mask is None:
-        active_mask = np.ones((nk, nj, ni), dtype='bool')
-        inactive_mask = np.zeros((nk, nj, ni), dtype='bool')
+        active_mask = np.ones((nk, nj, ni), dtype = 'bool')
+        inactive_mask = np.zeros((nk, nj, ni), dtype = 'bool')
     else:
         assert active_mask.shape == (nk, nj, ni)
         inactive_mask = np.logical_not(active_mask)
@@ -1423,8 +1423,8 @@ def _get_active_inactive_masks(active_mask, ni, nj, nk):
     return active_mask, inactive_mask, all_active
 
 
-def _get_nan_mask(all_active, geometry_defined_everywhere, cp_array, treat_as_nan,
-                  inactive_mask, dot_tolerance, morse_tolerance, ni, nj, nk):
+def _get_nan_mask(all_active, geometry_defined_everywhere, cp_array, treat_as_nan, inactive_mask, dot_tolerance,
+                  morse_tolerance, ni, nj, nk):
 
     if all_active and geometry_defined_everywhere:
         cp_nan_mask = None
@@ -1438,7 +1438,8 @@ def _get_nan_mask(all_active, geometry_defined_everywhere, cp_array, treat_as_na
                 if treat_as_nan == 'dots':
                     dot_mask = _get_dot_mask_dots(cp_array, dot_tolerance)
                 elif treat_as_nan in ['ij_dots', 'morse']:
-                    dot_mask = _get_dot_mask_ijdots_or_morse(treat_as_nan, cp_array, inactive_mask, dot_tolerance, morse_tolerance, ni, nj, nk)
+                    dot_mask = _get_dot_mask_ijdots_or_morse(treat_as_nan, cp_array, inactive_mask, dot_tolerance,
+                                                             morse_tolerance, ni, nj, nk)
                 else:
                     raise Exception('code broken')
                 cp_nan_mask = np.logical_or(cp_nan_mask, np.logical_and(inactive_mask, dot_mask))
@@ -1451,28 +1452,22 @@ def _get_nan_mask(all_active, geometry_defined_everywhere, cp_array, treat_as_na
 def _get_dot_mask_dots(cp_array, dot_tolerance):
     # for speed, only check primary diagonal of cells
     log.debug('geometry for cells with no length to primary cell diagonal being set to NaN')
-    dot_mask = np.all(np.abs(cp_array[:, :, :, 1, 1, 1] - cp_array[:, :, :, 0, 0, 0]) < dot_tolerance,
-                      axis=-1)
+    dot_mask = np.all(np.abs(cp_array[:, :, :, 1, 1, 1] - cp_array[:, :, :, 0, 0, 0]) < dot_tolerance, axis = -1)
     return dot_mask
 
 
 def _get_dot_mask_ijdots_or_morse(treat_as_nan, cp_array, inactive_mask, dot_tolerance, morse_tolerance, ni, nj, nk):
     # check one diagonal of each I & J face
     log.debug(
-        'geometry being set to NaN for inactive cells with no length to primary face diagonal for any I or J face'
-    )
-    dot_mask = np.zeros((nk, nj, ni), dtype=bool)
+        'geometry being set to NaN for inactive cells with no length to primary face diagonal for any I or J face')
+    dot_mask = np.zeros((nk, nj, ni), dtype = bool)
     #              k_face_vecs = cp_array[:, :, :, :, 1, 1] - cp_array[:, :, :, :, 0, 0]
     j_face_vecs = cp_array[:, :, :, 1, :, 1] - cp_array[:, :, :, 0, :, 0]
     i_face_vecs = cp_array[:, :, :, 1, 1, :] - cp_array[:, :, :, 0, 0, :]
-    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 0]) < dot_tolerance, axis=-1), True,
-                           dot_mask)
-    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 1]) < dot_tolerance, axis=-1), True,
-                           dot_mask)
-    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 0]) < dot_tolerance, axis=-1), True,
-                           dot_mask)
-    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 1]) < dot_tolerance, axis=-1), True,
-                           dot_mask)
+    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True, dot_mask)
+    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True, dot_mask)
+    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True, dot_mask)
+    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True, dot_mask)
     log.debug(f'dot mask set for {np.count_nonzero(dot_mask)} cells')
 
     if treat_as_nan == 'morse':
@@ -1480,24 +1475,24 @@ def _get_dot_mask_ijdots_or_morse(treat_as_nan, cp_array, inactive_mask, dot_tol
 
     return dot_mask
 
+
 def _get_dot_mask_morse(dot_mask, inactive_mask, morse_tolerance, ni, nj, nk, i_face_vecs, j_face_vecs):
     morse_tol_sqr = morse_tolerance * morse_tolerance
     # compare face vecs lengths in xy against max for active cells: where much greater set to NaN
-    len_j_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * j_face_vecs[..., :2], axis=-1)
-    len_i_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * i_face_vecs[..., :2], axis=-1)
+    len_j_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * j_face_vecs[..., :2], axis = -1)
+    len_i_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * i_face_vecs[..., :2], axis = -1)
     dead_mask = inactive_mask.reshape(nk, nj, ni, 1).repeat(2, -1)
     #                  mean_len_active_j_face_vecs_sqr = np.mean(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
     #                  mean_len_active_i_face_vecs_sqr = np.mean(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
-    max_len_active_j_face_vecs_sqr = np.max(ma.masked_array(len_j_face_vecs_sqr, mask=dead_mask))
-    max_len_active_i_face_vecs_sqr = np.max(ma.masked_array(len_i_face_vecs_sqr, mask=dead_mask))
-    dot_mask = np.where(
-        np.any(len_j_face_vecs_sqr > morse_tol_sqr * max_len_active_j_face_vecs_sqr, axis=-1),
-        True, dot_mask)
-    dot_mask = np.where(
-        np.any(len_i_face_vecs_sqr > morse_tol_sqr * max_len_active_i_face_vecs_sqr, axis=-1),
-        True, dot_mask)
+    max_len_active_j_face_vecs_sqr = np.max(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
+    max_len_active_i_face_vecs_sqr = np.max(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
+    dot_mask = np.where(np.any(len_j_face_vecs_sqr > morse_tol_sqr * max_len_active_j_face_vecs_sqr, axis = -1), True,
+                        dot_mask)
+    dot_mask = np.where(np.any(len_i_face_vecs_sqr > morse_tol_sqr * max_len_active_i_face_vecs_sqr, axis = -1), True,
+                        dot_mask)
     log.debug(f'morse mask set for {np.count_nonzero(dot_mask)} cells')
     return dot_mask
+
 
 def _get_masked_cp_array(geometry_defined_everywhere, cp_array, cp_nan_mask, ni, nj, nk):
     # set up masked version of corner point data based on cells with defined geometry
@@ -1525,7 +1520,8 @@ def _check_for_kgaps(nk, masked_cp_array, max_z_void):
         max_gap = np.max(max_gap_by_layer_and_xyz)
         log.debug('maximum void distance: {0:.3f}'.format(max_gap))
         if max_gap > max_z_void:
-            k_gaps, k_gap_raw_index, k_gap_after_layer, masked_cp_array = _get_kgaps_details(nk, masked_cp_array, max_z_void, max_gap_by_layer_and_xyz, gap)
+            k_gaps, k_gap_raw_index, k_gap_after_layer, masked_cp_array = _get_kgaps_details(
+                nk, masked_cp_array, max_z_void, max_gap_by_layer_and_xyz, gap)
         elif max_gap > 0.0:
             masked_cp_array = _close_gaps(masked_cp_array, gap)
 
@@ -1535,8 +1531,8 @@ def _check_for_kgaps(nk, masked_cp_array, max_z_void):
 def _get_kgaps_details(nk, masked_cp_array, max_z_void, max_gap_by_layer_and_xyz, gap):
     log.warning('maximum void distance exceeds limit, grid will include k gaps')
     k_gaps = 0
-    k_gap_after_layer = np.zeros((nk - 1,), dtype=bool)
-    k_gap_raw_index = np.empty((nk,), dtype=int)
+    k_gap_after_layer = np.zeros((nk - 1,), dtype = bool)
+    k_gap_raw_index = np.empty((nk,), dtype = int)
     k_gap_raw_index[0] = 0
     for k in range(nk - 1):
         max_layer_gap = np.max(max_gap_by_layer_and_xyz[k])
@@ -1591,8 +1587,7 @@ def _get_k_reduced_cp_array_kgaps(masked_cp_array, nk, k_gaps, k_gap_after_layer
             raw_k += 1
         else:  # take data from either possible cp slice, whichever is defined
             slice = masked_cp_array[k + 1, :, :, 0, :, :, :]
-            k_reduced_cp_array[raw_k, :, :, :, :, :] = np.where(slice.mask, masked_cp_array[k, :, :, 1, :, :, :],
-                                                                slice)
+            k_reduced_cp_array[raw_k, :, :, :, :, :] = np.where(slice.mask, masked_cp_array[k, :, :, 1, :, :, :], slice)
             raw_k += 1
     assert raw_k == nk + k_gaps
     return k_reduced_cp_array
