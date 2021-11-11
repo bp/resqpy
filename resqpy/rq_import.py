@@ -1150,139 +1150,27 @@ def grid_from_cp(model,
        this function sets up all the geometry arrays in memory but does not write to hdf5 nor create xml: use Grid methods;
        geometry_defined_everywhere is deprecated, use treat_as_nan instead
     """
-
-    if treat_as_nan is None:
-        if not geometry_defined_everywhere:
-            treat_as_nan = 'morse'
-    else:
-        assert treat_as_nan in ['none', 'dots', 'ij_dots', 'morse', 'inactive']
-        if treat_as_nan == 'none':
-            treat_as_nan = None
+    treat_as_nan = get_treat_as_nan(treat_as_nan, geometry_defined_everywhere)
     geometry_defined_everywhere = (treat_as_nan is None)
 
     assert cp_array.ndim == 7
-    nk, nj, ni = cp_array.shape[:3]
-    nk_plus_1 = nk + 1
-    nj_plus_1 = nj + 1
-    ni_plus_1 = ni + 1
 
-    if active_mask is None:
-        active_mask = np.ones((nk, nj, ni), dtype = 'bool')
-        inactive_mask = np.zeros((nk, nj, ni), dtype = 'bool')
-    else:
-        assert active_mask.shape == (nk, nj, ni)
-        inactive_mask = np.logical_not(active_mask)
-    all_active = np.all(active_mask)
+    ni, nj, nk, ni_plus_1, nj_plus_1, nk_plus_1 = _get_extents(cp_array)
 
-    if all_active and geometry_defined_everywhere:
-        cp_nan_mask = None
-    else:
-        cp_nan_mask = np.any(np.isnan(cp_array), axis = (3, 4, 5, 6))  # ie. if any nan per cell
-        if not geometry_defined_everywhere and not all_active:
-            if treat_as_nan == 'inactive':
-                log.debug('all inactive cell geometry being set to NaN')
-                cp_nan_mask = np.logical_or(cp_nan_mask, inactive_mask)
-            else:
-                if treat_as_nan == 'dots':
-                    # for speed, only check primary diagonal of cells
-                    log.debug('geometry for cells with no length to primary cell diagonal being set to NaN')
-                    dot_mask = np.all(np.abs(cp_array[:, :, :, 1, 1, 1] - cp_array[:, :, :, 0, 0, 0]) < dot_tolerance,
-                                      axis = -1)
-                elif treat_as_nan in ['ij_dots', 'morse']:
-                    # check one diagonal of each I & J face
-                    log.debug(
-                        'geometry being set to NaN for inactive cells with no length to primary face diagonal for any I or J face'
-                    )
-                    dot_mask = np.zeros((nk, nj, ni), dtype = bool)
-                    #              k_face_vecs = cp_array[:, :, :, :, 1, 1] - cp_array[:, :, :, :, 0, 0]
-                    j_face_vecs = cp_array[:, :, :, 1, :, 1] - cp_array[:, :, :, 0, :, 0]
-                    i_face_vecs = cp_array[:, :, :, 1, 1, :] - cp_array[:, :, :, 0, 0, :]
-                    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True,
-                                           dot_mask)
-                    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True,
-                                           dot_mask)
-                    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 0]) < dot_tolerance, axis = -1), True,
-                                           dot_mask)
-                    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 1]) < dot_tolerance, axis = -1), True,
-                                           dot_mask)
-                    log.debug(f'dot mask set for {np.count_nonzero(dot_mask)} cells')
-                    if treat_as_nan == 'morse':
-                        morse_tol_sqr = morse_tolerance * morse_tolerance
-                        # compare face vecs lengths in xy against max for active cells: where much greater set to NaN
-                        len_j_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * j_face_vecs[..., :2], axis = -1)
-                        len_i_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * i_face_vecs[..., :2], axis = -1)
-                        dead_mask = inactive_mask.reshape(nk, nj, ni, 1).repeat(2, -1)
-                        #                  mean_len_active_j_face_vecs_sqr = np.mean(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
-                        #                  mean_len_active_i_face_vecs_sqr = np.mean(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
-                        max_len_active_j_face_vecs_sqr = np.max(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
-                        max_len_active_i_face_vecs_sqr = np.max(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
-                        dot_mask = np.where(
-                            np.any(len_j_face_vecs_sqr > morse_tol_sqr * max_len_active_j_face_vecs_sqr, axis = -1),
-                            True, dot_mask)
-                        dot_mask = np.where(
-                            np.any(len_i_face_vecs_sqr > morse_tol_sqr * max_len_active_i_face_vecs_sqr, axis = -1),
-                            True, dot_mask)
-                        log.debug(f'morse mask set for {np.count_nonzero(dot_mask)} cells')
-                else:
-                    raise Exception('code broken')
-                cp_nan_mask = np.logical_or(cp_nan_mask, np.logical_and(inactive_mask, dot_mask))
-        geometry_defined_everywhere = not np.any(cp_nan_mask)
-        if geometry_defined_everywhere:
-            cp_nan_mask = None
+    active_mask, inactive_mask, all_active = _get_active_inactive_masks(active_mask, ni, nj, nk)
+
+    cp_nan_mask, geometry_defined_everywhere = _get_nan_mask(all_active, geometry_defined_everywhere, cp_array,
+                                                             treat_as_nan, inactive_mask, dot_tolerance,
+                                                             morse_tolerance, ni, nj, nk)
 
     if cp_nan_mask is not None:
         inactive_mask = np.logical_or(inactive_mask, cp_nan_mask)
         active_mask = np.logical_not(inactive_mask)
 
-    # set up masked version of corner point data based on cells with defined geometry
-    if geometry_defined_everywhere:
-        full_mask = None
-        masked_cp_array = ma.masked_array(cp_array, mask = ma.nomask)
-        log.info('geometry present for all cells')
-    else:
-        full_mask = cp_nan_mask.reshape((nk, nj, ni, 1)).repeat(24, axis = 3).reshape((nk, nj, ni, 2, 2, 2, 3))
-        masked_cp_array = ma.masked_array(cp_array, mask = full_mask)
-        log.info('number of cells without geometry: ' + str(np.count_nonzero(cp_nan_mask)))
+    masked_cp_array = _get_masked_cp_array(geometry_defined_everywhere, cp_array, cp_nan_mask, ni, nj, nk)
 
     # convert to resqml
-
-    k_gaps = None
-    k_gap_after_layer = None
-    k_gap_raw_index = None
-
-    if nk > 1:
-        # check for (vertical) voids, or un-pillar-like anomalies, which will require k gaps in the resqml ijk grid
-        log.debug('checking for voids')
-        gap = masked_cp_array[1:, :, :, 0, :, :, :] - masked_cp_array[:-1, :, :, 1, :, :, :]
-        max_gap_by_layer_and_xyz = np.max(np.abs(gap), axis = (1, 2, 3, 4))
-        max_gap = np.max(max_gap_by_layer_and_xyz)
-        log.debug('maximum void distance: {0:.3f}'.format(max_gap))
-        if max_gap > max_z_void:
-            log.warning('maximum void distance exceeds limit, grid will include k gaps')
-            k_gaps = 0
-            k_gap_after_layer = np.zeros((nk - 1,), dtype = bool)
-            k_gap_raw_index = np.empty((nk,), dtype = int)
-            k_gap_raw_index[0] = 0
-            for k in range(nk - 1):
-                max_layer_gap = np.max(max_gap_by_layer_and_xyz[k])
-                if max_layer_gap > max_z_void:
-                    k_gap_after_layer[k] = True
-                    k_gaps += 1
-                elif max_layer_gap > 0.0:
-                    # close void (includes shifting x & y)
-                    log.debug('closing void below layer (0 based): ' + str(k))
-                    layer_gap = gap[k] * 0.5
-                    layer_gap_unmasked = np.where(gap[k].mask, 0.0, layer_gap)
-                    masked_cp_array[k + 1, :, :, 0, :, :, :] -= layer_gap_unmasked
-                    masked_cp_array[k, :, :, 1, :, :, :] += layer_gap_unmasked
-                k_gap_raw_index[k + 1] = k + k_gaps
-        elif max_gap > 0.0:
-            # close voids (includes shifting x & y)
-            log.debug('closing voids')
-            gap *= 0.5
-            gap_unmasked = np.where(gap.mask, 0.0, gap)
-            masked_cp_array[1:, :, :, 0, :, :, :] -= gap_unmasked
-            masked_cp_array[:-1, :, :, 1, :, :, :] += gap_unmasked
+    k_gaps, k_gap_raw_index, k_gap_after_layer, masked_cp_array = _check_for_kgaps(nk, masked_cp_array, max_z_void)
 
     if k_gaps:
         nk_plus_1 += k_gaps
@@ -1290,54 +1178,14 @@ def grid_from_cp(model,
         k_gap_raw_index = np.arange(nk, dtype = int)
 
     # reduce cp array extent in k
-    log.debug('reducing k extent of corner point array (sharing points vertically)')
-    k_reduced_cp_array = ma.masked_array(np.zeros((nk_plus_1, nj, ni, 2, 2, 3)))  # (nk+1+k_gaps, nj, ni, jp, ip, xyz)
-    k_reduced_cp_array[0, :, :, :, :, :] = masked_cp_array[0, :, :, 0, :, :, :]
-    k_reduced_cp_array[-1, :, :, :, :, :] = masked_cp_array[-1, :, :, 1, :, :, :]
-    if k_gaps:
-        raw_k = 1
-        for k in range(nk - 1):
-            # fill reduced array slice(s) for base of layer k and top of layer k + 1
-            if k_gap_after_layer[k]:
-                k_reduced_cp_array[raw_k, :, :, :, :, :] = masked_cp_array[k, :, :, 1, :, :, :]
-                raw_k += 1
-                k_reduced_cp_array[raw_k, :, :, :, :, :] = masked_cp_array[k + 1, :, :, 0, :, :, :]
-                raw_k += 1
-            else:  # take data from either possible cp slice, whichever is defined
-                slice = masked_cp_array[k + 1, :, :, 0, :, :, :]
-                k_reduced_cp_array[raw_k, :, :, :, :, :] = np.where(slice.mask, masked_cp_array[k, :, :, 1, :, :, :],
-                                                                    slice)
-                raw_k += 1
-        assert raw_k == nk + k_gaps
-    else:
-        slice = masked_cp_array[1:, :, :, 0, :, :, :]
-        # where cell geometry undefined, if cell above is defined, take data from cell above with kp = 1 and set shared point defined
-        k_reduced_cp_array[1:-1, :, :, :, :, :] = np.where(slice.mask, masked_cp_array[:-1, :, :, 1, :, :, :], slice)
+    k_reduced_cp_array = _get_k_reduced_cp_array(nk_plus_1, masked_cp_array, ni, nj, nk, k_gaps, k_gap_after_layer)
 
     # create 2D array of active columns (columns where at least one cell is active)
     log.debug('creating 2D array of active columns')
     active_mask_2D = np.any(active_mask, axis = 0)
 
     # create primary pillar reference indices as one of four column corners around pillar, active column preferred
-    log.debug('creating primary pillar reference neighbourly indices')
-    primary_pillar_jip = np.zeros((nj_plus_1, ni_plus_1, 2), dtype = 'int')  # (nj + 1, ni + 1, jp:ip)
-    primary_pillar_jip[-1, :, 0] = 1
-    primary_pillar_jip[:, -1, 1] = 1
-    for j in range(nj_plus_1):
-        for i in range(ni_plus_1):
-            if active_mask_2D[j - primary_pillar_jip[j, i, 0], i - primary_pillar_jip[j, i, 1]]:
-                continue
-            if i > 0 and primary_pillar_jip[j, i, 1] == 0 and active_mask_2D[j - primary_pillar_jip[j, i, 0], i - 1]:
-                primary_pillar_jip[j, i, 1] = 1
-                continue
-            if j > 0 and primary_pillar_jip[j, i, 0] == 0 and active_mask_2D[j - 1, i - primary_pillar_jip[j, i, 1]]:
-                primary_pillar_jip[j, i, 0] = 1
-                continue
-            if i > 0 and j > 0 and primary_pillar_jip[j, i,
-                                                      0] == 0 and primary_pillar_jip[j, i,
-                                                                                     1] == 0 and active_mask_2D[j - 1,
-                                                                                                                i - 1]:
-                primary_pillar_jip[j, i, :] = 1
+    primary_pillar_jip = _get_primary_pillar_ref(ni_plus_1, nj_plus_1, active_mask_2D)
 
     # build extra pillar references for split pillars
     extras_count = np.zeros((nj_plus_1, ni_plus_1), dtype = 'int')  # count (0 to 3) of extras for pillar
@@ -1544,3 +1392,230 @@ def grid_from_cp(model,
         grid.grid_is_right_handed = (ijk_handedness == 'right')
 
     return grid
+
+
+def get_treat_as_nan(treat_as_nan, geometry_defined_everywhere):
+    if treat_as_nan is None:
+        if not geometry_defined_everywhere:
+            treat_as_nan = 'morse'
+    else:
+        assert treat_as_nan in ['none', 'dots', 'ij_dots', 'morse', 'inactive']
+        if treat_as_nan == 'none':
+            treat_as_nan = None
+
+    return treat_as_nan
+
+
+def _get_extents(array):
+    nk, nj, ni = array.shape[:3]
+    return ni, nj, nk, ni+1, nj+1, nk+1
+
+
+def _get_active_inactive_masks(active_mask, ni, nj, nk):
+    if active_mask is None:
+        active_mask = np.ones((nk, nj, ni), dtype='bool')
+        inactive_mask = np.zeros((nk, nj, ni), dtype='bool')
+    else:
+        assert active_mask.shape == (nk, nj, ni)
+        inactive_mask = np.logical_not(active_mask)
+    all_active = np.all(active_mask)
+
+    return active_mask, inactive_mask, all_active
+
+
+def _get_nan_mask(all_active, geometry_defined_everywhere, cp_array, treat_as_nan,
+                  inactive_mask, dot_tolerance, morse_tolerance, ni, nj, nk):
+
+    if all_active and geometry_defined_everywhere:
+        cp_nan_mask = None
+    else:
+        cp_nan_mask = np.any(np.isnan(cp_array), axis = (3, 4, 5, 6))  # ie. if any nan per cell
+        if not geometry_defined_everywhere and not all_active:
+            if treat_as_nan == 'inactive':
+                log.debug('all inactive cell geometry being set to NaN')
+                cp_nan_mask = np.logical_or(cp_nan_mask, inactive_mask)
+            else:
+                if treat_as_nan == 'dots':
+                    dot_mask = _get_dot_mask_dots(cp_array, dot_tolerance)
+                elif treat_as_nan in ['ij_dots', 'morse']:
+                    dot_mask = _get_dot_mask_ijdots_or_morse(treat_as_nan, cp_array, inactive_mask, dot_tolerance, morse_tolerance, ni, nj, nk)
+                else:
+                    raise Exception('code broken')
+                cp_nan_mask = np.logical_or(cp_nan_mask, np.logical_and(inactive_mask, dot_mask))
+        geometry_defined_everywhere = not np.any(cp_nan_mask)
+        if geometry_defined_everywhere:
+            cp_nan_mask = None
+    return cp_nan_mask, geometry_defined_everywhere
+
+
+def _get_dot_mask_dots(cp_array, dot_tolerance):
+    # for speed, only check primary diagonal of cells
+    log.debug('geometry for cells with no length to primary cell diagonal being set to NaN')
+    dot_mask = np.all(np.abs(cp_array[:, :, :, 1, 1, 1] - cp_array[:, :, :, 0, 0, 0]) < dot_tolerance,
+                      axis=-1)
+    return dot_mask
+
+
+def _get_dot_mask_ijdots_or_morse(treat_as_nan, cp_array, inactive_mask, dot_tolerance, morse_tolerance, ni, nj, nk):
+    # check one diagonal of each I & J face
+    log.debug(
+        'geometry being set to NaN for inactive cells with no length to primary face diagonal for any I or J face'
+    )
+    dot_mask = np.zeros((nk, nj, ni), dtype=bool)
+    #              k_face_vecs = cp_array[:, :, :, :, 1, 1] - cp_array[:, :, :, :, 0, 0]
+    j_face_vecs = cp_array[:, :, :, 1, :, 1] - cp_array[:, :, :, 0, :, 0]
+    i_face_vecs = cp_array[:, :, :, 1, 1, :] - cp_array[:, :, :, 0, 0, :]
+    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 0]) < dot_tolerance, axis=-1), True,
+                           dot_mask)
+    dot_mask[:] = np.where(np.all(np.abs(j_face_vecs[:, :, :, 1]) < dot_tolerance, axis=-1), True,
+                           dot_mask)
+    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 0]) < dot_tolerance, axis=-1), True,
+                           dot_mask)
+    dot_mask[:] = np.where(np.all(np.abs(i_face_vecs[:, :, :, 1]) < dot_tolerance, axis=-1), True,
+                           dot_mask)
+    log.debug(f'dot mask set for {np.count_nonzero(dot_mask)} cells')
+
+    if treat_as_nan == 'morse':
+        dot_mask = _get_dot_mask_morse(dot_mask, inactive_mask, morse_tolerance, ni, nj, nk, i_face_vecs, j_face_vecs)
+
+    return dot_mask
+
+def _get_dot_mask_morse(dot_mask, inactive_mask, morse_tolerance, ni, nj, nk, i_face_vecs, j_face_vecs):
+    morse_tol_sqr = morse_tolerance * morse_tolerance
+    # compare face vecs lengths in xy against max for active cells: where much greater set to NaN
+    len_j_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * j_face_vecs[..., :2], axis=-1)
+    len_i_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * i_face_vecs[..., :2], axis=-1)
+    dead_mask = inactive_mask.reshape(nk, nj, ni, 1).repeat(2, -1)
+    #                  mean_len_active_j_face_vecs_sqr = np.mean(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
+    #                  mean_len_active_i_face_vecs_sqr = np.mean(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))
+    max_len_active_j_face_vecs_sqr = np.max(ma.masked_array(len_j_face_vecs_sqr, mask=dead_mask))
+    max_len_active_i_face_vecs_sqr = np.max(ma.masked_array(len_i_face_vecs_sqr, mask=dead_mask))
+    dot_mask = np.where(
+        np.any(len_j_face_vecs_sqr > morse_tol_sqr * max_len_active_j_face_vecs_sqr, axis=-1),
+        True, dot_mask)
+    dot_mask = np.where(
+        np.any(len_i_face_vecs_sqr > morse_tol_sqr * max_len_active_i_face_vecs_sqr, axis=-1),
+        True, dot_mask)
+    log.debug(f'morse mask set for {np.count_nonzero(dot_mask)} cells')
+    return dot_mask
+
+def _get_masked_cp_array(geometry_defined_everywhere, cp_array, cp_nan_mask, ni, nj, nk):
+    # set up masked version of corner point data based on cells with defined geometry
+    if geometry_defined_everywhere:
+        full_mask = None
+        masked_cp_array = ma.masked_array(cp_array, mask = ma.nomask)
+        log.info('geometry present for all cells')
+    else:
+        full_mask = cp_nan_mask.reshape((nk, nj, ni, 1)).repeat(24, axis = 3).reshape((nk, nj, ni, 2, 2, 2, 3))
+        masked_cp_array = ma.masked_array(cp_array, mask = full_mask)
+        log.info('number of cells without geometry: ' + str(np.count_nonzero(cp_nan_mask)))
+    return masked_cp_array
+
+
+def _check_for_kgaps(nk, masked_cp_array, max_z_void):
+    k_gaps = None
+    k_gap_raw_index = None
+    k_gap_after_layer = None
+
+    if nk > 1:
+        # check for (vertical) voids, or un-pillar-like anomalies, which will require k gaps in the resqml ijk grid
+        log.debug('checking for voids')
+        gap = masked_cp_array[1:, :, :, 0, :, :, :] - masked_cp_array[:-1, :, :, 1, :, :, :]
+        max_gap_by_layer_and_xyz = np.max(np.abs(gap), axis = (1, 2, 3, 4))
+        max_gap = np.max(max_gap_by_layer_and_xyz)
+        log.debug('maximum void distance: {0:.3f}'.format(max_gap))
+        if max_gap > max_z_void:
+            k_gaps, k_gap_raw_index, k_gap_after_layer, masked_cp_array = _get_kgaps_details(nk, masked_cp_array, max_z_void, max_gap_by_layer_and_xyz, gap)
+        elif max_gap > 0.0:
+            masked_cp_array = _close_gaps(masked_cp_array, gap)
+
+    return k_gaps, k_gap_raw_index, k_gap_after_layer, masked_cp_array
+
+
+def _get_kgaps_details(nk, masked_cp_array, max_z_void, max_gap_by_layer_and_xyz, gap):
+    log.warning('maximum void distance exceeds limit, grid will include k gaps')
+    k_gaps = 0
+    k_gap_after_layer = np.zeros((nk - 1,), dtype=bool)
+    k_gap_raw_index = np.empty((nk,), dtype=int)
+    k_gap_raw_index[0] = 0
+    for k in range(nk - 1):
+        max_layer_gap = np.max(max_gap_by_layer_and_xyz[k])
+        if max_layer_gap > max_z_void:
+            k_gap_after_layer[k] = True
+            k_gaps += 1
+        elif max_layer_gap > 0.0:
+            # close void (includes shifting x & y)
+            log.debug('closing void below layer (0 based): ' + str(k))
+            layer_gap = gap[k] * 0.5
+            layer_gap_unmasked = np.where(gap[k].mask, 0.0, layer_gap)
+            masked_cp_array[k + 1, :, :, 0, :, :, :] -= layer_gap_unmasked
+            masked_cp_array[k, :, :, 1, :, :, :] += layer_gap_unmasked
+        k_gap_raw_index[k + 1] = k + k_gaps
+
+    return k_gaps, k_gap_raw_index, k_gap_after_layer, masked_cp_array
+
+
+def _close_gaps(masked_cp_array, gap):
+    # close voids (includes shifting x & y)
+    log.debug('closing voids')
+    gap *= 0.5
+    gap_unmasked = np.where(gap.mask, 0.0, gap)
+    masked_cp_array[1:, :, :, 0, :, :, :] -= gap_unmasked
+    masked_cp_array[:-1, :, :, 1, :, :, :] += gap_unmasked
+
+    return masked_cp_array
+
+
+def _get_k_reduced_cp_array(nk_plus_1, masked_cp_array, ni, nj, nk, k_gaps, k_gap_after_layer):
+    log.debug('reducing k extent of corner point array (sharing points vertically)')
+    k_reduced_cp_array = ma.masked_array(np.zeros((nk_plus_1, nj, ni, 2, 2, 3)))  # (nk+1+k_gaps, nj, ni, jp, ip, xyz)
+    k_reduced_cp_array[0, :, :, :, :, :] = masked_cp_array[0, :, :, 0, :, :, :]
+    k_reduced_cp_array[-1, :, :, :, :, :] = masked_cp_array[-1, :, :, 1, :, :, :]
+    if k_gaps:
+        return _get_k_reduced_cp_array_kgaps(masked_cp_array, nk, k_gaps, k_gap_after_layer, k_reduced_cp_array)
+    else:
+        slice = masked_cp_array[1:, :, :, 0, :, :, :]
+        # where cell geometry undefined, if cell above is defined, take data from cell above with kp = 1 and set shared point defined
+        k_reduced_cp_array[1:-1, :, :, :, :, :] = np.where(slice.mask, masked_cp_array[:-1, :, :, 1, :, :, :], slice)
+        return k_reduced_cp_array
+
+
+def _get_k_reduced_cp_array_kgaps(masked_cp_array, nk, k_gaps, k_gap_after_layer, k_reduced_cp_array):
+    raw_k = 1
+    for k in range(nk - 1):
+        # fill reduced array slice(s) for base of layer k and top of layer k + 1
+        if k_gap_after_layer[k]:
+            k_reduced_cp_array[raw_k, :, :, :, :, :] = masked_cp_array[k, :, :, 1, :, :, :]
+            raw_k += 1
+            k_reduced_cp_array[raw_k, :, :, :, :, :] = masked_cp_array[k + 1, :, :, 0, :, :, :]
+            raw_k += 1
+        else:  # take data from either possible cp slice, whichever is defined
+            slice = masked_cp_array[k + 1, :, :, 0, :, :, :]
+            k_reduced_cp_array[raw_k, :, :, :, :, :] = np.where(slice.mask, masked_cp_array[k, :, :, 1, :, :, :],
+                                                                slice)
+            raw_k += 1
+    assert raw_k == nk + k_gaps
+    return k_reduced_cp_array
+
+
+def _get_primary_pillar_ref(ni_plus_1, nj_plus_1, active_mask_2D):
+    log.debug('creating primary pillar reference neighbourly indices')
+    primary_pillar_jip = np.zeros((nj_plus_1, ni_plus_1, 2), dtype = 'int')  # (nj + 1, ni + 1, jp:ip)
+    primary_pillar_jip[-1, :, 0] = 1
+    primary_pillar_jip[:, -1, 1] = 1
+    for j in range(nj_plus_1):
+        for i in range(ni_plus_1):
+            if active_mask_2D[j - primary_pillar_jip[j, i, 0], i - primary_pillar_jip[j, i, 1]]:
+                continue
+            if i > 0 and primary_pillar_jip[j, i, 1] == 0 and active_mask_2D[j - primary_pillar_jip[j, i, 0], i - 1]:
+                primary_pillar_jip[j, i, 1] = 1
+                continue
+            if j > 0 and primary_pillar_jip[j, i, 0] == 0 and active_mask_2D[j - 1, i - primary_pillar_jip[j, i, 1]]:
+                primary_pillar_jip[j, i, 0] = 1
+                continue
+            if i > 0 and j > 0 and primary_pillar_jip[j, i,
+                                                      0] == 0 and primary_pillar_jip[j, i,
+                                                                                     1] == 0 and active_mask_2D[j - 1,
+                                                                                                                i - 1]:
+                primary_pillar_jip[j, i, :] = 1
+    return primary_pillar_jip
