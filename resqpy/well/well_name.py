@@ -20,9 +20,10 @@ import resqpy.organize as rqo
 
 from .md_datum import MdDatum
 from .wellbore_marker_frame import WellboreMarkerFrame
-from .well_functions import WellboreFrame, DeviationSurvey
+from .wellbore_frame import WellboreFrame
 from .blocked_well import BlockedWell
 from .trajectory import Trajectory
+from .deviation_survey import DeviationSurvey
 
 def well_name(well_object, model = None):
     """Returns the 'best' citation title from the object or related well objects.

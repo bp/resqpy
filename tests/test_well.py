@@ -21,7 +21,7 @@ def test_MdDatum(example_model_and_crs):
         location = (0, -99999, 3.14),
         md_reference = 'mean low water',
     )
-    datum = resqpy.well.well_functions.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
+    datum = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
     uuid = datum.uuid
 
     # Save to disk and reload
@@ -30,14 +30,14 @@ def test_MdDatum(example_model_and_crs):
 
     del model, crs, datum
     model2 = Model(epc_file = epc)
-    datum2 = resqpy.well.well_functions.MdDatum(parent_model = model2, uuid = uuid)
+    datum2 = resqpy.well.MdDatum(parent_model = model2, uuid = uuid)
 
     for key, expected_value in data.items():
         assert getattr(datum2, key) == expected_value, f"Issue with {key}"
 
-    identical = resqpy.well.well_functions.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
+    identical = resqpy.well.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
     data['md_reference'] = 'kelly bushing'
-    different = resqpy.well.well_functions.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
+    different = resqpy.well.MdDatum(parent_model = model2, crs_uuid = datum2.crs_uuid, **data)
     assert identical == datum2
     assert different != datum2
 
@@ -129,7 +129,7 @@ def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
     # Prepare an example Trajectory without a well feature
     wellname = "Hullabaloo"
     model, crs = example_model_and_crs
-    datum = resqpy.well.well_functions.MdDatum(parent_model = model,
+    datum = resqpy.well.MdDatum(parent_model = model,
                                                crs_uuid = crs.uuid,
                                                location = (0, 0, -100),
                                                md_reference = 'kelly bushing')
@@ -174,7 +174,7 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
         first_station = np.array([0, -1, 999], dtype = float),
     )
 
-    survey = resqpy.well.well_functions.DeviationSurvey(
+    survey = resqpy.well.DeviationSurvey(
         parent_model = model,
         represented_interp = well_interp,
         md_datum = datum,
@@ -190,7 +190,7 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
         df[col] = np.NaN
         df.loc[0, col] = array_data['first_station'][axis]
 
-    survey_b = resqpy.well.well_functions.DeviationSurvey.from_data_frame(parent_model = model,
+    survey_b = resqpy.well.DeviationSurvey.from_data_frame(parent_model = model,
                                                                           data_frame = df,
                                                                           md_datum = datum,
                                                                           md_uom = data['md_uom'],
@@ -200,7 +200,7 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
     csv_file = os.path.join(tmp_path, 'survey_c.csv')
     df.to_csv(csv_file)
 
-    survey_c = resqpy.well.well_functions.DeviationSurvey.from_ascii_file(parent_model = model,
+    survey_c = resqpy.well.DeviationSurvey.from_ascii_file(parent_model = model,
                                                                           deviation_survey_file = csv_file,
                                                                           md_datum = datum,
                                                                           md_uom = data['md_uom'],
@@ -225,9 +225,9 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
 
     # Reload from disk
     model2 = Model(epc_file = epc_path)
-    survey2 = resqpy.well.well_functions.DeviationSurvey(model2, uuid = survey_uuid)
-    survey_b2 = resqpy.well.well_functions.DeviationSurvey(model2, uuid = survey_b_uuid)
-    survey_c2 = resqpy.well.well_functions.DeviationSurvey(model2, uuid = survey_c_uuid)
+    survey2 = resqpy.well.DeviationSurvey(model2, uuid = survey_uuid)
+    survey_b2 = resqpy.well.DeviationSurvey(model2, uuid = survey_b_uuid)
+    survey_c2 = resqpy.well.DeviationSurvey(model2, uuid = survey_c_uuid)
 
     # --------- Assert --------------
     # Check all attributes were loaded from disk correctly

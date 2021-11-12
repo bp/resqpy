@@ -11,6 +11,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.well.well_functions as rqw
 
+import resqpy.well as rqw2
 
 def test_model(tmp_path):
 
@@ -21,9 +22,9 @@ def test_model(tmp_path):
     crs_root = crs.create_xml()
     model.store_epc()
     assert os.path.exists(epc)
-    md_datum_1 = rqw.MdDatum(model, location = (0.0, 0.0, -50.0), crs_uuid = crs.uuid)
+    md_datum_1 = rqw2.MdDatum(model, location = (0.0, 0.0, -50.0), crs_uuid = crs.uuid)
     md_datum_1.create_xml(title = 'Datum 1')
-    md_datum_2 = rqw.MdDatum(model, location = (3.0, 0.0, -50.0), crs_uuid = crs.uuid)
+    md_datum_2 = rqw2.MdDatum(model, location = (3.0, 0.0, -50.0), crs_uuid = crs.uuid)
     md_datum_2.create_xml(title = 'Datum 2')
     assert len(model.uuids(obj_type = 'MdDatum')) == 2
     model.store_epc()

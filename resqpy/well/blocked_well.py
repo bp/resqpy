@@ -19,6 +19,8 @@ import math as maths
 import numpy as np
 import pandas as pd
 
+from functools import partial
+
 import resqpy.crs as crs
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.uuid as bu
@@ -32,9 +34,9 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .well_functions import MdDatum, _pl, find_entry_and_exit
-from .well_utils import load_hdf5_array
+from .well_functions import _pl, find_entry_and_exit, load_hdf5_array
 from .trajectory import Trajectory
+from .md_datum import MdDatum
 
 class BlockedWell(BaseResqpy):
     """Class for RESQML Blocked Wellbore Representation (Wells), ie cells visited by wellbore.
@@ -163,28 +165,70 @@ class BlockedWell(BaseResqpy):
 
         if self.root is None:
             self.wellbore_interpretation = represented_interp
-            if grid is None and (self.trajectory is not None or wellspec_file is not None or cellio_file is not None or
-                                 column_ji0 is not None):
-                grid = self.model.grid()
-            if self.trajectory is not None:
-                self.compute_from_trajectory(self.trajectory, grid)
-            elif wellspec_file is not None:
-                okay = self.derive_from_wellspec(wellspec_file,
-                                                 well_name,
-                                                 grid,
-                                                 check_grid_name = check_grid_name,
-                                                 use_face_centres = use_face_centres,
-                                                 add_properties = add_wellspec_properties)
-            elif cellio_file is not None:
-                okay = self.import_from_rms_cellio(cellio_file, well_name, grid)
-                if not okay:
-                    self.node_count = 0
-            elif column_ji0 is not None:
-                okay = self.set_for_column(well_name, grid, column_ji0)
+            grid = self.__set_grid(grid = grid,
+                                   wellspec_file = wellspec_file,
+                                   cellio_file = cellio_file,
+                                   column_ji0 = column_ji0)
+
+            # Using dictionary mapping to replicate a switch statement. The init_function is chosen based on the
+            # data source and the correct function is then called based on the init_function_dict
+            init_function_dict = {'trajectory': partial(self.compute_from_trajectory, self.trajectory, grid),
+                                     'wellspec_file': partial(self.derive_from_wellspec,
+                                                         wellspec_file,
+                                                         well_name,
+                                                         grid,
+                                                         check_grid_name=check_grid_name,
+                                                         use_face_centres=use_face_centres,
+                                                         add_properties=add_wellspec_properties),
+                                     'cellio_file': partial(self.__check_cellio_init_okay,
+                                                       cellio_file=cellio_file,
+                                                       well_name=well_name,
+                                                       grid=grid),
+                                     'column_ji0': partial(self.set_for_column,
+                                                      well_name,
+                                                      grid, column_ji0)
+                                     }
+            chosen_init_method = BlockedWell.__choose_init_data_source(trajectory = self.trajectory,
+                                                              wellspec_file = wellspec_file,
+                                                              cellio_file = cellio_file,
+                                                              column_ji0= column_ji0)
+            try:
+                init_function_dict[chosen_init_method]()
+            except KeyError:
+                pass
             self.gridind_null = -1
             self.facepair_null = -1
             self.cellind_null = -1
         # else an empty object is returned
+
+    def __set_grid(self, grid, wellspec_file, cellio_file, column_ji0):
+        """Set the grid to which the blocked well belongs"""
+
+        if grid is None and (self.trajectory is not None or wellspec_file is not None or cellio_file is not None or
+                             column_ji0 is not None):
+            grid_final = self.model.grid()
+        else:
+            grid_final = grid
+        return grid_final
+
+    def __check_cellio_init_okay(self, cellio_file, well_name, grid):
+        """ Checks if BlockedWell object initialization from a cellio file is okay"""
+
+        okay = self.import_from_rms_cellio(cellio_file, well_name, grid)
+        if not okay:
+            self.node_count = 0
+
+    @staticmethod
+    def __choose_init_data_source(trajectory, wellspec_file, cellio_file, column_ji0):
+        """Specify the data source from which the BlockedWell object will be initialized"""
+        if trajectory is not None:
+            return "trajectory"
+        elif wellspec_file is not None:
+            return "wellspec_file"
+        elif cellio_file is not None:
+            return "cellio_file"
+        elif column_ji0 is not None:
+            return "column_ji0"
 
     def _load_from_xml(self):
         """Loads the blocked wellbore object from an xml node (and associated hdf5 data)."""
@@ -192,12 +236,7 @@ class BlockedWell(BaseResqpy):
         node = self.root
         assert node is not None
 
-        trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
-        assert trajectory_uuid is not None, 'blocked well trajectory reference not found in xml'
-        if self.trajectory is None:
-            self.trajectory = Trajectory(self.model, uuid = trajectory_uuid)
-        else:
-            assert bu.matching_uuids(self.trajectory.uuid, trajectory_uuid), 'blocked well trajectory uuid mismatch'
+        self.__find_trajectory_uuid(node = node)
 
         self.node_count = rqet.find_tag_int(node, 'NodeCount')
         assert self.node_count is not None and self.node_count >= 2, 'problem with blocked well node count'
@@ -222,6 +261,39 @@ class BlockedWell(BaseResqpy):
 
         assert self.cell_count < self.node_count
 
+        self.__find_ci_node_and_load_hdf5_array(node = node)
+
+        self.__find_fi_node_and_load_hdf5_array(node)
+
+        unique_grid_indices =  self.__find_gi_node_and_load_hdf5_array(node = node)
+
+        self.__find_grid_node(node = node, unique_grid_indices = unique_grid_indices)
+
+        interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
+        if interp_uuid is None:
+            self.wellbore_interpretation = None
+        else:
+            self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid = interp_uuid)
+
+        # Create blocked well log collection of all log data
+        self.logs = rqp.WellIntervalPropertyCollection(frame = self)
+
+        # Set up matches between cell_indices and grid_indices
+        self.cell_grid_link = self.map_cell_and_grid_indices()
+
+    def __find_trajectory_uuid(self, node):
+        """ Find and verify the uuid of the trajectory associated with the BlockedWell object."""
+
+        trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
+        assert trajectory_uuid is not None, 'blocked well trajectory reference not found in xml'
+        if self.trajectory is None:
+            self.trajectory = Trajectory(self.model, uuid=trajectory_uuid)
+        else:
+            assert bu.matching_uuids(self.trajectory.uuid, trajectory_uuid), 'blocked well trajectory uuid mismatch'
+
+    def __find_ci_node_and_load_hdf5_array(self, node):
+        """Find the BlockedWell object's cell indices hdf5 reference node and load the array."""
+
         ci_node = rqet.find_tag(node, 'CellIndices')
         assert ci_node is not None, 'blocked well cell indices hdf5 reference not found in xml'
         load_hdf5_array(self, ci_node, 'cell_indices', dtype = int)
@@ -230,6 +302,9 @@ class BlockedWell(BaseResqpy):
         self.cellind_null = rqet.find_tag_int(ci_node, 'NullValue')
         if self.cellind_null is None:
             self.cellind_null = -1  # if no Null found assume -1 default
+
+    def __find_fi_node_and_load_hdf5_array(self, node):
+        """Find the BlockedWell object's face indices hdf5 reference node and load the array."""
 
         fi_node = rqet.find_tag(node, 'LocalFacePairPerCellIndices')
         assert fi_node is not None, 'blocked well face indices hdf5 reference not found in xml'
@@ -248,6 +323,9 @@ class BlockedWell(BaseResqpy):
         if self.facepair_null is None:
             self.facepair_null = -1
 
+    def __find_gi_node_and_load_hdf5_array(self, node):
+        """Find the BlockedWell object's grid indices hdf5 reference node and load the array."""
+
         gi_node = rqet.find_tag(node, 'GridIndices')
         assert gi_node is not None, 'blocked well grid indices hdf5 reference not found in xml'
         load_hdf5_array(self, gi_node, 'grid_indices', dtype = 'int')
@@ -256,7 +334,10 @@ class BlockedWell(BaseResqpy):
         self.gridind_null = rqet.find_tag_int(gi_node, 'NullValue')
         if self.gridind_null is None:
             self.gridind_null = -1  # if no Null found assume -1 default
+        return unique_grid_indices
 
+    def __find_grid_node(self, node, unique_grid_indices):
+        """Find the BlockedWell object's grid reference node(s)."""
         grid_node_list = rqet.list_of_tag(node, 'Grid')
         assert len(grid_node_list) > 0, 'blocked well grid reference(s) not found in xml'
         assert unique_grid_indices[0] >= -1 and unique_grid_indices[-1] < len(
@@ -268,20 +349,9 @@ class BlockedWell(BaseResqpy):
             grid_node = self.model.referenced_node(grid_ref_node)
             assert grid_node is not None, 'grid referenced in blocked well xml is not present in model'
             grid_uuid = rqet.uuid_for_part_root(grid_node)
-            grid_obj = self.model.grid(uuid = grid_uuid, find_properties = False)
+            grid_obj = self.model.grid(uuid=grid_uuid, find_properties=False)
             self.grid_list.append(grid_obj)
 
-        interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
-        if interp_uuid is None:
-            self.wellbore_interpretation = None
-        else:
-            self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid = interp_uuid)
-
-        # Create blocked well log collection of all log data
-        self.logs = rqp.WellIntervalPropertyCollection(frame = self)
-
-        # Set up matches between cell_indices and grid_indices
-        self.cell_grid_link = self.map_cell_and_grid_indices()
 
     def map_cell_and_grid_indices(self):
         """Returns a list of index values linking the grid_indices to cell_indices.
@@ -521,24 +591,15 @@ class BlockedWell(BaseResqpy):
            parts to the model for this blocked well and the properties
         """
 
-        if well_name:
-            self.well_name = well_name
-        else:
-            well_name = self.well_name
+        well_name = self.__derive_from_wellspec_check_well_name(well_name = well_name)
 
-        if add_properties:
-            if isinstance(add_properties, list):
-                col_list = ['IW', 'JW', 'L'] + [col.upper() for col in add_properties if col not in ['IW', 'JW', 'L']]
-            else:
-                col_list = []
-        else:
-            col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
-        if check_grid_name:
-            grid_name = rqet.citation_title_for_node(grid.root).upper()
-            if not grid_name:
-                check_grid_name = False
-            else:
-                col_list.append('GRID')
+        col_list = BlockedWell.__derive_from_wellspec_verify_col_list(add_properties = add_properties)
+
+        name_for_check, col_list = BlockedWell.__derive_from_wellspec_check_grid_name(
+            check_grid_name = check_grid_name,
+            grid = grid,
+            col_list = col_list
+        )
 
         wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list)
 
@@ -547,13 +608,47 @@ class BlockedWell(BaseResqpy):
         df = wellspec_dict[well_name]
         assert len(df) > 0, 'no rows of perforation data found in wellspec for well ' + well_name
 
-        name_for_check = grid_name if check_grid_name else None
+        # name_for_check = grid_name if check_grid_name else None
         return self.derive_from_dataframe(df,
                                           well_name,
                                           grid,
                                           grid_name_to_check = name_for_check,
                                           use_face_centres = use_face_centres,
                                           add_as_properties = add_properties)
+
+    def __derive_from_wellspec_check_well_name(self, well_name):
+        """ Set the well name to be used in the wellspec file."""
+        if well_name:
+            self.well_name = well_name
+        else:
+            well_name = self.well_name
+        return well_name
+
+    @staticmethod
+    def __derive_from_wellspec_verify_col_list(add_properties):
+        """ Verify additional properties to be added to the wellspec file."""
+        if add_properties:
+            if isinstance(add_properties, list):
+                col_list = ['IW', 'JW', 'L'] + [col.upper() for col in add_properties if col not in ['IW', 'JW', 'L']]
+            else:
+                col_list = []
+        else:
+            col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
+        return col_list
+
+    @staticmethod
+    def __derive_from_wellspec_check_grid_name(check_grid_name, grid, col_list):
+        """ Verify the grid object to which the cell indices in the wellspec table belong."""
+        if check_grid_name:
+            grid_name = rqet.citation_title_for_node(grid.root).upper()
+            if not grid_name:
+                name_for_check = None
+            else:
+                col_list.append('GRID')
+                name_for_check = grid_name
+        else:
+            name_for_check = None
+        return name_for_check, col_list
 
     def derive_from_cell_list(self, cell_kji0_list, well_name, grid):
         """Populate empty blocked well from numpy int array of shape (N, 3) being list of cells."""
@@ -799,20 +894,7 @@ class BlockedWell(BaseResqpy):
         try:
             assert ' ' not in well_name, 'cannot import for well name containing spaces'
             with open(cellio_file, 'r') as fp:
-                while True:
-                    kf.skip_blank_lines_and_comments(fp)
-                    line = fp.readline()  # file format version number?
-                    assert line, 'well ' + str(well_name) + ' not found in file ' + str(cellio_file)
-                    fp.readline()  # 'Undefined'
-                    words = fp.readline().split()
-                    assert len(words), 'missing header info in cell I/O file'
-                    if words[0].upper() == well_name.upper():
-                        break
-                    while not kf.blank_line(fp):
-                        fp.readline()  # skip to block of data for next well
-                header_lines = int(fp.readline().strip())
-                for _ in range(header_lines):
-                    fp.readline()
+                BlockedWell.__verify_header_lines_in_cellio_file(fp = fp, well_name = well_name, cellio_file = cellio_file)
                 previous_xyz = None
                 trajectory_mds = []
                 trajectory_points = []  # entries paired with trajectory_mds
@@ -825,28 +907,16 @@ class BlockedWell(BaseResqpy):
                 while not kf.blank_line(fp):
 
                     line = fp.readline()
-                    words = line.split()
-                    assert len(words) >= 9, 'not enough items on data line in cell I/O file, minimum 9 expected'
-                    i1, j1, k1 = int(words[0]), int(words[1]), int(words[2])
-                    cell_kji0 = np.array((k1 - 1, j1 - 1, i1 - 1), dtype = int)
-                    assert np.all(0 <= cell_kji0) and np.all(
-                        cell_kji0 < grid.extent_kji), 'cell I/O cell index not within grid extent'
-                    entry_xyz = np.array((float(words[3]), float(words[4]), float(words[5])))
-                    exit_xyz = np.array((float(words[6]), float(words[7]), float(words[8])))
-                    if cellio_z_inc_down is None:
-                        cellio_z_inc_down = bool(entry_xyz[2] + exit_xyz[2] > 0.0)
-                    if cellio_z_inc_down != grid_z_inc_down:
-                        entry_xyz[2] = -entry_xyz[2]
-                        exit_xyz[2] = -exit_xyz[2]
+                    cell_kji0, entry_xyz, exit_xyz = BlockedWell.__parse_non_blank_line_in_cellio_file(line = line,
+                                                                                                grid = grid,
+                                                                                                cellio_z_inc_down = cellio_z_inc_down,
+                                                                                                grid_z_inc_down = grid_z_inc_down)
 
-                    cp = grid.corner_points(cell_kji0 = cell_kji0, cache_resqml_array = False)
-                    assert not np.any(np.isnan(cp)), 'missing geometry for perforation cell(kji0) ' + str(
-                        cell_kji0) + ' for well ' + str(well_name)
-                    cell_centre = np.mean(cp, axis = (0, 1, 2))
+                    cp, cell_centre, entry_vector, exit_vector = BlockedWell.__calculate_cell_cp_center_and_vectors(grid = grid,
+                                                               cell_kji0 = cell_kji0,
+                                                               well_name = well_name)
 
                     # let's hope everything is in the same coordinate reference system!
-                    entry_vector = 100.0 * (entry_xyz - cell_centre)
-                    exit_vector = 100.0 * (exit_xyz - cell_centre)
                     (entry_axis, entry_polarity, facial_entry_xyz, exit_axis, exit_polarity,
                      facial_exit_xyz) = find_entry_and_exit(cp, entry_vector, exit_vector, well_name)
 
@@ -877,14 +947,9 @@ class BlockedWell(BaseResqpy):
                     blocked_cells_kji0.append(cell_kji0)
                     blocked_face_pairs.append(((entry_axis, entry_polarity), (exit_axis, exit_polarity)))
 
-                blocked_count = len(blocked_cells_kji0)
-                if blocked_count == 0:
-                    log.warning('no intervals blocked for well ' + well_name + ' in grid ' + str(grid_name))
-                    return None
-                else:
-                    log.info(
-                        str(blocked_count) + ' interval' + _pl(blocked_count) + ' blocked for well ' + well_name +
-                        ' in grid ' + str(grid_name))
+                BlockedWell.__check_number_of_blocked_well_intervals(blocked_cells_kji0 = blocked_cells_kji0,
+                                                                  well_name = well_name,
+                                                                  grid_name = grid_name)
 
                 self.create_md_datum_and_trajectory(grid,
                                                     trajectory_mds,
@@ -910,47 +975,110 @@ class BlockedWell(BaseResqpy):
 
         return self
 
-    def dataframe(self,
-                  i_col = 'IW',
-                  j_col = 'JW',
-                  k_col = 'L',
-                  one_based = True,
-                  extra_columns_list = [],
-                  ntg_uuid = None,
-                  perm_i_uuid = None,
-                  perm_j_uuid = None,
-                  perm_k_uuid = None,
-                  satw_uuid = None,
-                  sato_uuid = None,
-                  satg_uuid = None,
-                  region_uuid = None,
-                  radw = None,
-                  skin = None,
-                  stat = None,
-                  active_only = False,
-                  min_k0 = None,
-                  max_k0 = None,
-                  k0_list = None,
-                  min_length = None,
-                  min_kh = None,
-                  max_depth = None,
-                  max_satw = None,
-                  min_sato = None,
-                  max_satg = None,
-                  perforation_list = None,
-                  region_list = None,
-                  depth_inc_down = None,
-                  set_k_face_intervals_vertical = False,
-                  anglv_ref = 'normal ij down',
-                  angla_plane_ref = None,
-                  length_mode = 'MD',
-                  length_uom = None,
-                  use_face_centres = False,
-                  preferential_perforation = True,
-                  add_as_properties = False,
-                  use_properties = False):
-        """Returns a pandas data frame containing WELLSPEC style data.
+    @staticmethod
+    def __verify_header_lines_in_cellio_file(fp, well_name, cellio_file):
+        """Find and verify the information in the header lines for the specified well in the RMS cellio file."""
+        while True:
+            kf.skip_blank_lines_and_comments(fp)
+            line = fp.readline()  # file format version number?
+            assert line, 'well ' + str(well_name) + ' not found in file ' + str(cellio_file)
+            fp.readline()  # 'Undefined' KADIJA: what is this doing?
+            words = fp.readline().split()
+            assert len(words), 'missing header info in cell I/O file'
+            if words[0].upper() == well_name.upper():
+                break
+            while not kf.blank_line(fp):
+                fp.readline()  # skip to block of data for next well
+        header_lines = int(fp.readline().strip())
+        for _ in range(header_lines):
+            fp.readline()
 
+    @staticmethod
+    def __parse_non_blank_line_in_cellio_file(line, grid, cellio_z_inc_down, grid_z_inc_down):
+        """Parse each non-blank line in the RMS cellio file for the relevant parameters."""
+
+        words = line.split()
+        assert len(words) >= 9, 'not enough items on data line in cell I/O file, minimum 9 expected'
+        i1, j1, k1 = int(words[0]), int(words[1]), int(words[2])
+        cell_kji0 = np.array((k1 - 1, j1 - 1, i1 - 1), dtype=int)
+        assert np.all(0 <= cell_kji0) and np.all(
+            cell_kji0 < grid.extent_kji), 'cell I/O cell index not within grid extent'
+        entry_xyz = np.array((float(words[3]), float(words[4]), float(words[5])))
+        exit_xyz = np.array((float(words[6]), float(words[7]), float(words[8])))
+        if cellio_z_inc_down is None:
+            cellio_z_inc_down = bool(entry_xyz[2] + exit_xyz[2] > 0.0)
+        if cellio_z_inc_down != grid_z_inc_down:
+            entry_xyz[2] = -entry_xyz[2]
+            exit_xyz[2] = -exit_xyz[2]
+        return cell_kji0, entry_xyz, exit_xyz
+
+    @staticmethod
+    def __calculate_cell_cp_center_and_vectors(grid, cell_kji0, entry_xyz, exit_xyz,well_name):
+        """Calculate the i,j,k coordinates that represent the corner points and center of a perforation cell. Calculate
+        the entry and exit vectors for the perforation cell."""
+
+        cp = grid.corner_points(cell_kji0=cell_kji0, cache_resqml_array=False)
+        assert not np.any(np.isnan(cp)), 'missing geometry for perforation cell(kji0) ' + str(
+            cell_kji0) + ' for well ' + str(well_name)
+        cell_centre = np.mean(cp, axis=(0, 1, 2))
+        # let's hope everything is in the same coordinate reference system!
+        entry_vector = 100.0 * (entry_xyz - cell_centre)
+        exit_vector = 100.0 * (exit_xyz - cell_centre)
+        return cp, cell_centre, entry_vector, exit_vector
+
+    @staticmethod
+    def __check_number_of_blocked_well_intervals(blocked_cells_kji0, well_name, grid_name):
+        """ Check that at least one interval is blocked for the specified well."""
+
+        blocked_count = len(blocked_cells_kji0)
+        if blocked_count == 0:
+            log.warning('no intervals blocked for well ' + well_name + ' in grid ' + str(grid_name))
+            return None
+        else:
+            log.info(
+                str(blocked_count) + ' interval' + _pl(blocked_count) + ' blocked for well ' + well_name +
+                ' in grid ' + str(grid_name))
+
+    def dataframe(self,
+                  i_col='IW',
+                  j_col='JW',
+                  k_col='L',
+                  one_based=True,
+                  extra_columns_list=[],
+                  ntg_uuid=None,
+                  perm_i_uuid=None,
+                  perm_j_uuid=None,
+                  perm_k_uuid=None,
+                  satw_uuid=None,
+                  sato_uuid=None,
+                  satg_uuid=None,
+                  region_uuid=None,
+                  radw=None,
+                  skin=None,
+                  stat=None,
+                  active_only=False,
+                  min_k0=None,
+                  max_k0=None,
+                  k0_list=None,
+                  min_length=None,
+                  min_kh=None,
+                  max_depth=None,
+                  max_satw=None,
+                  min_sato=None,
+                  max_satg=None,
+                  perforation_list=None,
+                  region_list=None,
+                  depth_inc_down=None,
+                  set_k_face_intervals_vertical=False,
+                  anglv_ref='normal ij down',
+                  angla_plane_ref=None,
+                  length_mode='MD',
+                  length_uom=None,
+                  use_face_centres=False,
+                  preferential_perforation=True,
+                  add_as_properties=False,
+                  use_properties=False):
+        """Returns a pandas data frame containing WELLSPEC style data.
         arguments:
            i_col (string, default 'IW'): the column name to use for cell I index values
            j_col (string, default 'JW'): the column name to use for cell J index values
@@ -987,11 +1115,11 @@ class BlockedWell(BaseResqpy):
            active_only (boolean, default False): if True, only cells that are flagged in the grid object as active are included;
               if False, cells are included whether active or not
            min_k0 (int, optional): if present, perforations in layers above this are excluded (layer number will be applied
-              naively to all grids – not recommended when working with more than one grid with different layering)
+              naively to all grids – not recommended when working with more than one grid with different layering)
            max_k0 (int, optional): if present, perforations in layers below this are excluded (layer number will be applied
-              naively to all grids – not recommended when working with more than one grid with different layering)
+              naively to all grids – not recommended when working with more than one grid with different layering)
            k0_list (list of int, optional): if present, only perforations in cells in these layers are included (layer numbers
-              will be applied naively to all grids – not recommended when working with more than one grid with different layering)
+              will be applied naively to all grids – not recommended when working with more than one grid with different layering)
            min_length (float, optional): if present, a minimum length for an individual perforation interval to be included;
               units are the length units of the trajectory object unless length_uom argument is set
            min_kh (float, optional): if present, the minimum permeability x length value for which an individual interval is
@@ -1040,7 +1168,6 @@ class BlockedWell(BaseResqpy):
               properties; if a list is provided it must be a subset of extra_columns_list
            use_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
               GRID and STAT) is populated from a property with citation title matching the column name, if it exists
-
         notes:
            units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
            the length_uom argument is used;
@@ -1048,7 +1175,7 @@ class BlockedWell(BaseResqpy):
            the min_k0 and max_k0 arguments do not stop later rows within the layer range from being included;
            the min_length and min_kh limits apply to individual cell intervals and thus depend on cell size;
            the water and oil saturation limits are for saturations at a single time and affect whether the interval
-           is included in the dataframe – there is no functionality to support turning perforations off and on over time;
+           is included in the dataframe – there is no functionality to support turning perforations off and on over time;
            the saturation limits do not stop deeper intervals with qualifying saturations from being included;
            the k0_list, perforation_list and region_list arguments should be set to None to disable the corresponding functionality,
            if set to an empty list, no rows will be included in the dataframe;
@@ -1056,7 +1183,6 @@ class BlockedWell(BaseResqpy):
            at add_as_properties and use_properties cannot both be True;
            add_as_properties and use_properties are only currently functional for single grid blocked wells;
            at present, unit conversion is not handled when using properties
-
         :meta common:
         """
 
@@ -1066,7 +1192,7 @@ class BlockedWell(BaseResqpy):
                 prop_uuid = uuid_or_dict[grid.uuid]
             else:
                 prop_uuid = uuid_or_dict  # uuid either in form of string or uuid.UUID
-            return grid.property_collection.single_array_ref(uuid = prop_uuid)
+            return grid.property_collection.single_array_ref(uuid=prop_uuid)
 
         def get_ref_vector(grid, grid_crs, cell_kji0, mode):
             # gravity = np.array((0.0, 0.0, 1.0))
@@ -1120,14 +1246,15 @@ class BlockedWell(BaseResqpy):
         if extra_columns_list:
             for extra in extra_columns_list:
                 assert extra.upper() in [
-                    'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF', 'RADB',
+                    'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF',
+                    'RADB',
                     'WI', 'WBC'
                 ]
                 column_list.append(extra.upper())
         else:
             add_as_properties = use_properties = False
         assert not (add_as_properties and use_properties)
-        pc = rqp.PropertyCollection(support = self) if use_properties else None
+        pc = rqp.PropertyCollection(support=self) if use_properties else None
         pc_titles = [] if pc is None else pc.titles()
         isotropic_perm = None
         if min_length is not None and min_length <= 0.0:
@@ -1187,7 +1314,8 @@ class BlockedWell(BaseResqpy):
         else:
             stat = 'ON'
         if 'GRID' not in column_list and self.number_of_grids() > 1:
-            log.error('creating blocked well dataframe without GRID column for well that intersects more than one grid')
+            log.error(
+                'creating blocked well dataframe without GRID column for well that intersects more than one grid')
         if 'LENGTH' in column_list and 'PPERF' in column_list and 'KH' not in column_list and perforation_list is not None:
             log.warning(
                 'both LENGTH and PPERF will include effects of partial perforation; only one should be used in WELLSPEC'
@@ -1207,20 +1335,21 @@ class BlockedWell(BaseResqpy):
             log.warning('empty perforation list specified for blocked well dataframe: no rows will be included')
         doing_angles = (('ANGLA' in column_list and 'ANGLA' not in pc_titles) or
                         ('ANGLV' in column_list and 'ANGLV' not in pc_titles) or doing_kh or do_well_inflow)
-        doing_xyz = (('X' in column_list and 'X' not in pc_titles) or ('Y' in column_list and 'Y' not in pc_titles) or
+        doing_xyz = (('X' in column_list and 'X' not in pc_titles) or (
+                    'Y' in column_list and 'Y' not in pc_titles) or
                      ('DEPTH' in column_list and 'DEPTH' not in pc_titles))
         doing_entry_exit = doing_angles or ('LENGTH' in column_list and 'LENGTH' not in pc_titles and
                                             length_mode == 'straight')
         grid_crs_list = []
         for grid in self.grid_list:
-            grid_crs = crs.Crs(self.model, uuid = grid.crs_uuid)
+            grid_crs = crs.Crs(self.model, uuid=grid.crs_uuid)
             grid_crs_list.append(grid_crs)
             if grid_crs.z_units != grid_crs.xy_units and (len(column_list) > 1 or
                                                           (len(column_list) == 1 and
                                                            column_list[0] != 'GRID')) is not None:
                 log.error('grid ' + str(rqet.citation_title_for_node(grid.root_node)) +
                           ' has z units different to xy units: some WELLSPEC data likely to be wrong')
-        k_face_check = np.zeros((2, 2), dtype = int)
+        k_face_check = np.zeros((2, 2), dtype=int)
         k_face_check[1, 1] = 1  # now represents entry, exit of K-, K+
         k_face_check_end = k_face_check.copy()
         k_face_check_end[1] = -1  # entry through K-, terminating (TD) within cell
@@ -1228,11 +1357,11 @@ class BlockedWell(BaseResqpy):
             traj_crs = None
             traj_z_inc_down = None
         else:
-            traj_crs = crs.Crs(self.trajectory.model, uuid = self.trajectory.crs_uuid)
+            traj_crs = crs.Crs(self.trajectory.model, uuid=self.trajectory.crs_uuid)
             assert traj_crs.xy_units == traj_crs.z_units
             traj_z_inc_down = traj_crs.z_inc_down
 
-        df = pd.DataFrame(columns = column_list)
+        df = pd.DataFrame(columns=column_list)
         df = df.astype({i_col: int, j_col: int, k_col: int})
 
         ci = -1
@@ -1273,7 +1402,7 @@ class BlockedWell(BaseResqpy):
             if max_satg is not None and prop_array(satg_uuid, grid)[tuple_kji0] > max_satg:
                 continue
             if 'PPERF' in pc_titles:
-                part_perf_fraction = pc.single_array_ref(citation_title = 'PPERF')[ci]
+                part_perf_fraction = pc.single_array_ref(citation_title='PPERF')[ci]
             else:
                 part_perf_fraction = 1.0
                 if perforation_list is not None:
@@ -1294,8 +1423,9 @@ class BlockedWell(BaseResqpy):
                                 perf_length += perf_end - perf_start
                     if perf_length == 0.0:
                         continue
-                    part_perf_fraction = min(1.0, perf_length / (self.node_mds[interval + 1] - self.node_mds[interval]))
-#        log.debug('kji0: ' + str(cell_kji0))
+                    part_perf_fraction = min(1.0,
+                                             perf_length / (self.node_mds[interval + 1] - self.node_mds[interval]))
+            #        log.debug('kji0: ' + str(cell_kji0))
             entry_xyz = None
             exit_xyz = None
             if doing_entry_exit:
@@ -1333,8 +1463,8 @@ class BlockedWell(BaseResqpy):
             cosine_anglv = cosine_angla = 1.0
             xyz = (np.NaN, np.NaN, np.NaN)
             md = 0.5 * (self.node_mds[interval + 1] + self.node_mds[interval])
-            anglv = pc.single_array_ref(citation_title = 'ANGLV')[ci] if 'ANGLV' in pc_titles else None
-            angla = pc.single_array_ref(citation_title = 'ANGLA')[ci] if 'ANGLA' in pc_titles else None
+            anglv = pc.single_array_ref(citation_title='ANGLV')[ci] if 'ANGLV' in pc_titles else None
+            angla = pc.single_array_ref(citation_title='ANGLA')[ci] if 'ANGLA' in pc_titles else None
             if doing_angles and not (set_k_face_intervals_vertical and
                                      (np.all(self.face_pair_indices[ci] == k_face_check) or
                                       np.all(self.face_pair_indices[ci] == k_face_check_end))):
@@ -1358,7 +1488,7 @@ class BlockedWell(BaseResqpy):
                     anglv_rad = maths.acos(cosine_anglv)
                     sine_anglv = maths.sin(anglv_rad)
                     anglv = vec.degrees_from_radians(anglv_rad)
-#           log.debug('anglv: ' + str(anglv))
+                #           log.debug('anglv: ' + str(anglv))
                 if anglv != 0.0:
                     # project well vector and i-axis vector onto plane defined by normal vector a_ref_vector
                     i_axis = grid.interface_vector(cell_kji0, 2)
@@ -1369,7 +1499,7 @@ class BlockedWell(BaseResqpy):
                         #                 log.debug('i axis unit vector: ' + str(i_axis))
                         i_axis -= vec.dot_product(i_axis, a_ref_vector) * a_ref_vector
                         i_axis = vec.unit_vector(i_axis)
-#                 log.debug('i axis unit vector in reference plane: ' + str(i_axis))
+                    #                 log.debug('i axis unit vector in reference plane: ' + str(i_axis))
                     if angla is not None:
                         angla_rad = vec.radians_from_degrees(angla)
                         cosine_angla = maths.cos(angla_rad)
@@ -1387,7 +1517,7 @@ class BlockedWell(BaseResqpy):
                             sine_angla = -sine_angla
 
 
-#              log.debug('angla: ' + str(angla))
+            #              log.debug('angla: ' + str(angla))
             else:
                 if angla is None:
                     angla = 0.0
@@ -1399,7 +1529,7 @@ class BlockedWell(BaseResqpy):
                     ntg_is_one = True
                 else:
                     ntg = prop_array(ntg_uuid, grid)[tuple_kji0]
-                    ntg_is_one = maths.isclose(ntg, 1.0, rel_tol = 0.001)
+                    ntg_is_one = maths.isclose(ntg, 1.0, rel_tol=0.001)
                 if isotropic_perm and ntg_is_one:
                     k_i = k_j = k_k = prop_array(perm_i_uuid, grid)[tuple_kji0]
                 else:
@@ -1435,23 +1565,23 @@ class BlockedWell(BaseResqpy):
                 if min_kh is not None and kh < min_kh:
                     continue
             elif 'KH' in pc_titles:
-                kh = pc.single_array_ref(citation_title = 'KH')[ci]
+                kh = pc.single_array_ref(citation_title='KH')[ci]
             else:
                 kh = None
             if 'LENGTH' in pc_titles:
-                length = pc.single_array_ref(citation_title = 'LENGTH')[ci]
+                length = pc.single_array_ref(citation_title='LENGTH')[ci]
             if 'RADW' in pc_titles:
-                radw = pc.single_array_ref(citation_title = 'RADW')[ci]
+                radw = pc.single_array_ref(citation_title='RADW')[ci]
             assert radw > 0.0
             if 'SKIN' in pc_titles:
-                skin = pc.single_array_ref(citation_title = 'SKIN')[ci]
+                skin = pc.single_array_ref(citation_title='SKIN')[ci]
             radb = wi = wbc = None
             if 'RADB' in pc_titles:
-                radb = pc.single_array_ref(citation_title = 'RADB')[ci]
+                radb = pc.single_array_ref(citation_title='RADB')[ci]
             if 'WI' in pc_titles:
-                wi = pc.single_array_ref(citation_title = 'WI')[ci]
+                wi = pc.single_array_ref(citation_title='WI')[ci]
             if 'WBC' in pc_titles:
-                wbc = pc.single_array_ref(citation_title = 'WBC')[ci]
+                wbc = pc.single_array_ref(citation_title='WBC')[ci]
             if do_well_inflow:
                 if isotropic_perm and ntg_is_one:
                     k_ei = k_ej = k_ek = k_i
@@ -1501,16 +1631,22 @@ class BlockedWell(BaseResqpy):
                     if depth_inc_down and ee_crs.z_inc_down is False:
                         xyz[2] = -xyz[2]
             xyz = np.array(xyz)
-            if 'X' in pc_titles:
-                xyz[0] = pc.single_array_ref(citation_title = 'X')[ci]
-            if 'Y' in pc_titles:
-                xyz[1] = pc.single_array_ref(citation_title = 'Y')[ci]
-            if 'DEPTH' in pc_titles:
-                xyz[2] = pc.single_array_ref(citation_title = 'DEPTH')[ci]
+            for i,col_header in enumerate(['X', 'Y', 'DEPTH']):
+                if col_header in pc_titles:
+                    xyz[i] = pc.single_array_ref(citation_title=col_header)[ci]
+
             if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
                 md = bwam.convert_lengths(md, self.trajectory.md_uom, length_uom)
             if 'MD' in pc_titles:
-                md = pc.single_array_ref(citation_title = 'MD')[ci]
+                md = pc.single_array_ref(citation_title='MD')[ci]
+
+            column_names = ['GRID', 'RADW', 'SKIN', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y',
+                            'STAT',
+                            'PPERF', 'RADB', 'WI', 'WBC']
+            column_values = [grid_name, radw, skin, angla, anglv, length, kh, xyz[2], md, xyz[0], xyz[1], stat,
+                             part_perf_fraction, radb, wi, wbc]
+            column_values_dict = dict(zip(column_names, column_values))
+
             for col_index in range(len(column_list)):
                 column = column_list[col_index]
                 if col_index < 3:
@@ -1518,40 +1654,10 @@ class BlockedWell(BaseResqpy):
                         row_dict[column] = cell_kji0[2 - col_index] + 1
                     else:
                         row_dict[column] = cell_kji0[2 - col_index]
-                elif column == 'GRID':
-                    row_dict['GRID'] = grid_name  # todo: worry about spaces and quotes
-                elif column == 'RADW':
-                    row_dict['RADW'] = radw
-                elif column == 'SKIN':
-                    row_dict['SKIN'] = skin
-                elif column == 'ANGLA':
-                    row_dict['ANGLA'] = angla
-                elif column == 'ANGLV':
-                    row_dict['ANGLV'] = anglv
-                elif column == 'LENGTH':
-                    # note: length units are those of trajectory length uom if length mode is MD and length_uom is None
-                    row_dict['LENGTH'] = length
-                elif column == 'KH':
-                    row_dict['KH'] = kh
-                elif column == 'DEPTH':
-                    row_dict['DEPTH'] = xyz[2]
-                elif column == 'MD':
-                    row_dict['MD'] = md
-                elif column == 'X':
-                    row_dict['X'] = xyz[0]
-                elif column == 'Y':
-                    row_dict['Y'] = xyz[1]
-                elif column == 'STAT':
-                    row_dict['STAT'] = stat
-                elif column == 'PPERF':
-                    row_dict['PPERF'] = part_perf_fraction
-                elif column == 'RADB':
-                    row_dict['RADB'] = radb
-                elif column == 'WI':
-                    row_dict['WI'] = wi
-                elif column == 'WBC':  # note: not a valid WELLSPEC column name
-                    row_dict['WBC'] = wbc
-            df = df.append(row_dict, ignore_index = True)
+                else:
+                    row_dict[column] = column_values_dict[column]
+
+            df = df.append(row_dict, ignore_index=True)
             row_ci_list.append(ci)
 
         if add_as_properties:
@@ -1561,7 +1667,7 @@ class BlockedWell(BaseResqpy):
                 property_columns = add_as_properties
             else:
                 property_columns = extra_columns_list
-            self._add_df_properties(df, property_columns, row_ci_list = row_ci_list, length_uom = length_uom)
+            self._add_df_properties(df, property_columns, row_ci_list=row_ci_list, length_uom=length_uom)
 
         return df
 
@@ -1585,37 +1691,10 @@ class BlockedWell(BaseResqpy):
         extra_pc = rqp.PropertyCollection()
         extra_pc.set_support(support = self)
         ci_map = np.array(row_ci_list, dtype = int)
+
         for e in columns:
             extra = e.upper()
-            if extra in ['GRID', 'STAT']:
-                continue  # todo: other non-numeric columns may need to be added to this list
-            pk = 'continuous'
-            uom = 'Euc'
-            if extra in ['ANGLA', 'ANGLV']:
-                uom = 'dega'
-                # neither azimuth nor dip are correct property kinds; todo: create local property kinds
-                pk = 'azimuth' if extra == 'ANGLA' else 'inclination'
-            elif extra in ['LENGTH', 'MD', 'X', 'Y', 'DEPTH', 'RADW']:
-                if length_uom is None or length_uom == 'Euc':
-                    if extra in ['LENGTH', 'MD']:
-                        uom = self.trajectory.md_uom
-                    elif extra in ['X', 'Y', 'RADW']:
-                        uom = self.grid_list[0].xy_units()
-                    else:
-                        uom = self.grid_list[0].z_units()
-                else:
-                    uom = length_uom
-                if extra == 'DEPTH':
-                    pk = 'depth'
-                else:
-                    pk = 'length'
-            elif extra == 'KH':
-                uom = 'mD.' + length_uom
-                pk = 'permeability length'
-            elif extra == 'PPERF':
-                uom = length_uom + '/' + length_uom
-            else:
-                uom = 'Euc'
+            pk, uom = self.__set_pk_and_uom_for_df_properties(extra = extra, length_uom = length_uom)
             # 'SKIN': use defaults for now; todo: create local property kind for skin
             expanded = np.full(self.cell_count, np.NaN)
             expanded[ci_map] = df[extra]
@@ -1633,6 +1712,37 @@ class BlockedWell(BaseResqpy):
                                                        count = 1)
         extra_pc.write_hdf5_for_imported_list()
         extra_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    def __set_pk_and_uom_for_df_properties(self, extra, length_uom):
+        """Set the property kind and unit of measure for all properties in the dataframe."""
+        column_list = ['ANGLA', 'ANGLV', 'KH', 'PPERF']
+        uom_list = ['dega', 'dega', 'mD.' + length_uom, length_uom + '/' + length_uom]
+        pk_list = ['azimuth', 'inclination', 'permeability_length', 'continuous'] # neither azimuth nor dip are correct property kinds; todo: create local property kinds
+        if extra in column_list:
+            list_position = column_list.index(extra)
+            uom, pk = uom_list[list_position], pk_list[list_position]
+        elif extra in ['LENGTH', 'MD', 'X', 'Y', 'DEPTH', 'RADW']:
+            uom, pk = self.__set_pk_and_uom_for_length_based_properties(length_uom = length_uom, extra = extra)
+        else:
+            uom = 'Euc'
+            pk = 'continuous'
+        return uom, pk
+
+    def __set_pk_and_uom_for_length_based_properties(self, length_uom, extra):
+        if length_uom is None or length_uom == 'Euc':
+            if extra in ['LENGTH', 'MD']:
+                uom = self.trajectory.md_uom
+            elif extra in ['X', 'Y', 'RADW']:
+                uom = self.grid_list[0].xy_units()
+            else:
+                uom = self.grid_list[0].z_units()
+        else:
+            uom = length_uom
+        if extra == 'DEPTH':
+            pk = 'depth'
+        else:
+            pk = 'length'
+        return pk, uom
 
     def static_kh(self,
                   ntg_uuid = None,
@@ -1756,29 +1866,6 @@ class BlockedWell(BaseResqpy):
            align_columns and float_format arguments are deprecated and no longer used
         """
 
-        def tidy_well_name(well_name):
-            nexus_friendly = ''
-            previous_underscore = False
-            for ch in well_name:
-                if not 32 <= ord(ch) < 128 or ch in ' ,!*#':
-                    ch = '_'
-                if not (previous_underscore and ch == '_'):
-                    nexus_friendly += ch
-                previous_underscore = (ch == '_')
-            if not nexus_friendly:
-                well_name = 'WELL_X'
-            return nexus_friendly
-
-        def is_float_column(col_name):
-            if col_name.upper() in ['ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF']:
-                return True
-            return False
-
-        def is_int_column(col_name):
-            if col_name.upper() in ['IW', 'JW', 'L']:
-                return True
-            return False
-
         assert wellspec_file, 'no output file specified to write WELLSPEC to'
 
         col_width_dict = {
@@ -1798,19 +1885,7 @@ class BlockedWell(BaseResqpy):
             'PPERF': 5
         }
 
-        if not well_name:
-            if self.well_name:
-                well_name = self.well_name
-            elif self.root is not None:
-                well_name = rqet.citation_title_for_node(self.root)
-            elif self.wellbore_interpretation is not None:
-                well_name = self.wellbore_interpretation.title
-            elif self.trajectory is not None:
-                well_name = self.trajectory.title
-            else:
-                log.warning('no well name identified for use in WELLSPEC')
-                well_name = 'WELLNAME'
-        well_name = tidy_well_name(well_name)
+        well_name = self.__get_well_name(well_name = well_name)
 
         df = self.dataframe(one_based = True,
                             extra_columns_list = extra_columns_list,
@@ -1850,49 +1925,127 @@ class BlockedWell(BaseResqpy):
         with open(wellspec_file, mode = mode) as fp:
             for _ in range(preceeding_blank_lines):
                 fp.write('\n')
-            if write_nexus_units:
-                if length_uom == 'm':
-                    fp.write('METRIC\n\n')
-                elif length_uom == 'ft':
-                    fp.write('ENGLISH\n\n')
-            if length_uom_comment and self.trajectory is not None and ('LENGTH' in extra_columns_list or
-                                                                       'MD' in extra_columns_list or
-                                                                       'KH' in extra_columns_list):
-                fp.write(
-                    f'! Length units along wellbore: {self.trajectory.md_uom if length_uom is None else length_uom}\n')
-            fp.write('WELLSPEC ' + str(well_name) + '\n')
-            for col_name in df.columns:
-                if col_name in col_width_dict:
-                    width = col_width_dict[col_name]
-                else:
-                    width = 10
-                form = '{0:>' + str(width) + '}'
-                fp.write(sep + form.format(col_name))
+
+            self.__write_wellspec_file_units_metadata(write_nexus_units = write_nexus_units,
+                                                      fp = fp,
+                                                      length_uom = length_uom,
+                                                      extra_columns_list = extra_columns_list,
+                                                      well_name = well_name
+                                                      )
+
+            BlockedWell.__write_wellspec_file_columns(df = df,
+                                                      fp = fp,
+                                                      col_width_dict = col_width_dict,
+                                                      sep = sep)
+
             fp.write('\n')
-            for row_info in df.iterrows():
-                row = row_info[1]
-                for col_name in df.columns:
-                    try:
-                        if col_name in col_width_dict:
-                            width = col_width_dict[col_name]
-                        else:
-                            width = 10
-                        if is_float_column(col_name):
-                            form = '{0:>' + str(width) + '.3f}'
-                            fp.write(sep + form.format(float(row[col_name])))
-                        else:
-                            form = '{0:>' + str(width) + '}'
-                            if is_int_column(col_name):
-                                fp.write(sep + form.format(int(row[col_name])))
-                            else:
-                                fp.write(sep + form.format(str(row[col_name])))
-                    except Exception:
-                        fp.write(sep + str(row[col_name]))
-                fp.write('\n')
+
+            BlockedWell.__write_wellspec_file_rows_from_dataframe(df = df,
+                                                                       fp = fp,
+                                                                       col_width_dict = col_width_dict,
+                                                                       sep = sep)
             for _ in range(trailing_blank_lines):
                 fp.write('\n')
 
         return df
+
+    @staticmethod
+    def __tidy_well_name(well_name):
+        nexus_friendly = ''
+        previous_underscore = False
+        for ch in well_name:
+            if not 32 <= ord(ch) < 128 or ch in ' ,!*#':
+                ch = '_'
+            if not (previous_underscore and ch == '_'):
+                nexus_friendly += ch
+            previous_underscore = (ch == '_')
+        if not nexus_friendly:
+            well_name = 'WELL_X'
+        return nexus_friendly
+
+    @staticmethod
+    def __is_float_column(col_name):
+        if col_name.upper() in ['ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF']:
+            return True
+        return False
+
+    @staticmethod
+    def __is_int_column(col_name):
+        if col_name.upper() in ['IW', 'JW', 'L']:
+            return True
+        return False
+
+    def __get_well_name(self, well_name):
+        """ Get the name of the well whose data is to be written to the Nexus WELLSPEC file
+        """
+        if not well_name:
+            if self.well_name:
+                well_name = self.well_name
+            elif self.root is not None:
+                well_name = rqet.citation_title_for_node(self.root)
+            elif self.wellbore_interpretation is not None:
+                well_name = self.wellbore_interpretation.title
+            elif self.trajectory is not None:
+                well_name = self.trajectory.title
+            else:
+                log.warning('no well name identified for use in WELLSPEC')
+                well_name = 'WELLNAME'
+        well_name = BlockedWell.tidy_well_name(well_name)
+
+        return well_name
+
+    def __write_wellspec_file_units_metadata(self, write_nexus_units, fp, length_uom,length_uom_comment, extra_columns_list, well_name ):
+        """Write the units of measure (uom) and system of measure for length in the WELLSPEC file. Also write a comment on
+        the length uom if necessary.
+
+        """
+        if write_nexus_units:
+            length_uom_system_list = ['METRIC', 'ENGLISH']
+            length_uom_index = ['m', 'ft'].index(length_uom)
+            fp.write(f'{length_uom_system_list[length_uom_index]}\n\n')
+
+        if length_uom_comment and self.trajectory is not None and ('LENGTH' in extra_columns_list or
+                                                                   'MD' in extra_columns_list or
+                                                                   'KH' in extra_columns_list):
+            fp.write(
+                f'! Length units along wellbore: {self.trajectory.md_uom if length_uom is None else length_uom}\n')
+        fp.write('WELLSPEC ' + str(well_name) + '\n')
+
+    @staticmethod
+    def __write_wellspec_file_columns(df, fp, col_width_dict, sep):
+        """Write the column names to the WELLSPEC file."""
+        for col_name in df.columns:
+            if col_name in col_width_dict:
+                width = col_width_dict[col_name]
+            else:
+                width = 10
+            form = '{0:>' + str(width) + '}'
+            fp.write(sep + form.format(col_name))
+
+    @staticmethod
+    def __write_wellspec_file_rows_from_dataframe(df, fp, col_width_dict, sep):
+        """ Writes the non-blank lines of a Nexus WELLSPEC file from a BlockedWell.dataframe """
+
+        for row_info in df.iterrows():
+            row = row_info[1]
+            for col_name in df.columns:
+                try:
+                    if col_name in col_width_dict:
+                        width = col_width_dict[col_name]
+                    else:
+                        width = 10
+                    if BlockedWell.__is_float_column(col_name):
+                        form = '{0:>' + str(width) + '.3f}'
+                        fp.write(sep + form.format(float(row[col_name])))
+                    else:
+                        form = '{0:>' + str(width) + '}'
+                        if BlockedWell.__is_int_column(col_name):
+                            fp.write(sep + form.format(int(row[col_name])))
+                        else:
+                            fp.write(sep + form.format(str(row[col_name])))
+                except Exception:
+                    fp.write(sep + str(row[col_name]))
+            fp.write('\n')
 
     def kji0_marker(self, active_only = True):
         """Convenience method returning (k0, j0, i0), grid_uuid of first blocked interval."""
@@ -2016,6 +2169,46 @@ class BlockedWell(BaseResqpy):
         if not self.title:
             self.title = 'blocked well'
 
+        self.__create_wellbore_feature_and_interpretation_xml_if_needed(add_as_part = add_as_part,
+                                                              add_relationships = add_relationships,
+                                                              originator = originator)
+
+        self.__create_trajectory_xml_if_needed(create_for_trajectory_if_needed = create_for_trajectory_if_needed,
+                                               add_as_part = add_as_part,
+                                               add_relationships = add_relationships,
+                                               originator = originator,
+                                               ext_uuid = ext_uuid,
+                                               title = title)
+
+        assert self.trajectory.root is not None, 'trajectory xml not established'
+
+        bw_node = super().create_xml(title = title, originator = originator, add_as_part = False)
+
+        # wellbore frame elements
+
+        nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node, gis_values_node, fis_node, fnull_node, fis_values_node = self.__create_bw_node_sub_elements(
+            bw_node = bw_node)
+
+        self.__create_hdf5_dataset_references(ext_uuid = ext_uuid,
+                                              mds_values_node = mds_values_node,
+                                              cis_values_node = cis_values_node,
+                                              gis_values_node = gis_values_node,
+                                              fis_values_node = fis_values_node
+                                              )
+
+        traj_root, grid_root, interp_root = self.__create_trajectory_grid_wellbore_interpretation_reference_nodes(bw_node = bw_node)
+
+        self.__add_as_part_and_add_relationships_if_required(add_as_part = add_as_part,
+                                                             add_relationships = add_relationships,
+                                                             bw_node = bw_node,
+                                                             interp_root = interp_root,
+                                                             ext_uuid = ext_uuid)
+
+        return bw_node
+
+    def __create_wellbore_feature_and_interpretation_xml_if_needed(self, add_as_part, add_relationships, originator):
+        """ Create root node for WellboreFeature and WellboreInterpretation objects if necessary."""
+
         if self.feature_to_be_written:
             if self.wellbore_feature is None:
                 self.create_feature_and_interpretation()
@@ -2028,6 +2221,8 @@ class BlockedWell(BaseResqpy):
                                                     add_relationships = add_relationships,
                                                     originator = originator)
 
+    def __create_trajectory_xml_if_needed(self, create_for_trajectory_if_needed, add_as_part, add_relationships, originator, ext_uuid, title):
+        """ Create root node for associated Trajectory object if necessary."""
         if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root is None:
             md_datum_root = self.trajectory.md_datum.create_xml(add_as_part = add_as_part,
                                                                 add_relationships = add_relationships,
@@ -2040,12 +2235,9 @@ class BlockedWell(BaseResqpy):
                                        title = title,
                                        originator = originator)
 
-        assert self.trajectory.root is not None, 'trajectory xml not established'
 
-        bw_node = super().create_xml(title = title, originator = originator, add_as_part = False)
-
-        # wellbore frame elements
-
+    def __create_bw_node_sub_elements(self, bw_node):
+        """ Append sub-elements to the BlockedWell object's root node."""
         nc_node = rqet.SubElement(bw_node, ns['resqml2'] + 'NodeCount')
         nc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
         nc_node.text = str(self.node_count)
@@ -2057,17 +2249,6 @@ class BlockedWell(BaseResqpy):
         mds_values_node = rqet.SubElement(mds_node, ns['resqml2'] + 'Values')
         mds_values_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         mds_values_node.text = rqet.null_xml_text
-
-        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'NodeMd', root = mds_values_node)
-
-        traj_root = self.trajectory.root
-        self.model.create_ref_node('Trajectory',
-                                   rqet.find_nested_tags_text(traj_root, ['Citation', 'Title']),
-                                   bu.uuid_from_string(traj_root.attrib['uuid']),
-                                   content_type = 'obj_WellboreTrajectoryRepresentation',
-                                   root = bw_node)
-
-        # remaining blocked wellbore elements
 
         cc_node = rqet.SubElement(bw_node, ns['resqml2'] + 'CellCount')
         cc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
@@ -2085,8 +2266,6 @@ class BlockedWell(BaseResqpy):
         cis_values_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         cis_values_node.text = rqet.null_xml_text
 
-        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'CellIndices', root = cis_values_node)
-
         gis_node = rqet.SubElement(bw_node, ns['resqml2'] + 'GridIndices')
         gis_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
         gis_node.text = rqet.null_xml_text
@@ -2098,8 +2277,6 @@ class BlockedWell(BaseResqpy):
         gis_values_node = rqet.SubElement(gis_node, ns['resqml2'] + 'Values')
         gis_values_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         gis_values_node.text = rqet.null_xml_text
-
-        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'GridIndices', root = gis_values_node)
 
         fis_node = rqet.SubElement(bw_node, ns['resqml2'] + 'LocalFacePairPerCellIndices')
         fis_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
@@ -2113,8 +2290,17 @@ class BlockedWell(BaseResqpy):
         fis_values_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         fis_values_node.text = rqet.null_xml_text
 
-        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'LocalFacePairPerCellIndices', root = fis_values_node)
+        return nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node, gis_values_node, fis_node, fnull_node, fis_values_node
 
+    def __create_trajectory_grid_wellbore_interpretation_reference_nodes(self, bw_node):
+        """ Create nodes and add to BlockedWell object root node."""
+
+        traj_root = self.trajectory.root
+        self.model.create_ref_node('Trajectory',
+                                   rqet.find_nested_tags_text(traj_root, ['Citation', 'Title']),
+                                   bu.uuid_from_string(traj_root.attrib['uuid']),
+                                   content_type = 'obj_WellboreTrajectoryRepresentation',
+                                   root = bw_node)
         for grid in self.grid_list:
 
             grid_root = grid.root
@@ -2132,7 +2318,23 @@ class BlockedWell(BaseResqpy):
                                        bu.uuid_from_string(interp_root.attrib['uuid']),
                                        content_type = 'obj_WellboreInterpretation',
                                        root = bw_node)
+        return traj_root, grid_root, interp_root
 
+    def __create_hdf5_dataset_references(self, ext_uuid, mds_values_node, cis_values_node, gis_values_node, fis_values_node):
+        """ Create nodes that reference the hdf5 datasets (arrays) and add to the BlockedWell onject's root node."""
+
+        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'NodeMd', root = mds_values_node)
+
+        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'CellIndices', root = cis_values_node)
+
+        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'GridIndices', root = gis_values_node)
+
+        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'LocalFacePairPerCellIndices', root = fis_values_node)
+
+    def __add_as_part_and_add_relationships_if_required(self, add_as_part, add_relationships, bw_node, interp_root, ext_uuid):
+        """Add the newly created BlockedWell object's root node as a part in the model and add reciprocal relationships.
+
+        """
         if add_as_part:
             self.model.add_part('obj_BlockedWellboreRepresentation', self.uuid, bw_node)
             if add_relationships:
@@ -2148,7 +2350,6 @@ class BlockedWell(BaseResqpy):
                 self.model.create_reciprocal_relationship(bw_node, 'mlToExternalPartProxy', ext_node,
                                                           'externalPartProxyToMl')
 
-        return bw_node
 
     def write_hdf5(self, file_name = None, mode = 'a', create_for_trajectory_if_needed = True):
         """Create or append to an hdf5 file, writing datasets for the measured depths, grid, cell & face indices.

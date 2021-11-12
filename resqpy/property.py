@@ -256,7 +256,7 @@ class PropertyCollection():
                 if support_type == 'obj_IjkGridRepresentation':
                     self.support = grr.any_grid(model, uuid = self.support_uuid, find_properties = False)
                 elif support_type == 'obj_WellboreFrameRepresentation':
-                    self.support = rqw.WellboreFrame(model, uuid = self.support_uuid)
+                    self.support = rqw2.WellboreFrame(model, uuid = self.support_uuid)
                 elif support_type == 'obj_BlockedWellboreRepresentation':
                     self.support = rqw2.BlockedWell(model, uuid = self.support_uuid)
                 elif support_type == 'obj_Grid2dRepresentation':
@@ -272,7 +272,7 @@ class PropertyCollection():
                     raise TypeError('unsupported property supporting representation class: ' + str(support_type))
             else:
                 if type(self.support) in [
-                        grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw2.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
+                        grr.Grid, grr.RegularGrid, rqw2.WellboreFrame, rqw2.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
                         rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
                         rug.PyramidGrid
                 ]:
@@ -344,7 +344,7 @@ class PropertyCollection():
                 else:
                     shape_list = [support.nk + 1, support.nj + 1, support.ni + 1]
 
-        elif isinstance(support, rqw.WellboreFrame):
+        elif isinstance(support, rqw2.WellboreFrame):
             if indexable_element is None or indexable_element == 'nodes':
                 shape_list = [support.node_count]
             elif indexable_element == 'intervals':

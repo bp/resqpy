@@ -32,8 +32,9 @@ from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .md_datum import MdDatum
-from .well_functions import DeviationSurvey, WellboreFrame
-from .well_utils import load_hdf5_array
+from .wellbore_frame import WellboreFrame
+from .well_functions import load_hdf5_array
+from .deviation_survey import DeviationSurvey
 
 class Trajectory(BaseResqpy):
     """Class for RESQML Wellbore Trajectory Representation (Geometry).
@@ -804,8 +805,8 @@ class Trajectory(BaseResqpy):
 
         return wbt_node
 
-    def __create_wellbore_feature_and_interpretation_xml(self, add_as_part=True, add_relationships=True, originator=None):
-        """ Return root node for WellboreFeature and WellboreInterpretation objects
+    def __create_wellbore_feature_and_interpretation_xml(self, add_as_part, add_relationships, originator):
+        """ Create root node for WellboreFeature and WellboreInterpretation objects
 
         """
 
@@ -832,7 +833,7 @@ class Trajectory(BaseResqpy):
         return md_datum_root
 
     def __create_wbt_node_non_geometry_sub_elements(self, wbt_node):
-        """ Append sub-elements to the Trajectory object's root node that are unrelated to well geometry
+        """ Append sub-elements to the Trajectory object's root node that are unrelated to well geometry.
 
         """
 

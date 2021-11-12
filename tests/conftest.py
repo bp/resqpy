@@ -14,8 +14,8 @@ import resqpy.property as rqp
 from resqpy.crs import Crs
 from resqpy.model import Model, new_model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
-from resqpy.well.well_functions import MdDatum, WellboreFrame
-from resqpy.well import Trajectory
+from resqpy.well import MdDatum, Trajectory, WellboreFrame
+
 
 @pytest.fixture(autouse = True)
 def capture_logs(caplog):

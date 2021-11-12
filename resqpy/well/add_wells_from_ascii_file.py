@@ -21,10 +21,11 @@ import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 
 from .md_datum import MdDatum
-from .well_functions import WellboreFrame, DeviationSurvey
+from .wellbore_frame import WellboreFrame
 from .wellbore_marker_frame import WellboreMarkerFrame
 from .blocked_well import BlockedWell
 from .trajectory import Trajectory
+from .deviation_survey import DeviationSurvey
 
 def add_wells_from_ascii_file(model,
                               crs_uuid,

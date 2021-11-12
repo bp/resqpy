@@ -3346,7 +3346,7 @@ class Model():
         uuids = self.uuids(obj_type = 'MdDatum')
         if uuids:
             for uuid in uuids:
-                datum = resqpy.well.well_functions.MdDatum(self, uuid = uuid)
+                datum = resqpy.well.MdDatum(self, uuid = uuid)
                 yield datum
 
     def iter_crs(self):

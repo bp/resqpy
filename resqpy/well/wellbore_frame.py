@@ -3,6 +3,7 @@
 """
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
+import resqpy.well
 
 version = '10th November 2021'
 
@@ -24,8 +25,7 @@ import resqpy.property as rqp
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .well_utils import load_hdf5_array
-from .well_functions import Trajectory
+from .well_functions import load_hdf5_array
 
 class WellboreFrame(BaseResqpy):
     """Class for RESQML WellboreFrameRepresentation objects (supporting well log Properties)
@@ -115,6 +115,7 @@ class WellboreFrame(BaseResqpy):
         self.logs = rqp.WellLogCollection(frame = self)
 
     def _load_from_xml(self):
+
         """Loads the wellbore frame object from an xml node (and associated hdf5 data)."""
 
         # NB: node is the root level xml node, not a node in the md list!
@@ -125,7 +126,7 @@ class WellboreFrame(BaseResqpy):
         trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
         assert trajectory_uuid is not None, 'wellbore frame trajectory reference not found in xml'
         if self.trajectory is None:
-            self.trajectory = Trajectory(self.model, uuid = trajectory_uuid)
+            self.trajectory = resqpy.well.Trajectory(self.model, uuid = trajectory_uuid)
         else:
             assert bu.matching_uuids(self.trajectory.uuid, trajectory_uuid), 'wellbore frame trajectory uuid mismatch'
 
@@ -147,6 +148,7 @@ class WellboreFrame(BaseResqpy):
 
         # Create well log collection of all log data
         self.logs = rqp.WellLogCollection(frame = self)
+        # pass
 
     def extract_crs_root(self):
         """Returns the xml root node of the coordinate reference system used by the related trajectory."""

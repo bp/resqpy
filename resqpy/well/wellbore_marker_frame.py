@@ -25,7 +25,7 @@ from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .trajectory import Trajectory
-from .well_utils import load_hdf5_array
+from .well_functions import load_hdf5_array
 
 class WellboreMarkerFrame(BaseResqpy):
     """Class to handle RESQML WellBoreMarkerFrameRepresentation objects.
