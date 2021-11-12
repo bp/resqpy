@@ -9,7 +9,7 @@ import pytest
 
 
 ## TODO: move to a general utilities area once complete
-def simple_grid_corns(k_gap = False, righthanded = True, undefined = False):
+def simple_grid_corns(k_gap=False, righthanded=True, undefined=False):
     """Returns corner points for simple 2x2x2 grid"""
     origin_cell = np.array([
         [
@@ -91,7 +91,7 @@ def simple_grid_corns(k_gap = False, righthanded = True, undefined = False):
                 ]
             ]
         ],
-        dtype = 'float')  # k1, j1, i1
+        dtype='float')  # k1, j1, i1
 
     if k_gap:
         corns[1, :, :, :, :, :, 2] += 1
@@ -104,9 +104,18 @@ def test_grid_from_cp_simple(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
     corns = simple_grid_corns()
+    expected_points = np.array([[[[0, 2, 0], [1, 2, 0], [2, 2, 0]],
+                                 [[0, 1, 0], [1, 1, 0], [2, 1, 0]],
+                                 [[0, 0, 0], [1, 0, 0], [2, 0, 0]]],
+                                [[[0, 2, 1], [1, 2, 1], [2, 2, 1]],
+                                 [[0, 1, 1], [1, 1, 1], [2, 1, 1]],
+                                 [[0, 0, 1], [1, 0, 1], [2, 0, 1]]],
+                                [[[0, 2, 2], [1, 2, 2], [2, 2, 2]],
+                                 [[0, 1, 2], [1, 1, 2], [2, 1, 2]],
+                                 [[0, 0, 2], [1, 0, 2], [2, 0, 2]]]])
 
     # Act
-    grid = rqi.grid_from_cp(model, cp_array = corns, crs_uuid = crs.uuid, ijk_handedness = None)
+    grid = rqi.grid_from_cp(model, cp_array=corns, crs_uuid=crs.uuid, ijk_handedness=None)
 
     # Assert
     assert grid is not None
@@ -117,6 +126,7 @@ def test_grid_from_cp_simple(example_model_and_crs):
     assert grid.pillar_shape == 'curved'
     assert grid.crs_uuid == crs.uuid
     assert grid.geometry_defined_for_all_cells_cached
+    assert_array_almost_equal(grid.points_cached, expected_points)
 
 
 def test_grid_from_cp_simple_inactive(example_model_and_crs):
@@ -129,10 +139,10 @@ def test_grid_from_cp_simple_inactive(example_model_and_crs):
 
     # Act
     grid = rqi.grid_from_cp(model,
-                            cp_array = corns,
-                            crs_uuid = crs.uuid,
-                            ijk_handedness = None,
-                            active_mask = active_mask)
+                            cp_array=corns,
+                            crs_uuid=crs.uuid,
+                            ijk_handedness=None,
+                            active_mask=active_mask)
 
     # Assert
     assert grid is not None
@@ -150,16 +160,16 @@ def test_grid_from_cp_simple_inactive(example_model_and_crs):
 def test_grid_from_cp_simple_nogeom(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
-    corns = simple_grid_corns(undefined = True)
+    corns = simple_grid_corns(undefined=True)
     expected_bool = np.ones((2, 2, 2))
     expected_bool[0, 0, 0] = 0
 
     # Act
     grid = rqi.grid_from_cp(model,
-                            cp_array = corns,
-                            crs_uuid = crs.uuid,
-                            ijk_handedness = None,
-                            geometry_defined_everywhere = False)
+                            cp_array=corns,
+                            crs_uuid=crs.uuid,
+                            ijk_handedness=None,
+                            geometry_defined_everywhere=False)
 
     # Assert
     assert grid is not None
@@ -176,7 +186,7 @@ def test_grid_from_cp_simple_nogeom(example_model_and_crs):
 def test_grid_from_cp_simple_inactive_nogeom(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
-    corns = simple_grid_corns(undefined = True)
+    corns = simple_grid_corns(undefined=True)
     expected_bool = np.ones((2, 2, 2))
     expected_bool[0, 0, 0] = 0
     active_mask = np.ones((2, 2, 2))
@@ -187,11 +197,11 @@ def test_grid_from_cp_simple_inactive_nogeom(example_model_and_crs):
 
     # Act
     grid = rqi.grid_from_cp(model,
-                            cp_array = corns,
-                            crs_uuid = crs.uuid,
-                            ijk_handedness = None,
-                            geometry_defined_everywhere = False,
-                            active_mask = active_mask)
+                            cp_array=corns,
+                            crs_uuid=crs.uuid,
+                            ijk_handedness=None,
+                            geometry_defined_everywhere=False,
+                            active_mask=active_mask)
 
     # Assert
     assert grid is not None
@@ -209,10 +219,10 @@ def test_grid_from_cp_simple_inactive_nogeom(example_model_and_crs):
 def test_grid_from_cp_simple_left(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
-    corns = simple_grid_corns(righthanded = False)
+    corns = simple_grid_corns(righthanded=False)
 
     # Act
-    grid = rqi.grid_from_cp(model, cp_array = corns, crs_uuid = crs.uuid, ijk_handedness = None)
+    grid = rqi.grid_from_cp(model, cp_array=corns, crs_uuid=crs.uuid, ijk_handedness=None)
 
     # Assert
     assert grid is not None
@@ -230,7 +240,7 @@ def test_grid_from_cp_simple_straight(example_model_and_crs):
     corns = simple_grid_corns()
 
     # Act
-    grid = rqi.grid_from_cp(model, cp_array = corns, crs_uuid = crs.uuid, known_to_be_straight = True)
+    grid = rqi.grid_from_cp(model, cp_array=corns, crs_uuid=crs.uuid, known_to_be_straight=True)
 
     # Assert
     assert grid is not None
@@ -244,10 +254,10 @@ def test_grid_from_cp_simple_straight(example_model_and_crs):
 def test_grid_from_cp_kgap(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
-    corns = simple_grid_corns(k_gap = True)
+    corns = simple_grid_corns(k_gap=True)
 
     # Act
-    grid = rqi.grid_from_cp(model, cp_array = corns, crs_uuid = crs.uuid)
+    grid = rqi.grid_from_cp(model, cp_array=corns, crs_uuid=crs.uuid)
 
     # Assert
     assert grid is not None
@@ -266,7 +276,7 @@ def test_grid_from_cp_kgap_zvoid(example_model_and_crs):
     corns[1, :, :, :, :, :, 2] += 0.5
 
     # Act
-    grid = rqi.grid_from_cp(model, cp_array = corns, crs_uuid = crs.uuid, max_z_void = 1)
+    grid = rqi.grid_from_cp(model, cp_array=corns, crs_uuid=crs.uuid, max_z_void=1)
 
     # Assert
     assert grid is not None
@@ -289,7 +299,7 @@ def test_grid_from_cp_kgap_zvoid(example_model_and_crs):
                           (['Surface_zmap.dat', 'Surface_zmap.dat'], 'zmap', True, 'map', 'surface', 6),
                           (['Surface_zmap.dat'], 'zmap', False, 'pick', 'surface', 2),
                           (['Surface_zmap.dat'], 'zmap', False, 'pick', 'TriangulatedSet', 2)])
-#(['Surface_zmap.dat'],'zmap',False,'pick','Grid2d',2)]) # TODO: Fails due to bug, Mesh.create_xml does not have an argument for crs_uuid
+# (['Surface_zmap.dat'],'zmap',False,'pick','Grid2d',2)]) # TODO: Fails due to bug, Mesh.create_xml does not have an argument for crs_uuid
 def test_add_surfaces(example_model_and_crs, test_data_path, surfaces, format, rqclass, interp_and_feat, role,
                       newparts):
     model, crs = example_model_and_crs
@@ -297,12 +307,12 @@ def test_add_surfaces(example_model_and_crs, test_data_path, surfaces, format, r
 
     surface_paths = [os.path.join(test_data_path, surf) for surf in surfaces]
 
-    rqi.add_surfaces(epc_file = model.epc_file,
-                     surface_file_format = format,
-                     surface_file_list = surface_paths,
-                     surface_role = role,
-                     rq_class = rqclass,
-                     make_horizon_interpretations_and_features = interp_and_feat)
+    rqi.add_surfaces(epc_file=model.epc_file,
+                     surface_file_format=format,
+                     surface_file_list=surface_paths,
+                     surface_role=role,
+                     rq_class=rqclass,
+                     make_horizon_interpretations_and_features=interp_and_feat)
 
     model = rq.Model(model.epc_file)
     assert len(model.parts()) == newparts
