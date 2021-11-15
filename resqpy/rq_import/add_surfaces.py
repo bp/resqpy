@@ -20,15 +20,15 @@ import resqpy.surface as rqs
 
 
 def add_surfaces(
-        epc_file,  # existing resqml model
-        crs_uuid=None,  # optional crs uuid, defaults to crs associated with model (usually main grid crs)
-        ext_uuid=None,  # if None, uuid for hdf5 file holding main grid geometry will be used
-        surface_file_format='zmap',  # zmap, rms (roxar) or GOCAD-Tsurf only formats currently supported
-        rq_class='surface',  # 'surface' or 'mesh': the class of object to be created
-        surface_role='map',  # 'map' or 'pick'
-        quad_triangles=False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
-        surface_file_list=None,  # list of full file names (paths), each holding one surface
-        make_horizon_interpretations_and_features=True):  # if True, feature and interpretation objects are created
+    epc_file,  # existing resqml model
+    crs_uuid = None,  # optional crs uuid, defaults to crs associated with model (usually main grid crs)
+    ext_uuid = None,  # if None, uuid for hdf5 file holding main grid geometry will be used
+    surface_file_format = 'zmap',  # zmap, rms (roxar) or GOCAD-Tsurf only formats currently supported
+    rq_class = 'surface',  # 'surface' or 'mesh': the class of object to be created
+    surface_role = 'map',  # 'map' or 'pick'
+    quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
+    surface_file_list = None,  # list of full file names (paths), each holding one surface
+    make_horizon_interpretations_and_features = True):  # if True, feature and interpretation objects are created
     """Process a list of surface files, adding each surface as a new part in the resqml model."""
 
     assert surface_file_list, 'surface file list is empty or missing'
@@ -41,7 +41,7 @@ def add_surfaces(
     assert rq_class in ['surface', 'mesh']
 
     log.info('accessing existing resqml model from: ' + epc_file)
-    model = rq.Model(epc_file=epc_file)
+    model = rq.Model(epc_file = epc_file)
     assert model, 'failed to read existing resqml model from file: ' + epc_file
 
     if crs_uuid is None:
@@ -54,11 +54,11 @@ def add_surfaces(
         ext_uuid = model.h5_uuid()
     if ext_uuid is None:  # no pre-existing hdf5 part or references in model
         hdf5_file = epc_file[:-4] + '.h5'
-        ext_node = model.create_hdf5_ext(file_name=hdf5_file)
+        ext_node = model.create_hdf5_ext(file_name = hdf5_file)
         ext_uuid = rqet.uuid_for_part_root(ext_node)
         h5_mode = 'w'
     else:
-        hdf5_file = model.h5_file_name(uuid=ext_uuid)
+        hdf5_file = model.h5_file_name(uuid = ext_uuid)
         h5_mode = 'a'
 
     assert ext_uuid is not None, 'failed to establish hdf5 uuid'
@@ -77,15 +77,15 @@ def add_surfaces(
         if rq_class == 'surface':
             if surface_file_format == 'GOCAD-Tsurf':
                 surface = rqs.Surface(model,
-                                      tsurf_file=surf_file,
-                                      surface_role=surface_role,
-                                      quad_triangles=quad_triangles)
+                                      tsurf_file = surf_file,
+                                      surface_role = surface_role,
+                                      quad_triangles = quad_triangles)
             else:
                 surface = rqs.Surface(model,
-                                      mesh_file=surf_file,
-                                      mesh_format=surface_file_format,
-                                      surface_role=surface_role,
-                                      quad_triangles=quad_triangles)
+                                      mesh_file = surf_file,
+                                      mesh_format = surface_file_format,
+                                      surface_role = surface_role,
+                                      quad_triangles = quad_triangles)
         elif rq_class == 'mesh':
             if surface_file_format == 'GOCAD-Tsurf':
                 log.info(
@@ -93,31 +93,31 @@ def add_surfaces(
                 break
             else:
                 surface = rqs.Mesh(model,
-                                   mesh_file=surf_file,
-                                   mesh_format=surface_file_format,
-                                   mesh_flavour='reg&z',
-                                   surface_role=surface_role,
-                                   crs_uuid=crs_uuid)
+                                   mesh_file = surf_file,
+                                   mesh_format = surface_file_format,
+                                   mesh_flavour = 'reg&z',
+                                   surface_role = surface_role,
+                                   crs_uuid = crs_uuid)
         else:
             log.critical('this is impossible')
         # NB. surface may be either a Surface object or a Mesh object
 
         log.debug('appending to hdf5 file for surface file: ' + surf_file)
-        surface.write_hdf5(hdf5_file, mode=h5_mode)
+        surface.write_hdf5(hdf5_file, mode = h5_mode)
 
         if make_horizon_interpretations_and_features:
-            feature = rqo.GeneticBoundaryFeature(model, kind='horizon', feature_name=short_name)
+            feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', feature_name = short_name)
             feature.create_xml()
-            interp = rqo.HorizonInterpretation(model, genetic_boundary_feature=feature, domain='depth')
+            interp = rqo.HorizonInterpretation(model, genetic_boundary_feature = feature, domain = 'depth')
             interp_root = interp.create_xml()
             surface.set_represented_interpretation_root(interp_root)
 
         surface.create_xml(ext_uuid,
-                           add_as_part=True,
-                           add_relationships=True,
-                           crs_uuid=rqet.uuid_for_part_root(crs_root),
-                           title=short_name + ' sourced from ' + surf_file,
-                           originator=None)
+                           add_as_part = True,
+                           add_relationships = True,
+                           crs_uuid = rqet.uuid_for_part_root(crs_root),
+                           title = short_name + ' sourced from ' + surf_file,
+                           originator = None)
 
     # mark model as modified
     model.set_modified()

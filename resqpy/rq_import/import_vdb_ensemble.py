@@ -23,33 +23,33 @@ from resqpy.rq_import import import_nexus
 def import_vdb_ensemble(
         epc_file,
         ensemble_run_dir,
-        existing_epc=False,
-        keyword_list=None,
-        property_kind_list=None,
-        vdb_static_properties=True,  # if True, static vdb properties are imported
-        vdb_recurrent_properties=True,
-        decoarsen=True,
-        timestep_selection='all',
-        create_property_set_per_realization=True,
-        create_property_set_per_timestep=True,
-        create_complete_property_set=False,
+        existing_epc = False,
+        keyword_list = None,
+        property_kind_list = None,
+        vdb_static_properties = True,  # if True, static vdb properties are imported
+        vdb_recurrent_properties = True,
+        decoarsen = True,
+        timestep_selection = 'all',
+        create_property_set_per_realization = True,
+        create_property_set_per_timestep = True,
+        create_complete_property_set = False,
         # remaining arguments only used if existing_epc is False
-        extent_ijk=None,  # 3 element numpy vector
-        corp_xy_units='metres',
-        corp_z_units='metres',
-        corp_z_inc_down=True,
-        ijk_handedness='right',
-        geometry_defined_everywhere=True,
-        treat_as_nan=None,
-        resqml_xy_units='metres',
-        resqml_z_units='metres',
-        resqml_z_inc_down=True,
-        shift_to_local=True,
-        local_origin_place='centre',  # 'centre' or 'minimum'
-        max_z_void=0.1,  # import will fail if vertical void greater than this is encountered
-        split_pillars=True,
-        split_tolerance=0.01,  # applies to each of x, y, z differences
-        progress_fn=None):
+        extent_ijk = None,  # 3 element numpy vector
+        corp_xy_units = 'metres',
+        corp_z_units = 'metres',
+        corp_z_inc_down = True,
+        ijk_handedness = 'right',
+        geometry_defined_everywhere = True,
+        treat_as_nan = None,
+        resqml_xy_units = 'metres',
+        resqml_z_units = 'metres',
+        resqml_z_inc_down = True,
+        shift_to_local = True,
+        local_origin_place = 'centre',  # 'centre' or 'minimum'
+        max_z_void = 0.1,  # import will fail if vertical void greater than this is encountered
+        split_pillars = True,
+        split_tolerance = 0.01,  # applies to each of x, y, z differences
+        progress_fn = None):
     """Adds properties from all vdb's within an ensemble directory tree to a single RESQML dataset, referencing a shared
     grid.
 
@@ -132,34 +132,34 @@ def import_vdb_ensemble(
     if not existing_epc:
         model = import_nexus(
             epc_file[:-4],  # output path and file name without .epc or .h5 extension
-            extent_ijk=extent_ijk,  # 3 element numpy vector, in case extent is not automatically determined
-            vdb_file=ensemble_list[0],  # vdb input file
-            corp_xy_units=corp_xy_units,
-            corp_z_units=corp_z_units,
-            corp_z_inc_down=corp_z_inc_down,
-            ijk_handedness=ijk_handedness,
-            geometry_defined_everywhere=geometry_defined_everywhere,
-            treat_as_nan=treat_as_nan,
-            resqml_xy_units=resqml_xy_units,
-            resqml_z_units=resqml_z_units,
-            resqml_z_inc_down=resqml_z_inc_down,
-            shift_to_local=shift_to_local,
-            local_origin_place=local_origin_place,  # 'centre' or 'minimum'
-            max_z_void=max_z_void,  # import will fail if vertical void greater than this is encountered
-            split_pillars=split_pillars,
-            split_tolerance=split_tolerance,  # applies to each of x, y, z differences
-            vdb_static_properties=False,
-            vdb_recurrent_properties=False,
-            create_property_set=False)
+            extent_ijk = extent_ijk,  # 3 element numpy vector, in case extent is not automatically determined
+            vdb_file = ensemble_list[0],  # vdb input file
+            corp_xy_units = corp_xy_units,
+            corp_z_units = corp_z_units,
+            corp_z_inc_down = corp_z_inc_down,
+            ijk_handedness = ijk_handedness,
+            geometry_defined_everywhere = geometry_defined_everywhere,
+            treat_as_nan = treat_as_nan,
+            resqml_xy_units = resqml_xy_units,
+            resqml_z_units = resqml_z_units,
+            resqml_z_inc_down = resqml_z_inc_down,
+            shift_to_local = shift_to_local,
+            local_origin_place = local_origin_place,  # 'centre' or 'minimum'
+            max_z_void = max_z_void,  # import will fail if vertical void greater than this is encountered
+            split_pillars = split_pillars,
+            split_tolerance = split_tolerance,  # applies to each of x, y, z differences
+            vdb_static_properties = False,
+            vdb_recurrent_properties = False,
+            create_property_set = False)
 
     model = rq.Model(
-        epc_file=epc_file)  # shouldn't be necessary if just created but it feels safer to re-open the model
+        epc_file = epc_file)  # shouldn't be necessary if just created but it feels safer to re-open the model
     assert model is not None, 'failed to instantiate model'
     grid = model.grid()
     assert grid is not None, 'grid not found'
     ext_uuid = model.h5_uuid()
     assert ext_uuid is not None, 'failed to determine uuid for hdf5 file reference'
-    hdf5_file = model.h5_file_name(uuid=ext_uuid)
+    hdf5_file = model.h5_file_name(uuid = ext_uuid)
 
     # create reporting timestep time series for recurrent data, if required, based on the first realisation
     recur_time_series = None
@@ -190,7 +190,7 @@ def import_vdb_ensemble(
             log.error('disabling recurrent property import')
             vdb_recurrent_properties = False
     if vdb_recurrent_properties:
-        recur_time_series = rts.TimeSeries(model, first_timestamp=first_stamp)
+        recur_time_series = rts.TimeSeries(model, first_timestamp = first_stamp)
         if timestep_selection == 'all':
             remaining_list = timestep_list[1:]
         elif timestep_selection == 'first and last':
@@ -208,7 +208,7 @@ def import_vdb_ensemble(
                 break
             recur_time_series.add_timestamp(stamp)
     if recur_time_series is not None:
-        recur_ts_node = recur_time_series.create_xml(title='simulator recurrent array timestep series')
+        recur_ts_node = recur_time_series.create_xml(title = 'simulator recurrent array timestep series')
         recur_ts_uuid = rqet.uuid_for_part_root(recur_ts_node)
         model.time_series = recur_ts_node  # save as the primary time series for the model
 
@@ -235,7 +235,7 @@ def import_vdb_ensemble(
         #      vdbase.set_use_case(vdb_case)
         vdbase.set_extent_kji(grid.extent_kji)
 
-        prop_import_collection = rp.GridPropertyCollection(realization=realisation)
+        prop_import_collection = rp.GridPropertyCollection(realization = realisation)
         prop_import_collection.set_grid(grid)
 
         decoarsen_array = None
@@ -251,16 +251,16 @@ def import_vdb_ensemble(
                             continue
                     prop_import_collection.import_vdb_static_property_to_cache(vdbase,
                                                                                keyword,
-                                                                               realization=realisation)
+                                                                               realization = realisation)
                 if decoarsen:
                     decoarsen_array = prop_import_collection.decoarsen_imported_list()
                     if decoarsen_array is not None:
                         log.debug('static properties decoarsened for realisation ' + str(realisation))
                 grid.write_hdf5_from_caches(hdf5_file,
-                                            mode='a',
-                                            geometry=False,
-                                            imported_properties=prop_import_collection,
-                                            write_active=False)
+                                            mode = 'a',
+                                            geometry = False,
+                                            imported_properties = prop_import_collection,
+                                            write_active = False)
                 prop_import_collection.remove_all_cached_arrays()
 
         if vdb_recurrent_properties:
@@ -304,19 +304,19 @@ def import_vdb_ensemble(
                                 vdbase,
                                 r_timestep_number,
                                 keyword,
-                                time_index=tni,  # index into recur_time_series
-                                realization=realisation)
+                                time_index = tni,  # index into recur_time_series
+                                realization = realisation)
                     if decoarsen_array is not None:
-                        step_import_collection.decoarsen_imported_list(decoarsen_array=decoarsen_array)
+                        step_import_collection.decoarsen_imported_list(decoarsen_array = decoarsen_array)
                     # extend hdf5 with cached arrays for this timestep
                     #         log.info('number of recurrent grid property arrays for timestep: ' + str(timestep_number) +
                     #                  ' is: ' + str(step_import_collection.number_of_imports()))
                     #         log.info('extending hdf5 file with recurrent properties for timestep: ' + str(timestep_number))
                     grid.write_hdf5_from_caches(hdf5_file,
-                                                mode='a',
-                                                geometry=False,
-                                                imported_properties=step_import_collection,
-                                                write_active=False)
+                                                mode = 'a',
+                                                geometry = False,
+                                                imported_properties = step_import_collection,
+                                                write_active = False)
                     # add imported list for this timestep to full imported list
                     prop_import_collection.inherit_imported_list_from_other_collection(step_import_collection)
                     #         log.debug('total number of property arrays after timestep: ' + str(timestep_number) +
@@ -329,7 +329,7 @@ def import_vdb_ensemble(
             continue
 
         prop_import_collection.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid,
-                                                                                   time_series_uuid=recur_ts_uuid)
+                                                                                   time_series_uuid = recur_ts_uuid)
 
         if create_property_set_per_realization:
             prop_import_collection.create_property_set_xml('property set for realization ' + str(realisation))
@@ -340,7 +340,7 @@ def import_vdb_ensemble(
     if complete_collection is not None:
         if create_property_set_per_timestep and recur_time_series is not None:
             for tni in range(recur_time_series.number_of_timestamps()):
-                ts_collection = rp.selective_version_of_collection(complete_collection, time_index=tni)
+                ts_collection = rp.selective_version_of_collection(complete_collection, time_index = tni)
                 if ts_collection.number_of_parts() > 0:
                     ts_collection.create_property_set_xml('property set for time index ' + str(tni))
         if create_complete_property_set:

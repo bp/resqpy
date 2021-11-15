@@ -19,10 +19,10 @@ import resqpy.property as rp
 
 
 def add_ab_properties(
-        epc_file,  # existing resqml model
-        grid_uuid=None,  # optional grid uuid, required if more than one grid in model; todo: handle list of grids?
-        ext_uuid=None,  # if None, hdf5 file holding grid geometry will be used
-        ab_property_list=None
+    epc_file,  # existing resqml model
+    grid_uuid = None,  # optional grid uuid, required if more than one grid in model; todo: handle list of grids?
+    ext_uuid = None,  # if None, hdf5 file holding grid geometry will be used
+    ab_property_list = None
 ):  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value,
     #          discrete, realization)
     """Process a list of pure binary property array files, adding as parts of model, related to grid (hdf5 file is
@@ -30,12 +30,12 @@ def add_ab_properties(
 
     assert ab_property_list, 'property list is empty or missing'
 
-    model = rq.Model(epc_file=epc_file)
+    model = rq.Model(epc_file = epc_file)
     if grid_uuid is None:
         grid_node = model.root_for_ijk_grid()  # will raise an exception if Model has more than 1 grid
         assert grid_node is not None, 'grid not found in model'
         grid_uuid = rqet.uuid_for_part_root(grid_node)
-    grid = grr.any_grid(parent_model=model, uuid=grid_uuid, find_properties=False)
+    grid = grr.any_grid(parent_model = model, uuid = grid_uuid, find_properties = False)
 
     if ext_uuid is None:
         ext_node = rqet.find_nested_tags(grid.geometry_root, ['Points', 'Coordinates', 'HdfProxy', 'UUID'])
@@ -50,14 +50,14 @@ def add_ab_properties(
         prop_import_collection.import_ab_property_to_cache(p_filename,
                                                            p_keyword,
                                                            grid.extent_kji,
-                                                           discrete=p_discrete,
-                                                           uom=p_uom,
-                                                           time_index=p_time_index,
-                                                           null_value=p_null_value,
-                                                           property_kind=p_property_kind,
-                                                           facet_type=p_facet_type,
-                                                           facet=p_facet,
-                                                           realization=p_realization)
+                                                           discrete = p_discrete,
+                                                           uom = p_uom,
+                                                           time_index = p_time_index,
+                                                           null_value = p_null_value,
+                                                           property_kind = p_property_kind,
+                                                           facet_type = p_facet_type,
+                                                           facet = p_facet,
+                                                           realization = p_realization)
         # todo: property_kind, facet_type & facet are not currently getting passed through the imported_list tuple in resqml_property
 
     if prop_import_collection is None:
@@ -69,10 +69,10 @@ def add_ab_properties(
     hdf5_file = model.h5_file_name()
     log.debug('appending to hdf5 file: ' + hdf5_file)
     grid.write_hdf5_from_caches(hdf5_file,
-                                mode='a',
-                                geometry=False,
-                                imported_properties=prop_import_collection,
-                                write_active=False)
+                                mode = 'a',
+                                geometry = False,
+                                imported_properties = prop_import_collection,
+                                write_active = False)
     # remove cached static property arrays from memory
     if prop_import_collection is not None:
         prop_import_collection.remove_all_cached_arrays()

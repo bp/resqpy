@@ -1,10 +1,7 @@
-all = ['import_nexus.py',
-       'GridFromCp.py',
-       'import_vdb_all_grids.py',
-       'grid_from_cp.py',
-       'import_vdb_ensemble.py',
-       'add_ab_properties.py',
-       'add_surfaces.py']
+all = [
+    'import_nexus.py', 'GridFromCp.py', 'import_vdb_all_grids.py', 'grid_from_cp.py', 'import_vdb_ensemble.py',
+    'add_ab_properties.py', 'add_surfaces.py'
+]
 
 from .GridFromCp import GridFromCp
 from .grid_from_cp import grid_from_cp
