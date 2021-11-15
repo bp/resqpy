@@ -209,7 +209,7 @@ def test_regular_mesh(example_model_and_crs):
     assert len(surf.distinct_edges()) == 6 * (ni - 1) * (nj - 1) + (ni - 1) + (nj - 1)
 
 
-@pytest.mark.skip(reason = "Bug in Mesh for ref&z flavou needs fixing first")
+#@pytest.mark.skip(reason = "Bug in Mesh for ref&z flavou needs fixing first")
 def test_refandz_mesh(example_model_and_crs):
     model, crs = example_model_and_crs
 
@@ -249,12 +249,11 @@ def test_refandz_mesh(example_model_and_crs):
                                ni = ni,
                                nj = nj,
                                z_supporting_mesh_uuid = support_uuid,
-                               title = 'random ref&z mesh',
+                               title = 'random refz mesh',
                                originator = 'Emma',
                                extra_metadata = {'testing mode': 'automated'})
 
     assert refz is not None
-    print(refz.title)
     refz.write_hdf5()
     refz.create_xml()
     refz_uuid = refz.uuid
@@ -264,20 +263,16 @@ def test_refandz_mesh(example_model_and_crs):
 
     # re-open model and check the mesh object is there
     reload = rq.Model(model.epc_file)
-    print(reload.parts())
 
-    print(support_uuid)
-    assert bu.matching_uuids(reload.uuid(obj_type = 'Grid2dRepresentation', title = 'random ref&z mesh'), refz_uuid)
+    assert bu.matching_uuids(reload.uuid(obj_type = 'Grid2dRepresentation', title = 'random refz mesh'), refz_uuid)
 
     # establish a resqpy Mesh from the object in the RESQML dataset
-    reload_refzmesh = resqpy.surface.Mesh(model, uuid = refz_uuid)
+    reload_refzmesh = resqpy.surface.Mesh(reload, uuid = refz_uuid)
 
     # check some of the metadata
     assert reload_refzmesh.ni == ni and reload_refzmesh.nj == nj
     assert reload_refzmesh.flavour == 'ref&z'
-    assert_array_almost_equal(np.array(reload_refzmesh.regular_origin), np.array(origin))
-    assert_array_almost_equal(np.array(reload_refzmesh.regular_dxyz_dij), np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]))
-    assert reload_refzmesh.ref_uuid == support_uuid
+    assert bu.matching_uuids(reload_refzmesh.ref_uuid, support_uuid)
 
     # check a fully expanded version of the points
     assert_array_almost_equal(reload_refzmesh.full_array_ref(), refz.full_array_ref())

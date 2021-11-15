@@ -288,7 +288,7 @@ class Mesh(BaseSurface):
                 # assert rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray'  # only this supported for now
                 self.ref_uuid = rqet.find_nested_tags_text(support_geom_node, ['SupportingRepresentation', 'UUID'])
                 assert self.ref_uuid, 'missing supporting representation info in xml for z-value mesh'
-                self.ref_mesh = Mesh(self.model, root_node = self.model.root_for_uuid(self.ref_uuid))
+                self.ref_mesh = Mesh(self.model, uuid = self.ref_uuid)
                 assert self.nj == self.ref_mesh.nj and self.ni == self.ref_mesh.ni  # only this supported for now
                 niosr_node = rqet.find_tag(support_geom_node, 'NodeIndicesOnSupportingRepresentation')
                 start_value = rqet.find_tag_int(niosr_node, 'StartValue')
@@ -584,7 +584,7 @@ class Mesh(BaseSurface):
                 ov_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
                 ov_node.text = '1'  # no other possibility cater for at present
                 oc_node = rqet.SubElement(o_node, ns['resqml2'] + 'Count')
-                oc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+                oc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
                 if j_or_i:
                     oc_node.text = str(self.ni - 1)
                 else:
@@ -692,5 +692,4 @@ class Mesh(BaseSurface):
                     ext_node = self.model.root_for_part(ext_part)
                     self.model.create_reciprocal_relationship(g2d_node, 'mlToExternalPartProxy', ext_node,
                                                               'externalPartProxyToMl')
-
         return g2d_node
