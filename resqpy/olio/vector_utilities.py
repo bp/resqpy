@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '11th October 2021'
+version = '15th November 2021'
 
 import logging
 
@@ -460,23 +460,23 @@ def points_in_triangles(p, t, da, projection = 'xy', edged = False):
        the triangles do not need to be in a consistent clockwise or anti-clockwise order
     """
 
-    assert p.ndim == 2 and t.ndim == 2
+    assert p.ndim == 2 and t.ndim == 2 and da.ndim == 2 and da.shape[1] == p.shape[1]
     cwt = clockwise_triangles(p, t, projection = projection)
     a0, a1 = _projected_xyz_axes(projection)
     d_count = len(da)
     d_base = len(p)
     t_count = len(t)
-    pp = np.concatenate(p, da)
-    tp = np.empty((t_count, d_count, 3, 3),
-                  dtype = int)  # build little triangles using da points and two of triangle vertices
+    pp = np.concatenate((p, da), axis = 0)
+    # build little triangles using da points and two of triangle vertices
+    tp = np.empty((t_count, d_count, 3, 3), dtype = int)
     tp[:, :, :, 2] = np.arange(d_count).reshape((1, -1, 1)) + d_base
-    tp[:, :, 0, 0] = np.where(cwt, t[:, 1], t[:, 0]).reshape((-1, 1))
-    tp[:, :, 0, 1] = np.where(cwt, t[:, 0], t[:, 1]).reshape((-1, 1))
-    tp[:, :, 1, 0] = np.where(cwt, t[:, 2], t[:, 1]).reshape((-1, 1))
-    tp[:, :, 1, 1] = np.where(cwt, t[:, 1], t[:, 2]).reshape((-1, 1))
-    tp[:, :, 2, 0] = np.where(cwt, t[:, 2], t[:, 0]).reshape((-1, 1))
-    tp[:, :, 2, 1] = np.where(cwt, t[:, 0], t[:, 2]).reshape((-1, 1))
-    cwtd = clockwise_triangles(pp, tp, projection = projection).reshape((t_count, d_count, 3))
+    tp[:, :, 0, 0] = np.where(cwt > 0.0, t[:, 1], t[:, 0]).reshape((-1, 1))
+    tp[:, :, 0, 1] = np.where(cwt > 0.0, t[:, 0], t[:, 1]).reshape((-1, 1))
+    tp[:, :, 1, 0] = np.where(cwt > 0.0, t[:, 2], t[:, 1]).reshape((-1, 1))
+    tp[:, :, 1, 1] = np.where(cwt > 0.0, t[:, 1], t[:, 2]).reshape((-1, 1))
+    tp[:, :, 2, 0] = np.where(cwt > 0.0, t[:, 0], t[:, 2]).reshape((-1, 1))
+    tp[:, :, 2, 1] = np.where(cwt > 0.0, t[:, 2], t[:, 0]).reshape((-1, 1))
+    cwtd = clockwise_triangles(pp, tp.reshape((-1, 3)), projection = projection).reshape((t_count, d_count, 3))
     if edged:
         return np.all(cwtd <= 0.0, axis = 2)
     else:

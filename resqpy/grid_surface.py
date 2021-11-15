@@ -1,6 +1,6 @@
 """grid_surface.py: Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '2nd November 2021'
+version = '15th November 2021'
 
 import logging
 
@@ -1159,14 +1159,14 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
         k_centres = centres[0, :, :].reshape((-1, 3))
         k_hits = vec.points_in_triangles(p, t, k_centres, projection = 'xy', edged = True).reshape(
             (t_count, grid.nj, grid.ni))
-        for k_t, k_j, k_i in np.where(k_hits):
+        for k_t, k_j, k_i in np.stack(np.where(k_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[0, k_j, k_i],
                                                centres[-1, k_j, k_i] - centres[0, k_j, k_i],
                                                p[t[k_t]],
                                                line_segment = True)
             if xyz is None:
                 continue
-            k_face = int((xyz[2] - centres[0, k_j, k_i]) / grid_dxyz[2])
+            k_face = int((xyz[2] - centres[0, k_j, k_i, 2]) / grid_dxyz[2])
             assert 0 <= k_face < grid.nk - 1
             k_faces[k_face, k_j, k_i] = True
     else:
@@ -1178,14 +1178,14 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
         j_centres = centres[:, 0, :].reshape((-1, 3))
         j_hits = vec.points_in_triangles(p, t, j_centres, projection = 'xz', edged = True).reshape(
             (t_count, grid.nk, grid.ni))
-        for j_t, j_k, j_i in np.where(j_hits):
+        for j_t, j_k, j_i in np.stack(np.where(j_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[j_k, 0, j_i],
                                                centres[j_k, -1, j_i] - centres[j_k, 0, j_i],
                                                p[t[j_t]],
                                                line_segment = True)
             if xyz is None:
                 continue
-            j_face = int((xyz[1] - centres[j_k, 0, j_i]) / grid_dxyz[1])
+            j_face = int((xyz[1] - centres[j_k, 0, j_i, 1]) / grid_dxyz[1])
             assert 0 <= j_face < grid.nj - 1
             j_faces[j_k, j_face, j_i] = True
     else:
@@ -1197,14 +1197,14 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
         i_centres = centres[:, :, 0].reshape((-1, 3))
         i_hits = vec.points_in_triangles(p, t, i_centres, projection = 'yz', edged = True).reshape(
             (t_count, grid.nk, grid.nj))
-        for i_t, i_k, i_j in np.where(i_hits):
+        for i_t, i_k, i_j in np.stack(np.where(i_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[i_k, i_j, 0],
                                                centres[i_k, i_j, -1] - centres[i_k, i_j, 0],
                                                p[t[i_t]],
                                                line_segment = True)
             if xyz is None:
                 continue
-            i_face = int((xyz[0] - centres[i_k, i_j, 0]) / grid_dxyz[0])
+            i_face = int((xyz[0] - centres[i_k, i_j, 0, 0]) / grid_dxyz[0])
             assert 0 <= i_face < grid.ni - 1
             i_faces[i_k, i_j, i_face] = True
     else:
