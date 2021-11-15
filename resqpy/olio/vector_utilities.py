@@ -1,7 +1,7 @@
 # vector_utilities module
 # note: many of these functions are redundant as they are provided by built-in numpy operations
 
-version = '11th October 2021'
+version = '15th November 2021'
 
 import logging
 
@@ -397,6 +397,30 @@ def clockwise(a, b, c):
     return (c[0] - a[0]) * (b[1] - a[1]) - ((c[1] - a[1]) * (b[0] - a[0]))
 
 
+def clockwise_triangles(p, t, projection = 'xy'):
+    """Returns a numpy array of +ve values where triangle points are in clockwise order, 0.0 if in line, -ve for ccw.
+
+    arguments:
+       p (numpy float array of shape (N, 2 or 3)): points in use as vertices of triangles
+       t (numpy int array of shape (M, 3)): indices into first axis of p defining the triangles
+       projection (string, default 'xy'): one of 'xy', 'xz' or 'yz' being the direction of projection,
+          ie. which elements of the second axis of p to use; must be 'xy' if p has shape (N, 2)
+
+    returns:
+       numpy float array of shape (M,) being the +ve or -ve values indicating clockwise or anti-clockwise
+       ordering of each triangle's vertices when projected onto the specified plane and viewed in the
+       direction negative to positive of the omitted axis
+
+    note:
+       assumes xyz axes are left-handed (reverse the result for a right handed system)
+    """
+
+    a0, a1 = _projected_xyz_axes(projection)
+
+    return (((p[t[:, 2], a0] - p[t[:, 0], a0]) * (p[t[:, 1], a1] - p[t[:, 0], a1])) -
+            ((p[t[:, 2], a1] - p[t[:, 0], a1]) * (p[t[:, 1], a0] - p[t[:, 0], a0])))
+
+
 def in_triangle(a, b, c, d):
     """Returns True if point d lies wholly within the triangle pf ccw points a, b, c, projected onto xy plane.
 
@@ -415,6 +439,48 @@ def in_triangle_edged(a, b, c, d):
     """
 
     return clockwise(a, b, d) <= 0.0 and clockwise(b, c, d) <= 0.0 and clockwise(c, a, d) <= 0.0
+
+
+def points_in_triangles(p, t, da, projection = 'xy', edged = False):
+    """Returns 2D numpy bool array indicating which of points da are within which triangles.
+
+    arguments:
+       p (numpy float array of shape (N, 2 or 3)): points in use as vertices of triangles
+       t (numpy int array of shape (M, 3)): indices into first axis of p defining the triangles
+       da (numpy float array of shape (D, 2 or 3)): points to test for
+       projection (string, default 'xy'): one of 'xy', 'xz' or 'yz' being the direction of projection,
+          ie. which elements of the second axis of p  and da to use; must be 'xy' if p and da have shape (N, 2)
+       edged (bool, default False): if True, points lying exactly on the edge of a triangle are included
+          as being in the triangle, otherwise they are excluded
+
+    returns:
+       numpy bool array of shape (M, D) indicating which points are within which triangles
+
+    note:
+       the triangles do not need to be in a consistent clockwise or anti-clockwise order
+    """
+
+    assert p.ndim == 2 and t.ndim == 2 and da.ndim == 2 and da.shape[1] == p.shape[1]
+    cwt = clockwise_triangles(p, t, projection = projection)
+    a0, a1 = _projected_xyz_axes(projection)
+    d_count = len(da)
+    d_base = len(p)
+    t_count = len(t)
+    pp = np.concatenate((p, da), axis = 0)
+    # build little triangles using da points and two of triangle vertices
+    tp = np.empty((t_count, d_count, 3, 3), dtype = int)
+    tp[:, :, :, 2] = np.arange(d_count).reshape((1, -1, 1)) + d_base
+    tp[:, :, 0, 0] = np.where(cwt > 0.0, t[:, 1], t[:, 0]).reshape((-1, 1))
+    tp[:, :, 0, 1] = np.where(cwt > 0.0, t[:, 0], t[:, 1]).reshape((-1, 1))
+    tp[:, :, 1, 0] = np.where(cwt > 0.0, t[:, 2], t[:, 1]).reshape((-1, 1))
+    tp[:, :, 1, 1] = np.where(cwt > 0.0, t[:, 1], t[:, 2]).reshape((-1, 1))
+    tp[:, :, 2, 0] = np.where(cwt > 0.0, t[:, 0], t[:, 2]).reshape((-1, 1))
+    tp[:, :, 2, 1] = np.where(cwt > 0.0, t[:, 2], t[:, 0]).reshape((-1, 1))
+    cwtd = clockwise_triangles(pp, tp.reshape((-1, 3)), projection = projection).reshape((t_count, d_count, 3))
+    if edged:
+        return np.all(cwtd <= 0.0, axis = 2)
+    else:
+        return np.all(cwtd < 0.0, axis = 2)
 
 
 def in_circumcircle(a, b, c, d):
@@ -527,6 +593,13 @@ def clockwise_sorted_indices(p, b):
         azi = azimuth(p[i] - centre)
         hull_list.append((azi, i))
     return np.array([i for (_, i) in sorted(hull_list)], dtype = int)
+
+
+def _projected_xyz_axes(projection):
+    assert projection in ['xy', 'xz', 'yz'], f'invalid projection {projection}'
+    a0 = 'xyz'.index(projection[0])
+    a1 = 'xyz'.index(projection[1])
+    return a0, a1
 
 
 # end of vector_utilities module
