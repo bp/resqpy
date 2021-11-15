@@ -18,6 +18,7 @@ import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .OrganizationFeature import OrganizationFeature
+from .GeobodyFeature import GeobodyFeature
 
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)
     """Extracts UUIDs of chrono bottom and top from xml for has occurred during sub-node, or (None, None)."""
