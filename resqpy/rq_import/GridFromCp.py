@@ -1,14 +1,13 @@
-"""GridFromCp.py: add description."""
+"""GridFromCp.py: Class to generate a RESQML grid object from an input corner point array, and other optional inputs."""
 
-version = '12th November 2021'
+version = '15th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
-# RMS and GOCAD are trademarks of Emerson
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('rq_import.py version ' + version)
+log.debug('GridFromCp.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma
@@ -16,7 +15,6 @@ import numpy.ma as ma
 import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.olio.vector_utilities as vec
-# import resqpy.olio.grid_functions as gf
 
 
 class GridFromCp:
@@ -279,6 +277,37 @@ class GridFromCp:
             self.__split_pillars = False
         log.debug('number of extra pillars: ' + str(len(self.__extras_list)))
 
+    def __append_single_pillar(self, i, j, ip, jp, col_j, p_col_i, p_col_j, primary_ip, primary_jp):
+        col_i = i - ip
+        if col_i < 0 or col_i >= self.__ni:
+            return  # no column this side of pillar in i
+        if jp == primary_jp and ip == primary_ip:
+            return  # this column is the primary for this pillar
+        discrepancy = np.max(
+            np.abs(self.__k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
+                   self.__k_reduced_cp_array[:, p_col_j, p_col_i, primary_jp, primary_ip, :]))
+        if discrepancy <= self.__split_tolerance:
+            return  # data for this column's corner aligns with primary
+        for e in range(self.__extras_count[j, i]):
+            eli = self.__extras_list_index[j, i] + e
+            pillar_j_extra = j - self.__extras_list[eli][0]
+            pillar_i_extra = i - self.__extras_list[eli][1]
+            discrepancy = np.max(
+                np.abs(self.__k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
+                       self.__k_reduced_cp_array[:, pillar_j_extra, pillar_i_extra, self.__extras_list[eli][0],
+                                                 self.__extras_list[eli][1], :]))
+            if discrepancy <= self.__split_tolerance:  # data for this corner aligns with existing extra
+                self.__extras_use[col_j, col_i, jp, ip] = e
+                break
+        if self.__extras_use[col_j, col_i, jp, ip] >= 0:  # reusing an existing extra for this pillar
+            return
+        # add this corner as an extra
+        if self.__extras_count[j, i] == 0:  # create entry point for this pillar in extras
+            self.__extras_list_index[j, i] = len(self.__extras_list)
+        self.__extras_list.append((jp, ip))
+        self.__extras_use[col_j, col_i, jp, ip] = self.__extras_count[j, i]
+        self.__extras_count[j, i] += 1
+
     def __append_extra_pillars(self, i, j):
         primary_jp = self.__primary_pillar_jip[j, i, 0]
         primary_ip = self.__primary_pillar_jip[j, i, 1]
@@ -290,35 +319,7 @@ class GridFromCp:
             if col_j < 0 or col_j >= self.__nj:
                 continue  # no column this side of pillar in j
             for ip in range(2):
-                col_i = i - ip
-                if col_i < 0 or col_i >= self.__ni:
-                    continue  # no column this side of pillar in i
-                if jp == primary_jp and ip == primary_ip:
-                    continue  # this column is the primary for this pillar
-                discrepancy = np.max(
-                    np.abs(self.__k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
-                           self.__k_reduced_cp_array[:, p_col_j, p_col_i, primary_jp, primary_ip, :]))
-                if discrepancy <= self.__split_tolerance:
-                    continue  # data for this column's corner aligns with primary
-                for e in range(self.__extras_count[j, i]):
-                    eli = self.__extras_list_index[j, i] + e
-                    pillar_j_extra = j - self.__extras_list[eli][0]
-                    pillar_i_extra = i - self.__extras_list[eli][1]
-                    discrepancy = np.max(
-                        np.abs(self.__k_reduced_cp_array[:, col_j, col_i, jp, ip, :] -
-                               self.__k_reduced_cp_array[:, pillar_j_extra, pillar_i_extra, self.__extras_list[eli][0],
-                                                         self.__extras_list[eli][1], :]))
-                    if discrepancy <= self.__split_tolerance:  # data for this corner aligns with existing extra
-                        self.__extras_use[col_j, col_i, jp, ip] = e
-                        break
-                if self.__extras_use[col_j, col_i, jp, ip] >= 0:  # reusing an existing extra for this pillar
-                    continue
-                # add this corner as an extra
-                if self.__extras_count[j, i] == 0:  # create entry point for this pillar in extras
-                    self.__extras_list_index[j, i] = len(self.__extras_list)
-                self.__extras_list.append((jp, ip))
-                self.__extras_use[col_j, col_i, jp, ip] = self.__extras_count[j, i]
-                self.__extras_count[j, i] += 1
+                self.__append_single_pillar(i, j, ip, jp, col_j, p_col_i, p_col_j, primary_ip, primary_jp)
 
     def __get_points_array(self):
         log.debug('creating points array as used in resqml format')
@@ -394,41 +395,44 @@ class GridFromCp:
 
         self.grid.points_cached = self.__points_array  # NB: reference to points_array, array not copied here
 
+    def __get_split_pillars_lists(self, pillar_i, pillar_j, e):
+        self.__split_pillar_indices_list.append((pillar_j * self.__ni_plus_1) + pillar_i)
+        use_count = 0
+        for jp in range(2):
+            j = pillar_j - jp
+            if j < 0 or j >= self.__nj:
+                continue
+            for ip in range(2):
+                i = pillar_i - ip
+                if i < 0 or i >= self.__ni:
+                    continue
+                if self.__extras_use[j, i, jp, ip] == e:
+                    use_count += 1
+                    self.__cols_for_extra_pillar_list.append((j * self.__ni) + i)
+        assert (use_count > 0)
+        self.__cumulative_length += use_count
+        self.__cumulative_length_list.append(self.__cumulative_length)
+
     def __add_split_arrays_to_grid(self):
         if self.__split_pillars:
             log.debug('adding split pillar arrays to grid object')
-            split_pillar_indices_list = []
-            cumulative_length_list = []
-            cols_for_extra_pillar_list = []
-            cumulative_length = 0
+            self.__split_pillar_indices_list = []
+            self.__cumulative_length_list = []
+            self.__cols_for_extra_pillar_list = []
+            self.__cumulative_length = 0
             for pillar_j in range(self.__nj_plus_1):
                 for pillar_i in range(self.__ni_plus_1):
                     for e in range(self.__extras_count[pillar_j, pillar_i]):
-                        split_pillar_indices_list.append((pillar_j * self.__ni_plus_1) + pillar_i)
-                        use_count = 0
-                        for jp in range(2):
-                            j = pillar_j - jp
-                            if j < 0 or j >= self.__nj:
-                                continue
-                            for ip in range(2):
-                                i = pillar_i - ip
-                                if i < 0 or i >= self.__ni:
-                                    continue
-                                if self.__extras_use[j, i, jp, ip] == e:
-                                    use_count += 1
-                                    cols_for_extra_pillar_list.append((j * self.__ni) + i)
-                        assert (use_count > 0)
-                        cumulative_length += use_count
-                        cumulative_length_list.append(cumulative_length)
-            log.debug('number of extra pillars: ' + str(len(split_pillar_indices_list)))
-            assert (len(cumulative_length_list) == len(split_pillar_indices_list))
-            self.grid.split_pillar_indices_cached = np.array(split_pillar_indices_list, dtype = 'int')
-            log.debug('number of uses of extra pillars: ' + str(len(cols_for_extra_pillar_list)))
-            assert (len(cols_for_extra_pillar_list) == np.count_nonzero(self.__extras_use + 1))
-            assert (len(cols_for_extra_pillar_list) == cumulative_length)
-            self.grid.cols_for_split_pillars = np.array(cols_for_extra_pillar_list, dtype = 'int')
-            assert (len(cumulative_length_list) == len(self.__extras_list))
-            self.grid.cols_for_split_pillars_cl = np.array(cumulative_length_list, dtype = 'int')
+                        self.__get_split_pillars_lists(pillar_i, pillar_j, e)
+            log.debug('number of extra pillars: ' + str(len(self.__split_pillar_indices_list)))
+            assert (len(self.__cumulative_length_list) == len(self.__split_pillar_indices_list))
+            self.grid.split_pillar_indices_cached = np.array(self.__split_pillar_indices_list, dtype = 'int')
+            log.debug('number of uses of extra pillars: ' + str(len(self.__cols_for_extra_pillar_list)))
+            assert (len(self.__cols_for_extra_pillar_list) == np.count_nonzero(self.__extras_use + 1))
+            assert (len(self.__cols_for_extra_pillar_list) == self.__cumulative_length)
+            self.grid.cols_for_split_pillars = np.array(self.__cols_for_extra_pillar_list, dtype = 'int')
+            assert (len(self.__cumulative_length_list) == len(self.__extras_list))
+            self.grid.cols_for_split_pillars_cl = np.array(self.__cumulative_length_list, dtype = 'int')
             self.grid.split_pillars_count = len(self.__extras_list)
 
     def __set_up_column_to_pillars_mapping(self):

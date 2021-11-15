@@ -1,14 +1,11 @@
-"""rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
+"""grid_from_cp.py: Module to generate a RESQML grid object from an input corner point array."""
 
-version = '22nd October 2021'
-
-# Nexus is a registered trademark of the Halliburton Company
-# RMS and GOCAD are trademarks of Emerson
+version = '15th November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('rq_import.py version ' + version)
+log.debug('grid_from_cp.py version ' + version)
 
 from resqpy.rq_import import GridFromCp
 

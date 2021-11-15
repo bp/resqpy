@@ -1,19 +1,15 @@
-"""rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
+"""add_ab_properties.py: Module to add binary grid properties to an existing RESQMl grid object."""
 
-version = '22nd October 2021'
-
-# Nexus is a registered trademark of the Halliburton Company
-# RMS and GOCAD are trademarks of Emerson
+version = '15th November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('rq_import.py version ' + version)
+log.debug('add_ab_properties.py version ' + version)
 
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
-# import resqpy.olio.grid_functions as gf
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rp
 

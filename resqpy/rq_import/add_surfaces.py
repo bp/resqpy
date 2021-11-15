@@ -1,14 +1,13 @@
-"""rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
+"""add_surfaces.py: Module to import a list of surfaces into a RESQML model, as triangulatedsets or mesh objects."""
 
-version = '22nd October 2021'
+version = '15th November 2021'
 
-# Nexus is a registered trademark of the Halliburton Company
 # RMS and GOCAD are trademarks of Emerson
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('rq_import.py version ' + version)
+log.debug('add_surfaces.py version ' + version)
 
 import os
 
@@ -34,12 +33,91 @@ def add_surfaces(
     assert surface_file_list, 'surface file list is empty or missing'
     assert surface_file_format in ['zmap', 'rms', 'roxar',
                                    'GOCAD-Tsurf'], 'unsupported surface file format: ' + str(surface_file_format)
+
+    rq_class = _get_rq_class(rq_class)
+
+    model, crs_uuid, crs_root, h5_mode, ext_uuid, hdf5_file = _get_model_details(epc_file, crs_uuid, ext_uuid)
+
+    for surf_file in surface_file_list:
+        model = _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
+                                    crs_root, rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features,
+                                    ext_uuid)
+
+    # mark model as modified
+    model.set_modified()
+
+    # store new version of model
+    log.info('storing model with additional parts in epc file: ' + epc_file)
+    model.store_epc(epc_file)
+
+    return model
+
+
+def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid, crs_root,
+                        rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features, ext_uuid):
+    _, short_name = os.path.split(surf_file)
+    dot = short_name.rfind('.')
+    if dot > 0:
+        short_name = short_name[:dot]
+
+    log.info('surface ' + short_name + ' processing file: ' + surf_file + ' using format: ' + surface_file_format)
+    if rq_class == 'surface':
+        if surface_file_format == 'GOCAD-Tsurf':
+            surface = rqs.Surface(model,
+                                  tsurf_file = surf_file,
+                                  surface_role = surface_role,
+                                  quad_triangles = quad_triangles)
+        else:
+            surface = rqs.Surface(model,
+                                  mesh_file = surf_file,
+                                  mesh_format = surface_file_format,
+                                  surface_role = surface_role,
+                                  quad_triangles = quad_triangles)
+    elif rq_class == 'mesh':
+        if surface_file_format == 'GOCAD-Tsurf':
+            log.info(f"Cannot convert a GOCAD-Tsurf to mesh, only to TriangulatedSurface - skipping file {surf_file}")
+            return model
+        else:
+            surface = rqs.Mesh(model,
+                               mesh_file = surf_file,
+                               mesh_format = surface_file_format,
+                               mesh_flavour = 'reg&z',
+                               surface_role = surface_role,
+                               crs_uuid = crs_uuid)
+    else:
+        log.critical('this is impossible')
+    # NB. surface may be either a Surface object or a Mesh object
+
+    log.debug('appending to hdf5 file for surface file: ' + surf_file)
+    surface.write_hdf5(hdf5_file, mode = h5_mode)
+
+    if make_horizon_interpretations_and_features:
+        feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', feature_name = short_name)
+        feature.create_xml()
+        interp = rqo.HorizonInterpretation(model, genetic_boundary_feature = feature, domain = 'depth')
+        interp_root = interp.create_xml()
+        surface.set_represented_interpretation_root(interp_root)
+
+    surface.create_xml(ext_uuid,
+                       add_as_part = True,
+                       add_relationships = True,
+                       crs_uuid = rqet.uuid_for_part_root(crs_root),
+                       title = short_name + ' sourced from ' + surf_file,
+                       originator = None)
+
+    return model
+
+
+def _get_rq_class(rq_class):
     if 'TriangulatedSet' in rq_class:
         rq_class = 'surface'
     elif 'Grid2d' in rq_class:
         rq_class = 'mesh'
     assert rq_class in ['surface', 'mesh']
+    return rq_class
 
+
+def _get_model_details(epc_file, crs_uuid, ext_uuid):
     log.info('accessing existing resqml model from: ' + epc_file)
     model = rq.Model(epc_file = epc_file)
     assert model, 'failed to read existing resqml model from file: ' + epc_file
@@ -66,64 +144,4 @@ def add_surfaces(
     # append to hdf5 file using arrays from Surface object's patch(es)
     log.info('will append to hdf5 file: ' + hdf5_file)
 
-    for surf_file in surface_file_list:
-
-        _, short_name = os.path.split(surf_file)
-        dot = short_name.rfind('.')
-        if dot > 0:
-            short_name = short_name[:dot]
-
-        log.info('surface ' + short_name + ' processing file: ' + surf_file + ' using format: ' + surface_file_format)
-        if rq_class == 'surface':
-            if surface_file_format == 'GOCAD-Tsurf':
-                surface = rqs.Surface(model,
-                                      tsurf_file = surf_file,
-                                      surface_role = surface_role,
-                                      quad_triangles = quad_triangles)
-            else:
-                surface = rqs.Surface(model,
-                                      mesh_file = surf_file,
-                                      mesh_format = surface_file_format,
-                                      surface_role = surface_role,
-                                      quad_triangles = quad_triangles)
-        elif rq_class == 'mesh':
-            if surface_file_format == 'GOCAD-Tsurf':
-                log.info(
-                    f"Cannot convert a GOCAD-Tsurf to mesh, only to TriangulatedSurface - skipping file {surf_file}")
-                break
-            else:
-                surface = rqs.Mesh(model,
-                                   mesh_file = surf_file,
-                                   mesh_format = surface_file_format,
-                                   mesh_flavour = 'reg&z',
-                                   surface_role = surface_role,
-                                   crs_uuid = crs_uuid)
-        else:
-            log.critical('this is impossible')
-        # NB. surface may be either a Surface object or a Mesh object
-
-        log.debug('appending to hdf5 file for surface file: ' + surf_file)
-        surface.write_hdf5(hdf5_file, mode = h5_mode)
-
-        if make_horizon_interpretations_and_features:
-            feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', feature_name = short_name)
-            feature.create_xml()
-            interp = rqo.HorizonInterpretation(model, genetic_boundary_feature = feature, domain = 'depth')
-            interp_root = interp.create_xml()
-            surface.set_represented_interpretation_root(interp_root)
-
-        surface.create_xml(ext_uuid,
-                           add_as_part = True,
-                           add_relationships = True,
-                           crs_uuid = rqet.uuid_for_part_root(crs_root),
-                           title = short_name + ' sourced from ' + surf_file,
-                           originator = None)
-
-    # mark model as modified
-    model.set_modified()
-
-    # store new version of model
-    log.info('storing model with additional parts in epc file: ' + epc_file)
-    model.store_epc(epc_file)
-
-    return model
+    return model, crs_uuid, crs_root, h5_mode, ext_uuid, hdf5_file

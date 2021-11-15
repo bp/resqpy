@@ -1,14 +1,13 @@
-"""rq_import.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
+"""import_nexus.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
-version = '22nd October 2021'
+version = '15th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
-# RMS and GOCAD are trademarks of Emerson
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('rq_import.py version ' + version)
+log.debug('import_nexus.py version ' + version)
 
 import glob
 import os
@@ -21,7 +20,6 @@ import resqpy.olio.ab_toolbox as abt
 import resqpy.olio.load_data as ld
 import resqpy.olio.trademark as tm
 import resqpy.olio.vdb as vdb
-# import resqpy.olio.grid_functions as gf
 import resqpy.olio.write_data as wd
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rp
