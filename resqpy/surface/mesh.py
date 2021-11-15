@@ -133,32 +133,32 @@ class Mesh(BaseSurface):
             pass
 
         elif mesh_file and mesh_format and crs_uuid is not None:
-            self._load_from_mesh_file(mesh_file, mesh_flavour, mesh_format, crs_uuid, ni, nj)
+            self.__load_from_mesh_file(mesh_file, mesh_flavour, mesh_format, crs_uuid, ni, nj)
 
         elif xyz_values is not None and crs_uuid is not None:
-            self._load_from_xyz_values(xyz_values)
+            self.__load_from_xyz_values(xyz_values)
 
         else:
-            self._load_from_arguments(ni, nj, origin, dxyz_dij, z_values, z_supporting_mesh_uuid, crs_uuid)
+            self.__load_from_arguments(ni, nj, origin, dxyz_dij, z_values, z_supporting_mesh_uuid, crs_uuid)
 
         assert self.crs_uuid is not None
         if not self.title:
             self.title = 'mesh'
 
-    def _load_from_arguments(self, ni, nj, origin, dxyz_dij, z_values, z_supporting_mesh_uuid, crs_uuid):
+    def __load_from_arguments(self, ni, nj, origin, dxyz_dij, z_values, z_supporting_mesh_uuid, crs_uuid):
         assert ni is not None and nj is not None, 'If loading from arguments ni and nj must be provided'
 
         if z_values is None:
             assert origin is not None and dxyz_dij is not None and crs_uuid is not None, 'origin, dxyz_dij and crs_uuid must be provided for regular mesh'
-            self._regular_mesh_from_arguments(ni, nj, origin, dxyz_dij, z_values)
+            self.__regular_mesh_from_arguments(ni, nj, origin, dxyz_dij, z_values)
         else:
             if z_supporting_mesh_uuid is not None:
-                self._refz_from_arguments(ni, nj, z_values, z_supporting_mesh_uuid)
+                self.__refz_from_arguments(ni, nj, z_values, z_supporting_mesh_uuid)
             else:
                 assert dxyz_dij is not None and crs_uuid is not None and origin is not None, 'dzy_dij, crs_uuid and origin must be provided for regular and z mesh'
-                self._regz_from_arguments(ni, nj, z_values, origin, dxyz_dij)
+                self.__regz_from_arguments(ni, nj, z_values, origin, dxyz_dij)
 
-    def _regz_from_arguments(self, ni, nj, z_values, origin, dxyz_dij):
+    def __regz_from_arguments(self, ni, nj, z_values, origin, dxyz_dij):
         # create a reg&z mesh from arguments
         assert nj > 0 and ni > 0
         assert len(origin) == 3
@@ -175,7 +175,7 @@ class Mesh(BaseSurface):
         self.full_array[..., 2] = z_values.reshape(tuple(self.full_array.shape[:-1]))
         self.flavour = 'reg&z'
 
-    def _refz_from_arguments(self, ni, nj, z_values, z_supporting_mesh_uuid):
+    def __refz_from_arguments(self, ni, nj, z_values, z_supporting_mesh_uuid):
         # create a ref&z mesh from arguments
         assert nj > 0 and ni > 0
         assert z_values.shape == (nj, ni) or z_values.shape == (nj * ni,)
@@ -190,7 +190,7 @@ class Mesh(BaseSurface):
         self.full_array[..., 2] = z_values.reshape(tuple(self.full_array.shape[:-1]))
         assert self.crs_uuid is not None, 'crs uuid missing'
 
-    def _regular_mesh_from_arguments(self, ni, nj, origin, dxyz_dij, z_values):
+    def __regular_mesh_from_arguments(self, ni, nj, origin, dxyz_dij, z_values):
         # create a regular mesh from arguments
         assert nj > 0 and ni > 0
         assert len(origin) == 3
@@ -202,7 +202,7 @@ class Mesh(BaseSurface):
         self.regular_dxyz_dij = np.array(dxyz_dij, dtype = float)
         assert self.crs_uuid is not None, 'crs uuid missing'
 
-    def _load_from_xyz_values(self, xyz_values):
+    def __load_from_xyz_values(self, xyz_values):
         # create an explicit mesh directly from a numpy array of points
         assert xyz_values.ndim == 3 and xyz_values.shape[2] == 3 and xyz_values.shape[0] > 1 and xyz_values.shape[1] > 1
         self.flavour = 'explicit'
@@ -211,7 +211,7 @@ class Mesh(BaseSurface):
         self.full_array = xyz_values.copy()
         assert self.crs_uuid is not None, 'crs uuid missing'
 
-    def _load_from_mesh_file(self, mesh_file, mesh_flavour, mesh_format, crs_uuid, ni, nj):
+    def __load_from_mesh_file(self, mesh_file, mesh_flavour, mesh_format, crs_uuid, ni, nj):
         # load an explicit mesh from an ascii file in RMS text or zmap format
         assert mesh_format in ['rms', 'roxar', 'zmap']  # 'roxar' is treated synonymously with 'rms'
         assert mesh_flavour in ['explicit', 'regular', 'reg&z', 'ref&z']
@@ -246,7 +246,7 @@ class Mesh(BaseSurface):
         assert self.crs_uuid is not None, 'crs uuid missing'
         # todo: option to create a regular and ref&z pair instead of an explicit mesh
 
-    def _load_from_xml_regular(self, point_node):
+    def __load_from_xml_regular(self, point_node):
         self.flavour = 'regular'
         origin_node = rqet.find_tag(point_node, 'Origin')
         self.regular_origin = (rqet.find_tag_float(origin_node,
@@ -274,12 +274,12 @@ class Mesh(BaseSurface):
             assert stride > 0.0, 'spacing distance is not positive in xml for regular mesh (lattice)'
             self.regular_dxyz_dij[1 - j_or_i] *= stride
 
-    def _load_from_xml_explicit(self, point_node):
+    def __load_from_xml_explicit(self, point_node):
         self.flavour = 'explicit'
         self.explicit_h5_key_pair = self.model.h5_uuid_and_path_for_node(point_node, tag = 'Coordinates')
         # load full_array on demand later (see full_array_ref() method)
 
-    def _load_from_xml_refz(self, support_geom_node):
+    def __load_from_xml_refz(self, support_geom_node):
         self.flavour = 'ref&z'
         # assert rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray'  # only this supported for now
         self.ref_uuid = rqet.find_nested_tags_text(support_geom_node, ['SupportingRepresentation', 'UUID'])
@@ -298,7 +298,7 @@ class Mesh(BaseSurface):
             assert count == (self.nj, self.ni)[j_or_i] - 1, \
                 'unexpected value for count in xml spacing info for regular mesh (lattice)'
 
-    def _load_from_xml_regz(self, support_geom_node):
+    def __load_from_xml_regz(self, support_geom_node):
         self.flavour = 'reg&z'
         orig_node = rqet.find_tag(support_geom_node, 'Origin')
         self.regular_origin = (rqet.find_tag_float(orig_node,
@@ -327,7 +327,7 @@ class Mesh(BaseSurface):
             assert stride > 0.0, 'spacing distance is not positive in xml for regular mesh (lattice)'
             self.regular_dxyz_dij[1 - j_or_i] *= stride
 
-    def _load_from_xml_basics(self):
+    def __load_from_xml_basics(self):
         root_node = self.root
         assert root_node is not None
         self.surface_role = rqet.find_tag_text(root_node, 'SurfaceRole')
@@ -350,21 +350,21 @@ class Mesh(BaseSurface):
         return point_node, flavour
 
     def _load_from_xml(self):
-        point_node, flavour = self._load_from_xml_basics()
+        point_node, flavour = self.__load_from_xml_basics()
 
         if flavour == 'Point3dLatticeArray':
-            self._load_from_xml_regular(point_node)
+            self.__load_from_xml_regular(point_node)
         elif flavour == 'Point3dZValueArray':
             # note: only simple, full use of supporting mesh is handled at present
             z_ref_node = rqet.find_tag(point_node, 'ZValues')
             self.ref_z_h5_key_pair = self.model.h5_uuid_and_path_for_node(z_ref_node, tag = 'Values')
             support_geom_node = rqet.find_tag(point_node, 'SupportingGeometry')
             if rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray':
-                self._load_from_xml_refz(support_geom_node)
+                self.__load_from_xml_refz(support_geom_node)
             elif rqet.node_type(support_geom_node) == 'Point3dLatticeArray':
-                self._load_from_xml_regz(support_geom_node)
+                self.__load_from_xml_regz(support_geom_node)
         elif flavour in ['Point3dHdf5Array', 'Point2dHdf5Array']:
-            self._load_from_xml_explicit(point_node)
+            self.__load_from_xml_explicit(point_node)
         else:
             raise Exception('unrecognised flavour for mesh points')
 
@@ -373,7 +373,7 @@ class Mesh(BaseSurface):
 
         self.represented_interpretation_root = interp_root
 
-    def _full_array_ref_explicit(self):
+    def __full_array_ref_explicit(self):
         # load array directly from hdf5 points reference; note: could be xyz or xy data
         assert self.explicit_h5_key_pair is not None, 'h5 key pair not established for mesh'
         try:
@@ -386,7 +386,7 @@ class Mesh(BaseSurface):
         except Exception:
             log.exception('hdf5 points failure for mesh')
 
-    def _full_array_ref_regular(self):
+    def __full_array_ref_regular(self):
         self.full_array = np.empty((self.nj, self.ni, 3))
         x_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 0], num = self.nj)
         y_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 1], num = self.nj)
@@ -397,9 +397,9 @@ class Mesh(BaseSurface):
         self.full_array = np.stack((x_full, y_full, z_full), axis = -1) + self.regular_origin
 
         if self.flavour == 'reg&z':  # overwrite regular z values with explicitly stored z values
-            self._full_array_ref_regz()
+            self.__full_array_ref_regz()
 
-    def _full_array_ref_regz(self):
+    def __full_array_ref_regz(self):
         assert self.ref_z_h5_key_pair is not None, 'h5 key pair missing for mesh z values'
         try:
             self.model.h5_array_element(self.ref_z_h5_key_pair,
@@ -412,7 +412,7 @@ class Mesh(BaseSurface):
         self.full_array[..., 2] = self.temp_z
         delattr(self, 'temp_z')
 
-    def _full_array_ref_refz(self):
+    def __full_array_ref_refz(self):
         # load array from referenced mesh and overwrite z values
         if self.ref_mesh is None:
             self.ref_mesh = Mesh(self.model, uuid = self.ref_uuid)
@@ -442,11 +442,11 @@ class Mesh(BaseSurface):
             return self.full_array
 
         if self.flavour == 'explicit':
-            self._full_array_ref_explicit()
+            self.__full_array_ref_explicit()
         elif self.flavour in ['regular', 'reg&z']:
-            self._full_array_ref_regular()
+            self.__full_array_ref_regular()
         elif self.flavour == 'ref&z':
-            self._full_array_ref_refz()
+            self.__full_array_ref_refz()
         else:
             raise Exception(f'unrecognised mesh flavour when fetching full array: {self.flavour}')
 
@@ -480,7 +480,7 @@ class Mesh(BaseSurface):
             log.error('bad mesh flavour when writing hdf5 array')
         h5_reg.write(file_name, mode = mode)
 
-    def _create_xml_regular(self, p_node):
+    def __create_xml_regular(self, p_node):
 
         assert self.regular_origin is not None and self.regular_dxyz_dij is not None
 
@@ -513,7 +513,7 @@ class Mesh(BaseSurface):
             else:
                 oc_node.text = str(self.nj - 1)
 
-    def _create_xml_refandz(self, p_node, ext_uuid):
+    def __create_xml_refandz(self, p_node, ext_uuid):
         assert ext_uuid is not None
         assert self.ref_uuid is not None
 
@@ -564,7 +564,7 @@ class Mesh(BaseSurface):
 
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'zvalues', root = v_node)
 
-    def _create_xml_regandz(self, p_node, ext_uuid):
+    def __create_xml_regandz(self, p_node, ext_uuid):
 
         assert ext_uuid is not None
 
@@ -614,7 +614,7 @@ class Mesh(BaseSurface):
 
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'zvalues', root = v_node)
 
-    def _create_xml_explicit(self, p_node, ext_uuid, use_xy_only):
+    def __create_xml_explicit(self, p_node, ext_uuid, use_xy_only):
         assert ext_uuid is not None
 
         if use_xy_only:
@@ -628,7 +628,7 @@ class Mesh(BaseSurface):
 
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points', root = coords)
 
-    def _create_xml_basics(self, g2d_node):
+    def __create_xml_basics(self, g2d_node):
         if self.represented_interpretation_root is not None:
             interp_root = self.represented_interpretation_root
             interp_uuid = bu.uuid_from_string(interp_root.attrib['uuid'])
@@ -670,7 +670,7 @@ class Mesh(BaseSurface):
 
         return p_node
 
-    def _create_xml_add_parts(self, g2d_node, ref_root, add_relationships, ext_uuid):
+    def __create_xml_add_parts(self, g2d_node, ref_root, add_relationships, ext_uuid):
         self.model.add_part('obj_Grid2dRepresentation', self.uuid, g2d_node)
         if add_relationships:
             self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', self.crs_root, 'sourceObject')
@@ -724,21 +724,21 @@ class Mesh(BaseSurface):
 
         g2d_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
-        p_node = self._create_xml_basics(g2d_node)
+        p_node = self.__create_xml_basics(g2d_node)
 
         ref_root = None
 
         if self.flavour == 'regular':
-            self._create_xml_regular(p_node)
+            self.__create_xml_regular(p_node)
 
         elif self.flavour == 'ref&z':
-            self._create_xml_refandz(p_node, ext_uuid)
+            self.__create_xml_refandz(p_node, ext_uuid)
 
         elif self.flavour == 'reg&z':
-            self._create_xml_regandz(p_node, ext_uuid)
+            self.__create_xml_regandz(p_node, ext_uuid)
 
         elif self.flavour == 'explicit':
-            self._create_xml_explicit(p_node, ext_uuid, use_xy_only)
+            self.__create_xml_explicit(p_node, ext_uuid, use_xy_only)
 
         else:
             log.error('mesh has bad flavour when creating xml')
@@ -747,6 +747,6 @@ class Mesh(BaseSurface):
         if root is not None:
             root.append(g2d_node)
         if add_as_part:
-            self._create_xml_add_parts(g2d_node, ref_root, add_relationships, ext_uuid)
+            self.__create_xml_add_parts(g2d_node, ref_root, add_relationships, ext_uuid)
 
         return g2d_node
