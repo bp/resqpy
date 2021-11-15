@@ -209,7 +209,7 @@ def test_regular_mesh(example_model_and_crs):
     assert len(surf.distinct_edges()) == 6 * (ni - 1) * (nj - 1) + (ni - 1) + (nj - 1)
 
 
-#@pytest.mark.skip(reason = "Bug in Mesh for ref&z flavou needs fixing first")
+# @pytest.mark.skip(reason = "Bug in Mesh for ref&z flavou needs fixing first")
 def test_refandz_mesh(example_model_and_crs):
     model, crs = example_model_and_crs
 
@@ -322,6 +322,53 @@ def test_explicit_mesh(example_model_and_crs):
 
     # check a fully expanded version of the points
     assert_array_almost_equal(persistent_mesh.full_array_ref(), mesh.full_array_ref())
+
+
+@pytest.mark.parametrize('flavour,infile,filetype', [('explicit', 'Surface_roxartext.txt', 'roxar'),
+                                                     ('explicit', 'Surface_roxartext.txt', 'rms'),
+                                                     ('explicit', 'Surface_zmap.dat', 'zmap'),
+                                                     ('regular', 'Surface_roxartext.txt', 'roxar'),
+                                                     ('regular', 'Surface_roxartext.txt', 'rms'),
+                                                     ('regular', 'Surface_zmap.dat', 'zmap'),
+                                                     ('reg&z', 'Surface_roxartext.txt', 'roxar'),
+                                                     ('reg&z', 'Surface_roxartext.txt', 'rms'),
+                                                     ('reg&z', 'Surface_zmap.dat', 'zmap')])
+def test_mesh_file(example_model_and_crs, test_data_path, flavour, infile, filetype):
+    model, crs = example_model_and_crs
+
+    mesh_file = test_data_path / infile
+
+    # make an explicit mesh representation
+    mesh = resqpy.surface.Mesh(model,
+                               crs_uuid = crs.uuid,
+                               mesh_flavour = flavour,
+                               mesh_file = mesh_file,
+                               mesh_format = filetype,
+                               title = 'mesh from file',
+                               originator = 'Emma',
+                               extra_metadata = {'testing mode': 'automated'})
+    assert mesh is not None
+    mesh.write_hdf5()
+    mesh.create_xml()
+    mesh_uuid = mesh.uuid
+
+    # fully write model to disc
+    model.store_epc()
+    epc = model.epc_file
+
+    # re-open model and check the mesh object is there
+    model = rq.Model(epc)
+    assert bu.matching_uuids(model.uuid(obj_type = 'Grid2dRepresentation', title = 'mesh from file'), mesh_uuid)
+
+    # establish a resqpy Mesh from the object in the RESQML dataset
+    persistent_mesh = resqpy.surface.Mesh(model, uuid = mesh_uuid)
+
+    # check some of the metadata
+    assert persistent_mesh.flavour == flavour
+
+    # check a fully expanded version of the points
+    if flavour != 'regular':
+        assert_array_almost_equal(persistent_mesh.full_array_ref(), mesh.full_array_ref())
 
 
 def test_pointset_from_array(example_model_and_crs):
