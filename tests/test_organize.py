@@ -15,7 +15,7 @@ from resqpy.model import Model
             dict(feature_name = 'hello', organization_kind = 'stratigraphic'),
         ),
         (
-            rqo.GeobodyFeature,
+            rqo_new.GeobodyFeature,
             dict(feature_name = 'hi'),
         ),
         (
