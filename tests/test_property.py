@@ -663,3 +663,36 @@ def test_establish_has_multiple_realisations_single(example_model_with_prop_ts_r
     assert len(pc.parts()) == 2
     assert not pc.establish_has_multiple_realizations()
     assert not pc.has_multiple_realizations()
+
+
+def test_establish_time_set_kind(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Assert model is not a time set
+    assert pc.establish_time_set_kind() == 'not a time set'
+
+    # Remove parts where ts != 2000-01-01Z
+    for part in pc.parts():
+        if pc.time_index_for_part(part) != 0:
+            pc.remove_part_from_dict(part)
+    # Assert new model is a single time
+    assert len(pc.parts()) == 1
+    assert pc.establish_time_set_kind() == 'single time'
+
+
+def test_discombobulated_combobulated_face_arrays(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    orig = np.array([[[[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]]])
+    pc = model.grid().property_collection
+
+    # Act
+    combob = pc.combobulated_face_array(orig)
+    assert combob.shape[-1] == 2
+    assert combob.shape[-2] == 3
+    discombob = pc.discombobulated_face_array(combob)
+    assert discombob.shape[-1] == 6
+
+    # Assert
+    assert_array_almost_equal(orig, discombob)

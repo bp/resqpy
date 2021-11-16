@@ -2488,11 +2488,12 @@ class PropertyCollection():
 
         assert resqpy_a.ndim >= 2 and resqpy_a.shape[-2] == 3 and resqpy_a.shape[-1] == 2
 
-        resqml_a_shape = tuple(list(resqpy_a.shape[:-2]).append(6))
+        resqml_a_shape = tuple(list(resqpy_a.shape[:-2]) + [6])
         resqml_a = np.empty(resqml_a_shape, dtype = resqpy_a.dtype)
 
         for face in range(6):
-            resqml_a[..., face] = resqpy_a[..., self.face_index_inverse_map[face]]
+            axis, polarity = self.face_index_inverse_map[face]
+            resqml_a[..., face] = resqpy_a[..., axis, polarity]
 
         return resqml_a
 
