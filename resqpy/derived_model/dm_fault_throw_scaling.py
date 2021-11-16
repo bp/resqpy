@@ -78,42 +78,7 @@ def fault_throw_scaling(epc_file,
        scaling factor applied independently, leading to some unrealistic results
     """
 
-    assert epc_file or new_epc_file, 'epc file name not specified'
-    if new_epc_file and epc_file and (
-        (new_epc_file == epc_file) or
-        (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
-        new_epc_file = None
-    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
-    if source_grid is None:
-        model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model
-    else:
-        model = source_grid.model
-    assert source_grid.grid_representation == 'IjkGrid'
-    assert model is not None
-
-    assert source_grid.has_split_coordinate_lines, 'cannot scale fault throws in unfaulted grid'
-    assert scaling_factor is not None or (connection_set is not None and scaling_dict is not None)
-
-    if ref_k_faces == 'base':
-        ref_k0 += 1
-    assert ref_k0 >= 0 and ref_k0 <= source_grid.nk, 'reference layer out of range'
-
-    # take a copy of the grid
-    log.debug('copying grid')
-    grid = copy_grid(source_grid, model)
-    grid.cache_all_geometry_arrays()  # probably already cached anyway
-
-    # todo: handle pillars with no geometry defined, and cells without geometry defined
-    assert grid.geometry_defined_for_all_pillars(), 'not all pillars have defined geometry'
-    all_good = grid.geometry_defined_for_all_cells()
-    if not all_good:
-        log.warning('not all cells have defined geometry')
-
-    primaries = (grid.nj + 1) * (grid.ni + 1)
-    offsets = np.zeros(grid.points_cached.shape[1:])
-
-    if scaling_factor is not None:  # apply global scaling to throws
+    def set_offsets_based_on_scaling_factor(grid, scaling_factor, offsets):
         # fetch unsplit equivalent of grid points for reference layer interface
         log.debug('fetching unsplit equivalent grid points')
         unsplit_points = grid.unsplit_points_ref().reshape(grid.nk + 1, -1, 3)
@@ -130,7 +95,7 @@ def fault_throw_scaling(epc_file,
         # apply global scaling to throws
         offsets[:] = semi_throws * (scaling_factor - 1.0)
 
-    if connection_set is not None and scaling_dict is not None:  # overwrite any global offsets with named fault throw adjustments
+    def set_offsets_based_on_scaling_dict(grid, connection_set, scaling_dict, offsets):
         connection_set.cache_arrays()
         for fault_index in range(len(connection_set.feature_list)):
             fault_name = connection_set.fault_name_for_feature_index(fault_index)
@@ -169,18 +134,7 @@ def fault_throw_scaling(epc_file,
                         offsets[p_b] = (grid.points_cached[ref_k0, p_b] - mid_point) * (fault_scaling - 1.0)
                         p_list.append(p_b)
 
-    # initialise flag array for adjustments
-    adjusted = np.zeros((primaries,), dtype = bool)
-
-    # insert adjusted throws to all layers of split pillars
-    grid.points_cached[:, grid.split_pillar_indices_cached, :] += offsets[grid.split_pillar_indices_cached, :].reshape(
-        1, -1, 3)
-    adjusted[grid.split_pillar_indices_cached] = True
-    grid.points_cached[:, primaries:, :] += offsets[primaries:, :].reshape(1, -1, 3)
-
-    # iteratively look for pillars neighbouring adjusted pillars, adjusting by a decayed amount
-    adjusted = adjusted.reshape((grid.nj + 1, grid.ni + 1))
-    while cell_range > 0:
+    def neighbourly_adjustment(grid, offsets, adjusted, cell_range):
         offset_decay = (maths.pow(2.0, cell_range) - 1.0) / (maths.pow(2.0, cell_range + 1) - 1.0)
         newly_adjusted = np.zeros((grid.nj + 1, grid.ni + 1), dtype = bool)
         for j in range(grid.nj + 1):
@@ -228,6 +182,81 @@ def fault_throw_scaling(epc_file,
                 offsets[p, :2] = offsets[p, 2] * dxy_dz
                 grid.points_cached[:, p, :] += offsets[p, :].reshape((1, 3))
                 newly_adjusted[j, i] = True
+        return newly_adjusted
+
+    def inherit_gcs_list(epc_file, gcs_list):
+        gcs_inheritance_model = rq.Model(epc_file)
+        for gcs, gcs_title in gcs_list:
+            # log.debug(f'inheriting gcs: {gcs_title}; old gcs uuid: {gcs.uuid}')
+            gcs.uuid = bu.new_uuid()
+            grid_list_modifications = []
+            for gi, g in enumerate(gcs.grid_list):
+                # log.debug(f'gcs uses grid: {g.title}; grid uuid: {g.uuid}')
+                if bu.matching_uuids(g.uuid, source_grid.uuid):
+                    grid_list_modifications.append(gi)
+            assert len(grid_list_modifications)
+            for gi in grid_list_modifications:
+                gcs.grid_list[gi] = grid
+            gcs.model = gcs_inheritance_model
+            gcs.write_hdf5()
+            gcs.create_xml(title = gcs_title)
+        gcs_inheritance_model.store_epc()
+        gcs_inheritance_model.h5_release()
+
+    assert epc_file or new_epc_file, 'epc file name not specified'
+    if new_epc_file and epc_file and (
+        (new_epc_file == epc_file) or
+        (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
+        new_epc_file = None
+    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
+    if source_grid is None:
+        model = rq.Model(epc_file)
+        source_grid = model.grid()  # requires there to be exactly one grid in model
+    else:
+        model = source_grid.model
+    assert source_grid.grid_representation == 'IjkGrid'
+    assert model is not None
+
+    assert source_grid.has_split_coordinate_lines, 'cannot scale fault throws in unfaulted grid'
+    assert scaling_factor is not None or (connection_set is not None and scaling_dict is not None)
+
+    if ref_k_faces == 'base':
+        ref_k0 += 1
+    assert ref_k0 >= 0 and ref_k0 <= source_grid.nk, 'reference layer out of range'
+
+    # take a copy of the grid
+    log.debug('copying grid')
+    grid = copy_grid(source_grid, model)
+    grid.cache_all_geometry_arrays()  # probably already cached anyway
+
+    # todo: handle pillars with no geometry defined, and cells without geometry defined
+    assert grid.geometry_defined_for_all_pillars(), 'not all pillars have defined geometry'
+    all_good = grid.geometry_defined_for_all_cells()
+    if not all_good:
+        log.warning('not all cells have defined geometry')
+
+    primaries = (grid.nj + 1) * (grid.ni + 1)
+    offsets = np.zeros(grid.points_cached.shape[1:])
+
+    if scaling_factor is not None:  # apply global scaling to throws
+        set_offsets_based_on_scaling_factor(grid, scaling_factor, offsets)
+
+    if connection_set is not None and scaling_dict is not None:  # overwrite any global offsets with named fault throw adjustments
+        set_offsets_based_on_scaling_dict(grid, connection_set, scaling_dict, offsets)
+
+    # initialise flag array for adjustments
+    adjusted = np.zeros((primaries,), dtype = bool)
+
+    # insert adjusted throws to all layers of split pillars
+    grid.points_cached[:, grid.split_pillar_indices_cached, :] += offsets[grid.split_pillar_indices_cached, :].reshape(
+        1, -1, 3)
+    adjusted[grid.split_pillar_indices_cached] = True
+    grid.points_cached[:, primaries:, :] += offsets[primaries:, :].reshape(1, -1, 3)
+
+    # iteratively look for pillars neighbouring adjusted pillars, adjusting by a decayed amount
+    adjusted = adjusted.reshape((grid.nj + 1, grid.ni + 1))
+    while cell_range > 0:
+        newly_adjusted = neighbourly_adjustment(grid, offsets, adjusted, cell_range)
         adjusted = np.logical_or(adjusted, newly_adjusted)
         cell_range -= 1
 
@@ -279,23 +308,7 @@ def fault_throw_scaling(epc_file,
 
     if len(gcs_list):
         log.debug(f'inheriting grid connection sets related to source grid: {source_grid.uuid}')
-        gcs_inheritance_model = rq.Model(epc_file)
-        for gcs, gcs_title in gcs_list:
-            # log.debug(f'inheriting gcs: {gcs_title}; old gcs uuid: {gcs.uuid}')
-            gcs.uuid = bu.new_uuid()
-            grid_list_modifications = []
-            for gi, g in enumerate(gcs.grid_list):
-                # log.debug(f'gcs uses grid: {g.title}; grid uuid: {g.uuid}')
-                if bu.matching_uuids(g.uuid, source_grid.uuid):
-                    grid_list_modifications.append(gi)
-            assert len(grid_list_modifications)
-            for gi in grid_list_modifications:
-                gcs.grid_list[gi] = grid
-            gcs.model = gcs_inheritance_model
-            gcs.write_hdf5()
-            gcs.create_xml(title = gcs_title)
-        gcs_inheritance_model.store_epc()
-        gcs_inheritance_model.h5_release()
+        inherit_gcs_list(epc_file, gcs_list)
 
     return grid
 
