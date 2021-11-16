@@ -640,6 +640,7 @@ def test_establish_has_multiple_realisations(example_model_with_prop_ts_rels):
     pc = model.grid().property_collection
     # Assert initial model has multiple
     assert pc.establish_has_multiple_realizations()
+    assert pc.has_multiple_realizations()
     # Remove parts with realiations
     for part in pc.parts():
         if pc.realization_for_part(part) is not None:
@@ -647,6 +648,7 @@ def test_establish_has_multiple_realisations(example_model_with_prop_ts_rels):
     # Assert new model has not got multiple
     assert len(pc.parts()) == 8
     assert not pc.establish_has_multiple_realizations()
+    assert not pc.has_multiple_realizations()
 
 
 def test_establish_has_multiple_realisations_single(example_model_with_prop_ts_rels):
@@ -660,3 +662,4 @@ def test_establish_has_multiple_realisations_single(example_model_with_prop_ts_r
     # Assert new model has not got multiple
     assert len(pc.parts()) == 2
     assert not pc.establish_has_multiple_realizations()
+    assert not pc.has_multiple_realizations()
