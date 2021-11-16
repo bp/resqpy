@@ -3,7 +3,7 @@
 import os
 import numpy as np
 
-import resqpy.grid_funtions as gf
+import resqpy.olio.grid_functions as gf
 import resqpy.rq_import as rqi
 
 
