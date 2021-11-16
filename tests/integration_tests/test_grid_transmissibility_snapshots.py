@@ -23,12 +23,12 @@ def test_check_transmisibility_output(test_data_path):
     current_filename = os.path.split(getsourcefile(lambda: 0))[0]
     base_folder = os.path.dirname(os.path.dirname(current_filename))
 
-    resqml_file_root = base_folder + '\\example_data\\block.epc'
+    resqml_file_root = base_folder + '/example_data/block.epc'
     grid_model = rq.Model(resqml_file_root)
     resqml_grid = grid_model.grid()
     k, j, i = resqml_grid.transmissibility()
 
-    snapshot_filename = current_filename + "\\snapshots\\transmissibility\\"
+    snapshot_filename = current_filename + "/snapshots/transmissibility/"
     check_load_snapshot(i, f'{snapshot_filename}block_i.txt')
     check_load_snapshot(j, f'{snapshot_filename}block_j.txt')
     check_load_snapshot(k, f'{snapshot_filename}block_k.txt')
