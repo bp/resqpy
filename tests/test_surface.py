@@ -29,7 +29,8 @@ def test_surface(tmp_model):
     # Check fault can be loaded in again
     model.store_epc()
     fault_interp = resqpy.organize.organize_old.FaultInterpretation(model, uuid = surf.represented_interpretation_uuid)
-    fault_feature = resqpy.organize.organize_old.TectonicBoundaryFeature(model, uuid = fault_interp.tectonic_boundary_feature.uuid)
+    fault_feature = resqpy.organize.organize_old.TectonicBoundaryFeature(
+        model, uuid = fault_interp.tectonic_boundary_feature.uuid)
 
     # Check title matches expected title
     assert fault_feature.feature_name == title

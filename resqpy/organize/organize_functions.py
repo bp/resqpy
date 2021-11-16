@@ -4,6 +4,7 @@ version = '9th August 2021'
 
 import resqpy.olio.xml_et as rqet
 
+
 def alias_for_attribute(attribute_name):
     """Return an attribute that is a direct alias for an existing attribute."""
 

@@ -20,6 +20,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .OrganizationFeature import OrganizationFeature
 from .GeobodyFeature import GeobodyFeature
 
+
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)
     """Extracts UUIDs of chrono bottom and top from xml for has occurred during sub-node, or (None, None)."""
     hod_node = rqet.find_tag(parent_node, tag)
@@ -148,7 +149,6 @@ def alias_for_attribute(attribute_name):
 #             self.model.add_part('obj_OrganizationFeature', self.uuid, ofn)
 #
 #         return ofn
-
 
 # class GeobodyFeature(BaseResqpy):
 #     """Class for RESQML Geobody Feature objects (note: definition may be incomplete in RESQML 2.0.1)."""
