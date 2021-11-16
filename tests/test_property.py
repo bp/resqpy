@@ -518,34 +518,37 @@ def test_remove_part_from_dict(example_model_with_properties):
     assert part not in pc.parts()
 
 
-def test_part_str(example_model_with_properties):
+def test_part_str(example_model_with_prop_ts_rels):
     # Arrange
-    model = example_model_with_properties
+    model = example_model_with_prop_ts_rels
     pc = model.grid().property_collection
     assert pc is not None
     part_disc = pc.parts()[0]
     part_cont = pc.parts()[-1]
+    part_facet = pc.parts()[4]
 
     # Act / Assert
     assert pc.part_str(part_disc) == 'discrete (Zone)'
     assert pc.part_str(part_disc, include_citation_title = False) == 'discrete'
-    assert pc.part_str(part_cont) == 'saturation (SW)'
-    assert pc.part_str(part_cont, include_citation_title = False) == 'saturation'
-    # TODO: add additional tests for facet and time indexed properties
+    assert pc.part_str(part_cont) == 'saturation; timestep: 2 (SW)'
+    assert pc.part_str(part_cont, include_citation_title = False) == 'saturation; timestep: 2'
+    assert pc.part_str(part_facet) == 'rock permeability: J (Perm)'
+    assert pc.part_str(part_facet, include_citation_title = False) == 'rock permeability: J'
 
 
-def test_part_filename(example_model_with_properties):
+def test_part_filename(example_model_with_prop_ts_rels):
     # Arrange
-    model = example_model_with_properties
+    model = example_model_with_prop_ts_rels
     pc = model.grid().property_collection
     assert pc is not None
     part_disc = pc.parts()[0]
     part_cont = pc.parts()[-1]
+    part_facet = pc.parts()[4]
 
     # Act / Assert
     assert pc.part_filename(part_disc) == 'discrete'
-    assert pc.part_filename(part_cont) == 'saturation'
-    # TODO: add additional tests for facet and time indexed properties
+    assert pc.part_filename(part_cont) == 'saturation_ts_2'
+    assert pc.part_filename(part_facet) == 'rock_permeability_J'
 
 
 def test_grid_for_part(example_model_with_properties):
@@ -578,7 +581,6 @@ def test_all_discrete(example_model_with_properties):
 
     # Act / Assert
     assert len(pc.parts()) == 4
-    print(pc.parts())
     assert pc.all_discrete()
 
 
@@ -614,3 +616,47 @@ def test_h5_overwrite_slice(example_model_with_properties):
     # Assert
     new_full = pc.cached_part_array_ref(part)
     assert_array_almost_equal(new_slice, new_full[0, 0])
+
+
+def test_string_lookup_for_part(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    lookup = model.parts_list_of_type('obj_StringTableLookup')[0]
+    assert lookup is not None
+    facies_part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Facies']
+    assert len(facies_part) == 1
+
+    # Act
+    lookup_uuid = pc.string_lookup_uuid_for_part(facies_part[0])
+
+    # Assert
+    assert bu.matching_uuids(lookup_uuid, model.uuid_for_part(lookup))
+
+
+def test_establish_has_multiple_realisations(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Assert initial model has multiple
+    assert pc.establish_has_multiple_realizations()
+    # Remove parts with realiations
+    for part in pc.parts():
+        if pc.realization_for_part(part) is not None:
+            pc.remove_part_from_dict(part)
+    # Assert new model has not got multiple
+    assert len(pc.parts()) == 8
+    assert not pc.establish_has_multiple_realizations()
+
+
+def test_establish_has_multiple_realisations_single(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Remove parts with realiation is None or 0
+    for part in pc.parts():
+        if pc.realization_for_part(part) in [None, 0]:
+            pc.remove_part_from_dict(part)
+    # Assert new model has not got multiple
+    assert len(pc.parts()) == 2
+    assert not pc.establish_has_multiple_realizations()
