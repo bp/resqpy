@@ -116,80 +116,81 @@ def extract_box_for_well(epc_file = None,
         log.info('box for well is: ' + bx.string_iijjkk1_for_box_kji0(box) + ' (simulator protocol)')
         return box
 
-    def build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory,
-                         blocked_well, bw_cells, cols_ji0, quad_triangles, outer_radius):
-       # todo: handle base interfaces above k gaps
-       # either work with grid layers of interfaces between layers (grid horizons)
-       # intialise masks to False
-       inclusion_mask = np.zeros(source_grid.extent_kji, dtype = bool)
-       outer_inactive_mask = None if outer_radius is None else np.zeros(source_grid.extent_kji, dtype = bool)
-       h_or_l = 'layer' if trajectory is None else 'horizon'
-       end_k0 = max_k0 + 1 if trajectory is None else max_k0 + 2
-       for k in range(min_k0, end_k0):
-           if trajectory is None:
-               if blocked_well is None:
-                   cols, intersect_points = cols_ji0, centres[k, column_ji0[0], column_ji0[1]].reshape((1, 3))
-               else:
-                   selected_cells = np.where(bw_cells[:, 0] == k)[0]
-                   cells = bw_cells[selected_cells]
-                   cols = cells[:, 1:]
-                   intersect_points = centres[cells[:, 0], cells[:, 1], cells[:, 2]]
-           else:
-               if k < source_grid.nk:
-                   cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
-                       trajectory, source_grid, k0 = k, ref_k_faces = 'top', quad_triangles = quad_triangles)
-               else:
-                   cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
-                       trajectory, source_grid, k0 = k - 1, ref_k_faces = 'base', quad_triangles = quad_triangles)
-           if cols is None or len(cols) == 0:
-               if not warned:
-                   log.warning(f"no intersection found between well and {h_or_l}(s) such as: {k}")
-                   warned = True
-               continue
-           count = cols.shape[0]
-           assert len(intersect_points) == count
-           if count > 1:
-               log.warning(f"{count} intersections found between well and {h_or_l}: {k}")
-           layer_mask = np.zeros((source_grid.nj, source_grid.ni), dtype = bool)  # to be set True within radius
-           if outer_radius is not None:
-               # to be set False within outer_radius
-               outer_layer_mask = np.ones((source_grid.nj, source_grid.ni), dtype = bool)
-           for intersect in range(count):
-               log.debug(f"well intersects {h_or_l} {k} in column j0,i0: {cols[intersect, 0]}, {cols[intersect, 1]}")
-               if radius > 0.0 or outer_radius is not None:
-                   if k < source_grid.nk:
-                       vectors = centres[k] - intersect_points[intersect].reshape((1, 1, 3))
-                       distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
-                       if radius > 0.0:
-                           layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
-                       if outer_radius is not None:
-                           outer_layer_mask = np.logical_and(outer_layer_mask,
-                                                             np.greater_equal(distance_sqr, outer_radius_sqr))
-                   if k > 0 and (not source_grid.k_gaps or k >= source_grid.nk - 1 or
-                                 not source_grid.k_gap_after_array[k - 1]):
-                       vectors = centres[k - 1] - intersect_points[intersect].reshape((1, 1, 3))
-                       distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
-                       if radius > 0.0:
-                           layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
-                       if outer_radius is not None:
-                           outer_layer_mask = np.logical_and(outer_layer_mask,
-                                                             np.greater_equal(distance_sqr, outer_radius_sqr))
-               layer_mask[cols[intersect, 0], cols[intersect, 1]] = True
-           if k <= max_k0:
-               inclusion_mask[k] = layer_mask
-               if outer_radius is not None:
-                   outer_inactive_mask[k] = outer_layer_mask
-           if k > min_k0:
-               inclusion_mask[k - 1] = np.logical_or(inclusion_mask[k - 1], layer_mask)
-               if outer_radius is not None:
-                   outer_inactive_mask[k - 1] = np.logical_and(outer_inactive_mask[k - 1], outer_layer_mask)
-           log.debug(f"number of columns found in {h_or_l} {k} within radius around well: {np.count_nonzero(layer_mask)}")
-       inc_count = np.count_nonzero(inclusion_mask)
-       if inc_count == 0:
-           log.error('no cells found within search radius around well')
-           return None, None
-       log.info('total number of cells found within radius around well: ' + str(inc_count))
-       return inclusion_mask, outer_inactive_mask
+    def build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked_well, bw_cells, cols_ji0,
+                         quad_triangles, outer_radius):
+        # todo: handle base interfaces above k gaps
+        # either work with grid layers of interfaces between layers (grid horizons)
+        # intialise masks to False
+        inclusion_mask = np.zeros(source_grid.extent_kji, dtype = bool)
+        outer_inactive_mask = None if outer_radius is None else np.zeros(source_grid.extent_kji, dtype = bool)
+        h_or_l = 'layer' if trajectory is None else 'horizon'
+        end_k0 = max_k0 + 1 if trajectory is None else max_k0 + 2
+        for k in range(min_k0, end_k0):
+            if trajectory is None:
+                if blocked_well is None:
+                    cols, intersect_points = cols_ji0, centres[k, column_ji0[0], column_ji0[1]].reshape((1, 3))
+                else:
+                    selected_cells = np.where(bw_cells[:, 0] == k)[0]
+                    cells = bw_cells[selected_cells]
+                    cols = cells[:, 1:]
+                    intersect_points = centres[cells[:, 0], cells[:, 1], cells[:, 2]]
+            else:
+                if k < source_grid.nk:
+                    cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
+                        trajectory, source_grid, k0 = k, ref_k_faces = 'top', quad_triangles = quad_triangles)
+                else:
+                    cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
+                        trajectory, source_grid, k0 = k - 1, ref_k_faces = 'base', quad_triangles = quad_triangles)
+            if cols is None or len(cols) == 0:
+                if not warned:
+                    log.warning(f"no intersection found between well and {h_or_l}(s) such as: {k}")
+                    warned = True
+                continue
+            count = cols.shape[0]
+            assert len(intersect_points) == count
+            if count > 1:
+                log.warning(f"{count} intersections found between well and {h_or_l}: {k}")
+            layer_mask = np.zeros((source_grid.nj, source_grid.ni), dtype = bool)  # to be set True within radius
+            if outer_radius is not None:
+                # to be set False within outer_radius
+                outer_layer_mask = np.ones((source_grid.nj, source_grid.ni), dtype = bool)
+            for intersect in range(count):
+                log.debug(f"well intersects {h_or_l} {k} in column j0,i0: {cols[intersect, 0]}, {cols[intersect, 1]}")
+                if radius > 0.0 or outer_radius is not None:
+                    if k < source_grid.nk:
+                        vectors = centres[k] - intersect_points[intersect].reshape((1, 1, 3))
+                        distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
+                        if radius > 0.0:
+                            layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
+                        if outer_radius is not None:
+                            outer_layer_mask = np.logical_and(outer_layer_mask,
+                                                              np.greater_equal(distance_sqr, outer_radius_sqr))
+                    if k > 0 and (not source_grid.k_gaps or k >= source_grid.nk - 1 or
+                                  not source_grid.k_gap_after_array[k - 1]):
+                        vectors = centres[k - 1] - intersect_points[intersect].reshape((1, 1, 3))
+                        distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
+                        if radius > 0.0:
+                            layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
+                        if outer_radius is not None:
+                            outer_layer_mask = np.logical_and(outer_layer_mask,
+                                                              np.greater_equal(distance_sqr, outer_radius_sqr))
+                layer_mask[cols[intersect, 0], cols[intersect, 1]] = True
+            if k <= max_k0:
+                inclusion_mask[k] = layer_mask
+                if outer_radius is not None:
+                    outer_inactive_mask[k] = outer_layer_mask
+            if k > min_k0:
+                inclusion_mask[k - 1] = np.logical_or(inclusion_mask[k - 1], layer_mask)
+                if outer_radius is not None:
+                    outer_inactive_mask[k - 1] = np.logical_and(outer_inactive_mask[k - 1], outer_layer_mask)
+            log.debug(
+                f"number of columns found in {h_or_l} {k} within radius around well: {np.count_nonzero(layer_mask)}")
+        inc_count = np.count_nonzero(inclusion_mask)
+        if inc_count == 0:
+            log.error('no cells found within search radius around well')
+            return None, None
+        log.info('total number of cells found within radius around well: ' + str(inc_count))
+        return inclusion_mask, outer_inactive_mask
 
     def invent_title(trajectory, blocked_well, column_ji0):
         if trajectory is not None:
@@ -317,7 +318,8 @@ def extract_box_for_well(epc_file = None,
 
     # create cell mask
     inclusion_mask, outer_inactive_mask = build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory,
-                                                           blocked_well, bw_cells, cols_ji0, quad_triangles, outer_radius)
+                                                           blocked_well, bw_cells, cols_ji0, quad_triangles,
+                                                           outer_radius)
 
     # derive box from inclusion mask
     box = box_from_inclusion_mask(source_grid, inclusion_mask)
@@ -327,7 +329,8 @@ def extract_box_for_well(epc_file = None,
         if active_cells_shape == 'prism':
             layer_mask = np.any(inclusion_mask, axis = 0)
             inclusion_mask[:] = layer_mask
-        box_inactive = np.logical_not(inclusion_mask[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1])
+        box_inactive = np.logical_not(inclusion_mask[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1,
+                                                     box[0, 2]:box[1, 2] + 1])
     else:  # 'box' option: leave all cells active (except where inactive in source grid)
         box_inactive = None
 
