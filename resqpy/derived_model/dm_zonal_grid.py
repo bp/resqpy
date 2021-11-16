@@ -1,10 +1,15 @@
 """High level zonal grid function."""
 
+import logging
+
+log = logging.getLogger(__name__)
+
 import os
 import numpy as np
 
 import resqpy.grid as grr
 import resqpy.model as rq
+import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 

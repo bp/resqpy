@@ -12,6 +12,7 @@ import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.grid_functions as gf
+import resqpy.olio.simple_lines as sl
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 

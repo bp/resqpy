@@ -1,5 +1,7 @@
 """Copy grid function."""
 
+import numpy as np
+
 import resqpy.grid as grr
 import resqpy.olio.xml_et as rqet
 

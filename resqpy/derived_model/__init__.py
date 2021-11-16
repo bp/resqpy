@@ -1,4 +1,4 @@
-__all__ = ['dm_add_edges_per_column_property_array'.
+__all__ = ['dm_add_edges_per_column_property_array',
            'dm_add_faults',
            'dm_add_one_blocked_well_property',
            'dm_add_one_grid_property_array',

@@ -10,8 +10,9 @@ import numpy as np
 import resqpy.crs as rqcrs
 import resqpy.grid as grr
 import resqpy.olio.uuid as bu
+import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __write_grid
+from resqpy.derived_model.dm_common import __prepare_simple_inheritance, __write_grid
 
 
 def interpolated_grid(epc_file,
@@ -284,8 +285,8 @@ def interpolated_grid(epc_file,
             grid.cols_for_split_pillars_cl = np.array(cumulative_length_list, dtype = 'int')
             grid.split_pillars_count = len(extras_list)
 
-    collection = _prepare_simple_inheritance(grid, grid_a, inherit_properties, inherit_realization,
-                                             inherit_all_realizations)
+    collection = __prepare_simple_inheritance(grid, grid_a, inherit_properties, inherit_realization,
+                                              inherit_all_realizations)
 
     if new_grid_title is None or len(new_grid_title) == 0:
         new_grid_title = 'interpolated between two grids with factor: ' + str(a_to_b_0_to_1)

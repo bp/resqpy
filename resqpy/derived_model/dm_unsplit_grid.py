@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 import os
 
 import resqpy.model as rq
+import resqpy.olio.xml_et as rqet
 
 from resqpy.derived_model.dm_common import __prepare_simple_inheritance, __write_grid
 from resqpy.derived_model.dm_copy_grid import copy_grid

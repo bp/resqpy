@@ -356,4 +356,3 @@ def refined_grid(epc_file,
                      mode = 'a')
 
     return grid
-import resqpy.olio.xml_et as rqet

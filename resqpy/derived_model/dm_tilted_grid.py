@@ -8,8 +8,9 @@ import os
 
 import resqpy.model as rq
 import resqpy.olio.vector_utilities as vec
+import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __prepare_simple_inheritance, __write_grid
+from resqpy.derived_model.dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid
 from resqpy.derived_model.dm_copy_grid import copy_grid
 
 
@@ -76,7 +77,7 @@ def tilted_grid(epc_file,
 
     # build cell displacement property array(s)
     if store_displacement:
-        displacement_collection = displacement_properties(grid, source_grid)
+        displacement_collection = __displacement_properties(grid, source_grid)
     else:
         displacement_collection = None
 
