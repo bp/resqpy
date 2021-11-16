@@ -105,4 +105,3 @@ def add_wells_from_ascii_file(epc_file,
     model.store_epc()
 
     return count
-

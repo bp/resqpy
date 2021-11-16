@@ -1,25 +1,11 @@
-__all__ = ['dm_add_edges_per_column_property_array',
-           'dm_add_faults',
-           'dm_add_one_blocked_well_property',
-           'dm_add_one_grid_property_array',
-           'dm_add_single_cell_grid',
-           'dm_add_wells_from_ascii_file',
-           'dm_add_zone_by_layer_property',
-           'dm_coarsened_grid',
-           'dm_common',
-           'dm_copy_grid',
-           'dm_drape_to_surface',
-           'dm_extract_box_for_well',
-           'dm_extract_box',
-           'dm_fault_throw_scaling',
-           'dm_gather_ensemble',
-           'dm_interpolated_grid',
-           'dm_local_depth_adjustment',
-           'dm_refined_grid',
-           'dm_tilted_grid',
-           'dm_unsplit_grid',
-           'dm_zonal_grid',
-           'dm_zone_layer_ranges_from_array']
+__all__ = [
+    'dm_add_edges_per_column_property_array', 'dm_add_faults', 'dm_add_one_blocked_well_property',
+    'dm_add_one_grid_property_array', 'dm_add_single_cell_grid', 'dm_add_wells_from_ascii_file',
+    'dm_add_zone_by_layer_property', 'dm_coarsened_grid', 'dm_common', 'dm_copy_grid', 'dm_drape_to_surface',
+    'dm_extract_box_for_well', 'dm_extract_box', 'dm_fault_throw_scaling', 'dm_gather_ensemble', 'dm_interpolated_grid',
+    'dm_local_depth_adjustment', 'dm_refined_grid', 'dm_tilted_grid', 'dm_unsplit_grid', 'dm_zonal_grid',
+    'dm_zone_layer_ranges_from_array'
+]
 
 from .dm_add_edges_per_column_property_array import add_edges_per_column_property_array
 from .dm_add_faults import add_faults

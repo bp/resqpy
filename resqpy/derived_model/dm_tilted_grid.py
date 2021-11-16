@@ -82,7 +82,7 @@ def tilted_grid(epc_file,
         displacement_collection = None
 
     collection = __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                             inherit_all_realizations)
+                                              inherit_all_realizations)
     if collection is None:
         collection = displacement_collection
     elif displacement_collection is not None:
