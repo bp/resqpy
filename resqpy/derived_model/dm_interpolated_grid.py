@@ -11,7 +11,7 @@ import resqpy.crs as rqcrs
 import resqpy.grid as grr
 import resqpy.olio.uuid as bu
 
-from resqpy.derived_model.derived_model_common import _prepare_somple_inheritance, __write_grid
+from resqpy.derived_model.dm_common import __write_grid
 
 
 def interpolated_grid(epc_file,
@@ -304,4 +304,3 @@ def interpolated_grid(epc_file,
                      mode = 'a')
 
     return grid
-

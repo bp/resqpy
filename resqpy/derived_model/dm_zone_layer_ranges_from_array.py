@@ -1,5 +1,9 @@
 """zone_layer_ranges_from_array() function."""
 
+import logging
+
+log = logging.getLogger(__name__)
+
 import numpy as np
 
 

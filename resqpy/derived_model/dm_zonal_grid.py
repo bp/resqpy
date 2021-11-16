@@ -8,8 +8,8 @@ import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model.derived_model_common import _pl, _prepare_somple_inheritance, __write_grid
-from resqpy.derived_model.zone_layer_ranges_from_array import zone_layer_ranges_from_array
+from resqpy.derived_model.dm_common import __write_grid
+from resqpy.derived_model.dm_zone_layer_ranges_from_array import zone_layer_ranges_from_array
 
 
 def zonal_grid(epc_file,

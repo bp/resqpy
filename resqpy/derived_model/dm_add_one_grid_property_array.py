@@ -7,7 +7,7 @@ import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model.derived_model_common import _pl, _prepare_somple_inheritance, __write_grid
+from resqpy.derived_model.dm_common import __write_grid
 
 
 def add_one_grid_property_array(epc_file,

@@ -1,6 +1,50 @@
 """Private common functions for derived model package."""
 
-def _pl(n, use_es = False):
+import logging
+
+log = logging.getLogger(__name__)
+
+import resqpy.grid as grr
+import resqpy.model as rq
+import resqpy.property as rqp
+
+
+def __displacement_properties(new_grid, old_grid):
+    """Computes cell centre differences in x, y, & z, between old & new grids, and returns a collection of 3 properties."""
+
+    displacement_collection = rqp.GridPropertyCollection()
+    displacement_collection.set_grid(new_grid)
+    old_grid.centre_point(cache_centre_array = True)
+    new_grid.centre_point(cache_centre_array = True)
+    displacement = new_grid.array_centre_point - old_grid.array_centre_point
+    log.debug('displacement array shape: ' + str(displacement.shape))
+    displacement_collection.x_array = displacement[..., 0].copy()
+    displacement_collection.y_array = displacement[..., 1].copy()
+    displacement_collection.z_array = displacement[..., 2].copy()
+    # horizontal_displacement = np.sqrt(x_displacement * x_displacement  +  y_displacement * y_displacement)
+    # todo: create prop collection to hold z_displacement and horizontal_displacement; add them to imported list
+    xy_units = rqet.find_tag(new_grid.crs_root, 'ProjectedUom').text.lower()
+    z_units = rqet.find_tag(new_grid.crs_root, 'VerticalUom').text.lower()
+    # todo: could replace 3 displacement properties with a single points property
+    displacement_collection.add_cached_array_to_imported_list(displacement_collection.x_array,
+                                                              'easterly displacement from tilt',
+                                                              'DX_DISPLACEMENT',
+                                                              discrete = False,
+                                                              uom = xy_units)
+    displacement_collection.add_cached_array_to_imported_list(displacement_collection.y_array,
+                                                              'northerly displacement from tilt',
+                                                              'DY_DISPLACEMENT',
+                                                              discrete = False,
+                                                              uom = xy_units)
+    displacement_collection.add_cached_array_to_imported_list(displacement_collection.z_array,
+                                                              'vertical displacement from tilt',
+                                                              'DZ_DISPLACEMENT',
+                                                              discrete = False,
+                                                              uom = z_units)
+    return displacement_collection
+
+
+def __pl(n, use_es = False):
     if n == 1:
         return ''
     elif use_es:
@@ -9,7 +53,7 @@ def _pl(n, use_es = False):
         return 's'
 
 
-def _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization, inherit_all_realizations):
+def __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization, inherit_all_realizations):
     collection = None
     if inherit_properties:
         source_collection = source_grid.extract_property_collection()
@@ -142,4 +186,3 @@ def __write_grid(epc_file,
     model.store_epc(epc_file)
 
     return prop_uuid_list
-
