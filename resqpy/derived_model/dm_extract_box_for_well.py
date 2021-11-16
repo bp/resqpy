@@ -125,6 +125,7 @@ def extract_box_for_well(epc_file = None,
         outer_inactive_mask = None if outer_radius is None else np.zeros(source_grid.extent_kji, dtype = bool)
         h_or_l = 'layer' if trajectory is None else 'horizon'
         end_k0 = max_k0 + 1 if trajectory is None else max_k0 + 2
+        warned = False
         for k in range(min_k0, end_k0):
             if trajectory is None:
                 if blocked_well is None:
@@ -263,7 +264,6 @@ def extract_box_for_well(epc_file = None,
     centres = source_grid.centre_point(cache_centre_array = True)
 
     # initialise local variables
-    warned = False
     box = None
     radius_sqr = radius * radius
     outer_radius_sqr = None if outer_radius is None else outer_radius * outer_radius
