@@ -107,7 +107,6 @@ def test_property(tmp_path):
 
 
 def test_create_Property_from_singleton_collection(tmp_model):
-
     # Arrange
     grid = grr.RegularGrid(tmp_model, extent_kji = (2, 3, 4))
     grid.write_hdf5()
@@ -247,7 +246,6 @@ def test_property_extra_metadata(tmp_path):
 
 
 def test_points_properties(tmp_path):
-
     epc = os.path.join(tmp_path, 'points_test.epc')
     model = rq.new_model(epc)
 
@@ -263,7 +261,7 @@ def test_points_properties(tmp_path):
     ts_uuid = ts.uuid
     assert ts.timeframe == 'geologic'
 
-    # create a simple grid without an explicit geometry and ensure it has a property collection initialised
+    #  create a simple grid without an explicit geometry and ensure it has a property collection initialised
     grid = grr.RegularGrid(model,
                            extent_kji = extent_kji,
                            origin = (0.0, 0.0, 1000.0),
@@ -295,7 +293,7 @@ def test_points_properties(tmp_path):
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
-    # create a dynamic points property (indexable cells) related to the geological time series
+    #  create a dynamic points property (indexable cells) related to the geological time series
     for r in range(ensemble_size):
         centres = grid.centre_point().copy()
         for time_index in range(time_series_size):
@@ -312,7 +310,7 @@ def test_points_properties(tmp_path):
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
 
-    # create a dynamic points property (indexable nodes) related to the geological time series
+    #  create a dynamic points property (indexable nodes) related to the geological time series
     # also create a parallel set of active cell properties
     for r in range(ensemble_size):
         nodes = grid.points_ref().copy()
@@ -412,7 +410,7 @@ def test_points_properties(tmp_path):
                                              time_series_uuid = ts_uuid)
     assert cc.number_of_parts() == ensemble_size * time_series_size
 
-    # check that 5 dimensional numpy arrays can be set up, each covering time indices for a single realisation
+    #  check that 5 dimensional numpy arrays can be set up, each covering time indices for a single realisation
     for r in range(ensemble_size):
         rcc = rqp.selective_version_of_collection(cc, realization = r)
         assert rcc.number_of_parts() == time_series_size
@@ -448,7 +446,7 @@ def test_points_properties(tmp_path):
     # and that the inactive array now indicates some cells are inactive
     assert grid.inactive is not None and np.count_nonzero(grid.inactive) > 0
 
-    # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
+    #  check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
     for ti in range(time_series_size):
         tnc = rqp.selective_version_of_collection(nc, time_index = ti)
         assert tnc.number_of_parts() == ensemble_size
@@ -502,3 +500,117 @@ def test_points_properties(tmp_path):
     # (in this example, the depths of all cells are increasing with time)
     assert_array_almost_equal(older_centres[..., :2], younger_centres[..., :2])  # xy
     assert np.all(older_centres[..., 2] < younger_centres[..., 2])  # depths
+
+
+def test_remove_part_from_dict(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    assert len(pc.parts()) == 7
+    part = pc.parts()[0]
+
+    # Act
+    pc.remove_part_from_dict(part)
+
+    # Assert
+    assert len(pc.parts()) == 6
+    assert part not in pc.parts()
+
+
+def test_part_str(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    part_disc = pc.parts()[0]
+    part_cont = pc.parts()[-1]
+
+    # Act / Assert
+    assert pc.part_str(part_disc) == 'discrete (Zone)'
+    assert pc.part_str(part_disc, include_citation_title = False) == 'discrete'
+    assert pc.part_str(part_cont) == 'saturation (SW)'
+    assert pc.part_str(part_cont, include_citation_title = False) == 'saturation'
+    # TODO: add additional tests for facet and time indexed properties
+
+
+def test_part_filename(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    part_disc = pc.parts()[0]
+    part_cont = pc.parts()[-1]
+
+    # Act / Assert
+    assert pc.part_filename(part_disc) == 'discrete'
+    assert pc.part_filename(part_cont) == 'saturation'
+    # TODO: add additional tests for facet and time indexed properties
+
+
+def test_grid_for_part(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    part = pc.parts()[0]
+
+    # Act
+    grid = pc.grid_for_part(part)
+
+    # Assert
+    assert grid == model.grid()
+
+
+def test_all_discrete(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+
+    # Act / Assert
+    assert not pc.all_discrete()
+
+    # Arrange
+    for part in pc.parts():
+        if pc.continuous_for_part(part):
+            pc.remove_part_from_dict(part)
+
+    # Act / Assert
+    assert len(pc.parts()) == 4
+    print(pc.parts())
+    assert pc.all_discrete()
+
+
+def test_h5_slice(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+
+    # Act  / Assert
+    part = pc.parts()[0]
+    full = pc.cached_part_array_ref(part)
+
+    slice = pc.h5_slice(part, (0, 0))
+    assert_array_almost_equal(slice, full[0, 0])
+
+    slice = pc.h5_slice(part, (-1, -1))
+    assert_array_almost_equal(slice, full[-1, -1])
+
+
+def test_h5_overwrite_slice(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    part = pc.parts()[0]
+
+    # Act
+    slice = pc.h5_slice(part, (0, 0))
+    new_slice = np.zeros(shape = slice.shape)
+    pc.h5_overwrite_slice(part, array_slice = new_slice, slice_tuple = (0, 0))
+
+    # Assert
+    new_full = pc.cached_part_array_ref(part)
+    assert_array_almost_equal(new_slice, new_full[0, 0])
