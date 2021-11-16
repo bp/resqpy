@@ -1,7 +1,6 @@
 """ Shared fixtures for tests """
 
 import logging
-import os
 from pathlib import Path
 from shutil import copytree
 
@@ -14,7 +13,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 from resqpy.crs import Crs
 from resqpy.model import Model, new_model
-from resqpy.organize import WellboreFeature, WellboreInterpretation
+from resqpy.organize.organize_old import WellboreFeature, WellboreInterpretation
 from resqpy.well import MdDatum, Trajectory, WellboreFrame
 
 

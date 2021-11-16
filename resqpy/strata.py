@@ -10,11 +10,9 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('strata.py version ' + version)
 
-import warnings
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.organize as rqo
+import resqpy.organize.organize_old as rqo
 import resqpy.weights_and_measures as wam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
