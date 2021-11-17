@@ -6,6 +6,7 @@ from .organize_functions import (
 import resqpy.olio.uuid as bu
 from resqpy.olio.base import BaseResqpy
 
+
 class FrontierFeature(BaseResqpy):
     """Class for RESQML Frontier Feature organizational objects."""
 

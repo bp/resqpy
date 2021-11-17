@@ -1,12 +1,12 @@
-from .organize_functions import (
-    equivalent_extra_metadata, extract_has_occurred_during, equivalent_chrono_pairs, create_xml_has_occurred_during
-)
+from .organize_functions import (equivalent_extra_metadata, extract_has_occurred_during, equivalent_chrono_pairs,
+                                 create_xml_has_occurred_during)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .OrganizationFeature import OrganizationFeature
+
 
 class EarthModelInterpretation(BaseResqpy):
     """Class for RESQML Earth Model Interpretation organizational objects."""
@@ -119,4 +119,3 @@ class EarthModelInterpretation(BaseResqpy):
                                                           'sourceObject')
 
         return emi
-

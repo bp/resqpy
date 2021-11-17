@@ -20,8 +20,6 @@ from .GeobodyBoundaryInterpretation import GeobodyBoundaryInterpretation
 from .GeobodyInterpretation import GeobodyInterpretation
 from .WellboreInterpretation import WellboreInterpretation
 
-from resqpy.organize.organize_functions import (
-    equivalent_extra_metadata,
-    alias_for_attribute,
-    extract_has_occurred_during, equivalent_chrono_pairs, create_xml_has_occurred_during
-)
+from resqpy.organize.organize_functions import (equivalent_extra_metadata, alias_for_attribute,
+                                                extract_has_occurred_during, equivalent_chrono_pairs,
+                                                create_xml_has_occurred_during)

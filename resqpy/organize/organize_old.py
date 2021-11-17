@@ -92,38 +92,3 @@ def alias_for_attribute(attribute_name):
         return setattr(self, attribute_name, value)
 
     return property(fget, fset, doc = f"Alias for {attribute_name}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

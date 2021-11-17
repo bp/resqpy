@@ -2,6 +2,7 @@ from .organize_functions import alias_for_attribute, equivalent_extra_metadata
 import resqpy.olio.uuid as bu
 from resqpy.olio.base import BaseResqpy
 
+
 class BoundaryFeature(BaseResqpy):
     """Class for RESQML Boudary Feature organizational objects."""
 
