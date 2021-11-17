@@ -8,9 +8,10 @@ import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
-import resqpy.organize.organize_old as rqo
+# import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 import resqpy.strata as strata
-import resqpy.organize as rqo_new
+# import resqpy.organize as rqo_new
 
 # the following creates a fully related set of objects, saves to persistent storage, and retrieves
 
@@ -26,7 +27,7 @@ def test_strata(tmp_path):
     emf = rqo.OrganizationFeature(model, feature_name = 'strata model', organization_kind = 'earth model')
     emf.create_xml()
 
-    emi = rqo_new.EarthModelInterpretation(model, organization_feature = emf)
+    emi = rqo.EarthModelInterpretation(model, organization_feature = emf)
     emi.create_xml()
 
     # stratigraphic organisational objects

@@ -1,7 +1,7 @@
 import pytest
 
-import resqpy.organize.organize_old as rqo
-import resqpy.organize as rqo_new
+# import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 import resqpy.organize.OrganizationFeature as OrganizationFeature
 from resqpy.model import Model
 
@@ -11,15 +11,15 @@ from resqpy.model import Model
     "cls, data",
     [
         (
-            rqo_new.OrganizationFeature,
+            rqo.OrganizationFeature,
             dict(feature_name = 'hello', organization_kind = 'stratigraphic'),
         ),
         (
-            rqo_new.GeobodyFeature,
+            rqo.GeobodyFeature,
             dict(feature_name = 'hi'),
         ),
         (
-            rqo_new.BoundaryFeature,
+            rqo.BoundaryFeature,
             dict(feature_name = 'foobar'),
         ),
         (
@@ -124,13 +124,13 @@ def test_FaultInterp(tmp_model):
 def test_EarthModel(tmp_model):
 
     title = 'gaia'
-    org_feat = rqo_new.OrganizationFeature(tmp_model, feature_name = 'marie kondo', organization_kind = "earth model")
-    em1 = rqo_new.EarthModelInterpretation(tmp_model, title = title, organization_feature = org_feat)
+    org_feat = rqo.OrganizationFeature(tmp_model, feature_name = 'marie kondo', organization_kind = "earth model")
+    em1 = rqo.EarthModelInterpretation(tmp_model, title = title, organization_feature = org_feat)
 
     org_feat.create_xml()
     em1.create_xml()
 
-    em2 = rqo_new.EarthModelInterpretation(tmp_model, uuid = em1.uuid)
+    em2 = rqo.EarthModelInterpretation(tmp_model, uuid = em1.uuid)
     assert em2.title == title
 
 

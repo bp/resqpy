@@ -20,7 +20,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
