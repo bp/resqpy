@@ -60,7 +60,7 @@ def test_model_iterators(example_model_with_well):
 
 def test_model_iterate_objects(example_model_with_well):
 
-    from resqpy.organize.organize_old import WellboreFeature, WellboreInterpretation
+    from resqpy.organize import WellboreFeature, WellboreInterpretation
 
     model, well_interp, _, _ = example_model_with_well
 

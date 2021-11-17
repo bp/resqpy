@@ -28,7 +28,7 @@ import resqpy.olio.vector_utilities as vec
 # import resqpy.olio.grid_functions as gf
 import resqpy.olio.write_data as wd
 import resqpy.olio.xml_et as rqet
-import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 import resqpy.property as rp
 import resqpy.surface as rqs
 import resqpy.time_series as rts
