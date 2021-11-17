@@ -97,129 +97,6 @@ def extract_box_for_well(epc_file = None,
        are both given, the source grid will be copied to the new epc
     """
 
-    def box_from_inclusion_mask(source_grid, inclusion_mask):
-        min_j0 = 0
-        while min_j0 < source_grid.nj - 1 and not np.any(inclusion_mask[:, min_j0, :]):
-            min_j0 += 1
-        max_j0 = source_grid.nj - 1
-        while max_j0 > 0 and not np.any(inclusion_mask[:, max_j0, :]):
-            max_j0 -= 1
-        assert max_j0 >= min_j0
-        min_i0 = 0
-        while min_i0 < source_grid.ni - 1 and not np.any(inclusion_mask[:, :, min_i0]):
-            min_i0 += 1
-        max_i0 = source_grid.ni - 1
-        while max_i0 > 0 and not np.any(inclusion_mask[:, :, max_i0]):
-            max_i0 -= 1
-        assert max_i0 >= min_i0
-        box = np.array([[min_k0, min_j0, min_i0], [max_k0, max_j0, max_i0]], dtype = int)
-        log.info('box for well is: ' + bx.string_iijjkk1_for_box_kji0(box) + ' (simulator protocol)')
-        return box
-
-    def build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked_well, bw_cells, cols_ji0,
-                         quad_triangles, outer_radius):
-        # todo: handle base interfaces above k gaps
-        # either work with grid layers of interfaces between layers (grid horizons)
-        # intialise masks to False
-        inclusion_mask = np.zeros(source_grid.extent_kji, dtype = bool)
-        outer_inactive_mask = None if outer_radius is None else np.zeros(source_grid.extent_kji, dtype = bool)
-        h_or_l = 'layer' if trajectory is None else 'horizon'
-        end_k0 = max_k0 + 1 if trajectory is None else max_k0 + 2
-        warned = False
-        for k in range(min_k0, end_k0):
-            if trajectory is None:
-                if blocked_well is None:
-                    cols, intersect_points = cols_ji0, centres[k, column_ji0[0], column_ji0[1]].reshape((1, 3))
-                else:
-                    selected_cells = np.where(bw_cells[:, 0] == k)[0]
-                    cells = bw_cells[selected_cells]
-                    cols = cells[:, 1:]
-                    intersect_points = centres[cells[:, 0], cells[:, 1], cells[:, 2]]
-            else:
-                if k < source_grid.nk:
-                    cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
-                        trajectory, source_grid, k0 = k, ref_k_faces = 'top', quad_triangles = quad_triangles)
-                else:
-                    cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
-                        trajectory, source_grid, k0 = k - 1, ref_k_faces = 'base', quad_triangles = quad_triangles)
-            if cols is None or len(cols) == 0:
-                if not warned:
-                    log.warning(f"no intersection found between well and {h_or_l}(s) such as: {k}")
-                    warned = True
-                continue
-            count = cols.shape[0]
-            assert len(intersect_points) == count
-            if count > 1:
-                log.warning(f"{count} intersections found between well and {h_or_l}: {k}")
-            layer_mask = np.zeros((source_grid.nj, source_grid.ni), dtype = bool)  # to be set True within radius
-            if outer_radius is not None:
-                # to be set False within outer_radius
-                outer_layer_mask = np.ones((source_grid.nj, source_grid.ni), dtype = bool)
-            for intersect in range(count):
-                log.debug(f"well intersects {h_or_l} {k} in column j0,i0: {cols[intersect, 0]}, {cols[intersect, 1]}")
-                if radius > 0.0 or outer_radius is not None:
-                    if k < source_grid.nk:
-                        vectors = centres[k] - intersect_points[intersect].reshape((1, 1, 3))
-                        distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
-                        if radius > 0.0:
-                            layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
-                        if outer_radius is not None:
-                            outer_layer_mask = np.logical_and(outer_layer_mask,
-                                                              np.greater_equal(distance_sqr, outer_radius_sqr))
-                    if k > 0 and (not source_grid.k_gaps or k >= source_grid.nk - 1 or
-                                  not source_grid.k_gap_after_array[k - 1]):
-                        vectors = centres[k - 1] - intersect_points[intersect].reshape((1, 1, 3))
-                        distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
-                        if radius > 0.0:
-                            layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
-                        if outer_radius is not None:
-                            outer_layer_mask = np.logical_and(outer_layer_mask,
-                                                              np.greater_equal(distance_sqr, outer_radius_sqr))
-                layer_mask[cols[intersect, 0], cols[intersect, 1]] = True
-            if k <= max_k0:
-                inclusion_mask[k] = layer_mask
-                if outer_radius is not None:
-                    outer_inactive_mask[k] = outer_layer_mask
-            if k > min_k0:
-                inclusion_mask[k - 1] = np.logical_or(inclusion_mask[k - 1], layer_mask)
-                if outer_radius is not None:
-                    outer_inactive_mask[k - 1] = np.logical_and(outer_inactive_mask[k - 1], outer_layer_mask)
-            log.debug(
-                f"number of columns found in {h_or_l} {k} within radius around well: {np.count_nonzero(layer_mask)}")
-        inc_count = np.count_nonzero(inclusion_mask)
-        if inc_count == 0:
-            log.error('no cells found within search radius around well')
-            return None, None
-        log.info('total number of cells found within radius around well: ' + str(inc_count))
-        return inclusion_mask, outer_inactive_mask
-
-    def invent_title(trajectory, blocked_well, column_ji0):
-        if trajectory is not None:
-            new_grid_title = 'local grid extracted for well: ' + str(trajectory.title)
-        elif blocked_well is not None:
-            new_grid_title = 'local grid extracted for blocked well: ' + str(blocked_well.title)
-        elif column_ji0 is not None:
-            new_grid_title = 'local grid extracted around column i, j (1 based): ' +  \
-                             str(column_ji0[1] + 1) + ', ' + str(column_ji0[0] + 1)
-        else:  # should not happen
-            new_grid_title = 'local grid extracted for well'
-        return new_grid_title
-
-    def add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name):
-        if new_epc_file:
-            # TODO: copy source grid and reassign source_grid to new copy
-            outer_epc = new_epc_file
-        else:
-            outer_epc = epc_file
-        # todo: make local property kind, or reuse active local property kind?
-        add_one_grid_property_array(outer_epc,
-                                    outer_inactive_mask,
-                                    'discrete',
-                                    grid_uuid = source_grid.uuid,
-                                    source_info = 'extract box for well outer radius',
-                                    title = 'distant mask for well ' + str(well_name),
-                                    discrete = True)
-
     # establish model, source grid, and trajectory model
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
@@ -265,13 +142,10 @@ def extract_box_for_well(epc_file = None,
 
     # initialise local variables
     box = None
-    radius_sqr = radius * radius
-    outer_radius_sqr = None if outer_radius is None else outer_radius * outer_radius
     trajectory = None
     blocked_well = None
     bw_cells = None
     bw_box = None
-    cols_ji0 = None
 
     # establish well information, dependent on type of well object
     if trajectory_uuid is not None:
@@ -312,17 +186,16 @@ def extract_box_for_well(epc_file = None,
             return None, None
         assert len(column_ji0) == 2
         assert 0 <= column_ji0[0] < source_grid.nj and 0 <= column_ji0[1] < source_grid.ni
-        cols_ji0 = np.array(column_ji0, dtype = int).reshape((1, 2))
         if not well_name:
             well_name = 'well for global column ' + str(column_ji0[1] + 1) + ', ' + str(column_ji0[0] + 1)
 
     # create cell mask
-    inclusion_mask, outer_inactive_mask = build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory,
-                                                           blocked_well, bw_cells, cols_ji0, quad_triangles,
-                                                           outer_radius)
+    inclusion_mask, outer_inactive_mask = __build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory,
+                                                             blocked_well, bw_cells, column_ji0, quad_triangles, radius,
+                                                             outer_radius)
 
     # derive box from inclusion mask
-    box = box_from_inclusion_mask(source_grid, inclusion_mask)
+    box = __box_from_inclusion_mask(source_grid, inclusion_mask, min_k0, max_k0)
 
     # prepare inactive mask to merge in for new grid
     if active_cells_shape in ['tube', 'prism']:
@@ -336,7 +209,7 @@ def extract_box_for_well(epc_file = None,
 
     # establish title for the new grid
     if not new_grid_title:
-        new_grid_title = invent_title(trajectory, blocked_well, column_ji0)
+        new_grid_title = __invent_title(trajectory, blocked_well, column_ji0)
 
     # perform the main grid extraction
     grid = extract_box(epc_file,
@@ -376,6 +249,135 @@ def extract_box_for_well(epc_file = None,
 
     # add mask property for outer radius, if specified
     if outer_radius is not None:
-        add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name)
+        __add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name)
 
     return grid, box
+
+
+def __box_from_inclusion_mask(source_grid, inclusion_mask, min_k0, max_k0):
+    min_j0 = 0
+    while min_j0 < source_grid.nj - 1 and not np.any(inclusion_mask[:, min_j0, :]):
+        min_j0 += 1
+    max_j0 = source_grid.nj - 1
+    while max_j0 > 0 and not np.any(inclusion_mask[:, max_j0, :]):
+        max_j0 -= 1
+    assert max_j0 >= min_j0
+    min_i0 = 0
+    while min_i0 < source_grid.ni - 1 and not np.any(inclusion_mask[:, :, min_i0]):
+        min_i0 += 1
+    max_i0 = source_grid.ni - 1
+    while max_i0 > 0 and not np.any(inclusion_mask[:, :, max_i0]):
+        max_i0 -= 1
+    assert max_i0 >= min_i0
+    box = np.array([[min_k0, min_j0, min_i0], [max_k0, max_j0, max_i0]], dtype = int)
+    log.info('box for well is: ' + bx.string_iijjkk1_for_box_kji0(box) + ' (simulator protocol)')
+    return box
+
+
+def __build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked_well, bw_cells, column_ji0,
+                       quad_triangles, radius, outer_radius):
+    # todo: handle base interfaces above k gaps
+    # either work with grid layers of interfaces between layers (grid horizons)
+    # intialise masks to False
+    radius_sqr = radius * radius
+    outer_radius_sqr = None if outer_radius is None else outer_radius * outer_radius
+    inclusion_mask = np.zeros(source_grid.extent_kji, dtype = bool)
+    outer_inactive_mask = None if outer_radius is None else np.zeros(source_grid.extent_kji, dtype = bool)
+    h_or_l = 'layer' if trajectory is None else 'horizon'
+    end_k0 = max_k0 + 1 if trajectory is None else max_k0 + 2
+    warned = False
+    for k in range(min_k0, end_k0):
+        if trajectory is None:
+            if blocked_well is None:
+                cols_ji0 = np.array(column_ji0, dtype = int).reshape((1, 2))
+                cols, intersect_points = cols_ji0, centres[k, column_ji0[0], column_ji0[1]].reshape((1, 3))
+            else:
+                selected_cells = np.where(bw_cells[:, 0] == k)[0]
+                cells = bw_cells[selected_cells]
+                cols = cells[:, 1:]
+                intersect_points = centres[cells[:, 0], cells[:, 1], cells[:, 2]]
+        else:
+            if k < source_grid.nk:
+                cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
+                    trajectory, source_grid, k0 = k, ref_k_faces = 'top', quad_triangles = quad_triangles)
+            else:
+                cols, intersect_points = rgs.find_intersections_of_trajectory_with_layer_interface(
+                    trajectory, source_grid, k0 = k - 1, ref_k_faces = 'base', quad_triangles = quad_triangles)
+        if cols is None or len(cols) == 0:
+            if not warned:
+                log.warning(f"no intersection found between well and {h_or_l}(s) such as: {k}")
+                warned = True
+            continue
+        count = cols.shape[0]
+        assert len(intersect_points) == count
+        if count > 1:
+            log.warning(f"{count} intersections found between well and {h_or_l}: {k}")
+        layer_mask = np.zeros((source_grid.nj, source_grid.ni), dtype = bool)  # to be set True within radius
+        if outer_radius is not None:
+            # to be set False within outer_radius
+            outer_layer_mask = np.ones((source_grid.nj, source_grid.ni), dtype = bool)
+        for intersect in range(count):
+            log.debug(f"well intersects {h_or_l} {k} in column j0,i0: {cols[intersect, 0]}, {cols[intersect, 1]}")
+            if radius > 0.0 or outer_radius is not None:
+                if k < source_grid.nk:
+                    vectors = centres[k] - intersect_points[intersect].reshape((1, 1, 3))
+                    distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
+                    if radius > 0.0:
+                        layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
+                    if outer_radius is not None:
+                        outer_layer_mask = np.logical_and(outer_layer_mask,
+                                                          np.greater_equal(distance_sqr, outer_radius_sqr))
+                if k > 0 and (not source_grid.k_gaps or k >= source_grid.nk - 1 or
+                              not source_grid.k_gap_after_array[k - 1]):
+                    vectors = centres[k - 1] - intersect_points[intersect].reshape((1, 1, 3))
+                    distance_sqr = vectors[..., 0] * vectors[..., 0] + vectors[..., 1] * vectors[..., 1]
+                    if radius > 0.0:
+                        layer_mask = np.logical_or(layer_mask, np.less_equal(distance_sqr, radius_sqr))
+                    if outer_radius is not None:
+                        outer_layer_mask = np.logical_and(outer_layer_mask,
+                                                          np.greater_equal(distance_sqr, outer_radius_sqr))
+            layer_mask[cols[intersect, 0], cols[intersect, 1]] = True
+        if k <= max_k0:
+            inclusion_mask[k] = layer_mask
+            if outer_radius is not None:
+                outer_inactive_mask[k] = outer_layer_mask
+        if k > min_k0:
+            inclusion_mask[k - 1] = np.logical_or(inclusion_mask[k - 1], layer_mask)
+            if outer_radius is not None:
+                outer_inactive_mask[k - 1] = np.logical_and(outer_inactive_mask[k - 1], outer_layer_mask)
+        log.debug(f"number of columns found in {h_or_l} {k} within radius around well: {np.count_nonzero(layer_mask)}")
+    inc_count = np.count_nonzero(inclusion_mask)
+    if inc_count == 0:
+        log.error('no cells found within search radius around well')
+        return None, None
+    log.info('total number of cells found within radius around well: ' + str(inc_count))
+    return inclusion_mask, outer_inactive_mask
+
+
+def __invent_title(trajectory, blocked_well, column_ji0):
+    if trajectory is not None:
+        new_grid_title = 'local grid extracted for well: ' + str(trajectory.title)
+    elif blocked_well is not None:
+        new_grid_title = 'local grid extracted for blocked well: ' + str(blocked_well.title)
+    elif column_ji0 is not None:
+        new_grid_title = 'local grid extracted around column i, j (1 based): ' +  \
+                         str(column_ji0[1] + 1) + ', ' + str(column_ji0[0] + 1)
+    else:  # should not happen
+        new_grid_title = 'local grid extracted for well'
+    return new_grid_title
+
+
+def __add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name):
+    if new_epc_file:
+        # TODO: copy source grid and reassign source_grid to new copy
+        outer_epc = new_epc_file
+    else:
+        outer_epc = epc_file
+    # todo: make local property kind, or reuse active local property kind?
+    add_one_grid_property_array(outer_epc,
+                                outer_inactive_mask,
+                                'discrete',
+                                grid_uuid = source_grid.uuid,
+                                source_info = 'extract box for well outer radius',
+                                title = 'distant mask for well ' + str(well_name),
+                                discrete = True)
