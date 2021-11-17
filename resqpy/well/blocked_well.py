@@ -1297,153 +1297,55 @@ class BlockedWell(BaseResqpy):
         :meta common:
         """
 
-        def prop_array(uuid_or_dict, grid):
-            assert uuid_or_dict is not None and grid is not None
-            if isinstance(uuid_or_dict, dict):
-                prop_uuid = uuid_or_dict[grid.uuid]
-            else:
-                prop_uuid = uuid_or_dict  # uuid either in form of string or uuid.UUID
-            return grid.property_collection.single_array_ref(uuid=prop_uuid)
-
-        def get_ref_vector(grid, grid_crs, cell_kji0, mode):
-            # gravity = np.array((0.0, 0.0, 1.0))
-            if mode == 'normal well i+':
-                return None  # ANGLA only: option for no projection onto a plane
-            ref_vector = None
-            # options for anglv or angla reference: 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down'
-            cell_axial_vectors = None
-            if not mode.startswith('z'):
-                cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
-            if mode == 'z+':
-                ref_vector = np.array((0.0, 0.0, 1.0))
-            elif mode == 'z down':
-                if grid_crs.z_inc_down:
-                    ref_vector = np.array((0.0, 0.0, 1.0))
-                else:
-                    ref_vector = np.array((0.0, 0.0, -1.0))
-            elif mode in ['k+', 'k down']:
-                ref_vector = vec.unit_vector(cell_axial_vectors[0])
-                if mode == 'k down' and not grid.k_direction_is_down:
-                    ref_vector = -ref_vector
-            else:  # normal to plane of ij axes
-                ref_vector = vec.unit_vector(vec.cross_product(cell_axial_vectors[1], cell_axial_vectors[2]))
-                if mode == 'normal ij down':
-                    if grid_crs.z_inc_down:
-                        if ref_vector[2] < 0.0:
-                            ref_vector = -ref_vector
-                    else:
-                        if ref_vector[2] > 0.0:
-                            ref_vector = -ref_vector
-            if ref_vector is None or ref_vector[2] == 0.0:
-                if grid_crs.z_inc_down:
-                    ref_vector = np.array((0.0, 0.0, 1.0))
-                else:
-                    ref_vector = np.array((0.0, 0.0, -1.0))
-            return ref_vector
-
         assert length_mode in ['MD', 'straight']
         assert length_uom is None or length_uom in ['m', 'ft']
-        assert anglv_ref in ['gravity', 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down']
-        if anglv_ref == 'gravity':
-            anglv_ref = 'z down'
-        if angla_plane_ref is None:
-            angla_plane_ref = anglv_ref
-        assert angla_plane_ref in [
-            'gravity', 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down', 'normal well i+'
-        ]
-        if angla_plane_ref == 'gravity':
-            angla_plane_ref = 'z down'
+
+        anglv_ref, angla_plane_ref = BlockedWell.__verify_angle_references(anglv_ref, angla_plane_ref)
         column_list = [i_col, j_col, k_col]
-        if extra_columns_list:
-            for extra in extra_columns_list:
-                assert extra.upper() in [
-                    'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF',
-                    'RADB',
-                    'WI', 'WBC'
-                ]
-                column_list.append(extra.upper())
-        else:
-            add_as_properties = use_properties = False
-        assert not (add_as_properties and use_properties)
+
+        column_list, add_as_properties, use_properties, skin, stat, radw = BlockedWell.__verify_extra_properties_to_be_added_to_dataframe(
+            extra_columns_list = extra_columns_list,
+            column_list = column_list,
+            add_as_properties = add_as_properties,
+            use_properties = use_properties,
+            skin = skin,
+            stat = stat,
+            radw = radw
+        )
+
         pc = rqp.PropertyCollection(support=self) if use_properties else None
         pc_titles = [] if pc is None else pc.titles()
-        isotropic_perm = None
+
+        max_satw, min_sato, max_satg = BlockedWell.__verify_saturation_ranges_and_property_uuids(max_satw, min_sato, max_satg, satw_uuid, sato_uuid, satg_uuid)
+
+        min_kh, doing_kh = BlockedWell.__verify_perm_i_uuid_for_kh(min_kh = min_kh, column_list = column_list,
+                                                                   perm_i_uuid = perm_i_uuid, pc_titles = pc_titles)
+
+        do_well_inflow = BlockedWell.__verify_perm_i_uuid_for_well_inflow(column_list = column_list,
+                                                                          perm_i_uuid = perm_i_uuid,
+                                                                          pc_titles = pc_titles)
+
+        perm_j_uuid, perm_k_uuid, isotropic_perm = BlockedWell.__verify_perm_j_k_uuids_for_kh_and_well_inflow(
+            doing_kh = doing_kh,
+            do_well_inflow = do_well_inflow,
+            perm_i_uuid = perm_i_uuid,
+            perm_j_uuid = perm_j_uuid,
+            perm_k_uuid = perm_k_uuid
+        )
+
         if min_length is not None and min_length <= 0.0:
             min_length = None
-        if min_kh is not None and min_kh <= 0.0:
-            min_kh = None
-        if max_satw is not None and max_satw >= 1.0:
-            max_satw = None
-        if min_sato is not None and min_sato <= 0.0:
-            min_sato = None
-        if max_satg is not None and max_satg >= 1.0:
-            max_satg = None
-        doing_kh = False
-        if ('KH' in column_list or min_kh is not None) and 'KH' not in pc_titles:
-            assert perm_i_uuid is not None, 'KH requested (or minimum specified) without I direction permeabilty being specified'
-            doing_kh = True
-        if 'WBC' in column_list and 'WBC' not in pc_titles:
-            assert perm_i_uuid is not None, 'WBC requested without I direction permeabilty being specified'
-            doing_kh = True
-        do_well_inflow = (('WI' in column_list and 'WI' not in pc_titles) or
-                          ('WBC' in column_list and 'WBC' not in pc_titles) or
-                          ('RADB' in column_list and 'RADB' not in pc_titles))
-        if do_well_inflow:
-            assert perm_i_uuid is not None, 'WI, RADB or WBC requested without I direction permeabilty being specified'
-        if doing_kh or do_well_inflow:
-            if perm_j_uuid is None and perm_k_uuid is None:
-                isotropic_perm = True
-            else:
-                if perm_j_uuid is None:
-                    perm_j_uuid = perm_i_uuid
-                if perm_k_uuid is None:
-                    perm_k_uuid = perm_i_uuid
-                # following line assumes arguments are passed in same form; if not, some unnecessary maths might be done
-                isotropic_perm = (bu.matching_uuids(perm_i_uuid, perm_j_uuid) and
-                                  bu.matching_uuids(perm_i_uuid, perm_k_uuid))
-        if max_satw is not None:
-            assert satw_uuid is not None, 'water saturation limit specified without saturation property array'
-        if min_sato is not None:
-            assert sato_uuid is not None, 'oil saturation limit specified without saturation property array'
-        if max_satg is not None:
-            assert satg_uuid is not None, 'gas saturation limit specified without saturation property array'
+
         if region_list is not None:
             assert region_uuid is not None, 'region list specified without region property array'
-        if radw is not None and 'RADW' not in column_list:
-            column_list.append('RADW')
-        if radw is None:
-            radw = 0.25
-        if skin is not None and 'SKIN' not in column_list:
-            column_list.append('SKIN')
-        if skin is None:
-            skin = 0.0
-        if stat is not None:
-            assert str(stat).upper() in ['ON', 'OFF']
-            stat = str(stat).upper()
-            if 'STAT' not in column_list:
-                column_list.append('STAT')
-        else:
-            stat = 'ON'
-        if 'GRID' not in column_list and self.number_of_grids() > 1:
-            log.error(
-                'creating blocked well dataframe without GRID column for well that intersects more than one grid')
-        if 'LENGTH' in column_list and 'PPERF' in column_list and 'KH' not in column_list and perforation_list is not None:
-            log.warning(
-                'both LENGTH and PPERF will include effects of partial perforation; only one should be used in WELLSPEC'
-            )
-        elif (perforation_list is not None and 'LENGTH' not in column_list and 'PPERF' not in column_list and
-              'KH' not in column_list and 'WBC' not in column_list):
-            log.warning('perforation list supplied but no use of LENGTH, KH, PPERF nor WBC')
-        if min_k0 is None:
-            min_k0 = 0
-        else:
-            assert min_k0 >= 0
-        if max_k0 is not None:
-            assert min_k0 <= max_k0
-        if k0_list is not None and len(k0_list) == 0:
-            log.warning('no layers included for blocked well dataframe: no rows will be included')
-        if perforation_list is not None and len(perforation_list) == 0:
-            log.warning('empty perforation list specified for blocked well dataframe: no rows will be included')
+
+        BlockedWell.__check_perforation_properties_to_be_added(column_list = column_list,
+                                                               perforation_list = perforation_list)
+
+        BlockedWell.__verify_k_layers_to_be_included(min_k0 = min_k0,
+                                                     max_k0 = max_k0,
+                                                     k0_list = k0_list)
+
         doing_angles = (('ANGLA' in column_list and 'ANGLA' not in pc_titles) or
                         ('ANGLV' in column_list and 'ANGLV' not in pc_titles) or doing_kh or do_well_inflow)
         doing_xyz = (('X' in column_list and 'X' not in pc_titles) or (
@@ -1451,26 +1353,15 @@ class BlockedWell(BaseResqpy):
                      ('DEPTH' in column_list and 'DEPTH' not in pc_titles))
         doing_entry_exit = doing_angles or ('LENGTH' in column_list and 'LENGTH' not in pc_titles and
                                             length_mode == 'straight')
-        grid_crs_list = []
-        for grid in self.grid_list:
-            grid_crs = crs.Crs(self.model, uuid=grid.crs_uuid)
-            grid_crs_list.append(grid_crs)
-            if grid_crs.z_units != grid_crs.xy_units and (len(column_list) > 1 or
-                                                          (len(column_list) == 1 and
-                                                           column_list[0] != 'GRID')) is not None:
-                log.error('grid ' + str(rqet.citation_title_for_node(grid.root_node)) +
-                          ' has z units different to xy units: some WELLSPEC data likely to be wrong')
+
+        grid_crs_list = self.__verify_number_of_grids_and_crs_units(column_list = column_list)
+
         k_face_check = np.zeros((2, 2), dtype=int)
         k_face_check[1, 1] = 1  # now represents entry, exit of K-, K+
         k_face_check_end = k_face_check.copy()
         k_face_check_end[1] = -1  # entry through K-, terminating (TD) within cell
-        if self.trajectory is None or self.trajectory.crs_root is None:
-            traj_crs = None
-            traj_z_inc_down = None
-        else:
-            traj_crs = crs.Crs(self.trajectory.model, uuid=self.trajectory.crs_uuid)
-            assert traj_crs.xy_units == traj_crs.z_units
-            traj_z_inc_down = traj_crs.z_inc_down
+
+        traj_crs, traj_z_inc_down = self.__get_trajectory_crs_and_z_inclination()
 
         df = pd.DataFrame(columns=column_list)
         df = df.astype({i_col: int, j_col: int, k_col: int})
@@ -1481,6 +1372,7 @@ class BlockedWell(BaseResqpy):
             interval_count = 0
         else:
             interval_count = self.node_count - 1
+
         for interval in range(interval_count):
             if self.grid_indices[interval] < 0:
                 continue  # unblocked interval
@@ -1492,26 +1384,19 @@ class BlockedWell(BaseResqpy):
             natural_cell = self.cell_indices[ci]
             cell_kji0 = grid.denaturalized_cell_index(natural_cell)
             tuple_kji0 = tuple(cell_kji0)
-            if max_depth is not None:
-                cell_depth = grid.centre_point(cell_kji0)[2]
-                if not grid_crs.z_inc_down:
-                    cell_depth = -cell_depth
-                if cell_depth > max_depth:
-                    continue
-            if active_only and grid.inactive is not None and grid.inactive[tuple_kji0]:
+
+            skip_interval = BlockedWell.__skip_interval_check(max_depth = max_depth, grid = grid, cell_kji0 = cell_kji0,
+                                                             grid_crs = grid_crs, active_only = active_only,
+                                                             tuple_kji0 = tuple_kji0, min_k0 = min_k0, max_k0 = max_k0,
+                                                             k0_list = k0_list, region_list = region_list,
+                                                             region_uuid = region_uuid, max_satw = max_satw,
+                                                             satw_uuid = satw_uuid, min_sato = min_sato,
+                                                             sato_uuid = sato_uuid, max_satg = max_satg,
+                                                             satg_uuid =  satg_uuid
+                                                             )
+            if skip_interval:
                 continue
-            if (min_k0 is not None and cell_kji0[0] < min_k0) or (max_k0 is not None and cell_kji0[0] > max_k0):
-                continue
-            if k0_list is not None and cell_kji0[0] not in k0_list:
-                continue
-            if region_list is not None and prop_array(region_uuid, grid)[tuple_kji0] not in region_list:
-                continue
-            if max_satw is not None and prop_array(satw_uuid, grid)[tuple_kji0] > max_satw:
-                continue
-            if min_sato is not None and prop_array(sato_uuid, grid)[tuple_kji0] < min_sato:
-                continue
-            if max_satg is not None and prop_array(satg_uuid, grid)[tuple_kji0] > max_satg:
-                continue
+
             if 'PPERF' in pc_titles:
                 part_perf_fraction = pc.single_array_ref(citation_title='PPERF')[ci]
             else:
@@ -1576,6 +1461,7 @@ class BlockedWell(BaseResqpy):
             md = 0.5 * (self.node_mds[interval + 1] + self.node_mds[interval])
             anglv = pc.single_array_ref(citation_title='ANGLV')[ci] if 'ANGLV' in pc_titles else None
             angla = pc.single_array_ref(citation_title='ANGLA')[ci] if 'ANGLA' in pc_titles else None
+
             if doing_angles and not (set_k_face_intervals_vertical and
                                      (np.all(self.face_pair_indices[ci] == k_face_check) or
                                       np.all(self.face_pair_indices[ci] == k_face_check_end))):
@@ -1583,12 +1469,12 @@ class BlockedWell(BaseResqpy):
                                          np.array(entry_xyz))  # nominal wellbore vector for interval
                 if traj_z_inc_down is not None and traj_z_inc_down != grid_crs.z_inc_down:
                     vector[2] = -vector[2]
-                v_ref_vector = get_ref_vector(grid, grid_crs, cell_kji0, anglv_ref)
+                v_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, anglv_ref)
                 #           log.debug('v ref vector: ' + str(v_ref_vector))
                 if angla_plane_ref == anglv_ref:
                     a_ref_vector = v_ref_vector
                 else:
-                    a_ref_vector = get_ref_vector(grid, grid_crs, cell_kji0, angla_plane_ref)
+                    a_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, angla_plane_ref)
                 #           log.debug('a ref vector: ' + str(a_ref_vector))
                 if anglv is not None:
                     anglv_rad = vec.radians_from_degrees(anglv)
@@ -1624,10 +1510,8 @@ class BlockedWell(BaseResqpy):
                         angla = vec.degrees_from_radians(angla_rad)
                         if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0:
                             angla = -angla
-                            angle_rad = -angla_rad
+                            angla_rad = -angla_rad ## as angle_rad before --> typo?
                             sine_angla = -sine_angla
-
-
             #              log.debug('angla: ' + str(angla))
             else:
                 if angla is None:
@@ -1639,10 +1523,10 @@ class BlockedWell(BaseResqpy):
                     ntg = 1.0
                     ntg_is_one = True
                 else:
-                    ntg = prop_array(ntg_uuid, grid)[tuple_kji0]
+                    ntg = BlockedWell.__prop_array(ntg_uuid, grid)[tuple_kji0]
                     ntg_is_one = maths.isclose(ntg, 1.0, rel_tol=0.001)
                 if isotropic_perm and ntg_is_one:
-                    k_i = k_j = k_k = prop_array(perm_i_uuid, grid)[tuple_kji0]
+                    k_i = k_j = k_k = BlockedWell.__prop_array(perm_i_uuid, grid)[tuple_kji0]
                 else:
                     if preferential_perforation and not ntg_is_one:
                         if part_perf_fraction <= ntg:
@@ -1650,12 +1534,12 @@ class BlockedWell(BaseResqpy):
                         else:
                             ntg /= part_perf_fraction  # adjusted ntg when some perforations in non-pay
                     # todo: check netgross facet type in property perm i & j parts: if set to gross then don't multiply by ntg below
-                    k_i = prop_array(perm_i_uuid, grid)[tuple_kji0] * ntg
-                    k_j = prop_array(perm_j_uuid, grid)[tuple_kji0] * ntg
-                    k_k = prop_array(perm_k_uuid, grid)[tuple_kji0]
+                    k_i = BlockedWell.__prop_array(perm_i_uuid, grid)[tuple_kji0] * ntg
+                    k_j = BlockedWell.__prop_array(perm_j_uuid, grid)[tuple_kji0] * ntg
+                    k_k = BlockedWell.__prop_array(perm_k_uuid, grid)[tuple_kji0]
             if doing_kh:
                 if isotropic_perm and ntg_is_one:
-                    kh = length * prop_array(perm_i_uuid, grid)[tuple_kji0]
+                    kh = length * BlockedWell.__prop_array(perm_i_uuid, grid)[tuple_kji0]
                 else:
                     if np.isnan(k_i) or np.isnan(k_j):
                         kh = 0.0
@@ -1781,6 +1665,284 @@ class BlockedWell(BaseResqpy):
             self._add_df_properties(df, property_columns, row_ci_list=row_ci_list, length_uom=length_uom)
 
         return df
+
+    @staticmethod
+    def __prop_array(uuid_or_dict, grid):
+        assert uuid_or_dict is not None and grid is not None
+        if isinstance(uuid_or_dict, dict):
+            prop_uuid = uuid_or_dict[grid.uuid]
+        else:
+            prop_uuid = uuid_or_dict  # uuid either in form of string or uuid.UUID
+        return grid.property_collection.single_array_ref(uuid=prop_uuid)
+
+    @staticmethod
+    def __get_ref_vector(grid, grid_crs, cell_kji0, mode):
+        # gravity = np.array((0.0, 0.0, 1.0))
+        if mode == 'normal well i+':
+            return None  # ANGLA only: option for no projection onto a plane
+        ref_vector = None
+        # options for anglv or angla reference: 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down'
+        cell_axial_vectors = None
+        if not mode.startswith('z'):
+            cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
+        if mode == 'z+':
+            ref_vector = np.array((0.0, 0.0, 1.0))
+        elif mode == 'z down':
+            if grid_crs.z_inc_down:
+                ref_vector = np.array((0.0, 0.0, 1.0))
+            else:
+                ref_vector = np.array((0.0, 0.0, -1.0))
+        elif mode in ['k+', 'k down']:
+            ref_vector = vec.unit_vector(cell_axial_vectors[0])
+            if mode == 'k down' and not grid.k_direction_is_down:
+                ref_vector = -ref_vector
+        else:  # normal to plane of ij axes
+            ref_vector = vec.unit_vector(vec.cross_product(cell_axial_vectors[1], cell_axial_vectors[2]))
+            if mode == 'normal ij down':
+                if grid_crs.z_inc_down:
+                    if ref_vector[2] < 0.0:
+                        ref_vector = -ref_vector
+                else:
+                    if ref_vector[2] > 0.0:
+                        ref_vector = -ref_vector
+        if ref_vector is None or ref_vector[2] == 0.0:
+            if grid_crs.z_inc_down:
+                ref_vector = np.array((0.0, 0.0, 1.0))
+            else:
+                ref_vector = np.array((0.0, 0.0, -1.0))
+        return ref_vector
+
+    @staticmethod
+    def __verify_angle_references(anglv_ref, angla_plane_ref):
+        """ Verify that the references for anglv and angla are one of the acceptable options."""
+
+        assert anglv_ref in ['gravity', 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down']
+        if anglv_ref == 'gravity':
+            anglv_ref = 'z down'
+        if angla_plane_ref is None:
+            angla_plane_ref = anglv_ref
+        assert angla_plane_ref in [
+            'gravity', 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down', 'normal well i+'
+        ]
+        if angla_plane_ref == 'gravity':
+            angla_plane_ref = 'z down'
+        return anglv_ref, angla_plane_ref
+
+    @staticmethod
+    def __verify_saturation_ranges_and_property_uuids(max_satw, min_sato, max_satg, satw_uuid, sato_uuid, satg_uuid):
+        """Verify that the fluid saturation limits fall within 0.0 to 1.0 and that the uuid of the required
+        saturation property array has been specified.
+        """
+
+        if max_satw is not None and max_satw >= 1.0:
+            max_satw = None
+        if min_sato is not None and min_sato <= 0.0:
+            min_sato = None
+        if max_satg is not None and max_satg >= 1.0:
+            max_satg = None
+
+        phase_list = ['water', 'oil', 'gas']
+        phase_saturation_limits_list = [max_satw, min_sato, max_satg]
+        uuids_list = [satw_uuid, sato_uuid, satg_uuid]
+
+        for phase, phase_limit, uuid in zip(phase_list, phase_saturation_limits_list, uuids_list):
+            if phase_limit is not None:
+                assert uuid is not None, f'{phase} saturation limit specified without saturation property array'
+
+        return max_satw, min_sato, max_satg
+
+    @staticmethod
+    def __verify_extra_properties_to_be_added_to_dataframe(extra_columns_list, column_list, add_as_properties,
+                                                           use_properties, skin, stat, radw):
+        """ Determine which extra columns, if any, should be added as properties to the dataframe.
+        Note, if skin, stat or radw are None, default values are specified."""
+
+        if extra_columns_list:
+            for extra in extra_columns_list:
+                assert extra.upper() in [
+                    'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF',
+                    'RADB',
+                    'WI', 'WBC'
+                ]
+                column_list.append(extra.upper())
+        else:
+            add_as_properties = use_properties = False
+        assert not (add_as_properties and use_properties)
+
+        column_list, skin, stat, radw = BlockedWell.__check_skin_stat_radw_to_be_added_as_properties(
+            skin = skin,
+            stat = stat,
+            radw = radw,
+            column_list = column_list
+        )
+
+        return column_list, add_as_properties, use_properties, skin, stat, radw
+
+    @staticmethod
+    def __check_perforation_properties_to_be_added(column_list, perforation_list):
+
+        if 'LENGTH' in column_list and 'PPERF' in column_list and 'KH' not in column_list and perforation_list is not None:
+            log.warning(
+                'both LENGTH and PPERF will include effects of partial perforation; only one should be used in WELLSPEC'
+            )
+        elif (perforation_list is not None and 'LENGTH' not in column_list and 'PPERF' not in column_list and
+              'KH' not in column_list and 'WBC' not in column_list):
+            log.warning('perforation list supplied but no use of LENGTH, KH, PPERF nor WBC')
+
+        if perforation_list is not None and len(perforation_list) == 0:
+            log.warning('empty perforation list specified for blocked well dataframe: no rows will be included')
+
+    @staticmethod
+    def __check_skin_stat_radw_to_be_added_as_properties(skin, stat, radw, column_list):
+        """ Verify whether skin should be added as a property in the dataframe."""
+
+        if skin is not None and 'SKIN' not in column_list:
+            column_list.append('SKIN')
+        if skin is None:
+            skin = 0.0
+
+        if stat is not None:
+            assert str(stat).upper() in ['ON', 'OFF']
+            stat = str(stat).upper()
+            if 'STAT' not in column_list:
+                column_list.append('STAT')
+        else:
+            stat = 'ON'
+
+        if radw is not None and 'RADW' not in column_list:
+            column_list.append('RADW')
+        if radw is None:
+            radw = 0.25
+
+        return column_list, skin, stat, radw
+
+    @staticmethod
+    def __verify_perm_i_uuid_for_well_inflow(column_list, perm_i_uuid, pc_titles):
+        """ Verify that the I direction permeability has been specified if well inflow properties
+         are to be added to the dataframe.
+        """
+        do_well_inflow = (('WI' in column_list and 'WI' not in pc_titles) or
+                          ('WBC' in column_list and 'WBC' not in pc_titles) or
+                          ('RADB' in column_list and 'RADB' not in pc_titles))
+        if do_well_inflow:
+            assert perm_i_uuid is not None, 'WI, RADB or WBC requested without I direction permeabilty being specified'
+
+        return do_well_inflow
+
+    @staticmethod
+    def __verify_perm_i_uuid_for_kh(min_kh, column_list, perm_i_uuid, pc_titles):
+        """ Verify that the I direction permeability has been specified if permeability thickness and wellbore constant
+         properties are to be added to the dataframe.
+        """
+        if min_kh is not None and min_kh <= 0.0:
+            min_kh = None
+        doing_kh = False
+        if ('KH' in column_list or min_kh is not None) and 'KH' not in pc_titles:
+            assert perm_i_uuid is not None, 'KH requested (or minimum specified) without I direction permeabilty being specified'
+            doing_kh = True
+        if 'WBC' in column_list and 'WBC' not in pc_titles:
+            assert perm_i_uuid is not None, 'WBC requested without I direction permeabilty being specified'
+            doing_kh = True
+
+        return min_kh, doing_kh
+
+    @staticmethod
+    def __verify_perm_j_k_uuids_for_kh_and_well_inflow(doing_kh, do_well_inflow, perm_i_uuid, perm_j_uuid, perm_k_uuid):
+        """ Verify that the J and K direction permeabilities have been specified if well inflow properties or
+         permeability thickness properties are to be added to the dataframe.
+        """
+        isotropic_perm = None
+        if doing_kh or do_well_inflow:
+            if perm_j_uuid is None and perm_k_uuid is None:
+                isotropic_perm = True
+            else:
+                if perm_j_uuid is None:
+                    perm_j_uuid = perm_i_uuid
+                if perm_k_uuid is None:
+                    perm_k_uuid = perm_i_uuid
+                # following line assumes arguments are passed in same form; if not, some unnecessary maths might be done
+                isotropic_perm = (bu.matching_uuids(perm_i_uuid, perm_j_uuid) and
+                                  bu.matching_uuids(perm_i_uuid, perm_k_uuid))
+
+        return perm_j_uuid, perm_k_uuid, isotropic_perm
+
+    @staticmethod
+    def __verify_k_layers_to_be_included(min_k0, max_k0, k0_list):
+        """Verify that the k layers to be included in the dataframe exist within the appropriate range."""
+
+        if min_k0 is None:
+            min_k0 = 0
+        else:
+            assert min_k0 >= 0
+        if max_k0 is not None:
+            assert min_k0 <= max_k0
+        if k0_list is not None and len(k0_list) == 0:
+            log.warning('no layers included for blocked well dataframe: no rows will be included')
+
+    def __verify_number_of_grids_and_crs_units(self, column_list):
+        """ Verify that a GRID column is included in the dataframe if the well intersects more than one grid.
+         Verify that each grid's crs units are consistent in all directions.
+        """
+
+        if 'GRID' not in column_list and self.number_of_grids() > 1:
+            log.error(
+                'creating blocked well dataframe without GRID column for well that intersects more than one grid')
+        grid_crs_list = []
+        for grid in self.grid_list:
+            grid_crs = crs.Crs(self.model, uuid=grid.crs_uuid)
+            grid_crs_list.append(grid_crs)
+            if grid_crs.z_units != grid_crs.xy_units and (len(column_list) > 1 or
+                                                          (len(column_list) == 1 and
+                                                           column_list[0] != 'GRID')) is not None:
+                log.error('grid ' + str(rqet.citation_title_for_node(grid.root_node)) +
+                          ' has z units different to xy units: some WELLSPEC data likely to be wrong')
+        return grid_crs_list
+
+    def __get_trajectory_crs_and_z_inclination(self):
+
+        if self.trajectory is None or self.trajectory.crs_root is None:
+            traj_crs = None
+            traj_z_inc_down = None
+        else:
+            traj_crs = crs.Crs(self.trajectory.model, uuid=self.trajectory.crs_uuid)
+            assert traj_crs.xy_units == traj_crs.z_units
+            traj_z_inc_down = traj_crs.z_inc_down
+
+        return traj_crs, traj_z_inc_down
+
+    @staticmethod
+    def __check_cell_depth(max_depth, grid, cell_kji0, grid_crs):
+        """ Check whether the maximum depth specified has been exceeded with the current interval.
+        """
+        max_depth_exceeded = False
+        if max_depth is not None:
+            cell_depth = grid.centre_point(cell_kji0)[2]
+            if not grid_crs.z_inc_down:
+                cell_depth = -cell_depth
+            if cell_depth > max_depth:
+                max_depth_exceeded = True
+        return max_depth_exceeded
+
+    @staticmethod
+    def __skip_interval_check(max_depth, grid, cell_kji0, grid_crs, active_only, tuple_kji0, min_k0, max_k0,
+                              k0_list, region_list, region_uuid, max_satw, satw_uuid, min_sato, sato_uuid,
+                              max_satg, satg_uuid):
+        """Check whether any conditions are met that mean the interval should be skipped."""
+
+        max_depth_exceeded = BlockedWell.__check_cell_depth(max_depth=max_depth, grid=grid, cell_kji0=cell_kji0,
+                                                            grid_crs=grid_crs)
+        inactive_grid = active_only and grid.inactive is not None and grid.inactive[tuple_kji0]
+        out_of_bounds_layer_1 = (min_k0 is not None and cell_kji0[0] < min_k0) or (max_k0 is not None and cell_kji0[0] > max_k0)
+        out_of_bounds_layer_2 = k0_list is not None and cell_kji0[0] not in k0_list
+        out_of_bounds_region = region_list is not None and BlockedWell.__prop_array(region_uuid, grid)[tuple_kji0] not in region_list
+        saturation_limit_exceeded_1 = max_satw is not None and BlockedWell.__prop_array(satw_uuid, grid)[tuple_kji0] > max_satw
+        saturation_limit_exceeded_2 = min_sato is not None and BlockedWell.__prop_array(sato_uuid, grid)[tuple_kji0] < min_sato
+        saturation_limit_exceeded_3 = max_satg is not None and BlockedWell.__prop_array(satg_uuid, grid)[tuple_kji0] > max_satg
+        skip_interval = any([inactive_grid, out_of_bounds_layer_2, out_of_bounds_layer_2, out_of_bounds_region, saturation_limit_exceeded_1,
+                saturation_limit_exceeded_2, saturation_limit_exceeded_3])
+
+        return skip_interval
+
 
     def _add_df_properties(self, df, columns, row_ci_list = None, length_uom = None):
         # creates a property part for each named column, based on the dataframe values
