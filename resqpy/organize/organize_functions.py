@@ -3,6 +3,7 @@
 version = '9th August 2021'
 
 import resqpy.olio.xml_et as rqet
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 def alias_for_attribute(attribute_name):
