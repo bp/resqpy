@@ -19,7 +19,7 @@ from resqpy.model import Model
             dict(feature_name = 'hi'),
         ),
         (
-            rqo.BoundaryFeature,
+            rqo_new.BoundaryFeature,
             dict(feature_name = 'foobar'),
         ),
         (
@@ -125,12 +125,12 @@ def test_EarthModel(tmp_model):
 
     title = 'gaia'
     org_feat = rqo_new.OrganizationFeature(tmp_model, feature_name = 'marie kondo', organization_kind = "earth model")
-    em1 = rqo.EarthModelInterpretation(tmp_model, title = title, organization_feature = org_feat)
+    em1 = rqo_new.EarthModelInterpretation(tmp_model, title = title, organization_feature = org_feat)
 
     org_feat.create_xml()
     em1.create_xml()
 
-    em2 = rqo.EarthModelInterpretation(tmp_model, uuid = em1.uuid)
+    em2 = rqo_new.EarthModelInterpretation(tmp_model, uuid = em1.uuid)
     assert em2.title == title
 
 
