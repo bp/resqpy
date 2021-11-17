@@ -3310,12 +3310,12 @@ class Model():
 
         :meta common:
         """
-        import resqpy.organize  # Imported here for speed, module is not always needed
+        import resqpy.organize.organize_old  # Imported here for speed, module is not always needed
 
         uuids = self.uuids(obj_type = 'WellboreInterpretation')
         if uuids:
             for uuid in uuids:
-                yield resqpy.organize.WellboreInterpretation(self, uuid = uuid)
+                yield resqpy.organize.organize_old.WellboreInterpretation(self, uuid = uuid)
 
     def iter_trajectories(self):
         """Iterable of all trajectories associated with the model.

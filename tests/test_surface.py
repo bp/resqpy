@@ -6,7 +6,7 @@ import resqpy.grid_surface as rqgs
 import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
-import resqpy.organize
+import resqpy.organize.organize_old
 import resqpy.surface
 
 import pytest
@@ -28,8 +28,8 @@ def test_surface(tmp_model):
 
     # Check fault can be loaded in again
     model.store_epc()
-    fault_interp = resqpy.organize.FaultInterpretation(model, uuid = surf.represented_interpretation_uuid)
-    fault_feature = resqpy.organize.TectonicBoundaryFeature(
+    fault_interp = resqpy.organize.organize_old.FaultInterpretation(model, uuid = surf.represented_interpretation_uuid)
+    fault_feature = resqpy.organize.TectonicBoundaryFeature(model, uuid = fault_interp.tectonic_boundary_feature.uuid)
         model, uuid = fault_interp.tectonic_boundary_feature.uuid)
 
     # Check title matches expected title
