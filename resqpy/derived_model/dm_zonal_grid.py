@@ -59,31 +59,6 @@ def zonal_grid(epc_file,
        single layer grid is generated; zone_layer_range_list will take precendence if present
     """
 
-    def fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True):
-        properties = grid.extract_property_collection()
-        assert properties is not None and properties.number_of_parts() > 0, 'no properties found in relation to grid'
-        properties = rqp.selective_version_of_collection(properties, continuous = False)
-        assert properties is not None and properties.number_of_parts() > 0,  \
-           'no discreet properties found in relation to grid'
-        if zone_title:
-            properties = rqp.selective_version_of_collection(
-                properties, citation_title = zone_title)  # could make case insensitive?
-            assert properties is not None and properties.number_of_parts() > 0,  \
-               'no discreet property found with title ' + zone_title
-        if zone_uuid:
-            if isinstance(zone_uuid, str):
-                zone_uuid = bu.uuid_from_string(zone_uuid)
-            zone_uuid_str = str(zone_uuid)
-            if zone_title:
-                postamble = ' (and title ' + zone_title + ')'
-            else:
-                postamble = ''
-            assert zone_uuid in properties.uuids(), 'no property found with uuid ' + zone_uuid_str + postamble
-            part_name = grid.model.part(uuid = zone_uuid)
-        else:
-            part_name = properties.singleton()
-        return properties.cached_part_array_ref(part_name, masked = masked)  # .copy() needed?
-
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
         (new_epc_file == epc_file) or
@@ -112,7 +87,7 @@ def zonal_grid(epc_file,
 
     if not single_layer_mode:  # process zone array
         if zone_layer_range_list is None:
-            zone_array = fetch_zone_array(source_grid, zone_title, zone_uuid)
+            zone_array = __fetch_zone_array(source_grid, zone_title, zone_uuid)
             zone_layer_range_list = zone_layer_ranges_from_array(zone_array,
                                                                  k0_min,
                                                                  k0_max,
@@ -264,6 +239,7 @@ def zonal_grid(epc_file,
             grid.cols_for_split_pillars_cl = source_grid.cols_for_split_pillars_cl.copy()
             grid.split_pillars_count = source_grid.split_pillars_count
 
+    # establish title for the new grid
     if new_grid_title is None or len(new_grid_title) == 0:
         if single_layer_mode:
             preamble = 'single layer'
@@ -271,11 +247,11 @@ def zonal_grid(epc_file,
             preamble = 'zonal'
         new_grid_title = preamble + ' version of ' + str(rqet.citation_title_for_node(source_grid.root))
 
+    # write the new grid
     model.h5_release()
     if new_epc_file:
         __write_grid(new_epc_file, grid, grid_title = new_grid_title, mode = 'w')
     else:
-        # ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']), 'Coordinates')
         __write_grid(epc_file, grid, ext_uuid = None, grid_title = new_grid_title, mode = 'a')
 
     return grid
@@ -316,3 +292,29 @@ def single_layer_grid(epc_file,
                       inactive_laissez_faire = inactive_laissez_faire,
                       new_grid_title = new_grid_title,
                       new_epc_file = new_epc_file)
+
+
+def __fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True):
+    properties = grid.extract_property_collection()
+    assert properties is not None and properties.number_of_parts() > 0, 'no properties found in relation to grid'
+    properties = rqp.selective_version_of_collection(properties, continuous = False)
+    assert properties is not None and properties.number_of_parts() > 0,  \
+       'no discreet properties found in relation to grid'
+    if zone_title:
+        properties = rqp.selective_version_of_collection(properties,
+                                                         citation_title = zone_title)  # could make case insensitive?
+        assert properties is not None and properties.number_of_parts() > 0,  \
+           'no discreet property found with title ' + zone_title
+    if zone_uuid:
+        if isinstance(zone_uuid, str):
+            zone_uuid = bu.uuid_from_string(zone_uuid)
+        zone_uuid_str = str(zone_uuid)
+        if zone_title:
+            postamble = ' (and title ' + zone_title + ')'
+        else:
+            postamble = ''
+        assert zone_uuid in properties.uuids(), 'no property found with uuid ' + zone_uuid_str + postamble
+        part_name = grid.model.part(uuid = zone_uuid)
+    else:
+        part_name = properties.singleton()
+    return properties.cached_part_array_ref(part_name, masked = masked)  # .copy() needed?
