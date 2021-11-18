@@ -1397,127 +1397,46 @@ class BlockedWell(BaseResqpy):
             if skip_interval:
                 continue
 
-            if 'PPERF' in pc_titles:
-                part_perf_fraction = pc.single_array_ref(citation_title='PPERF')[ci]
-            else:
-                part_perf_fraction = 1.0
-                if perforation_list is not None:
-                    perf_length = 0.0
-                    for perf_start, perf_end in perforation_list:
-                        if perf_end <= self.node_mds[interval] or perf_start >= self.node_mds[interval + 1]:
-                            continue
-                        if perf_start <= self.node_mds[interval]:
-                            if perf_end >= self.node_mds[interval + 1]:
-                                perf_length += self.node_mds[interval + 1] - self.node_mds[interval]
-                                break
-                            else:
-                                perf_length += perf_end - self.node_mds[interval]
-                        else:
-                            if perf_end >= self.node_mds[interval + 1]:
-                                perf_length += self.node_mds[interval + 1] - perf_start
-                            else:
-                                perf_length += perf_end - perf_start
-                    if perf_length == 0.0:
-                        continue
-                    part_perf_fraction = min(1.0,
-                                             perf_length / (self.node_mds[interval + 1] - self.node_mds[interval]))
-            #        log.debug('kji0: ' + str(cell_kji0))
-            entry_xyz = None
-            exit_xyz = None
-            if doing_entry_exit:
-                assert self.trajectory is not None
-                if use_face_centres:
-                    entry_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 0, 0],
-                                                 self.face_pair_indices[interval, 0, 1])
-                    if self.face_pair_indices[interval, 1, 0] >= 0:
-                        exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 1, 0],
-                                                    self.face_pair_indices[interval, 1, 1])
-                    else:
-                        exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 0, 0],
-                                                    1 - self.face_pair_indices[interval, 0, 1])
-                    ee_crs = grid_crs
-                else:
-                    entry_xyz = self.trajectory.xyz_for_md(self.node_mds[interval])
-                    exit_xyz = self.trajectory.xyz_for_md(self.node_mds[interval + 1])
-                    ee_crs = traj_crs
-            if length_mode == 'MD':
-                length = self.node_mds[interval + 1] - self.node_mds[interval]
-                if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
-                    length = bwam.convert_lengths(length, self.trajectory.md_uom, length_uom)
-            else:  # use straight line length between entry and exit
-                length = vec.naive_length(np.array(exit_xyz) -
-                                          np.array(entry_xyz))  # trajectory crs, unless use_face_centres!
-                if length_uom is not None:
-                    length = bwam.convert_lengths(length, ee_crs.z_units, length_uom)
-                elif self.trajectory is not None:
-                    length = bwam.convert_lengths(length, ee_crs.z_units, self.trajectory.md_uom)
-            if perforation_list is not None:
-                length *= part_perf_fraction
-            if min_length is not None and length < min_length:
+            skip_interval_due_to_perforations, part_perf_fraction = self.__get_part_perf_fraction_for_interval(
+                pc = pc, pc_titles = pc_titles,
+                perforation_list = perforation_list,
+                ci = ci,
+                interval = interval)
+            if skip_interval_due_to_perforations:
                 continue
-            sine_anglv = sine_angla = 0.0
-            cosine_anglv = cosine_angla = 1.0
+
+            entry_xyz, exit_xyz, ee_crs = self.__get_entry_exit_xyz_and_crs_for_interval(
+                doing_entry_exit = doing_entry_exit,
+                use_face_centres = use_face_centres,
+                grid = grid,
+                cell_kji0 = cell_kji0,
+                interval = interval,
+                grid_crs = grid_crs,
+                traj_crs = traj_crs
+            )
+
+            skip_interval_due_to_invalid_length, length = self.__get_length_of_interval(
+                length_mode = length_mode, interval = interval, length_uom = length_uom, entry_xyz = entry_xyz,
+                exit_xyz = exit_xyz, ee_crs = ee_crs, perforation_list = perforation_list,
+                part_perf_fraction = part_perf_fraction, min_length = min_length
+            )
+
+            if skip_interval_due_to_invalid_length:
+                continue
+
+            # sine_anglv = sine_angla = 0.0
+            # cosine_anglv = cosine_angla = 1.0
             xyz = (np.NaN, np.NaN, np.NaN)
             md = 0.5 * (self.node_mds[interval + 1] + self.node_mds[interval])
-            anglv = pc.single_array_ref(citation_title='ANGLV')[ci] if 'ANGLV' in pc_titles else None
-            angla = pc.single_array_ref(citation_title='ANGLA')[ci] if 'ANGLA' in pc_titles else None
 
-            if doing_angles and not (set_k_face_intervals_vertical and
-                                     (np.all(self.face_pair_indices[ci] == k_face_check) or
-                                      np.all(self.face_pair_indices[ci] == k_face_check_end))):
-                vector = vec.unit_vector(np.array(exit_xyz) -
-                                         np.array(entry_xyz))  # nominal wellbore vector for interval
-                if traj_z_inc_down is not None and traj_z_inc_down != grid_crs.z_inc_down:
-                    vector[2] = -vector[2]
-                v_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, anglv_ref)
-                #           log.debug('v ref vector: ' + str(v_ref_vector))
-                if angla_plane_ref == anglv_ref:
-                    a_ref_vector = v_ref_vector
-                else:
-                    a_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, angla_plane_ref)
-                #           log.debug('a ref vector: ' + str(a_ref_vector))
-                if anglv is not None:
-                    anglv_rad = vec.radians_from_degrees(anglv)
-                    cosine_anglv = maths.cos(anglv_rad)
-                    sine_anglv = maths.sin(anglv_rad)
-                else:
-                    cosine_anglv = min(max(vec.dot_product(vector, v_ref_vector), -1.0), 1.0)
-                    anglv_rad = maths.acos(cosine_anglv)
-                    sine_anglv = maths.sin(anglv_rad)
-                    anglv = vec.degrees_from_radians(anglv_rad)
-                #           log.debug('anglv: ' + str(anglv))
-                if anglv != 0.0:
-                    # project well vector and i-axis vector onto plane defined by normal vector a_ref_vector
-                    i_axis = grid.interface_vector(cell_kji0, 2)
-                    i_axis = vec.unit_vector(i_axis)
-                    if a_ref_vector is not None:  # project vector and i axis onto a plane
-                        vector -= vec.dot_product(vector, a_ref_vector) * a_ref_vector
-                        vector = vec.unit_vector(vector)
-                        #                 log.debug('i axis unit vector: ' + str(i_axis))
-                        i_axis -= vec.dot_product(i_axis, a_ref_vector) * a_ref_vector
-                        i_axis = vec.unit_vector(i_axis)
-                    #                 log.debug('i axis unit vector in reference plane: ' + str(i_axis))
-                    if angla is not None:
-                        angla_rad = vec.radians_from_degrees(angla)
-                        cosine_angla = maths.cos(angla_rad)
-                        sine_angla = maths.sin(angla_rad)
-                    else:
-                        cosine_angla = min(max(vec.dot_product(vector, i_axis), -1.0), 1.0)
-                        angla_rad = maths.acos(cosine_angla)
-                        # negate angla if vector is 'clockwise from' i_axis when viewed from above, projected in the xy plane
-                        # todo: have discussion around angla sign under different ijk handedness (and z inc direction?)
-                        sine_angla = maths.sin(angla_rad)
-                        angla = vec.degrees_from_radians(angla_rad)
-                        if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0:
-                            angla = -angla
-                            angla_rad = -angla_rad ## as angle_rad before --> typo?
-                            sine_angla = -sine_angla
-            #              log.debug('angla: ' + str(angla))
-            else:
-                if angla is None:
-                    angla = 0.0
-                if anglv is None:
-                    anglv = 0.0
+            anglv, sine_anglv, cosine_anglv, angla, sine_angla, cosine_angla = self.__get_angles_for_interval(
+                pc = pc, pc_titles = pc_titles, doing_angles = doing_angles,
+                set_k_face_intervals_vertical = set_k_face_intervals_vertical, ci = ci, k_face_check = k_face_check,
+                k_face_check_end = k_face_check_end, entry_xyz = entry_xyz, exit_xyz = exit_xyz,
+                traj_z_inc_down = traj_z_inc_down, grid = grid, grid_crs = grid_crs, cell_kji0 = cell_kji0,
+                anglv_ref = anglv_ref, angla_plane_ref = angla_plane_ref
+            )
+
             if doing_kh or do_well_inflow:
                 if ntg_uuid is None:
                     ntg = 1.0
@@ -1942,6 +1861,177 @@ class BlockedWell(BaseResqpy):
                 saturation_limit_exceeded_2, saturation_limit_exceeded_3])
 
         return skip_interval
+
+    def __get_part_perf_fraction_for_interval(self, pc, pc_titles, ci, perforation_list, interval):
+        """ Get the partial perforation fraction for the interval."""
+
+        skip_interval = False
+        if 'PPERF' in pc_titles:
+            part_perf_fraction = pc.single_array_ref(citation_title='PPERF')[ci]
+        else:
+            part_perf_fraction = 1.0
+            if perforation_list is not None:
+                perf_length = 0.0
+                for perf_start, perf_end in perforation_list:
+                    if perf_end <= self.node_mds[interval] or perf_start >= self.node_mds[interval + 1]:
+                        skip_interval= True
+                    if perf_start <= self.node_mds[interval]:
+                        if perf_end >= self.node_mds[interval + 1]:
+                            perf_length += self.node_mds[interval + 1] - self.node_mds[interval]
+                            break
+                        else:
+                            perf_length += perf_end - self.node_mds[interval]
+                    else:
+                        if perf_end >= self.node_mds[interval + 1]:
+                            perf_length += self.node_mds[interval + 1] - perf_start
+                        else:
+                            perf_length += perf_end - perf_start
+                if perf_length == 0.0:
+                    skip_interval = True
+                part_perf_fraction = min(1.0,
+                                         perf_length / (self.node_mds[interval + 1] - self.node_mds[interval]))
+
+        return skip_interval, part_perf_fraction
+
+    def __get_entry_exit_xyz_and_crs_for_interval(self, doing_entry_exit, use_face_centres, grid, cell_kji0, interval,
+                                                  grid_crs, traj_crs):
+        """Calculate the entry and exit points for the interval and set the entry and exit coordinate reference system.
+        """
+
+        entry_xyz = None
+        exit_xyz = None
+        ee_crs = None
+        if doing_entry_exit:
+            assert self.trajectory is not None
+            if use_face_centres:
+                entry_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 0, 0],
+                                             self.face_pair_indices[interval, 0, 1])
+                if self.face_pair_indices[interval, 1, 0] >= 0:
+                    exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 1, 0],
+                                                self.face_pair_indices[interval, 1, 1])
+                else:
+                    exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 0, 0],
+                                                1 - self.face_pair_indices[interval, 0, 1])
+                ee_crs = grid_crs
+            else:
+                entry_xyz = self.trajectory.xyz_for_md(self.node_mds[interval])
+                exit_xyz = self.trajectory.xyz_for_md(self.node_mds[interval + 1])
+                ee_crs = traj_crs
+
+        return entry_xyz, exit_xyz, ee_crs
+
+    def __get_length_of_interval(self, length_mode, interval, length_uom, entry_xyz, exit_xyz, ee_crs, perforation_list,
+                                part_perf_fraction, min_length):
+        """Calculate the length of the interval."""
+
+        skip_interval = False
+        if length_mode == 'MD':
+            length = self.node_mds[interval + 1] - self.node_mds[interval]
+            if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
+                length = bwam.convert_lengths(length, self.trajectory.md_uom, length_uom)
+        else:  # use straight line length between entry and exit
+            length = vec.naive_length(np.array(exit_xyz) -
+                                      np.array(entry_xyz))  # trajectory crs, unless use_face_centres!
+            if length_uom is not None:
+                length = bwam.convert_lengths(length, ee_crs.z_units, length_uom)
+            elif self.trajectory is not None:
+                length = bwam.convert_lengths(length, ee_crs.z_units, self.trajectory.md_uom)
+        if perforation_list is not None:
+            length *= part_perf_fraction
+        if min_length is not None and length < min_length:
+            skip_interval = True
+
+        return skip_interval, length
+
+    def __get_angles_for_interval(self, pc, pc_titles, doing_angles, set_k_face_intervals_vertical, ci, k_face_check,
+                                  k_face_check_end, entry_xyz, exit_xyz, traj_z_inc_down, grid, grid_crs, cell_kji0,
+                                  anglv_ref, angla_plane_ref):
+        """Calculate angla, anglv and related trigonometirc transforms for the interval."""
+
+        sine_anglv = sine_angla = 0.0
+        cosine_anglv = cosine_angla = 1.0
+        anglv = pc.single_array_ref(citation_title='ANGLV')[ci] if 'ANGLV' in pc_titles else None
+        angla = pc.single_array_ref(citation_title='ANGLA')[ci] if 'ANGLA' in pc_titles else None
+
+        if doing_angles and not (set_k_face_intervals_vertical and
+                                 (np.all(self.face_pair_indices[ci] == k_face_check) or
+                                  np.all(self.face_pair_indices[ci] == k_face_check_end))):
+            anglv, sine_anglv, cosine_anglv, vector, a_ref_vector = self.__get_anglv_for_interval(
+                anglv = anglv, entry_xyz  = entry_xyz, exit_xyz = exit_xyz, traj_z_inc_down = traj_z_inc_down,
+                grid = grid, grid_crs = grid_crs, cell_kji0 = cell_kji0, anglv_ref = anglv_ref,
+                angla_plane_ref = angla_plane_ref
+            )
+            if anglv != 0.0:
+                angla, sine_angla, cosine_angla = self.__get_angla_for_interval(angla = angla, grid = grid,
+                                                                                cell_kji0 = cell_kji0, vector = vector,
+                                                                                a_ref_vector = a_ref_vector)
+        else:
+            if angla is None:
+                angla = 0.0
+            if anglv is None:
+                anglv = 0.0
+
+        return anglv, sine_anglv, cosine_anglv, angla, sine_angla, cosine_angla
+
+    def __get_angla_for_interval(self, angla, grid, cell_kji0, vector, a_ref_vector):
+        """Calculate angla and related trigonometric transforms for the interval."""
+
+        # project well vector and i-axis vector onto plane defined by normal vector a_ref_vector
+        i_axis = grid.interface_vector(cell_kji0, 2)
+        i_axis = vec.unit_vector(i_axis)
+        if a_ref_vector is not None:  # project vector and i axis onto a plane
+            vector -= vec.dot_product(vector, a_ref_vector) * a_ref_vector
+            vector = vec.unit_vector(vector)
+            #                 log.debug('i axis unit vector: ' + str(i_axis))
+            i_axis -= vec.dot_product(i_axis, a_ref_vector) * a_ref_vector
+            i_axis = vec.unit_vector(i_axis)
+        #                 log.debug('i axis unit vector in reference plane: ' + str(i_axis))
+        if angla is not None:
+            angla_rad = vec.radians_from_degrees(angla)
+            cosine_angla = maths.cos(angla_rad)
+            sine_angla = maths.sin(angla_rad)
+        else:
+            cosine_angla = min(max(vec.dot_product(vector, i_axis), -1.0), 1.0)
+            angla_rad = maths.acos(cosine_angla)
+            # negate angla if vector is 'clockwise from' i_axis when viewed from above, projected in the xy plane
+            # todo: have discussion around angla sign under different ijk handedness (and z inc direction?)
+            sine_angla = maths.sin(angla_rad)
+            angla = vec.degrees_from_radians(angla_rad)
+            if vec.clockwise((0.0, 0.0), i_axis, vector) > 0.0:
+                angla = -angla
+                angla_rad = -angla_rad  ## as angle_rad before --> typo?
+                sine_angla = -sine_angla
+#              log.debug('angla: ' + str(angla))
+
+        return angla, sine_angla, cosine_angla
+
+    def __get_anglv_for_interval(self, anglv, entry_xyz, exit_xyz, traj_z_inc_down, grid, grid_crs,
+                                 cell_kji0, anglv_ref, angla_plane_ref):
+        """Get anglv and related trigonometric transforms for the interval."""
+
+        vector = vec.unit_vector(np.array(exit_xyz) -
+                                 np.array(entry_xyz))  # nominal wellbore vector for interval
+        if traj_z_inc_down is not None and traj_z_inc_down != grid_crs.z_inc_down:
+            vector[2] = -vector[2]
+        v_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, anglv_ref)
+        #           log.debug('v ref vector: ' + str(v_ref_vector))
+        if angla_plane_ref == anglv_ref:
+            a_ref_vector = v_ref_vector
+        else:
+            a_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, angla_plane_ref)
+        #           log.debug('a ref vector: ' + str(a_ref_vector))
+        if anglv is not None:
+            anglv_rad = vec.radians_from_degrees(anglv)
+            cosine_anglv = maths.cos(anglv_rad)
+            sine_anglv = maths.sin(anglv_rad)
+        else:
+            cosine_anglv = min(max(vec.dot_product(vector, v_ref_vector), -1.0), 1.0)
+            anglv_rad = maths.acos(cosine_anglv)
+            sine_anglv = maths.sin(anglv_rad)
+            anglv = vec.degrees_from_radians(anglv_rad)
+        #           log.debug('anglv: ' + str(anglv))
+
+        return anglv, sine_anglv, cosine_anglv, vector, a_ref_vector
 
 
     def _add_df_properties(self, df, columns, row_ci_list = None, length_uom = None):
