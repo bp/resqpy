@@ -5989,7 +5989,7 @@ def selective_version_of_collection(
     if support_uuid is None and grid is not None:
         support_uuid = grid.uuid
     if support_uuid is not None:
-        view.set_support(support_uuid = support_uuid)
+        view.set_support(support_uuid = support_uuid, model = collection.model)
     if realization is not None:
         view.set_realization(realization)
     view.inherit_parts_selectively_from_other_collection(collection,
@@ -6030,7 +6030,7 @@ def property_over_time_series_from_collection(collection, example_part):
     assert collection.part_in_collection(example_part)
     view = PropertyCollection()
     if collection.support_uuid is not None:
-        view.set_support(support_uuid = collection.support_uuid)
+        view.set_support(support_uuid = collection.support_uuid, model = collection.model)
     if collection.realization is not None:
         view.set_realization(collection.realization)
     view.inherit_similar_parts_for_time_series_from_other_collection(collection, example_part)

@@ -340,8 +340,8 @@ def example_model_with_prop_ts_rels(tmp_path):
                                                      time_index = ts_index,
                                                      null_value = None,
                                                      property_kind = 'saturation',
-                                                     facet_type = None,
-                                                     facet = None,
+                                                     facet_type = 'what',
+                                                     facet = 'water',
                                                      realization = None)
         collection.write_hdf5_for_imported_list()
         collection.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts.uuid)
