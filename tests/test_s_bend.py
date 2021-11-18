@@ -19,7 +19,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.rq_import as rqi
-import resqpy.well.well_functions as rqw
+import resqpy.well.well_utils as rqw
 import resqpy.well as rqw2
 
 def test_s_bend_fn(tmp_path, epc = None):

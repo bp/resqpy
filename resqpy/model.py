@@ -3327,7 +3327,7 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well.well_functions  # Imported here for speed, module is not always needed
+        import resqpy.well.well_utils  # Imported here for speed, module is not always needed
 
         uuids = self.uuids(obj_type = "WellboreTrajectoryRepresentation")
         for uuid in uuids:
@@ -3341,7 +3341,7 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well.well_functions  # Imported here to avoid circular imports
+        import resqpy.well.well_utils  # Imported here to avoid circular imports
 
         uuids = self.uuids(obj_type = 'MdDatum')
         if uuids:

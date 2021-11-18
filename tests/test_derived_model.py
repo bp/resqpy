@@ -13,7 +13,7 @@ import resqpy.olio.box_utilities as bx
 import resqpy.olio.fine_coarse as rqfc
 import resqpy.olio.uuid as bu
 import resqpy.property as rqp
-import resqpy.well.well_functions as rqw
+import resqpy.well.well_utils as rqw
 
 import resqpy.well as rqw2
 

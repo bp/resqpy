@@ -219,7 +219,7 @@ class PropertyCollection():
         import resqpy.grid as grr
         import resqpy.surface as rqs
         import resqpy.unstructured as rug
-        import resqpy.well.well_functions as rqw
+        import resqpy.well.well_utils as rqw
 
         # todo: check uuid's of individual parts' supports match that of support being set for whole collection
 
@@ -308,7 +308,7 @@ class PropertyCollection():
         import resqpy.grid as grr
         import resqpy.surface as rqs
         import resqpy.unstructured as rug
-        import resqpy.well.well_functions as rqw
+        import resqpy.well.well_utils as rqw
 
         shape_list = None
         support = self.support

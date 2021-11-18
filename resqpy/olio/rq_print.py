@@ -19,7 +19,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
 import resqpy.time_series as rts
-import resqpy.well.well_functions as rqw
+import resqpy.well.well_utils as rqw
 
 
 def pl(n, use_e = False):

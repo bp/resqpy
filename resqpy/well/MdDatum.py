@@ -1,4 +1,4 @@
-"""md_datum.py: resqpy module providing md datum class.
+"""MdDatum.py: resqpy module providing md datum class.
 
 """
 
@@ -10,7 +10,7 @@ version = '10th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('md_datum.py version ' + version)
+log.debug('MdDatum.py version ' + version)
 
 import warnings
 

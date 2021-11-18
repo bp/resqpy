@@ -1,4 +1,4 @@
-"""well_functions.py: resqpy well module providing trajectory, deviation survey, blocked well, wellbore frame and marker frame and md datum classes.
+"""well_utils.py: resqpy well module providing trajectory, deviation survey, blocked well, wellbore frame and marker frame and md datum classes.
 
 """
 
@@ -12,7 +12,7 @@ version = '10th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('well_functions.py version ' + version)
+log.debug('well_utils.py version ' + version)
 
 import math as maths
 from functools import partial
@@ -31,10 +31,10 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .md_datum import MdDatum
-from .wellbore_frame import WellboreFrame
-from .well_functions import load_hdf5_array
-from .deviation_survey import DeviationSurvey
+from .MdDatum import MdDatum
+from .WellboreFrame import WellboreFrame
+from .well_utils import load_hdf5_array
+from .DeviationSurvey import DeviationSurvey
 
 class Trajectory(BaseResqpy):
     """Class for RESQML Wellbore Trajectory Representation (Geometry).

@@ -32,7 +32,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.rq_import as rqi
-import resqpy.well.well_functions as rqw
+import resqpy.well.well_utils as rqw
 
 import resqpy.well as rqw2
 

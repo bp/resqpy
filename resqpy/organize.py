@@ -1456,7 +1456,7 @@ class WellboreInterpretation(BaseResqpy):
     def iter_trajectories(self):
         """Iterable of associated trajectories."""
 
-        import resqpy.well.well_functions
+        import resqpy.well.well_utils
 
         uuids = self.model.uuids(obj_type = "WellboreTrajectoryRepresentation", related_uuid = self.uuid)
         for uuid in uuids:
