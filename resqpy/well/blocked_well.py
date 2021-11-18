@@ -1346,13 +1346,10 @@ class BlockedWell(BaseResqpy):
                                                      max_k0 = max_k0,
                                                      k0_list = k0_list)
 
-        doing_angles = (('ANGLA' in column_list and 'ANGLA' not in pc_titles) or
-                        ('ANGLV' in column_list and 'ANGLV' not in pc_titles) or doing_kh or do_well_inflow)
-        doing_xyz = (('X' in column_list and 'X' not in pc_titles) or (
-                    'Y' in column_list and 'Y' not in pc_titles) or
-                     ('DEPTH' in column_list and 'DEPTH' not in pc_titles))
-        doing_entry_exit = doing_angles or ('LENGTH' in column_list and 'LENGTH' not in pc_titles and
-                                            length_mode == 'straight')
+        doing_angles, doing_xyz, doing_entry_exit = BlockedWell.__verify_if_angles_xyz_and_length_to_be_added(
+            column_list = column_list, pc_titles = pc_titles, doing_kh = doing_kh, do_well_inflow = do_well_inflow,
+            length_mode = length_mode
+        )
 
         grid_crs_list = self.__verify_number_of_grids_and_crs_units(column_list = column_list)
 
@@ -1368,10 +1365,7 @@ class BlockedWell(BaseResqpy):
 
         ci = -1
         row_ci_list = []
-        if self.node_count is None or self.node_count < 2:
-            interval_count = 0
-        else:
-            interval_count = self.node_count - 1
+        interval_count = self.__get_interval_count()
 
         for interval in range(interval_count):
             if self.grid_indices[interval] < 0:
@@ -1402,6 +1396,7 @@ class BlockedWell(BaseResqpy):
                 perforation_list = perforation_list,
                 ci = ci,
                 interval = interval)
+
             if skip_interval_due_to_perforations:
                 continue
 
@@ -1480,16 +1475,18 @@ class BlockedWell(BaseResqpy):
 
         self.__add_as_properties(df = df, add_as_properties = add_as_properties, extra_columns_list = extra_columns_list,
                                  row_ci_list = row_ci_list, length_uom = length_uom)
-        # if add_as_properties:
-        #     if isinstance(add_as_properties, list):
-        #         for col in add_as_properties:
-        #             assert col in extra_columns_list
-        #         property_columns = add_as_properties
-        #     else:
-        #         property_columns = extra_columns_list
-        #     self._add_df_properties(df, property_columns, row_ci_list=row_ci_list, length_uom=length_uom)
 
         return df
+
+    def __get_interval_count(self):
+        """Get the number of intervals to be added to the dataframe."""
+
+        if self.node_count is None or self.node_count < 2:
+            interval_count = 0
+        else:
+            interval_count = self.node_count - 1
+
+        return interval_count
 
     @staticmethod
     def __prop_array(uuid_or_dict, grid):
@@ -1704,6 +1701,20 @@ class BlockedWell(BaseResqpy):
         if k0_list is not None and len(k0_list) == 0:
             log.warning('no layers included for blocked well dataframe: no rows will be included')
 
+    @staticmethod
+    def __verify_if_angles_xyz_and_length_to_be_added(column_list, pc_titles, doing_kh, do_well_inflow, length_mode):
+        """ Determine if angla, anglv, x, y, z and length data are to be added as properties to the dataframe."""
+
+        doing_angles = (('ANGLA' in column_list and 'ANGLA' not in pc_titles) or
+                        ('ANGLV' in column_list and 'ANGLV' not in pc_titles) or doing_kh or do_well_inflow)
+        doing_xyz = (('X' in column_list and 'X' not in pc_titles) or (
+                    'Y' in column_list and 'Y' not in pc_titles) or
+                     ('DEPTH' in column_list and 'DEPTH' not in pc_titles))
+        doing_entry_exit = doing_angles or ('LENGTH' in column_list and 'LENGTH' not in pc_titles and
+                                            length_mode == 'straight')
+
+        return doing_angles, doing_xyz, doing_entry_exit
+
     def __verify_number_of_grids_and_crs_units(self, column_list):
         """ Verify that a GRID column is included in the dataframe if the well intersects more than one grid.
          Verify that each grid's crs units are consistent in all directions.
@@ -1763,8 +1774,9 @@ class BlockedWell(BaseResqpy):
         saturation_limit_exceeded_1 = max_satw is not None and BlockedWell.__prop_array(satw_uuid, grid)[tuple_kji0] > max_satw
         saturation_limit_exceeded_2 = min_sato is not None and BlockedWell.__prop_array(sato_uuid, grid)[tuple_kji0] < min_sato
         saturation_limit_exceeded_3 = max_satg is not None and BlockedWell.__prop_array(satg_uuid, grid)[tuple_kji0] > max_satg
-        skip_interval = any([inactive_grid, out_of_bounds_layer_2, out_of_bounds_layer_2, out_of_bounds_region, saturation_limit_exceeded_1,
-                saturation_limit_exceeded_2, saturation_limit_exceeded_3])
+        skip_interval = any([max_depth_exceeded, inactive_grid, out_of_bounds_layer_1, out_of_bounds_layer_2,
+                             out_of_bounds_region, saturation_limit_exceeded_1, saturation_limit_exceeded_2,
+                             saturation_limit_exceeded_3])
 
         return skip_interval
 
