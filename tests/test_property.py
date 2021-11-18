@@ -530,8 +530,8 @@ def test_part_str(example_model_with_prop_ts_rels):
     # Act / Assert
     assert pc.part_str(part_disc) == 'discrete (Zone)'
     assert pc.part_str(part_disc, include_citation_title = False) == 'discrete'
-    assert pc.part_str(part_cont) == 'saturation; timestep: 2 (SW)'
-    assert pc.part_str(part_cont, include_citation_title = False) == 'saturation; timestep: 2'
+    assert pc.part_str(part_cont) == 'saturation: water; timestep: 2 (SW)'
+    assert pc.part_str(part_cont, include_citation_title = False) == 'saturation: water; timestep: 2'
     assert pc.part_str(part_facet) == 'rock permeability: J (Perm)'
     assert pc.part_str(part_facet, include_citation_title = False) == 'rock permeability: J'
 
@@ -547,7 +547,7 @@ def test_part_filename(example_model_with_prop_ts_rels):
 
     # Act / Assert
     assert pc.part_filename(part_disc) == 'discrete'
-    assert pc.part_filename(part_cont) == 'saturation_ts_2'
+    assert pc.part_filename(part_cont) == 'saturation_water_ts_2'
     assert pc.part_filename(part_facet) == 'rock_permeability_J'
 
 
@@ -758,8 +758,8 @@ def test_similar_parts_for_realizations_from_other_collection(example_model_with
     copy_from = example_model_with_prop_ts_rels
     pc_from = copy_from.grid().property_collection
 
-    pc_to = rqp.PropertyCollection()
-    pc_to.set_support(model = copy_from, support_uuid = copy_from.grid().uuid)
+    pc_to = rqp.PropertyCollection(realization = 1)
+    pc_to.set_support(model = copy_from)
 
     rel1_parts = [part for part in pc_from.parts() if pc_from.realization_for_part(part) == 1]
     example_part = rel1_parts[0]
@@ -768,3 +768,63 @@ def test_similar_parts_for_realizations_from_other_collection(example_model_with
     pc_to.inherit_similar_parts_for_realizations_from_other_collection(other = pc_from, example_part = example_part)
     # Assert
     assert len(pc_to.parts()) == len(rel1_parts)
+
+
+def test_property_over_time_series_from_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+
+    sw_parts = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW']
+    example_part = sw_parts[0]
+
+    # Act
+    new_pc = rqp.property_over_time_series_from_collection(collection = pc, example_part = example_part)
+    # Assert
+    assert len(new_pc.parts()) == len(sw_parts)
+
+
+def test_property_for_keword_from_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+
+    sw_parts = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW']
+
+    # Act
+    new_pc = rqp.property_collection_for_keyword(collection = pc, keyword = 'sw')
+    # Assert
+    assert len(new_pc.parts()) == len(sw_parts)
+
+
+def test_stringlookup_add_str(example_model_and_crs):
+    # Arrange
+    model, _ = example_model_and_crs
+    lookup = rqp.StringLookup(parent_model = model)
+    assert lookup.str_dict == {}
+    # Act
+    lookup.set_string(0, 'channel')
+    # Assert
+    assert lookup.str_dict == {0: 'channel'}
+
+
+def test_create_property_set_xml(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    num_parts = len(pc.parts())
+
+    # Act
+    pc.create_property_set_xml('Grid property collection')
+    model.store_epc()
+    reload = rq.Model(model.epc_file)
+    # Assert
+    assert len(reload.parts_list_of_type('obj_PropertySet')) == 1
+
+    # Act
+    prop_set_root = reload.root_for_part(reload.parts_list_of_type('obj_PropertySet')[0])
+    pset = rqp.PropertyCollection()
+    pset.set_support(support = model.grid())
+    pset.populate_from_property_set(prop_set_root)
+    # Assert
+    assert len(pset.parts()) == num_parts
