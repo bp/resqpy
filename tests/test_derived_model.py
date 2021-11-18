@@ -629,8 +629,6 @@ def test_refined_and_coarsened_grid(tmp_path):
 
 def test_add_faults_and_scaling(tmp_path):
 
-    tmp_path = '/users/andy/bifröst/bc'
-
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'fault_test.epc')
     model = rq.new_model(epc)
