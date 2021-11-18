@@ -1507,6 +1507,19 @@ class BlockedWell(BaseResqpy):
         cell_axial_vectors = None
         if not mode.startswith('z'):
             cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
+        ref_vector = BlockedWell.__get_ref_vector_when_mode_not_normal_well_i(mode = mode, grid_crs = grid_crs,
+                                                                              cell_axial_vectors = cell_axial_vectors,
+                                                                              grid = grid)
+        if ref_vector is None or ref_vector[2] == 0.0:
+            if grid_crs.z_inc_down:
+                ref_vector = np.array((0.0, 0.0, 1.0))
+            else:
+                ref_vector = np.array((0.0, 0.0, -1.0))
+        return ref_vector
+
+    @staticmethod
+    def __get_ref_vector_when_mode_not_normal_well_i(mode, grid_crs, cell_axial_vectors, grid):
+
         if mode == 'z+':
             ref_vector = np.array((0.0, 0.0, 1.0))
         elif mode == 'z down':
@@ -1527,11 +1540,7 @@ class BlockedWell(BaseResqpy):
                 else:
                     if ref_vector[2] > 0.0:
                         ref_vector = -ref_vector
-        if ref_vector is None or ref_vector[2] == 0.0:
-            if grid_crs.z_inc_down:
-                ref_vector = np.array((0.0, 0.0, 1.0))
-            else:
-                ref_vector = np.array((0.0, 0.0, -1.0))
+
         return ref_vector
 
     @staticmethod
@@ -1603,16 +1612,27 @@ class BlockedWell(BaseResqpy):
     @staticmethod
     def __check_perforation_properties_to_be_added(column_list, perforation_list):
 
-        if 'LENGTH' in column_list and 'PPERF' in column_list and 'KH' not in column_list and perforation_list is not None:
+        if all(['LENGTH' in column_list, 'PPERF' in column_list, 'KH' not in column_list, perforation_list is not None]):
             log.warning(
                 'both LENGTH and PPERF will include effects of partial perforation; only one should be used in WELLSPEC'
             )
-        elif (perforation_list is not None and 'LENGTH' not in column_list and 'PPERF' not in column_list and
-              'KH' not in column_list and 'WBC' not in column_list):
+        elif all([perforation_list is not None, 'LENGTH' not in column_list, 'PPERF' not in column_list,
+            'KH' not in column_list, 'WBC' not in column_list]):
             log.warning('perforation list supplied but no use of LENGTH, KH, PPERF nor WBC')
 
         if perforation_list is not None and len(perforation_list) == 0:
             log.warning('empty perforation list specified for blocked well dataframe: no rows will be included')
+
+        # if 'LENGTH' in column_list and 'PPERF' in column_list and 'KH' not in column_list and perforation_list is not None:
+        #     log.warning(
+        #         'both LENGTH and PPERF will include effects of partial perforation; only one should be used in WELLSPEC'
+        #     )
+        # elif (perforation_list is not None and 'LENGTH' not in column_list and 'PPERF' not in column_list and
+        #       'KH' not in column_list and 'WBC' not in column_list):
+        #     log.warning('perforation list supplied but no use of LENGTH, KH, PPERF nor WBC')
+        #
+        # if perforation_list is not None and len(perforation_list) == 0:
+        #     log.warning('empty perforation list specified for blocked well dataframe: no rows will be included')
 
     @staticmethod
     def __check_skin_stat_radw_to_be_added_as_properties(skin, stat, radw, column_list):
@@ -1705,13 +1725,29 @@ class BlockedWell(BaseResqpy):
     def __verify_if_angles_xyz_and_length_to_be_added(column_list, pc_titles, doing_kh, do_well_inflow, length_mode):
         """ Determine if angla, anglv, x, y, z and length data are to be added as properties to the dataframe."""
 
-        doing_angles = (('ANGLA' in column_list and 'ANGLA' not in pc_titles) or
-                        ('ANGLV' in column_list and 'ANGLV' not in pc_titles) or doing_kh or do_well_inflow)
-        doing_xyz = (('X' in column_list and 'X' not in pc_titles) or (
-                    'Y' in column_list and 'Y' not in pc_titles) or
-                     ('DEPTH' in column_list and 'DEPTH' not in pc_titles))
-        doing_entry_exit = doing_angles or ('LENGTH' in column_list and 'LENGTH' not in pc_titles and
-                                            length_mode == 'straight')
+        doing_angles = any([('ANGLA' in column_list and 'ANGLA' not in pc_titles),
+                            ('ANGLV' in column_list and 'ANGLV' not in pc_titles),
+                            (doing_kh),
+                            (do_well_inflow)
+                            ]
+                           )
+        doing_xyz = any([('X' in column_list and 'X' not in pc_titles),
+                         ('Y' in column_list and 'Y' not in pc_titles),
+                         ('DEPTH' in column_list and 'DEPTH' not in pc_titles)
+                         ]
+                        )
+        doing_entry_exit = any([(doing_angles),
+                                ('LENGTH' in column_list and 'LENGTH' not in pc_titles and length_mode == 'straight')
+                                ]
+                               )
+
+        # doing_angles = (('ANGLA' in column_list and 'ANGLA' not in pc_titles) or
+        #                 ('ANGLV' in column_list and 'ANGLV' not in pc_titles) or doing_kh or do_well_inflow)
+        # doing_xyz = (('X' in column_list and 'X' not in pc_titles) or (
+        #             'Y' in column_list and 'Y' not in pc_titles) or
+        #              ('DEPTH' in column_list and 'DEPTH' not in pc_titles))
+        # doing_entry_exit = doing_angles or ('LENGTH' in column_list and 'LENGTH' not in pc_titles and
+        #                                     length_mode == 'straight')
 
         return doing_angles, doing_xyz, doing_entry_exit
 
@@ -1991,25 +2027,12 @@ class BlockedWell(BaseResqpy):
 
         skip_interval = False
         if doing_kh:
-            if isotropic_perm and ntg_is_one:
-                kh = length * BlockedWell.__prop_array(perm_i_uuid, grid)[tuple_kji0]
-            else:
-                if np.isnan(k_i) or np.isnan(k_j):
-                    kh = 0.0
-                elif anglv == 0.0:
-                    kh = length * maths.sqrt(k_i * k_j)
-                elif np.isnan(k_k):
-                    kh = 0.0
-                else:
-                    k_e = maths.pow(k_i * k_j * k_k, 1.0 / 3.0)
-                    if k_e == 0.0:
-                        kh = 0.0
-                    else:
-                        l_i = length * maths.sqrt(k_e / k_i) * sine_anglv * cosine_angla
-                        l_j = length * maths.sqrt(k_e / k_j) * sine_anglv * sine_angla
-                        l_k = length * maths.sqrt(k_e / k_k) * cosine_anglv
-                        l_p = maths.sqrt(l_i * l_i + l_j * l_j + l_k * l_k)
-                        kh = k_e * l_p
+            kh = BlockedWell.__get_kh_if_doing_kh(isotropic_perm = isotropic_perm, ntg_is_one = ntg_is_one,
+                                                  length = length, perm_i_uuid = perm_i_uuid, grid = grid,
+                                                  tuple_kji0 = tuple_kji0, k_i = k_i, k_j = k_j, k_k = k_k,
+                                                  anglv = anglv, sine_anglv = sine_anglv, cosine_anglv = cosine_anglv,
+                                                  sine_angla = sine_angla, cosine_angla = cosine_angla
+                                                  )
             if min_kh is not None and kh < min_kh:
                 skip_interval = True
         elif 'KH' in pc_titles:
@@ -2018,6 +2041,31 @@ class BlockedWell(BaseResqpy):
             kh = None
 
         return skip_interval, kh
+
+    @staticmethod
+    def __get_kh_if_doing_kh(isotropic_perm, ntg_is_one, length, perm_i_uuid, grid, tuple_kji0, k_i, k_j, k_k,
+                             anglv, sine_anglv, cosine_anglv, sine_angla, cosine_angla):
+
+        if isotropic_perm and ntg_is_one:
+            kh = length * BlockedWell.__prop_array(perm_i_uuid, grid)[tuple_kji0]
+        else:
+            if np.isnan(k_i) or np.isnan(k_j):
+                kh = 0.0
+            elif anglv == 0.0:
+                kh = length * maths.sqrt(k_i * k_j)
+            elif np.isnan(k_k):
+                kh = 0.0
+            else:
+                k_e = maths.pow(k_i * k_j * k_k, 1.0 / 3.0)
+                if k_e == 0.0:
+                    kh = 0.0
+                else:
+                    l_i = length * maths.sqrt(k_e / k_i) * sine_anglv * cosine_angla
+                    l_j = length * maths.sqrt(k_e / k_j) * sine_anglv * sine_angla
+                    l_k = length * maths.sqrt(k_e / k_k) * cosine_anglv
+                    l_p = maths.sqrt(l_i * l_i + l_j * l_j + l_k * l_k)
+                    kh = k_e * l_p
+        return kh
 
     @staticmethod
     def __get_pc_arrays_for_interval(pc, pc_titles, ci, length, radw, skin):
@@ -2047,33 +2095,20 @@ class BlockedWell(BaseResqpy):
                                                   ):
 
         if do_well_inflow:
-            if isotropic_perm and ntg_is_one:
-                k_ei = k_ej = k_ek = k_i
-                radw_e = radw
-            else:
-                k_ei = maths.sqrt(k_j * k_k)
-                k_ej = maths.sqrt(k_i * k_k)
-                k_ek = maths.sqrt(k_i * k_j)
-                r_wi = 0.0 if k_ei == 0.0 else 0.5 * radw * (maths.sqrt(k_ei / k_j) + maths.sqrt(k_ei / k_k))
-                r_wj = 0.0 if k_ej == 0.0 else 0.5 * radw * (maths.sqrt(k_ej / k_i) + maths.sqrt(k_ej / k_k))
-                r_wk = 0.0 if k_ek == 0.0 else 0.5 * radw * (maths.sqrt(k_ek / k_i) + maths.sqrt(k_ek / k_j))
-                rwi = r_wi * sine_anglv * cosine_angla
-                rwj = r_wj * sine_anglv * sine_angla
-                rwk = r_wk * cosine_anglv
-                radw_e = maths.sqrt(rwi * rwi + rwj * rwj + rwk * rwk)
-                if radw_e == 0.0:
-                    radw_e = radw  # no permeability in this situation anyway
+            k_ei, k_ej, k_ek, radw_e = BlockedWell.__calculate_ke_and_radw_e(
+                isotropic_perm = isotropic_perm, ntg_is_one = ntg_is_one, radw = radw, k_i = k_i, k_j = k_j, k_k = k_k,
+                sine_anglv = sine_anglv, cosine_anglv = cosine_anglv, sine_angla = sine_angla, cosine_angla = cosine_angla
+                )
+
             cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
             d2 = np.empty(3)
             for axis in range(3):
                 d2[axis] = np.sum(cell_axial_vectors[axis] * cell_axial_vectors[axis])
-            r_bi = 0.0 if k_ei == 0.0 else 0.14 * maths.sqrt(k_ei * (d2[1] / k_j + d2[0] / k_k))
-            r_bj = 0.0 if k_ej == 0.0 else 0.14 * maths.sqrt(k_ej * (d2[2] / k_i + d2[0] / k_k))
-            r_bk = 0.0 if k_ek == 0.0 else 0.14 * maths.sqrt(k_ek * (d2[2] / k_i + d2[1] / k_j))
-            rbi = r_bi * sine_anglv * cosine_angla
-            rbj = r_bj * sine_anglv * sine_angla
-            rbk = r_bk * cosine_anglv
-            radb_e = maths.sqrt(rbi * rbi + rbj * rbj + rbk * rbk)
+            radb_e = BlockedWell.__calculate_radb_e(k_ei = k_ei, k_ej = k_ej, k_ek = k_ek, k_i = k_i, k_j = k_j, k_k = k_k,
+                                                    d2 = d2, sine_anglv = sine_anglv, cosine_anglv = cosine_anglv,
+                                                    sine_angla = sine_angla, cosine_angla = cosine_angla
+                                                    )
+
             if radb is None:
                 radb = radw * radb_e / radw_e
             if wi is None:
@@ -2084,28 +2119,75 @@ class BlockedWell(BaseResqpy):
 
         return radb, wi, wbc
 
+    @staticmethod
+    def __calculate_ke_and_radw_e(isotropic_perm, ntg_is_one, radw, k_i, k_j, k_k, sine_anglv, cosine_anglv, sine_angla,
+                           cosine_angla):
+
+        if isotropic_perm and ntg_is_one:
+            k_ei = k_ej = k_ek = k_i
+            radw_e = radw
+        else:
+            k_ei = maths.sqrt(k_j * k_k)
+            k_ej = maths.sqrt(k_i * k_k)
+            k_ek = maths.sqrt(k_i * k_j)
+            r_wi = 0.0 if k_ei == 0.0 else 0.5 * radw * (maths.sqrt(k_ei / k_j) + maths.sqrt(k_ei / k_k))
+            r_wj = 0.0 if k_ej == 0.0 else 0.5 * radw * (maths.sqrt(k_ej / k_i) + maths.sqrt(k_ej / k_k))
+            r_wk = 0.0 if k_ek == 0.0 else 0.5 * radw * (maths.sqrt(k_ek / k_i) + maths.sqrt(k_ek / k_j))
+            rwi = r_wi * sine_anglv * cosine_angla
+            rwj = r_wj * sine_anglv * sine_angla
+            rwk = r_wk * cosine_anglv
+            radw_e = maths.sqrt(rwi * rwi + rwj * rwj + rwk * rwk)
+            if radw_e == 0.0:
+                radw_e = radw  # no permeability in this situation anyway
+
+        return k_ei, k_ej, k_ek, radw_e
+
+    @staticmethod
+    def __calculate_radb_e(k_ei, k_ej, k_ek, k_i, k_j, k_k, d2, sine_anglv, cosine_anglv, sine_angla, cosine_angla):
+
+        r_bi = 0.0 if k_ei == 0.0 else 0.14 * maths.sqrt(k_ei * (d2[1] / k_j + d2[0] / k_k))
+        r_bj = 0.0 if k_ej == 0.0 else 0.14 * maths.sqrt(k_ej * (d2[2] / k_i + d2[0] / k_k))
+        r_bk = 0.0 if k_ek == 0.0 else 0.14 * maths.sqrt(k_ek * (d2[2] / k_i + d2[1] / k_j))
+        rbi = r_bi * sine_anglv * cosine_angla
+        rbj = r_bj * sine_anglv * sine_angla
+        rbk = r_bk * cosine_anglv
+        radb_e = maths.sqrt(rbi * rbi + rbj * rbj + rbk * rbk)
+
+        return radb_e
+
     def __get_xyz_arrays_for_interval(self, doing_xyz, length_mode, length_uom, md, traj_crs, depth_inc_down,
                                       traj_z_inc_down, entry_xyz, exit_xyz, ee_crs, pc, pc_titles, ci):
         """ Get the x, y and z arrays for the interval."""
 
         xyz = (np.NaN, np.NaN, np.NaN)
         if doing_xyz:
-            if length_mode == 'MD' and self.trajectory is not None:
-                xyz = self.trajectory.xyz_for_md(md)
-                if length_uom is not None and length_uom != self.trajectory.md_uom:
-                    bwam.convert_lengths(xyz, traj_crs.z_units, length_uom)
-                if depth_inc_down and traj_z_inc_down is False:
-                    xyz[2] = -xyz[2]
-            else:
-                xyz = 0.5 * (np.array(exit_xyz) + np.array(entry_xyz))
-                if length_uom is not None and length_uom != ee_crs.z_units:
-                    bwam.convert_lengths(xyz, ee_crs.z_units, length_uom)
-                if depth_inc_down and ee_crs.z_inc_down is False:
-                    xyz[2] = -xyz[2]
+            xyz = self.__get_xyz_if_doing_xyz(length_mode = length_mode, md = md, length_uom = length_uom,
+                                              traj_crs = traj_crs, depth_inc_down = depth_inc_down,
+                                              traj_z_inc_down = traj_z_inc_down, entry_xyz = entry_xyz,
+                                              exit_xyz = exit_xyz, ee_crs = ee_crs
+                                              )
         xyz = np.array(xyz)
         for i, col_header in enumerate(['X', 'Y', 'DEPTH']):
             if col_header in pc_titles:
                 xyz[i] = pc.single_array_ref(citation_title=col_header)[ci]
+
+        return xyz
+
+    def __get_xyz_if_doing_xyz(self, length_mode, md, length_uom, traj_crs, depth_inc_down, traj_z_inc_down,
+                               exit_xyz, entry_xyz, ee_crs):
+
+        if length_mode == 'MD' and self.trajectory is not None:
+            xyz = self.trajectory.xyz_for_md(md)
+            if length_uom is not None and length_uom != self.trajectory.md_uom:
+                bwam.convert_lengths(xyz, traj_crs.z_units, length_uom)
+            if depth_inc_down and traj_z_inc_down is False:
+                xyz[2] = -xyz[2]
+        else:
+            xyz = 0.5 * (np.array(exit_xyz) + np.array(entry_xyz))
+            if length_uom is not None and length_uom != ee_crs.z_units:
+                bwam.convert_lengths(xyz, ee_crs.z_units, length_uom)
+            if depth_inc_down and ee_crs.z_inc_down is False:
+                xyz[2] = -xyz[2]
 
         return xyz
 
