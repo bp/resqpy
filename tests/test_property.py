@@ -696,3 +696,75 @@ def test_discombobulated_combobulated_face_arrays(example_model_with_properties)
 
     # Assert
     assert_array_almost_equal(orig, discombob)
+
+
+def test_time_series_array_ref(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Trim the model to only contain properties with timesteps
+    for part in pc.parts():
+        if pc.time_index_for_part(part) is None:
+            pc.remove_part_from_dict(part)
+    # Make sure the number of properties is as expected, and they are all the same property
+    assert len(pc.parts()) == 3
+    assert len(set([pc.citation_title_for_part(part) for part in pc.parts()])) == 1
+    # Pull out the full arrays to generate the expected output
+    sw1, sw2, sw3 = [pc.cached_part_array_ref(part) for part in pc.parts()]
+    expected = np.array([sw1, sw2, sw3])
+
+    # Act
+    output = pc.time_series_array_ref()
+
+    # Assert
+    assert_array_almost_equal(expected, output)
+
+
+def test_inherit_parts_from_other_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    copy_from = example_model_with_prop_ts_rels
+    pc_from = copy_from.grid().property_collection
+
+    pc_to = rqp.PropertyCollection()
+    pc_to.set_support(model = copy_from, support_uuid = copy_from.grid().uuid)
+
+    orig_from = len(pc_from.parts())
+
+    # Act
+    pc_to.inherit_parts_from_other_collection(pc_from)
+    # Assert
+    assert len(pc_to.parts()) == orig_from
+
+
+def test_similar_parts_for_time_series_from_other_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    copy_from = example_model_with_prop_ts_rels
+    pc_from = copy_from.grid().property_collection
+
+    pc_to = rqp.PropertyCollection()
+    pc_to.set_support(model = copy_from, support_uuid = copy_from.grid().uuid)
+
+    sw_parts = [part for part in pc_from.parts() if pc_from.citation_title_for_part(part) == 'SW']
+    example_part = sw_parts[0]
+
+    # Act
+    pc_to.inherit_similar_parts_for_time_series_from_other_collection(other = pc_from, example_part = example_part)
+    # Assert
+    assert len(pc_to.parts()) == len(sw_parts)
+
+
+def test_similar_parts_for_realizations_from_other_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    copy_from = example_model_with_prop_ts_rels
+    pc_from = copy_from.grid().property_collection
+
+    pc_to = rqp.PropertyCollection()
+    pc_to.set_support(model = copy_from, support_uuid = copy_from.grid().uuid)
+
+    rel1_parts = [part for part in pc_from.parts() if pc_from.realization_for_part(part) == 1]
+    example_part = rel1_parts[0]
+
+    # Act
+    pc_to.inherit_similar_parts_for_realizations_from_other_collection(other = pc_from, example_part = example_part)
+    # Assert
+    assert len(pc_to.parts()) == len(rel1_parts)
