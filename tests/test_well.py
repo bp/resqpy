@@ -12,6 +12,7 @@ from resqpy.model import Model
 from resqpy.property import Property
 import resqpy.well as rqw2
 
+
 def test_MdDatum(example_model_and_crs):
 
     # Set up a new datum
@@ -130,9 +131,9 @@ def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
     wellname = "Hullabaloo"
     model, crs = example_model_and_crs
     datum = resqpy.well.MdDatum(parent_model = model,
-                                               crs_uuid = crs.uuid,
-                                               location = (0, 0, -100),
-                                               md_reference = 'kelly bushing')
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -100),
+                                md_reference = 'kelly bushing')
     datum.create_xml()
     traj = rqw2.Trajectory(parent_model = model, md_datum = datum, well_name = wellname)
 
@@ -191,20 +192,20 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
         df.loc[0, col] = array_data['first_station'][axis]
 
     survey_b = resqpy.well.DeviationSurvey.from_data_frame(parent_model = model,
-                                                                          data_frame = df,
-                                                                          md_datum = datum,
-                                                                          md_uom = data['md_uom'],
-                                                                          angle_uom = data['angle_uom'])
+                                                           data_frame = df,
+                                                           md_datum = datum,
+                                                           md_uom = data['md_uom'],
+                                                           angle_uom = data['angle_uom'])
     survey_b_uuid = survey_b.uuid
 
     csv_file = os.path.join(tmp_path, 'survey_c.csv')
     df.to_csv(csv_file)
 
     survey_c = resqpy.well.DeviationSurvey.from_ascii_file(parent_model = model,
-                                                                          deviation_survey_file = csv_file,
-                                                                          md_datum = datum,
-                                                                          md_uom = data['md_uom'],
-                                                                          angle_uom = data['angle_uom'])
+                                                           deviation_survey_file = csv_file,
+                                                           md_datum = datum,
+                                                           md_uom = data['md_uom'],
+                                                           angle_uom = data['angle_uom'])
     survey_c_uuid = survey_c.uuid
 
     # ----------- Act ---------
@@ -276,10 +277,10 @@ def test_wellspec_properties(example_model_and_crs):
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
     bw = rqw2.BlockedWell(model,
-                                                wellspec_file = wellspec_file,
-                                                well_name = well_name,
-                                                use_face_centres = True,
-                                                add_wellspec_properties = True)
+                          wellspec_file = wellspec_file,
+                          well_name = well_name,
+                          use_face_centres = True,
+                          add_wellspec_properties = True)
     assert bw is not None
     bw_uuid = bw.uuid
     skin_uuid = model.uuid(title = 'SKIN', related_uuid = bw.uuid)

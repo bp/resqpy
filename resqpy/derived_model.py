@@ -36,6 +36,7 @@ import resqpy.well.well_utils as rqw
 
 import resqpy.well as rqw2
 
+
 def _pl(n, use_es = False):
     if n == 1:
         return ''
@@ -1737,10 +1738,10 @@ def extract_box_for_well(epc_file = None,
             log.info('creating well objects for column')
             box_column_ji0 = (column_ji0[0] - box[0, 1], column_ji0[1] - box[0, 2])
             bw = rqw2.BlockedWell(newer_model,
-                                 grid = grid,
-                                 column_ji0 = box_column_ji0,
-                                 well_name = well_name,
-                                 use_face_centres = True)
+                                  grid = grid,
+                                  column_ji0 = box_column_ji0,
+                                  well_name = well_name,
+                                  use_face_centres = True)
             bw.write_hdf5(create_for_trajectory_if_needed = True)
             bw.create_xml(create_for_trajectory_if_needed = True, title = well_name)
         elif blocked_well is not None:

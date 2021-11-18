@@ -22,6 +22,7 @@ import resqpy.rq_import as rqi
 import resqpy.well.well_utils as rqw
 import resqpy.well as rqw2
 
+
 def test_s_bend_fn(tmp_path, epc = None):
 
     if epc is None:

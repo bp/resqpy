@@ -272,9 +272,9 @@ class PropertyCollection():
                     raise TypeError('unsupported property supporting representation class: ' + str(support_type))
             else:
                 if type(self.support) in [
-                        grr.Grid, grr.RegularGrid, rqw2.WellboreFrame, rqw2.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
-                        rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
-                        rug.PyramidGrid
+                        grr.Grid, grr.RegularGrid, rqw2.WellboreFrame, rqw2.BlockedWell, rqs.Mesh,
+                        rqf.GridConnectionSet, rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid,
+                        rug.VerticalPrismGrid, rug.PyramidGrid
                 ]:
                     self.support_root = self.support.root
                 else:

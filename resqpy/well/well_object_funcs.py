@@ -309,6 +309,7 @@ def well_name(well_object, model = None):
 
     return rqet.citation_title_for_node(best_root_for_object(well_object, model = model))
 
+
 def well_name(well_object, model = None):
     """Returns the 'best' citation title from the object or related well objects.
 
@@ -458,6 +459,7 @@ def well_name(well_object, model = None):
 
     return rqet.citation_title_for_node(best_root_for_object(well_object, model = model))
 
+
 def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, check_well_name = False):
     """Creates a WellLogCollection and WellboreFrame from a LAS file.
 
@@ -522,6 +524,7 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, ch
 
     return collection, well_frame
 
+
 def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
     """Add a blocked well for each well in a Nexus WELLSPEC file.
 
@@ -557,6 +560,7 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
         count += 1
 
     log.info(f'{count} blocked wells created based on wellspec file: {wellspec_file}')
+
 
 def add_logs_from_cellio(blockedwell, cellio):
     """Creates a WellIntervalPropertyCollection for a given BlockedWell, using a given cell I/O file.
@@ -651,6 +655,7 @@ def add_logs_from_cellio(blockedwell, cellio):
                 realization = None)
             collection.write_hdf5_for_imported_list()
             collection.create_xml_for_imported_list_and_add_parts_to_model(string_lookup_uuid = lookup_uuid)
+
 
 def lookup_from_cellio(line, model):
     """Create a StringLookup Object from a cell I/O row containing a categorical column name and details.

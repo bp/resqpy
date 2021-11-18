@@ -13,6 +13,7 @@ import resqpy.well.well_utils as rqw
 
 import resqpy.well as rqw2
 
+
 def test_model(tmp_path):
 
     epc = os.path.join(tmp_path, 'model.epc')

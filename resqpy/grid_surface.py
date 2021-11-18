@@ -1410,8 +1410,8 @@ def populate_blocked_well_from_trajectory(blocked_well,
         # NB. temporary objects, relationships left in a mess
         model = rq.Model(create_basics = True)
         trajectory = rqw2.Trajectory(model,
-                                    blocked_well.trajectory.root_node,
-                                    hdf5_source_model = blocked_well.trajectory.model)
+                                     blocked_well.trajectory.root_node,
+                                     hdf5_source_model = blocked_well.trajectory.model)
         assert trajectory is not None
         traj_crs = rqc.Crs(blocked_well.model, uuid = rqet.uuid_for_part_root(blocked_well.trajectory.crs_root))
         traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs

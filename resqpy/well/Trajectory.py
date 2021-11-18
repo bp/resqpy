@@ -36,6 +36,7 @@ from .WellboreFrame import WellboreFrame
 from .well_utils import load_hdf5_array
 from .DeviationSurvey import DeviationSurvey
 
+
 class Trajectory(BaseResqpy):
     """Class for RESQML Wellbore Trajectory Representation (Geometry).
 
@@ -165,35 +166,37 @@ class Trajectory(BaseResqpy):
         # Using dictionary mapping to replicate a switch statement. The init_function key is chosen based on the
         # data source and the correct function is then called based on the init_function_dict
         init_function_dict = {
-            'tangent_vectors': self.set_tangents,
-            'deviation_survey': partial(self.compute_from_deviation_survey,
-                                        method = 'minimum curvature',
-                                        set_tangent_vectors = set_tangent_vectors),
-            'data_frame': partial(self.load_from_data_frame,
-                                  data_frame,
-                                  md_uom = length_uom,
-                                  md_datum = md_datum,
-                                  set_tangent_vectors = set_tangent_vectors),
-            'cell_kji0_list': partial(self.load_from_cell_list,
-                                      grid,
-                                      cell_kji0_list,
-                                      spline_mode,
-                                      length_uom),
-            'wellspec_file': partial(self.load_from_wellspec,
-                                     grid, wellspec_file,
-                                     well_name,
-                                     spline_mode,
-                                     length_uom),
-            'deviation_survey_file': partial(self.load_from_ascii_file,
-                                             deviation_survey_file,
-                                             space_separated_instead_of_csv = survey_file_space_separated,
-                                             md_uom = length_uom,
-                                             md_datum = md_datum,
-                                             title = well_name,
-                                             set_tangent_vectors = set_tangent_vectors)
+            'tangent_vectors':
+                self.set_tangents,
+            'deviation_survey':
+                partial(self.compute_from_deviation_survey,
+                        method = 'minimum curvature',
+                        set_tangent_vectors = set_tangent_vectors),
+            'data_frame':
+                partial(self.load_from_data_frame,
+                        data_frame,
+                        md_uom = length_uom,
+                        md_datum = md_datum,
+                        set_tangent_vectors = set_tangent_vectors),
+            'cell_kji0_list':
+                partial(self.load_from_cell_list, grid, cell_kji0_list, spline_mode, length_uom),
+            'wellspec_file':
+                partial(self.load_from_wellspec, grid, wellspec_file, well_name, spline_mode, length_uom),
+            'deviation_survey_file':
+                partial(self.load_from_ascii_file,
+                        deviation_survey_file,
+                        space_separated_instead_of_csv = survey_file_space_separated,
+                        md_uom = length_uom,
+                        md_datum = md_datum,
+                        title = well_name,
+                        set_tangent_vectors = set_tangent_vectors)
         }
 
-        chosen_init_method = self.__choose_init_method(set_tangent_vectors=set_tangent_vectors, data_frame=data_frame, cell_kji0_list=cell_kji0_list, wellspec_file=wellspec_file, deviation_survey_file=deviation_survey_file)
+        chosen_init_method = self.__choose_init_method(set_tangent_vectors = set_tangent_vectors,
+                                                       data_frame = data_frame,
+                                                       cell_kji0_list = cell_kji0_list,
+                                                       wellspec_file = wellspec_file,
+                                                       deviation_survey_file = deviation_survey_file)
 
         try:
             init_function_dict[chosen_init_method]()
@@ -214,7 +217,8 @@ class Trajectory(BaseResqpy):
         if self.md_datum is None and self.control_points is not None:
             self.md_datum = MdDatum(self.model, crs_uuid = self.crs_uuid, location = self.control_points[0])
 
-    def __choose_init_method(self, set_tangent_vectors, data_frame, cell_kji0_list, wellspec_file, deviation_survey_file):
+    def __choose_init_method(self, set_tangent_vectors, data_frame, cell_kji0_list, wellspec_file,
+                             deviation_survey_file):
         """Choose an init method based on data source.
 
         """
@@ -317,7 +321,7 @@ class Trajectory(BaseResqpy):
             self.md_domain = md_domain
         self.control_points = np.empty((self.knot_count, 3))
         self.control_points[0, :] = survey.first_station
-        self.__calculate_trajectory_from_inclination_and_azimuth(survey=survey)
+        self.__calculate_trajectory_from_inclination_and_azimuth(survey = survey)
         self.tangent_vectors = None
         if set_tangent_vectors:
             self.set_tangents()
@@ -472,7 +476,7 @@ class Trajectory(BaseResqpy):
             log.error('failed to read ascii deviation survey file ' + str(trajectory_file))
             raise
 
-        well_col = self.__check_well_col(df=df, trajectory_file=trajectory_file, well_col=well_col)
+        well_col = self.__check_well_col(df = df, trajectory_file = trajectory_file, well_col = well_col)
         if title:  # filter data frame by well name
             if well_col:
                 df = df[df[well_col] == title]
@@ -494,10 +498,11 @@ class Trajectory(BaseResqpy):
                                   set_tangent_vectors = set_tangent_vectors)
 
     @staticmethod
-    def __check_well_col(df,
-                       trajectory_file,
-                       well_col = None,
-                           ):
+    def __check_well_col(
+        df,
+        trajectory_file,
+        well_col = None,
+    ):
         """Verifies that a valid well_col has been supplied or can be found in the dataframe that has been generated
         from the trajectory file.
 
@@ -765,16 +770,16 @@ class Trajectory(BaseResqpy):
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
 
-        self.__create_wellbore_feature_and_interpretation_xml(add_as_part=add_as_part,
-                                                            add_relationships=add_relationships,
-                                                            originator=originator)
+        self.__create_wellbore_feature_and_interpretation_xml(add_as_part = add_as_part,
+                                                              add_relationships = add_relationships,
+                                                              originator = originator)
 
         if md_datum_root is None:
-            md_datum_root = self.__create_md_datum_root(md_datum_xyz=md_datum_xyz)
+            md_datum_root = self.__create_md_datum_root(md_datum_xyz = md_datum_xyz)
 
         wbt_node = super().create_xml(originator = originator, add_as_part = False)
 
-        self.__create_wbt_node_non_geometry_sub_elements(wbt_node=wbt_node)
+        self.__create_wbt_node_non_geometry_sub_elements(wbt_node = wbt_node)
 
         self.model.create_md_datum_reference(self.md_datum.root, root = wbt_node)
 
@@ -783,7 +788,7 @@ class Trajectory(BaseResqpy):
             # todo: check geometry elements for parametric curve flavours other than minimum curvature
 
             geom, kc_node, lki_node, cpp_node, cpp_values_node, cp_node, cp_coords_node, tv_node, tv_coords_node = self.__create_wbt_node_geometry_sub_elements(
-                wbt_node=wbt_node)
+                wbt_node = wbt_node)
 
             self.__get_crs_uuid()
 
@@ -796,13 +801,15 @@ class Trajectory(BaseResqpy):
             if (tv_node is not None) & (tv_coords_node is not None):
                 self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'tangentVectors', root = tv_coords_node)
 
-        self.__create_deviation_survey_reference_node(wbt_node=wbt_node)
+        self.__create_deviation_survey_reference_node(wbt_node = wbt_node)
 
-        interp_root = self.__create_wellbore_interpretation_reference_node(wbt_node=wbt_node)
+        interp_root = self.__create_wellbore_interpretation_reference_node(wbt_node = wbt_node)
 
-        self.__add_as_part_and_add_relationships(wbt_node = wbt_node, interp_root = interp_root,
-                                               add_as_part = add_as_part, add_relationships = add_relationships,
-                                               ext_uuid = ext_uuid)
+        self.__add_as_part_and_add_relationships(wbt_node = wbt_node,
+                                                 interp_root = interp_root,
+                                                 add_as_part = add_as_part,
+                                                 add_relationships = add_relationships,
+                                                 ext_uuid = ext_uuid)
 
         return wbt_node
 
@@ -815,10 +822,10 @@ class Trajectory(BaseResqpy):
             if self.wellbore_interpretation is None:
                 self.create_feature_and_interpretation()
             if self.wellbore_feature is not None:
-                self.wellbore_feature.create_xml(add_as_part=add_as_part, originator=originator)
-            self.wellbore_interpretation.create_xml(add_as_part=add_as_part,
-                                                        add_relationships=add_relationships,
-                                                        originator=originator)
+                self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
+            self.wellbore_interpretation.create_xml(add_as_part = add_as_part,
+                                                    add_relationships = add_relationships,
+                                                    originator = originator)
 
     def __create_md_datum_root(self, md_datum_xyz):
         """ Create the root node for the MdDatum object
@@ -826,7 +833,7 @@ class Trajectory(BaseResqpy):
         """
         if self.md_datum is None:
             assert md_datum_xyz is not None
-            self.md_datum = MdDatum(self.model, location=md_datum_xyz)
+            self.md_datum = MdDatum(self.model, location = md_datum_xyz)
         if self.md_datum.root is None:
             md_datum_root = self.md_datum.create_xml()
         else:
@@ -923,8 +930,8 @@ class Trajectory(BaseResqpy):
             self.model.create_ref_node('DeviationSurvey',
                                        rqet.find_tag(rqet.find_tag(ds_root, 'Citation'), 'Title').text,
                                        bu.uuid_from_string(ds_root.attrib['uuid']),
-                                       content_type='obj_DeviationSurveyRepresentation',
-                                       root=wbt_node)
+                                       content_type = 'obj_DeviationSurveyRepresentation',
+                                       root = wbt_node)
 
     def __create_wellbore_interpretation_reference_node(self, wbt_node):
         """Create a reference node to a WellboreInterpretation object and append it to the WellboreTrajectory object's root node.

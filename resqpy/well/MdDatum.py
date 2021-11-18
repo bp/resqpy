@@ -98,7 +98,7 @@ class MdDatum(BaseResqpy):
         # if self.crs_uuid is None and crs_root is not None:
         #     self.crs_uuid = rqet.uuid_for_part_root(crs_root)
         # assert self.crs_uuid is not None
-        self._validate_crs_uuid(crs_root=crs_root)
+        self._validate_crs_uuid(crs_root = crs_root)
 
         if self.root is None and (location is not None or md_reference):
             assert location is not None and md_reference

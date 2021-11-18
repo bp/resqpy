@@ -25,6 +25,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .Trajectory import Trajectory
 from .well_utils import load_hdf5_array
 
+
 class WellboreMarkerFrame(BaseResqpy):
     """Class to handle RESQML WellBoreMarkerFrameRepresentation objects.
 
@@ -275,7 +276,10 @@ class WellboreMarkerFrame(BaseResqpy):
                                                root = wbm_node_obj)
 
         # add as part
-        self.__add_as_part_and_add_relationships(wbm_node = wbm_node, ext_uuid = ext_uuid, add_as_part = add_as_part, add_relationships = add_relationships)
+        self.__add_as_part_and_add_relationships(wbm_node = wbm_node,
+                                                 ext_uuid = ext_uuid,
+                                                 add_as_part = add_as_part,
+                                                 add_relationships = add_relationships)
 
         return wbm_node
 
@@ -296,7 +300,7 @@ class WellboreMarkerFrame(BaseResqpy):
 
         return nodeCount, nodeMd, md_values_node
 
-    def __add_as_part_and_add_relationships(self,wbm_node, ext_uuid, add_as_part, add_relationships):
+    def __add_as_part_and_add_relationships(self, wbm_node, ext_uuid, add_as_part, add_relationships):
         """Add the newly created WellboreMarkerFrame object's root node as a part in the model
          and add reciprocal relationships."""
 

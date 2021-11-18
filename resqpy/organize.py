@@ -22,6 +22,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 # import resqpy.well as rqw2
 
+
 def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQML Occured (stet)
     """Extracts UUIDs of chrono bottom and top from xml for has occurred during sub-node, or (None, None)."""
     hod_node = rqet.find_tag(parent_node, tag)

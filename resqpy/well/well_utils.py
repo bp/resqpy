@@ -21,6 +21,7 @@ import resqpy.olio.intersection as intersect
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.xml_et as rqet
 
+
 def load_hdf5_array(object, node, array_attribute, tag = 'Values', dtype = 'float', model = None):
     """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
 
@@ -79,9 +80,6 @@ def well_names_in_cellio_file(cellio_file):
 
 
 # 'private' functions
-
-
-
 
 
 def find_entry_and_exit(cp, entry_vector, exit_vector, well_name):

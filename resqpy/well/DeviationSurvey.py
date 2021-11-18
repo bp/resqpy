@@ -27,6 +27,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .well_utils import _as_optional_array, extract_xyz, load_hdf5_array
 from .MdDatum import MdDatum
 
+
 class DeviationSurvey(BaseResqpy):
     """Class for RESQML wellbore deviation survey.
 
@@ -320,13 +321,13 @@ class DeviationSurvey(BaseResqpy):
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
 
-        md_datum_root = self.__check_md_datum_root(md_datum_root=md_datum_root, md_datum_xyz=md_datum_xyz)
+        md_datum_root = self.__check_md_datum_root(md_datum_root = md_datum_root, md_datum_xyz = md_datum_xyz)
 
         # Create root node, write citation block
         ds_node = super().create_xml(title = title, originator = originator, add_as_part = False)
 
         mds_values_node, azimuths_values_node, inclinations_values_node = self.__add_sub_elements_to_root_node(
-            ds_node=ds_node)
+            ds_node = ds_node)
 
         self.model.create_md_datum_reference(md_datum_root, root = ds_node)
 
@@ -338,10 +339,14 @@ class DeviationSurvey(BaseResqpy):
 
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Inclinations', root = inclinations_values_node)
 
-        interp_root = self.__create_wellbore_interpretation_ref_node(ds_node=ds_node)
+        interp_root = self.__create_wellbore_interpretation_ref_node(ds_node = ds_node)
 
-        self.__add_as_part_and_add_relationships(ds_node = ds_node, md_datum_root = md_datum_root, interp_root = interp_root,
-                                                 ext_uuid = ext_uuid, add_as_part=add_as_part, add_relationships=add_relationships)
+        self.__add_as_part_and_add_relationships(ds_node = ds_node,
+                                                 md_datum_root = md_datum_root,
+                                                 interp_root = interp_root,
+                                                 ext_uuid = ext_uuid,
+                                                 add_as_part = add_as_part,
+                                                 add_relationships = add_relationships)
 
         return ds_node
 
@@ -423,7 +428,8 @@ class DeviationSurvey(BaseResqpy):
                                        root = ds_node)
         return interp_root
 
-    def __add_as_part_and_add_relationships(self,ds_node, md_datum_root, interp_root, ext_uuid, add_as_part, add_relationships):
+    def __add_as_part_and_add_relationships(self, ds_node, md_datum_root, interp_root, ext_uuid, add_as_part,
+                                            add_relationships):
         """Add the newly created DeviationSurvey object's root node as a part in the model and add reciprocal
          relationships."""
 

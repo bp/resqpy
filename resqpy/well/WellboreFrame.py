@@ -26,6 +26,7 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .well_utils import load_hdf5_array
 
+
 class WellboreFrame(BaseResqpy):
     """Class for RESQML WellboreFrameRepresentation objects (supporting well log Properties)
 
@@ -114,7 +115,6 @@ class WellboreFrame(BaseResqpy):
         self.logs = rqp.WellLogCollection(frame = self)
 
     def _load_from_xml(self):
-
         """Loads the wellbore frame object from an xml node (and associated hdf5 data)."""
 
         # NB: node is the root level xml node, not a node in the md list!
@@ -198,7 +198,9 @@ class WellboreFrame(BaseResqpy):
         assert self.trajectory is not None, 'trajectory object missing'
         assert self.trajectory.root is not None, 'trajectory xml not established'
 
-        self.__create_wellbore_feature_and_interpretation_xml(add_as_part = add_as_part, add_relationships = add_relationships, originator = originator)
+        self.__create_wellbore_feature_and_interpretation_xml(add_as_part = add_as_part,
+                                                              add_relationships = add_relationships,
+                                                              originator = originator)
 
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
@@ -231,11 +233,17 @@ class WellboreFrame(BaseResqpy):
                                        content_type = 'obj_WellboreInterpretation',
                                        root = wf_node)
 
-        self.__add_as_part_and_add_relationships(wf_node = wf_node, ext_uuid = ext_uuid, add_as_part = add_as_part, add_relationships = add_relationships)
+        self.__add_as_part_and_add_relationships(wf_node = wf_node,
+                                                 ext_uuid = ext_uuid,
+                                                 add_as_part = add_as_part,
+                                                 add_relationships = add_relationships)
 
         return wf_node
 
-    def __create_wellbore_feature_and_interpretation_xml(self, add_as_part=True, add_relationships=True, originator=None):
+    def __create_wellbore_feature_and_interpretation_xml(self,
+                                                         add_as_part = True,
+                                                         add_relationships = True,
+                                                         originator = None):
         """ Return root node for WellboreFeature and WellboreInterpretation objects
 
         """
@@ -244,10 +252,10 @@ class WellboreFrame(BaseResqpy):
             if self.wellbore_interpretation is None:
                 self.create_feature_and_interpretation()
             if self.wellbore_feature is not None:
-                self.wellbore_feature.create_xml(add_as_part=add_as_part, originator=originator)
-            self.wellbore_interpretation.create_xml(add_as_part=add_as_part,
-                                                        add_relationships=add_relationships,
-                                                        originator=originator)
+                self.wellbore_feature.create_xml(add_as_part = add_as_part, originator = originator)
+            self.wellbore_interpretation.create_xml(add_as_part = add_as_part,
+                                                    add_relationships = add_relationships,
+                                                    originator = originator)
 
     def __add_sub_elements_to_root_node(self, wf_node):
         """Appends sub-elements to the WellboreFrame object's root node."""
@@ -266,7 +274,7 @@ class WellboreFrame(BaseResqpy):
 
         return nc_node, mds_node, mds_values_node
 
-    def __add_as_part_and_add_relationships(self,wf_node, ext_uuid, add_as_part, add_relationships):
+    def __add_as_part_and_add_relationships(self, wf_node, ext_uuid, add_as_part, add_relationships):
         """Add the newly created WellborFrame object's root node as a part in the model and add reciprocal relationships.."""
 
         if add_as_part:
