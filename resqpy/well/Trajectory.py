@@ -1,10 +1,10 @@
-"""well_utils.py: resqpy well module providing trajectory, deviation survey, blocked well, wellbore frame and marker frame and md datum classes.
+"""Trajectory.py: resqpy well module providing trajectory class.
 
 """
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '10th November 2021'
+version = '18th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -12,7 +12,7 @@ version = '10th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('well_utils.py version ' + version)
+log.debug('Trajectory.py version ' + version)
 
 import math as maths
 from functools import partial
@@ -498,7 +498,8 @@ class Trajectory(BaseResqpy):
                        trajectory_file,
                        well_col = None,
                            ):
-        """Verifies that a valid well_col has been supplied or can be found in the dataframe that has been generated from the trajectory file.
+        """Verifies that a valid well_col has been supplied or can be found in the dataframe that has been generated
+        from the trajectory file.
 
         """
 

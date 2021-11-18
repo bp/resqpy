@@ -1,11 +1,10 @@
-"""well_utils.py: resqpy well module providing trajectory, deviation survey, blocked well, wellbore frame and marker frame and md datum classes.
+"""WellboreFrame.py: resqpy well module providing wellbore frame class.
 
 """
 
-# todo: create a trajectory from a deviation survey, assuming minimum curvature
 import resqpy.well
 
-version = '10th November 2021'
+version = '18th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -13,7 +12,7 @@ version = '10th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('well_utils.py version ' + version)
+log.debug('WellboreFrame.py version ' + version)
 
 import numpy as np
 

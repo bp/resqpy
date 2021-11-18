@@ -1,10 +1,8 @@
-"""well_utils.py: resqpy well module providing trajectory, deviation survey, blocked well, wellbore frame and marker frame and md datum classes.
+"""WellboreMarkerFrame.py: resqpy well module providing marker frame class.
 
 """
 
-# todo: create a trajectory from a deviation survey, assuming minimum curvature
-
-version = '10th November 2021'
+version = '18th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -12,7 +10,7 @@ version = '10th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('well_utils.py version ' + version)
+log.debug('WellboreMarkerFrame.py version ' + version)
 
 import numpy as np
 import pandas as pd
@@ -283,6 +281,7 @@ class WellboreMarkerFrame(BaseResqpy):
 
     def __add_sub_elements_to_root_node(self, wbm_node):
         """Appends sub-elements to the WellboreMarkerFrame object's root node."""
+
         nodeCount = rqet.SubElement(wbm_node, ns['resqml2'] + 'NodeCount')
         nodeCount.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
         nodeCount.text = str(self.node_count)
@@ -298,7 +297,8 @@ class WellboreMarkerFrame(BaseResqpy):
         return nodeCount, nodeMd, md_values_node
 
     def __add_as_part_and_add_relationships(self,wbm_node, ext_uuid, add_as_part, add_relationships):
-        """Add the newly created WellboreMarkerFrame object's root node as a part in the model and add reciprocal relationships.."""
+        """Add the newly created WellboreMarkerFrame object's root node as a part in the model
+         and add reciprocal relationships."""
 
         if add_as_part:
             self.model.add_part('obj_WellboreMarkerFrameRepresentation', self.uuid, wbm_node)
