@@ -110,10 +110,11 @@ def add_faults(epc_file,
     else:
         lines_crs = rqcrs.Crs(model, uuid = lines_crs_uuid)
 
+    composite_face_set_dict = {}
+
     # build pillar list dict for polylines if necessary
     if full_pillar_list_dict is None:
         full_pillar_list_dict = {}
-        composite_face_set_dict = {}
         if polylines:
             for i, polyline in enumerate(polylines):
                 new_line = polyline.coordinates.copy()
@@ -137,6 +138,9 @@ def add_faults(epc_file,
                     face_set_id = f_name
                 __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict,
                                                composite_face_set_dict)
+
+    else:  # populate composite face set dictionary from full pillar list
+        __populate_composite_face_sets(source_grid, full_pillar_list_dict, composite_face_set_dict)
 
     # log.debug(f'full_pillar_list_dict:\n{full_pillar_list_dict}')
 
@@ -175,7 +179,7 @@ def add_faults(epc_file,
                      mode = 'a')
 
     # create grid connection set if requested
-    if create_gcs and (polylines is not None or lines_file_list is not None):
+    if create_gcs and len(composite_face_set_dict) > 0:
         if new_epc_file is not None:
             grid_uuid = grid.uuid
             model = rq.Model(new_epc_file)
@@ -200,6 +204,13 @@ def __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_lis
         full_pillar_list_dict[key] = pll
     for key, fs_info in face_set_dict.items():
         composite_face_set_dict[key] = fs_info
+
+
+def __populate_composite_face_sets(grid, full_pillar_list_dict, composite_face_set_dict):
+    for key, pillar_list in full_pillar_list_dict.items():
+        face_set_dict, _ = grid.make_face_sets_from_pillar_lists([pillar_list], key)
+        for k, fs_info in face_set_dict.items():
+            composite_face_set_dict[k] = fs_info
 
 
 def __fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_throw_right):

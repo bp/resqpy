@@ -7,7 +7,9 @@ from numpy.testing import assert_array_almost_equal
 
 import resqpy.crs as rqc
 import resqpy.derived_model as rqdm
+import resqpy.fault as rqf
 import resqpy.grid as grr
+import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.box_utilities as bx
 import resqpy.olio.fine_coarse as rqfc
@@ -623,3 +625,110 @@ def test_refined_and_coarsened_grid(tmp_path):
         length_array = cfc_lpc.single_array_ref(facet_type = 'direction', facet = 'KJI'[axis])
         assert length_array is not None
         assert np.allclose(length_array, c_dxyz[2 - axis])
+
+
+def test_add_faults_and_scaling(tmp_path):
+
+    tmp_path = '/users/andy/bifröst/bc'
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'fault_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+
+    # create a coarse grid
+    dxyz = (100.0, 150.0, 20.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (3, 5, 5),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = True, expand_const_arrays = True)
+    model.store_epc()
+
+    # prepare some polylines to define faults
+    pla = rql.Polyline(model,
+                       set_bool = False,
+                       set_crs = crs.uuid,
+                       title = 'line_a',
+                       set_coord = np.array([(50.0, -10.0, 0.0), (450.0, 760.0, 0.0)]))
+    plb = rql.Polyline(model,
+                       set_bool = False,
+                       set_crs = crs.uuid,
+                       title = 'line_b',
+                       set_coord = np.array([(-10.0, 530.0, 0.0), (510.0, 330.0, 0.0)]))
+    for pl in (pla, plb):
+        pl.write_hdf5()
+        pl.create_xml()
+    model.store_epc()
+
+    # add faults with default throws
+    f1a_grid = rqdm.add_faults(epc, source_grid = grid, polylines = [pla, plb], new_grid_title = 'faulted by polylines')
+    f1a_grid_uuid = f1a_grid.uuid
+
+    # prepare dictionaries to define more faults and their throws
+    pillar_list_dict = {}
+    pillar_list_dict['step_fault'] = [(1, 0), (1, 1), (2, 1), (2, 2), (2, 3), (2, 4), (1, 4), (1, 5)]
+    pillar_list_dict['north_south_fault'] = [(0, 3), (4, 3)]
+    throw_dict = {}
+    throw_dict['step_fault'] = (7.0, -7.0)
+    throw_dict['north_south_fault'] = (-3.3, 4.8)
+
+    # add faults with explicit throws
+    f2a_grid = rqdm.add_faults(epc,
+                               source_grid = grid,
+                               full_pillar_list_dict = pillar_list_dict,
+                               left_right_throw_dict = throw_dict,
+                               new_grid_title = 'faulted by dictionaries')
+    f2a_grid_uuid = f2a_grid.uuid
+
+    # scale faults globally
+    f1b_grid = rqdm.global_fault_throw_scaling(epc,
+                                               source_grid = f1a_grid,
+                                               scaling_factor = 10.0,
+                                               cell_range = 2,
+                                               new_grid_title = 'globally scaled faults')
+    f1b_grid_uuid = f1b_grid.uuid
+
+    # re-open the model to identify a grid connection set
+    model = rq.Model(epc)
+    gcs_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation', related_uuid = f2a_grid_uuid)
+    assert gcs_uuid is not None
+    gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+    assert gcs is not None
+
+    # create a scaling dictionary
+    scaling_dict = {'step_fault': 1.5, 'north_south_fault': 3.0}
+
+    # scale faults
+    f2b_grid = rqdm.fault_throw_scaling(epc,
+                                        source_grid = f2a_grid,
+                                        connection_set = gcs,
+                                        scaling_dict = scaling_dict,
+                                        cell_range = 1,
+                                        new_grid_title = 'dictionary scaled faults')
+    f2b_grid_uuid = f2b_grid.uuid
+
+    # re-open model and check grids
+    model = rq.Model(epc)
+    assert len(model.uuids(obj_type = 'IjkGridRepresentation')) == 5
+
+    g = grr.Grid(model, uuid = f1a_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -1.0), (500.0, 750.0, 61.0)]))
+
+    g = grr.Grid(model, uuid = f2a_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    # assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.3), (500.0, 750.0, 71.8)]))
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -7.0), (500.0, 750.0, 67.0)]))
+
+    g = grr.Grid(model, uuid = f1b_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    # assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -5.0), (500.0, 750.0, 65.0)]))
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -7.25), (500.0, 750.0, 67.75)]))
+
+    g = grr.Grid(model, uuid = f2b_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.5), (500.0, 750.0, 70.5)]))
