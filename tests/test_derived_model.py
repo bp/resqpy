@@ -1004,7 +1004,7 @@ def test_zonal_grid(tmp_path):
 def test_unsplit_grid(tmp_path):
 
     # create a model and a regular grid
-    epc = os.path.join(tmp_path, 'zonal_test.epc')
+    epc = os.path.join(tmp_path, 'unsplit_test.epc')
     model = rq.new_model(epc)
     crs = rqc.Crs(model)
     crs.create_xml()
@@ -1035,3 +1035,60 @@ def test_unsplit_grid(tmp_path):
     healed_grid = rqdm.unsplit_grid(epc, source_grid = f2a_grid, new_grid_title = 'healed grid')
     assert healed_grid is not None
     assert not healed_grid.has_split_coordinate_lines
+
+
+def test_tilted_grid(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'tilted_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (50.0, 50.0, 10.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (2, 2, 2),
+                           origin = (200.0, 200.0, 1000.0),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    # tilt by 45 degrees
+    t_grid = rqdm.tilted_grid(epc,
+                              pivot_xyz = (250.0, 250.0, 1000.0),
+                              azimuth = 90.0,
+                              dip = 45.0,
+                              new_grid_title = 'tilted')
+    assert t_grid is not None
+
+    # check xyz box of tilted grid
+    root_two = maths.sqrt(2.0)
+    expected_box = np.array([(250.0 - 70.0 / root_two, 200.0, 1000.0 - 50.0 / root_two),
+                             (250.0 + 50.0 / root_two, 300.0, 1000.0 + 70.0 / root_two)])
+    assert_array_almost_equal(t_grid.xyz_box(lazy = False), expected_box)
+
+
+def test_local_depth_adjustment(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'depth_adjust_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (50.0, 50.0, 10.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (2, 20, 20),
+                           origin = (500.0, 700.0, 2000.0),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    a_grid = rqdm.local_depth_adjustment(epc, grid, 700.0, 1000.0, 170.0, -7.0, False)
+    assert a_grid is not None
+    p = a_grid.points_ref()
+    assert maths.isclose(np.min(p[..., 2]), 2000.0 - 7.0)
