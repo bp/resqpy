@@ -30,26 +30,10 @@ def zone_layer_ranges_from_array(zone_array, min_k0 = 0, max_k0 = None, use_domi
        cells to a different zone!
     """
 
-    def dominant_zone(zone_array):
-        # modifies data in zone_array such that each layer has a single (most common) value
-        for k in range(zone_array.shape[0]):
-            unique_zones = np.unique(zone_array[k])
-            if len(unique_zones) <= 1:
-                continue
-            dominant = unique_zones[0]
-            dominant_count = np.count_nonzero(zone_array[k] == dominant)
-            for contender in unique_zones[1:]:
-                contender_count = np.count_nonzero(zone_array[k] == contender)
-                if contender_count > dominant_count:
-                    dominant = contender
-                    dominant_count = contender_count
-            zone_array[k] = dominant
-            log.info('layer ' + str(k + 1) + ' (1 based) zone set to most common value ' + str(dominant))
-
     if max_k0 is None:
         max_k0 = zone_array.shape[0] - 1
     if use_dominant_zone:
-        dominant_zone(zone_array)
+        __dominant_zone(zone_array)
     zone_list = np.unique(zone_array)
     log.debug('list of zones: ' + str(zone_list))
     assert len(zone_list) > 0, 'no zone values present (all cells inactive?)'
@@ -84,3 +68,20 @@ def zone_layer_ranges_from_array(zone_array, min_k0 = 0, max_k0 = None, use_domi
                        )  # todo: add more info to log
             zone_layer_range_list[zone_i][0] = zone_layer_range_list[zone_i - 1][1] + 1
     return zone_layer_range_list
+
+
+def __dominant_zone(zone_array):
+    # modifies data in zone_array such that each layer has a single (most common) value
+    for k in range(zone_array.shape[0]):
+        unique_zones = np.unique(zone_array[k])
+        if len(unique_zones) <= 1:
+            continue
+        dominant = unique_zones[0]
+        dominant_count = np.count_nonzero(zone_array[k] == dominant)
+        for contender in unique_zones[1:]:
+            contender_count = np.count_nonzero(zone_array[k] == contender)
+            if contender_count > dominant_count:
+                dominant = contender
+                dominant_count = contender_count
+        zone_array[k] = dominant
+        log.info('layer ' + str(k + 1) + ' (1 based) zone set to most common value ' + str(dominant))

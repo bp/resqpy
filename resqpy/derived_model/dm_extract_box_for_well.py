@@ -372,9 +372,10 @@ def __establish_files_and_models(epc_file, new_epc_file, trajectory_epc, source_
     assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
     if trajectory_epc == epc_file:
         trajectory_epc = None
-    if source_grid is None:
+    if epc_file:
         model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model (or one named 'ROOT')
+        if source_grid is None:
+            source_grid = model.grid()  # requires there to be exactly one grid in model (or one named ROOT)
     else:
         model = source_grid.model
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']

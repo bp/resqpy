@@ -189,3 +189,14 @@ def __write_grid(epc_file,
     model.store_epc(epc_file)
 
     return prop_uuid_list
+
+
+def __establish_model_and_source_grid(epc_file, source_grid):
+    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
+    if epc_file:
+        model = rq.Model(epc_file)
+        if source_grid is None:
+            source_grid = model.grid()  # requires there to be exactly one grid in model (or one named ROOT)
+    else:
+        model = source_grid.model
+    return model, source_grid

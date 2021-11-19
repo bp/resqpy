@@ -13,7 +13,7 @@ import resqpy.model as rq
 import resqpy.olio.intersection as meet
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid
+from resqpy.derived_model.dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
 from resqpy.derived_model.dm_copy_grid import copy_grid
 
 
@@ -85,12 +85,7 @@ def drape_to_surface(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
-    if source_grid is None:
-        model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model
-    else:
-        model = source_grid.model
+    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation == 'IjkGrid'
     assert model is not None
 
@@ -155,19 +150,7 @@ def drape_to_surface(epc_file,
     translate = picks - unsplit_points[ref_k0, :, :, :].reshape((-1, 3))
 
     # shift all points by translation vectors
-    log.debug('shifting entire grid along pillars')
-    if grid.has_split_coordinate_lines:
-        jip1 = (grid.nj + 1) * (grid.ni + 1)
-        # adjust primary pillars
-        grid.points_cached[:, :jip1, :] += translate.reshape((1, jip1, 3))  # will be broadcast over k axis
-        # adjust split pillars
-        for p in range(grid.split_pillars_count):
-            primary = grid.split_pillar_indices_cached[p]
-            grid.points_cached[:, jip1 + p, :] += translate.reshape(
-                (1, jip1, 3))[0, primary, :]  # will be broadcast over k axis
-    else:
-        grid.points_cached[:, :, :, :] +=  \
-           translate.reshape((1, grid.points_cached.shape[1], grid.points_cached.shape[2], 3))    # will be broadcast over k axis
+    __shift_by_translation_vectors(grid, translate)
 
     # check cell edge relative directions (in x,y) to ensure geometry is still coherent
     log.debug('checking grid geometry coherence')
@@ -205,3 +188,19 @@ def drape_to_surface(epc_file,
                      mode = 'a')
 
     return grid
+
+
+def __shift_by_translation_vectors(grid, translate):
+    log.debug('shifting entire grid along pillars')
+    if grid.has_split_coordinate_lines:
+        jip1 = (grid.nj + 1) * (grid.ni + 1)
+        # adjust primary pillars
+        grid.points_cached[:, :jip1, :] += translate.reshape((1, jip1, 3))  # will be broadcast over k axis
+        # adjust split pillars
+        for p in range(grid.split_pillars_count):
+            primary = grid.split_pillar_indices_cached[p]
+            grid.points_cached[:, jip1 + p, :] += translate.reshape(
+                (1, jip1, 3))[0, primary, :]  # will be broadcast over k axis
+    else:
+        grid.points_cached[:, :, :, :] +=  \
+           translate.reshape((1, grid.points_cached.shape[1], grid.points_cached.shape[2], 3))    # will be broadcast over k axis

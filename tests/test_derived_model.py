@@ -968,8 +968,6 @@ def test_drape_to_surface(tmp_path):
 
 def test_zonal_grid(tmp_path):
 
-    tmp_path = '/users/andy/bifröst/bc'
-
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'zonal_test.epc')
     model = rq.new_model(epc)
@@ -1001,3 +999,39 @@ def test_zonal_grid(tmp_path):
     # check z range of single layer grid
     o_box = o_grid.xyz_box()
     assert maths.isclose(o_box[1, 2] - o_box[0, 2], 7.0 * 12.0)
+
+
+def test_unsplit_grid(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'zonal_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (100.0, 150.0, 30.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (2, 3, 5),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    # add a fault
+    # prepare dictionaries to define more faults and their throws
+    pillar_list_dict = {}
+    pillar_list_dict['fault'] = [(0, 2), (1, 2), (1, 3), (2, 3)]
+    throw_dict = {}
+    throw_dict['fault'] = (7.0, -7.0)
+    f2a_grid = rqdm.add_faults(epc,
+                               source_grid = grid,
+                               full_pillar_list_dict = pillar_list_dict,
+                               left_right_throw_dict = throw_dict,
+                               new_grid_title = 'faulted by dictionaries')
+    f2a_grid_uuid = f2a_grid.uuid
+
+    # heal faults
+    healed_grid = rqdm.unsplit_grid(epc, source_grid = f2a_grid, new_grid_title = 'healed grid')
+    assert healed_grid is not None
+    assert not healed_grid.has_split_coordinate_lines

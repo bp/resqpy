@@ -16,7 +16,7 @@ import resqpy.olio.simple_lines as sl
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __prepare_simple_inheritance, __write_grid
+from resqpy.derived_model.dm_common import __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
 from resqpy.derived_model.dm_copy_grid import copy_grid
 
 
@@ -87,11 +87,7 @@ def add_faults(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    if source_grid is None:
-        model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model
-    else:
-        model = source_grid.model
+    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']  # unstructured grids not catered for
     assert model is not None
     assert len([arg for arg in (polylines, lines_file_list, full_pillar_list_dict) if arg is not None]) == 1

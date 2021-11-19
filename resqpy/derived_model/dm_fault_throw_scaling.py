@@ -13,7 +13,7 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid
+from resqpy.derived_model.dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
 from resqpy.derived_model.dm_copy_grid import copy_grid
 
 
@@ -83,12 +83,7 @@ def fault_throw_scaling(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
-    if source_grid is None:
-        model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model
-    else:
-        model = source_grid.model
+    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation == 'IjkGrid'
     assert model is not None
 

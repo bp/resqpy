@@ -14,7 +14,7 @@ import resqpy.olio.fine_coarse as fc
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model.dm_common import __write_grid
+from resqpy.derived_model.dm_common import __write_grid, __establish_model_and_source_grid
 
 
 def extract_box(epc_file = None,
@@ -65,14 +65,9 @@ def extract_box(epc_file = None,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
     if set_parent_window is None:
         set_parent_window = (new_epc_file is None)
-    if source_grid is None:
-        model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model (or one named 'ROOT')
-    else:
-        model = source_grid.model
+    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
     assert model is not None
     assert box is not None and box.shape == (2, 3)
