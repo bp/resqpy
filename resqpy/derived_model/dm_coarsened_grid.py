@@ -61,21 +61,10 @@ def coarsened_grid(epc_file,
        set_parent_window argument will relate the coarsened grid back to the original
     """
 
-    assert epc_file or new_epc_file, 'epc file name not specified'
-    if new_epc_file and epc_file and (
-        (new_epc_file == epc_file) or
-        (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
-        new_epc_file = None
-    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
+    new_epc_file, model, source_grid = __establish_files_and_model(epc_file, new_epc_file, source_grid)
+
     if set_parent_window is None:
         set_parent_window = (new_epc_file is None)
-    if source_grid is None:
-        model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model (or one named 'ROOT')
-    else:
-        model = source_grid.model
-    assert source_grid.grid_representation == 'IjkGrid'
-    assert model is not None
     assert fine_coarse is not None and isinstance(fine_coarse, fc.FineCoarse)
 
     assert not source_grid.has_split_coordinate_lines, 'coarsening only available for unsplit grids: use other functions to heal faults first'
@@ -158,6 +147,29 @@ def coarsened_grid(epc_file,
                 realization = inherit_realization,
                 copy_all_realizations = inherit_all_realizations)
 
+    __set_parent_window_in_grid(set_parent_window, source_grid, grid, fine_coarse)
+
+    # write grid
+    if new_grid_title is None or len(new_grid_title) == 0:
+        new_grid_title = 'grid coarsened from ' + str(rqet.citation_title_for_node(source_grid.root))
+
+    model.h5_release()
+    if new_epc_file:
+        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+    else:
+        ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
+                                                      'Coordinates')
+        __write_grid(epc_file,
+                     grid,
+                     ext_uuid = ext_uuid,
+                     property_collection = collection,
+                     grid_title = new_grid_title,
+                     mode = 'a')
+
+    return grid
+
+
+def __set_parent_window_in_grid(set_parent_window, source_grid, grid, fine_coarse):
     if set_parent_window:
         pw_grid_uuid = source_grid.uuid
         if isinstance(set_parent_window, str):
@@ -179,21 +191,19 @@ def coarsened_grid(epc_file,
                 assert set_parent_window == 'parent', 'set_parent_window value not recognized: ' + set_parent_window
         grid.set_parent(pw_grid_uuid, False, fine_coarse)
 
-    # write grid
-    if new_grid_title is None or len(new_grid_title) == 0:
-        new_grid_title = 'grid coarsened from ' + str(rqet.citation_title_for_node(source_grid.root))
 
-    model.h5_release()
-    if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+def __establish_files_and_model(epc_file, new_epc_file, source_grid):
+    assert epc_file or new_epc_file, 'epc file name not specified'
+    if new_epc_file and epc_file and (
+        (new_epc_file == epc_file) or
+        (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
+        new_epc_file = None
+    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
+    if source_grid is None:
+        model = rq.Model(epc_file)
+        source_grid = model.grid()  # requires there to be exactly one grid in model (or one named 'ROOT')
     else:
-        ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
-                                                      'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
-
-    return grid
+        model = source_grid.model
+    assert source_grid.grid_representation == 'IjkGrid'
+    assert model is not None
+    return new_epc_file, model, source_grid
