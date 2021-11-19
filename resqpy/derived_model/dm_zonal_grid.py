@@ -65,9 +65,10 @@ def zonal_grid(epc_file,
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
     assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
-    if source_grid is None:
+    if epc_file:
         model = rq.Model(epc_file)
-        source_grid = model.grid()  # requires there to be exactly one grid in model (or one named ROOT)
+        if source_grid is None:
+            source_grid = model.grid()  # requires there to be exactly one grid in model (or one named ROOT)
     else:
         model = source_grid.model
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
@@ -77,14 +78,7 @@ def zonal_grid(epc_file,
     single_layer_mode = (not zone_title and not zone_uuid and
                          (zone_layer_range_list is None or len(zone_layer_range_list) == 1))
 
-    if k0_min is None:
-        k0_min = 0
-    else:
-        assert k0_min >= 0 and k0_min < source_grid.nk
-    if k0_max is None:
-        k0_max = source_grid.nk - 1
-    else:
-        assert k0_max >= 0 and k0_max < source_grid.nk and k0_max >= k0_min
+    k0_min, k0_max = __set_or_check_k_min_max(k0_min, k0_max, source_grid)
 
     if not single_layer_mode:  # process zone array
         if zone_layer_range_list is None:
@@ -105,7 +99,7 @@ def zonal_grid(epc_file,
 
     # create a new, empty grid object
     is_regular = grr.is_regular_grid(source_grid.root) and single_layer_mode
-    grid = __empty_grid(source_grid, is_regular, k0_min, k0_max, zone_count)
+    grid = __empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count)
 
     # aggregate inactive cell mask depending on laissez faire argument
     __set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_layer_mode, k0_min, k0_max,
@@ -195,8 +189,7 @@ def __fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True)
     return properties.cached_part_array_ref(part_name, masked = masked)  # .copy() needed?
 
 
-def __empty_grid(source_grid, is_regular, k0_min, k0_max, zone_count):
-    model = source_grid.model
+def __empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count):
     if is_regular:
         dxyz_dkji = source_grid.block_dxyz_dkji.copy()
         dxyz_dkji[0] *= k0_max - k0_min + 1
@@ -336,3 +329,15 @@ def __process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zon
         grid.cols_for_split_pillars = source_grid.cols_for_split_pillars.copy()
         grid.cols_for_split_pillars_cl = source_grid.cols_for_split_pillars_cl.copy()
         grid.split_pillars_count = source_grid.split_pillars_count
+
+
+def __set_or_check_k_min_max(k0_min, k0_max, source_grid):
+    if k0_min is None:
+        k0_min = 0
+    else:
+        assert k0_min >= 0 and k0_min < source_grid.nk
+    if k0_max is None:
+        k0_max = source_grid.nk - 1
+    else:
+        assert k0_max >= 0 and k0_max < source_grid.nk and k0_max >= k0_min
+    return k0_min, k0_max

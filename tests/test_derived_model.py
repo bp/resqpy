@@ -968,6 +968,8 @@ def test_drape_to_surface(tmp_path):
 
 def test_zonal_grid(tmp_path):
 
+    tmp_path = '/users/andy/bifröst/bc'
+
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'zonal_test.epc')
     model = rq.new_model(epc)
@@ -987,7 +989,15 @@ def test_zonal_grid(tmp_path):
     zone_ranges = [(0, 1, 0), (2, 4, 1), (5, 8, 2), (9, 9, 3)]
     rqdm.zonal_grid(epc, zone_layer_range_list = zone_ranges, new_grid_title = 'four zone grid')
 
-    # re-open the model and take a look at the zonal grid
+    # create a single layer version of the grid
+    rqdm.single_layer_grid(epc, source_grid = grid, k0_min = 1, k0_max = 7, new_grid_title = 'single layer grid')
+
+    # re-open the model and take a look at the zonal grids
     model = rq.Model(epc)
     z_grid = model.grid(title = 'four zone grid')
     assert z_grid.nk == 4
+    o_grid = model.grid(title = 'single layer grid')
+    assert o_grid.nk == 1
+    # check z range of single layer grid
+    o_box = o_grid.xyz_box()
+    assert maths.isclose(o_box[1, 2] - o_box[0, 2], 7.0 * 12.0)
