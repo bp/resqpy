@@ -67,44 +67,12 @@ def refined_grid(epc_file,
        modified as a side-effect of the function (but not written to hdf5 or changed in xml)
     """
 
-    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
-    if not epc_file:
-        epc_file = source_grid.model.epc_file
-        assert epc_file, 'unable to ascertain epc filename from grid object'
-    if new_epc_file and epc_file and (
-        (new_epc_file == epc_file) or
-        (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
-        new_epc_file = None
+    epc_file, model, model_in, source_grid =  \
+        __establish_models_and_source_grid(epc_file, new_epc_file, source_grid, source_grid_uuid)
+
+    assert fine_coarse is not None and isinstance(fine_coarse, fc.FineCoarse)
     if set_parent_window is None:
         set_parent_window = (new_epc_file is None)
-    model = None
-    if new_epc_file:
-        log.debug('creating fresh model for refined grid')
-        model = rq.Model(epc_file = new_epc_file, new_epc = True, create_basics = True, create_hdf5_ext = True)
-    if epc_file:
-        model_in = rq.Model(epc_file)
-        if source_grid is None:
-            if source_grid_uuid is None:
-                log.debug('using default source grid from existing epc')
-                source_grid = model_in.grid()
-            else:
-                log.debug('selecting source grid from existing epc based on uuid')
-                source_grid = grr.Grid(model_in, uuid = source_grid_uuid)
-        else:
-            if source_grid_uuid is not None:
-                assert bu.matching_uuids(source_grid_uuid, source_grid.uuid)
-            grid_uuid = source_grid.uuid
-            log.debug('reloading source grid from existing epc file')
-            source_grid = grr.Grid(model_in, uuid = grid_uuid)
-        if model is None:
-            model = model_in
-    else:
-        model_in = source_grid.model
-    assert model_in is not None
-    assert model is not None
-    assert source_grid is not None
-    assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
-    assert fine_coarse is not None and isinstance(fine_coarse, fc.FineCoarse)
 
     if infill_missing_geometry and (not source_grid.geometry_defined_for_all_cells() or
                                     not source_grid.geometry_defined_for_all_pillars()):
@@ -378,3 +346,42 @@ def __set_parent_window(set_parent_window, source_grid, grid, fine_coarse):
         else:
             assert set_parent_window == 'parent', 'set_parent_window value not recognized: ' + set_parent_window
     grid.set_parent(pw_grid_uuid, True, fine_coarse)
+
+
+def __establish_models_and_source_grid(epc_file, new_epc_file, source_grid, source_grid_uuid):
+    assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
+    if not epc_file:
+        epc_file = source_grid.model.epc_file
+        assert epc_file, 'unable to ascertain epc filename from grid object'
+    if new_epc_file and epc_file and (
+        (new_epc_file == epc_file) or
+        (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
+        new_epc_file = None
+    model = None
+    if new_epc_file:
+        log.debug('creating fresh model for refined grid')
+        model = rq.Model(epc_file = new_epc_file, new_epc = True, create_basics = True, create_hdf5_ext = True)
+    if epc_file:
+        model_in = rq.Model(epc_file)
+        if source_grid is None:
+            if source_grid_uuid is None:
+                log.debug('using default source grid from existing epc')
+                source_grid = model_in.grid()
+            else:
+                log.debug('selecting source grid from existing epc based on uuid')
+                source_grid = grr.Grid(model_in, uuid = source_grid_uuid)
+        else:
+            if source_grid_uuid is not None:
+                assert bu.matching_uuids(source_grid_uuid, source_grid.uuid)
+            grid_uuid = source_grid.uuid
+            log.debug('reloading source grid from existing epc file')
+            source_grid = grr.Grid(model_in, uuid = grid_uuid)
+        if model is None:
+            model = model_in
+    else:
+        model_in = source_grid.model
+    assert model_in is not None
+    assert model is not None
+    assert source_grid is not None
+    assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
+    return epc_file, model, model_in, source_grid
