@@ -105,58 +105,20 @@ def add_faults(epc_file,
     if isinstance(polylines, rql.PolylineSet):
         polylines = polylines.convert_to_polylines()
 
-    if lines_crs_uuid is None:
-        lines_crs = None
-    else:
-        lines_crs = rqcrs.Crs(model, uuid = lines_crs_uuid)
-
     composite_face_set_dict = {}
 
     # build pillar list dict for polylines if necessary
     if full_pillar_list_dict is None:
         full_pillar_list_dict = {}
-        if polylines:
-            for i, polyline in enumerate(polylines):
-                new_line = polyline.coordinates.copy()
-                if polyline.crs_uuid is not None and polyline.crs_uuid != lines_crs_uuid:
-                    lines_crs_uuid = polyline.crs_uuid
-                    lines_crs = rqcrs.Crs(model, uuid = lines_crs_uuid)
-                if lines_crs:
-                    lines_crs.convert_array_to(grid_crs, new_line)
-                title = polyline.title if polyline.title else 'fault_' + str(i)
-                __make_face_sets_for_new_lines([new_line], title, grid, full_pillar_list_dict, composite_face_set_dict)
-        else:
-            for filename in lines_file_list:
-                new_lines = sl.read_lines(filename)
-                if lines_crs is not None:
-                    for a in new_lines:
-                        lines_crs.convert_array_to(grid_crs, a)
-                _, f_name = os.path.split(filename)
-                if f_name.lower().endswith('.dat'):
-                    face_set_id = f_name[:-4]
-                else:
-                    face_set_id = f_name
-                __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict,
-                                               composite_face_set_dict)
+        __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs,
+                                                     lines_file_list, full_pillar_list_dict, composite_face_set_dict)
 
     else:  # populate composite face set dictionary from full pillar list
-        __populate_composite_face_sets(source_grid, full_pillar_list_dict, composite_face_set_dict)
+        __populate_composite_face_sets_for_pillar_lists(source_grid, full_pillar_list_dict, composite_face_set_dict)
 
     # log.debug(f'full_pillar_list_dict:\n{full_pillar_list_dict}')
 
-    for fault_key in full_pillar_list_dict:
-
-        full_pillar_list = full_pillar_list_dict[fault_key]
-        left_right_throw = None
-        if left_right_throw_dict is not None:
-            left_right_throw = left_right_throw_dict.get(fault_key)
-        if left_right_throw is None:
-            left_right_throw = (+0.5, -0.5)
-
-        log.debug(
-            f'generating fault {fault_key} pillar count {len(full_pillar_list)}; left, right throw {left_right_throw}')
-
-        __fault_from_pillar_list(grid, full_pillar_list, left_right_throw[0], left_right_throw[1])
+    __process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict)
 
     collection = __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
                                               inherit_all_realizations)
@@ -179,19 +141,7 @@ def add_faults(epc_file,
                      mode = 'a')
 
     # create grid connection set if requested
-    if create_gcs and len(composite_face_set_dict) > 0:
-        if new_epc_file is not None:
-            grid_uuid = grid.uuid
-            model = rq.Model(new_epc_file)
-            grid = grr.Grid(model, root = model.root(uuid = grid_uuid), find_properties = False)
-        grid.set_face_set_gcs_list_from_dict(composite_face_set_dict, create_organizing_objects_where_needed = True)
-        combined_gcs = grid.face_set_gcs_list[0]
-        for gcs in grid.face_set_gcs_list[1:]:
-            combined_gcs.append(gcs)
-        combined_gcs.write_hdf5()
-        combined_gcs.create_xml(title = 'faults added from lines')
-        grid.clear_face_sets()
-        grid.model.store_epc()
+    __create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file, grid)
 
     return grid
 
@@ -206,7 +156,7 @@ def __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_lis
         composite_face_set_dict[key] = fs_info
 
 
-def __populate_composite_face_sets(grid, full_pillar_list_dict, composite_face_set_dict):
+def __populate_composite_face_sets_for_pillar_lists(grid, full_pillar_list_dict, composite_face_set_dict):
     for key, pillar_list in full_pillar_list_dict.items():
         face_set_dict, _ = grid.make_face_sets_from_pillar_lists([pillar_list], key)
         for k, fs_info in face_set_dict.items():
@@ -261,70 +211,8 @@ def __fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_thr
         # log.debug(f'T: p ji0: {primary_ji0}; p vec: {p_vector}; left v: {throw_left_vector}; right v: {throw_right_vector}')
         existing_foursome = grid.pillar_foursome(primary_ji0, none_if_unsplit = False)
         lr_foursome = gf.left_right_foursome(full_pillar_list, p_index)
-        p_j, p_i = primary_ji0
-        # log.debug(f'P: p ji0: {primary_ji0}; e foursome:\n{existing_foursome}; lr foursome:\n{lr_foursome}')
-        for exist_p in np.unique(existing_foursome):
-            exist_lr = None
-            new_p_made = False
-            for jp in range(2):
-                if (p_j == 0 and jp == 0) or (p_j == grid.nj and jp == 1):
-                    continue
-                for ip in range(2):
-                    if (p_i == 0 and ip == 0) or (p_i == grid.ni and ip == 1):
-                        continue
-                    if existing_foursome[jp, ip] != exist_p:
-                        continue
-                    if exist_lr is None:
-                        original_p[:] = grid.points_cached[:, exist_p, :]
-                        exist_lr = lr_foursome[jp, ip]
-                        # log.debug(f'A: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; exist_lr: {exist_lr}')
-                        grid.points_cached[:, exist_p, :] += throw_right_vector if exist_lr else throw_left_vector
-                        continue
-                    if lr_foursome[jp, ip] == exist_lr:
-                        continue
-                    natural_col = (p_j + jp - 1) * grid.ni + p_i + ip - 1
-                    if exist_p != primary:  # remove one of the columns currently assigned to exist_p
-                        extra_p = exist_p - n_primaries
-                        # log.debug(f're-split: primary: {primary}; exist: {exist_p}; col: {natural_col}; extra: {extra_p}')
-                        # log.debug(f'pre re-split: cols: {grid.cols_for_split_pillars}')
-                        # log.debug(f'pre re-split: ccl:  {grid.cols_for_split_pillars_cl}')
-                        assert grid.split_pillar_indices_cached[extra_p] == primary
-                        if extra_p == 0:
-                            start = 0
-                        else:
-                            start = grid.cols_for_split_pillars_cl[extra_p - 1]
-                        found = False
-                        for cols_index in range(start, start + grid.cols_for_split_pillars_cl[extra_p]):
-                            if grid.cols_for_split_pillars[cols_index] == natural_col:
-                                grid.cols_for_split_pillars = np.concatenate(
-                                    (grid.cols_for_split_pillars[:cols_index],
-                                     grid.cols_for_split_pillars[cols_index + 1:]))
-                                found = True
-                                break
-                        assert found
-                        grid.cols_for_split_pillars_cl[extra_p:] -= 1
-                        cl -= 1
-                        assert grid.cols_for_split_pillars_cl[extra_p] > 0
-                    # log.debug(f'post re-split: cols: {grid.cols_for_split_pillars}')
-                    # log.debug(f'post re-split: ccl:  {grid.cols_for_split_pillars_cl}')
-                    if not new_p_made:  # create a new split of pillar
-                        __extend_points_cached(grid, exist_p)
-                        # log.debug(f'B: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; lr: {lr_foursome[jp, ip]}; c ji0: {natural_col}')
-                        grid.points_cached[:, -1, :] = original_p + (throw_right_vector
-                                                                     if lr_foursome[jp, ip] else throw_left_vector)
-                        grid.split_pillar_indices_cached = __np_int_extended(grid.split_pillar_indices_cached, primary)
-                        if grid.split_pillars_count is None:
-                            grid.split_pillars_count = 0
-                        grid.split_pillars_count += 1
-                        grid.cols_for_split_pillars = __np_int_extended(grid.cols_for_split_pillars, natural_col)
-                        cl += 1
-                        grid.cols_for_split_pillars_cl = __np_int_extended(grid.cols_for_split_pillars_cl, cl)
-                        new_p_made = True
-                    else:  # include this column in newly split version of pillar
-                        # log.debug(f'C: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; lr: {lr_foursome[jp, ip]}; c ji0: {natural_col}')
-                        grid.cols_for_split_pillars = __np_int_extended(grid.cols_for_split_pillars, natural_col)
-                        cl += 1
-                        grid.cols_for_split_pillars_cl[-1] = cl
+        cl = __processs_foursome(grid, n_primaries, primary, original_p, existing_foursome, lr_foursome, primary_ji0,
+                                 throw_right_vector, throw_left_vector, cl)
 
 
 def __pillar_vector(grid, p_index):
@@ -365,3 +253,129 @@ def __np_int_extended(a, i):
     e[:-1] = a
     e[-1] = i
     return e
+
+
+def __create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file, grid):
+    if create_gcs and len(composite_face_set_dict) > 0:
+        if new_epc_file is not None:
+            grid_uuid = grid.uuid
+            model = rq.Model(new_epc_file)
+            grid = grr.Grid(model, root = model.root(uuid = grid_uuid), find_properties = False)
+        grid.set_face_set_gcs_list_from_dict(composite_face_set_dict, create_organizing_objects_where_needed = True)
+        combined_gcs = grid.face_set_gcs_list[0]
+        for gcs in grid.face_set_gcs_list[1:]:
+            combined_gcs.append(gcs)
+        combined_gcs.write_hdf5()
+        combined_gcs.create_xml(title = 'faults added from lines')
+        grid.clear_face_sets()
+        grid.model.store_epc()
+
+
+def __processs_foursome(grid, n_primaries, primary, original_p, existing_foursome, lr_foursome, primary_ji0,
+                        throw_right_vector, throw_left_vector, cl):
+    p_j, p_i = primary_ji0
+    # log.debug(f'P: p ji0: {primary_ji0}; e foursome:\n{existing_foursome}; lr foursome:\n{lr_foursome}')
+    for exist_p in np.unique(existing_foursome):
+        exist_lr = None
+        new_p_made = False
+        for jp in range(2):
+            if (p_j == 0 and jp == 0) or (p_j == grid.nj and jp == 1):
+                continue
+            for ip in range(2):
+                if (p_i == 0 and ip == 0) or (p_i == grid.ni and ip == 1):
+                    continue
+                if existing_foursome[jp, ip] != exist_p:
+                    continue
+                if exist_lr is None:
+                    original_p[:] = grid.points_cached[:, exist_p, :]
+                    exist_lr = lr_foursome[jp, ip]
+                    # log.debug(f'A: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; exist_lr: {exist_lr}')
+                    grid.points_cached[:, exist_p, :] += throw_right_vector if exist_lr else throw_left_vector
+                    continue
+                if lr_foursome[jp, ip] == exist_lr:
+                    continue
+                natural_col = (p_j + jp - 1) * grid.ni + p_i + ip - 1
+                if exist_p != primary:  # remove one of the columns currently assigned to exist_p
+                    extra_p = exist_p - n_primaries
+                    # log.debug(f're-split: primary: {primary}; exist: {exist_p}; col: {natural_col}; extra: {extra_p}')
+                    # log.debug(f'pre re-split: cols: {grid.cols_for_split_pillars}')
+                    # log.debug(f'pre re-split: ccl:  {grid.cols_for_split_pillars_cl}')
+                    assert grid.split_pillar_indices_cached[extra_p] == primary
+                    if extra_p == 0:
+                        start = 0
+                    else:
+                        start = grid.cols_for_split_pillars_cl[extra_p - 1]
+                    found = False
+                    for cols_index in range(start, start + grid.cols_for_split_pillars_cl[extra_p]):
+                        if grid.cols_for_split_pillars[cols_index] == natural_col:
+                            grid.cols_for_split_pillars = np.concatenate(
+                                (grid.cols_for_split_pillars[:cols_index],
+                                 grid.cols_for_split_pillars[cols_index + 1:]))
+                            found = True
+                            break
+                    assert found
+                    grid.cols_for_split_pillars_cl[extra_p:] -= 1
+                    cl -= 1
+                    assert grid.cols_for_split_pillars_cl[extra_p] > 0
+                # log.debug(f'post re-split: cols: {grid.cols_for_split_pillars}')
+                # log.debug(f'post re-split: ccl:  {grid.cols_for_split_pillars_cl}')
+                if not new_p_made:  # create a new split of pillar
+                    __extend_points_cached(grid, exist_p)
+                    # log.debug(f'B: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; lr: {lr_foursome[jp, ip]}; c ji0: {natural_col}')
+                    grid.points_cached[:, -1, :] = original_p + (throw_right_vector
+                                                                 if lr_foursome[jp, ip] else throw_left_vector)
+                    grid.split_pillar_indices_cached = __np_int_extended(grid.split_pillar_indices_cached, primary)
+                    if grid.split_pillars_count is None:
+                        grid.split_pillars_count = 0
+                    grid.split_pillars_count += 1
+                    grid.cols_for_split_pillars = __np_int_extended(grid.cols_for_split_pillars, natural_col)
+                    cl += 1
+                    grid.cols_for_split_pillars_cl = __np_int_extended(grid.cols_for_split_pillars_cl, cl)
+                    new_p_made = True
+                else:  # include this column in newly split version of pillar
+                    # log.debug(f'C: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; lr: {lr_foursome[jp, ip]}; c ji0: {natural_col}')
+                    grid.cols_for_split_pillars = __np_int_extended(grid.cols_for_split_pillars, natural_col)
+                    cl += 1
+                    grid.cols_for_split_pillars_cl[-1] = cl
+    return cl
+
+
+def __process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict):
+    for fault_key in full_pillar_list_dict:
+        full_pillar_list = full_pillar_list_dict[fault_key]
+        left_right_throw = None
+        if left_right_throw_dict is not None:
+            left_right_throw = left_right_throw_dict.get(fault_key)
+        if left_right_throw is None:
+            left_right_throw = (+0.5, -0.5)
+        log.debug(
+            f'generating fault {fault_key} pillar count {len(full_pillar_list)}; left, right throw {left_right_throw}')
+        __fault_from_pillar_list(grid, full_pillar_list, left_right_throw[0], left_right_throw[1])
+
+
+def __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs,
+                                                 lines_file_list, full_pillar_list_dict, composite_face_set_dict):
+    lines_crs = None if lines_crs_uuid is None else rqcrs.Crs(model, uuid = lines_crs_uuid)
+    if polylines:
+        for i, polyline in enumerate(polylines):
+            new_line = polyline.coordinates.copy()
+            if polyline.crs_uuid is not None and polyline.crs_uuid != lines_crs_uuid:
+                lines_crs_uuid = polyline.crs_uuid
+                lines_crs = rqcrs.Crs(model, uuid = lines_crs_uuid)
+            if lines_crs:
+                lines_crs.convert_array_to(grid_crs, new_line)
+            title = polyline.title if polyline.title else 'fault_' + str(i)
+            __make_face_sets_for_new_lines([new_line], title, grid, full_pillar_list_dict, composite_face_set_dict)
+    else:
+        for filename in lines_file_list:
+            new_lines = sl.read_lines(filename)
+            if lines_crs is not None:
+                for a in new_lines:
+                    lines_crs.convert_array_to(grid_crs, a)
+            _, f_name = os.path.split(filename)
+            if f_name.lower().endswith('.dat'):
+                face_set_id = f_name[:-4]
+            else:
+                face_set_id = f_name
+            __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict,
+                                           composite_face_set_dict)
