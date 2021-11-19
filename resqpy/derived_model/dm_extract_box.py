@@ -58,41 +58,6 @@ def extract_box(epc_file = None,
        in which case the grid and inherited properties are written there instead
     """
 
-    def array_box(a, box):
-        return a[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1].copy()
-
-    def local_col_index(extent, box, col):
-        # return local equivalent natural column index for global column index, or None if outside box
-        j, i = divmod(col, extent[2])
-        j -= box[0, 1]
-        i -= box[0, 2]
-        if j < 0 or i < 0 or j > box[1, 1] - box[0, 1] or i > box[1, 2] - box[0, 2]:
-            return None
-        return j * (box[1, 2] - box[0, 2] + 1) + i
-
-    def local_pillar_index(extent, box, p):
-        # return local equivalent natural pillar index for global pillar index, or None if outside box
-        p_j, p_i = divmod(p, extent[2] + 1)
-        p_j -= box[0, 1]
-        p_i -= box[0, 2]
-        if p_j < 0 or p_i < 0 or p_j > box[1, 1] - box[0, 1] + 1 or p_i > box[1, 2] - box[0, 2] + 1:
-            return None
-        return p_j * (box[1, 2] - box[0, 2] + 2) + p_i
-
-    def cols_for_pillar(extent, p):
-        # return 4 naturalized column indices for columns surrounding natural pillar index; -1 where beyond edge of ij space
-        cols = np.zeros((4,), dtype = int) - 1
-        p_j, p_i = divmod(p, extent[2] + 1)
-        if p_j > 0 and p_i > 0:
-            cols[0] = (p_j - 1) * extent[2] + p_i - 1
-        if p_j > 0 and p_i < extent[2]:
-            cols[1] = (p_j - 1) * extent[2] + p_i
-        if p_j < extent[1] and p_i > 0:
-            cols[2] = p_j * extent[2] + p_i - 1
-        if p_j < extent[1] and p_i < extent[2]:
-            cols[3] = p_j * extent[2] + p_i
-        return cols
-
     log.debug('extracting grid for box')
 
     assert epc_file or new_epc_file, 'epc file name not specified'
@@ -136,6 +101,108 @@ def extract_box(epc_file = None,
     grid.crs_uuid = source_grid.crs_uuid
 
     # inherit k_gaps for selected layer range
+    __inherit_k_gaps(source_grid, grid, box)
+
+    # extract inactive cell mask
+    __extract_inactive_cell_mask(source_grid, grid, box_inactive, box)
+
+    # extract the grid geometry
+    source_grid.cache_all_geometry_arrays()
+
+    # determine cell geometry is defined
+    if hasattr(source_grid, 'array_cell_geometry_is_defined'):
+        grid.array_cell_geometry_is_defined = __array_box(source_grid.array_cell_geometry_is_defined, box)
+        grid.geometry_defined_for_all_cells_cached = np.all(grid.array_cell_geometry_is_defined)
+    else:
+        grid.geometry_defined_for_all_cells_cached = source_grid.geometry_defined_for_all_cells_cached
+
+    # copy info for pillar geometry is defined
+    grid.geometry_defined_for_all_pillars_cached = source_grid.geometry_defined_for_all_pillars_cached
+    if hasattr(source_grid, 'array_pillar_geometry_is_defined'):
+        grid.array_pillar_geometry_is_defined = __array_box(source_grid.array_pillar_geometry_is_defined, box)
+        grid.geometry_defined_for_all_pillars_cached = np.all(grid.array_pillar_geometry_is_defined)
+
+    # get reference to points for source grid geometry
+    source_points = source_grid.points_ref()
+
+    pillar_box = box.copy()
+    if source_grid.k_gaps:
+        pillar_box[:, 0] = source_grid.k_raw_index_array[pillar_box[:, 0]]
+    pillar_box[1, :] += 1  # pillar points have extent one greater than cells, in each axis
+
+    if not source_grid.has_split_coordinate_lines:
+        log.debug('no split pillars in source grid')
+        grid.points_cached = __array_box(source_points, pillar_box)  # should work, ie. preserve xyz axis
+    else:
+        __process_split_pillars(source_grid, grid, box, pillar_box)
+
+    if set_parent_window:
+        fine_coarse = fc.FineCoarse(grid.extent_kji, grid.extent_kji, within_coarse_box = box)
+        fine_coarse.set_all_ratios_constant()
+        grid.set_parent(source_grid.uuid, True, fine_coarse)
+
+    collection = __inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization, inherit_all_realizations)
+
+    if new_grid_title is None or len(new_grid_title) == 0:
+        new_grid_title = 'local grid ' + box_str + ' extracted from ' + str(
+            rqet.citation_title_for_node(source_grid.root))
+
+    model.h5_release()
+    if new_epc_file:
+        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+    else:
+        ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
+                                                      'Coordinates')
+        __write_grid(epc_file,
+                     grid,
+                     ext_uuid = ext_uuid,
+                     property_collection = collection,
+                     grid_title = new_grid_title,
+                     mode = 'a')
+
+    return grid
+
+
+def __array_box(a, box):
+    return a[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1].copy()
+
+
+def __local_col_index(extent, box, col):
+    # return local equivalent natural column index for global column index, or None if outside box
+    j, i = divmod(col, extent[2])
+    j -= box[0, 1]
+    i -= box[0, 2]
+    if j < 0 or i < 0 or j > box[1, 1] - box[0, 1] or i > box[1, 2] - box[0, 2]:
+        return None
+    return j * (box[1, 2] - box[0, 2] + 1) + i
+
+
+def __local_pillar_index(extent, box, p):
+    # return local equivalent natural pillar index for global pillar index, or None if outside box
+    p_j, p_i = divmod(p, extent[2] + 1)
+    p_j -= box[0, 1]
+    p_i -= box[0, 2]
+    if p_j < 0 or p_i < 0 or p_j > box[1, 1] - box[0, 1] + 1 or p_i > box[1, 2] - box[0, 2] + 1:
+        return None
+    return p_j * (box[1, 2] - box[0, 2] + 2) + p_i
+
+
+def __cols_for_pillar(extent, p):
+    # return 4 naturalized column indices for columns surrounding natural pillar index; -1 where beyond edge of ij space
+    cols = np.zeros((4,), dtype = int) - 1
+    p_j, p_i = divmod(p, extent[2] + 1)
+    if p_j > 0 and p_i > 0:
+        cols[0] = (p_j - 1) * extent[2] + p_i - 1
+    if p_j > 0 and p_i < extent[2]:
+        cols[1] = (p_j - 1) * extent[2] + p_i
+    if p_j < extent[1] and p_i > 0:
+        cols[2] = p_j * extent[2] + p_i - 1
+    if p_j < extent[1] and p_i < extent[2]:
+        cols[3] = p_j * extent[2] + p_i
+    return cols
+
+
+def __inherit_k_gaps(source_grid, grid, box):
     if source_grid.k_gaps and box[1, 0] > box[0, 0]:
         k_gaps = np.count_nonzero(source_grid.k_gap_after_array[box[0, 0]:box[1, 0]])
         if k_gaps > 0:
@@ -149,7 +216,8 @@ def extract_box(epc_file = None,
                     k_offset += 1
             assert k_offset == k_gaps
 
-    # extract inactive cell mask
+
+def __extract_inactive_cell_mask(source_grid, grid, box_inactive, box):
     if source_grid.inactive is None:
         if box_inactive is None:
             log.debug('setting inactive mask to None')
@@ -160,120 +228,13 @@ def extract_box(epc_file = None,
     else:
         if box_inactive is None:
             log.debug('extrating inactive mask')
-            grid.inactive = array_box(source_grid.inactive, box)
+            grid.inactive = __array_box(source_grid.inactive, box)
         else:
             log.debug('setting inactive mask to merge of source grid extraction and mask passed as argument')
-            grid.inactive = np.logical_or(array_box(source_grid.inactive, box), box_inactive)
+            grid.inactive = np.logical_or(__array_box(source_grid.inactive, box), box_inactive)
 
-    # extract the grid geometry
-    source_grid.cache_all_geometry_arrays()
 
-    # determine cell geometry is defined
-    if hasattr(source_grid, 'array_cell_geometry_is_defined'):
-        grid.array_cell_geometry_is_defined = array_box(source_grid.array_cell_geometry_is_defined, box)
-        grid.geometry_defined_for_all_cells_cached = np.all(grid.array_cell_geometry_is_defined)
-    else:
-        grid.geometry_defined_for_all_cells_cached = source_grid.geometry_defined_for_all_cells_cached
-
-    # copy info for pillar geometry is defined
-    grid.geometry_defined_for_all_pillars_cached = source_grid.geometry_defined_for_all_pillars_cached
-    if hasattr(source_grid, 'array_pillar_geometry_is_defined'):
-        grid.array_pillar_geometry_is_defined = array_box(source_grid.array_pillar_geometry_is_defined, box)
-        grid.geometry_defined_for_all_pillars_cached = np.all(grid.array_pillar_geometry_is_defined)
-
-    # get reference to points for source grid geometry
-    source_points = source_grid.points_ref()
-
-    pillar_box = box.copy()
-    if source_grid.k_gaps:
-        pillar_box[:, 0] = source_grid.k_raw_index_array[pillar_box[:, 0]]
-    pillar_box[1, :] += 1  # pillar points have extent one greater than cells, in each axis
-
-    if not source_grid.has_split_coordinate_lines:
-        log.debug('no split pillars in source grid')
-        grid.points_cached = array_box(source_points, pillar_box)  # should work, ie. preserve xyz axis
-    else:
-        source_base_pillar_count = (source_grid.nj + 1) * (source_grid.ni + 1)
-        log.debug('number of base pillars in source grid: ' + str(source_base_pillar_count))
-        log.debug('number of extra pillars in source grid: ' + str(len(source_grid.split_pillar_indices_cached)))
-        base_points = array_box(
-            source_points[:, :source_base_pillar_count, :].reshape(
-                (source_grid.nk_plus_k_gaps + 1, source_grid.nj + 1, source_grid.ni + 1, 3)),
-            pillar_box).reshape(grid.nk_plus_k_gaps + 1, (grid.nj + 1) * (grid.ni + 1), 3)
-        extra_points = np.zeros(
-            (pillar_box[1, 0] - pillar_box[0, 0] + 1, source_points.shape[1] - source_base_pillar_count, 3))
-        spi_array = np.zeros(len(source_grid.split_pillar_indices_cached), dtype = int)
-        local_cols_array = np.zeros(len(source_grid.cols_for_split_pillars), dtype = int)
-        local_cols_cl = np.zeros(len(source_grid.split_pillar_indices_cached), dtype = int)
-        local_index = 0
-        for index in range(len(source_grid.split_pillar_indices_cached)):
-            source_pi = source_grid.split_pillar_indices_cached[index]
-            local_pi = local_pillar_index(source_grid.extent_kji, box, source_pi)
-            if local_pi is None:
-                continue
-            cols = cols_for_pillar(source_grid.extent_kji, source_pi)
-            local_cols = cols_for_pillar(grid.extent_kji, local_pi)
-            if index == 0:
-                start = 0
-            else:
-                start = source_grid.cols_for_split_pillars_cl[index - 1]
-            finish = source_grid.cols_for_split_pillars_cl[index]
-            source_pis = np.zeros((4,), dtype = int)
-            for c_i in range(4):
-                if local_cols[c_i] < 0:
-                    source_pis[c_i] = -1
-                    continue
-                if cols[c_i] in source_grid.cols_for_split_pillars[start:finish]:
-                    source_pis[c_i] = source_base_pillar_count + index
-                else:
-                    source_pis[c_i] = source_pi
-            unique_source_pis = np.unique(source_pis)
-            unique_count = len(unique_source_pis)
-            unique_index = 0
-            if unique_source_pis[0] == -1:
-                unique_index = 1
-                unique_count -= 1
-            if unique_count <= 0:
-                continue
-            base_points[:, local_pi, :] = source_points[pillar_box[0, 0]:pillar_box[1, 0] + 1,
-                                                        unique_source_pis[unique_index], :]
-            unique_index += 1
-            unique_count -= 1
-            if unique_count <= 0:
-                continue
-            while unique_count > 0:
-                source_pi = unique_source_pis[unique_index]
-                extra_points[:, local_index, :] = source_points[pillar_box[0, 0]:pillar_box[1, 0] + 1, source_pi, :]
-                spi_array[local_index] = local_pi
-                if local_index == 0:
-                    lc_index = 0
-                else:
-                    lc_index = local_cols_cl[local_index - 1]
-                for c_i in range(4):
-                    if source_pis[c_i] == source_pi and local_cols[c_i] >= 0:
-                        local_cols_array[lc_index] = local_cols[c_i]
-                        lc_index += 1
-                local_cols_cl[local_index] = lc_index
-                local_index += 1
-                unique_index += 1
-                unique_count -= 1
-        if local_index == 0:  # there are no split pillars in the box
-            log.debug('box does not inherit any split pillars')
-            grid.points_cached = base_points.reshape(grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3)
-            grid.has_split_coordinate_lines = False
-        else:
-            log.debug('number of extra pillars in box: ' + str(local_index))
-            grid.points_cached = np.concatenate((base_points, extra_points[:, :local_index, :]), axis = 1)
-            grid.split_pillar_indices_cached = spi_array[:local_index].copy()
-            grid.cols_for_split_pillars = local_cols_array[:local_cols_cl[local_index - 1]].copy()
-            grid.cols_for_split_pillars_cl = local_cols_cl[:local_index].copy()
-            grid.split_pillars_count = local_index
-
-    if set_parent_window:
-        fine_coarse = fc.FineCoarse(grid.extent_kji, grid.extent_kji, within_coarse_box = box)
-        fine_coarse.set_all_ratios_constant()
-        grid.set_parent(source_grid.uuid, True, fine_coarse)
-
+def __inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization, inherit_all_realizations):
     collection = None
     if inherit_properties:
         source_collection = source_grid.extract_property_collection()
@@ -294,22 +255,83 @@ def extract_box(epc_file = None,
                 box = box,
                 realization = inherit_realization,
                 copy_all_realizations = inherit_all_realizations)
+    return collection
 
-    if new_grid_title is None or len(new_grid_title) == 0:
-        new_grid_title = 'local grid ' + box_str + ' extracted from ' + str(
-            rqet.citation_title_for_node(source_grid.root))
 
-    model.h5_release()
-    if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+def __process_split_pillars(source_grid, grid, box, pillar_box):
+    source_points = source_grid.points_ref()
+    source_base_pillar_count = (source_grid.nj + 1) * (source_grid.ni + 1)
+    log.debug('number of base pillars in source grid: ' + str(source_base_pillar_count))
+    log.debug('number of extra pillars in source grid: ' + str(len(source_grid.split_pillar_indices_cached)))
+    base_points = __array_box(
+        source_points[:, :source_base_pillar_count, :].reshape(
+            (source_grid.nk_plus_k_gaps + 1, source_grid.nj + 1, source_grid.ni + 1, 3)),
+        pillar_box).reshape(grid.nk_plus_k_gaps + 1, (grid.nj + 1) * (grid.ni + 1), 3)
+    extra_points = np.zeros(
+        (pillar_box[1, 0] - pillar_box[0, 0] + 1, source_points.shape[1] - source_base_pillar_count, 3))
+    spi_array = np.zeros(len(source_grid.split_pillar_indices_cached), dtype = int)
+    local_cols_array = np.zeros(len(source_grid.cols_for_split_pillars), dtype = int)
+    local_cols_cl = np.zeros(len(source_grid.split_pillar_indices_cached), dtype = int)
+    local_index = 0
+    for index in range(len(source_grid.split_pillar_indices_cached)):
+        source_pi = source_grid.split_pillar_indices_cached[index]
+        local_pi = __local_pillar_index(source_grid.extent_kji, box, source_pi)
+        if local_pi is None:
+            continue
+        cols = __cols_for_pillar(source_grid.extent_kji, source_pi)
+        local_cols = __cols_for_pillar(grid.extent_kji, local_pi)
+        if index == 0:
+            start = 0
+        else:
+            start = source_grid.cols_for_split_pillars_cl[index - 1]
+        finish = source_grid.cols_for_split_pillars_cl[index]
+        source_pis = np.zeros((4,), dtype = int)
+        for c_i in range(4):
+            if local_cols[c_i] < 0:
+                source_pis[c_i] = -1
+                continue
+            if cols[c_i] in source_grid.cols_for_split_pillars[start:finish]:
+                source_pis[c_i] = source_base_pillar_count + index
+            else:
+                source_pis[c_i] = source_pi
+        unique_source_pis = np.unique(source_pis)
+        unique_count = len(unique_source_pis)
+        unique_index = 0
+        if unique_source_pis[0] == -1:
+            unique_index = 1
+            unique_count -= 1
+        if unique_count <= 0:
+            continue
+        base_points[:, local_pi, :] = source_points[pillar_box[0, 0]:pillar_box[1, 0] + 1,
+                                                    unique_source_pis[unique_index], :]
+        unique_index += 1
+        unique_count -= 1
+        if unique_count <= 0:
+            continue
+        while unique_count > 0:
+            source_pi = unique_source_pis[unique_index]
+            extra_points[:, local_index, :] = source_points[pillar_box[0, 0]:pillar_box[1, 0] + 1, source_pi, :]
+            spi_array[local_index] = local_pi
+            if local_index == 0:
+                lc_index = 0
+            else:
+                lc_index = local_cols_cl[local_index - 1]
+            for c_i in range(4):
+                if source_pis[c_i] == source_pi and local_cols[c_i] >= 0:
+                    local_cols_array[lc_index] = local_cols[c_i]
+                    lc_index += 1
+            local_cols_cl[local_index] = lc_index
+            local_index += 1
+            unique_index += 1
+            unique_count -= 1
+    if local_index == 0:  # there are no split pillars in the box
+        log.debug('box does not inherit any split pillars')
+        grid.points_cached = base_points.reshape(grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3)
+        grid.has_split_coordinate_lines = False
     else:
-        ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
-                                                      'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
-
-    return grid
+        log.debug('number of extra pillars in box: ' + str(local_index))
+        grid.points_cached = np.concatenate((base_points, extra_points[:, :local_index, :]), axis = 1)
+        grid.split_pillar_indices_cached = spi_array[:local_index].copy()
+        grid.cols_for_split_pillars = local_cols_array[:local_cols_cl[local_index - 1]].copy()
+        grid.cols_for_split_pillars_cl = local_cols_cl[:local_index].copy()
+        grid.split_pillars_count = local_index
