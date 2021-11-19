@@ -104,48 +104,11 @@ def zonal_grid(epc_file,
 
     # create a new, empty grid object
     is_regular = grr.is_regular_grid(source_grid.root) and single_layer_mode
-    if is_regular:
-        dxyz_dkji = source_grid.block_dxyz_dkji.copy()
-        dxyz_dkji[0] *= k0_max - k0_min + 1
-        grid = grr.RegularGrid(model,
-                               extent_kji = (1, source_grid.nj, source_grid.ni),
-                               dxyz_dkji = dxyz_dkji,
-                               origin = source_grid.block_origin,
-                               crs_uuid = source_grid.crs_uuid,
-                               set_points_cached = False)
-    else:
-        grid = grr.Grid(model)
-        # inherit attributes from source grid
-        grid.grid_representation = 'IjkGrid'
-        grid.extent_kji = np.array((zone_count, source_grid.nj, source_grid.ni), dtype = 'int')
-        grid.nk, grid.nj, grid.ni = zone_count, source_grid.nj, source_grid.ni
-        grid.has_split_coordinate_lines = source_grid.has_split_coordinate_lines
-        grid.crs_root = source_grid.crs_root
-        grid.crs_uuid = source_grid.crs_uuid
-
-    grid.k_direction_is_down = source_grid.k_direction_is_down
-    grid.grid_is_right_handed = source_grid.grid_is_right_handed
-    grid.pillar_shape = source_grid.pillar_shape
+    grid = __empty_grid(source_grid, is_regular, k0_min, k0_max, zone_count)
 
     # aggregate inactive cell mask depending on laissez faire argument
-    if source_grid.inactive is None:
-        log.debug('setting inactive mask to None')
-        grid.inactive = None
-    elif single_layer_mode:
-        if inactive_laissez_faire:
-            log.debug('setting inactive mask using all mode (laissez faire)')
-            grid.inactive = np.all(source_grid.inactive[k0_min:k0_max + 1], axis = 0).reshape(grid.extent_kji)
-        else:
-            log.debug('setting inactive mask using any mode (strict)')
-            grid.inactive = np.any(source_grid.inactive[k0_min:k0_max + 1], axis = 0).reshape(grid.extent_kji)
-    else:
-        grid.inactive = np.zeros(grid.extent_kji, dtype = bool)
-        for zone_i in range(zone_count):
-            zk0_min, zk0_max, _ = zone_layer_range_list[zone_i]
-            if inactive_laissez_faire:
-                grid.inactive[zone_i] = np.all(source_grid.inactive[zk0_min:zk0_max + 1], axis = 0)
-            else:
-                grid.inactive[zone_i] = np.any(source_grid.inactive[zk0_min:zk0_max + 1], axis = 0)
+    __set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_layer_mode,
+                             k0_min, k0_max, zone_layer_range_list, zone_count)
 
     if not is_regular:
 
@@ -207,32 +170,7 @@ def zonal_grid(epc_file,
                                 grid.array_cell_geometry_is_defined[zone_i, j, i] = True
                                 break
         else:
-            log.debug('scanning columns (split pillars) for reference geometry')
-            if not hasattr(source_grid, 'pillars_for_column'):
-                source_grid.create_column_pillar_mapping()
-            grid.pillars_for_column = source_grid.pillars_for_column.copy()
-            for zone_i in range(zone_count):
-                zk0_min, zk0_max = zone_layer_range_list[zone_i][0:2]
-                for j in range(grid.nj):
-                    for i in range(grid.ni):
-                        if grid.inactive[zone_i, j, i]:
-                            continue
-                        if zone_i == 0:
-                            for k in range(zk0_min, zk0_max + 1):
-                                if source_grid.array_cell_geometry_is_defined[k, j, i]:
-                                    for jp in range(2):
-                                        for ip in range(2):
-                                            pillar = grid.pillars_for_column[j, i, jp, ip]
-                                            grid.points_cached[0, pillar] = source_points[k, pillar]
-                                    break
-                        for k in range(zk0_max + 1, zk0_min - 1, -1):
-                            if source_grid.array_cell_geometry_is_defined[k, j, i]:
-                                for jp in range(2):
-                                    for ip in range(2):
-                                        pillar = grid.pillars_for_column[j, i, jp, ip]
-                                        grid.points_cached[zone_i + 1, pillar] = source_points[k + 1, pillar]
-                                grid.array_cell_geometry_is_defined[zone_i, j, i] = True
-                                break
+            __scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_list, zone_count)
         if grid.has_split_coordinate_lines:
             grid.split_pillar_indices_cached = source_grid.split_pillar_indices_cached.copy()
             grid.cols_for_split_pillars = source_grid.cols_for_split_pillars.copy()
@@ -318,3 +256,81 @@ def __fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True)
     else:
         part_name = properties.singleton()
     return properties.cached_part_array_ref(part_name, masked = masked)  # .copy() needed?
+
+
+def __empty_grid(source_grid, is_regular, k0_min, k0_max, zone_count):
+    model = source_grid.model
+    if is_regular:
+        dxyz_dkji = source_grid.block_dxyz_dkji.copy()
+        dxyz_dkji[0] *= k0_max - k0_min + 1
+        grid = grr.RegularGrid(model,
+                               extent_kji = (1, source_grid.nj, source_grid.ni),
+                               dxyz_dkji = dxyz_dkji,
+                               origin = source_grid.block_origin,
+                               crs_uuid = source_grid.crs_uuid,
+                               set_points_cached = False)
+    else:
+        grid = grr.Grid(model)
+        # inherit attributes from source grid
+        grid.grid_representation = 'IjkGrid'
+        grid.extent_kji = np.array((zone_count, source_grid.nj, source_grid.ni), dtype = 'int')
+        grid.nk, grid.nj, grid.ni = zone_count, source_grid.nj, source_grid.ni
+        grid.has_split_coordinate_lines = source_grid.has_split_coordinate_lines
+        grid.crs_root = source_grid.crs_root
+        grid.crs_uuid = source_grid.crs_uuid
+    grid.k_direction_is_down = source_grid.k_direction_is_down
+    grid.grid_is_right_handed = source_grid.grid_is_right_handed
+    grid.pillar_shape = source_grid.pillar_shape
+    return grid
+
+
+def __scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_list, zone_count):
+    source_points = source_grid.points_ref()
+    log.debug('scanning columns (split pillars) for reference geometry')
+    if not hasattr(source_grid, 'pillars_for_column'):
+        source_grid.create_column_pillar_mapping()
+    grid.pillars_for_column = source_grid.pillars_for_column.copy()
+    for zone_i in range(zone_count):
+        zk0_min, zk0_max = zone_layer_range_list[zone_i][0:2]
+        for j in range(grid.nj):
+            for i in range(grid.ni):
+                if grid.inactive[zone_i, j, i]:
+                    continue
+                if zone_i == 0:
+                    for k in range(zk0_min, zk0_max + 1):
+                        if source_grid.array_cell_geometry_is_defined[k, j, i]:
+                            for jp in range(2):
+                                for ip in range(2):
+                                    pillar = grid.pillars_for_column[j, i, jp, ip]
+                                    grid.points_cached[0, pillar] = source_points[k, pillar]
+                            break
+                for k in range(zk0_max + 1, zk0_min - 1, -1):
+                    if source_grid.array_cell_geometry_is_defined[k, j, i]:
+                        for jp in range(2):
+                            for ip in range(2):
+                                pillar = grid.pillars_for_column[j, i, jp, ip]
+                                grid.points_cached[zone_i + 1, pillar] = source_points[k + 1, pillar]
+                        grid.array_cell_geometry_is_defined[zone_i, j, i] = True
+                        break
+
+
+def __set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_layer_mode,
+                             k0_min, k0_max, zone_layer_range_list, zone_count):
+    if source_grid.inactive is None:
+        log.debug('setting inactive mask to None')
+        grid.inactive = None
+    elif single_layer_mode:
+        if inactive_laissez_faire:
+            log.debug('setting inactive mask using all mode (laissez faire)')
+            grid.inactive = np.all(source_grid.inactive[k0_min:k0_max + 1], axis = 0).reshape(grid.extent_kji)
+        else:
+            log.debug('setting inactive mask using any mode (strict)')
+            grid.inactive = np.any(source_grid.inactive[k0_min:k0_max + 1], axis = 0).reshape(grid.extent_kji)
+    else:
+        grid.inactive = np.zeros(grid.extent_kji, dtype = bool)
+        for zone_i in range(zone_count):
+            zk0_min, zk0_max, _ = zone_layer_range_list[zone_i]
+            if inactive_laissez_faire:
+                grid.inactive[zone_i] = np.all(source_grid.inactive[zk0_min:zk0_max + 1], axis = 0)
+            else:
+                grid.inactive[zone_i] = np.any(source_grid.inactive[zk0_min:zk0_max + 1], axis = 0)
