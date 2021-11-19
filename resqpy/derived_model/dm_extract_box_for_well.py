@@ -232,8 +232,8 @@ def __build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked
     end_k0 = max_k0 + 1 if trajectory is None else max_k0 + 2
     warned = False
     for k in range(min_k0, end_k0):
-        cols, intersect_points = __find_intersections(source_grid, k, trajectory, blocked_well, bw_cells,
-                                                      column_ji0, centres, quad_triangles)
+        cols, intersect_points = __find_intersections(source_grid, k, trajectory, blocked_well, bw_cells, column_ji0,
+                                                      centres, quad_triangles)
         if cols is None or len(cols) == 0:
             if not warned:
                 log.warning(f"no intersection found between well and {h_or_l}(s) such as: {k}")

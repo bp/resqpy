@@ -141,7 +141,8 @@ def extract_box(epc_file = None,
         fine_coarse.set_all_ratios_constant()
         grid.set_parent(source_grid.uuid, True, fine_coarse)
 
-    collection = __inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization, inherit_all_realizations)
+    collection = __inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization,
+                                      inherit_all_realizations)
 
     if new_grid_title is None or len(new_grid_title) == 0:
         new_grid_title = 'local grid ' + box_str + ' extracted from ' + str(

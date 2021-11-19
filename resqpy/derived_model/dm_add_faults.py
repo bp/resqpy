@@ -110,8 +110,8 @@ def add_faults(epc_file,
     # build pillar list dict for polylines if necessary
     if full_pillar_list_dict is None:
         full_pillar_list_dict = {}
-        __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs,
-                                                     lines_file_list, full_pillar_list_dict, composite_face_set_dict)
+        __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
+                                                     full_pillar_list_dict, composite_face_set_dict)
 
     else:  # populate composite face set dictionary from full pillar list
         __populate_composite_face_sets_for_pillar_lists(source_grid, full_pillar_list_dict, composite_face_set_dict)
@@ -308,9 +308,8 @@ def __processs_foursome(grid, n_primaries, primary, original_p, existing_foursom
                     found = False
                     for cols_index in range(start, start + grid.cols_for_split_pillars_cl[extra_p]):
                         if grid.cols_for_split_pillars[cols_index] == natural_col:
-                            grid.cols_for_split_pillars = np.concatenate(
-                                (grid.cols_for_split_pillars[:cols_index],
-                                 grid.cols_for_split_pillars[cols_index + 1:]))
+                            grid.cols_for_split_pillars = np.concatenate((grid.cols_for_split_pillars[:cols_index],
+                                                                          grid.cols_for_split_pillars[cols_index + 1:]))
                             found = True
                             break
                     assert found
@@ -353,8 +352,8 @@ def __process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_thro
         __fault_from_pillar_list(grid, full_pillar_list, left_right_throw[0], left_right_throw[1])
 
 
-def __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs,
-                                                 lines_file_list, full_pillar_list_dict, composite_face_set_dict):
+def __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
+                                                 full_pillar_list_dict, composite_face_set_dict):
     lines_crs = None if lines_crs_uuid is None else rqcrs.Crs(model, uuid = lines_crs_uuid)
     if polylines:
         for i, polyline in enumerate(polylines):
@@ -377,5 +376,4 @@ def __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_c
                 face_set_id = f_name[:-4]
             else:
                 face_set_id = f_name
-            __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict,
-                                           composite_face_set_dict)
+            __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict)

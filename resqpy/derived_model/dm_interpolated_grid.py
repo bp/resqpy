@@ -280,40 +280,40 @@ def __interpolate_points_cached_from_cp(grid, grid_a, grid_b, a_weight, b_weight
 
 
 def __add_split_pillars_for_extras(grid, extras_count, extras_use, extras_list):
-        log.debug('adding split pillar arrays to grid object')
-        split_pillar_indices_list = []
-        cumulative_length_list = []
-        cols_for_extra_pillar_list = []
-        cumulative_length = 0
-        for pillar_j in range(grid.nj + 1):
-            for pillar_i in range(grid.ni + 1):
-                for e in range(extras_count[pillar_j, pillar_i]):
-                    split_pillar_indices_list.append(pillar_j * (grid.ni + 1) + pillar_i)
-                    use_count = 0
-                    for jp in range(2):
-                        j = pillar_j - jp
-                        if j < 0 or j >= grid.nj:
+    log.debug('adding split pillar arrays to grid object')
+    split_pillar_indices_list = []
+    cumulative_length_list = []
+    cols_for_extra_pillar_list = []
+    cumulative_length = 0
+    for pillar_j in range(grid.nj + 1):
+        for pillar_i in range(grid.ni + 1):
+            for e in range(extras_count[pillar_j, pillar_i]):
+                split_pillar_indices_list.append(pillar_j * (grid.ni + 1) + pillar_i)
+                use_count = 0
+                for jp in range(2):
+                    j = pillar_j - jp
+                    if j < 0 or j >= grid.nj:
+                        continue
+                    for ip in range(2):
+                        i = pillar_i - ip
+                        if i < 0 or i >= grid.ni:
                             continue
-                        for ip in range(2):
-                            i = pillar_i - ip
-                            if i < 0 or i >= grid.ni:
-                                continue
-                            if extras_use[j, i, jp, ip] == e:
-                                use_count += 1
-                                cols_for_extra_pillar_list.append((j * grid.ni) + i)
-                    assert (use_count > 0)
-                    cumulative_length += use_count
-                    cumulative_length_list.append(cumulative_length)
-        log.debug('number of extra pillars: ' + str(len(split_pillar_indices_list)))
-        assert (len(cumulative_length_list) == len(split_pillar_indices_list))
-        grid.split_pillar_indices_cached = np.array(split_pillar_indices_list, dtype = 'int')
-        log.debug('number of uses of extra pillars: ' + str(len(cols_for_extra_pillar_list)))
-        assert (len(cols_for_extra_pillar_list) == np.count_nonzero(extras_use + 1))
-        assert (len(cols_for_extra_pillar_list) == cumulative_length)
-        grid.cols_for_split_pillars = np.array(cols_for_extra_pillar_list, dtype = 'int')
-        assert (len(cumulative_length_list) == len(extras_list))
-        grid.cols_for_split_pillars_cl = np.array(cumulative_length_list, dtype = 'int')
-        grid.split_pillars_count = len(extras_list)
+                        if extras_use[j, i, jp, ip] == e:
+                            use_count += 1
+                            cols_for_extra_pillar_list.append((j * grid.ni) + i)
+                assert (use_count > 0)
+                cumulative_length += use_count
+                cumulative_length_list.append(cumulative_length)
+    log.debug('number of extra pillars: ' + str(len(split_pillar_indices_list)))
+    assert (len(cumulative_length_list) == len(split_pillar_indices_list))
+    grid.split_pillar_indices_cached = np.array(split_pillar_indices_list, dtype = 'int')
+    log.debug('number of uses of extra pillars: ' + str(len(cols_for_extra_pillar_list)))
+    assert (len(cols_for_extra_pillar_list) == np.count_nonzero(extras_use + 1))
+    assert (len(cols_for_extra_pillar_list) == cumulative_length)
+    grid.cols_for_split_pillars = np.array(cols_for_extra_pillar_list, dtype = 'int')
+    assert (len(cumulative_length_list) == len(extras_list))
+    grid.cols_for_split_pillars_cl = np.array(cumulative_length_list, dtype = 'int')
+    grid.split_pillars_count = len(extras_list)
 
 
 def __close_vertical_voids(grid, grid_cp, z_units):
