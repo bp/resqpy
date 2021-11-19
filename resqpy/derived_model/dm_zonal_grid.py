@@ -74,7 +74,8 @@ def zonal_grid(epc_file,
     if source_grid.grid_representation == 'IjkBlockGrid':
         source_grid.make_regular_points_cached()
     assert model is not None
-    single_layer_mode = (not zone_title and not zone_uuid)
+    single_layer_mode = (not zone_title and not zone_uuid and
+                         (zone_layer_range_list is None or len(zone_layer_range_list) == 1))
 
     if k0_min is None:
         k0_min = 0

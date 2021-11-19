@@ -964,3 +964,30 @@ def test_drape_to_surface(tmp_path):
     model = rq.Model(epc)
     draped = model.grid(title = 'draped')
     assert draped is not None
+
+
+def test_zonal_grid(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'zonal_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (200.0, -270.0, 12.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (9, 2, 3),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    # create a zonal version of the grid
+    zone_ranges = [(0, 1, 0), (2, 4, 1), (5, 8, 2), (9, 9, 3)]
+    rqdm.zonal_grid(epc, zone_layer_range_list = zone_ranges, new_grid_title = 'four zone grid')
+
+    # re-open the model and take a look at the zonal grid
+    model = rq.Model(epc)
+    z_grid = model.grid(title = 'four zone grid')
+    assert z_grid.nk == 4
