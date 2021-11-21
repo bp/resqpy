@@ -1456,12 +1456,11 @@ class WellboreInterpretation(BaseResqpy):
         """Iterable of associated trajectories."""
 
         # import resqpy.well.well_utils
-        import resqpy.well as rqw
+        import resqpy.well
 
         uuids = self.model.uuids(obj_type = "WellboreTrajectoryRepresentation", related_uuid = self.uuid)
         for uuid in uuids:
-            # yield resqpy.well.Trajectory(self.model, uuid = uuid)
-            yield rqw.Trajectory(self.model, uuid = uuid)
+            yield resqpy.well.Trajectory(self.model, uuid = uuid)
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this interpretation is essentially the same as the other; otherwise False."""
