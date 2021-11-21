@@ -32,8 +32,6 @@ import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.xml_namespaces import namespace as ns_url
 
-# import resqpy.well as rqw2
-
 use_version_string = False
 
 
@@ -3327,11 +3325,13 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well.well_utils  # Imported here for speed, module is not always needed
+        # import resqpy.well.well_utils  # Imported here for speed, module is not always needed
+        import resqpy.well as rqw
 
         uuids = self.uuids(obj_type = "WellboreTrajectoryRepresentation")
         for uuid in uuids:
-            yield resqpy.well.Trajectory(self, uuid = uuid)
+            # yield resqpy.well.Trajectory(self, uuid = uuid)
+            yield rqw.Trajectory(self, uuid = uuid)
 
     def iter_md_datums(self):
         """Iterable of all MdDatum objects associated with the model.
@@ -3341,12 +3341,14 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well.well_utils  # Imported here to avoid circular imports
+        # import resqpy.well.well_utils  # Imported here to avoid circular imports
+        import resqpy.well as rqw
 
         uuids = self.uuids(obj_type = 'MdDatum')
         if uuids:
             for uuid in uuids:
-                datum = resqpy.well.MdDatum(self, uuid = uuid)
+                # datum = resqpy.well.MdDatum(self, uuid = uuid)
+                datum = rqw.MdDatum(self, uuid = uuid)
                 yield datum
 
     def iter_crs(self):

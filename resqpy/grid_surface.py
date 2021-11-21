@@ -18,8 +18,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.surface as rqs
-import resqpy.well.well_utils as rqw
-import resqpy.well as rqw2
+import resqpy.well as rqw
 
 
 class GridSkin:
@@ -1392,11 +1391,11 @@ def populate_blocked_well_from_trajectory(blocked_well,
         base_md = trajectory.measured_depths[segment]
         return base_md + fraction * (trajectory.measured_depths[segment + 1] - base_md)
 
-    assert isinstance(blocked_well, rqw2.BlockedWell)
-    assert isinstance(blocked_well.trajectory, rqw2.Trajectory)
+    assert isinstance(blocked_well, rqw.BlockedWell)
+    assert isinstance(blocked_well.trajectory, rqw.Trajectory)
     assert grid is not None
 
-    log.debug(f'blocking well {rqw2.well_name(blocked_well)} from trajectory and grid')
+    log.debug(f'blocking well {rqw.well_name(blocked_well)} from trajectory and grid')
 
     if grid.k_gaps:
         use_single_layer_tactics = False
@@ -1409,9 +1408,9 @@ def populate_blocked_well_from_trajectory(blocked_well,
         # create a temporary orphanage model (in memory only) to host a copy of the trajectory for crs alignment
         # NB. temporary objects, relationships left in a mess
         model = rq.Model(create_basics = True)
-        trajectory = rqw2.Trajectory(model,
-                                     blocked_well.trajectory.root_node,
-                                     hdf5_source_model = blocked_well.trajectory.model)
+        trajectory = rqw.Trajectory(model,
+                                    blocked_well.trajectory.root_node,
+                                    hdf5_source_model = blocked_well.trajectory.model)
         assert trajectory is not None
         traj_crs = rqc.Crs(blocked_well.model, uuid = rqet.uuid_for_part_root(blocked_well.trajectory.crs_root))
         traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs

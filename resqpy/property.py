@@ -30,7 +30,7 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-import resqpy.well as rqw2
+import resqpy.well as rqw
 
 # following are loaded dynamically, to avoid circular reference during import (issue for python version < 3.7)
 # import resqpy.grid as grr
@@ -219,7 +219,6 @@ class PropertyCollection():
         import resqpy.grid as grr
         import resqpy.surface as rqs
         import resqpy.unstructured as rug
-        import resqpy.well.well_utils as rqw
 
         # todo: check uuid's of individual parts' supports match that of support being set for whole collection
 
@@ -256,9 +255,9 @@ class PropertyCollection():
                 if support_type == 'obj_IjkGridRepresentation':
                     self.support = grr.any_grid(model, uuid = self.support_uuid, find_properties = False)
                 elif support_type == 'obj_WellboreFrameRepresentation':
-                    self.support = rqw2.WellboreFrame(model, uuid = self.support_uuid)
+                    self.support = rqw.WellboreFrame(model, uuid = self.support_uuid)
                 elif support_type == 'obj_BlockedWellboreRepresentation':
-                    self.support = rqw2.BlockedWell(model, uuid = self.support_uuid)
+                    self.support = rqw.BlockedWell(model, uuid = self.support_uuid)
                 elif support_type == 'obj_Grid2dRepresentation':
                     self.support = rqs.Mesh(model, uuid = self.support_uuid)
                 elif support_type == 'obj_GridConnectionSetRepresentation':
@@ -272,9 +271,9 @@ class PropertyCollection():
                     raise TypeError('unsupported property supporting representation class: ' + str(support_type))
             else:
                 if type(self.support) in [
-                        grr.Grid, grr.RegularGrid, rqw2.WellboreFrame, rqw2.BlockedWell, rqs.Mesh,
-                        rqf.GridConnectionSet, rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid,
-                        rug.VerticalPrismGrid, rug.PyramidGrid
+                        grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
+                        rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
+                        rug.PyramidGrid
                 ]:
                     self.support_root = self.support.root
                 else:
@@ -308,7 +307,7 @@ class PropertyCollection():
         import resqpy.grid as grr
         import resqpy.surface as rqs
         import resqpy.unstructured as rug
-        import resqpy.well.well_utils as rqw
+        import resqpy.well as rqw
 
         shape_list = None
         support = self.support
@@ -344,13 +343,13 @@ class PropertyCollection():
                 else:
                     shape_list = [support.nk + 1, support.nj + 1, support.ni + 1]
 
-        elif isinstance(support, rqw2.WellboreFrame):
+        elif isinstance(support, rqw.WellboreFrame):
             if indexable_element is None or indexable_element == 'nodes':
                 shape_list = [support.node_count]
             elif indexable_element == 'intervals':
                 shape_list = [support.node_count - 1]
 
-        elif isinstance(support, rqw2.BlockedWell):
+        elif isinstance(support, rqw.BlockedWell):
             if indexable_element is None or indexable_element == 'intervals':
                 shape_list = [support.node_count - 1]  # all intervals, including unblocked
 
