@@ -2725,8 +2725,8 @@ class PropertyCollection():
             if not discrete and np.all(np.isnan(zorro)):
                 min_value = max_value = None
             else:
-                min_value = np.nanmin(zorro)
-                max_value = np.nanmax(zorro)
+                min_value = int(np.nanmin(zorro))
+                max_value = int(np.nanmax(zorro))
             if min_value is ma.masked or min_value == np.NaN:
                 min_value = None
             if max_value is ma.masked or max_value == np.NaN:

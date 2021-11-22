@@ -13,6 +13,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
 import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
+import resqpy.surface as rqs
 
 # ---- Test PropertyCollection methods ---
 
@@ -828,3 +829,48 @@ def test_create_property_set_xml(example_model_with_properties):
     pset.populate_from_property_set(prop_set_root)
     # Assert
     assert len(pset.parts()) == num_parts
+
+
+def test_override_min_max(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = pc.parts()[0]
+
+    print(pc.dict[part])
+    vmin = pc.minimum_value_for_part(part)
+    vmax = pc.maximum_value_for_part(part)
+
+    # Act
+    pc.override_min_max(part, min_value = vmin - 1, max_value = vmax + 1)
+    # Assert
+    assert pc.minimum_value_for_part(part) == vmin - 1
+    assert pc.maximum_value_for_part(part) == vmax + 1
+
+
+def test_set_support_mesh(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+
+    ni = 5
+    nj = 5
+    origin = (0, 0, 0)
+    di = dj = 50.0
+
+    # make a regular mesh representation
+    support = rqs.Mesh(model,
+                       crs_uuid = crs.uuid,
+                       mesh_flavour = 'regular',
+                       ni = ni,
+                       nj = nj,
+                       origin = origin,
+                       dxyz_dij = np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]),
+                       title = 'regular mesh',
+                       originator = 'Emma',
+                       extra_metadata = {'testing mode': 'automated'})
+    assert support is not None
+    support.write_hdf5()
+    support.create_xml()
+
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = support)

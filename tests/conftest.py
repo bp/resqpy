@@ -229,20 +229,21 @@ def example_model_with_prop_ts_rels(tmp_path):
                     add_cell_length_properties = False)
     model.store_epc()
 
-    zone = np.ones(shape = (5, 5))
-    zone_array = np.array([zone, zone + 1, zone + 2])
+    zone = np.ones(shape = (5, 5), dtype = 'int')
+    zone_array = np.array([zone, zone + 1, zone + 2], dtype = 'int')
 
-    vpc = np.array([[1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2]])
-    vpc_array = np.array([vpc, vpc, vpc])
+    vpc = np.array([[1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2]], dtype = 'int')
+    vpc_array = np.array([vpc, vpc, vpc], dtype = 'int')
 
-    facies = np.array([[1, 1, 1, 2, 2], [1, 1, 2, 2, 2], [1, 2, 2, 2, 3], [2, 2, 2, 3, 3], [2, 2, 3, 3, 3]])
-    facies_array = np.array([facies, facies, facies])
+    facies = np.array([[1, 1, 1, 2, 2], [1, 1, 2, 2, 2], [1, 2, 2, 2, 3], [2, 2, 2, 3, 3], [2, 2, 3, 3, 3]],
+                      dtype = 'int')
+    facies_array = np.array([facies, facies, facies], dtype = 'int')
 
     perm = np.array([[1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10]])
     perm_array = np.array([perm, perm, perm])
 
-    fb = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2]])
-    fb_array = np.array([fb, fb, fb])
+    fb = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2]], dtype = 'int')
+    fb_array = np.array([fb, fb, fb], dtype = 'int')
 
     ntg = np.array([[0, 0.5, 0, 0.5, 0], [0.5, 0, 0.5, 0, 0.5], [0, 0.5, 0, 0.5, 0], [0.5, 0, 0.5, 0, 0.5],
                     [0, 0.5, 0, 0.5, 0]])
