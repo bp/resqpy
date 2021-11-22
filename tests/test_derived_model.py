@@ -19,6 +19,10 @@ import resqpy.property as rqp
 import resqpy.surface as rqs
 import resqpy.well as rqw
 
+from resqpy.olio.random_seed import seed
+
+seed(2349857)
+
 
 def test_add_single_cell_grid(tmp_path):
 
@@ -273,6 +277,50 @@ def test_extract_box_for_well(tmp_path):
     assert np.all(np.logical_not(grid_2.inactive[np.logical_not(expected_inactive_1)]))
     # check prism shape to inactive cells
     assert np.all(grid_2.inactive == grid_2.inactive[0])
+
+
+def test_extract_box(tmp_path):
+    # create an empty model and add a crs
+    epc = os.path.join(tmp_path, 'box_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    model.store_epc()
+    # create a grid
+    grid = grr.RegularGrid(model,
+                           crs_uuid = crs.uuid,
+                           extent_kji = (5, 10, 12),
+                           origin = (2000.0, 3000.0, 1000.0),
+                           dxyz = (100.0, 100.0, 20.0),
+                           title = 'original grid',
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml()
+    # introduce a couple of faults
+    fault_lines = []
+    fl1 = np.array([(2600.0, 2900.0, 0.0), (2600.0, 4100.0, 0.0)])
+    fault_lines.append(rql.Polyline(model, set_bool = False, set_coord = fl1, set_crs = crs.uuid, title = 'fault 1'))
+    fl2 = np.array([(1900.0, 3500.0, 0.0), (3300.0, 3500.0, 0.0)])
+    fault_lines.append(rql.Polyline(model, set_bool = False, set_coord = fl2, set_crs = crs.uuid, title = 'fault 2'))
+    for fl in fault_lines:
+        fl.write_hdf5()
+        fl.create_xml()
+    model.store_epc()
+    fs_grid = rqdm.add_faults(epc, grid, polylines = fault_lines, new_grid_title = 'small throws')
+    # scale the throw on the faults
+    fb_grid = rqdm.global_fault_throw_scaling(epc,
+                                              source_grid = fs_grid,
+                                              scaling_factor = 30.0,
+                                              cell_range = 2,
+                                              new_grid_title = 'big throws')
+    # extract a box
+    box = np.array([(1, 2, 3), (3, 8, 9)], dtype = int)
+    e_grid = rqdm.extract_box(epc, source_grid = fb_grid, box = box, new_grid_title = 'extracted grid')
+    assert e_grid is not None
+    # re-open model and check extent of extracted grid
+    model = rq.Model(epc)
+    grid = grr.Grid(model, uuid = e_grid.uuid)
+    assert np.all(grid.extent_kji == (3, 7, 7))
 
 
 def test_add_grid_points_property(tmp_path):
@@ -1156,3 +1204,48 @@ def test_local_depth_adjustment(tmp_path):
     assert a_grid is not None
     p = a_grid.points_ref()
     assert maths.isclose(np.min(p[..., 2]), 2000.0 - 7.0)
+
+
+def test_gather_ensemble(tmp_path):
+    # create three models, each with a regular grid and a grid property
+    epc_list = []
+    for m in range(3):
+        epc = os.path.join(tmp_path, f'grid_{m}.epc')
+        model = rq.new_model(epc)
+        crs = rqc.Crs(model)
+        crs.create_xml()
+        dxyz = (50.0, 50.0, 10.0)
+        extent_kji = (3, 20, 20)
+        grid = grr.RegularGrid(model,
+                               crs_uuid = model.crs_uuid,
+                               extent_kji = extent_kji,
+                               origin = (500.0, 700.0, 1000.0),
+                               dxyz = dxyz,
+                               as_irregular_grid = True)
+        grid.write_hdf5()
+        grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+        model.store_epc()
+        ntg = np.random.random(extent_kji)
+        rqdm.add_one_grid_property_array(epc,
+                                         ntg,
+                                         property_kind = 'net to gross ratio',
+                                         grid_uuid = grid.uuid,
+                                         title = 'NETGRS',
+                                         uom = 'm3/m3',
+                                         indexable_element = 'cells')
+        epc_list.append(epc)
+    # gather ensemble
+    combined_epc = os.path.join(tmp_path, 'combo.epc')
+    rqdm.gather_ensemble(epc_list, combined_epc)
+    # open combined model and check realisations
+    model = rq.Model(combined_epc)
+    grid = model.grid()
+    assert grid is not None
+    pc = grid.property_collection
+    assert pc.has_multiple_realizations()
+    assert pc.realization_list(sort_list = True) == [0, 1, 2]
+    ntg_pc = rqp.selective_version_of_collection(pc, property_kind = 'net to gross ratio')
+    assert ntg_pc.number_of_parts() == 3
+    ntg3 = ntg_pc.realizations_array_ref()
+    assert ntg3.shape == (3, 3, 20, 20)
+    assert np.all(ntg3 >= 0.0) and np.all(ntg3 <= 1.0)
