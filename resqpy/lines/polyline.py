@@ -339,9 +339,11 @@ class Polyline(_BasePolyline):
             if self.isclosed:
                 seg_count += 1
             d = 2 if in_xy else 3
+            p1 = np.zeros(3)
+            p2 = np.zeros(3)
             for seg_index in range(seg_count):
                 successor = (seg_index + 1) % len(self.coordinates)
-                p1, p2 = self.coordinates[seg_index, :d], self.coordinates[successor, :d]
+                p1[:d], p2[:d] = self.coordinates[seg_index, :d], self.coordinates[successor, :d]
                 sum += (p1 + p2) * vu.naive_length(p2 - p1)
             centre = sum / (2.0 * self.full_length(in_xy = in_xy))
         if cache:
@@ -398,7 +400,7 @@ class Polyline(_BasePolyline):
         segment, px, py = self.first_line_intersection(centre_xy[0], centre_xy[1], x, y, half_segment = True)
         assert px is not None
         norm_x, norm_y = None, None
-        if mode == 'square':
+        if mode == 'square':  # todo: check square mode – looks wrong
             if px == centre_xy[0]:
                 norm_x = 0.5
             else:
