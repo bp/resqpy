@@ -99,59 +99,10 @@ class PolylineSet(_BasePolyline):
                 self.title = polylines[0].title
 
         elif irap_file is not None:  # Create from an input IRAP file
-            inpoints = rsl.read_lines(irap_file)
-            self.count_perpol = []
-            closed_array = []
-            self.title = os.path.basename(irap_file).split(".")[0]
-            for i, poly in enumerate(inpoints):
-                if len(poly) > 1:  # Polylines must have at least 2 points
-                    self.count_perpol.append(len(poly))
-                    if vu.isclose(poly[0], poly[-1]):
-                        closed_array.append(True)
-                    else:
-                        closed_array.append(False)
-                    if i == 0:
-                        self.coordinates = poly
-                    else:
-                        self.coordinates = np.concatenate((self.coordinates, poly))
-            self.count_perpol = np.array(self.count_perpol)
-            if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
-                self.crs_uuid = self.model.crs_uuid
-            self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
-                                                   self.crs_root, self.rep_int_root)
+            self._set_from_irap(irap_file)
 
         elif charisma_file is not None:
-            with open(charisma_file) as f:
-                inpoints = f.readlines()
-            self.count_perpol = []
-            closed_array = []
-            self.title = os.path.basename(charisma_file).split(".")[0]
-            for i, line in enumerate(inpoints):
-                line = line.split()
-                if i == 0:
-                    self.coordinates = (np.array([[float(line[3]), float(line[4]), float(line[5])]]))
-                    stick = line[7]
-                    count = 1
-                else:
-                    self.coordinates = np.concatenate(
-                        (self.coordinates, np.array(([[float(line[3]), float(line[4]),
-                                                       float(line[5])]]))))
-                    count += 1
-                    if stick != line[7] or i == len(inpoints) - 1:
-                        if count <= 2:  # Line has fewer than 2 points
-                            log.info(
-                                f"Polylines must contain at least 2 points - ignoring point {self.coordinates[-2]}")
-                            self.coordinates = np.delete(self.coordinates, -2, 0)  # Remove the second to last entry
-                        else:
-                            self.count_perpol.append(count - 1)
-                            closed_array.append(False)
-                        count = 1
-                        stick = line[7]
-            self.count_perpol = np.array(self.count_perpol)
-            if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
-                self.crs_uuid = self.model.crs_uuid
-            self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
-                                                   self.crs_root, self.rep_int_root)
+            self._set_from_charisma(charisma_file)
 
     def _load_from_xml(self):
 
@@ -198,6 +149,60 @@ class PolylineSet(_BasePolyline):
             # delattr(self,'count_perpol')
 
             self.polys.extend(subpolys)
+
+    def _set_from_irap(self, irap_file):
+        inpoints = rsl.read_lines(irap_file)
+        self.count_perpol = []
+        closed_array = []
+        self.title = os.path.basename(irap_file).split(".")[0]
+        for i, poly in enumerate(inpoints):
+            if len(poly) > 1:  # Polylines must have at least 2 points
+                self.count_perpol.append(len(poly))
+                if vu.isclose(poly[0], poly[-1]):
+                    closed_array.append(True)
+                else:
+                    closed_array.append(False)
+                if i == 0:
+                    self.coordinates = poly
+                else:
+                    self.coordinates = np.concatenate((self.coordinates, poly))
+        self.count_perpol = np.array(self.count_perpol)
+        if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
+            self.crs_uuid = self.model.crs_uuid
+        self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
+                                               self.crs_root, self.rep_int_root)
+
+    def _set_from_charisma(self, charisma_file):
+        with open(charisma_file) as f:
+            inpoints = f.readlines()
+        self.count_perpol = []
+        closed_array = []
+        self.title = os.path.basename(charisma_file).split(".")[0]
+        for i, line in enumerate(inpoints):
+            line = line.split()
+            if i == 0:
+                self.coordinates = (np.array([[float(line[3]), float(line[4]), float(line[5])]]))
+                stick = line[7]
+                count = 1
+            else:
+                self.coordinates = np.concatenate(
+                    (self.coordinates, np.array(([[float(line[3]), float(line[4]),
+                                                   float(line[5])]]))))
+                count += 1
+                if stick != line[7] or i == len(inpoints) - 1:
+                    if count <= 2:  # Line has fewer than 2 points
+                        log.info(f"Polylines must contain at least 2 points - ignoring point {self.coordinates[-2]}")
+                        self.coordinates = np.delete(self.coordinates, -2, 0)  # Remove the second to last entry
+                    else:
+                        self.count_perpol.append(count - 1)
+                        closed_array.append(False)
+                    count = 1
+                    stick = line[7]
+        self.count_perpol = np.array(self.count_perpol)
+        if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
+            self.crs_uuid = self.model.crs_uuid
+        self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
+                                               self.crs_root, self.rep_int_root)
 
     @property
     def crs_root(self):
@@ -427,7 +432,7 @@ class PolylineSet(_BasePolyline):
         """
 
         from resqpy.lines.polyline import Polyline
-        
+
         if count_perpol is None:
             count_perpol = self.count_perpol
         if closed_array is None:

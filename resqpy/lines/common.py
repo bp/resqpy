@@ -127,18 +127,6 @@ def tangents(points, weight = 'linear', closed = False):
         if two neighbouring points are identical, a divide by zero will occur
     """
 
-    def one_tangent(points, k1, k2, k3, weight):
-        v1 = points[k2] - points[k1]
-        v2 = points[k3] - points[k2]
-        l1 = vu.naive_length(v1)
-        l2 = vu.naive_length(v2)
-        if weight == 'square':
-            return vu.unit_vector(v1 / (l1 * l1) + v2 / (l2 * l2))
-        elif weight == 'cube':
-            return vu.unit_vector(v1 / (l1 * l1 * l1) + v2 / (l2 * l2 * l2))
-        else:  # linear weight mode
-            return vu.unit_vector(v1 / l1 + v2 / l2)
-
     assert points.ndim == 2 and points.shape[1] == 3
     assert weight in ['linear', 'square', 'cube']
 
@@ -147,11 +135,11 @@ def tangents(points, weight = 'linear', closed = False):
     tangent_vectors = np.empty((knot_count, 3))
 
     for knot in range(1, knot_count - 1):
-        tangent_vectors[knot] = one_tangent(points, knot - 1, knot, knot + 1, weight)
+        tangent_vectors[knot] = __one_tangent(points, knot - 1, knot, knot + 1, weight)
     if closed:
         assert knot_count > 2, 'closed poly line must contain at least 3 knots for tangent generation'
-        tangent_vectors[0] = one_tangent(points, -1, 0, 1, weight)
-        tangent_vectors[-1] = one_tangent(points, -2, -1, 0, weight)
+        tangent_vectors[0] = __one_tangent(points, -1, 0, 1, weight)
+        tangent_vectors[-1] = __one_tangent(points, -2, -1, 0, weight)
     else:
         tangent_vectors[0] = vu.unit_vector(points[1] - points[0])
         tangent_vectors[-1] = vu.unit_vector(points[-1] - points[-2])
@@ -219,21 +207,8 @@ def spline(points,
         seg_lengths[-1] = vu.naive_length(points[0] - points[-1])
 
     knot_insertions = np.full(seg_count, min_subdivisions - 1, dtype = int)
-    if max_segment_length is not None:
-        for seg in range(seg_count):
-            sub_count = maths.ceil(seg_lengths[seg] / max_segment_length)
-            if sub_count > knot_insertions[seg] + 1:
-                knot_insertions[seg] = sub_count - 1
-    if max_degrees_per_knot is not None:
-        for seg in range(seg_count):
-            next = seg + 1 if seg < knot_count - 1 else 0
-            segment = points[next] - points[seg]
-            turn = (vu.degrees_difference(tangent_vectors[seg], segment) +
-                    vu.degrees_difference(segment, tangent_vectors[next]))
-            log.debug(f'spline segment {seg}; turn: {turn:4.2f}')
-            sub_count = maths.ceil(turn / max_degrees_per_knot)
-            if sub_count > knot_insertions[seg] + 1:
-                knot_insertions[seg] = sub_count - 1
+    __prepare_knot_insertions(knot_insertions, max_segment_length, seg_count, seg_lengths, max_degrees_per_knot,
+                              knot_count, tangent_vectors, points)
     insertion_count = np.sum(knot_insertions)
     log.debug(f'{insertion_count} knot insertions for spline')
     spline_knot_count = knot_count + insertion_count
@@ -261,3 +236,35 @@ def spline(points,
     assert sk == spline_knot_count
 
     return spline_points
+
+
+def __one_tangent(points, k1, k2, k3, weight):
+    v1 = points[k2] - points[k1]
+    v2 = points[k3] - points[k2]
+    l1 = vu.naive_length(v1)
+    l2 = vu.naive_length(v2)
+    if weight == 'square':
+        return vu.unit_vector(v1 / (l1 * l1) + v2 / (l2 * l2))
+    elif weight == 'cube':
+        return vu.unit_vector(v1 / (l1 * l1 * l1) + v2 / (l2 * l2 * l2))
+    else:  # linear weight mode
+        return vu.unit_vector(v1 / l1 + v2 / l2)
+
+
+def __prepare_knot_insertions(knot_insertions, max_segment_length, seg_count, seg_lengths, max_degrees_per_knot,
+                              knot_count, tangent_vectors, points):
+    if max_segment_length is not None:
+        for seg in range(seg_count):
+            sub_count = maths.ceil(seg_lengths[seg] / max_segment_length)
+            if sub_count > knot_insertions[seg] + 1:
+                knot_insertions[seg] = sub_count - 1
+    if max_degrees_per_knot is not None:
+        for seg in range(seg_count):
+            next = seg + 1 if seg < knot_count - 1 else 0
+            segment = points[next] - points[seg]
+            turn = (vu.degrees_difference(tangent_vectors[seg], segment) +
+                    vu.degrees_difference(segment, tangent_vectors[next]))
+            log.debug(f'spline segment {seg}; turn: {turn:4.2f}')
+            sub_count = maths.ceil(turn / max_degrees_per_knot)
+            if sub_count > knot_insertions[seg] + 1:
+                knot_insertions[seg] = sub_count - 1
