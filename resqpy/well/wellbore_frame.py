@@ -1,4 +1,4 @@
-"""WellboreFrame.py: resqpy well module providing wellbore frame class.
+"""wellbore_frame.py: resqpy well module providing wellbore frame class.
 
 """
 
@@ -12,7 +12,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('WellboreFrame.py version ' + version)
+log.debug('wellbore_frame.py version ' + version)
 
 import numpy as np
 

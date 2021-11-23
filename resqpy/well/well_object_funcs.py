@@ -26,12 +26,12 @@ import resqpy.property as rqp
 import resqpy.weights_and_measures as bwam
 import resqpy.olio.wellspec_keywords as wsk
 
-from .MdDatum import MdDatum
-from .WellboreFrame import WellboreFrame
-from .WellboreMarkerFrame import WellboreMarkerFrame
-from .BlockedWell import BlockedWell
-from .Trajectory import Trajectory
-from .DeviationSurvey import DeviationSurvey
+from .md_datum import MdDatum
+from .wellbore_frame import WellboreFrame
+from .wellbore_marker_frame import WellboreMarkerFrame
+from .blocked_well import BlockedWell
+from .trajectory import Trajectory
+from .deviation_survey import DeviationSurvey
 
 
 def add_wells_from_ascii_file(model,

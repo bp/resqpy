@@ -1,4 +1,4 @@
-"""WellboreMarkerFrame.py: resqpy well module providing marker frame class.
+"""wellbore_marker_frame.py: resqpy well module providing marker frame class.
 
 """
 
@@ -10,7 +10,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('WellboreMarkerFrame.py version ' + version)
+log.debug('wellbore_marker_frame.py version ' + version)
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .Trajectory import Trajectory
+from .trajectory import Trajectory
 from .well_utils import load_hdf5_array
 
 

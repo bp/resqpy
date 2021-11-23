@@ -1,4 +1,4 @@
-"""DeviationSurvey.py: resqpy well module providing deviation survey class.
+"""deviation_survey.py: resqpy well module providing deviation survey class.
 
 """
 
@@ -12,7 +12,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('DeviationSurvey.py version ' + version)
+log.debug('deviation_survey.py version ' + version)
 
 import pandas as pd
 
@@ -25,7 +25,7 @@ from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .well_utils import _as_optional_array, extract_xyz, load_hdf5_array
-from .MdDatum import MdDatum
+from .md_datum import MdDatum
 
 
 class DeviationSurvey(BaseResqpy):
