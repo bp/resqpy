@@ -5,7 +5,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .GeobodyFeature import GeobodyFeature
+from .geobody_feature import GeobodyFeature
 
 
 class GeobodyInterpretation(BaseResqpy):

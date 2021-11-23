@@ -1,7 +1,7 @@
 import pytest
 
 import resqpy.organize as rqo
-import resqpy.organize.OrganizationFeature as OrganizationFeature
+import resqpy.organize.organization_feature as OrganizationFeature
 from resqpy.model import Model
 
 

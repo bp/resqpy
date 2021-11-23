@@ -5,7 +5,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .GeneticBoundaryFeature import GeneticBoundaryFeature
+from .genetic_boundary_feature import GeneticBoundaryFeature
 
 
 class GeobodyBoundaryInterpretation(BaseResqpy):
