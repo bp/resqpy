@@ -111,3 +111,22 @@ class PropertyKind(BaseResqpy):
             # no relationships at present, if local parent property kinds were to be supported then a rel. is needed there
 
         return pk
+
+
+def create_transmisibility_multiplier_property_kind(model):
+    """Create a local property kind 'transmisibility multiplier' for a given model.
+
+    argument:
+       model: resqml model object
+
+    returns:
+       property kind uuid
+    """
+    log.debug("Making a new property kind 'Transmissibility multiplier'")
+    tmult_kind = PropertyKind(parent_model = model,
+                              title = 'transmissibility multiplier',
+                              parent_property_kind = 'continuous')
+    tmult_kind.create_xml()
+    tmult_kind_uuid = tmult_kind.uuid
+    model.store_epc()
+    return tmult_kind_uuid

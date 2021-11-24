@@ -18,7 +18,6 @@ import resqpy.weights_and_measures as bwam
 #from .propertycollection import PropertyCollection
 #from .property import Property
 
-
 # the following resqml property kinds and facet types are 'known about' by this module in relation to nexus
 # other property kinds should be handled okay but without any special treatment
 # see property_kind_and_facet_from_keyword() for simulator keyword to property kind and facet mapping
@@ -92,7 +91,6 @@ expected_facet_type_dict = {
 }
 
 
-
 def same_property_kind(pk_a, pk_b):
     """Returns True if the two property kinds are the same, or pseudonyms."""
 
@@ -103,25 +101,6 @@ def same_property_kind(pk_a, pk_b):
     if pk_a in ['permeability rock', 'rock permeability'] and pk_b in ['permeability rock', 'rock permeability']:
         return True
     return False
-
-
-def create_transmisibility_multiplier_property_kind(model):
-    """Create a local property kind 'transmisibility multiplier' for a given model.
-
-    argument:
-       model: resqml model object
-
-    returns:
-       property kind uuid
-    """
-    log.debug("Making a new property kind 'Transmissibility multiplier'")
-    tmult_kind = resqpy.property.PropertyKind(parent_model = model,
-                              title = 'transmissibility multiplier',
-                              parent_property_kind = 'continuous')
-    tmult_kind.create_xml()
-    tmult_kind_uuid = tmult_kind.uuid
-    model.store_epc()
-    return tmult_kind_uuid
 
 
 def property_kind_and_facet_from_keyword(keyword):
@@ -649,17 +628,16 @@ def write_hdf5_and_create_xml_for_active_property(model,
     """Writes hdf5 data and creates xml for an active cell property; returns uuid."""
 
     active = resqpy.property.Property.from_array(parent_model = model,
-                                 cached_array = active_property_array,
-                                 source_info = None,
-                                 keyword = title,
-                                 support_uuid = support_uuid,
-                                 property_kind = 'active',
-                                 local_property_kind_uuid = None,
-                                 indexable_element = 'cells',
-                                 discrete = True,
-                                 time_series_uuid = time_series_uuid,
-                                 time_index = time_index,
-                                 realization = realization,
-                                 find_local_property_kind = True)
+                                                 cached_array = active_property_array,
+                                                 source_info = None,
+                                                 keyword = title,
+                                                 support_uuid = support_uuid,
+                                                 property_kind = 'active',
+                                                 local_property_kind_uuid = None,
+                                                 indexable_element = 'cells',
+                                                 discrete = True,
+                                                 time_series_uuid = time_series_uuid,
+                                                 time_index = time_index,
+                                                 realization = realization,
+                                                 find_local_property_kind = True)
     return active.uuid
-

@@ -9,12 +9,10 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('property.py version ' + version)
 
-
 import pandas as pd
 from .propertycollection import PropertyCollection
 from .wellintervalproperty import WellIntervalProperty
 from .property_common import return_cell_indices
-
 
 
 class WellIntervalPropertyCollection(PropertyCollection):
