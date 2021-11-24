@@ -1,10 +1,12 @@
-from .organize_functions import alias_for_attribute, equivalent_extra_metadata
+"""Class for RESQML Boundary Feature organizational objects."""
+
+from ._utils import alias_for_attribute, equivalent_extra_metadata
 import resqpy.olio.uuid as bu
 from resqpy.olio.base import BaseResqpy
 
 
 class BoundaryFeature(BaseResqpy):
-    """Class for RESQML Boudary Feature organizational objects."""
+    """Class for RESQML Boundary Feature organizational objects."""
 
     resqml_type = "BoundaryFeature"
     feature_name = alias_for_attribute("title")

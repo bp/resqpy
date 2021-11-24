@@ -1,4 +1,6 @@
-from .organize_functions import alias_for_attribute, equivalent_extra_metadata
+"""Class for generic RESQML Organization Feature objects."""
+
+from ._utils import alias_for_attribute, equivalent_extra_metadata
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy

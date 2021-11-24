@@ -1,4 +1,4 @@
-"""organize_old.py: RESQML Feature and Interpretation classes."""
+"""RESQML Feature and Interpretation classes."""
 
 version = '9th November 2021'
 
@@ -10,7 +10,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('organize_old.py version ' + version)
 
-from .organize_functions import alias_for_attribute, equivalent_extra_metadata
+from ._utils import alias_for_attribute, equivalent_extra_metadata
 import resqpy.olio.uuid as bu
 from resqpy.olio.base import BaseResqpy
 

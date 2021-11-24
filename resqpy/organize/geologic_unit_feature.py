@@ -1,4 +1,6 @@
-from .organize_functions import (
+"""Class for RESQML Geologic Unit Feature organizational objects."""
+
+from ._utils import (
     equivalent_extra_metadata,
     alias_for_attribute,
 )

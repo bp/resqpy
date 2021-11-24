@@ -1,5 +1,7 @@
-from .organize_functions import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                                 equivalent_chrono_pairs, create_xml_has_occurred_during)
+"""Class for RESQML Horizon Interpretation organizational objects."""
+
+from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
+                     equivalent_chrono_pairs, create_xml_has_occurred_during)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
