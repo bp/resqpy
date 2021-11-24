@@ -1,5 +1,4 @@
-# load_data module
-# contains functions to load data from various formats of file
+""" Functions to load data from various ASCII simulator file formats"""
 
 version = '29th April 2021'
 
