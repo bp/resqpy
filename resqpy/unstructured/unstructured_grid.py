@@ -18,7 +18,6 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.unstructured.tetra_grid import TetraGrid
 
 valid_cell_shapes = ['polyhedral', 'tetrahedral', 'pyramidal', 'prism', 'hexahedral']  #: valid cell shapes
 
@@ -814,6 +813,8 @@ class UnstructuredGrid(BaseResqpy):
         note:
            this is a computationally expensive method
         """
+
+        from resqpy.unstructured.tetra_grid import TetraGrid
 
         tetra = TetraGrid.from_unstructured_cell(self, cell, set_handedness = False)
         assert tetra is not None

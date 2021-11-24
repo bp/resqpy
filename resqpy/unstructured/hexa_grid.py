@@ -7,13 +7,12 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('hexa_grid.py version ' + version)
 
-
 import numpy as np
 
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
 import resqpy.property as rqp
-from resqoy.unstructured.unstructured_grid import UnstructuredGrid
+from resqpy.unstructured.unstructured_grid import UnstructuredGrid
 
 
 class HexaGrid(UnstructuredGrid):
