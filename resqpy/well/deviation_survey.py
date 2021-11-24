@@ -321,7 +321,7 @@ class DeviationSurvey(BaseResqpy):
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
 
-        md_datum_root = self.__check_md_datum_root(md_datum_root = md_datum_root, md_datum_xyz = md_datum_xyz)
+        md_datum_root = self.__get_md_datum_root(md_datum_root = md_datum_root, md_datum_xyz = md_datum_xyz)
 
         # Create root node, write citation block
         ds_node = super().create_xml(title = title, originator = originator, add_as_part = False)
@@ -330,17 +330,11 @@ class DeviationSurvey(BaseResqpy):
             ds_node = ds_node)
 
         self.model.create_md_datum_reference(md_datum_root, root = ds_node)
-
         self.model.create_solitary_point3d('FirstStationLocation', ds_node, self.first_station)
-
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Mds', root = mds_values_node)
-
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Azimuths', root = azimuths_values_node)
-
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Inclinations', root = inclinations_values_node)
-
         interp_root = self.__create_wellbore_interpretation_ref_node(ds_node = ds_node)
-
         self.__add_as_part_and_add_relationships(ds_node = ds_node,
                                                  md_datum_root = md_datum_root,
                                                  interp_root = interp_root,
@@ -350,8 +344,9 @@ class DeviationSurvey(BaseResqpy):
 
         return ds_node
 
-    def __check_md_datum_root(self, md_datum_root, md_datum_xyz):
+    def __get_md_datum_root(self, md_datum_root, md_datum_xyz):
         """ Ensures that the root node for the MdDatum object that the DeviationSurvey depths are based on exists.
+        If not, a root node will be created and returned.
 
         """
 
