@@ -1,12 +1,12 @@
-"""relperm.py: class for storing and retrieving dataframes of relative permeability
-data as RESQML objects.
+"""relperm.py: class for dataframes of relative permeability data as RESQML objects.
 
-   note that this module uses the obj_Grid2dRepresentation class in a way that was not envisaged
-   when the RESQML standard was defined; software that does not use resqpy is unlikely to be
-   able to do much with data stored in this way
-
-   Nexus is a registered trademark of Halliburton
+Note that this module uses the obj_Grid2dRepresentation class in a way that was not envisaged
+when the RESQML standard was defined; software that does not use resqpy is unlikely to be
+able to do much with data stored in this way.
 """
+
+# Nexus is a registered trademark of Halliburton
+
 import logging
 import os
 

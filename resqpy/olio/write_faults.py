@@ -1,4 +1,4 @@
-#  write_faults.py
+"""Writing faults in NEXUS format"""
 
 version = '29th April 2021'
 
@@ -41,7 +41,6 @@ def write_faults_nexus(filename, df, grid_name = 'ROOT'):
     assert df is not None and len(df) > 0, 'no data in faults dataframe'
 
     with open(filename, 'w') as fp:
-        fp.write('! Exported from Bifrost resqml_baffle notebook\n\n')
         fault_names = pd.unique(df.name)
         for fault_name in fault_names:
             fdf = df[df.name == fault_name]

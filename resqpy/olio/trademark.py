@@ -1,4 +1,4 @@
-# trademark.py module for mentioning trademarks in diagnostic log
+""" trademark.py module for mentioning trademarks in diagnostic log """
 
 version = '9th April 2021'
 
