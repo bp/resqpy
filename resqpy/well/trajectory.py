@@ -46,7 +46,7 @@ class Trajectory(BaseResqpy):
     """
 
     resqml_type = 'WellboreTrajectoryRepresentation'
-    well_name = rqo._alias_for_attribute("title")
+    well_name = rqo.alias_for_attribute("title")
 
     def __init__(
             self,

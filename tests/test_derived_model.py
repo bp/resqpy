@@ -1,5 +1,6 @@
 import os
 
+import math as maths
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,15 +8,21 @@ from numpy.testing import assert_array_almost_equal
 
 import resqpy.crs as rqc
 import resqpy.derived_model as rqdm
+import resqpy.fault as rqf
 import resqpy.grid as grr
+import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.box_utilities as bx
 import resqpy.olio.fine_coarse as rqfc
 import resqpy.olio.uuid as bu
 import resqpy.property as rqp
-
+import resqpy.surface as rqs
 
 import resqpy.well as rqw
+
+from resqpy.olio.random_seed import seed
+
+seed(2349857)
 
 
 def test_add_single_cell_grid(tmp_path):
@@ -271,6 +278,50 @@ def test_extract_box_for_well(tmp_path):
     assert np.all(np.logical_not(grid_2.inactive[np.logical_not(expected_inactive_1)]))
     # check prism shape to inactive cells
     assert np.all(grid_2.inactive == grid_2.inactive[0])
+
+
+def test_extract_box(tmp_path):
+    # create an empty model and add a crs
+    epc = os.path.join(tmp_path, 'box_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    model.store_epc()
+    # create a grid
+    grid = grr.RegularGrid(model,
+                           crs_uuid = crs.uuid,
+                           extent_kji = (5, 10, 12),
+                           origin = (2000.0, 3000.0, 1000.0),
+                           dxyz = (100.0, 100.0, 20.0),
+                           title = 'original grid',
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml()
+    # introduce a couple of faults
+    fault_lines = []
+    fl1 = np.array([(2600.0, 2900.0, 0.0), (2600.0, 4100.0, 0.0)])
+    fault_lines.append(rql.Polyline(model, set_bool = False, set_coord = fl1, set_crs = crs.uuid, title = 'fault 1'))
+    fl2 = np.array([(1900.0, 3500.0, 0.0), (3300.0, 3500.0, 0.0)])
+    fault_lines.append(rql.Polyline(model, set_bool = False, set_coord = fl2, set_crs = crs.uuid, title = 'fault 2'))
+    for fl in fault_lines:
+        fl.write_hdf5()
+        fl.create_xml()
+    model.store_epc()
+    fs_grid = rqdm.add_faults(epc, grid, polylines = fault_lines, new_grid_title = 'small throws')
+    # scale the throw on the faults
+    fb_grid = rqdm.global_fault_throw_scaling(epc,
+                                              source_grid = fs_grid,
+                                              scaling_factor = 30.0,
+                                              cell_range = 2,
+                                              new_grid_title = 'big throws')
+    # extract a box
+    box = np.array([(1, 2, 3), (3, 8, 9)], dtype = int)
+    e_grid = rqdm.extract_box(epc, source_grid = fb_grid, box = box, new_grid_title = 'extracted grid')
+    assert e_grid is not None
+    # re-open model and check extent of extracted grid
+    model = rq.Model(epc)
+    grid = grr.Grid(model, uuid = e_grid.uuid)
+    assert np.all(grid.extent_kji == (3, 7, 7))
 
 
 def test_add_grid_points_property(tmp_path):
@@ -529,6 +580,70 @@ def test_interpolated_grid(tmp_path):
             assert not np.any(np.isclose(grid.points_cached, grid1.points_cached))
 
 
+def test_interpolated_faulted_grid(tmp_path):
+    # create an empty model and add a crs
+    epc = os.path.join(tmp_path, 'faulted_interpolation.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    # create a regular grid
+    grid0 = grr.RegularGrid(model,
+                            crs_uuid = model.crs_uuid,
+                            origin = (0.0, 0.0, 1000.0),
+                            extent_kji = (5, 4, 3),
+                            dxyz = (100.0, 150.0, 50.0),
+                            as_irregular_grid = True)
+    grid0.grid_representation = 'IjkGrid'  # overwrite block grid setting
+    grid0.write_hdf5()
+    grid0.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+    # prepare fault data and add faults to grid with two different throw sets
+    pl_dict = {}
+    pl_dict['f1'] = [(2, 0), (2, 1), (1, 1), (1, 2), (1, 3)]
+    pl_dict['f2'] = [(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)]
+    lr_dict = {}
+    lr_dict['f1'] = (23.0, -23.0)
+    lr_dict['f2'] = (-37.3, 14.8)
+    grid_a = rqdm.add_faults(epc,
+                             source_grid = grid0,
+                             full_pillar_list_dict = pl_dict,
+                             left_right_throw_dict = lr_dict,
+                             new_grid_title = 'grid a')
+    lr_dict = {}
+    lr_dict['f1'] = (-23.0, 23.0)
+    lr_dict['f2'] = (17.2, -22.9)
+    grid_b = rqdm.add_faults(epc,
+                             source_grid = grid0,
+                             full_pillar_list_dict = pl_dict,
+                             left_right_throw_dict = lr_dict,
+                             new_grid_title = 'grid b')
+    # interpolate between the two grids
+    between_grid_uuids = []
+    for f in [0.0, 0.23, 0.5, 1.0]:
+        grid = rqdm.interpolated_grid(epc,
+                                      grid_a,
+                                      grid_b,
+                                      a_to_b_0_to_1 = f,
+                                      split_tolerance = 0.01,
+                                      inherit_properties = False,
+                                      inherit_realization = None,
+                                      inherit_all_realizations = False,
+                                      new_grid_title = 'between_' + str(f))
+        assert grid is not None
+        between_grid_uuids.append(grid.uuid)
+    # re-open model and check end point interpolated grid geometries
+    model = rq.Model(epc)
+    for i, g_uuid in enumerate(between_grid_uuids):
+        grid = grr.Grid(model, uuid = g_uuid)
+        assert grid is not None
+        grid.cache_all_geometry_arrays()
+        assert hasattr(grid, 'points_cached') and grid.points_cached is not None
+        if i == 0:
+            assert_array_almost_equal(grid.points_cached, grid_a.points_cached)
+        elif i == len(between_grid_uuids) - 1:
+            assert_array_almost_equal(grid.points_cached, grid_b.points_cached)
+
+
 def test_refined_and_coarsened_grid(tmp_path):
 
     # create a model and a coarse grid
@@ -625,3 +740,513 @@ def test_refined_and_coarsened_grid(tmp_path):
         length_array = cfc_lpc.single_array_ref(facet_type = 'direction', facet = 'KJI'[axis])
         assert length_array is not None
         assert np.allclose(length_array, c_dxyz[2 - axis])
+
+
+def test_add_faults(tmp_path):
+
+    def write_poly(filename, a, mode = 'w'):
+        nines = 999.0
+        with open(filename, mode = mode) as fp:
+            for row in range(len(a)):
+                fp.write(f'{a[row, 0]:8.3f} {a[row, 1]:8.3f} {a[row, 2]:8.3f}\n')
+            fp.write(f'{nines:8.3f} {nines:8.3f} {nines:8.3f}\n')
+
+    def make_poly(model, a, title, crs):
+        return [rql.Polyline(model, set_bool = False, set_coord = a, set_crs = crs.uuid, title = title)]
+
+    epc = os.path.join(tmp_path, 'tic_tac_toe.epc')
+
+    for test_mode in ['file', 'polyline']:
+
+        model = rq.new_model(epc)
+        grid = grr.RegularGrid(model, extent_kji = (1, 3, 3), set_points_cached = True)
+        grid.write_hdf5()
+        grid.create_xml(write_geometry = True)
+        crs = rqc.Crs(model, uuid = grid.crs_uuid)
+        model.store_epc()
+
+        # single straight fault
+        a = np.array([[-0.2, 2.0, -0.1], [3.2, 2.0, -0.1]])
+        f = os.path.join(tmp_path, 'ttt_f1.dat')
+        if test_mode == 'file':
+            write_poly(f, a)
+            lines_file_list = [f]
+            polylines = None
+        else:
+            lines_file_list = None
+            polylines = make_poly(model, a, 'ttt_f1', crs)
+        g = rqdm.add_faults(epc,
+                            source_grid = None,
+                            polylines = polylines,
+                            lines_file_list = lines_file_list,
+                            inherit_properties = False,
+                            new_grid_title = 'ttt_f1 straight')
+
+        # single zig-zag fault
+        a = np.array([[-0.2, 1.0, -0.1], [1.0, 1.0, -0.1], [1.0, 2.0, -0.1], [3.2, 2.0, -0.1]])
+        f = os.path.join(tmp_path, 'ttt_f2.dat')
+        if test_mode == 'file':
+            write_poly(f, a)
+            lines_file_list = [f]
+            polylines = None
+        else:
+            lines_file_list = None
+            polylines = make_poly(model, a, 'ttt_f2', crs)
+        g = rqdm.add_faults(epc,
+                            source_grid = None,
+                            polylines = polylines,
+                            lines_file_list = lines_file_list,
+                            inherit_properties = True,
+                            new_grid_title = 'ttt_f2 zig_zag')
+
+        # single zig-zag-zig fault
+        a = np.array([[-0.2, 1.0, -0.1], [1.0, 1.0, -0.1], [1.0, 2.0, -0.1], [2.0, 2.0, -0.1], [2.0, 1.0, -0.1],
+                      [3.2, 1.0, -0.1]])
+        f = os.path.join(tmp_path, 'ttt_f3.dat')
+        if test_mode == 'file':
+            write_poly(f, a)
+            lines_file_list = [f]
+            polylines = None
+        else:
+            lines_file_list = None
+            polylines = make_poly(model, a, 'ttt_f3', crs)
+        g = rqdm.add_faults(epc,
+                            source_grid = None,
+                            polylines = polylines,
+                            lines_file_list = lines_file_list,
+                            inherit_properties = True,
+                            new_grid_title = 'ttt_f3 zig_zag_zig')
+
+        # horst block
+        a = np.array([[-0.2, 1.0, -0.1], [3.2, 1.0, -0.1]])
+        b = np.array([[3.2, 2.0, -0.1], [-0.2, 2.0, -0.1]])
+        fa = os.path.join(tmp_path, 'ttt_f4a.dat')
+        fb = os.path.join(tmp_path, 'ttt_f4b.dat')
+        if test_mode == 'file':
+            write_poly(fa, a)
+            write_poly(fb, b)
+            lines_file_list = [fa, fb]
+            polylines = None
+        else:
+            lines_file_list = None
+            polylines = make_poly(model, a, 'ttt_f4a', crs) + make_poly(model, b, 'ttt_f4b', crs)
+        g = rqdm.add_faults(epc,
+                            source_grid = None,
+                            polylines = polylines,
+                            lines_file_list = lines_file_list,
+                            inherit_properties = True,
+                            new_grid_title = 'ttt_f4 horst')
+
+        # asymmetrical horst block
+        lr_throw_dict = {'ttt_f4a': (0.0, -0.3), 'ttt_f4b': (0.0, -0.6)}
+        g = rqdm.add_faults(epc,
+                            source_grid = None,
+                            polylines = polylines,
+                            lines_file_list = lines_file_list,
+                            left_right_throw_dict = lr_throw_dict,
+                            inherit_properties = True,
+                            new_grid_title = 'ttt_f5 horst')
+        assert g is not None
+
+        # scaled version of asymmetrical horst block
+        model = rq.Model(epc)
+        grid = model.grid(title = 'ttt_f5 horst')
+        assert grid is not None
+        gcs_uuids = model.uuids(obj_type = 'GridConnectionSetRepresentation', related_uuid = grid.uuid)
+        assert gcs_uuids
+        scaling_dict = {'ttt_f4a': 3.0, 'ttt_f4b': 1.7}
+        for i, gcs_uuid in enumerate(gcs_uuids):
+            gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+            assert gcs is not None
+            assert bu.matching_uuids(gcs.uuid, gcs_uuid)
+            rqdm.fault_throw_scaling(epc,
+                                     source_grid = grid,
+                                     scaling_factor = None,
+                                     connection_set = gcs,
+                                     scaling_dict = scaling_dict,
+                                     ref_k0 = 0,
+                                     ref_k_faces = 'top',
+                                     cell_range = 0,
+                                     offset_decay = 0.5,
+                                     store_displacement = False,
+                                     inherit_properties = True,
+                                     inherit_realization = None,
+                                     inherit_all_realizations = False,
+                                     new_grid_title = f'ttt_f6 scaled {i+1}',
+                                     new_epc_file = None)
+            model = rq.Model(epc)
+            grid = model.grid(title = f'ttt_f6 scaled {i+1}')
+            assert grid is not None
+
+        # two intersecting straight faults
+        a = np.array([[-0.2, 2.0, -0.1], [3.2, 2.0, -0.1]])
+        b = np.array([[1.0, -0.2, -0.1], [1.0, 3.2, -0.1]])
+        f = os.path.join(tmp_path, 'ttt_f7.dat')
+        write_poly(f, a)
+        write_poly(f, b, mode = 'a')
+        if test_mode == 'file':
+            write_poly(f, a)
+            write_poly(f, b, mode = 'a')
+            lines_file_list = [f]
+            polylines = None
+        else:
+            lines_file_list = None
+            polylines = make_poly(model, a, 'ttt_f7_1', crs) + make_poly(model, b, 'ttt_f7_2', crs)
+        g = rqdm.add_faults(epc,
+                            source_grid = None,
+                            polylines = polylines,
+                            lines_file_list = lines_file_list,
+                            inherit_properties = True,
+                            new_grid_title = 'ttt_f7')
+
+        # re-open and check a few things
+        model = rq.Model(epc)
+        assert len(model.titles(obj_type = 'IjkGridRepresentation')) == 8
+        g1 = model.grid(title = 'ttt_f7')
+        assert g1.split_pillars_count == 5
+        cpm = g1.create_column_pillar_mapping()
+        assert cpm.shape == (3, 3, 2, 2)
+        extras = (cpm >= 16)
+        assert np.count_nonzero(extras) == 7
+        assert np.all(np.sort(np.unique(cpm)) == np.arange(21))
+
+
+def test_add_faults_and_scaling(tmp_path):
+
+    # create a model with crs
+    epc = os.path.join(tmp_path, 'fault_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+
+    # create a grid
+    dxyz = (100.0, 150.0, 20.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (3, 5, 5),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = True, expand_const_arrays = True)
+    model.store_epc()
+
+    # prepare some polylines to define faults
+    pla = rql.Polyline(model,
+                       set_bool = False,
+                       set_crs = crs.uuid,
+                       title = 'line_a',
+                       set_coord = np.array([(50.0, -10.0, 0.0), (450.0, 760.0, 0.0)]))
+    plb = rql.Polyline(model,
+                       set_bool = False,
+                       set_crs = crs.uuid,
+                       title = 'line_b',
+                       set_coord = np.array([(-10.0, 530.0, 0.0), (510.0, 330.0, 0.0)]))
+    for pl in (pla, plb):
+        pl.write_hdf5()
+        pl.create_xml()
+    model.store_epc()
+
+    # add faults with default throws
+    f1a_grid = rqdm.add_faults(epc, source_grid = grid, polylines = [pla, plb], new_grid_title = 'faulted by polylines')
+    f1a_grid_uuid = f1a_grid.uuid
+
+    # prepare dictionaries to define more faults and their throws
+    pillar_list_dict = {}
+    pillar_list_dict['step_fault'] = [(1, 0), (1, 1), (2, 1), (2, 2), (2, 3), (2, 4), (1, 4), (1, 5)]
+    pillar_list_dict['north_south_fault'] = [(0, 3), (4, 3)]
+    throw_dict = {}
+    throw_dict['step_fault'] = (7.0, -7.0)
+    throw_dict['north_south_fault'] = (-3.3, 4.8)
+
+    # add faults with explicit throws
+    f2a_grid = rqdm.add_faults(epc,
+                               source_grid = grid,
+                               full_pillar_list_dict = pillar_list_dict,
+                               left_right_throw_dict = throw_dict,
+                               new_grid_title = 'faulted by dictionaries')
+    f2a_grid_uuid = f2a_grid.uuid
+
+    # scale faults globally
+    f1b_grid = rqdm.global_fault_throw_scaling(epc,
+                                               source_grid = f1a_grid,
+                                               scaling_factor = 10.0,
+                                               cell_range = 2,
+                                               new_grid_title = 'globally scaled faults')
+    f1b_grid_uuid = f1b_grid.uuid
+
+    # re-open the model to identify a grid connection set
+    model = rq.Model(epc)
+    gcs_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation', related_uuid = f2a_grid_uuid)
+    assert gcs_uuid is not None
+    gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+    assert gcs is not None
+
+    # create a scaling dictionary
+    scaling_dict = {'step_fault': 1.5, 'north_south_fault': 3.0}
+
+    # scale faults
+    f2b_grid = rqdm.fault_throw_scaling(epc,
+                                        source_grid = f2a_grid,
+                                        connection_set = gcs,
+                                        scaling_dict = scaling_dict,
+                                        cell_range = 1,
+                                        new_grid_title = 'dictionary scaled faults')
+    f2b_grid_uuid = f2b_grid.uuid
+
+    # re-open model and check grids
+    model = rq.Model(epc)
+    assert len(model.uuids(obj_type = 'IjkGridRepresentation')) == 5
+
+    g = grr.Grid(model, uuid = f1a_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -1.0), (500.0, 750.0, 61.0)]))
+
+    g = grr.Grid(model, uuid = f2a_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    # assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.3), (500.0, 750.0, 71.8)]))
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -7.0), (500.0, 750.0, 67.0)]))
+
+    g = grr.Grid(model, uuid = f1b_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    # assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -5.0), (500.0, 750.0, 65.0)]))
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -7.25), (500.0, 750.0, 67.75)]))
+
+    g = grr.Grid(model, uuid = f2b_grid_uuid)
+    gbox = g.xyz_box(lazy = False)
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.5), (500.0, 750.0, 70.5)]))
+
+
+def test_drape_to_surface(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'drape_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (180.0, -250.0, 25.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (2, 5, 6),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False, expand_const_arrays = True)
+    model.store_epc()
+
+    # make a wavey surface covering the area of the grid with a boundary buffer
+    model = rq.Model(epc)
+    source_grid = model.grid()
+    xyz_box = source_grid.xyz_box(lazy = False, local = True)
+    surf = rqs.Surface(model)
+    nx = ny = 100
+    mesh_xyz = np.empty((100, 100, 3))
+    xy_range = np.max(xyz_box[1, 0:2] - xyz_box[0, 0:2]) * 1.2
+    xy_centre = np.mean(xyz_box[:, 0:2], axis = 0)
+    origin_xy = xy_centre - xy_range * 0.5
+    dx = xy_range / nx
+    dy = xy_range / ny
+    points_z = source_grid.points_ref()[..., 2]
+    thickness = np.nanmean(points_z[-1, ...] - points_z[0, ...])
+    x_wavelength = xy_range / 20.0
+    x_half_amplitude = thickness / 10.0
+    y_wavelength = xy_range / 10.0
+    y_half_amplitude = thickness / 4.0
+    mesh_xyz[:, :, 2] = xyz_box[0, 2]  # set z initially to flat plane at depth of shallowest point of grid
+    for i in range(nx):
+        x = dx * i
+        mesh_xyz[i, :, 0] = origin_xy[0] + dx * i  # x
+        mesh_xyz[i, :, 2] += x_half_amplitude * maths.sin(
+            x * 2.0 * maths.pi / x_wavelength)  # add a depth wave in x direction
+    for j in range(ny):
+        y = dy * j
+        mesh_xyz[:, j, 1] = origin_xy[1] + dy * j  # y
+        mesh_xyz[:, j, 2] += y_half_amplitude * maths.sin(
+            y * 2.0 * maths.pi / y_wavelength)  # add a depth wave in y direction
+    surf.set_from_irregular_mesh(mesh_xyz)
+
+    # drape the grid to the surface
+    rqdm.drape_to_surface(epc,
+                          source_grid,
+                          surf,
+                          ref_k0 = 0,
+                          ref_k_faces = 'top',
+                          store_displacement = True,
+                          new_grid_title = 'draped')
+
+    # reopen the model
+    model = rq.Model(epc)
+    draped = model.grid(title = 'draped')
+    assert draped is not None
+
+
+def test_zonal_grid(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'zonal_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (200.0, -270.0, 12.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (9, 2, 3),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    # create a zonal version of the grid
+    zone_ranges = [(0, 1, 0), (2, 4, 1), (5, 8, 2), (9, 9, 3)]
+    rqdm.zonal_grid(epc, zone_layer_range_list = zone_ranges, new_grid_title = 'four zone grid')
+
+    # create a single layer version of the grid
+    rqdm.single_layer_grid(epc, source_grid = grid, k0_min = 1, k0_max = 7, new_grid_title = 'single layer grid')
+
+    # re-open the model and take a look at the zonal grids
+    model = rq.Model(epc)
+    z_grid = model.grid(title = 'four zone grid')
+    assert z_grid.nk == 4
+    o_grid = model.grid(title = 'single layer grid')
+    assert o_grid.nk == 1
+    # check z range of single layer grid
+    o_box = o_grid.xyz_box()
+    assert maths.isclose(o_box[1, 2] - o_box[0, 2], 7.0 * 12.0)
+
+
+def test_unsplit_grid(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'unsplit_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (100.0, 150.0, 30.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (2, 3, 5),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    # add a fault
+    # prepare dictionaries to define more faults and their throws
+    pillar_list_dict = {}
+    pillar_list_dict['fault'] = [(0, 2), (1, 2), (1, 3), (2, 3)]
+    throw_dict = {}
+    throw_dict['fault'] = (7.0, -7.0)
+    f2a_grid = rqdm.add_faults(epc,
+                               source_grid = grid,
+                               full_pillar_list_dict = pillar_list_dict,
+                               left_right_throw_dict = throw_dict,
+                               new_grid_title = 'faulted by dictionaries')
+    f2a_grid_uuid = f2a_grid.uuid
+
+    # heal faults
+    healed_grid = rqdm.unsplit_grid(epc, source_grid = f2a_grid, new_grid_title = 'healed grid')
+    assert healed_grid is not None
+    assert not healed_grid.has_split_coordinate_lines
+
+
+def test_tilted_grid(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'tilted_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (50.0, 50.0, 10.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (2, 2, 2),
+                           origin = (200.0, 200.0, 1000.0),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    # tilt by 45 degrees
+    t_grid = rqdm.tilted_grid(epc,
+                              pivot_xyz = (250.0, 250.0, 1000.0),
+                              azimuth = 90.0,
+                              dip = 45.0,
+                              new_grid_title = 'tilted')
+    assert t_grid is not None
+
+    # check xyz box of tilted grid
+    root_two = maths.sqrt(2.0)
+    expected_box = np.array([(250.0 - 70.0 / root_two, 200.0, 1000.0 - 50.0 / root_two),
+                             (250.0 + 50.0 / root_two, 300.0, 1000.0 + 70.0 / root_two)])
+    assert_array_almost_equal(t_grid.xyz_box(lazy = False), expected_box)
+
+
+def test_local_depth_adjustment(tmp_path):
+
+    # create a model and a regular grid
+    epc = os.path.join(tmp_path, 'depth_adjust_test.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    dxyz = (50.0, 50.0, 10.0)
+    grid = grr.RegularGrid(model,
+                           crs_uuid = model.crs_uuid,
+                           extent_kji = (2, 20, 20),
+                           origin = (500.0, 700.0, 2000.0),
+                           dxyz = dxyz,
+                           as_irregular_grid = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+
+    a_grid = rqdm.local_depth_adjustment(epc, grid, 700.0, 1000.0, 170.0, -7.0, False)
+    assert a_grid is not None
+    p = a_grid.points_ref()
+    assert maths.isclose(np.min(p[..., 2]), 2000.0 - 7.0)
+
+
+def test_gather_ensemble(tmp_path):
+    # create three models, each with a regular grid and a grid property
+    epc_list = []
+    for m in range(3):
+        epc = os.path.join(tmp_path, f'grid_{m}.epc')
+        model = rq.new_model(epc)
+        crs = rqc.Crs(model)
+        crs.create_xml()
+        dxyz = (50.0, 50.0, 10.0)
+        extent_kji = (3, 20, 20)
+        grid = grr.RegularGrid(model,
+                               crs_uuid = model.crs_uuid,
+                               extent_kji = extent_kji,
+                               origin = (500.0, 700.0, 1000.0),
+                               dxyz = dxyz,
+                               as_irregular_grid = True)
+        grid.write_hdf5()
+        grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+        model.store_epc()
+        ntg = np.random.random(extent_kji)
+        rqdm.add_one_grid_property_array(epc,
+                                         ntg,
+                                         property_kind = 'net to gross ratio',
+                                         grid_uuid = grid.uuid,
+                                         title = 'NETGRS',
+                                         uom = 'm3/m3',
+                                         indexable_element = 'cells')
+        epc_list.append(epc)
+    # gather ensemble
+    combined_epc = os.path.join(tmp_path, 'combo.epc')
+    rqdm.gather_ensemble(epc_list, combined_epc)
+    # open combined model and check realisations
+    model = rq.Model(combined_epc)
+    grid = model.grid()
+    assert grid is not None
+    pc = grid.property_collection
+    assert pc.has_multiple_realizations()
+    assert pc.realization_list(sort_list = True) == [0, 1, 2]
+    ntg_pc = rqp.selective_version_of_collection(pc, property_kind = 'net to gross ratio')
+    assert ntg_pc.number_of_parts() == 3
+    ntg3 = ntg_pc.realizations_array_ref()
+    assert ntg3.shape == (3, 3, 20, 20)
+    assert np.all(ntg3 >= 0.0) and np.all(ntg3 <= 1.0)
