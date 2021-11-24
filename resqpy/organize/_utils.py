@@ -1,4 +1,4 @@
-"""organize_old.py: RESQML Feature and Interpretation classes."""
+"""Helper functions for RESQML Feature and Interpretation classes."""
 
 version = '9th August 2021'
 
