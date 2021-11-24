@@ -17,9 +17,8 @@ __all__ = [
     'GeneticBoundaryFeature',
 ]
 
-from resqpy.organize._utils import (equivalent_extra_metadata, alias_for_attribute,
-                                    extract_has_occurred_during, equivalent_chrono_pairs,
-                                    create_xml_has_occurred_during)
+from resqpy.organize._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
+                                    equivalent_chrono_pairs, create_xml_has_occurred_during)
 from .boundary_feature import BoundaryFeature
 from .earth_model_interpretation import EarthModelInterpretation
 from .fault_interpretation import FaultInterpretation
