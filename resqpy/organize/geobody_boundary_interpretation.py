@@ -11,7 +11,7 @@ from .genetic_boundary_feature import GeneticBoundaryFeature
 
 
 class GeobodyBoundaryInterpretation(BaseResqpy):
-    """Class for RESQML Geobody Boudary Interpretation organizational objects."""
+    """Class for RESQML Geobody Boundary Interpretation organizational objects."""
 
     resqml_type = 'GeobodyBoundaryInterpretation'
     valid_domains = ('depth', 'time', 'mixed')
@@ -27,6 +27,18 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
                  domain = 'depth',
                  boundary_relation_list = None,
                  extra_metadata = None):
+        """
+        Args:
+            parent_model(model.Model): Model to which the feature belongs
+            root_node(DEPRECATED)
+            uuid(UUID, Optional): The UUID of an existing Geobody Boundary Interpretation object. If present, all the other optional arguments are ignored
+            title(str, Optional): Citation title when creating a new object
+            genetic_boundary_feature(GeneticBoundaryFeature,Optional): Interpreted feature when creating a new object
+            domain(str,Optional): One of ('depth', 'time', 'mixed') when creating a new object
+            boundary_relation_list(list,Optional): Set of ('conformable', 'unconformable below and above', 'unconformable above',
+                                'unconformable below') when creating a new object
+            extra_metadata(dict,Optional): Extra metadata items added when creating a new object
+        """
 
         self.domain = domain
         self.boundary_relation_list = None if not boundary_relation_list else boundary_relation_list.copy()
