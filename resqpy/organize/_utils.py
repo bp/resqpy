@@ -19,6 +19,7 @@ def alias_for_attribute(attribute_name):
 
 
 def equivalent_extra_metadata(a, b):
+    """Returns True if the two objects have identical extra metadata"""
     a_has = hasattr(a, 'extra_metadata')
     b_has = hasattr(b, 'extra_metadata')
     if a_has:
@@ -51,6 +52,7 @@ def extract_has_occurred_during(parent_node, tag = 'HasOccuredDuring'):  # RESQM
 
 
 def equivalent_chrono_pairs(pair_a, pair_b, model = None):
+    """Returns True if the two chronostratigraphic pairs are equivalent"""
     if pair_a == pair_b:
         return True
     if pair_a is None or pair_b is None:
@@ -64,6 +66,7 @@ def equivalent_chrono_pairs(pair_a, pair_b, model = None):
 
 
 def create_xml_has_occurred_during(model, parent_node, hod_pair, tag = 'HasOccuredDuring'):
+    """Creates XML sub-tree 'HasOccuredDuring' node"""
     if hod_pair is None:
         return
     base_chrono_uuid, top_chrono_uuid = hod_pair

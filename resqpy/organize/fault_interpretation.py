@@ -71,6 +71,7 @@ class FaultInterpretation(BaseResqpy):
 
     @property
     def feature_uuid(self):
+        """Returns the UUID of the interpreted feature"""
         # TODO: rewrite using uuid as primary key
         return rqet.uuid_for_part_root(self.feature_root)
 

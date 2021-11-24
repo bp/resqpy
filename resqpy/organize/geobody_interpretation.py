@@ -103,6 +103,7 @@ class GeobodyInterpretation(BaseResqpy):
                    originator = None,
                    title_suffix = None,
                    reuse = True):
+        """Creates an XML tree in memory and optionally adds it as a 'part' in the Model"""
 
         if not self.title:
             self.title = self.geobody_feature.feature_name
