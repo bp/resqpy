@@ -1,6 +1,6 @@
-"""property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""well_log.py: class for a welllog, representing resqml properties for well logs"""
 
-version = '21st October 2021'
+version = '24th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('property.py version ' + version)
 
-from .propertycollection import PropertyCollection
+from .property_collection import PropertyCollection
 
 
 class WellLog:

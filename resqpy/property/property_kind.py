@@ -1,6 +1,6 @@
-"""property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""property_kind.py: containing resqml propertykind class"""
 
-version = '21st October 2021'
+version = '24th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 

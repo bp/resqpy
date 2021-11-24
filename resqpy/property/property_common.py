@@ -1,7 +1,7 @@
 """property_common.py: module containing common methods for properties"""
 import resqpy.property
 
-version = '21st October 2021'
+version = '24th November 2021'
 
 import logging
 

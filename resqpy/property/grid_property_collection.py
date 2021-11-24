@@ -1,6 +1,6 @@
-"""property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""grid_property_collection.py: class for a collection of grid properties"""
 
-version = '21st October 2021'
+version = '24th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -10,7 +10,6 @@ log = logging.getLogger(__name__)
 log.debug('property.py version ' + version)
 
 import os
-# import xml.etree.ElementTree as et
 
 import numpy as np
 
@@ -20,7 +19,7 @@ import resqpy.olio.load_data as ld
 import resqpy.olio.write_data as wd
 import resqpy.olio.xml_et as rqet
 
-from .propertycollection import PropertyCollection
+from .property_collection import PropertyCollection
 from .property_common import selective_version_of_collection
 
 

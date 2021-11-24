@@ -1,6 +1,6 @@
-"""property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""well_interval_property.py: class for wellintervalproperty, for resqml wellbore frame of blocked wellbore supports."""
 
-version = '21st October 2021'
+version = '24th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('property.py version ' + version)
 
-from .propertycollection import PropertyCollection
+from .property_collection import PropertyCollection
 
 
 class WellIntervalProperty:

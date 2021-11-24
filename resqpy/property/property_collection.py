@@ -18,8 +18,8 @@ import resqpy.olio.xml_et as rqet
 import resqpy.time_series as rts
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .propertykind import PropertyKind
-from .stringlookup import StringLookup
+from .property_kind import PropertyKind
+from .string_lookup import StringLookup
 from .property_common import same_property_kind, supported_property_kind_list, property_kind_and_facet_from_keyword, dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, guess_uom
 
 

@@ -1,6 +1,6 @@
-"""property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""well_log_collection.py: class for a collection of well logs"""
 
-version = '21st October 2021'
+version = '24th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -17,9 +17,9 @@ import pandas as pd
 
 import resqpy.weights_and_measures as bwam
 
-from .propertycollection import PropertyCollection
+from .property_collection import PropertyCollection
 from .property_common import infer_property_kind
-from .welllog import WellLog
+from .well_log import WellLog
 
 
 class WellLogCollection(PropertyCollection):
