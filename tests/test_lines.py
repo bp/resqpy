@@ -3,7 +3,7 @@ from numpy.testing import assert_array_almost_equal
 
 import resqpy.lines
 import resqpy.model as rq
-import resqpy.organize.organize_old
+import resqpy.organize
 
 
 def test_lines(example_model_and_crs):
@@ -31,8 +31,8 @@ def test_lines(example_model_and_crs):
     reload = resqpy.lines.Polyline(parent_model = model, uuid = line.uuid)
     assert reload.citation_title == title
 
-    fault_interp = resqpy.organize.organize_old.FaultInterpretation(model, uuid = line.rep_int_uuid)
-    fault_feature = resqpy.organize.organize_old.TectonicBoundaryFeature(model, uuid = fault_interp.feature_uuid)
+    fault_interp = resqpy.organize.FaultInterpretation(model, uuid = line.rep_int_uuid)
+    fault_feature = resqpy.organize.TectonicBoundaryFeature(model, uuid = fault_interp.feature_uuid)
 
     # Check title matches expected title
     assert fault_feature.feature_name == title

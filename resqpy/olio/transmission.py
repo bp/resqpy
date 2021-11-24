@@ -14,7 +14,7 @@ import numpy as np
 import resqpy.fault as rqf
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
-import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 
 
 def half_cell_t(grid,

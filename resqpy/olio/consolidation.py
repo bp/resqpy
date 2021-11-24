@@ -10,7 +10,7 @@ log.debug('consolidation.py version ' + version)
 import resqpy.crs as rqc
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.time_series as rqt
 

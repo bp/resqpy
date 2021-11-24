@@ -8,8 +8,9 @@ import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
-import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 import resqpy.strata as strata
+# import resqpy.organize as rqo_new
 
 # the following creates a fully related set of objects, saves to persistent storage, and retrieves
 
