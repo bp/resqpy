@@ -1,3 +1,5 @@
+"""Package containing unstructured grid classes."""
+
 __all__ = [
     'UnstructuredGrid', 'HexaGrid', 'PrismGrid', 'VerticalPrismGrid', 'PyramidGrid', 'TetraGrid', 'valid_cell_shapes'
 ]
