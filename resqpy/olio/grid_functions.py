@@ -1,4 +1,4 @@
-# grid functions module
+"""Miscellaneous functions relating to grids"""
 
 version = '29th April 2021'
 

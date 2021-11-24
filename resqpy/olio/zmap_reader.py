@@ -1,4 +1,4 @@
-# function for reading a zmap file
+""" Functions for reading a zmap file"""
 
 version = '13th May 2021'
 

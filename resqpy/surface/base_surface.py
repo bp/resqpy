@@ -10,7 +10,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('surface.py version ' + version)
 
-import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 
 

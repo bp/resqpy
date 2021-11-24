@@ -1,29 +1,24 @@
-"""organize_old.py: RESQML Feature and Interpretation classes."""
+"""Class for RESQML Wellbore Feature organizational objects."""
 
-version = '9th November 2021'
+from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
+                     equivalent_chrono_pairs, create_xml_has_occurred_during)
 
-# most feature and interpretation classes catered for here
-# stratigraphic classes in strata.py
-
-import logging
-
-log = logging.getLogger(__name__)
-log.debug('organize_old.py version ' + version)
-
-from .organize_functions import alias_for_attribute, equivalent_extra_metadata
 import resqpy.olio.uuid as bu
+import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
-class GeobodyFeature(BaseResqpy):
-    """Class for RESQML Geobody Feature objects (note: definition may be incomplete in RESQML 2.0.1)."""
+class WellboreFeature(BaseResqpy):
+    """Class for RESQML Wellbore Feature organizational objects."""
 
-    resqml_type = "GeobodyFeature"
+    # note: optional WITSML link not supported
+
+    resqml_type = "WellboreFeature"
     feature_name = alias_for_attribute("title")
 
     def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
-        """Initialises a geobody feature object."""
-
+        """Initialises a wellbore feature organisational object."""
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = feature_name,
@@ -32,8 +27,7 @@ class GeobodyFeature(BaseResqpy):
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this feature is essentially the same as the other; otherwise False."""
-
-        if other is None or not isinstance(other, self.__class__):
+        if other is None or not isinstance(other, WellboreFeature):
             return False
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
@@ -42,7 +36,7 @@ class GeobodyFeature(BaseResqpy):
         return self.feature_name == other.feature_name
 
     def create_xml(self, add_as_part = True, originator = None, reuse = True):
-        """Creates a geobody feature xml node from this geobody feature object."""
+        """Creates a wellbore feature organisational xml node from this wellbore feature object."""
         if reuse and self.try_reuse():
             return self.root  # check for reusable (equivalent) object
         return super().create_xml(add_as_part = add_as_part, originator = originator)
