@@ -13,7 +13,7 @@ import numpy as np
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
 import resqpy.olio.xml_et as rqet
-import resqpy.organize.organize_old as rqo
+import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 
 
