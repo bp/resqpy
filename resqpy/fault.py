@@ -49,8 +49,9 @@ class GridConnectionSet(BaseResqpy):
                  title = None,
                  originator = None,
                  extra_metadata = None):
-        """Initializes a new GridConnectionSet and optionally loads it from xml or a list of simulator format ascii
-        files.
+        """Initializes a new GridConnectionSet.
+        
+        Optionally loads it from xml or a list of simulator format ascii files.
 
         arguments:
            parent_model (model.Model object): the resqml model that this grid connection set will be part of
@@ -229,9 +230,10 @@ class GridConnectionSet(BaseResqpy):
         return self.property_collection
 
     def set_pairs_from_kelp(self, kelp_0, kelp_1, feature_name, create_organizing_objects_where_needed, axis = 'K'):
-        """Sets cell_index_pairs and face_index_pairs based on j and i face kelp strands, using simple no throw
-        pairing."""
-
+        """Set cell_index_pairs and face_index_pairs based on j and i face kelp strands.
+        
+        Uses simple no throw pairing.
+        """
         # note: this method has been reworked to allow 'kelp' to be 'horizontal' strands when working in cross section
 
         if axis == 'K':
@@ -1093,8 +1095,9 @@ class GridConnectionSet(BaseResqpy):
                    write_new_properties = True,
                    title = None,
                    originator = None):
-        """Creates a Grid Connection Set (fault faces) xml node and optionally adds as child of root and/or to parts
-        forest.
+        """Creates a Grid Connection Set (fault faces) xml node.
+        
+        Optionally adds as child of root and/or to parts forest.
 
         :meta common:
         """
@@ -1433,8 +1436,7 @@ class GridConnectionSet(BaseResqpy):
                                                 property_name = 'Transmissibility multiplier',
                                                 gridindex = 0,
                                                 ref_k = None):
-        """Generate a float value aray defining the property values for different column edges present for a given
-        feature.
+        """Generate a float value aray defining the property values for different column edges present for a given feature.
 
         Args:
            feature - feature index
@@ -1516,8 +1518,7 @@ class GridConnectionSet(BaseResqpy):
                                                    property_name = 'Transmissibility multiplier',
                                                    feature_list = None,
                                                    ref_k = None):
-        """Generate a combined mask, index and value arrays for all column edges across a k-layer range, for a defined
-        feature_list.
+        """Generate combined mask, index and value arrays for all column edges across a k-layer range, for a defined feature_list.
 
         Args:
            gridindex - index of grid to be used in grid connection set gridlist, default 0

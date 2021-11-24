@@ -606,7 +606,7 @@ class PropertyCollection():
 
         arguments:
            other: another PropertyCollection object with some imported arrays
-           copy_cached_array (boolean, default True): if True, arrays cached with the other
+           copy_cached_arrays (boolean, default True): if True, arrays cached with the other
               collection are copied and cached with this collection
            exclude_inactive (boolean, default False): if True, any item in the other imported list
               which has INACTIVE or ACTIVE as the keyword is excluded from the inheritance
@@ -739,7 +739,6 @@ class PropertyCollection():
         to be inherited.
 
         note:
-
            the grid argument is maintained for backward compatibility; it is treated synonymously with support
            which takes precendence; the categorical boolean argument can be used to filter only Categorical
            (or non-Categorical) properties

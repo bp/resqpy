@@ -247,8 +247,7 @@ class RelPerm(DataFrame):
                 print(f'Appended to DAT file: {filename} at {filepath}')
 
     def write_hdf5_and_create_xml(self):
-        """Write relative permeability table data to hdf5 file and create xml for RESQML objects to represent
-        dataframe."""
+        """Write relative permeability table data to hdf5 file and create xml for dataframe objects."""
         super().write_hdf5_and_create_xml()
         mesh_root = self.mesh.root
         # create an xml of extra metadata to indicate that this is a relative permeability table
@@ -256,8 +255,7 @@ class RelPerm(DataFrame):
 
 
 def text_to_relperm_dict(relperm_data, is_file = True):
-    """Returns a dictionary that contains dataframes with relative permeability and capillary pressure data and phase
-    combinations.
+    """Return dict of dataframes with relative permeability and capillary pressure data and phase combinations.
 
     arguments:
        relperm_data (str): relative or full path of the text file to be processed or string of relative permeability data

@@ -42,8 +42,9 @@ class Surface(BaseSurface):
                  crs_uuid = None,
                  originator = None,
                  extra_metadata = {}):
-        """Create an empty Surface object (RESQML TriangulatedSetRepresentation) and optionally populates from xml,
-        point set or mesh.
+        """Create an empty Surface object (RESQML TriangulatedSetRepresentation).
+        
+        Optionally populates from xml, point set or mesh.
 
         arguments:
            parent_model (model.Model object): the model to which this surface belongs
@@ -325,9 +326,10 @@ class Surface(BaseSurface):
         self.uuid = bu.new_uuid()
 
     def set_to_multi_cell_faces_from_corner_points(self, cp, quad_triangles = True):
-        """Populates this (empty) surface to represent faces of a set of cells, from corner points of shape (N, 2, 2, 2,
-        3)."""
-
+        """Populates this (empty) surface to represent faces of a set of cells.
+        
+        From corner points of shape (N, 2, 2, 2, 3).
+        """
         assert cp.size % 24 == 0
         cp = cp.reshape((-1, 2, 2, 2, 3))
         self.patch_list = []
@@ -340,10 +342,9 @@ class Surface(BaseSurface):
         self.uuid = bu.new_uuid()
 
     def cell_axis_and_polarity_from_triangle_index(self, triangle_index):
-        """For surface freshly built for cell faces, returns (cell_number, face_axis, polarity) for given triangle
-        index.
+        """For surface freshly built for cell faces, returns (cell_number, face_axis, polarity).
 
-        argument:
+        arguments:
            triangle_index (int or numpy int array): the triangle index (or array of indices) for which cell face
               information is required
 
@@ -361,13 +362,14 @@ class Surface(BaseSurface):
         return cell_number, axis, polarity
 
     def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
-        """Populate this (empty) surface with a patch of two triangles defining a flat, horizontal plane at a given
-        depth.
+        """Populate this (empty) surface with a patch of two triangles.
+        
+        Triangles define a flat, horizontal plane at a given depth.
 
-           arguments:
-              depth (float): z value to use in all points in the triangulated patch
-              box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
-              border (float): an optional border width added around the x,y area defined by box_xyz
+        arguments:
+            depth (float): z value to use in all points in the triangulated patch
+            box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
+            border (float): an optional border width added around the x,y area defined by box_xyz
 
         :meta common:
         """
@@ -438,9 +440,10 @@ class Surface(BaseSurface):
         self.set_from_mesh_file(filename, 'rms', quad_triangles = quad_triangles)
 
     def vertical_rescale_points(self, ref_depth = None, scaling_factor = 1.0):
-        """Modify the z values of points for this surface by stretching the distance from reference depth by scaling
-        factor."""
-
+        """Modify the z values of points by rescaling.
+        
+        Stretches the distance from reference depth by scaling factor.
+        """
         if scaling_factor == 1.0:
             return
         if ref_depth is None:
@@ -480,20 +483,20 @@ class Surface(BaseSurface):
                    originator = None):
         """Creates a triangulated surface xml node from this surface object and optionally adds as part of model.
 
-           arguments:
-              ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the surface arrays
-              add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-                 in the model
-              add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-                 new triangulated representation part to the crs part (and optional interpretation part)
-              crs_uuid (optional): the uuid of the coordinate reference system applicable to the surface points data;
-                 if None, the main crs for the model is assumed to apply
-              title (string): used as the citation Title text; should be meaningful to a human
-              originator (string, optional): the name of the human being who created the triangulated representation part;
-                 default is to use the login name
+        arguments:
+            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the surface arrays
+            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+                in the model
+            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+                new triangulated representation part to the crs part (and optional interpretation part)
+            crs_uuid (optional): the uuid of the coordinate reference system applicable to the surface points data;
+                if None, the main crs for the model is assumed to apply
+            title (string): used as the citation Title text; should be meaningful to a human
+            originator (string, optional): the name of the human being who created the triangulated representation part;
+                default is to use the login name
 
-           returns:
-              the newly created triangulated representation (surface) xml node
+        returns:
+            the newly created triangulated representation (surface) xml node
 
         :meta common:
         """

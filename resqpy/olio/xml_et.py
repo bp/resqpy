@@ -167,32 +167,42 @@ def find_nested_tags_cast(root, tag_list, dtype = None):
 
 
 def find_nested_tags_text(root, tag_list):
-    """Follows a list of tags in a nested xml hierarchy, returning the stripped text of the node at the deepest
-    level."""
+    """Return stripped text of node at deepest level of xml hierarchy.
+    
+    Args:
+        tag_list: list of tags in a nested xml hierarchy
+    """
 
     node = find_nested_tags(root, tag_list)
     return node_text(node)
 
 
 def find_nested_tags_bool(root, tag_list):
-    """Follows a list of tags in a nested xml hierarchy, returning the text of the node at the deepest level, as
-    bool."""
-
+    """Return stripped text of node at deepest level of xml hierarchy as a bool.
+    
+    Args:
+        tag_list: list of tags in a nested xml hierarchy
+    """
     node = find_nested_tags(root, tag_list)
     return node_bool(node)
 
 
 def find_nested_tags_int(root, tag_list):
-    """Follows a list of tags in a nested xml hierarchy, returning the text of the node at the deepest level, as int."""
-
+    """Return stripped text of node at deepest level of xml hierarchy as an int.
+    
+    Args:
+        tag_list: list of tags in a nested xml hierarchy
+    """
     node = find_nested_tags(root, tag_list)
     return node_int(node)
 
 
 def find_nested_tags_float(root, tag_list):
-    """Follows a list of tags in a nested xml hierarchy, returning the text of the node at the deepest level, as
-    float."""
-
+    """Return stripped text of node at deepest level of xml hierarchy as a float.
+    
+    Args:
+        tag_list: list of tags in a nested xml hierarchy
+    """
     node = find_nested_tags(root, tag_list)
     return node_float(node)
 
@@ -583,9 +593,8 @@ def time_units_from_node(node):
         return node.text.strip()
 
 
-def xyz_handedness(xy_axes, z_inc_down):
-    """Returns xyz true handedness as 'left', 'right' or 'unknown', based on xy_axes (string) and z_inc_down
-    (boolean)."""
+def xyz_handedness(xy_axes: str, z_inc_down: bool):
+    """Return xyz true handedness as 'left', 'right' or 'unknown'."""
 
     if xy_axes is None or z_inc_down is None:
         return 'unknown'
@@ -611,8 +620,11 @@ def xyz_handedness(xy_axes, z_inc_down):
 
 
 def ijk_handedness(geom_node):
-    """Returns ijk true handedness as 'left', 'right' or 'unknown', based on GridIsRightHanded node in grid geometry
-    node."""
+    """Returns ijk true handedness as 'left', 'right' or 'unknown'.
+    
+    Args:
+        GridIsRightHanded node in grid geometry node.
+    """
 
     if geom_node is None:
         return 'unknown'

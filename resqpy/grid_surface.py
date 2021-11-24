@@ -192,8 +192,9 @@ class GridSkin:
                                               start_xyz = None,
                                               nudge = None,
                                               exclude_kji0 = None):
-        """Returns the x,y,z and K,J,I and axis, polarity & segment of the first intersection of the trajectory with the
-        torn skin.
+        """Returns the first intersection of the trajectory with the torn skin.
+
+        Returns the x,y,z and K,J,I and axis, polarity & segment.
 
         arguments:
            trajectory (well.Trajectory object): the trajectory to be intersected with the skin
@@ -205,10 +206,13 @@ class GridSkin:
            exclude_kji0 (triple int, optional): if present, the indices of a cell to exclude as a possible result
 
         returns:
-           5-tuple (triple float, triple int, int, int, int): the first element is the xyz coordinates of the intersection point
-           in the crs of the grid; second element is the kji0 of the cell that is intersected, which might be a pinched out
-           or otherwise inactive cell; 3rd element is 0, 1 or 2 for K, J or I axis of cell face; 4th element is 0 for -ve
-           face, 1 for +ve face; 5th element is the trajectory knot prior to the intersection (also the segment number)
+           5-tuple of:
+
+           - (triple float): xyz coordinates of the intersection point in the crs of the grid
+           - (triple int): kji0 of the cell that is intersected, which might be a pinched out or otherwise inactive cell
+           - (int): 0, 1 or 2 for K, J or I axis of cell face
+           - (int): 0 for -ve face, 1 for +ve face
+           - (int): trajectory knot prior to the intersection (also the segment number)
 
         note:
            if the GridSkin object has been initialised using single layer tactics, then the k0 value will be zero for any
@@ -767,8 +771,7 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
                                                                start = 0,
                                                                heal_faults = False,
                                                                quad_triangles = True):
-    """Returns xyz and other info of the first intersection of well trajectory (or list of trajectories) with layer
-    interface.
+    """Returns info about the first intersection of well trajectory(s) with layer interface.
 
     arguments:
        trajectory (well.Trajectory object; or list thereof): the wellbore trajectory object(s) to find the intersection for;
@@ -839,8 +842,7 @@ def find_first_intersection_of_trajectory_with_cell_surface(trajectory,
                                                             start_xyz = None,
                                                             nudge = 0.001,
                                                             quad_triangles = True):
-    """Searches along the trajectory from a starting point until the first intersection with the cell's surface is
-    encountered."""
+    """Return first intersection with cell's surface found along a trajectory."""
 
     cp = grid.corner_points(kji0)
     cell_surface = rqs.Surface(grid.model)
