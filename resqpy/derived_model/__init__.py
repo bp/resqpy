@@ -1,3 +1,5 @@
+"""Creating a derived resqml model from an existing one; mostly grid manipulations."""
+
 __all__ = [
     'add_edges_per_column_property_array', 'add_faults', 'add_one_blocked_well_property', 'add_one_grid_property_array',
     'add_single_cell_grid', 'add_wells_from_ascii_file', 'add_zone_by_layer_property', 'coarsened_grid', 'copy_grid',
