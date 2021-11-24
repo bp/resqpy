@@ -2956,6 +2956,9 @@ class PropertyCollection():
         assert not points or const_value is None
         assert not points or facet_type is None
         assert self.model is not None
+
+        self.null_value = null_value
+
         if support_uuid is None:
             support_uuid = self.support_uuid
         assert support_uuid is not None
@@ -2969,54 +2972,22 @@ class PropertyCollection():
             const_value = None
 
         support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
-        if indexable_element is None:
-            if support_type in [
-                    'obj_IjkGridRepresentation', 'obj_BlockedWellboreRepresentation', 'obj_Grid2dRepresentation',
-                    'obj_UnstructuredGridRepresentation'
-            ]:
-                indexable_element = 'cells'
-            elif support_type == 'obj_WellboreFrameRepresentation':
-                indexable_element = 'nodes'  # note: could be 'intervals'
-            elif support_type == 'obj_GridConnectionSetRepresentation':
-                indexable_element = 'faces'
-            else:
-                raise Exception('indexable element unknown for unsupported supporting representation object')
+
+        indexable_element = _get_indexable_element(indexable_element, support_type)
 
         direction = None if facet_type is None or facet_type != 'direction' else facet
+
         if self.support is not None:
-            shape_list = self.supporting_shape(indexable_element = indexable_element, direction = direction)
-            if shape_list is not None:
-                if count > 1:
-                    shape_list.append(count)
-                if points:
-                    shape_list.append(3)
-                if property_array is not None:
-                    assert tuple(shape_list) == property_array.shape,  \
-                       f'property array shape {property_array.shape} is not the expected {tuple(shape_list)}'
+            self._check_shape_list(indexable_element, direction, property_array, points, count)
+
         # todo: assertions:
         #    numpy data type matches discrete flag (and assumptions about precision)
         #    uom are valid units for property_kind
         assert property_kind, 'missing property kind when creating xml for property'
 
-        if discrete:
-            if string_lookup_uuid is None:
-                d_or_c_text = 'Discrete'
-            else:
-                d_or_c_text = 'Categorical'
-            xsd_type = 'integer'
-            hdf5_type = 'IntegerHdf5Array'
-        elif points:
-            d_or_c_text = 'Points'
-            xsd_type = 'double'
-            hdf5_type = 'Point3dHdf5Array'
-            null_value = None
-        else:
-            d_or_c_text = 'Continuous'
-            xsd_type = 'double'
-            hdf5_type = 'DoubleHdf5Array'
-            null_value = None
+        self._get_property_type_details(discrete, string_lookup_uuid, points)
 
-        p_node = self.model.new_obj_node(d_or_c_text + 'Property')
+        p_node = self.model.new_obj_node(self.d_or_c_text + 'Property')
         if p_uuid is None:
             p_uuid = bu.uuid_from_string(p_node.attrib['uuid'])
         else:
@@ -3055,67 +3026,15 @@ class PropertyCollection():
                                                     title = support_title,
                                                     content_type = support_type)
 
-        p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
-        p_kind_node.text = rqet.null_xml_text
-        if find_local_property_kinds and property_kind not in supported_property_kind_list:
-            if property_kind_uuid is None:
-                pk_parts_list = self.model.parts_list_of_type('PropertyKind')
-                for part in pk_parts_list:
-                    if self.model.citation_title_for_part(part) == property_kind:
-                        property_kind_uuid = self.model.uuid_for_part(part)
-                        break
-                if property_kind_uuid is None:
-                    # create local property kind object and fetch uuid
-                    lpk = PropertyKind(self.model,
-                                       title = property_kind,
-                                       example_uom = uom,
-                                       parent_property_kind = 'discrete' if discrete else 'continuous')
-                    lpk.create_xml()
-                    property_kind_uuid = lpk.uuid
-        if property_kind_uuid is None:
-            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'StandardPropertyKind')  # todo: local prop kind ref
-            kind_node = rqet.SubElement(p_kind_node, ns['resqml2'] + 'Kind')
-            kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlPropertyKind')
-            kind_node.text = property_kind
-        else:
-            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'LocalPropertyKind')  # todo: local prop kind ref
-            self.model.create_ref_node('LocalPropertyKind',
-                                       property_kind,
-                                       property_kind_uuid,
-                                       content_type = 'obj_PropertyKind',
-                                       root = p_kind_node)
-
-        # create patch node
-        const_count = None
-        if const_value is not None:
-            s_shape = self.supporting_shape(indexable_element = indexable_element, direction = direction)
-            assert s_shape is not None
-            const_count = np.product(np.array(s_shape, dtype = int))
-        _ = self.model.create_patch(p_uuid,
-                                    ext_uuid,
-                                    root = p_node,
-                                    hdf5_type = hdf5_type,
-                                    xsd_type = xsd_type,
-                                    null_value = null_value,
-                                    const_value = const_value,
-                                    const_count = const_count,
-                                    points = points)
-
-        if facet_type is not None and facet is not None:
-            facet_node = rqet.SubElement(p_node, ns['resqml2'] + 'Facet')
-            facet_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PropertyKindFacet')
-            facet_node.text = rqet.null_xml_text
-            facet_type_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Facet')
-            facet_type_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Facet')
-            facet_type_node.text = facet_type
-            facet_value_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Value')
-            facet_value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
-            facet_value_node.text = facet
+        self._create_xml_property_kind(p_node, find_local_property_kinds, property_kind, uom, discrete,
+                                       property_kind_uuid)
+        self._create_xml_patch_node(p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid)
+        _create_xml_facet_node(facet_type, facet, p_node)
 
         if add_min_max:
             # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
             if const_value is not None:
-                if (discrete and const_value != null_value) or (not discrete and not np.isnan(const_value)):
+                if (discrete and const_value != self.null_value) or (not discrete and not np.isnan(const_value)):
                     if min_value is None:
                         min_value = const_value
                     if max_value is None:
@@ -3147,11 +3066,11 @@ class PropertyCollection():
                             max_value = None
             if min_value is not None:
                 min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
-                min_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)
+                min_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
                 min_node.text = str(min_value)
             if max_value is not None:
                 max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
-                max_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)
+                max_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
                 max_node.text = str(max_value)
 
         if discrete:
@@ -3179,7 +3098,7 @@ class PropertyCollection():
             self.model.uom_node(p_node, uom)
 
         if add_as_part:
-            self.model.add_part('obj_' + d_or_c_text + 'Property', p_uuid, p_node)
+            self.model.add_part('obj_' + self.d_or_c_text + 'Property', p_uuid, p_node)
             if add_relationships:
                 if support_root is not None:
                     self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
@@ -3518,3 +3437,116 @@ class PropertyCollection():
         if facet_t is None or facet_t != 'direction':
             return None
         return self.facet_for_part(part)
+
+    def _check_shape_list(self, indexable_element, direction, property_array, points, count):
+        shape_list = self.supporting_shape(indexable_element = indexable_element, direction = direction)
+        if shape_list is not None:
+            if count > 1:
+                shape_list.append(count)
+            if points:
+                shape_list.append(3)
+            if property_array is not None:
+                assert tuple(shape_list) == property_array.shape, \
+                    f'property array shape {property_array.shape} is not the expected {tuple(shape_list)}'
+
+    def _get_property_kind_uuid(self, property_kind_uuid, property_kind, uom, discrete):
+        if property_kind_uuid is None:
+            pk_parts_list = self.model.parts_list_of_type('PropertyKind')
+            for part in pk_parts_list:
+                if self.model.citation_title_for_part(part) == property_kind:
+                    property_kind_uuid = self.model.uuid_for_part(part)
+                    break
+            if property_kind_uuid is None:
+                # create local property kind object and fetch uuid
+                lpk = PropertyKind(self.model,
+                                   title = property_kind,
+                                   example_uom = uom,
+                                   parent_property_kind = 'discrete' if discrete else 'continuous')
+                lpk.create_xml()
+                property_kind_uuid = lpk.uuid
+        return property_kind_uuid
+
+    def _create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind, uom, discrete,
+                                  property_kind_uuid):
+        p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
+        p_kind_node.text = rqet.null_xml_text
+        if find_local_property_kinds and property_kind not in supported_property_kind_list:
+            property_kind_uuid = self._get_property_kind_uuid(property_kind_uuid, property_kind, uom, discrete)
+
+        if property_kind_uuid is None:
+            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'StandardPropertyKind')  # todo: local prop kind ref
+            kind_node = rqet.SubElement(p_kind_node, ns['resqml2'] + 'Kind')
+            kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlPropertyKind')
+            kind_node.text = property_kind
+        else:
+            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'LocalPropertyKind')  # todo: local prop kind ref
+            self.model.create_ref_node('LocalPropertyKind',
+                                       property_kind,
+                                       property_kind_uuid,
+                                       content_type = 'obj_PropertyKind',
+                                       root = p_kind_node)
+
+    def _create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid):
+        # create patch node
+        const_count = None
+        if const_value is not None:
+            s_shape = self.supporting_shape(indexable_element = indexable_element, direction = direction)
+            assert s_shape is not None
+            const_count = np.product(np.array(s_shape, dtype = int))
+        _ = self.model.create_patch(p_uuid,
+                                    ext_uuid,
+                                    root = p_node,
+                                    hdf5_type = self.hdf5_type,
+                                    xsd_type = self.xsd_type,
+                                    null_value = self.null_value,
+                                    const_value = const_value,
+                                    const_count = const_count,
+                                    points = points)
+
+    def _get_property_type_details(self, discrete, string_lookup_uuid, points):
+        if discrete:
+            if string_lookup_uuid is None:
+                self.d_or_c_text = 'Discrete'
+            else:
+                self.d_or_c_text = 'Categorical'
+            self.xsd_type = 'integer'
+            self.hdf5_type = 'IntegerHdf5Array'
+        elif points:
+            self.d_or_c_text = 'Points'
+            self.xsd_type = 'double'
+            self.hdf5_type = 'Point3dHdf5Array'
+            self.null_value = None
+        else:
+            self.d_or_c_text = 'Continuous'
+            self.xsd_type = 'double'
+            self.hdf5_type = 'DoubleHdf5Array'
+            self.null_value = None
+
+
+def _get_indexable_element(indexable_element, support_type):
+    if indexable_element is None:
+        if support_type in [
+                'obj_IjkGridRepresentation', 'obj_BlockedWellboreRepresentation', 'obj_Grid2dRepresentation',
+                'obj_UnstructuredGridRepresentation'
+        ]:
+            indexable_element = 'cells'
+        elif support_type == 'obj_WellboreFrameRepresentation':
+            indexable_element = 'nodes'  # note: could be 'intervals'
+        elif support_type == 'obj_GridConnectionSetRepresentation':
+            indexable_element = 'faces'
+        else:
+            raise Exception('indexable element unknown for unsupported supporting representation object')
+    return indexable_element
+
+
+def _create_xml_facet_node(facet_type, facet, p_node):
+    if facet_type is not None and facet is not None:
+        facet_node = rqet.SubElement(p_node, ns['resqml2'] + 'Facet')
+        facet_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PropertyKindFacet')
+        facet_node.text = rqet.null_xml_text
+        facet_type_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Facet')
+        facet_type_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Facet')
+        facet_type_node.text = facet_type
+        facet_value_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Value')
+        facet_value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
+        facet_value_node.text = facet
