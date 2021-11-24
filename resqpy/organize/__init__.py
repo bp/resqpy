@@ -1,18 +1,29 @@
 """ Package for RESQML organizational objects """
 
 __all__ = [
-    'OrganizationFeature',
-    'GeobodyFeature',
-    'BoundaryFeature',
-    'FrontierFeature',
-    'FluidBoundaryFeature',
-    'RockFluidUnitFeature',
-    'TectonicBoundaryFeature',
-    'GeneticBoundaryFeature',
-    'FluidBoundaryFeature',
-    'RockFluidUnitFeature',
-    'TectonicBoundaryFeature',
-    'GeneticBoundaryFeature',
+    # Classes
+    "BoundaryFeature",
+    "EarthModelInterpretation",
+    "FaultInterpretation",
+    "FluidBoundaryFeature",
+    "FrontierFeature",
+    "GeneticBoundaryFeature",
+    "GeobodyBoundaryInterpretation",
+    "GeobodyFeature",
+    "GeobodyInterpretation",
+    "GeologicUnitFeature",
+    "HorizonInterpretation",
+    "OrganizationFeature",
+    "RockFluidUnitFeature",
+    "TectonicBoundaryFeature",
+    "WellboreFeature",
+    "WellboreInterpretation",
+    # Functions
+    "equivalent_extra_metadata",
+    "alias_for_attribute",
+    "extract_has_occurred_during",
+    "equivalent_chrono_pairs",
+    "create_xml_has_occurred_during",
 ]
 
 from resqpy.organize._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
