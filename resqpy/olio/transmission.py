@@ -1,4 +1,4 @@
-# transmission.py
+"""Transmissibility functions for grids"""
 
 version = '14th October 2021'
 

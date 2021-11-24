@@ -1,4 +1,4 @@
-# module containing array writing functions
+"""Array writing functions"""
 
 version = '29th April 2021'
 

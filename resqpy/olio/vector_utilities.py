@@ -1,5 +1,10 @@
-# vector_utilities module
-# note: many of these functions are redundant as they are provided by built-in numpy operations
+""" Utilities for working with 3D vectors in cartesian space.
+
+note: some of these functions are redundant as they are provided by built-in numpy operations.
+
+a vector is a one dimensional numpy array with 3 elements: x, y, z.
+some functions accept a tuple or list of 3 elements as an alternative to a numpy array.
+"""
 
 version = '15th November 2021'
 
@@ -7,10 +12,6 @@ import logging
 
 log = logging.getLogger(__name__)
 log.debug('vector_utilities.py version %s', version)
-
-# works with 3D vectors in a cartesian space
-# a vector is a one dimensional numpy array with 3 elements: x, y, z
-# some functions accept a tuple or list of 3 elements as an alternative to a numpy array
 
 import math as maths
 
