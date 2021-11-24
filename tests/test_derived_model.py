@@ -211,17 +211,17 @@ def test_extract_box_for_well(tmp_path):
     # create a couple of well trajectories
     cells_visited = [(0, 1, 2), (1, 1, 2), (1, 1, 3), (1, 2, 3), (1, 2, 4), (2, 2, 4)]
     traj_1 = rqw.Trajectory(model,
-                             grid = grid,
-                             cell_kji0_list = cells_visited,
-                             length_uom = 'm',
-                             spline_mode = 'linear',
-                             well_name = 'well 1')
+                            grid = grid,
+                            cell_kji0_list = cells_visited,
+                            length_uom = 'm',
+                            spline_mode = 'linear',
+                            well_name = 'well 1')
     traj_2 = rqw.Trajectory(model,
-                             grid = grid,
-                             cell_kji0_list = cells_visited,
-                             length_uom = 'm',
-                             spline_mode = 'cube',
-                             well_name = 'well 2')
+                            grid = grid,
+                            cell_kji0_list = cells_visited,
+                            length_uom = 'm',
+                            spline_mode = 'cube',
+                            well_name = 'well 2')
     for traj in (traj_1, traj_2):
         traj.write_hdf5()
         traj.create_xml()
@@ -517,7 +517,7 @@ def test_add_wells_from_ascii_file(tmp_path):
     for wi in range(well_count):
         well_name = 'Hole_' + str(wi + 1)
         traj = rqw.Trajectory(model,
-                               uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = well_name))
+                              uuid = model.uuid(obj_type = 'WellboreTrajectoryRepresentation', title = well_name))
         assert traj is not None
         assert traj.knot_count == 3 + wi
 

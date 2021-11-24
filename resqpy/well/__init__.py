@@ -1,3 +1,7 @@
+"""resqpy modules providing trajectory, deviation survey, blocked well, wellbore frame, wellbore marker frame and
+ md datum classes.
+"""
+
 __all__ = [
     'md_datum', 'blocked_well', 'well_object_funcs', 'trajectory', 'deviation_survey', 'wellbore_frame',
     'wellbore_marker_frame'
