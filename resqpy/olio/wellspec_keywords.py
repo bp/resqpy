@@ -1,4 +1,4 @@
-# module defining dictionary of nexus WELLSPEC column keywords
+"""Module defining dictionary of nexus WELLSPEC column keywords"""
 
 version = '29th April 2021'
 

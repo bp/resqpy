@@ -2,8 +2,6 @@
 
 """
 
-# todo: create a trajectory from a deviation survey, assuming minimum curvature
-
 version = '10th November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company

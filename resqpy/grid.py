@@ -5503,6 +5503,8 @@ class RegularGrid(Grid):
         if as_irregular_grid:
             set_points_cached = True
 
+        self.is_aligned = None  #: boolean indicating alignment of IJK axes with +/- xyz respectively
+
         if uuid is None:
             super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
             self.grid_representation = 'IjkGrid' if as_irregular_grid else 'IjkBlockGrid'
@@ -5568,6 +5570,7 @@ class RegularGrid(Grid):
             dxyz_dkji = np.array([[0.0, 0.0, dxyz[2]], [0.0, dxyz[1], 0.0], [dxyz[0], 0.0, 0.0]])
         self.block_origin = np.array(origin).copy()
         self.block_dxyz_dkji = np.array(dxyz_dkji).copy()
+        self._set_is_aligned()
         if use_vertical and dxyz_dkji[0][0] == 0.0 and dxyz_dkji[0][1] == 0.0:  # ie. no x,y change with k
             self.pillar_shape = 'vertical'
         else:
@@ -5863,6 +5866,12 @@ class RegularGrid(Grid):
                 self.property_collection.inherit_parts_from_other_collection(dpc)
 
         return node
+
+    def _set_is_aligned(self):
+        """Sets is_aligned attribute True if IJK axes align with +/- xyz respectively."""
+        if self.block_dxyz_dkji is None:
+            self.is_aligned = None
+        self.is_aligned = (np.count_nonzero(self.block_dxyz_dkji * np.array([[1.0, 1, 0], [1, 0, 1], [0, 1, 1]])) == 0)
 
 
 def establish_zone_property_kind(model):

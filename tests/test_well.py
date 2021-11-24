@@ -276,10 +276,10 @@ def test_wellspec_properties(example_model_and_crs):
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
     bw = resqpy.well.BlockedWell(model,
-                          wellspec_file = wellspec_file,
-                          well_name = well_name,
-                          use_face_centres = True,
-                          add_wellspec_properties = True)
+                                 wellspec_file = wellspec_file,
+                                 well_name = well_name,
+                                 use_face_centres = True,
+                                 add_wellspec_properties = True)
     assert bw is not None
     bw_uuid = bw.uuid
     skin_uuid = model.uuid(title = 'SKIN', related_uuid = bw.uuid)

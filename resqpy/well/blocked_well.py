@@ -51,7 +51,7 @@ class BlockedWell(BaseResqpy):
     """
 
     resqml_type = 'BlockedWellboreRepresentation'
-    well_name = rqo._alias_for_attribute("title")
+    well_name = rqo.alias_for_attribute("title")
 
     def __init__(self,
                  parent_model,

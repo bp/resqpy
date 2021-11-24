@@ -85,3 +85,31 @@ def test_clockwise():
     p1, p2 = np.array(p2), np.array(p1)
     p3 = np.array(p3)
     assert vec.clockwise(p1, p2, p3) < 0.0
+
+
+def test_clockwise_triangles():
+    p = np.array([(1.0, 1.0, 1.0), (2.0, 2.0, -1.0), (1.0, 2.0, 0.0), (2.0, 1.0, 0.0)])
+    t = np.array([(0, 1, 2), (0, 1, 3)], dtype = int)
+    e_xy = np.array([-1.0, 1.0])
+    assert np.all(vec.clockwise_triangles(p, t) * e_xy > 0.0)
+    e_xz = np.array([1.0, -1.0])
+    assert np.all(vec.clockwise_triangles(p, t, projection = 'xz') * e_xz > 0.0)
+    e_yz = np.array([-1.0, 1.0])
+    assert np.all(vec.clockwise_triangles(p, t, projection = 'yz') * e_yz > 0.0)
+
+
+def test_points_in_triangles():
+    p = np.array([(1.0, 1.0, 1.0), (2.0, 2.0, -1.0), (1.0, 2.0, 0.0), (2.0, 1.0, 0.0)])
+    t = np.array([(0, 1, 2), (0, 1, 3)], dtype = int)
+    d = np.array([(0.5, 1.5, 0.0), (1.25, 1.75, 0.0), (1.75, 1.25, -3.0), (1.5, 1.5, 1.5), (1.0, 1.0, 3.0),
+                  (1.5, 0.5, 1.0), (1.5, 2.5, 0.0), (0.5, 0.5, 0.5), (2.5, 1.5, -1.0)])
+    e_no_edge = np.zeros((len(t), len(d)), dtype = bool)
+    e_no_edge[0, 1] = True
+    e_no_edge[1, 2] = True
+    e_edge = e_no_edge.copy()
+    e_edge[:, 3] = True
+    e_edge[:, 4] = True
+    r_no_edge = vec.points_in_triangles(p, t, d, projection = 'xy', edged = False)
+    r_edge = vec.points_in_triangles(p, t, d, projection = 'xy', edged = True)
+    assert np.all(r_no_edge == e_no_edge)
+    assert np.all(r_edge == e_edge)
