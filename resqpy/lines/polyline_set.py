@@ -180,18 +180,17 @@ class PolylineSet(_BasePolyline):
         self.title = os.path.basename(charisma_file).split(".")[0]
         for i, line in enumerate(inpoints):
             line = line.split()
+            coord_entry = np.array([[float(line[3]), float(line[4]), float(line[5])]])
             if i == 0:
-                self.coordinates = (np.array([[float(line[3]), float(line[4]), float(line[5])]]))
+                self.coordinates = coord_entry
                 stick = line[7]
                 count = 1
             else:
-                self.coordinates = np.concatenate(
-                    (self.coordinates, np.array(([[float(line[3]), float(line[4]),
-                                                   float(line[5])]]))))
+                self.coordinates = np.concatenate((self.coordinates, coord_entry))
                 count += 1
                 if stick != line[7] or i == len(inpoints) - 1:
-                    if count <= 2:  # Line has fewer than 2 points
-                        log.info(f"Polylines must contain at least 2 points - ignoring point {self.coordinates[-2]}")
+                    if count <= 2 and stick != line[7]:  # Line has fewer than 2 points
+                        log.warning(f"Polylines must contain at least 2 points - ignoring point {self.coordinates[-2]}")
                         self.coordinates = np.delete(self.coordinates, -2, 0)  # Remove the second to last entry
                     else:
                         self.count_perpol.append(count - 1)
@@ -436,8 +435,8 @@ class PolylineSet(_BasePolyline):
         if count_perpol is None:
             count_perpol = self.count_perpol
         if closed_array is None:
-            closed_array = np.zeros(count_perpol, dtype = bool)
-            closed_node = rqet.find_nested_tag(self.root, ['LinePatch', 'ClosedPolylines'])
+            closed_array = np.zeros(len(count_perpol), dtype = bool)
+            closed_node = rqet.find_nested_tags(self.root, ['LinePatch', 'ClosedPolylines'])
             if closed_node is not None:
                 closed_array[:] = self.get_bool_array(closed_node)
         if coordinates is None:
@@ -500,6 +499,8 @@ class PolylineSet(_BasePolyline):
 
         assert len(self.closed_array) == len(self.count_perpol)
         assert np.sum(self.count_perpol) == len(self.coordinates)
+
+        self.polys = polylines
 
     def bool_array_format(self, closed_array):
         """Determines an appropriate output boolean array format from an input array of bools.
@@ -570,7 +571,7 @@ class PolylineSet(_BasePolyline):
             file_name: output file name for polyline set representation
         """
 
-        faultname = self.title.replace(" ", "_")
+        faultname = self.title.replace(" ", "_") if self.title else 'fault'
         lines = []
         for i, poly in enumerate(self.polys):
             for point in poly.coordinates:
