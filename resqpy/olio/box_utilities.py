@@ -47,6 +47,7 @@ def volume_of_box(box):
 
 
 def central_cell(box):
+    """Returns the indices of the cell at the centre of the box."""
     return box[0] + ((box[1] - box[0]) // 2)
 
 

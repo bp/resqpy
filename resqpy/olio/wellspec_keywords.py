@@ -127,6 +127,8 @@ wellspec_dtype['DZ']       = float
 
 
 def increment_complaints(keyword):
+    """Increments the count of complaints (warnings) associated with the keyword."""
+
     global wellspec_dict
     assert (keyword.upper() in wellspec_dict.keys())
     old_entry = wellspec_dict[keyword.upper()]
@@ -134,26 +136,36 @@ def increment_complaints(keyword):
 
 
 def known_keyword(keyword):
+    """Returns True if the keyword exists in the wellspec dictionary."""
+
     return keyword.upper() in wellspec_dict.keys()
 
 
 def add_unknown_keyword(keyword):
+    """Adds the keyword to the dictionary with attributes flagged as unknown."""
+
     global wellspec_dict
     assert (not known_keyword(keyword))
     wellspec_dict[keyword.upper()] = (1, wk_unknown, wk_banned, None, False)  # assumes warning or error already given
 
 
 def default_value(keyword):
+    """Returns the default value for the keyword."""
+
     assert (known_keyword(keyword))
     return wellspec_dict[keyword][3]
 
 
 def complaints(keyword):
+    """Returns the number of complaints (warnings) logged for the keyword."""
+
     assert (known_keyword(keyword))
     return wellspec_dict[keyword][0]
 
 
 def check_value(keyword, value):
+    """Returns True if the value is acceptable for the keyword."""
+
     try:
         key = keyword.upper()
         if not known_keyword(key):
@@ -186,6 +198,8 @@ def check_value(keyword, value):
 
 
 def required_out_list():
+    """Returns a list of keywords that are required."""
+
     list = []
     for key in wellspec_dict.keys():
         if wellspec_dict[key][2] == wk_required:
@@ -194,6 +208,8 @@ def required_out_list():
 
 
 def length_unit_conversion_applicable(keyword):
+    """Returns True if the keyword has a quantity class of length."""
+    
     assert (known_keyword(keyword))
     return wellspec_dict[keyword][4]
 
