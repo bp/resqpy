@@ -13,8 +13,10 @@ from .property_collection import PropertyCollection
 
 
 class WellIntervalProperty:
-    """Thin wrapper class around interval properties for a Wellbore Frame or Blocked Wellbore (ie interval or cell well
-    logss)."""
+    """Thin wrapper class around interval properties for a Wellbore Frame or Blocked Wellbore.
+
+    ie, interval or cell well logs.
+    """
 
     def __init__(self, collection, part):
         """Create an interval log or blocked well log from a part name."""

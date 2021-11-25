@@ -16,8 +16,7 @@ from .property_common import return_cell_indices
 
 
 class WellIntervalPropertyCollection(PropertyCollection):
-    """Class for RESQML property collection for a WellboreFrame for interval or blocked well logs, inheriting from
-    PropertyCollection."""
+    """Class for RESQML property collection for a WellboreFrame for interval or blocked well logs"""
 
     def __init__(self, frame = None, property_set_root = None, realization = None):
         """Creates a new property collection related to interval or blocked well logs and a wellbore frame."""

@@ -108,8 +108,9 @@ class GridPropertyCollection(PropertyCollection):
                                                                            realization = None,
                                                                            copy_all_realizations = False,
                                                                            uncache_other_arrays = True):
-        """Extends this collection's imported list with properties from other collection, optionally extracting for a
-        box.
+        """Extends this collection's imported list with properties from other collection.
+
+        Optionally extract for a box.
 
         arguments:
            other: another GridPropertyCollection object which might relate to a different grid object
@@ -459,8 +460,9 @@ class GridPropertyCollection(PropertyCollection):
                                        facet = None,
                                        realization = None,
                                        use_binary = True):
-        """Reads a property array from an ascii (or pure binary) file, caches and adds to imported list (but not
-        collection dict).
+        """Reads a property array from an ascii (or pure binary) file, caches and adds to imported list.
+
+        Does not add to collection dict.
 
         arguments:
            file_name (string): the name of the file to read the array data from; should contain data for one array only, without
@@ -585,8 +587,9 @@ class GridPropertyCollection(PropertyCollection):
                                                time_index = None,
                                                uom = None,
                                                realization = None):
-        """Reads a vdb recurrent property array for one timestep, caches and adds to imported list (but not collection
-        dict).
+        """Reads a vdb recurrent property array for one timestep, caches and adds to imported list.
+
+        Does not add to collection dict.
 
         arguments:
            vdbase: an object of class vdb.VDB, already initialised with the path of the vdb
