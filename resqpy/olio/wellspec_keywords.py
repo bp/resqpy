@@ -209,7 +209,7 @@ def required_out_list():
 
 def length_unit_conversion_applicable(keyword):
     """Returns True if the keyword has a quantity class of length."""
-    
+
     assert (known_keyword(keyword))
     return wellspec_dict[keyword][4]
 

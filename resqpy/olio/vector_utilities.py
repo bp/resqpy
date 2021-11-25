@@ -363,7 +363,7 @@ def project_points_onto_plane(plane_xyz, normal_vector, points):
 
 def perspective_vector(xyz_box, view_axis, vanishing_distance, vector):
     """Returns a version of vector with a perspective applied."""
-    
+
     mid_points = np.zeros(3)
     xyz_ranges = np.zeros(3)
     result = np.zeros(3)
