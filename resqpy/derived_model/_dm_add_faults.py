@@ -16,8 +16,8 @@ import resqpy.olio.simple_lines as sl
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model.dm_copy_grid import copy_grid
+from resqpy.derived_model._dm_common import __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
+from resqpy.derived_model._dm_copy_grid import copy_grid
 
 
 def add_faults(epc_file,

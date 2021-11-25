@@ -14,8 +14,8 @@ import resqpy.olio.box_utilities as bx
 import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
-from resqpy.derived_model.dm_add_one_grid_property_array import add_one_grid_property_array
-from resqpy.derived_model.dm_extract_box import extract_box
+from resqpy.derived_model._dm_add_one_grid_property_array import add_one_grid_property_array
+from resqpy.derived_model._dm_extract_box import extract_box
 
 
 def extract_box_for_well(epc_file = None,

@@ -14,7 +14,7 @@ import resqpy.olio.fine_coarse as fc
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model.dm_common import __write_grid, __establish_model_and_source_grid
+from resqpy.derived_model._dm_common import __write_grid, __establish_model_and_source_grid
 
 
 def extract_box(epc_file = None,
