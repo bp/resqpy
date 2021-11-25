@@ -47,6 +47,7 @@ def volume_of_box(box):
 
 
 def central_cell(box):
+    """Returns the indices of the cell at the centre of the box."""
     return box[0] + ((box[1] - box[0]) // 2)
 
 
@@ -278,14 +279,14 @@ def boxes_overlap(box_a, box_b):
 
 def overlapping_boxes(established_box, new_box, trim_box):
     """Checks for 3D overlap of two boxes; returns True and sets trim_box if there is overlap, otherwise False.
+    
+    trim_box is modified in place.
 
     Arguments:
        established_box: numpy int array of shape (2, 3)
        new_box: numpy int array of shape (2, 3)
           each is lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
           protocol of indices for the two boxes must be the same
-
-    output argument (modified):
        trim_box: numpy int array of shape (2, 3)
           set to lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
           a subset of new_box such that if removed from new_box, a valid box would remain with no overlap with established_box
@@ -293,7 +294,6 @@ def overlapping_boxes(established_box, new_box, trim_box):
           if there is no overlap (return value False), all elements of trim_box are set to 0
 
     note:
-
        when there is overlap between the boxes, there can be more than one way to trim the new_box,
        with trim_box fully covering either ij, jk or ik planes of new_box
        the function selects the trim_box containing the minimum number of cells (minimum 'loss' to trimming)
@@ -402,9 +402,10 @@ def trim_box_by_box_returning_new_mask(box_to_be_trimmed, trim_box, mask_kji0):
 
 
 def trim_box_to_mask_returning_new_mask(bounding_box_kji0, mask_kji0):
-    """Reduces the coverage of bounding box to the minimum needed to contain True elements of mask; returns trimmed
-    mask."""
-
+    """Reduce the coverage of bounding box to the minimum needed to contain True elements of mask.
+    
+    Returns trimmed mask.
+    """
     # NB: bounding box is modified by this function
     assert bounding_box_kji0.ndim == 2 and bounding_box_kji0.shape == (2, 3) and bounding_box_kji0.dtype == 'int'
     assert (mask_kji0.ndim == 3 and

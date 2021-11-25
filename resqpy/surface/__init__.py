@@ -1,6 +1,6 @@
 """Classes for RESQML objects related to surfaces"""
 
-__all__ = ['base_surface', 'combined_surface', 'mesh', 'triangulated_patch', 'pointset', 'surface']
+__all__ = ['BaseSurface', 'CombinedSurface', 'Mesh', 'TriangulatedPatch', 'PointSet', 'Surface']
 
 from .base_surface import BaseSurface
 from .combined_surface import CombinedSurface

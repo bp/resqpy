@@ -39,6 +39,8 @@ for key, url in namespace.items():
 
 
 def colon_namespace(url):
+    """Returns the short form namespace for the url, complete with colon suffix."""
+
     if url[0] == '{':
         return inverse_namespace[url[1:-1]] + ':'
     return inverse_namespace[url] + ':'

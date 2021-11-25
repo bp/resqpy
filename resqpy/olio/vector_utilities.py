@@ -271,6 +271,8 @@ def rotation_matrix_3d_axial(axis, angle):
 
 
 def rotation_3d_matrix(xzy_axis_angles):
+    """Retuns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
+
     matrix = np.zeros((3, 3))
     for axis in range(3):
         matrix[axis, axis] = 1.0
@@ -360,6 +362,8 @@ def project_points_onto_plane(plane_xyz, normal_vector, points):
 
 
 def perspective_vector(xyz_box, view_axis, vanishing_distance, vector):
+    """Returns a version of vector with a perspective applied."""
+
     mid_points = np.zeros(3)
     xyz_ranges = np.zeros(3)
     result = np.zeros(3)

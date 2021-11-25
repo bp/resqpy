@@ -27,7 +27,8 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
                  domain = 'depth',
                  boundary_relation_list = None,
                  extra_metadata = None):
-        """
+        """ Instantiate a GeobodyBoundaryInterpretation object.
+
         Args:
             parent_model(model.Model): Model to which the feature belongs
             root_node(DEPRECATED)
@@ -106,8 +107,7 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
                    originator = None,
                    title_suffix = None,
                    reuse = True):
-        """Creates a geobody boundary interpretation organisational xml node from a geobody boundary interpretation
-        object."""
+        """Create a organisational xml node from a geobody boundary interpretation object."""
 
         if not self.title:
             self.title = self.genetic_boundary_feature.feature_name
