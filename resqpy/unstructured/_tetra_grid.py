@@ -11,7 +11,7 @@ import numpy as np
 
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
-from resqpy.unstructured.unstructured_grid import UnstructuredGrid, valid_cell_shapes
+from resqpy.unstructured._unstructured_grid import UnstructuredGrid, valid_cell_shapes
 
 
 class TetraGrid(UnstructuredGrid):

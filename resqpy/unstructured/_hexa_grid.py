@@ -12,7 +12,7 @@ import numpy as np
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
 import resqpy.property as rqp
-from resqpy.unstructured.unstructured_grid import UnstructuredGrid
+from resqpy.unstructured._unstructured_grid import UnstructuredGrid
 
 
 class HexaGrid(UnstructuredGrid):
