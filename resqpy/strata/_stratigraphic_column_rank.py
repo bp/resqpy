@@ -1,4 +1,4 @@
-"""stratigraphic_column_rank.py: RESQML StratigraphicColumnRankInterpretation class."""
+"""_stratigraphic_column_rank.py: RESQML StratigraphicColumnRankInterpretation class."""
 
 version = '24th November 2021'
 
@@ -8,16 +8,16 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('stratigraphic_column_rank.py version ' + version)
+log.debug('_stratigraphic_column_rank.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata.strata_common import valid_domains, _index_attr
-from resqpy.strata.binary_contact_interpretation import BinaryContactInterpretation
-from resqpy.strata.stratigraphic_unit_interpretation import StratigraphicUnitInterpretation
+from resqpy.strata._strata_common import valid_domains, _index_attr
+from resqpy.strata._binary_contact_interpretation import BinaryContactInterpretation
+from resqpy.strata._stratigraphic_unit_interpretation import StratigraphicUnitInterpretation
 
 
 class StratigraphicColumnRank(BaseResqpy):

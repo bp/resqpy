@@ -2487,11 +2487,12 @@ class PropertyCollection():
 
         assert resqpy_a.ndim >= 2 and resqpy_a.shape[-2] == 3 and resqpy_a.shape[-1] == 2
 
-        resqml_a_shape = tuple(list(resqpy_a.shape[:-2]).append(6))
+        resqml_a_shape = tuple(list(resqpy_a.shape[:-2]) + [6])
         resqml_a = np.empty(resqml_a_shape, dtype = resqpy_a.dtype)
 
         for face in range(6):
-            resqml_a[..., face] = resqpy_a[..., self.face_index_inverse_map[face]]
+            axis, polarity = self.face_index_inverse_map[face]
+            resqml_a[..., face] = resqpy_a[..., axis, polarity]
 
         return resqml_a
 
@@ -2722,6 +2723,9 @@ class PropertyCollection():
             zorro = self.masked_array(cached_array, exclude_value = null_value)
             if not discrete and np.all(np.isnan(zorro)):
                 min_value = max_value = None
+            elif discrete:
+                min_value = int(np.nanmin(zorro))
+                max_value = int(np.nanmax(zorro))
             else:
                 min_value = np.nanmin(zorro)
                 max_value = np.nanmax(zorro)
@@ -5987,7 +5991,7 @@ def selective_version_of_collection(
     if support_uuid is None and grid is not None:
         support_uuid = grid.uuid
     if support_uuid is not None:
-        view.set_support(support_uuid = support_uuid)
+        view.set_support(support_uuid = support_uuid, model = collection.model)
     if realization is not None:
         view.set_realization(realization)
     view.inherit_parts_selectively_from_other_collection(collection,
@@ -6028,7 +6032,7 @@ def property_over_time_series_from_collection(collection, example_part):
     assert collection.part_in_collection(example_part)
     view = PropertyCollection()
     if collection.support_uuid is not None:
-        view.set_support(support_uuid = collection.support_uuid)
+        view.set_support(support_uuid = collection.support_uuid, model = collection.model)
     if collection.realization is not None:
         view.set_realization(collection.realization)
     view.inherit_similar_parts_for_time_series_from_other_collection(collection, example_part)

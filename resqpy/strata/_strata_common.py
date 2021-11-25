@@ -1,4 +1,4 @@
-"""strata_common.py: common functions and valid xml constant values for stratigraphy related RESQML classes."""
+"""_strata_common.py: common functions and valid xml constant values for stratigraphy related RESQML classes."""
 
 # note: two compositions have a spurious trailing space in the RESQML xsd; resqpy hides this from calling code
 valid_compositions = [

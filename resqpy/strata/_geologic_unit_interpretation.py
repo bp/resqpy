@@ -1,4 +1,4 @@
-"""geologic_unit_interpretation.py: RESQML GeologicUnitInterpretation class."""
+"""_geologic_unit_interpretation.py: RESQML GeologicUnitInterpretation class."""
 
 version = '24th November 2021'
 
@@ -7,14 +7,14 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('geologic_unit_interpretation.py version ' + version)
+log.debug('_geologic_unit_interpretation.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata.strata_common import valid_compositions, valid_implacements, valid_domains
+from resqpy.strata._strata_common import valid_compositions, valid_implacements, valid_domains
 
 
 class GeologicUnitInterpretation(BaseResqpy):

@@ -1,4 +1,4 @@
-"""Transmissibility functions for grids"""
+"""Transmissibility functions for grids."""
 
 version = '14th October 2021'
 

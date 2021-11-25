@@ -1,17 +1,6 @@
-"""Generic small utility functions"""
+"""Generic small utility functions."""
 
 version = '29th April 2021'
-
-# simple utility function definitions:
-#    def kji0_from_ijk1(index_ijk1):   # reverse order of indices and subtract 1
-#    def ijk1_from_kji0(index_kji0):   # reverse order of indices and add 1
-#    def extent_switch_ijk_kji(extent_in):   # reverse order of elements in extent (either ijk to kji or vice versa)
-#    def string_ijk1_for_cell_kji0(cell_kji0):
-#    def string_ijk1_for_cell_ijk1(cell_ijk1):
-#    def string_ijk_for_extent_kji(extent_kji):
-#    def string_xyz(xyz):
-#    def cell_count_from_extent(extent):
-#    def horizon_float(k0, plus_or_minus):
 
 import numpy as np
 

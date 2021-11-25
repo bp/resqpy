@@ -1,4 +1,4 @@
-"""stratigraphic_column.py: RESQML StratigraphicColumn class."""
+"""_stratigraphic_column.py: RESQML StratigraphicColumn class."""
 
 version = '24th November 2021'
 
@@ -7,14 +7,14 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('stratigraphic_column.py version ' + version)
+log.debug('_stratigraphic_column.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
-from resqpy.strata.strata_common import _index_attr
-from resqpy.strata.stratigraphic_column_rank import StratigraphicColumnRank
+from resqpy.strata._strata_common import _index_attr
+from resqpy.strata._stratigraphic_column_rank import StratigraphicColumnRank
 
 
 class StratigraphicColumn(BaseResqpy):

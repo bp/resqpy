@@ -1,17 +1,17 @@
-"""polyline.py: Resqml polyline module."""
+"""_polyline.py: Resqml polyline module."""
 
 version = '23rd November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('polylines.py version ' + version)
+log.debug('_polyline.py version ' + version)
 
 import math as maths
 import numpy as np
 
 import resqpy.olio.intersection as meet
-from resqpy.lines.common import _BasePolyline, load_hdf5_array, tangents, spline
+from resqpy.lines._common import _BasePolyline, load_hdf5_array, tangents, spline
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
@@ -136,6 +136,8 @@ class Polyline(_BasePolyline):
 
     @property
     def rep_int_uuid(self):
+        """Returns the uuid of the represented interpretation."""
+
         # TODO: Track uuid only, not root
         return rqet.uuid_for_part_root(self.rep_int_root)
 
@@ -351,8 +353,12 @@ class Polyline(_BasePolyline):
         return centre
 
     def first_line_intersection(self, x1, y1, x2, y2, half_segment = False):
-        """Returns segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline, or None,
-        None, None."""
+        """Finds the first intersection of (half) bounded line x,y 1 to 2 with polyline.
+
+        returns:
+           segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline,
+           or None, None, None if no intersection found
+        """
 
         seg_count = len(self.coordinates) - 1
         if self.isclosed:

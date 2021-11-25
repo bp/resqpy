@@ -1,4 +1,4 @@
-"""stratigraphic_unit_interpretation.py: RESQML StratigraphicUnitInterpretation class."""
+"""_stratigraphic_unit_interpretation.py: RESQML StratigraphicUnitInterpretation class."""
 
 version = '24th November 2021'
 
@@ -7,15 +7,15 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('stratigraphic_unit_interpretation.py version ' + version)
+log.debug('_stratigraphic_unit_interpretation.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata.strata_common import valid_deposition_modes
-from resqpy.strata.geologic_unit_interpretation import GeologicUnitInterpretation
-from resqpy.strata.stratigraphic_unit_feature import StratigraphicUnitFeature
+from resqpy.strata._strata_common import valid_deposition_modes
+from resqpy.strata._geologic_unit_interpretation import GeologicUnitInterpretation
+from resqpy.strata._stratigraphic_unit_feature import StratigraphicUnitFeature
 
 
 class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
@@ -99,6 +99,8 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
 
     @property
     def stratigraphic_unit_feature(self):
+        """Returns the interpreted geologic unit feature."""
+
         return self.geologic_unit_feature
 
     def _load_from_xml(self):

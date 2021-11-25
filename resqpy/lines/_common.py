@@ -1,11 +1,11 @@
-"""polylines.py: Resqml polyline common functions module."""
+"""_common.py: Resqml polyline common functions module."""
 
 version = '23rd November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('polyline common.py version ' + version)
+log.debug('polyline _common.py version ' + version)
 
 import math as maths
 import numpy as np
@@ -78,7 +78,7 @@ def load_hdf5_array(object, node, array_attribute, tag = 'Values'):
 def shift_polyline(parent_model, poly_root, xyz_shift = (0, 0, 0), title = ''):
     """Returns a new polyline object, shifted by given coordinates."""
 
-    from resqpy.lines.polyline import Polyline
+    from resqpy.lines._polyline import Polyline
 
     poly = Polyline(parent_model = parent_model, poly_root = poly_root)
     if title != '':
@@ -93,7 +93,7 @@ def shift_polyline(parent_model, poly_root, xyz_shift = (0, 0, 0), title = ''):
 def flatten_polyline(parent_model, poly_root, axis = "z", value = 0.0, title = ''):
     """Returns a new polyline object, flattened (projected) on a chosen axis to a given value."""
 
-    from resqpy.lines.polyline import Polyline
+    from resqpy.lines._polyline import Polyline
 
     axis = axis.lower()
     value = float(value)
