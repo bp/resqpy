@@ -104,9 +104,8 @@ class MdDatum(BaseResqpy):
             assert len(location) == 3
 
     def _validate_crs_uuid(self, crs_root):
-        """Temporary code to sort out crs reference until the crs_root ard is retired
-
-        """
+        """Temporary code to sort out crs reference until the crs_root ard is retired."""
+        
         if self.crs_uuid is None and crs_root is not None:
             self.crs_uuid = rqet.uuid_for_part_root(crs_root)
         assert self.crs_uuid is not None

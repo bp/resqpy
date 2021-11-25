@@ -300,7 +300,9 @@ class WellboreMarkerFrame(BaseResqpy):
 
     def __add_as_part_and_add_relationships(self, wbm_node, ext_uuid, add_as_part, add_relationships):
         """Add the newly created WellboreMarkerFrame object's root node as a part in the model
-         and add reciprocal relationships."""
+
+        and add reciprocal relationships.
+        """
 
         if add_as_part:
             self.model.add_part('obj_WellboreMarkerFrameRepresentation', self.uuid, wbm_node)

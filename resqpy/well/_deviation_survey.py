@@ -349,9 +349,7 @@ class DeviationSurvey(BaseResqpy):
         return ds_node
 
     def __check_md_datum_root(self, md_datum_root, md_datum_xyz):
-        """ Ensures that the root node for the MdDatum object that the DeviationSurvey depths are based on exists.
-
-        """
+        """ Ensures that the root node for the MdDatum object that the DeviationSurvey depths are based on exists."""
 
         if md_datum_root is None:
             if self.md_datum is None:
@@ -429,7 +427,9 @@ class DeviationSurvey(BaseResqpy):
     def __add_as_part_and_add_relationships(self, ds_node, md_datum_root, interp_root, ext_uuid, add_as_part,
                                             add_relationships):
         """Add the newly created DeviationSurvey object's root node as a part in the model and add reciprocal
-         relationships."""
+
+        relationships.
+        """
 
         if add_as_part:
             self.model.add_part('obj_DeviationSurveyRepresentation', self.uuid, ds_node)

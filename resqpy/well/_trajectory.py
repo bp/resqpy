@@ -69,6 +69,7 @@ class Trajectory(BaseResqpy):
             originator = None,
             extra_metadata = None):
         """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or
+
         ascii file.
 
         arguments:
@@ -947,7 +948,7 @@ class Trajectory(BaseResqpy):
     def __add_as_part_and_add_relationships(self, wbt_node, interp_root, add_as_part, add_relationships, ext_uuid):
         """Add the newly created Trajectory object's root node as a part in the model and add reciprocal
 
-         relationships.
+        relationships.
         """
 
         if add_as_part:
