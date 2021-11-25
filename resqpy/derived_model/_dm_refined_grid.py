@@ -15,7 +15,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.rq_import as rqi
 
-from resqpy.derived_model.dm_common import __write_grid
+from resqpy.derived_model._dm_common import __write_grid
 
 
 def refined_grid(epc_file,

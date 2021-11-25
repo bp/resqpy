@@ -1,17 +1,17 @@
-"""polyline_set.py: Resqml polyline set module."""
+"""_polyline_set.py: Resqml polyline set module."""
 
 version = '23rd November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('polylines.py version ' + version)
+log.debug('_polyline_set.py version ' + version)
 
 import os
 import numpy as np
 
 import resqpy.crs as rcrs
-from resqpy.lines.common import _BasePolyline, load_hdf5_array
+from resqpy.lines._common import _BasePolyline, load_hdf5_array
 import resqpy.olio.simple_lines as rsl
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
@@ -430,7 +430,7 @@ class PolylineSet(_BasePolyline):
         :meta common:
         """
 
-        from resqpy.lines.polyline import Polyline
+        from resqpy.lines._polyline import Polyline
 
         if count_perpol is None:
             count_perpol = self.count_perpol

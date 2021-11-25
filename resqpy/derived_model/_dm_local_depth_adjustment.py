@@ -11,8 +11,8 @@ import numpy as np
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model.dm_copy_grid import copy_grid
+from resqpy.derived_model._dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
+from resqpy.derived_model._dm_copy_grid import copy_grid
 
 
 def local_depth_adjustment(epc_file,

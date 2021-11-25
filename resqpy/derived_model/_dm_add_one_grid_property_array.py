@@ -7,7 +7,7 @@ import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model.dm_common import __write_grid
+from resqpy.derived_model._dm_common import __write_grid
 
 
 def add_one_grid_property_array(epc_file,

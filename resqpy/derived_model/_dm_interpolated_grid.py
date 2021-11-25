@@ -12,7 +12,7 @@ import resqpy.grid as grr
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model.dm_common import __prepare_simple_inheritance, __write_grid
+from resqpy.derived_model._dm_common import __prepare_simple_inheritance, __write_grid
 
 
 def interpolated_grid(epc_file,

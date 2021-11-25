@@ -14,7 +14,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model.dm_common import __write_grid
+from resqpy.derived_model._dm_common import __write_grid
 
 
 def coarsened_grid(epc_file,

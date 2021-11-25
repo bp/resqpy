@@ -11,7 +11,7 @@ import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
-from resqpy.derived_model.dm_common import __pl
+from resqpy.derived_model._dm_common import __pl
 
 
 def add_wells_from_ascii_file(epc_file,

@@ -2,7 +2,7 @@
 
 import resqpy.property as rqp
 
-from resqpy.derived_model.dm_add_one_grid_property_array import add_one_grid_property_array
+from resqpy.derived_model._dm_add_one_grid_property_array import add_one_grid_property_array
 
 
 def add_edges_per_column_property_array(epc_file,

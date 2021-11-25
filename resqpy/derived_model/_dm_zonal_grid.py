@@ -13,8 +13,8 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model.dm_common import __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model.dm_zone_layer_ranges_from_array import zone_layer_ranges_from_array
+from resqpy.derived_model._dm_common import __write_grid, __establish_model_and_source_grid
+from resqpy.derived_model._dm_zone_layer_ranges_from_array import zone_layer_ranges_from_array
 
 
 def zonal_grid(epc_file,
