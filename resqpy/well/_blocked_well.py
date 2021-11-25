@@ -3031,7 +3031,7 @@ class BlockedWell(BaseResqpy):
                                                         ext_uuid):
         """Add the newly created BlockedWell object's root node as a part in the model and
 
-         add reciprocal relationships.
+        add reciprocal relationships.
         """
 
         if add_as_part:
