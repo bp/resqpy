@@ -265,3 +265,33 @@ def test_splined_trajectory(example_model_and_crs):
     assert splined_trajectory is not None
     np.testing.assert_almost_equal(trajectory_from_ascii.measured_depths[0], splined_trajectory.measured_depths[0], 0)
     np.testing.assert_almost_equal(trajectory_from_ascii.measured_depths[-1], splined_trajectory.measured_depths[-1], 0)
+
+def test_dataframe(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    # Create Md Datum object
+    data = dict(
+        location = (0, 0, 0),
+        md_reference = 'mean low water',
+    )
+    datum = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
+    source_dataframe = pd.DataFrame({
+        'MD': [300, 310, 330, 340],
+        'X': [1, 2, 3, 4],
+        'Y': [1, 2, 3, 4],
+        'Z': [305, 315, 340, 345],
+    }).astype(float)
+    deviation_survey_file_path = os.path.join(model.epc_directory, 'deviation_survey.csv')
+    source_dataframe.to_csv(deviation_survey_file_path, index = False)
+    # Create a trajectory from the csv file
+    trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
+                                                   deviation_survey_file = deviation_survey_file_path,
+                                                   md_datum = datum,
+                                                   length_uom = 'm')
+    # --------- Act ----------
+    # Get the dataframe containing the trajectory data
+    dataframe = trajectory_from_ascii.dataframe()
+
+    # -------- Assert ---------
+    pd.testing.assert_frame_equal(source_dataframe, dataframe)
