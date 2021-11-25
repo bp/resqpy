@@ -1,4 +1,4 @@
-"""binary_contact_interpretation.py: RESQML low level BinaryContactInterpretation class."""
+"""_binary_contact_interpretation.py: RESQML low level BinaryContactInterpretation class."""
 
 version = '24th November 2021'
 
@@ -7,12 +7,12 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('binary_contact_interpretation.py version ' + version)
+log.debug('_binary_contact_interpretation.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata.strata_common import valid_contact_relationships, valid_contact_verbs, valid_contact_sides, valid_contact_modes
+from resqpy.strata._strata_common import valid_contact_relationships, valid_contact_verbs, valid_contact_sides, valid_contact_modes
 
 
 class BinaryContactInterpretation:
