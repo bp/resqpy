@@ -33,21 +33,16 @@ def test_MdDatum(example_model_and_crs):
     assert identical == datum2
     assert different != datum2
 
+
 @pytest.mark.parametrize('other_data,expected',
-                         [(dict(location = (0, -99999, 3.14), md_reference = 'mean low water'),
-                           True),
-                          (dict(location = (5, -30000, 5), md_reference = 'kelly bushing'),
-                           False)
-                         ])
+                         [(dict(location = (0, -99999, 3.14), md_reference = 'mean low water'), True),
+                          (dict(location = (5, -30000, 5), md_reference = 'kelly bushing'), False)])
 def test_is_equivalent(example_model_and_crs, other_data, expected):
     # Test that comparison of metadata items returns the expected result
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    data = dict(
-        location = (0, -99999, 3.14),
-        md_reference = 'mean low water'
-    )
+    data = dict(location = (0, -99999, 3.14), md_reference = 'mean low water')
 
     # --------- Act ----------
     datum1 = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)

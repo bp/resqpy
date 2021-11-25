@@ -111,23 +111,23 @@ def test_get_md_datum(example_model_with_well):
 
     # Create a survey
     data = dict(
-        title='Majestic Umlaut ö',
-        originator='Thor, god of sparkles',
-        md_uom='ft',
-        angle_uom='rad',
-        is_final=True,
+        title = 'Majestic Umlaut ö',
+        originator = 'Thor, god of sparkles',
+        md_uom = 'ft',
+        angle_uom = 'rad',
+        is_final = True,
     )
     array_data = dict(
-        measured_depths=np.array([1, 2, 3], dtype=float) + 1000.0,
-        azimuths=np.array([4, 5, 6], dtype=float),
-        inclinations=np.array([7, 8, 9], dtype=float),
-        first_station=np.array([0, -1, 999], dtype=float),
+        measured_depths = np.array([1, 2, 3], dtype = float) + 1000.0,
+        azimuths = np.array([4, 5, 6], dtype = float),
+        inclinations = np.array([7, 8, 9], dtype = float),
+        first_station = np.array([0, -1, 999], dtype = float),
     )
 
     survey = resqpy.well.DeviationSurvey(
-        parent_model=model,
-        represented_interp=well_interp,
-        md_datum=None,
+        parent_model = model,
+        represented_interp = well_interp,
+        md_datum = None,
         **data,
         **array_data,
     )
@@ -135,6 +135,7 @@ def test_get_md_datum(example_model_with_well):
     # ----------- Act ---------
     survey.write_hdf5()
     with pytest.raises(ValueError) as excinfo:
-        survey._DeviationSurvey__get_md_datum_root(md_datum_root=None, md_datum_xyz=None)
+        survey._DeviationSurvey__get_md_datum_root(md_datum_root = None, md_datum_xyz = None)
+
     # -------- Assert ---------
     assert "Must provide a MD Datum for the DeviationSurvey" in str(excinfo.value)
