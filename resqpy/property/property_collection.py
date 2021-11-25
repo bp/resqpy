@@ -3033,90 +3033,23 @@ class PropertyCollection():
 
         if add_min_max:
             # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
-            if const_value is not None:
-                if (discrete and const_value != self.null_value) or (not discrete and not np.isnan(const_value)):
-                    if min_value is None:
-                        min_value = const_value
-                    if max_value is None:
-                        max_value = const_value
-            elif property_array is not None:
-                if discrete:
-                    if min_value is None:
-                        try:
-                            min_value = int(property_array.min())
-                        except Exception:
-                            min_value = None
-                            log.warning('no xml minimum value set for discrete property')
-                    if max_value is None:
-                        try:
-                            max_value = int(property_array.max())
-                        except Exception:
-                            max_value = None
-                            log.warning('no xml maximum value set for discrete property')
-                else:
-                    if min_value is None or max_value is None:
-                        all_nan = np.all(np.isnan(property_array))
-                    if min_value is None and not all_nan:
-                        min_value = np.nanmin(property_array)
-                        if np.isnan(min_value) or min_value is ma.masked:
-                            min_value = None
-                    if max_value is None and not all_nan:
-                        max_value = np.nanmax(property_array)
-                        if np.isnan(max_value) or max_value is ma.masked:
-                            max_value = None
-            if min_value is not None:
-                min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
-                min_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
-                min_node.text = str(min_value)
-            if max_value is not None:
-                max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
-                max_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
-                max_node.text = str(max_value)
+            min_value, max_value = self._get_property_array_min_max_value(property_array, const_value, discrete, min_value, max_value)
 
+            self._create_xml_property_min_max(p_node, min_value, max_value) # TODO: continue here!
+
+        sl_root = None
         if discrete:
-            if string_lookup_uuid is not None:
-                sl_root = self.model.root_for_uuid(string_lookup_uuid)
-                assert sl_root is not None, 'string table lookup is missing whilst importing categorical property'
-                assert rqet.node_type(
-                    sl_root) == 'obj_StringTableLookup', 'referenced uuid is not for string table lookup'
-                self.model.create_ref_node('Lookup',
-                                           self.model.title_for_root(sl_root),
-                                           string_lookup_uuid,
-                                           content_type = 'obj_StringTableLookup',
-                                           root = p_node)
+            sl_root = self._create_xml_lookup_node(p_node, string_lookup_uuid)
+
         else:  # continuous
-            if not uom:
-                uom = guess_uom(property_kind,
-                                min_value,
-                                max_value,
-                                self.support,
-                                facet_type = facet_type,
-                                facet = facet)
-                if not uom:
-                    uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
-                    log.warning(f'uom set to Euc for property {title} of kind {property_kind}')
-            self.model.uom_node(p_node, uom)
+            self._create_xml_uom_node(p_node, uom, property_kind, min_value, max_value, facet_type, facet, title)
 
         if add_as_part:
             self.model.add_part('obj_' + self.d_or_c_text + 'Property', p_uuid, p_node)
             if add_relationships:
-                if support_root is not None:
-                    self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
-                if property_kind_uuid is not None:
-                    pk_node = self.model.root_for_uuid(property_kind_uuid)
-                    if pk_node is not None:
-                        self.model.create_reciprocal_relationship(p_node, 'destinationObject', pk_node, 'sourceObject')
-                if related_time_series_node is not None:
-                    self.model.create_reciprocal_relationship(p_node, 'destinationObject', related_time_series_node,
-                                                              'sourceObject')
-                if discrete and string_lookup_uuid is not None:
-                    self.model.create_reciprocal_relationship(p_node, 'destinationObject', sl_root, 'sourceObject')
-
-                if const_value is None:
-                    ext_node = self.model.root_for_part(
-                        rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False))
-                    self.model.create_reciprocal_relationship(p_node, 'mlToExternalPartProxy', ext_node,
-                                                              'externalPartProxyToMl')
+                self._create_xml_add_relationships(p_node, support_root, property_kind_uuid,
+                                                                       related_time_series_node, sl_root, discrete,
+                                                                       string_lookup_uuid, const_value, ext_uuid)
 
         return p_node
 
@@ -3522,6 +3455,70 @@ class PropertyCollection():
             self.hdf5_type = 'DoubleHdf5Array'
             self.null_value = None
 
+    def _get_property_array_min_max_value(self, property_array, const_value, discrete, min_value, max_value):
+        if const_value is not None:
+            return _get_property_array_min_max_const(const_value, self.null_value, min_value, max_value, discrete)
+        elif property_array is not None:
+            return  _get_property_array_min_max_array(property_array, min_value, max_value, discrete)
+
+    def _create_xml_property_min_max(self, p_node, min_value, max_value):
+        if min_value is not None:
+            min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
+            min_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
+            min_node.text = str(min_value)
+        if max_value is not None:
+            max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
+            max_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
+            max_node.text = str(max_value)
+
+    def _create_xml_lookup_node(self, p_node, string_lookup_uuid):
+        sl_root = None
+        if string_lookup_uuid is not None:
+            sl_root = self.model.root_for_uuid(string_lookup_uuid)
+            assert sl_root is not None, 'string table lookup is missing whilst importing categorical property'
+            assert rqet.node_type(
+                sl_root) == 'obj_StringTableLookup', 'referenced uuid is not for string table lookup'
+            self.model.create_ref_node('Lookup',
+                                       self.model.title_for_root(sl_root),
+                                       string_lookup_uuid,
+                                       content_type='obj_StringTableLookup',
+                                       root=p_node)
+        return sl_root
+
+    def _create_xml_uom_node(self, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title):
+        if not uom:
+            uom = guess_uom(property_kind,
+                            min_value,
+                            max_value,
+                            self.support,
+                            facet_type=facet_type,
+                            facet=facet)
+            if not uom:
+                uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
+                log.warning(f'uom set to Euc for property {title} of kind {property_kind}')
+        self.model.uom_node(p_node, uom)
+
+    def _create_xml_add_relationships(self, p_node, support_root, property_kind_uuid,
+                                       related_time_series_node, sl_root, discrete,
+                                       string_lookup_uuid, const_value, ext_uuid):
+        if support_root is not None:
+            self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
+        if property_kind_uuid is not None:
+            pk_node = self.model.root_for_uuid(property_kind_uuid)
+            if pk_node is not None:
+                self.model.create_reciprocal_relationship(p_node, 'destinationObject', pk_node, 'sourceObject')
+        if related_time_series_node is not None:
+            self.model.create_reciprocal_relationship(p_node, 'destinationObject', related_time_series_node,
+                                                      'sourceObject')
+        if discrete and string_lookup_uuid is not None:
+            self.model.create_reciprocal_relationship(p_node, 'destinationObject', sl_root, 'sourceObject')
+
+        if const_value is None:
+            ext_node = self.model.root_for_part(
+                rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed=False))
+            self.model.create_reciprocal_relationship(p_node, 'mlToExternalPartProxy', ext_node,
+                                                      'externalPartProxyToMl')
+
 
 def _get_indexable_element(indexable_element, support_type):
     if indexable_element is None:
@@ -3550,3 +3547,39 @@ def _create_xml_facet_node(facet_type, facet, p_node):
         facet_value_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Value')
         facet_value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
         facet_value_node.text = facet
+
+def _get_property_array_min_max_const(const_value, null_value, min_value, max_value, discrete):
+    if (discrete and const_value != null_value) or (not discrete and not np.isnan(const_value)):
+        if min_value is None:
+            min_value = const_value
+        if max_value is None:
+            max_value = const_value
+    return min_value, max_value
+
+def _get_property_array_min_max_array(property_array, min_value, max_value, discrete):
+    if discrete:
+        if min_value is None:
+            try:
+                min_value = int(property_array.min())
+            except Exception:
+                min_value = None
+                log.warning('no xml minimum value set for discrete property')
+        if max_value is None:
+            try:
+                max_value = int(property_array.max())
+            except Exception:
+                max_value = None
+                log.warning('no xml maximum value set for discrete property')
+    else:
+        if min_value is None or max_value is None:
+            all_nan = np.all(np.isnan(property_array))
+        if min_value is None and not all_nan:
+            min_value = np.nanmin(property_array)
+            if np.isnan(min_value) or min_value is ma.masked:
+                min_value = None
+        if max_value is None and not all_nan:
+            max_value = np.nanmax(property_array)
+            if np.isnan(max_value) or max_value is ma.masked:
+                max_value = None
+
+    return min_value, max_value
