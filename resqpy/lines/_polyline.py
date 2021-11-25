@@ -261,8 +261,7 @@ class Polyline(_BasePolyline):
         return 0.5 * (self.coordinates[segment_index] + self.coordinates[successor])
 
     def segment_normal(self, segment_index):
-        """For a closed polyline returns a unit vector giving the 2D (xy) direction of an outward facing normal to a
-        segment."""
+        """For a closed polyline return a unit vector giving the 2D (xy) direction of an outward facing normal to a segment."""
 
         successor = self._successor(segment_index)
         segment_vector = self.coordinates[successor, :2] - self.coordinates[segment_index, :2]
@@ -359,7 +358,6 @@ class Polyline(_BasePolyline):
            segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline,
            or None, None, None if no intersection found
         """
-
         seg_count = len(self.coordinates) - 1
         if self.isclosed:
             seg_count += 1

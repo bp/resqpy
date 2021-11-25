@@ -124,8 +124,7 @@ class PropertyCollection():
     """
 
     def __init__(self, support = None, property_set_root = None, realization = None):
-        """Initialise an empty Property Collection; if support is not None, populate with properties for that
-        representation.
+        """Initialise an empty Property Collection, optionally populate properties from a supporting representation.
 
         arguments:
            support (optional): a grid.Grid object or a well.WellboreFrame object which belongs to a resqpy.Model which includes
@@ -201,8 +200,9 @@ class PropertyCollection():
                 self.populate_from_property_set(property_set_root)
 
     def set_support(self, support_uuid = None, support = None, model = None, modify_parts = True):
-        """Sets the supporting object associated with this collection, without loading props, if not done so at
-        initialisation.
+        """Sets the supporting object associated with this collection if not done so at initialisation.
+
+        Does not load properties.
 
         Arguments:
            support_uuid: the uuid of the supporting representation which the properties in this collection are for
@@ -286,8 +286,7 @@ class PropertyCollection():
                         self.dict[part] = tuple(modified)
 
     def supporting_shape(self, indexable_element = None, direction = None):
-        """Returns the shape of the supporting representation with respect to the given indexable element, as a list of
-        ints.
+        """Return the shape of the supporting representation with respect to the given indexable element
 
         arguments:
            indexable_element (string, optional): if None, a hard-coded default depending on the supporting representation class
@@ -607,7 +606,7 @@ class PropertyCollection():
 
         arguments:
            other: another PropertyCollection object with some imported arrays
-           copy_cached_array (boolean, default True): if True, arrays cached with the other
+           copy_cached_arrays (boolean, default True): if True, arrays cached with the other
               collection are copied and cached with this collection
            exclude_inactive (boolean, default False): if True, any item in the other imported list
               which has INACTIVE or ACTIVE as the keyword is excluded from the inheritance
@@ -740,7 +739,6 @@ class PropertyCollection():
         to be inherited.
 
         note:
-
            the grid argument is maintained for backward compatibility; it is treated synonymously with support
            which takes precendence; the categorical boolean argument can be used to filter only Categorical
            (or non-Categorical) properties
@@ -904,8 +902,7 @@ class PropertyCollection():
                                                                      example_part,
                                                                      citation_title_match_starts_with = False,
                                                                      ignore_clashes = False):
-        """Adds the example part from other collection and any other parts for same property with different
-        realizations.
+        """Add the example part from other collection and any other parts for same property with different realizations.
 
         arguments:
            other: another PropertyCollection object related to the same support as this collection, from which to inherit
@@ -1734,8 +1731,7 @@ class PropertyCollection():
         return self.unique_element_list(15, sort_list = sort_list)
 
     def string_lookup_uuid_for_part(self, part):
-        """If the property has an associated string lookup (is categorical), returns the uuid for the string table
-        lookup.
+        """If the property has an associated string lookup (is categorical), return the uuid.
 
         arguments:
            part (string): the part name for which the string lookup uuid is required
@@ -1803,9 +1799,10 @@ class PropertyCollection():
         self.dict[part] = tuple(property_part)
 
     def establish_time_set_kind(self):
-        """Re-evaulates the time set kind attribute based on all properties having same time index in the same time
-        series."""
-
+        """Re-evaulate the time set kind attribute.
+        
+        Based on all properties having same time index in the same time series.
+        """
         self.time_set_kind_attr = 'single time'
         #  note: other option of 'equivalent times' not catered for in this code
         common_time_index = None
@@ -1832,17 +1829,19 @@ class PropertyCollection():
         return self.time_set_kind_attr
 
     def time_set_kind(self):
-        """Returns the time set kind attribute based on all properties having same time index in the same time
-        series."""
-
+        """Returns the time set kind attribute.
+        
+        Based on all properties having same time index in the same time series.
+        """
         if self.time_set_kind_attr is None:
             self.establish_time_set_kind()
         return self.time_set_kind_attr
 
     def establish_has_single_property_kind(self):
-        """Re-evaluates the has single property kind attribute depending on whether all properties are of the same
-        kind."""
-
+        """Re-evaluates the has single property kind attribute
+        
+        Depends on whether all properties are of the same kind.
+        """
         self.has_single_property_kind_flag = True
         common_property_kind = None
         for part in self.parts():
@@ -1855,15 +1854,17 @@ class PropertyCollection():
         return self.has_single_property_kind_flag
 
     def has_single_property_kind(self):
-        """Returns the has single property kind flag depending on whether all properties are of the same kind."""
+        """Return the has single property kind flag depending on whether all properties are of the same kind."""
 
         if self.has_single_property_kind_flag is None:
             self.establish_has_single_property_kind()
         return self.has_single_property_kind_flag
 
     def establish_has_single_indexable_element(self):
-        """Re-evaluates the has single indexable element attribute depending on whether all properties have the same."""
-
+        """Re-evaluate the has single indexable element attribute.
+        
+        Depends on whether all properties have the same.
+        """
         self.has_single_indexable_element_flag = True
         common_ie = None
         for part in self.parts():
@@ -1883,9 +1884,10 @@ class PropertyCollection():
         return self.has_single_indexable_element_flag
 
     def establish_has_multiple_realizations(self):
-        """Re-evaluates the has multiple realizations attribute based on whether properties belong to more than one
-        realization."""
-
+        """Re-evaluates the has multiple realizations attribute.
+        
+        Based on whether properties belong to more than one realization.
+        """
         self.has_multiple_realizations_flag = False
         common_realization = None
         for part in self.parts():
@@ -1914,8 +1916,7 @@ class PropertyCollection():
         return self.has_multiple_realizations_flag
 
     def establish_has_single_uom(self):
-        """Re-evaluates the has single uom attribute depending on whether all properties have the same units of
-        measure."""
+        """Re-evaluates the has single uom attribute depending on whether all properties have the same units of measure."""
 
         self.has_single_uom_flag = True
         common_uom = None
@@ -1962,8 +1963,7 @@ class PropertyCollection():
         self.has_multiple_realizations_flag = (realization > 1)
 
     def masked_array(self, simple_array, exclude_inactive = True, exclude_value = None, points = False):
-        """Returns a masked version of simple_array, using inactive mask associated with support for this property
-        collection.
+        """Returns a masked version of simple_array, using inactive mask associated with support for this property collection.
 
         arguments:
            simple_array (numpy array): an unmasked numpy array with the same shape as property arrays for the support
@@ -2467,8 +2467,7 @@ class PropertyCollection():
         return resqpy_a
 
     def discombobulated_face_array(self, resqpy_a):
-        """Returns a RESQML format copy of logical face property array a, re-ordered and reshaped regarding the six
-        facial directions.
+        """Return logical face property array a, re-ordered and reshaped regarding the six facial directions.
 
         argument:
            resqpy_a (numpy array of shape (..., 3, 2)): the penultimate array axis represents K,J,I and the final axis is -/+ face
@@ -2517,8 +2516,7 @@ class PropertyCollection():
                               discrete_cycle = None,
                               trust_min_max = False,
                               fix_zero_at = None):
-        """Returns a triplet of: a numpy float array containing the data normalized between 0.0 and 1.0, the min value,
-        the max value.
+        """Return data normalised to between 0 and 1, along with min and max value.
 
         arguments:
            part (string): the part name for which the normalized array reference is required
@@ -2817,8 +2815,9 @@ class PropertyCollection():
                                                             find_local_property_kinds = True,
                                                             expand_const_arrays = False,
                                                             extra_metadata = {}):
-        """Add imported or generated grid property arrays as parts in parent model, creating xml; hdf5 should already
-        have been written.
+        """Add imported or generated grid property arrays as parts in parent model, creating xml.
+        
+        hdf5 should already have been written.
 
         arguments:
            ext_uuid: uuid for the hdf5 external part, which must be known to the model's hdf5 dictionary
@@ -4117,8 +4116,9 @@ class GridPropertyCollection(PropertyCollection):
                                                                            realization = None,
                                                                            copy_all_realizations = False,
                                                                            uncache_other_arrays = True):
-        """Extends this collection's imported list with properties from other collection, optionally extracting for a
-        box.
+        """Extend this collection's imported list with properties from other collection.
+        
+        Optionally extract for a box.
 
         arguments:
            other: another GridPropertyCollection object which might relate to a different grid object
@@ -4468,8 +4468,9 @@ class GridPropertyCollection(PropertyCollection):
                                        facet = None,
                                        realization = None,
                                        use_binary = True):
-        """Reads a property array from an ascii (or pure binary) file, caches and adds to imported list (but not
-        collection dict).
+        """Reads a property array from an ascii (or pure binary) file, caches and adds to imported list.
+        
+        Does not add to collection dict.
 
         arguments:
            file_name (string): the name of the file to read the array data from; should contain data for one array only, without
@@ -4594,8 +4595,9 @@ class GridPropertyCollection(PropertyCollection):
                                                time_index = None,
                                                uom = None,
                                                realization = None):
-        """Reads a vdb recurrent property array for one timestep, caches and adds to imported list (but not collection
-        dict).
+        """Reads a vdb recurrent property array for one timestep, caches and adds to imported list.
+        
+        Does not add to collection dict.
 
         arguments:
            vdbase: an object of class vdb.VDB, already initialised with the path of the vdb
@@ -5552,8 +5554,10 @@ class PropertyKind(BaseResqpy):
 
 
 class WellIntervalProperty:
-    """Thin wrapper class around interval properties for a Wellbore Frame or Blocked Wellbore (ie interval or cell well
-    logss)."""
+    """Thin wrapper class around interval properties for a Wellbore Frame or Blocked Wellbore.
+    
+    ie, interval or cell well logs.
+    """
 
     def __init__(self, collection, part):
         """Create an interval log or blocked well log from a part name."""
@@ -5575,8 +5579,7 @@ class WellIntervalProperty:
 
 
 class WellIntervalPropertyCollection(PropertyCollection):
-    """Class for RESQML property collection for a WellboreFrame for interval or blocked well logs, inheriting from
-    PropertyCollection."""
+    """Class for RESQML property collection for a WellboreFrame for interval or blocked well logs"""
 
     def __init__(self, frame = None, property_set_root = None, realization = None):
         """Creates a new property collection related to interval or blocked well logs and a wellbore frame."""

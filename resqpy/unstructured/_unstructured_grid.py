@@ -757,8 +757,9 @@ class UnstructuredGrid(BaseResqpy):
         return np.mean(self.cell_face_centre_points(cell), axis = 0)
 
     def centre_point(self, cell = None, cache_centre_array = False):
-        """Returns centre point of a cell or array of centre points of all cells; optionally cache centre points for all
-        cells.
+        """Returns centre point of a cell or array of centre points of all cells.
+        
+        Optionally cache centre points for all cells.
 
         arguments:
            cell (optional): if present, the cell number of the individual cell for which the
