@@ -66,7 +66,7 @@ class WellboreMarkerFrame(BaseResqpy):
         self.node_mds = None  # node_count measured depths (in same units and datum as trajectory) of markers
         self.wellbore_marker_list = [
         ]  # list of markers, each: (marker UUID, geologic boundary, marker citation title, interp. object)
-        if self.trajectory is not None:
+        if self.trajectory is not None: # TODO: should this be changed to is None?
             self.trajectory = trajectory
 
         super().__init__(model = parent_model,

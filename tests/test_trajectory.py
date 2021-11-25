@@ -122,11 +122,19 @@ def test_load_from_ascii_file(example_model_and_crs):
     # --------- Arrange ----------
     model, crs = example_model_and_crs
     well_names = [None, 'Coconut']
+    elevation = 100
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                    crs_uuid = crs.uuid,
+                    location = (0, 0, -elevation),
+                    md_reference = 'kelly bushing')
+    mds =  np.array([300, 310, 330, 340])
+    zs = mds - elevation
     source_dataframe = pd.DataFrame({
-        'MD': [300, 310, 330, 340],
+        'MD': mds,
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
-        'Z': [305, 315, 340, 345],
+        'Z': zs,
         'WELL': ['Coconut', 'Coconut', 'Mango', 'Mango']
     })
     deviation_survey_file_path = os.path.join(model.epc_directory, 'deviation_survey.csv')
@@ -139,7 +147,8 @@ def test_load_from_ascii_file(example_model_and_crs):
             with pytest.raises(Exception) as excinfo:
                 trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
                                                                deviation_survey_file = deviation_survey_file_path,
-                                                               length_uom = 'm')
+                                                               length_uom = 'm',
+                                                               md_datum = datum)
 
             # -------- Assert ---------
             assert "attempt to set trajectory for unidentified well from ascii file holding data for multiple wells" in str(
@@ -150,148 +159,149 @@ def test_load_from_ascii_file(example_model_and_crs):
             trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
                                                            deviation_survey_file = deviation_survey_file_path,
                                                            well_name = well_name,
-                                                           length_uom = 'm')
+                                                           length_uom = 'm',
+                                                           md_datum = datum)
             # -------- Assert ---------
             assert trajectory_from_ascii is not None
 
 
-def test_set_tangents(example_model_with_well):
-
+def test_set_tangents(example_model_and_crs):
     # --------- Arrange ----------
-    # Create a Deviation Survey object in memory
-    # Load example model from a fixture
-    model, well_interp, datum, _ = example_model_with_well
+    model, crs = example_model_and_crs
+    elevation = 100
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds =  np.array([300, 310, 330, 340])
+    zs = mds - elevation
+    well_name = 'Coconut'
+    source_dataframe = pd.DataFrame({
+        'MD': mds,
+        'X': [1, 2, 3, 4],
+        'Y': [1, 2, 3, 4],
+        'Z': zs,
+        'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut']
+    })
 
-    # Create a deviation survey
-    data = dict(
-        title = 'Majestic Umlaut ö',
-        originator = 'Thor, god of sparkles',
-        md_uom = 'ft',
-        angle_uom = 'rad',
-        is_final = True,
-    )
-    array_data = dict(
-        measured_depths = np.array([1, 2, 3], dtype = float) + 1000.0,
-        azimuths = np.array([4, 5, 6], dtype = float),
-        inclinations = np.array([7, 8, 9], dtype = float),
-        first_station = np.array([0, -1, 999], dtype = float),
-    )
-
-    survey = resqpy.well.DeviationSurvey(
-        parent_model = model,
-        represented_interp = well_interp,
-        md_datum = datum,
-        **data,
-        **array_data,
-    )
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        data_frame = source_dataframe,
+                                        well_name = well_name,
+                                        md_datum = datum,
+                                        length_uom = 'm')
 
     # --------- Act ----------
-    # Create a trajectory from the deviation survey
-    trajectory_from_deviation_survey = resqpy.well.Trajectory(parent_model = model, deviation_survey = survey)
     # Calculate tangent vectors based on control points
-    trajectory_from_deviation_survey.set_tangents()
+    trajectory.set_tangents()
 
     # --------- Assert ----------
-    assert trajectory_from_deviation_survey.tangent_vectors is not None
-    assert trajectory_from_deviation_survey.tangent_vectors.shape == (trajectory_from_deviation_survey.knot_count, 3)
+    assert trajectory.tangent_vectors is not None
+    assert trajectory.tangent_vectors.shape == (trajectory.knot_count, 3)
 
 
 def test_xyz_for_md(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    # Create Md Datum object
-    data = dict(
-        location = (0, 0, 0),
-        md_reference = 'mean low water',
-    )
-    datum = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
+    elevation = 100
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                    crs_uuid = crs.uuid,
+                    location = (0, 0, -elevation),
+                    md_reference = 'kelly bushing')
+    mds =  np.array([300, 310, 330, 340])
+    zs = mds - elevation
     well_name = 'Coconut'
     source_dataframe = pd.DataFrame({
-        'MD': [300, 310, 330, 340],
+        'MD': mds,
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
-        'Z': [305, 315, 340, 345],
+        'Z': zs,
         'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut']
     })
-    deviation_survey_file_path = os.path.join(model.epc_directory, 'deviation_survey.csv')
-    source_dataframe.to_csv(deviation_survey_file_path, index = False)
-    # Create a trajectory from the csv file
-    trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
-                                                   deviation_survey_file = deviation_survey_file_path,
+
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                                   data_frame = source_dataframe,
                                                    well_name = well_name,
                                                    md_datum = datum,
                                                    length_uom = 'm')
     # --------- Act ----------
     # # Get the xyz triplet for a given measured depth
-    x, y, z = trajectory_from_ascii.xyz_for_md(md = 305)
+    x, y, z = trajectory.xyz_for_md(md = 305)
 
     # # -------- Assert ---------
     assert x == y == 1.5
-    assert z == 310
+    assert z == 205
 
 
 def test_splined_trajectory(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    # Create Md Datum object
-    data = dict(
-        location = (0, 0, 0),
-        md_reference = 'mean low water',
-    )
-    datum = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
+    elevation = 100
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                    crs_uuid = crs.uuid,
+                    location = (0, 0, -elevation),
+                    md_reference = 'kelly bushing')
+    mds =  np.array([300, 310, 330, 340])
+    zs = mds - elevation
     well_name = 'Coconut'
     source_dataframe = pd.DataFrame({
-        'MD': [300, 310, 330, 340],
+        'MD': mds,
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
-        'Z': [305, 315, 340, 345],
+        'Z': zs,
         'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut']
     })
-    deviation_survey_file_path = os.path.join(model.epc_directory, 'deviation_survey.csv')
-    source_dataframe.to_csv(deviation_survey_file_path, index = False)
-    # Create a trajectory from the csv file
-    trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
-                                                   deviation_survey_file = deviation_survey_file_path,
-                                                   well_name = well_name,
-                                                   md_datum = datum,
-                                                   length_uom = 'm')
+
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        data_frame = source_dataframe,
+                                        well_name = well_name,
+                                        md_datum = datum,
+                                        length_uom = 'm')
     # --------- Act ----------
     # Get splined trajectory
-    splined_trajectory = trajectory_from_ascii.splined_trajectory(well_name = 'Coconut')
+    splined_trajectory = trajectory.splined_trajectory(well_name = 'Coconut')
 
     # -------- Assert ---------
     assert splined_trajectory is not None
-    np.testing.assert_almost_equal(trajectory_from_ascii.measured_depths[0], splined_trajectory.measured_depths[0], 0)
-    np.testing.assert_almost_equal(trajectory_from_ascii.measured_depths[-1], splined_trajectory.measured_depths[-1], 0)
+    np.testing.assert_almost_equal(trajectory.measured_depths[0], splined_trajectory.measured_depths[0], 0)
+    np.testing.assert_almost_equal(trajectory.measured_depths[-1], splined_trajectory.measured_depths[-1], 0)
+
 
 def test_dataframe(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    # Create Md Datum object
-    data = dict(
-        location = (0, 0, 0),
-        md_reference = 'mean low water',
-    )
-    datum = resqpy.well.MdDatum(parent_model = model, crs_uuid = crs.uuid, **data)
+    elevation = 100
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                    crs_uuid = crs.uuid,
+                    location = (0, 0, -elevation),
+                    md_reference = 'kelly bushing')
+    mds =  np.array([300, 310, 330, 340])
+    zs = mds - elevation
     source_dataframe = pd.DataFrame({
-        'MD': [300, 310, 330, 340],
+        'MD': mds,
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
-        'Z': [305, 315, 340, 345],
-    }).astype(float)
-    deviation_survey_file_path = os.path.join(model.epc_directory, 'deviation_survey.csv')
-    source_dataframe.to_csv(deviation_survey_file_path, index = False)
-    # Create a trajectory from the csv file
-    trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
-                                                   deviation_survey_file = deviation_survey_file_path,
-                                                   md_datum = datum,
-                                                   length_uom = 'm')
+        'Z': zs,
+    })
+
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        data_frame = source_dataframe,
+                                        md_datum = datum,
+                                        length_uom = 'm')
+
     # --------- Act ----------
     # Get the dataframe containing the trajectory data
-    dataframe = trajectory_from_ascii.dataframe()
+    returned_dataframe = trajectory.dataframe()
 
     # -------- Assert ---------
-    pd.testing.assert_frame_equal(source_dataframe, dataframe)
+    pd.testing.assert_frame_equal(source_dataframe.astype(float), returned_dataframe)
