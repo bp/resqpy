@@ -156,6 +156,7 @@ class WellboreFrame(BaseResqpy):
 
     def create_feature_and_interpretation(self):
         """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does
+
         not already exist.
 
         Uses the wellboreframe citation title as the well name
@@ -242,9 +243,7 @@ class WellboreFrame(BaseResqpy):
                                                          add_as_part = True,
                                                          add_relationships = True,
                                                          originator = None):
-        """ Return root node for WellboreFeature and WellboreInterpretation objects
-
-        """
+        """ Return root node for WellboreFeature and WellboreInterpretation objects"""
 
         if self.feature_and_interpretation_to_be_written:
             if self.wellbore_interpretation is None:
