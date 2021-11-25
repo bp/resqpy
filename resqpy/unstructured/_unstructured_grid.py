@@ -814,7 +814,7 @@ class UnstructuredGrid(BaseResqpy):
            this is a computationally expensive method
         """
 
-        from resqpy.unstructured.tetra_grid import TetraGrid
+        from resqpy.unstructured._tetra_grid import TetraGrid
 
         tetra = TetraGrid.from_unstructured_cell(self, cell, set_handedness = False)
         assert tetra is not None
