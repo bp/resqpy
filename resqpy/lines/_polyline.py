@@ -136,6 +136,8 @@ class Polyline(_BasePolyline):
 
     @property
     def rep_int_uuid(self):
+        """Returns the uuid of the represented interpretation."""
+
         # TODO: Track uuid only, not root
         return rqet.uuid_for_part_root(self.rep_int_root)
 
@@ -351,8 +353,12 @@ class Polyline(_BasePolyline):
         return centre
 
     def first_line_intersection(self, x1, y1, x2, y2, half_segment = False):
-        """Returns segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline, or None,
-        None, None."""
+        """Finds the first intersection of (half) bounded line x,y 1 to 2 with polyline.
+
+        returns:
+           segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline,
+           or None, None, None if no intersection found
+        """
 
         seg_count = len(self.coordinates) - 1
         if self.isclosed:

@@ -99,6 +99,8 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
 
     @property
     def stratigraphic_unit_feature(self):
+        """Returns the interpreted geologic unit feature."""
+
         return self.geologic_unit_feature
 
     def _load_from_xml(self):
