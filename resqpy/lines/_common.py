@@ -1,11 +1,11 @@
-"""polylines.py: Resqml polyline common functions module."""
+"""_common.py: Resqml polyline common functions module."""
 
 version = '23rd November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('polyline common.py version ' + version)
+log.debug('polyline _common.py version ' + version)
 
 import math as maths
 import numpy as np

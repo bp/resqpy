@@ -1,17 +1,17 @@
-"""polyline.py: Resqml polyline module."""
+"""_polyline.py: Resqml polyline module."""
 
 version = '23rd November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('polylines.py version ' + version)
+log.debug('_polyline.py version ' + version)
 
 import math as maths
 import numpy as np
 
 import resqpy.olio.intersection as meet
-from resqpy.lines.common import _BasePolyline, load_hdf5_array, tangents, spline
+from resqpy.lines._common import _BasePolyline, load_hdf5_array, tangents, spline
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
