@@ -437,10 +437,9 @@ class GridConnectionSet(BaseResqpy):
             tbf_parts_list = self.model.parts_list_of_type('TectonicBoundaryFeature')
 
         for name in name_list:
-            success, const_mult = self._set_pairs_from_faces_df_for_named_fault(feature_index, faces, name, fault_tmult_dict, fi_dict,
-                                                                                create_organizing_objects_where_needed, tbf_parts_list,
-                                                                                fi_list, cell_pair_list, face_pair_list, const_mult,
-                                                                                mult_list, grid, create_mult_prop)
+            success, const_mult = self._set_pairs_from_faces_df_for_named_fault(
+                feature_index, faces, name, fault_tmult_dict, fi_dict, create_organizing_objects_where_needed,
+                tbf_parts_list, fi_list, cell_pair_list, face_pair_list, const_mult, mult_list, grid, create_mult_prop)
             if success:
                 feature_index += 1
 
@@ -1709,9 +1708,9 @@ class GridConnectionSet(BaseResqpy):
             const_value = const_value)
 
     def _set_pairs_from_faces_df_for_named_fault(self, feature_index, faces, name, fault_tmult_dict, fi_dict,
-                                                 create_organizing_objects_where_needed, tbf_parts_list,
-                                                 fi_list, cell_pair_list, face_pair_list, const_mult,
-                                                 mult_list, grid, create_mult_prop):
+                                                 create_organizing_objects_where_needed, tbf_parts_list, fi_list,
+                                                 cell_pair_list, face_pair_list, const_mult, mult_list, grid,
+                                                 create_mult_prop):
         fault_dict_multiplier = 1.0
         if fault_tmult_dict is not None:
             if name in fault_tmult_dict:
@@ -1731,9 +1730,7 @@ class GridConnectionSet(BaseResqpy):
             if tbf is None:
                 tbf = rqo.TectonicBoundaryFeature(self.model, feature_name = name, kind = 'fault')
                 tbf.create_xml()
-            fi = rqo.FaultInterpretation(self.model,
-                                         title = name,
-                                         tectonic_boundary_feature = tbf,
+            fi = rqo.FaultInterpretation(self.model, title = name, tectonic_boundary_feature = tbf,
                                          is_normal = True)  # todo: set is_normal based on fault geometry in grid?
             fi_root = fi.create_xml(tectonic_boundary_feature_root = tbf.root)
             fi_uuid = rqet.uuid_for_part_root(fi_root)
