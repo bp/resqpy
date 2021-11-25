@@ -1,6 +1,4 @@
-"""blocked_well.py: resqpy well module providing blocked well class.
-
-"""
+"""_blocked_well.py: resqpy well module providing blocked well class"""
 
 version = '18th November 2021'
 
@@ -10,7 +8,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('blocked_well.py version ' + version)
+log.debug('_blocked_well.py version ' + version)
 
 import math as maths
 
@@ -33,8 +31,8 @@ from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .well_utils import _pl, find_entry_and_exit, load_hdf5_array
-from .trajectory import Trajectory
-from .md_datum import MdDatum
+from ._trajectory import Trajectory
+from ._md_datum import MdDatum
 
 
 class BlockedWell(BaseResqpy):

@@ -1,6 +1,4 @@
-"""well_utils.py: functions used by the classes in resqpy.well.
-
-"""
+"""well_utils.py: functions used by the classes in resqpy.well"""
 
 version = '10th November 2021'
 

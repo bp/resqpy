@@ -1,6 +1,4 @@
-"""trajectory.py: resqpy well module providing trajectory class.
-
-"""
+"""_trajectory.py: resqpy well module providing trajectory class"""
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
@@ -12,7 +10,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('trajectory.py version ' + version)
+log.debug('_trajectory.py version ' + version)
 
 import math as maths
 from functools import partial
@@ -31,10 +29,10 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .md_datum import MdDatum
-from .wellbore_frame import WellboreFrame
+from ._md_datum import MdDatum
+from ._wellbore_frame import WellboreFrame
 from .well_utils import load_hdf5_array
-from .deviation_survey import DeviationSurvey
+from ._deviation_survey import DeviationSurvey
 
 
 class Trajectory(BaseResqpy):

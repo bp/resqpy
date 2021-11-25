@@ -1,7 +1,4 @@
-"""well_object_funcs.py: resqpy well module for functions that use MdDatum, Trajectory, DeviationSurvey,
- WellboreFrame, WellboreMarkerFrame and BlockedWell classes.
-
-"""
+"""well_object_funcs.py: resqpy well module for functions that impact well objects"""
 
 version = '10th November 2021'
 
@@ -26,12 +23,12 @@ import resqpy.property as rqp
 import resqpy.weights_and_measures as bwam
 import resqpy.olio.wellspec_keywords as wsk
 
-from .md_datum import MdDatum
-from .wellbore_frame import WellboreFrame
-from .wellbore_marker_frame import WellboreMarkerFrame
-from .blocked_well import BlockedWell
-from .trajectory import Trajectory
-from .deviation_survey import DeviationSurvey
+from ._md_datum import MdDatum
+from ._wellbore_frame import WellboreFrame
+from ._wellbore_marker_frame import WellboreMarkerFrame
+from ._blocked_well import BlockedWell
+from ._trajectory import Trajectory
+from ._deviation_survey import DeviationSurvey
 
 
 def add_wells_from_ascii_file(model,
