@@ -23,7 +23,7 @@ import resqpy.olio.trademark as tm
 def write_faults_nexus(filename, df, grid_name = 'ROOT'):
     """Creates a Nexus include file holding MULT keywords with FNAME and face data, from pandas dataframe."""
 
-    def write_header_lines(fp, T, grid_name, fault_name):
+    def _write_header_lines(fp, T, grid_name, fault_name):
         fp.write('\nMULT\t' + T + '\tALL\tPLUS\tMULT\n')
         fp.write('\tGRID\t' + grid_name + '\n')
         fp.write('\tFNAME\t' + fault_name + '\n')
@@ -31,7 +31,7 @@ def write_faults_nexus(filename, df, grid_name = 'ROOT'):
             log.warning('exported fault name longer than Nexus limit of 256 characters: ' + fault_name)
             tm.log_nexus_tm('warning')
 
-    def write_rows(fp, df):
+    def _write_rows(fp, df):
         for row in range(len(df)):
             fp.write('\t{0:1d}\t{1:1d}\t{2:1d}\t{3:1d}\t{4:1d}\t{5:1d}\t1.0\n'.format(
                 df.iloc[row, 1], df.iloc[row, 2], df.iloc[row, 3], df.iloc[row, 4], df.iloc[row, 5], df.iloc[row, 6]))
@@ -47,8 +47,8 @@ def write_faults_nexus(filename, df, grid_name = 'ROOT'):
             fdfi = fdf[fdf.face == 'I+']
             fdfj = fdf[fdf.face == 'J+']
             if len(fdfi):
-                write_header_lines(fp, 'TX', grid_name, fault_name)
-                write_rows(fp, fdfi)
+                _write_header_lines(fp, 'TX', grid_name, fault_name)
+                _write_rows(fp, fdfi)
             if len(fdfj):
-                write_header_lines(fp, 'TY', grid_name, fault_name)
-                write_rows(fp, fdfj)
+                _write_header_lines(fp, 'TY', grid_name, fault_name)
+                _write_rows(fp, fdfj)

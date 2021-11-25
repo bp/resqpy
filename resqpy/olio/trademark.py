@@ -12,6 +12,13 @@ nexus_tm_level = None
 
 
 def log_nexus_tm(level = lg.INFO):
+    """Produces a Nexus trademark log message once at the given severity.
+
+    note:
+       this function should be called after referring to Nexus in another log message, passing the
+       severity of that other message
+    """
+
     global nexus_tm_level
     if isinstance(level, str):
         level = lg.__dict__[level.upper()]
