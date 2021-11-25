@@ -403,9 +403,10 @@ def trim_box_by_box_returning_new_mask(box_to_be_trimmed, trim_box, mask_kji0):
 
 
 def trim_box_to_mask_returning_new_mask(bounding_box_kji0, mask_kji0):
-    """Reduces the coverage of bounding box to the minimum needed to contain True elements of mask; returns trimmed
-    mask."""
-
+    """Reduce the coverage of bounding box to the minimum needed to contain True elements of mask.
+    
+    Returns trimmed mask.
+    """
     # NB: bounding box is modified by this function
     assert bounding_box_kji0.ndim == 2 and bounding_box_kji0.shape == (2, 3) and bounding_box_kji0.dtype == 'int'
     assert (mask_kji0.ndim == 3 and

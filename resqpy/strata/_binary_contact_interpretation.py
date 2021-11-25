@@ -111,8 +111,7 @@ class BinaryContactInterpretation:
            f'missing or invalid contact verb {self.verb} in xml for binary contact interpretation'
 
     def create_xml(self, parent_node = None):
-        """Generates xml sub-tree for this contact interpretation, for inclusion as element of high level
-        interpretation.
+        """Generates xml sub-tree for this contact interpretation, for inclusion as element of high level interpretation.
 
         arguments:
            parent_node (lxml.etree._Element, optional): if present, the created sub-tree is added as a child to this node

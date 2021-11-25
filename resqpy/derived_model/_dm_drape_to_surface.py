@@ -31,7 +31,9 @@ def drape_to_surface(epc_file,
                      inherit_all_realizations = False,
                      new_grid_title = None,
                      new_epc_file = None):
-    """Extends a resqml model with a new grid where the reference layer boundary of the source grid has been re-draped
+    """Return a new grid with geometry draped to a surface.
+    
+    Extend a resqml model with a new grid where the reference layer boundary of the source grid has been re-draped
     to a surface.
 
     arguments:

@@ -1,6 +1,4 @@
-"""
-resqpy.organize: Package for RESQML organizational objects.
-"""
+""" Package for RESQML organizational objects """
 
 __all__ = [
     'OrganizationFeature',

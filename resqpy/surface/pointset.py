@@ -141,7 +141,8 @@ class PointSet(BaseSurface):
         # note: load of patches handled elsewhere
 
     def from_charisma(self, charisma_file):
-        """Instantiates a pointset using points from an input charisma file
+        """Instantiate a pointset using points from an input charisma file
+
         arguments:
             charisma_file: a charisma 3d interpretation file
         """
@@ -158,7 +159,8 @@ class PointSet(BaseSurface):
             self.title = charisma_file
 
     def from_irap(self, irap_file):
-        """Instantiates a pointset using points from an input irap file
+        """Instantiate a pointset using points from an input irap file.
+
         arguments:
             irap_file: a IRAP classic points format file
         """
@@ -183,7 +185,8 @@ class PointSet(BaseSurface):
               the (closed, convex) polyline
            random_point_count (int, optional): if present then the number of random
               points to generate within the (closed) polyline in the xy plane, with z set to 0.0
-            """
+
+        """
         if random_point_count:
             assert polyline.is_convex()
             points = np.zeros((random_point_count, 3))
@@ -333,20 +336,20 @@ class PointSet(BaseSurface):
                    originator = None):
         """Creates a point set representation xml node from this point set object and optionally adds as part of model.
 
-           arguments:
-              ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the points array(s)
-              add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-                 in the model
-              add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-                 new point set part to the crs part (and optional interpretation part)
-              root (optional, usually None): if not None, the newly created point set representation node is appended
-                 as a child to this node
-              title (string): used as the citation Title text; should be meaningful to a human
-              originator (string, optional): the name of the human being who created the point set representation part;
-                 default is to use the login name
+        arguments:
+            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the points array(s)
+            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+                in the model
+            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+                new point set part to the crs part (and optional interpretation part)
+            root (optional, usually None): if not None, the newly created point set representation node is appended
+                as a child to this node
+            title (string): used as the citation Title text; should be meaningful to a human
+            originator (string, optional): the name of the human being who created the point set representation part;
+                default is to use the login name
 
-           returns:
-              the newly created point set representation xml node
+        returns:
+            the newly created point set representation xml node
 
         :meta common:
         """

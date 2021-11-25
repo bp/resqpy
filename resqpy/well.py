@@ -687,8 +687,9 @@ class Trajectory(BaseResqpy):
             hdf5_source_model = None,
             originator = None,
             extra_metadata = None):
-        """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or
-        ascii file.
+        """Creates a new trajectory object.
+        
+        Optionally loads it from xml, deviation survey, pandas dataframe, or ascii file.
 
         arguments:
            parent_model (model.Model object): the model which the new trajectory belongs to
@@ -1152,8 +1153,9 @@ class Trajectory(BaseResqpy):
         df.to_csv(trajectory_file, sep = sep, index = False, mode = mode)
 
     def xyz_for_md(self, md):
-        """Returns an xyz triplet corresponding to the given measured depth; uses simple linear interpolation between
-        knots.
+        """Returns an xyz triplet corresponding to the given measured depth.
+        
+        Uses simple linear interpolation between knots.
 
         args:
            md (float): measured depth for which xyz location is required; units must be those of self.md_uom
@@ -1281,8 +1283,7 @@ class Trajectory(BaseResqpy):
         return self.measured_depths
 
     def create_feature_and_interpretation(self):
-        """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does
-        not already exist.
+        """Instantiate new empty WellboreFeature and WellboreInterpretation objects.
 
         Uses the trajectory citation title as the well name
         """
@@ -1311,11 +1312,11 @@ class Trajectory(BaseResqpy):
                    originator = None):
         """Create a wellbore trajectory representation node from a Trajectory object, optionally add as part.
 
-           notes:
-              measured depth datum xml node must be in place before calling this function;
-              branching well structures (multi-laterals) are supported by the resqml standard but not yet by
-              this code;
-              optional witsml trajectory reference not yet supported here
+        notes:
+            measured depth datum xml node must be in place before calling this function;
+            branching well structures (multi-laterals) are supported by the resqml standard but not yet by
+            this code;
+            optional witsml trajectory reference not yet supported here
 
         :meta common:
         """
@@ -1460,8 +1461,9 @@ class Trajectory(BaseResqpy):
         return wbt_node
 
     def write_hdf5(self, file_name = None, mode = 'a'):
-        """Create or append to an hdf5 file, writing datasets for the measured depths, control points and tangent
-        vectors.
+        """Create or append to an hdf5 file.
+        
+        Writes datasets for the measured depths, control points and tangent vectors.
 
         :meta common:
         """
@@ -1617,10 +1619,10 @@ class WellboreFrame(BaseResqpy):
         return self.trajectory.crs_root
 
     def create_feature_and_interpretation(self):
-        """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does
-        not already exist.
+        """Instantiate new empty WellboreFeature and WellboreInterpretation objects.
 
-        Uses the wellboreframe citation title as the well name
+        Does nothing if WellboreInterpretation already exists.
+        Uses the wellboreframe citation title as the well name.
         """
         if self.wellbore_interpretation is not None:
             log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
@@ -2084,11 +2086,12 @@ class BlockedWell(BaseResqpy):
         return well_box
 
     def face_pair_array(self):
-        """Returns numpy int array of shape (N, 2, 2) being pairs of face (axis, polarity) pairs, to go with
-        cell_kji0_array().
+        """Return pairs of face (axis, polarity) pairs, to go with cell_kji0_array.
+
+        Returns:
+            int array of shape (N, 2, 2)
 
         note:
-
            each of the N rows in the returned array is of the form:
 
               ((entry_face_axis, entry_face_polarity), (exit_face_axis, exit_face_polarity))
@@ -2156,9 +2159,10 @@ class BlockedWell(BaseResqpy):
         assert bw is self
 
     def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True):
-        """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md
-        datum."""
-
+        """Populates empty blocked well for a 'vertical' well in given column.
+        
+        Creates simulation trajectory and md datum.
+        """
         if well_name:
             self.well_name = well_name
         col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']  # NB: L is Layer, ie. k
@@ -3350,8 +3354,9 @@ class BlockedWell(BaseResqpy):
                   length_uom = None,
                   use_face_centres = False,
                   preferential_perforation = True):
-        """Returns the total static K.H (permeability x height); length units are those of trajectory md_uom unless
-        length_upm is set.
+        """Returns the total static K.H (permeability x height).
+        
+        Length units are those of trajectory md_uom unless length_upm is set.
 
         note:
            see doc string for dataframe() method for argument descriptions; perm_i_uuid required
