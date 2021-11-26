@@ -30,7 +30,7 @@ from ._dm_unsplit_grid import unsplit_grid
 from ._dm_zonal_grid import zonal_grid, single_layer_grid
 from ._dm_zone_layer_ranges_from_array import zone_layer_ranges_from_array
 
-# Set "module" attribute of all public objects to this path. Fixes issue #310
+# Set "module" attribute of all public objects to this path.
 for _name in __all__:
     _obj = eval(_name)
     if hasattr(_obj, "__module__"):

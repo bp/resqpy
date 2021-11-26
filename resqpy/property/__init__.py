@@ -31,3 +31,9 @@ from .well_interval_property import WellIntervalProperty
 from .well_interval_property_collection import WellIntervalPropertyCollection
 from .well_log import WellLog
 from .well_log_collection import WellLogCollection
+
+# Set "module" attribute of all public objects to this path.
+for _name in __all__:
+    _obj = eval(_name)
+    if hasattr(_obj, "__module__"):
+        _obj.__module__ = __name__
