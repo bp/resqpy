@@ -1,3 +1,5 @@
+"""property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+
 __all__ = [
     'PropertyCollection', 'Property', 'WellLog', 'WellIntervalProperty', 'WellIntervalPropertyCollection',
     'WellLogCollection', 'StringLookup', 'PropertyKind', 'GridPropertyCollection',

@@ -1737,6 +1737,7 @@ class PropertyCollection():
 
     def establish_has_multiple_realizations(self):
         """Re-evaluates the has multiple realizations attribute.
+
         Based on whether properties belong to more than one realization.
         """
         self.has_multiple_realizations_flag = False
@@ -3468,7 +3469,6 @@ class PropertyCollection():
                         realization = perms.realization_for_part(perm_i_part),
                         indexable_element = perms.indexable_for_part(perm_i_part),
                         count = 1,
-
                         points = False)
                     self.model.h5_release()
                     kv_collection.write_hdf5_for_imported_list()
@@ -3592,7 +3592,6 @@ def _check_citation_title(citation_title, citation_title_match_starts_with, othe
             if other.citation_title_for_part(part) != citation_title:
                 return True
     return False
-
 
 
 def _check_categorical_and_lookup(categorical, other, part):
