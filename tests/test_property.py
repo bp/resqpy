@@ -13,6 +13,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
 import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
+import resqpy.surface as rqs
 
 # ---- Test PropertyCollection methods ---
 
@@ -107,7 +108,6 @@ def test_property(tmp_path):
 
 
 def test_create_Property_from_singleton_collection(tmp_model):
-
     # Arrange
     grid = grr.RegularGrid(tmp_model, extent_kji = (2, 3, 4))
     grid.write_hdf5()
@@ -247,7 +247,6 @@ def test_property_extra_metadata(tmp_path):
 
 
 def test_points_properties(tmp_path):
-
     epc = os.path.join(tmp_path, 'points_test.epc')
     model = rq.new_model(epc)
 
@@ -263,7 +262,7 @@ def test_points_properties(tmp_path):
     ts_uuid = ts.uuid
     assert ts.timeframe == 'geologic'
 
-    # create a simple grid without an explicit geometry and ensure it has a property collection initialised
+    #  create a simple grid without an explicit geometry and ensure it has a property collection initialised
     grid = grr.RegularGrid(model,
                            extent_kji = extent_kji,
                            origin = (0.0, 0.0, 1000.0),
@@ -295,7 +294,7 @@ def test_points_properties(tmp_path):
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
-    # create a dynamic points property (indexable cells) related to the geological time series
+    #  create a dynamic points property (indexable cells) related to the geological time series
     for r in range(ensemble_size):
         centres = grid.centre_point().copy()
         for time_index in range(time_series_size):
@@ -312,7 +311,7 @@ def test_points_properties(tmp_path):
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
 
-    # create a dynamic points property (indexable nodes) related to the geological time series
+    #  create a dynamic points property (indexable nodes) related to the geological time series
     # also create a parallel set of active cell properties
     for r in range(ensemble_size):
         nodes = grid.points_ref().copy()
@@ -412,7 +411,7 @@ def test_points_properties(tmp_path):
                                              time_series_uuid = ts_uuid)
     assert cc.number_of_parts() == ensemble_size * time_series_size
 
-    # check that 5 dimensional numpy arrays can be set up, each covering time indices for a single realisation
+    #  check that 5 dimensional numpy arrays can be set up, each covering time indices for a single realisation
     for r in range(ensemble_size):
         rcc = rqp.selective_version_of_collection(cc, realization = r)
         assert rcc.number_of_parts() == time_series_size
@@ -448,7 +447,7 @@ def test_points_properties(tmp_path):
     # and that the inactive array now indicates some cells are inactive
     assert grid.inactive is not None and np.count_nonzero(grid.inactive) > 0
 
-    # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
+    #  check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
     for ti in range(time_series_size):
         tnc = rqp.selective_version_of_collection(nc, time_index = ti)
         assert tnc.number_of_parts() == ensemble_size
@@ -502,3 +501,376 @@ def test_points_properties(tmp_path):
     # (in this example, the depths of all cells are increasing with time)
     assert_array_almost_equal(older_centres[..., :2], younger_centres[..., :2])  # xy
     assert np.all(older_centres[..., 2] < younger_centres[..., 2])  # depths
+
+
+def test_remove_part_from_dict(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    assert len(pc.parts()) == 7
+    part = pc.parts()[0]
+
+    # Act
+    pc.remove_part_from_dict(part)
+
+    # Assert
+    assert len(pc.parts()) == 6
+    assert part not in pc.parts()
+
+
+def test_part_str(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    assert pc is not None
+    part_disc = pc.parts()[0]
+    part_cont = pc.parts()[-1]
+    part_facet = pc.parts()[4]
+
+    # Act / Assert
+    assert pc.part_str(part_disc) == 'discrete (Zone)'
+    assert pc.part_str(part_disc, include_citation_title = False) == 'discrete'
+    assert pc.part_str(part_cont) == 'saturation: water; timestep: 2 (SW)'
+    assert pc.part_str(part_cont, include_citation_title = False) == 'saturation: water; timestep: 2'
+    assert pc.part_str(part_facet) == 'rock permeability: J (Perm)'
+    assert pc.part_str(part_facet, include_citation_title = False) == 'rock permeability: J'
+
+
+def test_part_filename(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    assert pc is not None
+    part_disc = pc.parts()[0]
+    part_cont = pc.parts()[-1]
+    part_facet = pc.parts()[4]
+
+    # Act / Assert
+    assert pc.part_filename(part_disc) == 'discrete'
+    assert pc.part_filename(part_cont) == 'saturation_water_ts_2'
+    assert pc.part_filename(part_facet) == 'rock_permeability_J'
+
+
+def test_grid_for_part(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    part = pc.parts()[0]
+
+    # Act
+    grid = pc.grid_for_part(part)
+
+    # Assert
+    assert grid == model.grid()
+
+
+def test_all_discrete(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+
+    # Act / Assert
+    assert not pc.all_discrete()
+
+    # Arrange
+    for part in pc.parts():
+        if pc.continuous_for_part(part):
+            pc.remove_part_from_dict(part)
+
+    # Act / Assert
+    assert len(pc.parts()) == 4
+    assert pc.all_discrete()
+
+
+def test_h5_slice(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+
+    # Act  / Assert
+    part = pc.parts()[0]
+    full = pc.cached_part_array_ref(part)
+
+    slice = pc.h5_slice(part, (0, 0))
+    assert_array_almost_equal(slice, full[0, 0])
+
+    slice = pc.h5_slice(part, (-1, -1))
+    assert_array_almost_equal(slice, full[-1, -1])
+
+
+def test_h5_overwrite_slice(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    assert pc is not None
+    part = pc.parts()[0]
+
+    # Act
+    slice = pc.h5_slice(part, (0, 0))
+    new_slice = np.zeros(shape = slice.shape)
+    pc.h5_overwrite_slice(part, array_slice = new_slice, slice_tuple = (0, 0))
+
+    # Assert
+    new_full = pc.cached_part_array_ref(part)
+    assert_array_almost_equal(new_slice, new_full[0, 0])
+
+
+def test_string_lookup_for_part(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    lookup = model.parts_list_of_type('obj_StringTableLookup')[0]
+    assert lookup is not None
+    facies_part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Facies']
+    assert len(facies_part) == 1
+
+    # Act
+    lookup_uuid = pc.string_lookup_uuid_for_part(facies_part[0])
+
+    # Assert
+    assert bu.matching_uuids(lookup_uuid, model.uuid_for_part(lookup))
+
+
+def test_establish_has_multiple_realisations(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Assert initial model has multiple
+    assert pc.establish_has_multiple_realizations()
+    assert pc.has_multiple_realizations()
+    # Remove parts with realiations
+    for part in pc.parts():
+        if pc.realization_for_part(part) is not None:
+            pc.remove_part_from_dict(part)
+    # Assert new model has not got multiple
+    assert len(pc.parts()) == 8
+    assert not pc.establish_has_multiple_realizations()
+    assert not pc.has_multiple_realizations()
+
+
+def test_establish_has_multiple_realisations_single(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Remove parts with realiation is None or 0
+    for part in pc.parts():
+        if pc.realization_for_part(part) in [None, 0]:
+            pc.remove_part_from_dict(part)
+    # Assert new model has not got multiple
+    assert len(pc.parts()) == 2
+    assert not pc.establish_has_multiple_realizations()
+    assert not pc.has_multiple_realizations()
+
+
+def test_establish_time_set_kind(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Assert model is not a time set
+    assert pc.establish_time_set_kind() == 'not a time set'
+
+    # Remove parts where ts != 2000-01-01Z
+    for part in pc.parts():
+        if pc.time_index_for_part(part) != 0:
+            pc.remove_part_from_dict(part)
+    # Assert new model is a single time
+    assert len(pc.parts()) == 1
+    assert pc.establish_time_set_kind() == 'single time'
+
+
+def test_discombobulated_combobulated_face_arrays(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    orig = np.array([[[[1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]]]])
+    pc = model.grid().property_collection
+
+    # Act
+    combob = pc.combobulated_face_array(orig)
+    assert combob.shape[-1] == 2
+    assert combob.shape[-2] == 3
+    discombob = pc.discombobulated_face_array(combob)
+    assert discombob.shape[-1] == 6
+
+    # Assert
+    assert_array_almost_equal(orig, discombob)
+
+
+def test_time_series_array_ref(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    # Trim the model to only contain properties with timesteps
+    for part in pc.parts():
+        if pc.time_index_for_part(part) is None:
+            pc.remove_part_from_dict(part)
+    # Make sure the number of properties is as expected, and they are all the same property
+    assert len(pc.parts()) == 3
+    assert len(set([pc.citation_title_for_part(part) for part in pc.parts()])) == 1
+    # Pull out the full arrays to generate the expected output
+    sw1, sw2, sw3 = [pc.cached_part_array_ref(part) for part in pc.parts()]
+    expected = np.array([sw1, sw2, sw3])
+
+    # Act
+    output = pc.time_series_array_ref()
+
+    # Assert
+    assert_array_almost_equal(expected, output)
+
+
+def test_inherit_parts_from_other_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    copy_from = example_model_with_prop_ts_rels
+    pc_from = copy_from.grid().property_collection
+
+    pc_to = rqp.PropertyCollection()
+    pc_to.set_support(model = copy_from, support_uuid = copy_from.grid().uuid)
+
+    orig_from = len(pc_from.parts())
+
+    # Act
+    pc_to.inherit_parts_from_other_collection(pc_from)
+    # Assert
+    assert len(pc_to.parts()) == orig_from
+
+
+def test_similar_parts_for_time_series_from_other_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    copy_from = example_model_with_prop_ts_rels
+    pc_from = copy_from.grid().property_collection
+
+    pc_to = rqp.PropertyCollection()
+    pc_to.set_support(model = copy_from, support_uuid = copy_from.grid().uuid)
+
+    sw_parts = [part for part in pc_from.parts() if pc_from.citation_title_for_part(part) == 'SW']
+    example_part = sw_parts[0]
+
+    # Act
+    pc_to.inherit_similar_parts_for_time_series_from_other_collection(other = pc_from, example_part = example_part)
+    # Assert
+    assert len(pc_to.parts()) == len(sw_parts)
+
+
+def test_similar_parts_for_realizations_from_other_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    copy_from = example_model_with_prop_ts_rels
+    pc_from = copy_from.grid().property_collection
+
+    pc_to = rqp.PropertyCollection(realization = 1)
+    pc_to.set_support(model = copy_from)
+
+    rel1_parts = [part for part in pc_from.parts() if pc_from.realization_for_part(part) == 1]
+    example_part = rel1_parts[0]
+
+    # Act
+    pc_to.inherit_similar_parts_for_realizations_from_other_collection(other = pc_from, example_part = example_part)
+    # Assert
+    assert len(pc_to.parts()) == len(rel1_parts)
+
+
+def test_property_over_time_series_from_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+
+    sw_parts = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW']
+    example_part = sw_parts[0]
+
+    # Act
+    new_pc = rqp.property_over_time_series_from_collection(collection = pc, example_part = example_part)
+    # Assert
+    assert len(new_pc.parts()) == len(sw_parts)
+
+
+def test_property_for_keword_from_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+
+    sw_parts = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW']
+
+    # Act
+    new_pc = rqp.property_collection_for_keyword(collection = pc, keyword = 'sw')
+    # Assert
+    assert len(new_pc.parts()) == len(sw_parts)
+
+
+def test_stringlookup_add_str(example_model_and_crs):
+    # Arrange
+    model, _ = example_model_and_crs
+    lookup = rqp.StringLookup(parent_model = model)
+    assert lookup.str_dict == {}
+    # Act
+    lookup.set_string(0, 'channel')
+    # Assert
+    assert lookup.str_dict == {0: 'channel'}
+
+
+def test_create_property_set_xml(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    num_parts = len(pc.parts())
+
+    # Act
+    pc.create_property_set_xml('Grid property collection')
+    model.store_epc()
+    reload = rq.Model(model.epc_file)
+    # Assert
+    assert len(reload.parts_list_of_type('obj_PropertySet')) == 1
+
+    # Act
+    prop_set_root = reload.root_for_part(reload.parts_list_of_type('obj_PropertySet')[0])
+    pset = rqp.PropertyCollection()
+    pset.set_support(support = model.grid())
+    pset.populate_from_property_set(prop_set_root)
+    # Assert
+    assert len(pset.parts()) == num_parts
+
+
+def test_override_min_max(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = pc.parts()[0]
+
+    print(pc.dict[part])
+    vmin = pc.minimum_value_for_part(part)
+    vmax = pc.maximum_value_for_part(part)
+
+    # Act
+    pc.override_min_max(part, min_value = vmin - 1, max_value = vmax + 1)
+    # Assert
+    assert pc.minimum_value_for_part(part) == vmin - 1
+    assert pc.maximum_value_for_part(part) == vmax + 1
+
+
+def test_set_support_mesh(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+
+    ni = 5
+    nj = 5
+    origin = (0, 0, 0)
+    di = dj = 50.0
+
+    # make a regular mesh representation
+    support = rqs.Mesh(model,
+                       crs_uuid = crs.uuid,
+                       mesh_flavour = 'regular',
+                       ni = ni,
+                       nj = nj,
+                       origin = origin,
+                       dxyz_dij = np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]),
+                       title = 'regular mesh',
+                       originator = 'Emma',
+                       extra_metadata = {'testing mode': 'automated'})
+    assert support is not None
+    support.write_hdf5()
+    support.create_xml()
+
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = support)

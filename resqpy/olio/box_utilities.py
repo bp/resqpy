@@ -1,4 +1,11 @@
-# box_utilities module
+"""Simple functions relating to cartesian grid boxes
+
+A box is a logical cuboid subset of the cells of a cartesian grid.
+A box is defined by a small numpy array: [[min_k, min_j, min_i], [max_k, max_j, max_i]].
+The cells identified by the max indices are included in the box (not following the python convention)
+The ordering of the i,j & k indices might be reversed - identifier names then have a suffix of _ijk instead of _kji.
+The indices can be in simulator convention, starting at 1, or python convention, starting at 0, indicated by suffix of 0 or 1
+"""
 
 version = '13th July 2021'
 
@@ -6,32 +13,6 @@ import logging
 
 log = logging.getLogger(__name__)
 log.debug('box_utilities.py version %s', version)
-
-# simple functions relating to cartesian grid boxes
-# a box is a logical cuboid subset of the cells of a cartesian grid
-# a box is defined by a small numpy array: [[min_k, min_j, min_i], [max_k, max_j, max_i]]
-# the cells identified by the max indices are included in the box (not following the python convention)
-# the ordering of the i,j & k indices might be reversed - identifier names then have a suffix of _ijk instead of _kji
-# the indices can be in simulator convention, starting at 1, or python convention, starting at 0, indicated by suffix of 0 or 1
-
-# functions defined here:
-#    def extent_of_box(box):     # returns 3 element extent of box (box can be kji or ijk, 0 or 1 based)
-#    def volume_of_box(box):
-#    def central_cell(box):
-#    def string_iijjkk1_for_box_kji0(box_kji0):
-#    def spaced_string_iijjkk1_for_box_kji0(box_kji0, colon_separator = ' '):
-#    def box_kji0_from_words_iijjkk1(words):
-#    def cell_in_box(cell, box):
-#    def valid_box(box0, host_extent):
-#    def single_cell_box(cell):
-#    def full_extent_box0(extent):
-#    def union(box_1, box_2):
-#    def parent_cell_from_local_box_cell(box, box_cell, based_0_or_1 = 0):
-#    def local_box_cell_from_parent_cell(box, parent_cell, based_0_or_1 = 0):
-#    def boxes_overlap(box_a, box_b):
-#    def overlapping_boxes(established_box, new_box, trim_box):
-#    def trim_box_by_box_returning_new_mask(box_to_be_trimmed, trim_box, mask_kji0):
-#    def trim_box_to_mask_returning_new_mask(bounding_box_kji0, mask_kji0):
 
 import numpy as np
 
@@ -66,6 +47,7 @@ def volume_of_box(box):
 
 
 def central_cell(box):
+    """Returns the indices of the cell at the centre of the box."""
     return box[0] + ((box[1] - box[0]) // 2)
 
 
@@ -297,14 +279,14 @@ def boxes_overlap(box_a, box_b):
 
 def overlapping_boxes(established_box, new_box, trim_box):
     """Checks for 3D overlap of two boxes; returns True and sets trim_box if there is overlap, otherwise False.
+    
+    trim_box is modified in place.
 
     Arguments:
        established_box: numpy int array of shape (2, 3)
        new_box: numpy int array of shape (2, 3)
           each is lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
           protocol of indices for the two boxes must be the same
-
-    output argument (modified):
        trim_box: numpy int array of shape (2, 3)
           set to lower & upper indices in 3 dimensions defining a logical cuboid subset of a 3D cartesian grid
           a subset of new_box such that if removed from new_box, a valid box would remain with no overlap with established_box
@@ -312,7 +294,6 @@ def overlapping_boxes(established_box, new_box, trim_box):
           if there is no overlap (return value False), all elements of trim_box are set to 0
 
     note:
-
        when there is overlap between the boxes, there can be more than one way to trim the new_box,
        with trim_box fully covering either ij, jk or ik planes of new_box
        the function selects the trim_box containing the minimum number of cells (minimum 'loss' to trimming)
@@ -421,9 +402,10 @@ def trim_box_by_box_returning_new_mask(box_to_be_trimmed, trim_box, mask_kji0):
 
 
 def trim_box_to_mask_returning_new_mask(bounding_box_kji0, mask_kji0):
-    """Reduces the coverage of bounding box to the minimum needed to contain True elements of mask; returns trimmed
-    mask."""
-
+    """Reduce the coverage of bounding box to the minimum needed to contain True elements of mask.
+    
+    Returns trimmed mask.
+    """
     # NB: bounding box is modified by this function
     assert bounding_box_kji0.ndim == 2 and bounding_box_kji0.shape == (2, 3) and bounding_box_kji0.dtype == 'int'
     assert (mask_kji0.ndim == 3 and

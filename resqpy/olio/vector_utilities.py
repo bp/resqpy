@@ -1,5 +1,10 @@
-# vector_utilities module
-# note: many of these functions are redundant as they are provided by built-in numpy operations
+""" Utilities for working with 3D vectors in cartesian space.
+
+note: some of these functions are redundant as they are provided by built-in numpy operations.
+
+a vector is a one dimensional numpy array with 3 elements: x, y, z.
+some functions accept a tuple or list of 3 elements as an alternative to a numpy array.
+"""
 
 version = '15th November 2021'
 
@@ -7,10 +12,6 @@ import logging
 
 log = logging.getLogger(__name__)
 log.debug('vector_utilities.py version %s', version)
-
-# works with 3D vectors in a cartesian space
-# a vector is a one dimensional numpy array with 3 elements: x, y, z
-# some functions accept a tuple or list of 3 elements as an alternative to a numpy array
 
 import math as maths
 
@@ -270,6 +271,8 @@ def rotation_matrix_3d_axial(axis, angle):
 
 
 def rotation_3d_matrix(xzy_axis_angles):
+    """Retuns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
+
     matrix = np.zeros((3, 3))
     for axis in range(3):
         matrix[axis, axis] = 1.0
@@ -359,6 +362,8 @@ def project_points_onto_plane(plane_xyz, normal_vector, points):
 
 
 def perspective_vector(xyz_box, view_axis, vanishing_distance, vector):
+    """Returns a version of vector with a perspective applied."""
+
     mid_points = np.zeros(3)
     xyz_ranges = np.zeros(3)
     result = np.zeros(3)

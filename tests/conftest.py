@@ -1,7 +1,6 @@
 """ Shared fixtures for tests """
 
 import logging
-import os
 from pathlib import Path
 from shutil import copytree
 
@@ -16,6 +15,7 @@ from resqpy.crs import Crs
 from resqpy.model import Model, new_model
 from resqpy.organize import WellboreFeature, WellboreInterpretation
 from resqpy.well import MdDatum, Trajectory, WellboreFrame
+import resqpy.time_series as rqts
 
 
 @pytest.fixture(autouse = True)
@@ -193,6 +193,158 @@ def example_model_with_properties(tmp_path):
                                                      realization = None)
         collection.write_hdf5_for_imported_list()
         collection.create_xml_for_imported_list_and_add_parts_to_model()
+    model.store_epc()
+
+    return model
+
+
+@pytest.fixture
+def example_model_with_prop_ts_rels(tmp_path):
+    """Model with a grid (5x5x3) and properties.
+   Properties:
+   - Zone (discrete)
+   - VPC (discrete)
+   - Fault block (discrete)
+   - Facies (discrete)
+   - NTG (continuous)
+   - POR (continuous)
+   - SW (continuous) (recurrent)
+   """
+    model_path = str(tmp_path / 'test_model.epc')
+    model = Model(create_basics = True, create_hdf5_ext = True, epc_file = model_path, new_epc = True)
+    model.store_epc(model.epc_file)
+
+    grid = grr.RegularGrid(parent_model = model,
+                           origin = (0, 0, 0),
+                           extent_kji = (3, 5, 5),
+                           crs_uuid = rqet.uuid_for_part_root(model.crs_root),
+                           set_points_cached = True)
+    grid.cache_all_geometry_arrays()
+    grid.write_hdf5_from_caches(file = model.h5_file_name(file_must_exist = False), mode = 'w')
+
+    grid.create_xml(ext_uuid = model.h5_uuid(),
+                    title = 'grid',
+                    write_geometry = True,
+                    add_cell_length_properties = False)
+    model.store_epc()
+
+    zone = np.ones(shape = (5, 5), dtype = 'int')
+    zone_array = np.array([zone, zone + 1, zone + 2], dtype = 'int')
+
+    vpc = np.array([[1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2]], dtype = 'int')
+    vpc_array = np.array([vpc, vpc, vpc], dtype = 'int')
+
+    facies = np.array([[1, 1, 1, 2, 2], [1, 1, 2, 2, 2], [1, 2, 2, 2, 3], [2, 2, 2, 3, 3], [2, 2, 3, 3, 3]],
+                      dtype = 'int')
+    facies_array = np.array([facies, facies, facies], dtype = 'int')
+
+    perm = np.array([[1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10]])
+    perm_array = np.array([perm, perm, perm])
+
+    fb = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2]], dtype = 'int')
+    fb_array = np.array([fb, fb, fb], dtype = 'int')
+
+    ntg = np.array([[0, 0.5, 0, 0.5, 0], [0.5, 0, 0.5, 0, 0.5], [0, 0.5, 0, 0.5, 0], [0.5, 0, 0.5, 0, 0.5],
+                    [0, 0.5, 0, 0.5, 0]])
+    ntg1_array = np.array([ntg, ntg, ntg])
+    ntg2_array = np.array([ntg + 0.1, ntg + 0.1, ntg + 0.1])
+
+    por = np.array([[1, 1, 1, 1, 1], [0.5, 0.5, 0.5, 0.5, 0.5], [1, 1, 1, 1, 1], [0.5, 0.5, 0.5, 0.5, 0.5],
+                    [1, 1, 1, 1, 1]])
+    por1_array = np.array([por, por, por])
+    por2_array = np.array([por - 0.1, por - 0.1, por - 0.1])
+
+    sat = np.array([[1, 0.5, 1, 0.5, 1], [1, 0.5, 1, 0.5, 1], [1, 0.5, 1, 0.5, 1], [1, 0.5, 1, 0.5, 1],
+                    [1, 0.5, 1, 0.5, 1]])
+    sat1_array = np.array([sat, sat, sat])
+    sat2_array = np.array([sat, sat, np.where(sat == 0.5, 0.75, sat)])
+    sat3_array = np.array(
+        [np.where(sat == 0.5, 0.75, sat),
+         np.where(sat == 0.5, 0.75, sat),
+         np.where(sat == 0.5, 0.75, sat)])
+
+    collection = rqp.GridPropertyCollection()
+    collection.set_grid(grid)
+
+    ts = rqts.TimeSeries(parent_model = model, first_timestamp = '2000-01-01Z')
+    ts.extend_by_days(365)
+    ts.extend_by_days(365)
+
+    ts.create_xml()
+
+    lookup = rqp.StringLookup(parent_model = model, int_to_str_dict = {1: 'channel', 2: 'interbedded', 3: 'shale'})
+    lookup.create_xml()
+
+    model.store_epc()
+
+    # Add non-varying properties
+    for array, name, kind, discrete, facet_type, facet in zip([zone_array, vpc_array, fb_array, perm_array],
+                                                              ['Zone', 'VPC', 'Fault block', 'Perm'],
+                                                              ['discrete', 'discrete', 'discrete', 'rock permeability'],
+                                                              [True, True, True, False],
+                                                              [None, None, None, 'direction'], [None, None, None, 'J']):
+        collection.add_cached_array_to_imported_list(cached_array = array,
+                                                     source_info = '',
+                                                     keyword = name,
+                                                     discrete = discrete,
+                                                     uom = None,
+                                                     time_index = None,
+                                                     null_value = None,
+                                                     property_kind = kind,
+                                                     facet_type = facet_type,
+                                                     facet = facet,
+                                                     realization = None)
+        collection.write_hdf5_for_imported_list()
+        collection.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Add realisation varying properties
+    for array, name, kind, rel in zip([ntg1_array, por1_array, ntg2_array, por2_array], ['NTG', 'POR', 'NTG', 'POR'],
+                                      ['net to gross ratio', 'porosity', 'net to gross ratio', 'porosity'],
+                                      [0, 0, 1, 1]):
+        collection.add_cached_array_to_imported_list(cached_array = array,
+                                                     source_info = '',
+                                                     keyword = name,
+                                                     discrete = False,
+                                                     uom = None,
+                                                     time_index = None,
+                                                     null_value = None,
+                                                     property_kind = kind,
+                                                     facet_type = None,
+                                                     facet = None,
+                                                     realization = rel)
+        collection.write_hdf5_for_imported_list()
+        collection.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Add categorial property
+    collection.add_cached_array_to_imported_list(cached_array = facies_array,
+                                                 source_info = '',
+                                                 keyword = 'Facies',
+                                                 discrete = True,
+                                                 uom = None,
+                                                 time_index = None,
+                                                 null_value = None,
+                                                 property_kind = 'discrete',
+                                                 facet_type = None,
+                                                 facet = None,
+                                                 realization = None)
+    collection.write_hdf5_for_imported_list()
+    collection.create_xml_for_imported_list_and_add_parts_to_model(string_lookup_uuid = lookup.uuid)
+
+    # Add time varying properties
+    for array, ts_index in zip([sat1_array, sat2_array, sat3_array], [0, 1, 2]):
+        collection.add_cached_array_to_imported_list(cached_array = array,
+                                                     source_info = '',
+                                                     keyword = 'SW',
+                                                     discrete = False,
+                                                     uom = None,
+                                                     time_index = ts_index,
+                                                     null_value = None,
+                                                     property_kind = 'saturation',
+                                                     facet_type = 'what',
+                                                     facet = 'water',
+                                                     realization = None)
+        collection.write_hdf5_for_imported_list()
+        collection.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts.uuid)
     model.store_epc()
 
     return model

@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pytest
-from numpy.lib.arraysetops import isin
 
 import resqpy.crs as rqc
 import resqpy.model as rq

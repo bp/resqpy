@@ -30,6 +30,8 @@ class Crs(BaseResqpy):
 
     @property
     def resqml_type(self):
+        """Returns the RESQML class for this crs."""
+
         return 'LocalTime3dCrs' if hasattr(self, 'time_units') and self.time_units else 'LocalDepth3dCrs'
 
     valid_axis_orders = ("easting northing", "northing easting", "westing southing", "southing westing",
