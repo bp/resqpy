@@ -1057,6 +1057,11 @@ class PropertyCollection():
     # the main dictionary maps from part name to a tuple of information
     # this function simply extracts one element of the tuple in a way that returns None if the part is awol
     def element_for_part(self, part, index):
+        """Returns a particular element by index from the tuple of metadata for the specified part.
+
+        :meta private:
+        """
+
         if part not in self.dict:
             return None
         return self.dict[part][index]
@@ -1064,6 +1069,11 @@ class PropertyCollection():
     # 'private' function for returning a list of unique values for an element from the tuples within the collection
     # excludes None from list
     def unique_element_list(self, index, sort_list = True):
+        """Returns an optionally sorted list of unique values (excluding None) of an element identified by index.
+
+        :meta private:
+        """
+
         s = set()
         for _, t in self.dict.items():
             e = t[index]
