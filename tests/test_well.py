@@ -11,7 +11,6 @@ from resqpy.model import Model
 from resqpy.property import Property
 import resqpy.well
 
-
 # def test_MdDatum(example_model_and_crs):
 #
 #     # Set up a new datum
@@ -123,7 +122,6 @@ def test_logs_conversion(example_model_with_logs):
 
 # Trajectory
 
-
 # def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
 #
 #     # Prepare an example Trajectory without a well feature
@@ -145,9 +143,7 @@ def test_logs_conversion(example_model_with_logs):
 #     assert traj.wellbore_feature is not None
 #     assert traj.wellbore_feature.feature_name == wellname
 
-
 # Deviation Survey tests
-
 
 # def test_DeviationSurvey(example_model_with_well, tmp_path):
 #     # Test that all attrbutes are correctly saved and loaded from disk
@@ -242,7 +238,6 @@ def test_logs_conversion(example_model_with_logs):
 #         for key, expected_value in array_data.items():
 #             assert_array_almost_equal(getattr(s, key), expected_value, err_msg = f"Error for {key}")
 #         assert s.station_count == len(array_data['azimuths'])
-
 
 # BlockedWell
 

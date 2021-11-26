@@ -61,13 +61,12 @@ class WellboreMarkerFrame(BaseResqpy):
            the newly created wellbore framework marker object
         """
 
-        self.trajectory = None
+        self.trajectory = trajectory
         self.node_count = None  # number of measured depth nodes, each being for a marker
         self.node_mds = None  # node_count measured depths (in same units and datum as trajectory) of markers
-        self.wellbore_marker_list = [
-        ]  # list of markers, each: (marker UUID, geologic boundary, marker citation title, interp. object)
-        if self.trajectory is not None: # TODO: should this be changed to is None?
-            self.trajectory = trajectory
+        # self.wellbore_marker_list = [
+        # ]  # list of markers, each: (marker UUID, geologic boundary, marker citation title, interp. object)
+        self.wellbore_marker_list = []
 
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -75,6 +74,52 @@ class WellboreMarkerFrame(BaseResqpy):
                          originator = originator,
                          extra_metadata = extra_metadata,
                          root_node = wellbore_marker_frame_root)
+
+    def load_from_data_frame(self,
+                             dataframe,
+                             md_col = 'MD',
+                             x_col = 'X',
+                             y_col = 'Y',
+                             z_col = 'Z',
+                             boundary_kind_col = 'Type',
+                             feature_col = 'Feature_Name',
+                             interp_col = 'Interp_Name',
+                             well_col = 'Well'):
+        """Load wellbore marker frame data from a pandas data frame.
+
+        Args:
+           dataframe: a pandas dataframe holding the wellbore marker frame data
+           md_col (string, default 'MD'): the name of the column holding measured depth values
+           x_col (string, default 'X'): the name of the column holding X values
+           y_col (string, default 'Y'): the name of the column holding Y values
+           z_col (string, default 'Z'): the name of the column holding Z values
+           boundary_kind_col (string, default 'Type'): the name of the column holding boundary feature kind values
+           feature_col (string, default 'Feature_Name'): the name of the column holding feature name values
+           interp_col (string, default 'Interp_Name'): the name of the column holding feature interpretation name values
+           well_col (string, default 'Well'): the name of the column holding well name value
+        """
+
+        for col in [md_col, x_col, y_col, z_col, boundary_kind_col, feature_col, interp_col, well_col]:
+            assert col in dataframe.columns
+        self.node_count = len(dataframe)
+        self.node_mds = dataframe[md_col].values
+        self.get_wellbore_marker_list(dataframe)
+
+    def get_wellbore_marker_list(self, dataframe):
+        """ Create a list of wellbore markers from a pandas dataframe. Each wellbore marker tuple should contain
+        (marker UUID, geologic boundary, marker citation title, interp. object).
+
+        Args:
+           dataframe: a pandas dataframe holding the wellbore marker frame data
+        """
+
+        for i, row in enumerate(dataframe.iterrows()):
+            marker_uuid = str(self.model.uuid(title = row[1]['Feature_Name'], title_case_sensitive = False))
+            geologic_boundary = row[1]['Type']
+            marker_citation_title = row[1]['Feature_Name']
+            interp_object = self.get_interpretation_obj(
+                interpretation_uuid = self.model.uuid(title = row[1]['Interp_Name'], title_case_sensitive = False))
+            self.wellbore_marker_list.append((marker_uuid, geologic_boundary, marker_citation_title, interp_object))
 
     def get_trajectory_obj(self, trajectory_uuid):
         """Returns a trajectory object.
@@ -96,7 +141,8 @@ class WellboreMarkerFrame(BaseResqpy):
             # create new trajectory object
             trajectory_root_node = self.model.root_for_uuid(trajectory_uuid)
             assert trajectory_root_node is not None, 'referenced wellbore trajectory missing from model'
-            return Trajectory(self.model, trajectory_root = trajectory_root_node)
+            # return Trajectory(self.model, trajectory_root = trajectory_root_node)
+            return Trajectory(self.model, uuid = trajectory_uuid)
 
     def get_interpretation_obj(self, interpretation_uuid, interp_type = None):
         """Creates an interpretation object; returns a horizon or fault interpretation object.
@@ -125,15 +171,18 @@ class WellboreMarkerFrame(BaseResqpy):
 
         if interp_type == 'obj_HorizonInterpretation':
             # create new horizon interpretation object
-            return rqo.HorizonInterpretation(self.model, root_node = interpretation_root_node)
+            # return rqo.HorizonInterpretation(self.model, root_node = interpretation_root_node)
+            return rqo.HorizonInterpretation(self.model, uuid = interpretation_uuid)
 
         elif interp_type == 'obj_FaultInterpretation':
             # create new fault interpretation object
-            return rqo.FaultInterpretation(self.model, root_node = interpretation_root_node)
+            # return rqo.FaultInterpretation(self.model, root_node = interpretation_root_node)
+            return rqo.FaultInterpretation(self.model, uuid = interpretation_uuid)
 
         elif interp_type == 'obj_GeobodyInterpretation':
             # create new geobody interpretation object
-            return rqo.GeobodyInterpretation(self.model, root_node = interpretation_root_node)
+            # return rqo.GeobodyInterpretation(self.model, root_node = interpretation_root_node)
+            return rqo.GeobodyInterpretation(self.model, uuid = interpretation_uuid)
         else:
             # No interpretation for the marker
             return None
@@ -149,9 +198,8 @@ class WellboreMarkerFrame(BaseResqpy):
         wellbore_marker_frame_root = self.root
         assert wellbore_marker_frame_root is not None
 
-        if self.trajectory is None:
-            self.trajectory = self.get_trajectory_obj(
-                rqet.find_nested_tags_text(wellbore_marker_frame_root, ['Trajectory', 'UUID']))
+        self.trajectory = self.get_trajectory_obj(
+            rqet.find_nested_tags_text(wellbore_marker_frame_root, ['Trajectory', 'UUID']))
 
         # list of Wellbore markers, each: (marker UUID, geologic boundary, marker citation title, interp. object)
         self.wellbore_marker_list = []
@@ -188,11 +236,14 @@ class WellboreMarkerFrame(BaseResqpy):
             _, boundary_kind, title, interp = self.wellbore_marker_list[i]
             if interp:
                 if boundary_kind == 'horizon':
-                    feature_name = rqo.GeneticBoundaryFeature(self.model, root_node = interp.feature_root).feature_name
+                    # feature_name = rqo.GeneticBoundaryFeature(self.model, root_node = interp.feature_root).feature_name
+                    feature_name = rqo.GeneticBoundaryFeature(self.model, uuid = interp.uuid).feature_name
                 elif boundary_kind == 'fault':
-                    feature_name = rqo.TectonicBoundaryFeature(self.model, root_node = interp.feature_root).feature_name
+                    # feature_name = rqo.TectonicBoundaryFeature(self.model, root_node = interp.feature_root).feature_name
+                    feature_name = rqo.TectonicBoundaryFeature(self.model, uuid = interp.uuid).feature_name
                 elif boundary_kind == 'geobody':
-                    feature_name = rqo.GeneticBoundaryFeature(self.model, root_node = interp.feature_root).feature_name
+                    # feature_name = rqo.GeneticBoundaryFeature(self.model, root_node = interp.feature_root).feature_name
+                    feature_name = rqo.GeneticBoundaryFeature(self.model, uuid = interp.uuid).feature_name
                 else:
                     assert False, 'unexpected boundary kind'
             else:
@@ -223,7 +274,6 @@ class WellboreMarkerFrame(BaseResqpy):
                    ext_uuid = None,
                    add_as_part = True,
                    add_relationships = True,
-                   wellbore_marker_list = None,
                    title = 'wellbore marker framework',
                    originator = None):
 

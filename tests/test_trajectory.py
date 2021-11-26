@@ -125,10 +125,10 @@ def test_load_from_ascii_file(example_model_and_crs):
     elevation = 100
     # Create a measured depth datum
     datum = resqpy.well.MdDatum(parent_model = model,
-                    crs_uuid = crs.uuid,
-                    location = (0, 0, -elevation),
-                    md_reference = 'kelly bushing')
-    mds =  np.array([300, 310, 330, 340])
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds = np.array([300, 310, 330, 340])
     zs = mds - elevation
     source_dataframe = pd.DataFrame({
         'MD': mds,
@@ -174,7 +174,7 @@ def test_set_tangents(example_model_and_crs):
                                 crs_uuid = crs.uuid,
                                 location = (0, 0, -elevation),
                                 md_reference = 'kelly bushing')
-    mds =  np.array([300, 310, 330, 340])
+    mds = np.array([300, 310, 330, 340])
     zs = mds - elevation
     well_name = 'Coconut'
     source_dataframe = pd.DataFrame({
@@ -208,10 +208,10 @@ def test_xyz_for_md(example_model_and_crs):
     elevation = 100
     # Create a measured depth datum
     datum = resqpy.well.MdDatum(parent_model = model,
-                    crs_uuid = crs.uuid,
-                    location = (0, 0, -elevation),
-                    md_reference = 'kelly bushing')
-    mds =  np.array([300, 310, 330, 340])
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds = np.array([300, 310, 330, 340])
     zs = mds - elevation
     well_name = 'Coconut'
     source_dataframe = pd.DataFrame({
@@ -224,10 +224,10 @@ def test_xyz_for_md(example_model_and_crs):
 
     # Create a trajectory from dataframe
     trajectory = resqpy.well.Trajectory(parent_model = model,
-                                                   data_frame = source_dataframe,
-                                                   well_name = well_name,
-                                                   md_datum = datum,
-                                                   length_uom = 'm')
+                                        data_frame = source_dataframe,
+                                        well_name = well_name,
+                                        md_datum = datum,
+                                        length_uom = 'm')
     # --------- Act ----------
     # # Get the xyz triplet for a given measured depth
     x, y, z = trajectory.xyz_for_md(md = 305)
@@ -244,10 +244,10 @@ def test_splined_trajectory(example_model_and_crs):
     elevation = 100
     # Create a measured depth datum
     datum = resqpy.well.MdDatum(parent_model = model,
-                    crs_uuid = crs.uuid,
-                    location = (0, 0, -elevation),
-                    md_reference = 'kelly bushing')
-    mds =  np.array([300, 310, 330, 340])
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds = np.array([300, 310, 330, 340])
     zs = mds - elevation
     well_name = 'Coconut'
     source_dataframe = pd.DataFrame({
@@ -281,10 +281,10 @@ def test_dataframe(example_model_and_crs):
     elevation = 100
     # Create a measured depth datum
     datum = resqpy.well.MdDatum(parent_model = model,
-                    crs_uuid = crs.uuid,
-                    location = (0, 0, -elevation),
-                    md_reference = 'kelly bushing')
-    mds =  np.array([300, 310, 330, 340])
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds = np.array([300, 310, 330, 340])
     zs = mds - elevation
     source_dataframe = pd.DataFrame({
         'MD': mds,
