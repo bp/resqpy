@@ -1,6 +1,6 @@
-"""property.py: module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""propertycollection.py: class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '21st October 2021'
+version = '23rd November 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -9,105 +9,18 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('property.py version ' + version)
 
-import os
-# import xml.etree.ElementTree as et
-from datetime import datetime
-from functools import lru_cache
-
-import lasio
 import numpy as np
 import numpy.ma as ma
-import pandas as pd
 
-import resqpy.olio.ab_toolbox as abt
-import resqpy.olio.box_utilities as bxu
-import resqpy.olio.load_data as ld
 import resqpy.olio.uuid as bu
-import resqpy.olio.write_data as wd
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.time_series as rts
-import resqpy.weights_and_measures as bwam
-from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-# following are loaded dynamically, to avoid circular reference during import (issue for python version < 3.7)
-# import resqpy.grid as grr
-# import resqpy.well as rqw
-# import resqpy.grid as rqs
-# import resqpy.fault as rqf
-
-# the following resqml property kinds and facet types are 'known about' by this module in relation to nexus
-# other property kinds should be handled okay but without any special treatment
-# see property_kind_and_facet_from_keyword() for simulator keyword to property kind and facet mapping
-
-supported_property_kind_list = [
-    'code', 'index', 'depth', 'rock volume', 'pore volume', 'volume', 'thickness', 'length', 'cell length',
-    'net to gross ratio', 'porosity', 'permeability thickness', 'permeability length', 'permeability rock',
-    'rock permeability', 'fluid volume', 'transmissibility', 'pressure', 'saturation', 'solution gas-oil ratio',
-    'vapor oil-gas ratio', 'property multiplier', 'thermodynamic temperature', 'continuous', 'discrete', 'categorical'
-]
-
-supported_local_property_kind_list = [
-    'active', 'transmissibility multiplier', 'fault transmissibility', 'mat transmissibility'
-]
-
-supported_facet_type_list = ['direction', 'netgross', 'what']
-
-# current implementation limits a property to having at most one facet; resqml standard allows for many
-# if a property kind does not appear in the following dictionary, facet_type and facet are expected to be None
-# mapping from property kind to (facet_type, list of possible facet values), only applicable when indexable element is 'cells'
-# use of the following in code is DEPRECATED; it remains here to give a hint of facet types and facets in use
-
-expected_facet_type_dict = {
-    'depth': ('what', ['cell centre', 'cell top']),  # made up
-    'rock volume': ('netgross', ['net', 'gross']),  # resqml standard
-    'thickness': ('netgross', ['net', 'gross']),
-    'length': ('direction', ['X', 'Y', 'Z']),  # facet values made up
-    'cell length': ('direction', ['I', 'J', 'K']),  # facet values made up
-    'permeability rock': ('direction', ['I', 'J', 'K']),  # todo: allow IJ and IJK
-    'rock permeability': ('direction', ['I', 'J', 'K']),  # todo: allow IJ and IJK
-    'transmissibility': ('direction', ['I', 'J', 'K']),
-    'transmissibility multiplier': (
-        'direction',  # local property kind
-        ['I', 'J', 'K']),
-    'fault transmissibility': ('direction', ['I', 'J']),  # local property kind; K faces also permitted
-    'mat transmissibility': ('direction', ['K']),  # local property kind; I & J faces also permitted
-    'saturation': (
-        'what',
-        [
-            'water',
-            'oil',
-            'gas',  # made up but probably good
-            'water minimum',
-            'gas minimum',
-            'oil minimum',  # made up for end-points
-            'water residual',
-            'gas residual',
-            'oil residual',
-            'water residual to oil',
-            'gas residual to oil'
-        ]),
-    'fluid volume': (
-        'what',
-        [
-            'water',
-            'oil',
-            'gas',  # made up but probably good
-            'water (mobile)',
-            'oil (mobile)',
-            'gas (mobile)'
-        ]),  # made up
-    'property multiplier': (
-        'what',
-        [
-            'rock volume',  # made up; todo: add rock permeability?
-            'pore volume',
-            'transmissibility'
-        ]),
-    'code': ('what', ['inactive', 'active']),  # NB: user defined keywords also accepted
-    'index': ('what', ['uid', 'pixel map'])
-}
+from .property_kind import PropertyKind
+from .string_lookup import StringLookup
+from .property_common import same_property_kind, supported_property_kind_list, property_kind_and_facet_from_keyword, dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, guess_uom
 
 
 class PropertyCollection():
@@ -170,6 +83,7 @@ class PropertyCollection():
         self.has_multiple_realizations_flag = None
         self.parent_set_root = None
         self.realization = realization  # model realization number within an ensemble
+        self.null_value = None
         self.imported_list = [
         ]  # list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
         #                                   min_value, max_value, property_kind, facet_type, facet, realization,
@@ -446,40 +360,26 @@ class PropertyCollection():
         if part is None:
             return
         assert part not in self.dict
-        if realization is not None and self.realization is not None:
-            assert (realization == self.realization)
-        if realization is None:
-            realization = self.realization
         uuid = self.model.uuid_for_part(part, is_rels = False)
         assert uuid is not None
         xml_node = self.model.root_for_part(part, is_rels = False)
         assert xml_node is not None
-        type = self.model.type_of_part(part)
-        #      log.debug('adding part ' + part + ' of type ' + type)
-        assert type in [
-            'obj_ContinuousProperty', 'obj_DiscreteProperty', 'obj_CategoricalProperty', 'obj_PointsProperty'
-        ]
-        if continuous is None:
-            continuous = (type in ['obj_ContinuousProperty', 'obj_PointsProperty'])
-        else:
-            assert continuous == (type in ['obj_ContinuousProperty', 'obj_PointsProperty'])
-        points = (type == 'obj_PointsProperty')
-        string_lookup_uuid = None
-        if type == 'obj_CategoricalProperty':
-            sl_ref_node = rqet.find_tag(xml_node, 'Lookup')
-            string_lookup_uuid = bu.uuid_from_string(rqet.find_tag_text(sl_ref_node, 'UUID'))
+
+        realization = self._add_part_to_dict_get_realization(realization, xml_node)
+
+        type, continuous, points, string_lookup_uuid, sl_ref_node = self._add_part_to_dict_get_type_details(
+            part, continuous, xml_node)
+
         extra_metadata = rqet.load_metadata_from_xml(xml_node)
         count_node = rqet.find_tag(xml_node, 'Count')
         assert count_node is not None
         count = int(count_node.text)
-        realization_node = rqet.find_tag(xml_node,
-                                         'RealizationIndex')  # optional; if present use to populate realization
-        if realization_node is not None:
-            realization = int(realization_node.text)
+
         indexable_node = rqet.find_tag(xml_node, 'IndexableElement')
         assert indexable_node is not None
         indexable = indexable_node.text
         citation_title = rqet.find_tag(rqet.find_tag(xml_node, 'Citation'), 'Title').text
+
         (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
         prop_kind_node = rqet.find_tag(xml_node, 'PropertyKind')
         assert (prop_kind_node is not None)
@@ -498,6 +398,7 @@ class PropertyCollection():
              property_kind not in ['cell length', 'length', 'thickness'])):
             log.warning(
                 f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
+
         facet_type = None
         facet = None
         facet_node = rqet.find_tag(xml_node, 'Facet')  # todo: handle more than one facet for a property
@@ -508,12 +409,14 @@ class PropertyCollection():
                 facet_type = None
             if facet is not None and facet == '':
                 facet = None
+
         time_series_uuid = None
         time_index = None
         time_node = rqet.find_tag(xml_node, 'TimeIndex')
         if time_node is not None:
             time_index = int(rqet.find_tag(time_node, 'Index').text)
             time_series_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(time_node, 'TimeSeries'), 'UUID').text)
+
         minimum = None
         min_node = rqet.find_tag(xml_node, 'MinimumValue')
         if min_node is not None:
@@ -523,6 +426,7 @@ class PropertyCollection():
         if max_node is not None:
             maximum = max_node.text  # NB: left as text
         uom = None
+
         support_uuid = self.model.supporting_representation_for_part(part)
         if support_uuid is None:
             support_uuid = self.support_uuid
@@ -532,6 +436,7 @@ class PropertyCollection():
             self.set_support(None)
         if isinstance(support_uuid, str):
             support_uuid = bu.uuid_from_string(support_uuid)
+
         if continuous:
             uom_node = rqet.find_tag(xml_node, 'UOM')
             if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
@@ -745,71 +650,18 @@ class PropertyCollection():
         """
 
         #      log.debug('inheriting parts selectively')
-        if support_uuid is None and grid is not None:
-            support_uuid = grid.uuid
-        if support_uuid is not None and self.support_uuid is not None:
-            assert bu.matching_uuids(support_uuid, self.support_uuid)
-        assert other is not None
-        if self.model is None:
-            self.model = other.model
-        else:
-            assert self.model is other.model
-        assert self.support_uuid is None or other.support_uuid is None or bu.matching_uuids(
-            self.support_uuid, other.support_uuid)
-        if self.support_uuid is None and self.number_of_parts() == 0:
-            self.set_support(support_uuid = other.support_uuid, support = other.support)
+        self._set_support_and_model_from_collection(other, support_uuid, grid)
+
         if self.realization is not None and other.realization is not None:
             assert self.realization == other.realization
         if time_index is not None:
             assert time_index >= 0
+
         for (part, info) in other.dict.items():
-            if realization is not None and other.realization_for_part(part) != realization:
-                continue
-            if support_uuid is not None and not bu.matching_uuids(support_uuid, other.support_uuid_for_part(part)):
-                continue
-            if uuid is not None and not bu.matching_uuids(uuid, other.uuid_for_part(part)):
-                continue
-            if continuous is not None and other.continuous_for_part(part) != continuous:
-                continue
-            if categorical is not None:
-                if categorical:
-                    if other.continuous_for_part(part) or (other.string_lookup_uuid_for_part(part) is None):
-                        continue
-                else:
-                    if not (other.continuous_for_part(part) or (other.string_lookup_uuid_for_part(part) is None)):
-                        continue
-            if count is not None and other.count_for_part(part) != count:
-                continue
-            if points is not None and other.points_for_part(part) != points:
-                continue
-            if indexable is not None and other.indexable_for_part(part) != indexable:
-                continue
-            if property_kind is not None and not same_property_kind(other.property_kind_for_part(part), property_kind):
-                continue
-            if facet_type is not None and other.facet_type_for_part(part) != facet_type:
-                continue
-            if facet is not None and other.facet_for_part(part) != facet:
-                continue
-            if citation_title is not None:
-                if citation_title_match_starts_with:
-                    if not other.citation_title_for_part(part).startswith():
-                        continue
-                else:
-                    if other.citation_title_for_part(part) != citation_title:
-                        continue
-            if time_series_uuid is not None and not bu.matching_uuids(time_series_uuid,
-                                                                      other.time_series_uuid_for_part(part)):
-                continue
-            if time_index is not None and other.time_index_for_part(part) != time_index:
-                continue
-            if string_lookup_uuid is not None and not bu.matching_uuids(string_lookup_uuid,
-                                                                        other.string_lookup_uuid_for_part(part)):
-                continue
-            if part in self.dict.keys():
-                if ignore_clashes:
-                    continue
-                assert (False)
-            self.dict[part] = other.dict[part]
+            self._add_selected_part_from_other_dict(part, other, realization, support_uuid, uuid, continuous,
+                                                    categorical, count, points, indexable, property_kind, facet_type,
+                                                    facet, citation_title, citation_title_match_starts_with,
+                                                    time_series_uuid, time_index, string_lookup_uuid, ignore_clashes)
 
     def inherit_similar_parts_for_time_series_from_other_collection(self,
                                                                     other,
@@ -1320,7 +1172,6 @@ class PropertyCollection():
         """
 
         import resqpy.grid as grr
-        import resqpy.unstructured as rug
 
         support_uuid = self.support_uuid_for_part(part)
         if support_uuid is None:
@@ -1800,8 +1651,8 @@ class PropertyCollection():
         self.dict[part] = tuple(property_part)
 
     def establish_time_set_kind(self):
-        """Re-evaulate the time set kind attribute.
-        
+        """Re-evaulates the time set kind attribute.
+
         Based on all properties having same time index in the same time series.
         """
         self.time_set_kind_attr = 'single time'
@@ -1831,7 +1682,7 @@ class PropertyCollection():
 
     def time_set_kind(self):
         """Returns the time set kind attribute.
-        
+
         Based on all properties having same time index in the same time series.
         """
         if self.time_set_kind_attr is None:
@@ -1839,7 +1690,7 @@ class PropertyCollection():
         return self.time_set_kind_attr
 
     def establish_has_single_property_kind(self):
-        """Re-evaluates the has single property kind attribute
+        """Re-evaluates the has single property kind attribute.
         
         Depends on whether all properties are of the same kind.
         """
@@ -1863,7 +1714,7 @@ class PropertyCollection():
 
     def establish_has_single_indexable_element(self):
         """Re-evaluate the has single indexable element attribute.
-        
+
         Depends on whether all properties have the same.
         """
         self.has_single_indexable_element_flag = True
@@ -1886,7 +1737,7 @@ class PropertyCollection():
 
     def establish_has_multiple_realizations(self):
         """Re-evaluates the has multiple realizations attribute.
-        
+
         Based on whether properties belong to more than one realization.
         """
         self.has_multiple_realizations_flag = False
@@ -3046,6 +2897,10 @@ class PropertyCollection():
         assert not points or const_value is None
         assert not points or facet_type is None
         assert self.model is not None
+
+        if null_value is not None:
+            self.null_value = null_value
+
         if support_uuid is None:
             support_uuid = self.support_uuid
         assert support_uuid is not None
@@ -3059,58 +2914,22 @@ class PropertyCollection():
             const_value = None
 
         support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
-        if indexable_element is None:
-            if support_type in [
-                    'obj_IjkGridRepresentation', 'obj_BlockedWellboreRepresentation', 'obj_Grid2dRepresentation',
-                    'obj_UnstructuredGridRepresentation'
-            ]:
-                indexable_element = 'cells'
-            elif support_type == 'obj_WellboreFrameRepresentation':
-                indexable_element = 'nodes'  # note: could be 'intervals'
-            elif support_type == 'obj_GridConnectionSetRepresentation':
-                indexable_element = 'faces'
-            else:
-                raise Exception('indexable element unknown for unsupported supporting representation object')
+
+        indexable_element = _get_indexable_element(indexable_element, support_type)
 
         direction = None if facet_type is None or facet_type != 'direction' else facet
+
         if self.support is not None:
-            shape_list = self.supporting_shape(indexable_element = indexable_element, direction = direction)
-            if shape_list is not None:
-                if count > 1:
-                    shape_list.append(count)
-                if points:
-                    shape_list.append(3)
-                if property_array is not None:
-                    assert tuple(shape_list) == property_array.shape,  \
-                       f'property array shape {property_array.shape} is not the expected {tuple(shape_list)}'
+            self._check_shape_list(indexable_element, direction, property_array, points, count)
+
         # todo: assertions:
         #    numpy data type matches discrete flag (and assumptions about precision)
         #    uom are valid units for property_kind
         assert property_kind, 'missing property kind when creating xml for property'
 
-        if discrete:
-            if string_lookup_uuid is None:
-                d_or_c_text = 'Discrete'
-            else:
-                d_or_c_text = 'Categorical'
-            xsd_type = 'integer'
-            hdf5_type = 'IntegerHdf5Array'
-        elif points:
-            d_or_c_text = 'Points'
-            xsd_type = 'double'
-            hdf5_type = 'Point3dHdf5Array'
-            null_value = None
-        else:
-            d_or_c_text = 'Continuous'
-            xsd_type = 'double'
-            hdf5_type = 'DoubleHdf5Array'
-            null_value = None
+        self._get_property_type_details(discrete, string_lookup_uuid, points)
 
-        p_node = self.model.new_obj_node(d_or_c_text + 'Property')
-        if p_uuid is None:
-            p_uuid = bu.uuid_from_string(p_node.attrib['uuid'])
-        else:
-            p_node.attrib['uuid'] = str(p_uuid)
+        p_node, p_uuid = self._create_xml_get_p_node(p_uuid)
 
         self.model.create_citation(root = p_node, title = title, originator = originator)
 
@@ -3127,167 +2946,33 @@ class PropertyCollection():
         ie_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IndexableElements')
         ie_node.text = indexable_element
 
-        if realization is not None and realization >= 0:
-            ri_node = rqet.SubElement(p_node, ns['resqml2'] + 'RealizationIndex')
-            ri_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
-            ri_node.text = str(realization)
+        self._create_xml_realization_node(realization, p_node)
 
-        if time_series_uuid is None or time_index is None:
-            related_time_series_node = None
-        else:
-            related_time_series_node = self.model.root(uuid = time_series_uuid)
-            time_series = rts.any_time_series(self.model, uuid = time_series_uuid)
-            time_series.create_time_index(time_index, root = p_node)
+        related_time_series_node = self._create_xml_time_series_node(time_series_uuid, time_index, p_node, support_uuid,
+                                                                     support_type, support_root)
 
-        support_title = '' if support_root is None else rqet.citation_title_for_node(support_root)
-        self.model.create_supporting_representation(support_uuid = support_uuid,
-                                                    root = p_node,
-                                                    title = support_title,
-                                                    content_type = support_type)
-
-        p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
-        p_kind_node.text = rqet.null_xml_text
-        if find_local_property_kinds and property_kind not in supported_property_kind_list:
-            if property_kind_uuid is None:
-                pk_parts_list = self.model.parts_list_of_type('PropertyKind')
-                for part in pk_parts_list:
-                    if self.model.citation_title_for_part(part) == property_kind:
-                        property_kind_uuid = self.model.uuid_for_part(part)
-                        break
-                if property_kind_uuid is None:
-                    # create local property kind object and fetch uuid
-                    lpk = PropertyKind(self.model,
-                                       title = property_kind,
-                                       example_uom = uom,
-                                       parent_property_kind = 'discrete' if discrete else 'continuous')
-                    lpk.create_xml()
-                    property_kind_uuid = lpk.uuid
-        if property_kind_uuid is None:
-            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'StandardPropertyKind')  # todo: local prop kind ref
-            kind_node = rqet.SubElement(p_kind_node, ns['resqml2'] + 'Kind')
-            kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlPropertyKind')
-            kind_node.text = property_kind
-        else:
-            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'LocalPropertyKind')  # todo: local prop kind ref
-            self.model.create_ref_node('LocalPropertyKind',
-                                       property_kind,
-                                       property_kind_uuid,
-                                       content_type = 'obj_PropertyKind',
-                                       root = p_kind_node)
-
-        # create patch node
-        const_count = None
-        if const_value is not None:
-            s_shape = self.supporting_shape(indexable_element = indexable_element, direction = direction)
-            assert s_shape is not None
-            const_count = np.product(np.array(s_shape, dtype = int))
-        _ = self.model.create_patch(p_uuid,
-                                    ext_uuid,
-                                    root = p_node,
-                                    hdf5_type = hdf5_type,
-                                    xsd_type = xsd_type,
-                                    null_value = null_value,
-                                    const_value = const_value,
-                                    const_count = const_count,
-                                    points = points)
-
-        if facet_type is not None and facet is not None:
-            facet_node = rqet.SubElement(p_node, ns['resqml2'] + 'Facet')
-            facet_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PropertyKindFacet')
-            facet_node.text = rqet.null_xml_text
-            facet_type_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Facet')
-            facet_type_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Facet')
-            facet_type_node.text = facet_type
-            facet_value_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Value')
-            facet_value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
-            facet_value_node.text = facet
+        self._create_xml_property_kind(p_node, find_local_property_kinds, property_kind, uom, discrete,
+                                       property_kind_uuid)
+        self._create_xml_patch_node(p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid)
+        _create_xml_facet_node(facet_type, facet, p_node)
 
         if add_min_max:
             # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
-            if const_value is not None:
-                if (discrete and const_value != null_value) or (not discrete and not np.isnan(const_value)):
-                    if min_value is None:
-                        min_value = const_value
-                    if max_value is None:
-                        max_value = const_value
-            elif property_array is not None:
-                if discrete:
-                    if min_value is None:
-                        try:
-                            min_value = int(property_array.min())
-                        except Exception:
-                            min_value = None
-                            log.warning('no xml minimum value set for discrete property')
-                    if max_value is None:
-                        try:
-                            max_value = int(property_array.max())
-                        except Exception:
-                            max_value = None
-                            log.warning('no xml maximum value set for discrete property')
-                else:
-                    if min_value is None or max_value is None:
-                        all_nan = np.all(np.isnan(property_array))
-                    if min_value is None and not all_nan:
-                        min_value = np.nanmin(property_array)
-                        if np.isnan(min_value) or min_value is ma.masked:
-                            min_value = None
-                    if max_value is None and not all_nan:
-                        max_value = np.nanmax(property_array)
-                        if np.isnan(max_value) or max_value is ma.masked:
-                            max_value = None
-            if min_value is not None:
-                min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
-                min_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)
-                min_node.text = str(min_value)
-            if max_value is not None:
-                max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
-                max_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)
-                max_node.text = str(max_value)
+            min_value, max_value = self._get_property_array_min_max_value(property_array, const_value, discrete,
+                                                                          min_value, max_value)
 
+            self._create_xml_property_min_max(p_node, min_value, max_value)  # TODO: continue here!
+
+        sl_root = None
         if discrete:
-            if string_lookup_uuid is not None:
-                sl_root = self.model.root_for_uuid(string_lookup_uuid)
-                assert sl_root is not None, 'string table lookup is missing whilst importing categorical property'
-                assert rqet.node_type(
-                    sl_root) == 'obj_StringTableLookup', 'referenced uuid is not for string table lookup'
-                self.model.create_ref_node('Lookup',
-                                           self.model.title_for_root(sl_root),
-                                           string_lookup_uuid,
-                                           content_type = 'obj_StringTableLookup',
-                                           root = p_node)
+            sl_root = self._create_xml_lookup_node(p_node, string_lookup_uuid)
+
         else:  # continuous
-            if not uom:
-                uom = guess_uom(property_kind,
-                                min_value,
-                                max_value,
-                                self.support,
-                                facet_type = facet_type,
-                                facet = facet)
-                if not uom:
-                    uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
-                    log.warning(f'uom set to Euc for property {title} of kind {property_kind}')
-            self.model.uom_node(p_node, uom)
+            self._create_xml_uom_node(p_node, uom, property_kind, min_value, max_value, facet_type, facet, title)
 
-        if add_as_part:
-            self.model.add_part('obj_' + d_or_c_text + 'Property', p_uuid, p_node)
-            if add_relationships:
-                if support_root is not None:
-                    self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
-                if property_kind_uuid is not None:
-                    pk_node = self.model.root_for_uuid(property_kind_uuid)
-                    if pk_node is not None:
-                        self.model.create_reciprocal_relationship(p_node, 'destinationObject', pk_node, 'sourceObject')
-                if related_time_series_node is not None:
-                    self.model.create_reciprocal_relationship(p_node, 'destinationObject', related_time_series_node,
-                                                              'sourceObject')
-                if discrete and string_lookup_uuid is not None:
-                    self.model.create_reciprocal_relationship(p_node, 'destinationObject', sl_root, 'sourceObject')
-
-                if const_value is None:
-                    ext_node = self.model.root_for_part(
-                        rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False))
-                    self.model.create_reciprocal_relationship(p_node, 'mlToExternalPartProxy', ext_node,
-                                                              'externalPartProxyToMl')
+        self._create_xml_add_as_part(add_as_part, p_uuid, p_node, add_relationships, support_root, property_kind_uuid,
+                                     related_time_series_node, sl_root, discrete, string_lookup_uuid, const_value,
+                                     ext_uuid)
 
         return p_node
 
@@ -3397,138 +3082,17 @@ class PropertyCollection():
         :meta common:
         """
 
-        ntg_part = poro_part = perm_i_part = perm_j_part = perm_k_part = None
-        try:
-            ntg_part = self.singleton(realization = realization, property_kind = 'net to gross ratio')
-        except Exception:
-            log.error('problem with net to gross ratio data (more than one array present?)')
-            ntg_part = None
-        try:
-            poro_part = self.singleton(realization = realization, property_kind = 'porosity')
-        except Exception:
-            log.error('problem with porosity data (more than one array present?)')
-            poro_part = None
+        perm_i_part = perm_j_part = perm_k_part = None
+
+        ntg_part = self._find_single_part('net to gross ratio', realization)
+        poro_part = self._find_single_part('porosity', realization)
+
         perms = selective_version_of_collection(self, realization = realization, property_kind = 'permeability rock')
         if perms is None or perms.number_of_parts() == 0:
             log.error('no rock permeabilities present')
         else:
-            if perms.number_of_parts() == 1:
-                perm_i_part = perms.singleton()
-                if share_perm_parts:
-                    perm_j_part = perm_k_part = perm_i_part
-                elif perms.facet_type_for_part(perm_i_part) == 'direction':
-                    direction = perms.facet_for_part(perm_i_part)
-                    if direction == 'J':
-                        perm_j_part = perm_i_part
-                        perm_i_part = None
-                    elif direction == 'IJ':
-                        perm_j_part = perm_i_part
-                    elif direction == 'K':
-                        perm_k_part = perm_i_part
-                        perm_i_part = None
-                    elif direction == 'IJK':
-                        perm_j_part = perm_k_part = perm_i_part
-            else:
-                try:
-                    perm_i_part = perms.singleton(facet_type = 'direction', facet = 'I')
-                    if not perm_i_part:
-                        perm_i_part = perms.singleton(facet_type = 'direction', facet = 'IJ')
-                    if not perm_i_part:
-                        perm_i_part = perms.singleton(facet_type = 'direction', facet = 'IJK')
-                    if not perm_i_part:
-                        perm_i_part = perms.singleton(citation_title = 'KI')
-                    if not perm_i_part:
-                        perm_i_part = perms.singleton(citation_title = 'PERMI')
-                    if not perm_i_part:
-                        perm_i_part = perms.singleton(citation_title = 'KX')
-                    if not perm_i_part:
-                        perm_i_part = perms.singleton(citation_title = 'PERMX')
-                    if not perm_i_part:
-                        log.error('unable to discern which rock permeability to use for I direction')
-                except Exception:
-                    log.error('problem with permeability data (more than one I direction array present?)')
-                    perm_i_part = None
-                try:
-                    perm_j_part = perms.singleton(facet_type = 'direction', facet = 'J')
-                    if not perm_j_part:
-                        perm_j_part = perms.singleton(facet_type = 'direction', facet = 'IJ')
-                    if not perm_j_part:
-                        perm_j_part = perms.singleton(facet_type = 'direction', facet = 'IJK')
-                    if not perm_j_part:
-                        perm_j_part = perms.singleton(citation_title = 'KJ')
-                    if not perm_j_part:
-                        perm_j_part = perms.singleton(citation_title = 'PERMJ')
-                    if not perm_j_part:
-                        perm_j_part = perms.singleton(citation_title = 'KY')
-                    if not perm_j_part:
-                        perm_j_part = perms.singleton(citation_title = 'PERMY')
-                except Exception:
-                    log.error('problem with permeability data (more than one J direction array present?)')
-                    perm_j_part = None
-                if perm_j_part is None and share_perm_parts:
-                    perm_j_part = perm_i_part
-                elif perm_i_part is None and share_perm_parts:
-                    perm_i_part = perm_j_part
-                try:
-                    perm_k_part = perms.singleton(facet_type = 'direction', facet = 'K')
-                    if perm_k_part is None:
-                        perm_k_part = perms.singleton(facet_type = 'direction', facet = 'IJK')
-                    if not perm_k_part:
-                        perm_k_part = perms.singleton(citation_title = 'KK')
-                    if not perm_k_part:
-                        perm_k_part = perms.singleton(citation_title = 'PERMK')
-                    if not perm_k_part:
-                        perm_k_part = perms.singleton(citation_title = 'KZ')
-                    if not perm_k_part:
-                        perm_k_part = perms.singleton(citation_title = 'PERMZ')
-                except Exception:
-                    log.error('problem with permeability data (more than one K direction array present?)')
-                    perm_k_part = None
-                if perm_k_part is None:
-                    assert perm_k_mode in [None, 'none', 'shared', 'ratio', 'ntg', 'ntg squared']
-                    # note: could switch ratio mode to shared if perm_k_ratio is 1.0
-                    if perm_k_mode is None or perm_k_mode == 'none':
-                        pass
-                    elif perm_k_mode == 'shared':
-                        if share_perm_parts:
-                            perm_k_part = perm_i_part
-                    elif perm_i_part is not None:
-                        log.info('generating K permeability data using mode ' + str(perm_k_mode))
-                        if perm_j_part is not None and perm_j_part != perm_i_part:
-                            # generate root mean square of I & J permeabilities to use as horizontal perm
-                            kh = np.sqrt(
-                                perms.cached_part_array_ref(perm_i_part) * perms.cached_part_array_ref(perm_j_part))
-                        else:  # use I permeability as horizontal perm
-                            kh = perms.cached_part_array_ref(perm_i_part)
-                        kv = kh * perm_k_ratio
-                        if ntg_part is not None:
-                            if perm_k_mode == 'ntg':
-                                kv *= self.cached_part_array_ref(ntg_part)
-                            elif perm_k_mode == 'ntg squared':
-                                ntg = self.cached_part_array_ref(ntg_part)
-                                kv *= ntg * ntg
-                        kv_collection = PropertyCollection()
-                        kv_collection.set_support(support_uuid = self.support_uuid, model = self.model)
-                        kv_collection.add_cached_array_to_imported_list(
-                            kv,
-                            'derived from horizontal perm with mode ' + str(perm_k_mode),
-                            'KK',
-                            discrete = False,
-                            uom = 'mD',
-                            time_index = None,
-                            null_value = None,
-                            property_kind = 'permeability rock',
-                            facet_type = 'direction',
-                            facet = 'K',
-                            realization = perms.realization_for_part(perm_i_part),
-                            indexable_element = perms.indexable_for_part(perm_i_part),
-                            count = 1,
-                            points = False)
-                        self.model.h5_release()
-                        kv_collection.write_hdf5_for_imported_list()
-                        kv_collection.create_xml_for_imported_list_and_add_parts_to_model()
-                        self.inherit_parts_from_other_collection(kv_collection)
-                        perm_k_part = kv_collection.singleton()
+            perm_i_part, perm_j_part, perm_k_part = self._get_single_perm_ijk_parts(perms, share_perm_parts,
+                                                                                    perm_k_mode, perm_k_ratio, ntg_part)
 
         return ntg_part, poro_part, perm_i_part, perm_j_part, perm_k_part
 
@@ -3609,2565 +3173,485 @@ class PropertyCollection():
             return None
         return self.facet_for_part(part)
 
-
-class Property(BaseResqpy):
-    """Class for an individual property object; uses a single element PropertyCollection behind the scenes."""
-
-    @property
-    def resqml_type(self):
-        root_node = self.root
-        if root_node is not None:
-            return rqet.node_type(root_node, strip_obj = True)
-        if (not hasattr(self, 'collection') or self.collection.number_of_parts() != 1 or self.is_continuous()):
-            return 'ContinuousProperty'
-        if self.collection.points_for_part(self.collection.parts()[0]):
-            return 'PointsProperty'
-        return 'CategoricalProperty' if self.is_categorical() else 'DiscreteProperty'
-
-    def __init__(self, parent_model, uuid = None, title = None, support_uuid = None, extra_metadata = None):
-        """Initialises a resqpy Property object, either for an existing RESQML property, or empty for support.
-
-        arguments:
-           parent_model (model.Model): the model to which the property belongs
-           uuid (uuid.UUID, optional): required if initialising from an existing RESQML property object
-           title (str, optional): the citation title to use for the property; ignored if uuid is present
-           support_uuid (uuid.UUID, optional): identifies the supporting representation for the property;
-              ignored if uuid is present
-           extra_metadata (dict, optional): if present, the dictionary items are added as extra metadata;
-              ignored if uuid is present
-
-        returns:
-           new resqpy Property object
-        """
-
-        self.collection = PropertyCollection()
-        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
-        if support_uuid is not None:
-            if self.collection.support_uuid is None:
-                self.collection.set_support(model = parent_model, support_uuid = support_uuid)
-            else:
-                assert bu.matching_uuids(support_uuid, self.collection.support_uuid)
-
-    def _load_from_xml(self):
-        """Populates this property object from xml; not usually called directly."""
-
-        part = self.part
-        assert part is not None
-        if self.collection is None:
-            self.collection = PropertyCollection()
-        if self.collection.model is None:
-            self.collection.model = self.model
-        self.collection.add_part_to_dict(part)
-        self.extra_metadata = self.collection.extra_metadata_for_part(
-            part)  # duplicate, as standard attribute in BaseResqpy
-        self.collection.has_single_property_kind_flag = True
-        self.collection.has_single_indexable_element_flag = True
-        self.collection.has_multiple_realizations_flag = False
-        assert self.collection.number_of_parts() == 1
-
-    @classmethod
-    def from_singleton_collection(cls, property_collection: PropertyCollection):
-        """Populates a new Property from a PropertyCollection containing just one part.
-
-        arguments:
-           property_collection (PropertyCollection): the singleton collection from which to populate this Property
-        """
-
-        # Validate
-        assert property_collection.model is not None
-        assert property_collection is not None
-        assert property_collection.number_of_parts() == 1
-
-        # Instantiate the object i.e. call the class __init__ method
-        part = property_collection.parts()[0]
-        prop = cls(parent_model = property_collection.model,
-                   uuid = property_collection.uuid_for_part(part),
-                   support_uuid = property_collection.support_uuid,
-                   title = property_collection.citation_title_for_part(part),
-                   extra_metadata = property_collection.extra_metadata_for_part(part))
-
-        # Edit properties of collection attribute
-        prop.collection.has_single_property_kind_flag = True
-        prop.collection.has_single_indexable_element_flag = True
-        prop.collection.has_multiple_realizations_flag = False
-
-        return prop
-
-    @classmethod
-    def from_array(cls,
-                   parent_model,
-                   cached_array,
-                   source_info,
-                   keyword,
-                   support_uuid,
-                   property_kind = None,
-                   local_property_kind_uuid = None,
-                   indexable_element = None,
-                   facet_type = None,
-                   facet = None,
-                   discrete = False,
-                   uom = None,
-                   null_value = None,
-                   time_series_uuid = None,
-                   time_index = None,
-                   realization = None,
-                   count = 1,
-                   points = False,
-                   const_value = None,
-                   string_lookup_uuid = None,
-                   find_local_property_kind = True,
-                   expand_const_arrays = False,
-                   extra_metadata = {}):
-        """Populates a new Property from a numpy array and metadata; NB. Writes data to hdf5 and adds part to model.
-
-        arguments:
-           parent_model (model.Model): the model to which the new property belongs
-           cached_array: a numpy array to be made into a property; for a constant array set cached_array to None
-              (and use const_value)
-           source_info (string): typically the name of a file from which the array has been read but can be any
-              information regarding the source of the data
-           keyword (string): this will be used as the citation title for the property
-           support_uuid (uuid): the uuid of the supporting representation
-           property_kind (string): resqml property kind (required unless a local propery kind is identified with
-              local_property_kind_uuid)
-           local_property_kind_uuid (uuid.UUID or string, optional): uuid of local property kind, or None if a
-              standard property kind applies or if the local property kind is identified by its name (see
-              find_local_property_kind)
-           indexable_element (string): the indexable element in the supporting representation; if None
-              then the 'typical' indexable element for the class of supporting representation will be assumed
-           facet_type (string, optional): resqml facet type, or None; resqpy only supports at most one facet per
-              property though RESQML allows for multiple)
-           facet (string, optional): resqml facet, or None; resqpy only supports at most one facet per property
-              though RESQML allows for multiple)
-           discrete (boolean, optional, default False): if True, the array should contain integer (or boolean)
-              data, if False, float; set True for any discrete data including categorical
-           uom (string, optional, default None): the resqml units of measure for the data; required for
-              continuous (float) array
-           null_value (int, optional, default None): if present, this is used in the metadata to indicate that
-              the value is to be interpreted as a null value wherever it appears in the discrete data; not used
-              for continuous data where NaN is always the null value
-           time_series_uuid (optional): the uuid of the full or reduced time series that the time_index is for
-           time_index (integer, optional, default None): if not None, the time index for the property (see also
-              time_series_uuid)
-           realization (int, optional): realization number, or None
-           count (int, default 1): the number of values per indexable element; if greater than one then this
-              must be the fastest cycling axis in the cached array, ie last index
-           const_value (int, float or bool, optional): the value with which a constant array is filled;
-              required if cached_array is None, must be None otherwise
-           string_lookup_uuid (optional): if present, the uuid of the string table lookup which the categorical data
-              relates to; if None, the property will not be configured as categorical
-           find_local_property_kind (boolean, default True): if True, local property kind uuid need not be provided as
-              long as the property_kind is set to match the title of the appropriate local property kind object
-           expand_const_arrays (boolean, default False): if True, and a const_value is given, the array will be fully
-              expanded and written to the hdf5 file; the xml will then not indicate that it is constant
-           extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
-
-        returns:
-           new Property object built from numpy array; the hdf5 data has been written, xml created and the part
-           added to the model
-
-        notes:
-           this method writes to the hdf5 file and creates the xml node, which is added as a part to the model;
-           calling code must still call the model's store_epc() method;
-           this from_array() method is a convenience method calling self.collection.set_support(),
-           self.prepare_import(), self.write_hdf5() and self.create_xml()
-
-        :meta common:
-        """
-        # Validate
-        assert parent_model is not None
-        assert cached_array is not None or const_value is not None
-
-        # Instantiate the object i.e. call the class __init__ method
-        prop = cls(parent_model = parent_model,
-                   title = keyword,
-                   support_uuid = support_uuid,
-                   extra_metadata = extra_metadata)
-
-        # Prepare array data in collection attribute and add to model
-        prop.collection.set_support(model = prop.model,
-                                    support_uuid = support_uuid)  # this can be expensive; todo: optimise
-        if prop.collection.model is None:
-            prop.collection.model = prop.model
-        prop.prepare_import(cached_array,
-                            source_info,
-                            keyword,
-                            discrete = discrete,
-                            uom = uom,
-                            time_index = time_index,
-                            null_value = null_value,
-                            property_kind = property_kind,
-                            local_property_kind_uuid = local_property_kind_uuid,
-                            facet_type = facet_type,
-                            facet = facet,
-                            realization = realization,
-                            indexable_element = indexable_element,
-                            count = count,
-                            points = points,
-                            const_value = const_value)
-        prop.write_hdf5(expand_const_arrays = expand_const_arrays)
-        prop.create_xml(support_uuid = support_uuid,
-                        time_series_uuid = time_series_uuid,
-                        string_lookup_uuid = string_lookup_uuid,
-                        property_kind_uuid = local_property_kind_uuid,
-                        find_local_property_kind = find_local_property_kind,
-                        expand_const_arrays = expand_const_arrays,
-                        extra_metadata = extra_metadata)
-        return prop
-
-    def array_ref(self, dtype = None, masked = False, exclude_null = False):
-        """Returns a (cached) numpy array containing the property values.
-
-        arguments:
-           dtype (str or type, optional): the required dtype of the array (usually float, int or bool)
-           masked (boolean, default False): if True, a numpy masked array is returned, with the mask determined by
-              the inactive cell mask in the case of a Grid property
-           exclude_null (boolean, default False): if True and masked is True, elements whose value is the null value
-              (NaN for floats) will be masked out
-
-        returns:
-           numpy array
-
-        :meta common:
-        """
-
-        return self.collection.cached_part_array_ref(self.part,
-                                                     dtype = dtype,
-                                                     masked = masked,
-                                                     exclude_null = exclude_null)
-
-
-#   def citation_title(self):
-#      return self.collection.citation_title_for_part(self.part)
-
-    def is_continuous(self):
-        """Returns boolean indicating that the property contains continuous (ie. float) data.
-
-        :meta common:
-        """
-        return self.collection.continuous_for_part(self.part)
-
-    def is_points(self):
-        """Returns boolean indicating that the property is a points property."""
-
-        return self.collection.points_for_part(self.part)
-
-    def is_categorical(self):
-        """Returns boolean indicating that the property contains categorical data.
-
-        :meta common:
-        """
-        return self.collection.part_is_categorical(self.part)
-
-    def null_value(self):
-        """Returns int being the null value for the (discrete) property."""
-        return self.collection.null_value_for_part(self.part)
-
-    def count(self):
-        """Returns int being the number of values for each element (usually 1)."""
-        return self.collection.count_for_part(self.part)
-
-    def indexable_element(self):
-        """Returns string being the indexable element for the property.
-
-        :meta common:
-        """
-        return self.collection.indexable_for_part(self.part)
-
-    def property_kind(self):
-        """Returns string being the property kind for the property.
-
-        :meta common:
-        """
-        return self.collection.property_kind_for_part(self.part)
-
-    def local_property_kind_uuid(self):
-        """Returns uuid of the local property kind for the property (if applicable, otherwise None)."""
-        return self.collection.local_property_kind_uuid(self.part)
-
-    def facet_type(self):
-        """Returns string being the facet type for the property, or None if no facet present.
-
-        note: resqpy currently supports at most one facet per property, though RESQML allows for multiple.
-
-        :meta common:
-        """
-        return self.collection.facet_type_for_part(self.part)
-
-    def facet(self):
-        """Returns string being the facet value for the property, or None if no facet present.
-
-        note: resqpy currently supports at most one facet per property, though RESQML allows for multiple.
-
-        :meta common:
-        """
-        return self.collection.facet_for_part(self.part)
-
-    def time_series_uuid(self):
-        """Returns the uuid of the related time series (if applicable, otherwise None)."""
-        return self.collection.time_series_uuid_for_part(self.part)
-
-    def time_index(self):
-        """Returns int being the index into the related time series (if applicable, otherwise None)."""
-        return self.collection.time_index_for_part(self.part)
-
-    def minimum_value(self):
-        """Returns the minimum value for the property as stored in xml (float or int or None)."""
-        return self.collection.minimum_value_for_part(self.part)
-
-    def maximum_value(self):
-        """Returns the maximum value for the property as stored in xml (float or int or None)."""
-        return self.collection.maximum_value_for_part(self.part)
-
-    def uom(self):
-        """Returns string being the units of measure (for a continuous property, otherwise None).
-
-        :meta common:
-        """
-        return self.collection.uom_for_part(self.part)
-
-    def string_lookup_uuid(self):
-        """Returns the uuid of the related string lookup table (for a categorical property, otherwise None)."""
-        return self.collection.string_lookup_uuid_for_part(self.part)
-
-    def string_lookup(self):
-        """Returns a resqpy StringLookup table (for a categorical property, otherwise None)."""
-        return self.collection.string_lookup_for_part(self.part)
-
-    def constant_value(self):
-        """For a constant property, returns the constant value (float or int or bool, or None if not constant)."""
-        return self.collection.constant_value_for_part(self.part)
-
-    def prepare_import(self,
-                       cached_array,
-                       source_info,
-                       keyword,
-                       discrete = False,
-                       uom = None,
-                       time_index = None,
-                       null_value = None,
-                       property_kind = None,
-                       local_property_kind_uuid = None,
-                       facet_type = None,
-                       facet = None,
-                       realization = None,
-                       indexable_element = None,
-                       count = 1,
-                       const_value = None,
-                       points = False):
-        """Takes a numpy array and metadata and sets up a single array import list; not usually called directly.
-
-        note:
-           see the documentation for the convenience method from_array()
-        """
-        assert self.collection.number_of_parts() == 0
-        assert not self.collection.imported_list
-        self.collection.add_cached_array_to_imported_list(cached_array,
-                                                          source_info,
-                                                          keyword,
-                                                          discrete = discrete,
-                                                          uom = uom,
-                                                          time_index = time_index,
-                                                          null_value = null_value,
-                                                          property_kind = property_kind,
-                                                          local_property_kind_uuid = local_property_kind_uuid,
-                                                          facet_type = facet_type,
-                                                          facet = facet,
-                                                          realization = realization,
-                                                          indexable_element = indexable_element,
-                                                          count = count,
-                                                          const_value = const_value,
-                                                          points = points)
-
-    def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False):
-        """Writes the array data to the hdf5 file; not usually called directly.
-
-        notes:
-           see the documentation for the convenience method from_array();
-        """
-        if not self.collection.imported_list:
-            log.warning('no imported Property array to write to hdf5')
-            return
-        self.collection.write_hdf5_for_imported_list(file_name = file_name,
-                                                     mode = mode,
-                                                     expand_const_arrays = expand_const_arrays)
-
-    def create_xml(self,
-                   ext_uuid = None,
-                   support_uuid = None,
-                   time_series_uuid = None,
-                   string_lookup_uuid = None,
-                   property_kind_uuid = None,
-                   find_local_property_kind = True,
-                   expand_const_arrays = False,
-                   extra_metadata = {}):
-        """Creates an xml tree for the property and adds it as a part to the model; not usually called directly.
-
-        note:
-           see the documentation for the convenience method from_array()
-           NB. this method has the deliberate side effect of modifying the uuid and title of self to match those
-           of the property collection part!
-        """
-        if not self.collection.imported_list:
-            log.warning('no imported Property array to create xml for')
-            return
-        self.collection.create_xml_for_imported_list_and_add_parts_to_model(
-            ext_uuid = ext_uuid,
-            support_uuid = support_uuid,
-            time_series_uuid = time_series_uuid,
-            selected_time_indices_list = None,
-            string_lookup_uuid = string_lookup_uuid,
-            property_kind_uuid = property_kind_uuid,
-            find_local_property_kinds = find_local_property_kind,
-            expand_const_arrays = expand_const_arrays,
-            extra_metadata = extra_metadata)
-        self.collection.has_single_property_kind_flag = True
-        self.collection.has_single_uom_flag = True
-        self.collection.has_single_indexable_element_flag = True
-        self.collection.has_multiple_realizations_flag = False
-        part = self.collection.parts()[0]
-        assert part is not None
-        self.uuid = self.collection.uuid_for_part(part)
-        self.title = self.collection.citation_title_for_part(part)
-        return self.root
-
-
-class GridPropertyCollection(PropertyCollection):
-    """Class for RESQML Property collection for an IJK Grid, inheriting from PropertyCollection."""
-
-    def __init__(self, grid = None, property_set_root = None, realization = None):
-        """Creates a new property collection related to an IJK grid.
-
-        arguments:
-           grid (grid.Grid object, optional): must be present unless creating a completely blank, empty collection
-           property_set_root (optional): if present, the collection is populated with the properties defined in the xml tree
-              of the property set; grid must not be None when using this argument
-           realization (integer, optional): if present, the single realisation (within an ensemble) that this collection is for;
-              if None, then the collection is either covering a whole ensemble (individual properties can each be flagged with a
-              realisation number), or is for properties that do not have multiple realizations
-
-        returns:
-           the new GridPropertyCollection object
-
-        note:
-           usually a grid should be passed, however a completely blank collection may be created prior to using
-           collection inheritance methods to populate from another collection, in which case the grid can be lazily left
-           as None here
-
-        :meta common:
-        """
-
-        if grid is not None:
-            log.debug('initialising grid property collection for grid: ' + str(rqet.citation_title_for_node(grid.root)))
-            log.debug('grid uuid: ' + str(grid.uuid))
-        super().__init__(support = grid, property_set_root = property_set_root, realization = realization)
-        self._copy_support_to_grid_attributes()
-
-        # NB: RESQML documentation is not clear which order is correct; should be kept consistent with same data in fault.py
-        # face_index_map maps from (axis, p01) to face index value in range 0..5
-        #     self.face_index_map = np.array([[0, 1], [4, 2], [5, 3]], dtype = int)
-        self.face_index_map = np.array([[0, 1], [2, 4], [5, 3]], dtype = int)  # order: top, base, J-, I+, J+, I-
-        # and the inverse, maps from 0..5 to (axis, p01)
-        #     self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = int)
-        self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = int)
-
-    def _copy_support_to_grid_attributes(self):
-        # following three pseudonyms are for backward compatibility
-        self.grid = self.support
-        self.grid_root = self.support_root
-        self.grid_uuid = self.support_uuid
-
-    def set_grid(self, grid, grid_root = None, modify_parts = True):
-        """Sets the supporting representation object for the collection to be the given grid.
-
-        note:
-           this method does not need to be called if the grid was passed during object initialisation.
-        """
-
-        self.set_support(support = grid, modify_parts = modify_parts)
-        self._copy_support_to_grid_attributes()
-
-    def h5_slice_for_box(self, part, box):
-        """Returns a subset of the array for part, without loading the whole array (unless already cached).
-
-        arguments:
-           part (string): the part name for which the array slice is required
-           box (numpy int array of shape (2, 3)): the min, max indices for K, J, I axes for which an array
-              extract is required
-
-        returns:
-           numpy array that is a hyper-slice of the hdf5 array
-
-        note:
-           this method always fetches from the hdf5 file and does not attempt local caching; the whole array
-           is not loaded; all axes continue to exist in the returned array, even where the sliced extent of
-           an axis is 1; the upper indices indicated in the box are included in the data (unlike the python
-           protocol)
-        """
-
-        slice_tuple = (slice(box[0, 0], box[1, 0] + 1), slice(box[0, 1],
-                                                              box[1, 1] + 1), slice(box[0, 2], box[1, 2] + 1))
-        return self.h5_slice(part, slice_tuple)
-
-    def extend_imported_list_copying_properties_from_other_grid_collection(self,
-                                                                           other,
-                                                                           box = None,
-                                                                           refinement = None,
-                                                                           coarsening = None,
-                                                                           realization = None,
-                                                                           copy_all_realizations = False,
-                                                                           uncache_other_arrays = True):
-        """Extend this collection's imported list with properties from other collection.
-        
-        Optionally extract for a box.
-
-        arguments:
-           other: another GridPropertyCollection object which might relate to a different grid object
-           box: (numpy int array of shape (2, 3), optional): if present, a logical ijk cuboid subset of the source arrays
-              is extracted, box axes are (min:max, kji0); if None, the full arrays are copied
-           refinement (resqpy.olio.fine_coarse.FineCoarse object, optional): if present, other is taken to be a collection
-              for a coarser grid and the property values are sampled for a finer grid based on the refinement mapping
-           coarsening (resqpy.olio.fine_coarse.FineCoarse object, optional): if present, other is taken to be a collection
-              for a finer grid and the property values are upscaled for a coarser grid based on the coarsening mapping
-           realization (int, optional): if present, only properties for this realization are copied; if None, only
-              properties without a realization number are copied unless copy_all_realizations is True
-           copy_all_realizations (boolean, default False): if True (and realization is None), all properties are copied;
-              if False, only properties with a realization of None are copied; ignored if realization is not None
-           uncache_other_arrays (boolean, default True): if True, after each array is copied, the original is uncached from
-              the source collection (to free up memory)
-
-        notes:
-           this function can be used to copy properties between one grid object and another compatible one, for example
-           after a grid manipulation has generated a new version of the geometry; it can also be used to select an ijk box
-           subset of the property data and/or refine or coarsen the property data;
-           if a box is supplied, the first index indicates min (0) or max (1) and the second index indicates k (0), j (1) or i (2);
-           the values in box are zero based and cells matching the maximum indices are included (unlike with python ranges);
-           when coarsening or refining, this function ignores the 'within...box' attributes of the FineCoarse object so
-           the box argument must be used to effect a local grid coarsening or refinement
-        """
-
-        # todo: optional use of active cell mask in coarsening
-
-        def array_box(collection, part, box = None, uncache_other_arrays = True):
-            full_array = collection.cached_part_array_ref(part)
-            if box is None:
-                a = full_array.copy()
-            else:
-                a = full_array[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1].copy()
-            full_array = None
-            if uncache_other_arrays:
-                other.uncache_part_array(part)
-            return a
-
-        def coarsening_sample(coarsening, a):
-            # for now just take value from first cell in box
-            # todo: find most common element in box
-            a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji), dtype = a.dtype)
-            assert a.shape == tuple(coarsening.fine_extent_kji)
-            # todo: try to figure out some numpy slice operations to avoid use of for loops
-            for k in range(coarsening.coarse_extent_kji[0]):
-                for j in range(coarsening.coarse_extent_kji[1]):
-                    for i in range(coarsening.coarse_extent_kji[2]):
-                        # local box within lgc space of fine cells, for 1 coarse cell
-                        cell_box = coarsening.fine_box_for_coarse((k, j, i))
-                        a_coarsened[k, j, i] = a[tuple(cell_box[0])]
-            return a_coarsened
-
-        def coarsening_sum(coarsening, a, axis = None):
-            a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
-            assert a.shape == tuple(coarsening.fine_extent_kji)
-            # todo: try to figure out some numpy slice operations to avoid use of for loops
-            for k in range(coarsening.coarse_extent_kji[0]):
-                for j in range(coarsening.coarse_extent_kji[1]):
-                    for i in range(coarsening.coarse_extent_kji[2]):
-                        cell_box = coarsening.fine_box_for_coarse(
-                            (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
-                        # yapf: disable
-                        a_coarsened[k, j, i] = np.nansum(a[cell_box[0, 0]:cell_box[1, 0] + 1,
-                                                           cell_box[0, 1]:cell_box[1, 1] + 1,
-                                                           cell_box[0, 2]:cell_box[1, 2] + 1])
-                        # yapf: enable
-                        if axis is not None:
-                            axis_1 = (axis + 1) % 3
-                            axis_2 = (axis + 2) % 3
-                            # yapf: disable
-                            divisor = ((cell_box[1, axis_1] + 1 - cell_box[0, axis_1]) *
-                                       (cell_box[1, axis_2] + 1 - cell_box[0, axis_2]))
-                            # yapf: enable
-                            a_coarsened[k, j, i] = a_coarsened[k, j, i] / float(divisor)
-            return a_coarsened
-
-        def coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, zero_weight_result = np.NaN):
-            a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
-            assert a.shape == tuple(coarsening.fine_extent_kji)
-            assert fine_weight.shape == a.shape
-            if coarse_weight is not None:
-                assert coarse_weight.shape == a_coarsened.shape
-            for k in range(coarsening.coarse_extent_kji[0]):
-                for j in range(coarsening.coarse_extent_kji[1]):
-                    for i in range(coarsening.coarse_extent_kji[2]):
-                        cell_box = coarsening.fine_box_for_coarse(
-                            (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
-                        a_coarsened[k, j, i] = np.nansum(
-                            a[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
-                              cell_box[0, 2]:cell_box[1, 2] + 1] *
-                            fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
-                                        cell_box[0, 2]:cell_box[1, 2] + 1])
-                        if coarse_weight is None:
-                            weight = np.nansum(fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1,
-                                                           cell_box[0, 1]:cell_box[1, 1] + 1,
-                                                           cell_box[0, 2]:cell_box[1, 2] + 1])
-                            if np.isnan(weight) or weight == 0.0:
-                                a_coarsened[k, j, i] = zero_weight_result
-                            else:
-                                a_coarsened[k, j, i] /= weight
-            if coarse_weight is not None:
-                mask = np.logical_or(np.isnan(coarse_weight), coarse_weight == 0.0)
-                a_coarsened = np.where(mask, zero_weight_result, a_coarsened / coarse_weight)
-            return a_coarsened
-
-        def add_to_imported(collection, a, title, info, null_value = None, const_value = None):
-            collection.add_cached_array_to_imported_list(
-                a,
-                title,
-                info[10],  # citation_title
-                discrete = not info[4],
-                indexable_element = 'cells',
-                uom = info[15],
-                time_index = info[12],
-                null_value = null_value,
-                property_kind = info[7],
-                local_property_kind_uuid = info[17],
-                facet_type = info[8],
-                facet = info[9],
-                realization = info[0],
-                const_value = const_value,
-                points = info[21])
-
-        import resqpy.grid as grr  # at global level was causing issues due to circular references, ie. grid importing this module
-
-        assert other.support is not None and isinstance(other.support,
-                                                        grr.Grid), 'other property collection has no grid support'
-        assert refinement is None or coarsening is None, 'refinement and coarsening both specified simultaneously'
-
-        if box is not None:
-            assert bxu.valid_box(box, other.grid.extent_kji)
-            if refinement is not None:
-                assert tuple(bxu.extent_of_box(box)) == tuple(refinement.coarse_extent_kji)
-            elif coarsening is not None:
-                assert tuple(bxu.extent_of_box(box)) == tuple(coarsening.fine_extent_kji)
-        # todo: any contraints on realization numbers ?
-
-        if coarsening is not None:  # static upscaling of key property kinds, simple sampling of others
-
-            assert self.support is not None and tuple(self.support.extent_kji) == tuple(coarsening.coarse_extent_kji)
-
-            # look for properties by kind, process in order: rock volume, net to gross ratio, porosity, permeability, saturation
-            source_rv = selective_version_of_collection(other, realization = realization, property_kind = 'rock volume')
-            source_ntg = selective_version_of_collection(other,
-                                                         realization = realization,
-                                                         property_kind = 'net to gross ratio')
-            source_poro = selective_version_of_collection(other, realization = realization, property_kind = 'porosity')
-            source_sat = selective_version_of_collection(other, realization = realization, property_kind = 'saturation')
-            source_perm = selective_version_of_collection(other,
-                                                          realization = realization,
-                                                          property_kind = 'permeability rock')
-            # todo: add kh and some other property kinds
-
-            # bulk rock volume
-            fine_rv_array = coarse_rv_array = None
-            if source_rv.number_of_parts() == 0:
-                log.debug('computing bulk rock volume from fine and coarse grid geometries')
-                source_rv_array = other.support.volume()
-                if box is None:
-                    fine_rv_array = source_rv_array
-                else:
-                    fine_rv_array = source_rv_array[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1,
-                                                    box[0, 2]:box[1, 2] + 1]
-                coarse_rv_array = self.support.volume()
-            else:
-                for (part, info) in source_rv.dict.items():
-                    if not copy_all_realizations and info[0] != realization:
-                        continue
-                    fine_rv_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                    coarse_rv_array = coarsening_sum(coarsening, fine_rv_array)
-                    add_to_imported(self, coarse_rv_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # net to gross ratio
-            # note that coarsened ntg values may exceed one when reference bulk rock volumes are from grid geometries
-            fine_ntg_array = coarse_ntg_array = None
-            for (part, info) in source_ntg.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_ntg_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_ntg_array = coarsening_weighted_mean(coarsening,
-                                                            fine_ntg_array,
-                                                            fine_rv_array,
-                                                            coarse_weight = coarse_rv_array,
-                                                            zero_weight_result = 0.0)
-                add_to_imported(self, coarse_ntg_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            if fine_ntg_array is None:
-                fine_nrv_array = fine_rv_array
-                coarse_nrv_array = coarse_rv_array
-            else:
-                fine_nrv_array = fine_rv_array * fine_ntg_array
-                coarse_nrv_array = coarse_rv_array * coarse_ntg_array
-
-            fine_poro_array = coarse_poro_array = None
-            for (part, info) in source_poro.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_poro_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_poro_array = coarsening_weighted_mean(coarsening,
-                                                             fine_poro_array,
-                                                             fine_nrv_array,
-                                                             coarse_weight = coarse_nrv_array,
-                                                             zero_weight_result = 0.0)
-                add_to_imported(self, coarse_poro_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # saturations
-            fine_sat_array = coarse_sat_array = None
-            fine_sat_weight = fine_nrv_array
-            coarse_sat_weight = coarse_nrv_array
-            if fine_poro_array is not None:
-                fine_sat_weight *= fine_poro_array
-                coarse_sat_weight *= coarse_poro_array
-            for (part, info) in source_sat.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_sat_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_sat_array = coarsening_weighted_mean(coarsening,
-                                                            fine_sat_array,
-                                                            fine_sat_weight,
-                                                            coarse_weight = coarse_sat_weight,
-                                                            zero_weight_result = 0.0)
-                add_to_imported(self, coarse_sat_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # permeabilities
-            # todo: use more harmonic, arithmetic mean instead of just bulk rock volume weighted; consider ntg
-            for (part, info) in source_perm.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_perm_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_perm_array = coarsening_weighted_mean(coarsening,
-                                                             fine_perm_array,
-                                                             fine_nrv_array,
-                                                             coarse_weight = coarse_nrv_array,
-                                                             zero_weight_result = 0.0)
-                add_to_imported(self, coarse_perm_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # cell lengths
-            source_cell_lengths = selective_version_of_collection(other,
-                                                                  realization = realization,
-                                                                  property_kind = 'cell length')
-            for (part, info) in source_cell_lengths.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_cl_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                assert info[5] == 1 and info[8] == 'direction'
-                axis = 'KJI'.index(info[9][0].upper())
-                coarse_cl_array = coarsening_sum(coarsening, fine_cl_array, axis = axis)
-                add_to_imported(self, coarse_cl_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # TODO: all other supported property kinds requiring special treatment
-            # default behaviour is bulk volume weighted mean for continuous data, first cell in box for discrete
-            handled_kinds = ('rock volume', 'net to gross ratio', 'porosity', 'saturation', 'permeability rock',
-                             'rock permeability', 'cell length')
-            for (part, info) in other.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                if info[7] in handled_kinds:
-                    continue
-                fine_ordinary_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                if info[4]:
-                    coarse_ordinary_array = coarsening_weighted_mean(coarsening,
-                                                                     fine_ordinary_array,
-                                                                     fine_rv_array,
-                                                                     coarse_weight = coarse_rv_array)
-                else:
-                    coarse_ordinary_array = coarsening_sample(coarsening, fine_ordinary_array)
-                add_to_imported(self, coarse_ordinary_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-        else:
-
-            if realization is None:
-                source_collection = other
-            else:
-                source_collection = selective_version_of_collection(other, realization = realization)
-
-            for (part, info) in source_collection.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-
-                const_value = info[20]
-                if const_value is None:
-                    a = array_box(source_collection, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                else:
-                    a = None
-
-                if refinement is not None and a is not None:  # simple resampling
-                    if info[6] != 'cells':
-                        # todo: appropriate refinement of data for other indexable elements
-                        continue
-                    # todo: dividing up of values when needed, eg. volumes, areas, lengths
-                    assert tuple(a.shape) == tuple(refinement.coarse_extent_kji)
-                    assert self.support is not None and tuple(self.support.extent_kji) == tuple(
-                        refinement.fine_extent_kji)
-                    k_ratio_vector = refinement.coarse_for_fine_axial_vector(0)
-                    a_refined_k = np.empty((refinement.fine_extent_kji[0], refinement.coarse_extent_kji[1],
-                                            refinement.coarse_extent_kji[2]),
-                                           dtype = a.dtype)
-                    a_refined_k[:, :, :] = a[k_ratio_vector, :, :]
-                    j_ratio_vector = refinement.coarse_for_fine_axial_vector(1)
-                    a_refined_kj = np.empty(
-                        (refinement.fine_extent_kji[0], refinement.fine_extent_kji[1], refinement.coarse_extent_kji[2]),
-                        dtype = a.dtype)
-                    a_refined_kj[:, :, :] = a_refined_k[:, j_ratio_vector, :]
-                    i_ratio_vector = refinement.coarse_for_fine_axial_vector(2)
-                    a = np.empty(tuple(refinement.fine_extent_kji), dtype = a.dtype)
-                    a[:, :, :] = a_refined_kj[:, :, i_ratio_vector]
-                    # for cell length properties, scale down the values in accordance with refinement
-                    if info[4] and info[7] == 'cell length' and info[8] == 'direction' and info[5] == 1:
-                        dir_ch = info[9].upper()
-                        log.debug(f'refining cell lengths for axis {dir_ch}')
-                        if dir_ch == 'K':
-                            a *= refinement.proportions_for_axis(0).reshape((-1, 1, 1))
-                        elif dir_ch == 'J':
-                            a *= refinement.proportions_for_axis(1).reshape((1, -1, 1))
-                        elif dir_ch == 'I':
-                            a *= refinement.proportions_for_axis(2).reshape((1, 1, -1))
-
-                self.add_cached_array_to_imported_list(
-                    a,
-                    'copied from grid ' + str(other.support.uuid),
-                    info[10],  # citation_title
-                    discrete = not info[4],
-                    indexable_element = 'cells',
-                    uom = info[15],
-                    time_index = info[12],
-                    null_value = None,  # todo: extract from other's xml
-                    property_kind = info[7],
-                    local_property_kind_uuid = info[17],
-                    facet_type = info[8],
-                    facet = info[9],
-                    realization = info[0],
-                    const_value = const_value,
-                    points = info[21])
-
-    def import_nexus_property_to_cache(self,
-                                       file_name,
-                                       keyword,
-                                       extent_kji = None,
-                                       discrete = False,
-                                       uom = None,
-                                       time_index = None,
-                                       null_value = None,
-                                       property_kind = None,
-                                       local_property_kind_uuid = None,
-                                       facet_type = None,
-                                       facet = None,
-                                       realization = None,
-                                       use_binary = True):
-        """Reads a property array from an ascii (or pure binary) file, caches and adds to imported list.
-        
-        Does not add to collection dict.
-
-        arguments:
-           file_name (string): the name of the file to read the array data from; should contain data for one array only, without
-              the keyword
-           keyword (string): the keyword to associate with the imported data, which will become the citation title
-           extent_kji (optional, default None): if present, [nk, nj, ni] being the extent (shape) of the array to be imported;
-              if None, the shape of the grid associated with this collection is used
-           discrete (boolean, optional, default False): if True, integer data is imported, if False, float data
-           uom (string, optional, default None): the resqml units of measure applicable to the data
-           time_index (integer, optional, default None): if present, this array is for time varying data and this value is the
-              index into a time series associated with this collection
-           null_value (int or float, optional, default None): if present, this is used in the metadata to indicate that
-              this value is to be interpreted as a null value wherever it appears in the data (this does not change the
-              data during import)
-           property_kind (string): resqml property kind, or None
-           local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None for standard property kind
-           facet_type (string): resqml facet type, or None
-           facet (string): resqml facet, or None
-           realization (int): realization number, or None
-           use_binary (boolean, optional, default True): if True, and an up-to-date pure binary version of the file exists,
-              then the data is loaded from that instead of from the ascii file; if True but the binary version does not
-              exist (or is older than the ascii file), the pure binary version is written as a side effect of the import;
-              if False, the ascii file is used even if a pure binary equivalent exists, and no binary file is written
-
-        note:
-           this function only performs the first importation step of actually reading the array into memory; other steps
-           must follow to include the array as a part in the resqml model and in this collection of properties (see doc
-           string for add_cached_array_to_imported_list() for the sequence of steps)
-        """
-
-        log.debug(f'importing {keyword} array from file {file_name}')
-        # note: code in resqml_import adds imported arrays to model and to dict
-        if self.imported_list is None:
-            self.imported_list = []
-        if extent_kji is None:
-            extent_kji = self.grid.extent_kji
-        if discrete:
-            data_type = 'integer'
-        else:
-            data_type = 'real'
-        try:
-            import_array = ld.load_array_from_file(file_name,
-                                                   extent_kji,
-                                                   data_type = data_type,
-                                                   comment_char = '!',
-                                                   data_free_of_comments = False,
-                                                   use_binary = use_binary)
-        except Exception:
-            log.exception('failed to import {} arrau from file {}'.format(keyword, file_name))
-            return None
-
-        self.add_cached_array_to_imported_list(import_array,
-                                               file_name,
-                                               keyword,
-                                               discrete = discrete,
-                                               uom = uom,
-                                               time_index = time_index,
-                                               null_value = null_value,
-                                               property_kind = property_kind,
-                                               local_property_kind_uuid = local_property_kind_uuid,
-                                               facet_type = facet_type,
-                                               facet = facet,
-                                               realization = realization,
-                                               points = False)
-        return import_array
-
-    def import_vdb_static_property_to_cache(self, vdbase, keyword, grid_name = 'ROOT', uom = None, realization = None):
-        """Reads a vdb static property array, caches and adds to imported list (but not collection dict).
-
-        arguments:
-           vdbase: an object of class vdb.VDB, already initialised with the path of the vdb
-           keyword (string): the Nexus keyword (or equivalent) of the static property to be loaded
-           grid_name (string): the grid name as used in the vdb
-           uom (string): The resqml unit of measure that applies to the data
-           realization (optional, int): The realization number that this property belongs to; use None
-              if not applicable
-
-        returns:
-           cached array containing the property data; the cached array is in an unpacked state
-           (ie. can be directly indexed with [k0, j0, i0])
-
-        note:
-           when importing from a vdb (or other sources), use methods such as this to build up a list
-           of imported arrays; then write hdf5 for the imported arrays; finally create xml for imported
-           properties
-        """
-
-        log.info('importing vdb static property {} array'.format(keyword))
-        keyword = keyword.upper()
-        try:
-            discrete = True
-            dtype = None
-            if keyword[0].upper() == 'I' or keyword in ['KID', 'UID', 'UNPACK', 'DAD']:
-                # coerce to integer values (vdb stores integer data as reals!)
-                dtype = 'int32'
-            elif keyword in ['DEADCELL', 'LIVECELL']:
-                dtype = 'bool'  # could use the default dtype of 64 bit integer
-            else:
-                dtype = 'float'  # convert to 64 bit; could omit but RESQML states 64 bit
-                discrete = False
-            import_array = vdbase.grid_static_property(grid_name, keyword, dtype = dtype)
-            assert import_array is not None
-        except Exception:
-            log.exception(f'failed to import static property {keyword} from vdb')
-            return None
-
-        self.add_cached_array_to_imported_list(import_array,
-                                               vdbase.path,
-                                               keyword,
-                                               discrete = discrete,
-                                               uom = uom,
-                                               time_index = None,
-                                               null_value = None,
-                                               realization = realization)
-        return import_array
-
-    def import_vdb_recurrent_property_to_cache(self,
-                                               vdbase,
-                                               timestep,
-                                               keyword,
-                                               grid_name = 'ROOT',
-                                               time_index = None,
-                                               uom = None,
-                                               realization = None):
-        """Reads a vdb recurrent property array for one timestep, caches and adds to imported list.
-        
-        Does not add to collection dict.
-
-        arguments:
-           vdbase: an object of class vdb.VDB, already initialised with the path of the vdb
-           timestep (int): The Nexus timestep number at which the property array was generated; NB. this is
-              not necessarily the same as a resqml time index
-           keyword (string): the Nexus keyword (or equivalent) of the recurrent property to be loaded
-           grid_name (string): the grid name as used in the vdb
-           time_index (int, optional): if present, used as the time index, otherwise timestep is used
-           uom (string): The resqml unit of measure that applies to the data
-           realization (optional, int): The realization number that this property belongs to; use None
-              if not applicable
-
-        returns:
-           cached array containing the property data; the cached array is in an unpacked state
-           (ie. can be directly indexed with [k0, j0, i0])
-
-        notes:
-           when importing from a vdb (or other sources), use methods such as this to build up a list
-           of imported arrays; then write hdf5 for the imported arrays; finally create xml for imported
-           properties
-        """
-
-        log.info('importing vdb recurrent property {0} array for timestep {1}'.format(keyword, str(timestep)))
-        if time_index is None:
-            time_index = timestep
-        keyword = keyword.upper()
-        try:
-            import_array = vdbase.grid_recurrent_property_for_timestep(grid_name, keyword, timestep, dtype = 'float')
-            assert import_array is not None
-        except Exception:
-            # could raise an exception (as for static properties)
-            log.error(f'failed to import recurrent property {keyword} from vdb for timestep {timestep}')
-            return None
-
-        self.add_cached_array_to_imported_list(import_array,
-                                               vdbase.path,
-                                               keyword,
-                                               discrete = False,
-                                               uom = uom,
-                                               time_index = time_index,
-                                               null_value = None,
-                                               realization = realization)
-        return import_array
-
-    def import_ab_property_to_cache(self,
-                                    file_name,
-                                    keyword,
-                                    extent_kji = None,
-                                    discrete = None,
-                                    uom = None,
-                                    time_index = None,
-                                    null_value = None,
-                                    property_kind = None,
-                                    local_property_kind_uuid = None,
-                                    facet_type = None,
-                                    facet = None,
-                                    realization = None):
-        """Reads a property array from a pure binary file, caches and adds to imported list (but not collection dict).
-
-        arguments:
-           file_name (string): the name of the file to read the array data from; should contain data for one array only in
-              'pure binary' format (as used by ab_* suite of utilities)
-           keyword (string): the keyword to associate with the imported data, which will become the citation title
-           extent_kji (optional, default None): if present, [nk, nj, ni] being the extent (shape) of the array to be imported;
-              if None, the shape of the grid associated with this collection is used
-           discrete (boolean, optional, default False): if True, integer data is imported, if False, float data
-           uom (string, optional, default None): the resqml units of measure applicable to the data
-           time_index (integer, optional, default None): if present, this array is for time varying data and this value is the
-              index into a time series associated with this collection
-           null_value (int or float, optional, default None): if present, this is used in the metadata to indicate that
-              this value is to be interpreted as a null value wherever it appears in the data (this does not change the
-              data during import)
-           property_kind (string): resqml property kind, or None
-           local_property_kind_uuid (uuid.UUID or string): uuid of local property kind, or None
-           facet_type (string): resqml facet type, or None
-           facet (string): resqml facet, or None
-           realization (int): realization number, or None
-
-        note:
-           this function only performs the first importation step of actually reading the array into memory; other steps
-           must follow to include the array as a part in the resqml model and in this collection of properties (see doc
-           string for add_cached_array_to_imported_list() for the sequence of steps)
-        """
-
-        if self.imported_list is None:
-            self.imported_list = []
-        if extent_kji is None:
-            extent_kji = self.grid.extent_kji
-        assert file_name[-3:] in ['.db', '.fb', '.ib', '.lb',
-                                  '.bb'], 'file extension not in pure binary array expected set for: ' + file_name
-        if discrete is None:
-            discrete = (file_name[-3:] in ['.ib', '.lb', '.bb'])
-        else:
-            assert discrete == (file_name[-3:]
-                                in ['.ib', '.lb',
-                                    '.bb']), 'discrete argument is not consistent with file extension for: ' + file_name
-        try:
-            import_array = abt.load_array_from_ab_file(
-                file_name, extent_kji, return_64_bit = False)  # todo: RESQML indicates 64 bit for everything
-        except Exception:
-            log.exception('failed to import property from pure binary file: ' + file_name)
-            return None
-
-        self.add_cached_array_to_imported_list(import_array,
-                                               file_name,
-                                               keyword,
-                                               discrete = discrete,
-                                               uom = uom,
-                                               time_index = time_index,
-                                               null_value = null_value,
-                                               property_kind = property_kind,
-                                               local_property_kind_uuid = local_property_kind_uuid,
-                                               facet_type = facet_type,
-                                               facet = facet,
-                                               realization = realization)
-        return import_array
-
-    def decoarsen_imported_list(self, decoarsen_array = None, reactivate = True):
-        """Decoarsen imported Nexus properties if needed.
-
-        arguments:
-           decoarsen_array (int array, optional): if present, the naturalised cell index of the coarsened host cell, for each fine cell;
-              if None, the ICOARS keyword is searched for in the imported list and if not found KID data is used to derive the mapping
-           reactivate (boolean, default True): if True, the parent grid will have decoarsened cells' inactive flag set to that of the
-              host cell
-
-        returns:
-           a copy of the array used for decoarsening, if established, or None if no decoarsening array was identified
-
-        notes:
-           a return value of None indicates that no decoarsening occurred;
-           coarsened values are redistributed quite naively, with coarse volumes being split equally between fine cells, similarly for
-           length and area based properties; default used for most properties is simply to replicate the coarse value;
-           the ICOARS array itself is left unchanged, which means the method should only be called once for an imported list;
-           if no array is passed and no ICOARS array found, the KID values are inspected and the decoarsen array reverse engineered;
-           the method must be called before the imported arrays are written to hdf5;
-           reactivation only modifies the grid object attribute and does not write to hdf5, so the method should be called prior to
-           writing the grid in this situation
-        """
-        # imported_list is list pf:
-        # (0: uuid, 1: file_name, 2: keyword, 3: cached_name, 4: discrete, 5: uom, 6: time_index, 7: null_value, 8: min_value, 9: max_value,
-        # 10: property_kind, 11: facet_type, 12: facet, 13: realization, 14: indexable_element, 15: count, 16: local_property_kind_uuid,
-        # 17: const_value)
-
-        skip_keywords = ['UID', 'ICOARS', 'KID', 'DAD']  # TODO: complete this list
-        decoarsen_length_kinds = ['length', 'cell length', 'thickness', 'permeability thickness', 'permeability length']
-        decoarsen_area_kinds = ['transmissibility']
-        decoarsen_volume_kinds = ['volume', 'rock volume', 'pore volume', 'fluid volume']
-
-        assert self.grid is not None
-
-        kid_attr_name = None
-        k_share = j_share = i_share = None
-
-        if decoarsen_array is None:
-            for import_item in self.imported_list:
-                if (import_item[14] is None or import_item[14] == 'cells') and import_item[4] and hasattr(
-                        self, import_item[3]):
-                    if import_item[2] == 'ICOARS':
-                        decoarsen_array = self.__dict__[import_item[3]] - 1  # ICOARS values are one based
-                        break
-                    if import_item[2] == 'KID':
-                        kid_attr_name = import_item[3]
-
-        if decoarsen_array is None and kid_attr_name is not None:
-            kid = self.__dict__[kid_attr_name]
-            kid_mask = (kid == -3)  # -3 indicates cell inactive due to coarsening
-            assert kid_mask.shape == tuple(self.grid.extent_kji)
-            if np.any(kid_mask):
-                log.debug(f'{np.count_nonzero(kid_mask)} cells marked as requiring decoarsening in KID data')
-                decoarsen_array = np.full(self.grid.extent_kji, -1, dtype = int)
-                k_share = np.zeros(self.grid.extent_kji, dtype = int)
-                j_share = np.zeros(self.grid.extent_kji, dtype = int)
-                i_share = np.zeros(self.grid.extent_kji, dtype = int)
-                natural = 0
-                for k0 in range(self.grid.nk):
-                    for j0 in range(self.grid.nj):
-                        for i0 in range(self.grid.ni):
-                            #                     if decoarsen_array[k0, j0, i0] < 0:
-                            if kid[k0, j0, i0] == 0:
-                                #                        assert not kid_mask[k0, j0, i0]
-                                ke = k0 + 1
-                                while ke < self.grid.nk and kid_mask[ke, j0, i0]:
-                                    ke += 1
-                                je = j0 + 1
-                                while je < self.grid.nj and kid_mask[k0, je, i0]:
-                                    je += 1
-                                ie = i0 + 1
-                                while ie < self.grid.ni and kid_mask[k0, j0, ie]:
-                                    ie += 1
-                                # todo: check for conflict and resolve
-                                decoarsen_array[k0:ke, j0:je, i0:ie] = natural
-                                k_share[k0:ke, j0:je, i0:ie] = ke - k0
-                                j_share[k0:ke, j0:je, i0:ie] = je - j0
-                                i_share[k0:ke, j0:je, i0:ie] = ie - i0
-                            elif not kid_mask[k0, j0, i0]:  # inactive for reasons other than coarsening
-                                decoarsen_array[k0, j0, i0] = natural
-                                k_share[k0, j0, i0] = 1
-                                j_share[k0, j0, i0] = 1
-                                i_share[k0, j0, i0] = 1
-                            natural += 1
-                assert np.all(decoarsen_array >= 0)
-
-        if decoarsen_array is None:
-            return None
-
-        cell_count = decoarsen_array.size
-        host_count = len(np.unique(decoarsen_array))
-        log.debug(f'{host_count} of {cell_count} are hosts; difference is {cell_count - host_count}')
-        assert cell_count == self.grid.cell_count()
-        if np.all(decoarsen_array.flatten() == np.arange(cell_count, dtype = int)):
-            return None  # identity array
-
-        if k_share is None:
-            sharing_needed = False
-            for import_item in self.imported_list:
-                kind = import_item[10]
-                if kind in decoarsen_volume_kinds or kind in decoarsen_area_kinds or kind in decoarsen_length_kinds:
-                    sharing_needed = True
+    def _check_shape_list(self, indexable_element, direction, property_array, points, count):
+        shape_list = self.supporting_shape(indexable_element = indexable_element, direction = direction)
+        if shape_list is not None:
+            if count > 1:
+                shape_list.append(count)
+            if points:
+                shape_list.append(3)
+            if property_array is not None:
+                assert tuple(shape_list) == property_array.shape, \
+                    f'property array shape {property_array.shape} is not the expected {tuple(shape_list)}'
+
+    def _get_property_kind_uuid(self, property_kind_uuid, property_kind, uom, discrete):
+        if property_kind_uuid is None:
+            pk_parts_list = self.model.parts_list_of_type('PropertyKind')
+            for part in pk_parts_list:
+                if self.model.citation_title_for_part(part) == property_kind:
+                    property_kind_uuid = self.model.uuid_for_part(part)
                     break
-            if sharing_needed:
-                k_share = np.zeros(self.grid.extent_kji, dtype = int)
-                j_share = np.zeros(self.grid.extent_kji, dtype = int)
-                i_share = np.zeros(self.grid.extent_kji, dtype = int)
-                natural = 0
-                for k0 in range(self.grid.nk):
-                    for j0 in range(self.grid.nj):
-                        for i0 in range(self.grid.ni):
-                            if k_share[k0, j0, i0] == 0:
-                                ke = k0 + 1
-                                while ke < self.grid.nk and decoarsen_array[ke, j0, i0] == natural:
-                                    ke += 1
-                                je = j0 + 1
-                                while je < self.grid.nj and decoarsen_array[k0, je, i0] == natural:
-                                    je += 1
-                                ie = i0 + 1
-                                while ie < self.grid.ni and decoarsen_array[k0, j0, ie] == natural:
-                                    ie += 1
-                                k_share[k0:ke, j0:je, i0:ie] = ke - k0
-                                j_share[k0:ke, j0:je, i0:ie] = je - j0
-                                i_share[k0:ke, j0:je, i0:ie] = ie - i0
-                            natural += 1
+            if property_kind_uuid is None:
+                # create local property kind object and fetch uuid
+                lpk = PropertyKind(self.model,
+                                   title = property_kind,
+                                   example_uom = uom,
+                                   parent_property_kind = 'discrete' if discrete else 'continuous')
+                lpk.create_xml()
+                property_kind_uuid = lpk.uuid
+        return property_kind_uuid
 
-        if k_share is not None:
-            assert np.all(k_share > 0) and np.all(j_share > 0) and np.all(i_share > 0)
-            volume_share = (k_share * j_share * i_share).astype(float)
-            k_share = k_share.astype(float)
-            j_share = j_share.astype(float)
-            i_share = i_share.astype(float)
+    def _create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind, uom, discrete,
+                                  property_kind_uuid):
+        p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
+        p_kind_node.text = rqet.null_xml_text
+        if find_local_property_kinds and property_kind not in supported_property_kind_list:
+            property_kind_uuid = self._get_property_kind_uuid(property_kind_uuid, property_kind, uom, discrete)
 
-        property_count = 0
-        for import_item in self.imported_list:
-            if import_item[3] is None or not hasattr(self, import_item[3]):
-                continue  # todo: handle decoarsening of const arrays?
-            if import_item[14] is not None and import_item[14] != 'cells':
-                continue
-            coarsened = self.__dict__[import_item[3]].flatten()
-            assert coarsened.size == cell_count
-            keyword = import_item[2]
-            if keyword.upper() in skip_keywords:
-                continue
-            kind = import_item[10]
-            if kind in decoarsen_volume_kinds:
-                redistributed = coarsened[decoarsen_array] / volume_share
-            elif kind in decoarsen_area_kinds:
-                # only transmissibilty currently in this set of supported property kinds
-                log.warning(
-                    f'decoarsening of transmissibility {keyword} skipped due to simple methods not yielding correct values'
-                )
-            elif kind in decoarsen_length_kinds:
-                facet_dir = import_item[12] if import_item[11] == 'direction' else None
-                if kind in ['thickness', 'permeability thickness'] or (facet_dir == 'K'):
-                    redistributed = coarsened[decoarsen_array] / k_share
-                elif facet_dir == 'J':
-                    redistributed = coarsened[decoarsen_array] / j_share
-                elif facet_dir == 'I':
-                    redistributed = coarsened[decoarsen_array] / i_share
-                else:
-                    log.warning(f'decoarsening of length property {keyword} skipped as direction not established')
+        if property_kind_uuid is None:
+            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'StandardPropertyKind')  # todo: local prop kind ref
+            kind_node = rqet.SubElement(p_kind_node, ns['resqml2'] + 'Kind')
+            kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlPropertyKind')
+            kind_node.text = property_kind
+        else:
+            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'LocalPropertyKind')  # todo: local prop kind ref
+            self.model.create_ref_node('LocalPropertyKind',
+                                       property_kind,
+                                       property_kind_uuid,
+                                       content_type = 'obj_PropertyKind',
+                                       root = p_kind_node)
+
+    def _create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid):
+        # create patch node
+        const_count = None
+        if const_value is not None:
+            s_shape = self.supporting_shape(indexable_element = indexable_element, direction = direction)
+            assert s_shape is not None
+            const_count = np.product(np.array(s_shape, dtype = int))
+        _ = self.model.create_patch(p_uuid,
+                                    ext_uuid,
+                                    root = p_node,
+                                    hdf5_type = self.hdf5_type,
+                                    xsd_type = self.xsd_type,
+                                    null_value = self.null_value,
+                                    const_value = const_value,
+                                    const_count = const_count,
+                                    points = points)
+
+    def _get_property_type_details(self, discrete, string_lookup_uuid, points):
+        if discrete:
+            if string_lookup_uuid is None:
+                self.d_or_c_text = 'Discrete'
+
             else:
-                redistributed = coarsened[decoarsen_array]
-            self.__dict__[import_item[3]] = redistributed.reshape(self.grid.extent_kji)
-            property_count += 1
-
-        if property_count:
-            log.debug(f'{property_count} properties decoarsened')
-
-        if reactivate and hasattr(self.grid, 'inactive'):
-            log.debug('reactivating cells inactive due to coarsening')
-            pre_count = np.count_nonzero(self.grid.inactive)
-            self.grid.inactive = self.grid.inactive.flatten()[decoarsen_array].reshape(self.grid.extent_kji)
-            post_count = np.count_nonzero(self.grid.inactive)
-            log.debug(f'{pre_count - post_count} cells reactivated')
-
-        return decoarsen_array
-
-    def write_nexus_property(
-            self,
-            part,
-            file_name,
-            keyword = None,
-            headers = True,
-            append = False,
-            columns = 20,
-            decimals = 3,  # note: decimals only applicable to real numbers
-            blank_line_after_i_block = True,
-            blank_line_after_j_block = False,
-            space_separated = False,  # default is tab separated
-            use_binary = False,
-            binary_only = False,
-            nan_substitute_value = None):
-        """Writes the property array to a file in a format suitable for including as nexus input.
-
-        arguments:
-           part (string): the part name for which the array is to be exported
-           file_name (string): the path of the file to be created (any existing file will be overwritten)
-           keyword (string, optional, default None): if not None, the Nexus keyword to be included in the
-              ascii export file (otherwise data only is written, without a keyword)
-           headers (boolean, optional, default True): if True, some header comments are included in the
-              ascii export file, using a Nexus comment character
-           append (boolean, optional, default False): if True, any existing file is appended to rather than
-              overwritten
-           columns (integer, optional, default 20): the maximum number of data items to be written per line
-           decimals (integer, optional, default 3): the number of decimal places included in the values
-              written to the ascii export file (ignored for integer data)
-           blank_line_after_i_block (boolean, optional, default True): if True, a blank line is inserted
-              after each I-block of data (ie. when the J index changes)
-           blank_line_after_j_block (boolean, optional, default False): if True, a blank line is inserted
-              after each J-block of data (ie. when the K index changes)
-           space_separated (boolean, optional, default False): if True, a space is inserted between values;
-              if False, a tab is used
-           use_binary (boolean, optional, default False): if True, a pure binary copy of the array is
-              written
-           binary_only (boolean, optional, default False): if True, and if use_binary is True, then no
-              ascii file is generated; if False (or if use_binary is False) then an ascii file is written
-           nan_substitute_value (float, optional, default None): if a value is supplied, any not-a-number
-              values are replaced with this value in the exported file (the cached property array remains
-              unchanged); if None, then 'nan' or 'Nan' will appear in the ascii export file
-        """
-
-        array_ref = self.cached_part_array_ref(part)
-        assert (array_ref is not None)
-        extent_kji = array_ref.shape
-        assert (len(extent_kji) == 3)
-        wd.write_array_to_ascii_file(file_name,
-                                     extent_kji,
-                                     array_ref,
-                                     headers = headers,
-                                     keyword = keyword,
-                                     columns = columns,
-                                     data_type = rqet.simplified_data_type(array_ref.dtype),
-                                     decimals = decimals,
-                                     target_simulator = 'nexus',
-                                     blank_line_after_i_block = blank_line_after_i_block,
-                                     blank_line_after_j_block = blank_line_after_j_block,
-                                     space_separated = space_separated,
-                                     append = append,
-                                     use_binary = use_binary,
-                                     binary_only = binary_only,
-                                     nan_substitute_value = nan_substitute_value)
-
-    def write_nexus_property_generating_filename(
-            self,
-            part,
-            directory,
-            use_title_for_keyword = False,
-            headers = True,
-            columns = 20,
-            decimals = 3,  # note: decimals only applicable to real numbers
-            blank_line_after_i_block = True,
-            blank_line_after_j_block = False,
-            space_separated = False,  # default is tab separated
-            use_binary = False,
-            binary_only = False,
-            nan_substitute_value = None):
-        """Writes the property array to a file using a filename generated from the citation title etc.
-
-        arguments:
-           part (string): the part name for which the array is to be exported
-           directory (string): the path of the diractory into which the file will be written
-           use_title_for_keyword (boolean, optional, default False): if True, the citation title for the property part
-              is used as a keyword in the ascii export file
-           for other arguments, see the docstring for the write_nexus_property() function
-
-        note:
-           the generated filename consists of the citation title (with spaces replaced with underscores);
-           the facet type and facet, if present;
-           _t_ and the time_index, if the part has a time index
-        """
-
-        title = self.citation_title_for_part(part).replace(' ', '_')
-        if use_title_for_keyword:
-            keyword = title
+                self.d_or_c_text = 'Categorical'
+            self.xsd_type = 'integer'
+            self.hdf5_type = 'IntegerHdf5Array'
+        elif points:
+            self.d_or_c_text = 'Points'
+            self.xsd_type = 'double'
+            self.hdf5_type = 'Point3dHdf5Array'
+            self.null_value = None
         else:
-            keyword = None
-        fname = title
-        facet_type = self.facet_type_for_part(part)
-        if facet_type is not None:
-            fname += '_' + facet_type.replace(' ', '_') + '_' + self.facet_for_part(part).replace(' ', '_')
-        time_index = self.time_index_for_part(part)
-        if time_index is not None:
-            fname += '_t_' + str(time_index)
-        # could add .dat extension
-        self.write_nexus_property(part,
-                                  os.path.join(directory, fname),
-                                  keyword = keyword,
-                                  headers = headers,
-                                  append = False,
-                                  columns = columns,
-                                  decimals = decimals,
-                                  blank_line_after_i_block = blank_line_after_i_block,
-                                  blank_line_after_j_block = blank_line_after_j_block,
-                                  space_separated = space_separated,
-                                  use_binary = use_binary,
-                                  binary_only = binary_only,
-                                  nan_substitute_value = nan_substitute_value)
+            self.d_or_c_text = 'Continuous'
+            self.xsd_type = 'double'
+            self.hdf5_type = 'DoubleHdf5Array'
+            self.null_value = None
 
-    def write_nexus_collection(self,
-                               directory,
-                               use_title_for_keyword = False,
-                               headers = True,
-                               columns = 20,
-                               decimals = 3,
-                               blank_line_after_i_block = True,
-                               blank_line_after_j_block = False,
-                               space_separated = False,
-                               use_binary = False,
-                               binary_only = False,
-                               nan_substitute_value = None):
-        """Writes a set of files, one for each part in the collection.
+    def _get_property_array_min_max_value(self, property_array, const_value, discrete, min_value, max_value):
+        if const_value is not None:
+            return _get_property_array_min_max_const(const_value, self.null_value, min_value, max_value, discrete)
+        elif property_array is not None:
+            return _get_property_array_min_max_array(property_array, min_value, max_value, discrete)
 
-        arguments:
-           directory (string): the path of the diractory into which the files will be written
-           for other arguments, see the docstrings for the write_nexus_property_generating_filename() and
-              write_nexus_property() functions
+    def _create_xml_property_min_max(self, p_node, min_value, max_value):
+        if min_value is not None:
+            min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
+            min_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
+            min_node.text = str(min_value)
+        if max_value is not None:
+            max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
+            max_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
+            max_node.text = str(max_value)
 
-        note:
-           the generated filenames are based on the citation titles etc., as for
-           write_nexus_property_generating_filename()
-        """
+    def _create_xml_lookup_node(self, p_node, string_lookup_uuid):
+        sl_root = None
+        if string_lookup_uuid is not None:
+            sl_root = self.model.root_for_uuid(string_lookup_uuid)
+            assert sl_root is not None, 'string table lookup is missing whilst importing categorical property'
+            assert rqet.node_type(sl_root) == 'obj_StringTableLookup', 'referenced uuid is not for string table lookup'
+            self.model.create_ref_node('Lookup',
+                                       self.model.title_for_root(sl_root),
+                                       string_lookup_uuid,
+                                       content_type = 'obj_StringTableLookup',
+                                       root = p_node)
+        return sl_root
 
-        for part in self.dict.keys():
-            self.write_nexus_property_generating_filename(part,
-                                                          directory,
-                                                          use_title_for_keyword = use_title_for_keyword,
-                                                          headers = headers,
-                                                          columns = columns,
-                                                          decimals = decimals,
-                                                          blank_line_after_i_block = blank_line_after_i_block,
-                                                          blank_line_after_j_block = blank_line_after_j_block,
-                                                          space_separated = space_separated,
-                                                          use_binary = use_binary,
-                                                          binary_only = binary_only,
-                                                          nan_substitute_value = nan_substitute_value)
+    def _create_xml_uom_node(self, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title):
+        if not uom:
+            uom = guess_uom(property_kind, min_value, max_value, self.support, facet_type = facet_type, facet = facet)
+            if not uom:
+                uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
+                log.warning(f'uom set to Euc for property {title} of kind {property_kind}')
+        self.model.uom_node(p_node, uom)
 
+    def _create_xml_add_relationships(self, p_node, support_root, property_kind_uuid, related_time_series_node, sl_root,
+                                      discrete, string_lookup_uuid, const_value, ext_uuid):
+        if support_root is not None:
+            self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
+        if property_kind_uuid is not None:
+            pk_node = self.model.root_for_uuid(property_kind_uuid)
+            if pk_node is not None:
+                self.model.create_reciprocal_relationship(p_node, 'destinationObject', pk_node, 'sourceObject')
+        if related_time_series_node is not None:
+            self.model.create_reciprocal_relationship(p_node, 'destinationObject', related_time_series_node,
+                                                      'sourceObject')
+        if discrete and string_lookup_uuid is not None:
+            self.model.create_reciprocal_relationship(p_node, 'destinationObject', sl_root, 'sourceObject')
 
-class WellLogCollection(PropertyCollection):
-    """Class for RESQML Property collection for a Wellbore Frame (ie well logs), inheriting from PropertyCollection."""
+        if const_value is None:
+            ext_node = self.model.root_for_part(
+                rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False))
+            self.model.create_reciprocal_relationship(p_node, 'mlToExternalPartProxy', ext_node,
+                                                      'externalPartProxyToMl')
 
-    def __init__(self, frame = None, property_set_root = None, realization = None):
-        """Creates a new property collection related to a wellbore frame.
+    def _create_xml_realization_node(self, realization, p_node):
+        if realization is not None and realization >= 0:
+            ri_node = rqet.SubElement(p_node, ns['resqml2'] + 'RealizationIndex')
+            ri_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
+            ri_node.text = str(realization)
 
-        arguments:
-           frame (well.WellboreFrame object, optional): must be present unless creating a completely blank, empty collection.
-              See :class:`resqpy.well.WellboreFrame`
-           property_set_root (optional): if present, the collection is populated with the properties defined in the xml tree
-              of the property set; frame must not be None when using this argument
-           realization (integer, optional): if present, the single realisation (within an ensemble) that this collection is for;
-              if None, then the collection is either covering a whole ensemble (individual properties can each be flagged with a
-              realisation number), or is for properties that do not have multiple realizations
-
-        returns:
-           the new WellLogCollection object
-
-        note:
-           usually a wellbore frame should be passed, however a completely blank collection may be created prior to using
-           collection inheritance methods to populate from another collection, in which case the frame can be lazily left
-           as None here;
-           for actual well logs, the realization argument will usually be None; for synthetic logs created from an ensemble
-           it may be of use
-        """
-
-        super().__init__(support = frame, property_set_root = property_set_root, realization = realization)
-
-    def add_log(self, title, data, unit, discrete = False, realization = None, write = True, source_info = ''):
-        """Add a well log to the collection, and optionally save to HDF / XML.
-
-        Note:
-           If write=False, the data are not written to the model and are saved to be written later.
-           To write the data, you can subsequently call::
-
-              logs.write_hdf5_for_imported_list()
-              logs.create_xml_for_imported_list_and_add_parts_to_model()
-
-        Args:
-           title (str): Name of log, typically the mnemonic
-           data (array-like): log data to write. Must have same length as frame MDs
-           unit (str): Unit of measure
-           discrete (bool): by default False, i.e. continuous
-           realization (int): If given, assign data to a realisation.
-           write (bool): If True, write XML and HDF5.
-           source_info (str): curve description or other human readable text
-
-        Returns:
-           uuids: list of uuids of newly added properties. Only returned if write=True.
-        """
-        # Validate
-        if self.support is None:
-            raise ValueError('Supporting WellboreFrame not present')
-        if len(data) != self.support.node_count:
-            raise ValueError(f'Data mismatch: data length={len(data)}, but MD node count={self.support.node_count}')
-
-        # Infer valid RESQML properties
-        # TODO: Store orginal unit somewhere if it's not a valid RESQML unit
-        uom = bwam.rq_uom(unit)
-        property_kind, facet_type, facet = infer_property_kind(title, uom)
-
-        # Add to the "import list"
-        self.add_cached_array_to_imported_list(
-            cached_array = np.array(data),
-            source_info = source_info,
-            keyword = title,
-            discrete = discrete,
-            uom = uom,
-            property_kind = property_kind,
-            facet_type = facet_type,
-            facet = facet,
-            realization = realization,
-        )
-
-        if write:
-            self.write_hdf5_for_imported_list()
-            return self.create_xml_for_imported_list_and_add_parts_to_model()
+    def _create_xml_time_series_node(self, time_series_uuid, time_index, p_node, support_uuid, support_type,
+                                     support_root):
+        if time_series_uuid is None or time_index is None:
+            related_time_series_node = None
         else:
-            return None
+            related_time_series_node = self.model.root(uuid = time_series_uuid)
+            time_series = rts.any_time_series(self.model, uuid = time_series_uuid)
+            time_series.create_time_index(time_index, root = p_node)
 
-    def iter_logs(self):
-        """Generator that yields component Log objects.
+        support_title = '' if support_root is None else rqet.citation_title_for_node(support_root)
+        self.model.create_supporting_representation(support_uuid = support_uuid,
+                                                    root = p_node,
+                                                    title = support_title,
+                                                    content_type = support_type)
+        return related_time_series_node
 
-        Yields:
-           instances of :class:`resqpy.property.WellLog` .
+    def _create_xml_get_p_node(self, p_uuid):
+        p_node = self.model.new_obj_node(self.d_or_c_text + 'Property')
+        if p_uuid is None:
+            p_uuid = bu.uuid_from_string(p_node.attrib['uuid'])
+        else:
+            p_node.attrib['uuid'] = str(p_uuid)
+        return p_node, p_uuid
 
-        Example::
+    def _create_xml_add_as_part(self, add_as_part, p_uuid, p_node, add_relationships, support_root, property_kind_uuid,
+                                related_time_series_node, sl_root, discrete, string_lookup_uuid, const_value, ext_uuid):
+        if add_as_part:
+            self.model.add_part('obj_' + self.d_or_c_text + 'Property', p_uuid, p_node)
+            if add_relationships:
+                self._create_xml_add_relationships(p_node, support_root, property_kind_uuid, related_time_series_node,
+                                                   sl_root, discrete, string_lookup_uuid, const_value, ext_uuid)
 
-           for log in log_collection.logs():
-              print(log.title)
-        """
+    def _set_support_and_model_from_collection(self, other, support_uuid, grid):
+        if support_uuid is None and grid is not None:
+            support_uuid = grid.uuid
+        if support_uuid is not None and self.support_uuid is not None:
+            assert bu.matching_uuids(support_uuid, self.support_uuid)
 
-        return (WellLog(collection = self, uuid = uuid) for uuid in self.uuids())
+        assert other is not None
+        if self.model is None:
+            self.model = other.model
+        else:
+            assert self.model is other.model
 
-    def to_df(self, include_units = False):
-        """Return pandas dataframe of log data.
+        assert self.support_uuid is None or other.support_uuid is None or bu.matching_uuids(
+            self.support_uuid, other.support_uuid)
+        if self.support_uuid is None and self.number_of_parts() == 0:
+            self.set_support(support_uuid = other.support_uuid, support = other.support)
 
-        Args:
-           include_units (bool): include unit in column names
-        """
+    def _add_selected_part_from_other_dict(self, part, other, realization, support_uuid, uuid, continuous, categorical,
+                                           count, points, indexable, property_kind, facet_type, facet, citation_title,
+                                           citation_title_match_starts_with, time_series_uuid, time_index,
+                                           string_lookup_uuid, ignore_clashes):
 
-        assert self.support is not None
-
-        # Get MD values
-        md_values = self.support.node_mds
-        assert md_values.ndim == 1, 'measured depths not 1D numpy array'
-
-        # Get logs
-        data = {}
-        for log in self.iter_logs():
-
-            col_name = log.title
-            if include_units and log.uom:
-                col_name += f' ({log.uom})'
-
-            values = log.values()
-            if values.ndim > 1:
-                raise NotImplementedError('Multidimensional logs not yet supported in pandas')
-
-            data[col_name] = values
-
-        df = pd.DataFrame(data = data, index = md_values)
-        return df
-
-    def to_las(self):
-        """Return a lasio.LASFile object, which can then be written to disk.
-
-        Example::
-
-           las = collection.to_las()
-           las.write('example_logs.las', version=2)
-        """
-        las = lasio.LASFile()
-
-        las.well.WELL = str(self.support.wellbore_interpretation.title)
-        las.well.DATE = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
-
-        # todo: Get UWI from somewhere
-        # las.well.UWI = uwi
-
-        # Lookup depths from associated WellboreFrame and Trajectory
-        md_values = self.support.node_mds
-        md_unit = self.support.trajectory.md_uom
-
-        # Measured depths should be first column in LAS file
-        # todo: include datum information in description
-        las.append_curve('MD', md_values, unit = md_unit)
-
-        for well_log in self.iter_logs():
-            name = well_log.title
-            unit = well_log.uom
-            values = well_log.values()
-            if values.ndim > 1:
-                raise NotImplementedError('Multidimensional logs not yet supported in pandas')
-            assert len(values) > 0
-            log.debug(f"Writing log {name} of length {len(values)} and shape {values.shape}")
-            las.append_curve(name, values, unit = unit, descr = None)
-        return las
-
-    def set_wellbore_frame(self, frame):
-        """Sets the supporting representation object for the property collection to be the given wellbore frame object.
-
-        note:
-           this method does not need to be called if the wellbore frame was identified at the time the collection
-           was initialised
-        """
-
-        self.set_support(support = frame)
-
-
-class WellLog:
-    """Thin wrapper class around RESQML properties for well logs."""
-
-    def __init__(self, collection, uuid):
-        """Create a well log from a part name."""
-
-        self.collection: PropertyCollection = collection
-        self.model = collection.model
-        self.uuid = uuid
-
-        part = self.model.part_for_uuid(uuid)
-        indexable = self.collection.indexable_for_part(part)
-        if indexable != 'nodes':
-            raise NotImplementedError('well frame related property does not have nodes as indexable element')
-
-        #: Name of log
-        self.title = self.model.citation_title_for_part(part)
-
-        #: Unit of measure
-        self.uom = self.collection.uom_for_part(part)
-
-    def values(self):
-        """Return log data as numpy array.
-
-        Note:
-           may return 2D numpy array with shape (num_depths, num_columns).
-        """
-
-        part = self.model.part_for_uuid(self.uuid)
-        return self.collection.cached_part_array_ref(part)
-
-
-class StringLookup(BaseResqpy):
-    """Class catering for RESQML obj_StringLookupTable objects."""
-
-    resqml_type = "StringTableLookup"
-
-    def __init__(self,
-                 parent_model,
-                 root_node = None,
-                 uuid = None,
-                 int_to_str_dict = None,
-                 title = None,
-                 extra_metadata = None,
-                 originator = None):
-        """Creates a new string lookup (RESQML obj_StringTableLookup) object.
-
-        arguments:
-           parent_model: the model to which this string lookup belongs
-           root_node (optional): if present, the root xml node for the StringTableLookup from which this object is populated
-           int_to_str_dict (optional): if present, a dictionary mapping from integers to strings, used to populate the lookup;
-              ignored if root_node is present
-           title (string, optional): if present, is used as the citation title for the object; ignored if root_node is not None
-
-        returns:
-           the new StringLookup object
-
-        :meta common:
-        """
-
-        self.min_index = None
-        self.max_index = None
-        self.str_list = []
-        self.str_dict = {}
-        self.stored_as_list = False
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
-        if uuid is None and root_node is None:
-            self.load_from_dict(int_to_str_dict)
-
-    def _load_from_xml(self):
-        root_node = self.root
-        for v_node in rqet.list_of_tag(root_node, 'Value'):
-            key = rqet.find_tag_int(v_node, 'Key')
-            value = rqet.find_tag_text(v_node, 'Value')
-            assert key not in self.str_dict, 'key value ' + str(
-                key) + ' occurs more than once in string lookup table xml'
-            self.str_dict[key] = value
-            if self.min_index is None or key < self.min_index:
-                self.min_index = key
-            if self.max_index is None or key > self.max_index:
-                self.max_index = key
-
-    def load_from_dict(self, int_to_str_dict):
-        if int_to_str_dict is None:
+        if _check_not_none_and_not_equals(realization, other.realization_for_part, part):
             return
-        assert len(int_to_str_dict), 'empty dictionary passed to string lookup initialisation'
-        self.str_dict = int_to_str_dict.copy()
-        self.min_index = min(self.str_dict.keys())
-        self.max_index = max(self.str_dict.keys())
-        self.set_list_from_dict_conditionally()
+        if _check_not_none_and_not_uuid_match(support_uuid, other.support_uuid_for_part, part):
+            return
+        if _check_not_none_and_not_uuid_match(uuid, other.uuid_for_part, part):
+            return
+        if _check_not_none_and_not_equals(continuous, other.continuous_for_part, part):
+            return
+        if _check_categorical_and_lookup(categorical, other, part):
+            return
+        if _check_not_none_and_not_equals(count, other.count_for_part, part):
+            return
+        if _check_not_none_and_not_equals(points, other.points_for_part, part):
+            return
+        if _check_not_none_and_not_equals(indexable, other.indexable_for_part, part):
+            return
+        if property_kind is not None and not same_property_kind(other.property_kind_for_part(part), property_kind):
+            return
+        if _check_not_none_and_not_equals(facet_type, other.facet_type_for_part, part):
+            return
+        if _check_not_none_and_not_equals(facet, other.facet_for_part, part):
+            return
+        if _check_citation_title(citation_title, citation_title_match_starts_with, other, part):
+            return
+        if _check_not_none_and_not_uuid_match(time_series_uuid, other.time_series_uuid_for_part, part):
+            return
+        if _check_not_none_and_not_equals(time_index, other.time_index_for_part, part):
+            return
+        if _check_not_none_and_not_uuid_match(string_lookup_uuid, other.string_lookup_uuid_for_part, part):
+            return
+        if part in self.dict.keys():
+            if ignore_clashes:
+                return
+            assert (False)
+        self.dict[part] = other.dict[part]
 
-    def is_equivalent(self, other):
-        """Returns True if this lookup is the same as other (apart from uuid); False otherwise."""
+    def _find_single_part(self, kind, realization):
+        try:
+            part = self.singleton(realization = realization, property_kind = kind)
+        except Exception:
+            log.error(f'problem with {kind} (more than one array present?)')
+            part = None
+        return part
 
-        if other is None:
-            return False
-        if self is other:
-            return True
-        if bu.matching_uuids(self.uuid, other.uuid):
-            return True
-        if self.title != other.title or self.min_index != other.min_index or self.max_index != other.max_index:
-            return False
-        return self.str_dict == other.str_dict
+    def _get_single_perm_ijk_parts(self, perms, share_perm_parts, perm_k_mode, perm_k_ratio, ntg_part):
+        if perms.number_of_parts() == 1:
+            return _get_single_perm_ijk_parts_one(perms, share_perm_parts)
+        else:
+            perm_i_part = _get_single_perm_ijk_for_direction(perms, 'I')
+            perm_j_part = _get_single_perm_ijk_for_direction(perms, 'J')
+            if perm_j_part is None and share_perm_parts:
+                perm_j_part = perm_i_part
+            elif perm_i_part is None and share_perm_parts:
+                perm_i_part = perm_j_part
+            perm_k_part = _get_single_perm_ijk_for_direction(perms, 'K')
+            if perm_k_part is None:
+                assert perm_k_mode in [None, 'none', 'shared', 'ratio', 'ntg', 'ntg squared']
+                # note: could switch ratio mode to shared if perm_k_ratio is 1.0
+                if perm_k_mode is None or perm_k_mode == 'none':
+                    pass
+                elif perm_k_mode == 'shared':
+                    if share_perm_parts:
+                        perm_k_part = perm_i_part
+                elif perm_i_part is not None:
+                    log.info('generating K permeability data using mode ' + str(perm_k_mode))
+                    if perm_j_part is not None and perm_j_part != perm_i_part:
+                        # generate root mean square of I & J permeabilities to use as horizontal perm
+                        kh = np.sqrt(
+                            perms.cached_part_array_ref(perm_i_part) * perms.cached_part_array_ref(perm_j_part))
+                    else:  # use I permeability as horizontal perm
+                        kh = perms.cached_part_array_ref(perm_i_part)
+                    kv = kh * perm_k_ratio
+                    if ntg_part is not None:
+                        if perm_k_mode == 'ntg':
+                            kv *= self.cached_part_array_ref(ntg_part)
+                        elif perm_k_mode == 'ntg squared':
+                            ntg = self.cached_part_array_ref(ntg_part)
+                            kv *= ntg * ntg
+                    kv_collection = PropertyCollection()
+                    kv_collection.set_support(support_uuid = self.support_uuid, model = self.model)
+                    kv_collection.add_cached_array_to_imported_list(
+                        kv,
+                        'derived from horizontal perm with mode ' + str(perm_k_mode),
+                        'KK',
+                        discrete = False,
+                        uom = 'mD',
+                        time_index = None,
+                        null_value = None,
+                        property_kind = 'permeability rock',
+                        facet_type = 'direction',
+                        facet = 'K',
+                        realization = perms.realization_for_part(perm_i_part),
+                        indexable_element = perms.indexable_for_part(perm_i_part),
+                        count = 1,
+                        points = False)
+                    self.model.h5_release()
+                    kv_collection.write_hdf5_for_imported_list()
+                    kv_collection.create_xml_for_imported_list_and_add_parts_to_model()
+                    self.inherit_parts_from_other_collection(kv_collection)
+                    perm_k_part = kv_collection.singleton()
+        return perm_i_part, perm_j_part, perm_k_part
 
-    def set_list_from_dict_conditionally(self):
-        """Sets a list copy of the lookup table, which can be indexed directly, if it makes sense to do so."""
+    def _add_part_to_dict_get_realization(self, realization, xml_node):
+        if realization is not None and self.realization is not None:
+            assert (realization == self.realization)
+        if realization is None:
+            realization = self.realization
+        realization_node = rqet.find_tag(xml_node,
+                                         'RealizationIndex')  # optional; if present use to populate realization
+        if realization_node is not None:
+            realization = int(realization_node.text)
+        return realization
 
-        self.str_list = []
-        self.stored_as_list = False
-        if self.min_index >= 0 and (self.max_index < 50 or 10 * len(self.str_dict) // self.max_index > 8):
-            for key in range(self.max_index + 1):
-                if key in self.str_dict:
-                    self.str_list.append(self.str_dict[key])
-                else:
-                    self.str_list.append(None)
-            self.stored_as_list = True
+    def _add_part_to_dict_get_type_details(self, part, continuous, xml_node):
+        sl_ref_node = None
+        type = self.model.type_of_part(part)
+        #      log.debug('adding part ' + part + ' of type ' + type)
+        assert type in [
+            'obj_ContinuousProperty', 'obj_DiscreteProperty', 'obj_CategoricalProperty', 'obj_PointsProperty'
+        ]
+        if continuous is None:
+            continuous = (type in ['obj_ContinuousProperty', 'obj_PointsProperty'])
+        else:
+            assert continuous == (type in ['obj_ContinuousProperty', 'obj_PointsProperty'])
+        points = (type == 'obj_PointsProperty')
+        string_lookup_uuid = None
+        if type == 'obj_CategoricalProperty':
+            sl_ref_node = rqet.find_tag(xml_node, 'Lookup')
+            string_lookup_uuid = bu.uuid_from_string(rqet.find_tag_text(sl_ref_node, 'UUID'))
 
-    def set_string(self, key, value):
-        """Sets the string associated with a given integer key."""
+        return type, continuous, points, string_lookup_uuid, sl_ref_node
 
-        self.str_dict[key] = value
-        limits_changed = False
-        if self.min_index is None or value < self.min_index:
-            self.min_index = value
-            limits_changed = True
-        if self.max_index is None or value > self.max_index:
-            self.max_index = value
-            limits_changed = True
-        if self.stored_as_list:
-            if limits_changed:
-                self.set_list_from_dict_conditionally()
-            else:
-                self.str_list[key] = value
 
-    def get_string(self, key):
-        """Returns the string associated with the integer key, or None if not found.
+def _get_indexable_element(indexable_element, support_type):
+    if indexable_element is None:
+        if support_type in [
+                'obj_IjkGridRepresentation', 'obj_BlockedWellboreRepresentation', 'obj_Grid2dRepresentation',
+                'obj_UnstructuredGridRepresentation'
+        ]:
+            indexable_element = 'cells'
+        elif support_type == 'obj_WellboreFrameRepresentation':
+            indexable_element = 'nodes'  # note: could be 'intervals'
+        elif support_type == 'obj_GridConnectionSetRepresentation':
+            indexable_element = 'faces'
+        else:
+            raise Exception('indexable element unknown for unsupported supporting representation object')
+    return indexable_element
 
-        :meta common:
-        """
 
-        if key < self.min_index or key > self.max_index:
-            return None
-        if self.stored_as_list:
-            return self.str_list[key]
-        if key not in self.str_dict:
-            return None
-        return self.str_dict[key]
+def _create_xml_facet_node(facet_type, facet, p_node):
+    if facet_type is not None and facet is not None:
+        facet_node = rqet.SubElement(p_node, ns['resqml2'] + 'Facet')
+        facet_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PropertyKindFacet')
+        facet_node.text = rqet.null_xml_text
+        facet_type_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Facet')
+        facet_type_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Facet')
+        facet_type_node.text = facet_type
+        facet_value_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Value')
+        facet_value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
+        facet_value_node.text = facet
 
-    def get_list(self):
-        """Returns a list of values, sorted by key.
 
-        :meta common:
-        """
+def _get_property_array_min_max_const(const_value, null_value, min_value, max_value, discrete):
+    if (discrete and const_value != null_value) or (not discrete and not np.isnan(const_value)):
+        if min_value is None:
+            min_value = const_value
+        if max_value is None:
+            max_value = const_value
+    return min_value, max_value
 
-        if self.stored_as_list:
-            return self.str_list
-        return list(dict(sorted(list(self.str_dict.items()))).values())
 
-    def length(self):
-        """Returns the nominal length of the lookup table.
-
-        :meta common:
-        """
-
-        if self.stored_as_list:
-            return len(self.str_list)
-        return len(self.str_dict)
-
-    def get_index_for_string(self, string):
-        """Returns the integer key for the given string (exact match required), or None if not found.
-
-        :meta common:
-        """
-
-        if self.stored_as_list:
+def _get_property_array_min_max_array(property_array, min_value, max_value, discrete):
+    if discrete:
+        if min_value is None:
             try:
-                index = self.str_list.index(string)
-                return index
+                min_value = int(property_array.min())
             except Exception:
-                return None
-        if string not in self.str_dict.values():
-            return None
-        for k, v in self.str_dict.items():
-            if v == string:
-                return k
-        return None
+                min_value = None
+                log.warning('no xml minimum value set for discrete property')
+        if max_value is None:
+            try:
+                max_value = int(property_array.max())
+            except Exception:
+                max_value = None
+                log.warning('no xml maximum value set for discrete property')
+    else:
+        if min_value is None or max_value is None:
+            all_nan = np.all(np.isnan(property_array))
+        if min_value is None and not all_nan:
+            min_value = np.nanmin(property_array)
+            if np.isnan(min_value) or min_value is ma.masked:
+                min_value = None
+        if max_value is None and not all_nan:
+            max_value = np.nanmax(property_array)
+            if np.isnan(max_value) or max_value is ma.masked:
+                max_value = None
 
-    def create_xml(self, title = None, originator = None, add_as_part = True, reuse = True):
-        """Creates an xml node for the string table lookup.
-
-        arguments:
-           title (string, optional): if present, overrides the object's title attribute to be used as citation title
-           originator (string, optional): if present, used as the citation creator (otherwise login name is used)
-           add_as_part (boolean, default True): if True, the property set is added to the model as a part
-
-        :meta common:
-        """
-
-        if title:
-            self.title = title
-
-        if reuse and self.try_reuse():
-            return self.root  # check for reusable (equivalent) object
-
-        sl_node = super().create_xml(add_as_part = False, originator = originator)
-
-        for k, v in self.str_dict.items():
-
-            pair_node = rqet.SubElement(sl_node, ns['resqml2'] + 'Value')
-            pair_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'StringLookup')
-            pair_node.text = rqet.null_xml_text
-
-            key_node = rqet.SubElement(pair_node, ns['resqml2'] + 'Key')
-            key_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-            key_node.text = str(k)
-
-            value_node = rqet.SubElement(pair_node, ns['resqml2'] + 'Value')
-            value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
-            value_node.text = str(v)
-
-        if add_as_part:
-            self.model.add_part('obj_StringTableLookup', self.uuid, sl_node)
-
-        return sl_node
+    return min_value, max_value
 
 
-class PropertyKind(BaseResqpy):
-    """Class catering for RESQML bespoke PropertyKind objects."""
-
-    resqml_type = "PropertyKind"
-
-    def __init__(self,
-                 parent_model,
-                 root_node = None,
-                 uuid = None,
-                 title = None,
-                 is_abstract = False,
-                 example_uom = None,
-                 naming_system = 'urn:resqml:bp.com:resqpy',
-                 parent_property_kind = 'continuous',
-                 extra_metadata = None,
-                 originator = None):
-        """Initialise a new bespoke property kind."""
-
-        self.is_abstract = is_abstract
-        self.naming_system = naming_system
-        self.example_uom = example_uom
-        self.parent_kind = parent_property_kind
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
-
-    def _load_from_xml(self):
-        root_node = self.root
-        self.is_abstract = rqet.find_tag_bool(root_node, 'IsAbstract')
-        self.naming_system = rqet.find_tag_text(root_node, 'NamingSystem')
-        self.example_uom = rqet.find_tag_text(root_node, 'RepresentativeUom')
-        ppk_node = rqet.find_tag(root_node, 'ParentPropertyKind')
-        assert ppk_node is not None
-        ppk_kind_node = rqet.find_tag(ppk_node, 'Kind')
-        assert ppk_kind_node is not None, 'only standard property kinds supported as parent kind'
-        self.parent_kind = ppk_kind_node.text
-
-    def is_equivalent(self, other_pk, check_extra_metadata = True):
-        """Returns True if this property kind is essentially the same as the other; False otherwise."""
-
-        if other_pk is None:
-            return False
-        if self is other_pk:
-            return True
-        if bu.matching_uuids(self.uuid, other_pk.uuid):
-            return True
-        if (self.parent_kind != other_pk.parent_kind or self.title != other_pk.title or
-                self.is_abstract != other_pk.is_abstract or self.naming_system != other_pk.naming_system):
-            return False
-        if (self.example_uom and other_pk.example_uom) and self.example_uom != other_pk.example_uom:
-            return False
-        if check_extra_metadata:
-            if (self.extra_metadata or other_pk.extra_metadata) and self.extra_metadata != other_pk.extra_metadata:
-                return False
-        return True
-
-    def create_xml(self, add_as_part = True, originator = None, reuse = True):
-        """Create xml for this bespoke property kind."""
-
-        if reuse and self.try_reuse():
-            return self.root  # check for reusable (equivalent) object
-
-        pk = super().create_xml(add_as_part = False, originator = originator)
-
-        ns_node = rqet.SubElement(pk, ns['resqml2'] + 'NamingSystem')
-        ns_node.set(ns['xsi'] + 'type', ns['xsd'] + 'anyURI')
-        ns_node.text = str(self.naming_system)
-
-        ia_node = rqet.SubElement(pk, ns['resqml2'] + 'IsAbstract')
-        ia_node.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-        ia_node.text = str(self.is_abstract).lower()
-
-        # note: schema definition requires this field, even for discrete property kinds
-        uom = self.example_uom
-        if uom is None:
-            uom = 'Euc'
-        ru_node = rqet.SubElement(pk, ns['resqml2'] + 'RepresentativeUom')
-        ru_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlUom')
-        ru_node.text = str(uom)
-
-        ppk_node = rqet.SubElement(pk, ns['resqml2'] + 'ParentPropertyKind')
-        ppk_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'StandardPropertyKind')
-        ppk_node.text = rqet.null_xml_text
-
-        ppk_kind_node = rqet.SubElement(ppk_node, ns['resqml2'] + 'Kind')
-        ppk_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlPropertyKind')
-        ppk_kind_node.text = str(self.parent_kind)
-
-        if add_as_part:
-            self.model.add_part('obj_PropertyKind', self.uuid, pk)
-            # no relationships at present, if local parent property kinds were to be supported then a rel. is needed there
-
-        return pk
+def _check_not_none_and_not_equals(attrib, method, part):
+    return (attrib is not None and method(part) != attrib)
 
 
-class WellIntervalProperty:
-    """Thin wrapper class around interval properties for a Wellbore Frame or Blocked Wellbore.
-    
-    ie, interval or cell well logs.
-    """
-
-    def __init__(self, collection, part):
-        """Create an interval log or blocked well log from a part name."""
-
-        self.collection: PropertyCollection = collection
-        self.model = collection.model
-        self.part = part
-
-        indexable = self.collection.indexable_for_part(part)
-        assert indexable in ['cells', 'intervals'], 'expected cells or intervals as indexable element'
-
-        self.name = self.model.citation_title_for_part(part)
-        self.uom = self.collection.uom_for_part(part)
-
-    def values(self):
-        """Return interval log or blocked well log as numpy array."""
-
-        return self.collection.cached_part_array_ref(self.part)
+def _check_not_none_and_not_uuid_match(uuid, method, part):
+    return (uuid is not None and not bu.matching_uuids(uuid, method(part)))
 
 
-class WellIntervalPropertyCollection(PropertyCollection):
-    """Class for RESQML property collection for a WellboreFrame for interval or blocked well logs"""
-
-    def __init__(self, frame = None, property_set_root = None, realization = None):
-        """Creates a new property collection related to interval or blocked well logs and a wellbore frame."""
-
-        super().__init__(support = frame, property_set_root = property_set_root, realization = realization)
-
-    def logs(self):
-        """Generator that yields component Interval log or Blocked well log objects."""
-        return (WellIntervalProperty(collection = self, part = part) for part in self.parts())
-
-    def to_pandas(self, include_units = False):
-        cell_indices = [return_cell_indices(i, self.support.cell_indices) for i in self.support.cell_grid_link]
-        data = {}
-        for log in self.logs():
-            col_name = log.name
-            values = log.values()
-            data[col_name] = values
-        df = pd.DataFrame(data = data, index = cell_indices)
-        return df
-
-
-def same_property_kind(pk_a, pk_b):
-    """Returns True if the two property kinds are the same, or pseudonyms."""
-
-    if pk_a is None or pk_b is None:
-        return False
-    if pk_a == pk_b:
-        return True
-    if pk_a in ['permeability rock', 'rock permeability'] and pk_b in ['permeability rock', 'rock permeability']:
-        return True
+def _check_citation_title(citation_title, citation_title_match_starts_with, other, part):
+    if citation_title is not None:
+        if citation_title_match_starts_with:
+            if not other.citation_title_for_part(part).startswith():
+                return True
+        else:
+            if other.citation_title_for_part(part) != citation_title:
+                return True
     return False
 
 
-def create_transmisibility_multiplier_property_kind(model):
-    """Create a local property kind 'transmisibility multiplier' for a given model.
-
-    argument:
-       model: resqml model object
-
-    returns:
-       property kind uuid
-    """
-    log.debug("Making a new property kind 'Transmissibility multiplier'")
-    tmult_kind = PropertyKind(parent_model = model,
-                              title = 'transmissibility multiplier',
-                              parent_property_kind = 'continuous')
-    tmult_kind.create_xml()
-    tmult_kind_uuid = tmult_kind.uuid
-    model.store_epc()
-    return tmult_kind_uuid
-
-
-def property_kind_and_facet_from_keyword(keyword):
-    """If keyword is recognised, returns equivalent resqml PropertyKind and Facet info.
-
-    argument:
-       keyword (string): Nexus grid property keyword
-
-    returns:
-       (property_kind, facet_type, facet) as defined in resqml standard; some or all may be None
-
-    note:
-       this function may now return the local property kind 'transmissibility multiplier'; calling code must ensure that
-       the local property kind object is created if not already present
-    """
-
-    # note: this code doesn't cater for a property having more than one facet, eg. direction and phase
-
-    def facet_info_for_dir_ch(dir_ch):
-        facet_type = None
-        facet = None
-        if dir_ch in ['i', 'j', 'k', 'x', 'y', 'z']:
-            facet_type = 'direction'
-            if dir_ch in ['i', 'x']:
-                facet = 'I'
-            elif dir_ch in ['j', 'y']:
-                facet = 'J'
-            else:
-                facet = 'K'
-            # NB: resqml also allows for combinations, eg. IJ, IJK
-        return (facet_type, facet)
-
-    # note: 'what' facet_type for made-up uses might be better changed to the generic 'qualifier' facet type
-
-    property_kind = None
-    facet_type = None
-    facet = None
-    lk = keyword.lower()
-    if lk in ['bv', 'brv']:  # bulk rock volume
-        property_kind = 'rock volume'
-        facet_type = 'netgross'
-        facet = 'gross'  # todo: check this is the facet in xsd
-    elif lk in ['pv', 'pvr', 'porv']:
-        property_kind = 'pore volume'  # pore volume
-    elif lk in ['mdep', 'depth', 'tops', 'mids']:
-        property_kind = 'depth'  # depth (nexus) and tops mean top depth
-        facet_type = 'what'  # this might need to be something different
-        if lk in ['mdep', 'mids']:
-            facet = 'cell centre'
+def _check_categorical_and_lookup(categorical, other, part):
+    if categorical is not None:
+        if categorical:
+            if other.continuous_for_part(part) or (other.string_lookup_uuid_for_part(part) is None):
+                return True
         else:
-            facet = 'cell top'
-    elif lk in ['ntg', 'netgrs']:
-        property_kind = 'net to gross ratio'  # net-to-gross
-    elif lk in ['netv', 'nrv']:  # net volume
-        property_kind = 'rock volume'
-        facet_type = 'netgross'
-        facet = 'net'
-    elif lk in ['dzc', 'dzn', 'dz', 'dznet']:
-        property_kind = 'thickness'  # or should these keywords use cell length in K direction?
-        facet_type = 'netgross'
-        if lk.startswith('dzn'):
-            facet = 'net'
-        else:
-            facet = 'gross'
-    elif lk in ['dxc', 'dyc', 'dx', 'dy']:
-        property_kind = 'cell length'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[1])
-    elif len(lk) > 2 and lk[0] == 'd' and lk[1] in 'xyz':
-        property_kind = 'length'
-        facet_type = 'direction'
-        facet = lk[1].upper()  # keep as 'X', 'Y' or 'Z'
-    elif lk in ['por', 'poro', 'porosity']:
-        property_kind = 'porosity'  # porosity
-    elif lk == 'kh':
-        property_kind = 'permeability thickness'  # K.H (not horizontal permeability)
-    elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):  # permeability
-        property_kind = 'permeability rock'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
-    elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
-        property_kind = 'transmissibility'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
-    elif lk in ['p', 'pressure']:
-        property_kind = 'pressure'  # pressure; todo: phase pressures
-    elif lk in ['sw', 'so', 'sg', 'satw', 'sato', 'satg', 'soil']:  # saturations
-        property_kind = 'saturation'
-        facet_type = 'what'  # todo: check use of 'what' for phase
-        if lk in ['sw', 'satw', 'swat']:
-            facet = 'water'
-        elif lk in ['so', 'sato', 'soil']:
-            facet = 'oil'
-        elif lk in ['sg', 'satg', 'sgas']:
-            facet = 'gas'
-    elif lk in ['swl', 'swr', 'sgl', 'sgr', 'swro', 'sgro', 'sor', 'swu', 'sgu']:  # nexus saturation end points
-        property_kind = 'saturation'
-        facet_type = 'what'  # note: use of 'what' for phase is a guess
-        if lk[1] == 'w':
-            facet = 'water'
-        elif lk[1] == 'g':
-            facet = 'gas'
-        elif lk[1] == 'o':
-            facet = 'oil'
-        if lk[-1] == 'l':
-            facet += ' minimum'
-        elif lk[-1] == 'u':
-            facet += ' maximum'
-        elif lk[2:] == 'ro':
-            facet += ' residual to oil'
-        elif lk[-1] == 'r':
-            facet += ' residual'
-        else:
-            assert False, 'problem deciphering saturation end point keyword: ' + lk
-#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
-    elif lk in ['wip', 'oip', 'gip', 'mobw', 'mobo', 'mobg', 'ocip']:  # todo: check these, especially ocip
-        property_kind = 'fluid volume'
-        facet_type = 'what'  # todo: check use of 'what' for phase
-        if lk in ['wip', 'mobw']:
-            facet = 'water'  # todo: add another facet indicating mobile volume
-        elif lk in ['oip', 'mobo']:
-            facet = 'oil'
-        elif lk in ['gip', 'mobg']:
-            facet = 'gas'
-        elif lk == 'ocip':
-            facet = 'oil condensate'  # todo: this seems unlikely: check
-        if lk[:3] == 'mob':
-            facet += ' (mobile)'
-    elif lk in ['tmx', 'tmy', 'tmz', 'tmflx', 'tmfly', 'tmflz', 'multx', 'multy', 'multz']:
-        property_kind = 'transmissibility multiplier'  # NB: resqpy local property kind
-        facet_type = 'direction'
-        _, facet = facet_info_for_dir_ch(lk[-1])
-    elif lk in ['multbv', 'multpv']:
-        property_kind = 'property multiplier'
-        facet_type = 'what'  # here 'what' facet indicates property affected
-        if lk == 'multbv':
-            facet = 'rock volume'  # NB: making this up as I go along
-        elif lk == 'multpv':
-            facet = 'pore volume'
-    elif lk == 'rs':
-        property_kind = 'solution gas-oil ratio'
-    elif lk == 'rv':
-        property_kind = 'vapor oil-gas ratio'
-    elif lk in ['temp', 'temperature']:
-        property_kind = 'thermodynamic temperature'
-    elif lk in ['dad', 'kid', 'unpack', 'deadcell', 'inactive']:
-        property_kind = 'code'
-        facet_type = 'what'
-        # todo: kid can only be used as an inactive cell indication for the root grid
-        if lk in ['kid', 'deadcell', 'inactive']:
-            facet = 'inactive'  # standize on 'inactive' to indicate use as mask
-        else:
-            facet = lk  # note: use deadcell or unpack for inactive, if nothing better?
-    elif lk == 'livecell' or lk.startswith('act'):
-        property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
+            if not (other.continuous_for_part(part) or (other.string_lookup_uuid_for_part(part) is None)):
+                return True
+    return False
 
 
-#      property_kind = 'code'
-#      facet_type = 'what'
-#      facet = 'active'
-    elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
-        property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
-    elif lk == 'uid':
-        property_kind = 'index'
-        facet_type = 'what'
-        facet = 'uid'
-    return (property_kind, facet_type, facet)
+def _get_single_perm_ijk_parts_one(perms, share_perm_parts):
+    perm_i_part = perms.singleton()
+    if share_perm_parts:
+        perm_j_part = perm_k_part = perm_i_part
+    elif perms.facet_type_for_part(perm_i_part) == 'direction':
+        direction = perms.facet_for_part(perm_i_part)
+        if direction == 'J':
+            perm_j_part = perm_i_part
+            perm_i_part = None
+        elif direction == 'IJ':
+            perm_j_part = perm_i_part
+        elif direction == 'K':
+            perm_k_part = perm_i_part
+            perm_i_part = None
+        elif direction == 'IJK':
+            perm_j_part = perm_k_part = perm_i_part
+    return perm_i_part, perm_j_part, perm_k_part
 
 
-def infer_property_kind(name, unit):
-    """Guess a valid property kind."""
+def _get_single_perm_ijk_for_direction(perms, direction):
+    facet_options, title_options = _get_facet_title_options_for_direction(direction)
 
-    # Currently unit is ignored
+    try:
+        part = None
+        for facet_op in facet_options:
+            if not part:
+                part = perms.singleton(facet_type = 'direction', facet = facet_op)
+        if not part:
+            for title in title_options:
+                if not part:
+                    part = perms.singleton(citation_title = title)
+        if not part:
+            log.error(f'unable to discern which rock permeability to use for {direction} direction')
+    except Exception:
+        log.error(f'problem with permeability data (more than one {direction} direction array present?)')
+        part = None
+    return part
 
-    valid_kinds = bwam.valid_property_kinds()
 
-    if name in valid_kinds:
-        kind = name
+def _get_facet_title_options_for_direction(direction):
+    if direction == 'I':
+        facet_options = ['I', 'IJ', 'IJK']
+        title_options = ['KI', 'PERMI', 'KX', 'PERMX']
+    elif direction == 'J':
+        facet_options = ['J', 'IJ', 'IJK']
+        title_options = ['KJ', 'PERMJ', 'KY', 'PERMY']
     else:
-        # TODO: use an appropriate default
-        kind = 'Unknown'
-
-    # TODO: determine facet_type and facet somehow
-    facet_type = None
-    facet = None
-
-    return kind, facet_type, facet
-
-
-def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet = None):
-    """Returns a guess at the units of measure for the given kind of property.
-
-    arguments:
-       property_kind (string): a valid resqml property kind, lowercase
-       minimum: the minimum value in the data for which the units are being guessed
-       maximum: the maximum value in the data for which the units are being guessed
-       support: the grid.Grid or well.WellboreFrame object which the property data relates to
-       facet_type (string, optional): a valid resqml facet type, lowercase, one of:
-               'direction', 'what', 'netgross', 'qualifier', 'conditions', 'statistics'
-       facet: (string, present if facet_type is present): the value relating to the facet_type,
-                eg. 'I' for direction, or 'oil' for 'what'
-
-    returns:
-       a valid resqml unit of measure (uom) for the property_kind, or None
-
-    note:
-       the resqml standard allows a property to have any number of facets; however,
-       this module currently only supports zero or one facet per property
-    """
-
-    def crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and feet for z
-        if crs_node is None:
-            return None
-        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-        if xy_units == 'm' and z_units == 'm':
-            return 'm'
-        if xy_units == 'ft' and z_units == 'ft':
-            return 'ft'
-        return None
-
-    if support is None or not hasattr(support, 'extract_crs_root'):
-        crs_node = None
-    else:
-        crs_node = support.extract_crs_root()
-    from_crs = crs_m_or_ft(crs_node)
-
-    if property_kind in ['rock volume', 'pore volume', 'volume']:
-        if from_crs is None:
-            return None
-        if from_crs == 'ft' and property_kind == 'pore volume':
-            return 'bbl'  # seems to be Nexus 'ENGLISH' uom for pv out
-        return from_crs + '3'  # ie. m3 or ft3
-    if property_kind == 'depth':
-        if crs_node is None:
-            return None
-        return rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-    if property_kind == 'cell length':  # todo: pass in direction facet to pick up xy_units or z_units
-        return from_crs
-    if property_kind in ['net to gross ratio', 'porosity', 'saturation']:
-        if maximum is not None and str(maximum) != 'unknown':
-            max_real = float(maximum)
-            if max_real > 1.0 and max_real <= 100.0:
-                return '%'
-            if max_real < 0.0 or max_real > 1.0:
-                return None
-        if from_crs == 'm':
-            return 'm3/m3'
-        if from_crs == 'ft':
-            return 'ft3/ft3'
-        return 'Euc'
-    if property_kind == 'permeability rock' or property_kind == 'rock permeability':
-        return 'mD'
-    if property_kind == 'permeability thickness':
-        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-        if z_units == 'm':
-            return 'mD.m'
-        if z_units == 'ft':
-            return 'mD.ft'
-        return None
-    if property_kind == 'permeability length':
-        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-        if xy_units == 'm':
-            return 'mD.m'
-        if xy_units == 'ft':
-            return 'mD.ft'
-        return None
-    if property_kind == 'fluid volume':
-        if from_crs == 'm':
-            return 'm3'
-        if from_crs == 'ft':
-            if facet_type == 'what' and facet == 'gas':
-                return '1000 ft3'  # todo: check units output by nexus for GIP
-            else:
-                return 'bbl'  # todo: check whether nexus uses 10^3 or 10^6 units
-        return None
-    if property_kind.endswith('transmissibility'
-                             ):  # note: RESQML QuantityClass only includes a unit-viscosity VolumePerTimePerPressureUom
-        if from_crs == 'm':
-            return 'm3.cP/(kPa.d)'  # NB: might actually be m3/(psi.d) or m3/(bar.d)
-        if from_crs == 'ft':
-            return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
-        return None
-    if property_kind == 'pressure':
-        if from_crs == 'm':
-            return 'kPa'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
-            return 'psi'
-        if maximum is not None:
-            max_real = float(maximum)
-            if max_real == 0.0:
-                return None
-            if max_real > 10000.0:
-                return 'kPa'
-            if max_real < 500.0:
-                return 'bar'
-            if max_real < 5000.0:
-                return 'psi'
-        return None
-    if property_kind == 'solution gas-oil ratio':
-        if from_crs == 'm':
-            return 'm3/m3'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
-            return '1000 ft3/bbl'
-        return None
-    if property_kind == 'vapor oil-gas ratio':
-        if from_crs == 'm':
-            return 'm3/m3'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
-            return '0.001 bbl/ft3'
-        return None
-    if property_kind.endswith('multiplier'):
-        return 'Euc'
-    # todo: 'degC' or 'degF' for thermodynamic temperature
-    return None
-
-
-def selective_version_of_collection(
-        collection,
-        realization = None,
-        support_uuid = None,
-        grid = None,  # for backward compatibility
-        uuid = None,
-        continuous = None,
-        points = None,
-        count = None,
-        indexable = None,
-        property_kind = None,
-        facet_type = None,
-        facet = None,
-        citation_title = None,
-        time_series_uuid = None,
-        time_index = None,
-        uom = None,
-        string_lookup_uuid = None,
-        categorical = None):
-    """Returns a new PropertyCollection with those parts which match all arguments that are not None.
-
-    arguments:
-       collection: an existing PropertyCollection from which a subset will be returned as a new object;
-                   the existing collection might often be the 'main' collection holding all the properties
-                   for a supporting representation (grid or wellbore frame)
-
-    Other optional arguments:
-    realization, support_uuid, grid, uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
-    citation_title, time_series_uuid, time_index, uom, string_lookup_uuid, categorical:
-
-    for each of these arguments: if None, then all members of collection pass this filter;
-    if not None then only those members with the given value pass this filter;
-    finally, the filters for all the attributes must be passed for a given member
-    to be included in the returned collection.
-
-    returns:
-       a new PropertyCollection containing those properties which match the filter parameters that are not None
-
-    note:
-       the grid keyword argument is maintained for backward compatibility: support_uuid argument takes precedence;
-       the categorical boolean argument can be used to select only
-       categorical (or non-categorical) properties, even though this is not explicitly held as a field in the
-       internal dictionary
-    """
-
-    assert collection is not None
-    view = PropertyCollection()
-    if support_uuid is None and grid is not None:
-        support_uuid = grid.uuid
-    if support_uuid is not None:
-        view.set_support(support_uuid = support_uuid, model = collection.model)
-    if realization is not None:
-        view.set_realization(realization)
-    view.inherit_parts_selectively_from_other_collection(collection,
-                                                         realization = realization,
-                                                         support_uuid = support_uuid,
-                                                         uuid = uuid,
-                                                         continuous = continuous,
-                                                         points = points,
-                                                         count = count,
-                                                         indexable = indexable,
-                                                         property_kind = property_kind,
-                                                         facet_type = facet_type,
-                                                         facet = facet,
-                                                         citation_title = citation_title,
-                                                         time_series_uuid = time_series_uuid,
-                                                         time_index = time_index,
-                                                         uom = uom,
-                                                         string_lookup_uuid = string_lookup_uuid,
-                                                         categorical = categorical)
-    return view
-
-
-def property_over_time_series_from_collection(collection, example_part):
-    """Returns a new PropertyCollection with parts like the example part, over all indices in its time series.
-
-    arguments:
-       collection: an existing PropertyCollection from which a subset will be returned as a new object;
-                   the existing collection might often be the 'main' collection holding all the properties
-                   for a grid
-       example_part (string): the part name of an example member of collection (which has an associated time_series)
-
-    returns:
-       a new PropertyCollection containing those memners of collection which have the same property kind
-       (and facet, if any) as the example part and which have the same associated time series
-    """
-
-    assert collection is not None and example_part is not None
-    assert collection.part_in_collection(example_part)
-    view = PropertyCollection()
-    if collection.support_uuid is not None:
-        view.set_support(support_uuid = collection.support_uuid, model = collection.model)
-    if collection.realization is not None:
-        view.set_realization(collection.realization)
-    view.inherit_similar_parts_for_time_series_from_other_collection(collection, example_part)
-    return view
-
-
-def property_collection_for_keyword(collection, keyword):
-    """Returns a new PropertyCollection with parts that match the property kind and facet deduced for the keyword.
-
-    arguments:
-       collection: an existing PropertyCollection from which a subset will be returned as a new object;
-                   the existing collection might often be the 'main' collection holding all the properties
-                   for a supporting representation (grid or wellbore frame)
-       keyword (string): a simulator keyword for which the property kind (and facet, if any) can be deduced
-
-    returns:
-       a new PropertyCollection containing those memners of collection which have the property kind
-       (and facet, if any) as that deduced for the keyword
-
-    note:
-       this function is particularly relevant to grid property collections for simulation models;
-       the handling of simulator keywords in this module is based on the main grid property keywords
-       for Nexus; if the resqml dataset was generated from simulator data using this module then
-       the result of this function should be reliable; resqml data sets from other sources might use facets
-       if a different way, leading to an omission in the results of this function
-    """
-
-    assert collection is not None and keyword
-    (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(keyword)
-    if property_kind is None:
-        log.warning('failed to deduce property kind for keyword: ' + keyword)
-        return None
-    return selective_version_of_collection(collection,
-                                           property_kind = property_kind,
-                                           facet_type = facet_type,
-                                           facet = facet)
-
-
-def reformat_column_edges_to_resqml_format(array):
-    """Converts an array of shape (nj,ni,2,2) to shape (nj,ni,4) in RESQML edge ordering."""
-    newarray = np.empty((array.shape[0], array.shape[1], 4), dtype = array.dtype)
-    newarray[:, :, 0] = array[:, :, 1, 0]
-    newarray[:, :, 1] = array[:, :, 0, 1]
-    newarray[:, :, 2] = array[:, :, 1, 1]
-    newarray[:, :, 3] = array[:, :, 0, 0]
-    return newarray
-
-
-def reformat_column_edges_from_resqml_format(array):
-    """Converts an array of shape (nj,ni,4) in RESQML edge ordering to shape (nj,ni,2,2)"""
-    newarray = np.empty((array.shape[0], array.shape[1], 2, 2), dtype = array.dtype)
-    newarray[:, :, 0, 0] = array[:, :, 3]
-    newarray[:, :, 0, 1] = array[:, :, 1]
-    newarray[:, :, 1, 0] = array[:, :, 0]
-    newarray[:, :, 1, 1] = array[:, :, 2]
-    return newarray
-
-
-# 'private' functions returning attribute name for cached version of property array
-# I find the leading underscore so ugly, I can't bring myself to use it for 'private' functions, even though many people do
-
-
-def _cache_name_for_uuid(uuid):
-    """Returns the attribute name used for the cached copy of the property array for the given uuid.
-
-    :meta private:
-    """
-
-    return 'c_' + bu.string_from_uuid(uuid)
-
-
-def _cache_name(part):
-    """Returns the attribute name used for the cached copy of the property array for the given part.
-
-    :meta private:
-    """
-
-    if part is None:
-        return None
-    uuid = rqet.uuid_in_part_name(part)
-    if uuid is None:
-        return None
-    return _cache_name_for_uuid(uuid)
-
-
-def dtype_flavour(continuous, use_32_bit):
-    """Returns the numpy elemental data type depending on the two boolean flags.
-
-    :meta private:
-    """
-
-    if continuous:
-        if use_32_bit:
-            dtype = np.float32
-        else:
-            dtype = np.float64
-    else:
-        if use_32_bit:
-            dtype = np.int32
-        else:
-            dtype = np.int64
-    return dtype
-
-
-def return_cell_indices(i, cell_indices):
-    if i == -1:
-        return np.nan
-    else:
-        return cell_indices[i]
-
-
-def write_hdf5_and_create_xml_for_active_property(model,
-                                                  active_property_array,
-                                                  support_uuid,
-                                                  title = 'ACTIVE',
-                                                  realization = None,
-                                                  time_series_uuid = None,
-                                                  time_index = None):
-    """Writes hdf5 data and creates xml for an active cell property; returns uuid."""
-
-    active = Property.from_array(parent_model = model,
-                                 cached_array = active_property_array,
-                                 source_info = None,
-                                 keyword = title,
-                                 support_uuid = support_uuid,
-                                 property_kind = 'active',
-                                 local_property_kind_uuid = None,
-                                 indexable_element = 'cells',
-                                 discrete = True,
-                                 time_series_uuid = time_series_uuid,
-                                 time_index = time_index,
-                                 realization = realization,
-                                 find_local_property_kind = True)
-    return active.uuid
+        facet_options = ['K', 'IJK']
+        title_options = ['KK', 'PERMK', 'KZ', 'PERMZ']
+    return facet_options, title_options
