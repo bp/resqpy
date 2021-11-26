@@ -435,94 +435,21 @@ class GridConnectionSet(BaseResqpy):
             fi_dict[self.model.title_for_part(fi_part).split()[0].lower()] = self.model.uuid_for_part(fi_part)
         if create_organizing_objects_where_needed:
             tbf_parts_list = self.model.parts_list_of_type('TectonicBoundaryFeature')
+
         for name in name_list:
-            fault_dict_multiplier = 1.0
-            if fault_tmult_dict is not None:
-                if name in fault_tmult_dict:
-                    fault_dict_multiplier = float(fault_tmult_dict[name])
-                if name.lower() in fault_tmult_dict:
-                    fault_dict_multiplier = float(fault_tmult_dict[name.lower()])
-            # fetch uuid for fault interpretation object
-            if name.lower() in fi_dict:
-                fi_uuid = fi_dict[name.lower()]
-            elif create_organizing_objects_where_needed:
-                tbf = None
-                fi_root = None
-                for tbf_part in tbf_parts_list:
-                    if name.lower() == self.model.title_for_part(tbf_part).split()[0].lower():
-                        tbf = rqo.TectonicBoundaryFeature(self.model, uuid = self.model.uuid_for_part(tbf_part))
-                        break
-                if tbf is None:
-                    tbf = rqo.TectonicBoundaryFeature(self.model, feature_name = name, kind = 'fault')
-                    tbf.create_xml()
-                fi = rqo.FaultInterpretation(self.model,
-                                             title = name,
-                                             tectonic_boundary_feature = tbf,
-                                             is_normal = True)  # todo: set is_normal based on fault geometry in grid?
-                fi_root = fi.create_xml(tectonic_boundary_feature_root = tbf.root)
-                fi_uuid = rqet.uuid_for_part_root(fi_root)
-                fi_dict[name.lower()] = fi_uuid
-            else:
-                log.error('no interpretation found for fault: ' + name)
-                continue
-            self.feature_list.append(('obj_FaultInterpretation', fi_uuid, str(name)))
-            feature_faces = faces[faces['name'] == name]
-            fault_const_mult = True
-            fault_mult_value = None
-            for i in range(len(feature_faces)):
-                entry = feature_faces.iloc[i]
-                f = entry['face']
-                axis = 'KJI'.index(f[0])
-                fp = '-+'.index(f[1])
-                multiplier = float(entry['mult']) * fault_dict_multiplier
-                if const_mult and len(mult_list):
-                    const_mult = maths.isclose(multiplier, mult_list[0])
-                if fault_const_mult:
-                    if fault_mult_value is None:
-                        fault_mult_value = multiplier
-                    else:
-                        fault_const_mult = maths.isclose(multiplier, fault_mult_value)
-                for k0 in range(entry['k1'], entry['k2'] + 1):
-                    for j0 in range(entry['j1'], entry['j2'] + 1):
-                        for i0 in range(entry['i1'], entry['i2'] + 1):
-                            neighbour = np.array([k0, j0, i0], dtype = int)
-                            if fp:
-                                neighbour[axis] += 1
-                            else:
-                                neighbour[axis] -= 1
-                            fi_list.append(feature_index)
-                            cell_pair_list.append((grid.natural_cell_index(
-                                (k0, j0, i0)), grid.natural_cell_index(neighbour)))
-                            face_pair_list.append((self.face_index_map[axis, fp], self.face_index_map[axis, 1 - fp]))
-                            if create_mult_prop:
-                                mult_list.append(multiplier)
-            if fi_root is not None and fault_const_mult and fault_mult_value is not None:
-                #patch extra_metadata into xml for new fault interpretation object
-                rqet.create_metadata_xml(fi_root, {"Transmissibility multiplier": str(fault_mult_value)})
-            feature_index += 1
+            success, const_mult = self._set_pairs_from_faces_df_for_named_fault(
+                feature_index, faces, name, fault_tmult_dict, fi_dict, create_organizing_objects_where_needed,
+                tbf_parts_list, fi_list, cell_pair_list, face_pair_list, const_mult, mult_list, grid, create_mult_prop)
+            if success:
+                feature_index += 1
+
         self.feature_indices = np.array(fi_list, dtype = int)
         self.cell_index_pairs = np.array(cell_pair_list, dtype = int)
         self.face_index_pairs = np.array(face_pair_list, dtype = int)
         self.count = len(self.cell_index_pairs)
         assert len(self.face_index_pairs) == self.count
         if create_mult_prop and self.count > 0:
-            pc = self.extract_property_collection()
-            if const_mult:
-                mult_array = None
-                const_value = mult_list[0]
-            else:
-                mult_array = np.array(mult_list, dtype = float)
-                const_value = None
-            pc.add_cached_array_to_imported_list(
-                mult_array,
-                'dataframe from ascii simulator input file',
-                'TMULT',
-                uom = 'Euc',  # actually a ratio of transmissibilities
-                property_kind = 'transmissibility multiplier',
-                local_property_kind_uuid = None,
-                realization = None,
-                indexable_element = 'faces',
-                const_value = const_value)
+            self._create_multiplier_property(mult_list, const_mult)
 
     def write_hdf5_and_create_xml_for_new_properties(self):
         """Wites any new property arrays to hdf5, creates xml for the properties and adds them to model.
@@ -1254,7 +1181,7 @@ class GridConnectionSet(BaseResqpy):
         return gcs
 
     def write_simulator(self, filename, mode = 'w', simulator = 'nexus', include_both_sides = False, use_minus = False):
-        """Creates a Nexus include file holding FAULTS (or MULT) keyword and data."""
+        """Creates a Nexus include file holding MULT keywords and data."""
 
         assert simulator == 'nexus'
 
@@ -1760,3 +1687,89 @@ class GridConnectionSet(BaseResqpy):
                                   self.face_index_pairs == self.face_index_pairs_null_value)
         combined = 6 * self.cell_index_pairs + self.face_index_pairs
         return np.where(null_mask, self.face_index_pairs_null_value, combined)
+
+    def _create_multiplier_property(self, mult_list, const_mult):
+        pc = self.extract_property_collection()
+        if const_mult:
+            mult_array = None
+            const_value = mult_list[0]
+        else:
+            mult_array = np.array(mult_list, dtype = float)
+            const_value = None
+        pc.add_cached_array_to_imported_list(
+            mult_array,
+            'dataframe from ascii simulator input file',
+            'TMULT',
+            uom = 'Euc',  # actually a ratio of transmissibilities
+            property_kind = 'transmissibility multiplier',
+            local_property_kind_uuid = None,
+            realization = None,
+            indexable_element = 'faces',
+            const_value = const_value)
+
+    def _set_pairs_from_faces_df_for_named_fault(self, feature_index, faces, name, fault_tmult_dict, fi_dict,
+                                                 create_organizing_objects_where_needed, tbf_parts_list, fi_list,
+                                                 cell_pair_list, face_pair_list, const_mult, mult_list, grid,
+                                                 create_mult_prop):
+        fault_dict_multiplier = 1.0
+        if fault_tmult_dict is not None:
+            if name in fault_tmult_dict:
+                fault_dict_multiplier = float(fault_tmult_dict[name])
+            if name.lower() in fault_tmult_dict:
+                fault_dict_multiplier = float(fault_tmult_dict[name.lower()])
+        # fetch uuid for fault interpretation object
+        if name.lower() in fi_dict:
+            fi_uuid = fi_dict[name.lower()]
+        elif create_organizing_objects_where_needed:
+            tbf = None
+            fi_root = None
+            for tbf_part in tbf_parts_list:
+                if name.lower() == self.model.title_for_part(tbf_part).split()[0].lower():
+                    tbf = rqo.TectonicBoundaryFeature(self.model, uuid = self.model.uuid_for_part(tbf_part))
+                    break
+            if tbf is None:
+                tbf = rqo.TectonicBoundaryFeature(self.model, feature_name = name, kind = 'fault')
+                tbf.create_xml()
+            fi = rqo.FaultInterpretation(self.model, title = name, tectonic_boundary_feature = tbf,
+                                         is_normal = True)  # todo: set is_normal based on fault geometry in grid?
+            fi_root = fi.create_xml(tectonic_boundary_feature_root = tbf.root)
+            fi_uuid = rqet.uuid_for_part_root(fi_root)
+            fi_dict[name.lower()] = fi_uuid
+        else:
+            log.error('no interpretation found for fault: ' + name)
+            return False, const_mult
+        self.feature_list.append(('obj_FaultInterpretation', fi_uuid, str(name)))
+        feature_faces = faces[faces['name'] == name]
+        fault_const_mult = True
+        fault_mult_value = None
+        for i in range(len(feature_faces)):
+            entry = feature_faces.iloc[i]
+            f = entry['face']
+            axis = 'KJI'.index(f[0])
+            fp = '-+'.index(f[1])
+            multiplier = float(entry['mult']) * fault_dict_multiplier
+            if const_mult and len(mult_list):
+                const_mult = maths.isclose(multiplier, mult_list[0])
+            if fault_const_mult:
+                if fault_mult_value is None:
+                    fault_mult_value = multiplier
+                else:
+                    fault_const_mult = maths.isclose(multiplier, fault_mult_value)
+            for k0 in range(entry['k1'], entry['k2'] + 1):
+                for j0 in range(entry['j1'], entry['j2'] + 1):
+                    for i0 in range(entry['i1'], entry['i2'] + 1):
+                        neighbour = np.array([k0, j0, i0], dtype = int)
+                        if fp:
+                            neighbour[axis] += 1
+                        else:
+                            neighbour[axis] -= 1
+                        fi_list.append(feature_index)
+                        cell_pair_list.append((grid.natural_cell_index(
+                            (k0, j0, i0)), grid.natural_cell_index(neighbour)))
+                        face_pair_list.append((self.face_index_map[axis, fp], self.face_index_map[axis, 1 - fp]))
+                        if create_mult_prop:
+                            mult_list.append(multiplier)
+        if fi_root is not None and fault_const_mult and fault_mult_value is not None:
+            #patch extra_metadata into xml for new fault interpretation object
+            rqet.create_metadata_xml(fi_root, {"Transmissibility multiplier": str(fault_mult_value)})
+        return True, const_mult
