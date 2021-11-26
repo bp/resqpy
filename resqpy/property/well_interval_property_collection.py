@@ -25,9 +25,12 @@ class WellIntervalPropertyCollection(PropertyCollection):
 
     def logs(self):
         """Generator that yields component Interval log or Blocked well log objects."""
+
         return (WellIntervalProperty(collection = self, part = part) for part in self.parts())
 
     def to_pandas(self, include_units = False):
+        """Returns a dataframe with a column for each well log included in the collection."""
+
         cell_indices = [return_cell_indices(i, self.support.cell_indices) for i in self.support.cell_grid_link]
         data = {}
         for log in self.logs():

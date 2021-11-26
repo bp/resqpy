@@ -73,6 +73,8 @@ class StringLookup(BaseResqpy):
                 self.max_index = key
 
     def load_from_dict(self, int_to_str_dict):
+        """Sets the contents of this string lookup based on a dict mapping int to str."""
+
         if int_to_str_dict is None:
             return
         assert len(int_to_str_dict), 'empty dictionary passed to string lookup initialisation'

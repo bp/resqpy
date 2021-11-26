@@ -21,6 +21,7 @@ class Property(BaseResqpy):
 
     @property
     def resqml_type(self):
+        """Returns the RESQML object class string for this Property."""
         root_node = self.root
         if root_node is not None:
             return rqet.node_type(root_node, strip_obj = True)

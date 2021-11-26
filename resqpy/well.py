@@ -1005,6 +1005,7 @@ class Trajectory(BaseResqpy):
         self.set_measured_depths()
 
     def load_from_wellspec(self, grid, wellspec_file, well_name, spline_mode = 'cube', md_uom = 'm'):
+        """Sets the trajectory data based on visiting the cells identified in a Nexus wellspec keyword."""
 
         col_list = ['IW', 'JW', 'L']
         wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list)
@@ -4077,6 +4078,7 @@ class WellboreMarkerFrame(BaseResqpy):
                    wellbore_marker_list = None,
                    title = 'wellbore marker framework',
                    originator = None):
+        """Creates the xml tree for this wellbore marker frame and optionally adds as a part to the model."""
 
         assert type(add_as_part) is bool
 

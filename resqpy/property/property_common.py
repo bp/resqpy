@@ -612,6 +612,8 @@ def dtype_flavour(continuous, use_32_bit):
 
 
 def return_cell_indices(i, cell_indices):
+    """Returns the i'th entry in the cell_indices array, or NaN if i has null value of -1."""
+
     if i == -1:
         return np.nan
     else:
