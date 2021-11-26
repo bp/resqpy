@@ -17,6 +17,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.time_series as rts
 from resqpy.olio.xml_namespaces import curly_namespace as ns
+import resqpy.well as rqw
 
 from .property_kind import PropertyKind
 from .string_lookup import StringLookup
