@@ -48,7 +48,7 @@ def pinchout_connection_set(grid, skip_inactive = True, feature_name = 'pinchout
                 if ka >= grid.nk - 1:
                     break
                 # ka now in non-pinched out cell above pinchout
-                if (skip_inactive and dead[ka, j, i]) or (grid.k_gaps and grid.k_gap_after[ka]):
+                if (skip_inactive and dead[ka, j, i]) or (grid.k_gaps and grid.k_gap_after_array[ka]):
                     ka += 1
                     continue
                 kb = ka + 1
@@ -99,14 +99,15 @@ def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap conne
     cip_list = []  # cell index pair list
 
     for k in range(grid.nk - 1):
-        if grid.k_gap_after_array[k]:
-            k_gap_pillar_z = p[grid.k_raw_index_array[k + 1]][..., 2] - p[grid.k_raw_index_array[k] + 1][..., 2]
-            if grid.has_split_coordinate_lines:
-                pfc = grid.create_column_pillar_mapping()  # pillars for column
-                k_gap_z = 0.25 * np.sum(k_gap_pillar_z[pfc], axis = (2, 3))  # resulting shape (nj, ni)
-            else:
-                k_gap_z = 0.25 * (k_gap_pillar_z[:-1, :-1] + k_gap_pillar_z[:-1, 1:] + k_gap_pillar_z[1:, :-1] +
-                                  k_gap_pillar_z[1:, 1:])  # shape (nj, ni)
+        if not grid.k_gap_after_array[k]:
+            continue
+        k_gap_pillar_z = p[grid.k_raw_index_array[k + 1]][..., 2] - p[grid.k_raw_index_array[k] + 1][..., 2]
+        if grid.has_split_coordinate_lines:
+            pfc = grid.create_column_pillar_mapping()  # pillars for column
+            k_gap_z = 0.25 * np.sum(k_gap_pillar_z[pfc], axis = (2, 3))  # resulting shape (nj, ni)
+        else:
+            k_gap_z = 0.25 * (k_gap_pillar_z[:-1, :-1] + k_gap_pillar_z[:-1, 1:] + k_gap_pillar_z[1:, :-1] +
+                              k_gap_pillar_z[1:, 1:])  # shape (nj, ni)
         if flip_z:
             k_gap_z = -k_gap_z
         layer_mask = np.logical_and(np.logical_not(np.isnan(k_gap_z)), k_gap_z < tolerance)
