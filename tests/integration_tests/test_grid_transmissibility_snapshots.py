@@ -1,6 +1,5 @@
 import os
 from inspect import getsourcefile
-
 from numpy import loadtxt, savetxt
 
 import resqpy.model as rq
