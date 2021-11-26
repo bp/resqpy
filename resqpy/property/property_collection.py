@@ -1920,59 +1920,24 @@ class PropertyCollection():
 
         :meta common:
         """
-
-        assert self.support is not None, 'attempt to build realizations array for property collection without supporting representation'
-        assert self.number_of_parts() > 0, 'attempt to build realizations array for empty property collection'
-        assert self.has_single_property_kind(
-        ), 'attempt to build realizations array for collection with multiple property kinds'
-        assert self.has_single_indexable_element(
-        ), 'attempt to build realizations array for collection containing a variety of indexable elements'
-        assert self.has_single_uom(
-        ), 'attempt to build realizations array for collection containing multiple units of measure'
-
-        r_list = self.realization_list(sort_list = True)
-        assert self.number_of_parts() == len(r_list), 'collection covers more than realizations of a single property'
-
-        continuous = self.all_continuous()
-        if not continuous:
-            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        r_list, continuous = self._realizations_array_ref_initial_checks()
 
         if fill_value is None:
             fill_value = np.NaN if continuous else -1
-
         if indexable_element is None:
             indexable_element = self.indexable_for_part(self.parts()[0])
 
-        if fill_missing:
-            r_extent = r_list[-1] + 1
-        else:
-            r_extent = len(r_list)
-
+        r_extent = _realizations_array_ref_get_r_extent(fill_missing, r_list)
         dtype = dtype_flavour(continuous, use_32_bit)
         # todo: handle direction dependent shapes
-        shape_list = self.supporting_shape(indexable_element = indexable_element)
-        shape_list.insert(0, r_extent)
-        if self.points_for_part(self.parts()[0]):
-            shape_list.append(3)
+
+        shape_list = self._realizations_array_ref_get_shape_list(indexable_element, r_extent)
 
         a = np.full(shape_list, fill_value, dtype = dtype)
-
         if fill_missing:
-            for part in self.parts():
-                realization = self.realization_for_part(part)
-                assert realization is not None and 0 <= realization < r_extent, 'realization missing (or out of range?)'
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[realization] = pa
-                self.uncache_part_array(part)
+            return self._realizations_array_ref_fill_missing(r_extent, dtype, a)
         else:
-            for index in range(len(r_list)):
-                realization = r_list[index]
-                part = self.singleton(realization = realization)
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[index] = pa
-                self.uncache_part_array(part)
-
-        return a
+            return self._realizations_array_ref_not_fill_missing(r_list, dtype, a)
 
     def time_series_array_ref(self,
                               use_32_bit = False,
@@ -2005,22 +1970,7 @@ class PropertyCollection():
 
         :meta common:
         """
-
-        assert self.support is not None, 'attempt to build time series array for property collection without supporting representation'
-        assert self.number_of_parts() > 0, 'attempt to build time series array for empty property collection'
-        assert self.has_single_property_kind(
-        ), 'attempt to build time series array for collection with multiple property kinds'
-        assert self.has_single_indexable_element(
-        ), 'attempt to build time series array for collection containing a variety of indexable elements'
-        assert self.has_single_uom(
-        ), 'attempt to build time series array for collection containing multiple units of measure'
-
-        ti_list = self.time_index_list(sort_list = True)
-        assert self.number_of_parts() == len(ti_list), 'collection covers more than time indices of a single property'
-
-        continuous = self.all_continuous()
-        if not continuous:
-            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        ti_list, continuous = self._time_array_ref_initial_checks()
 
         if fill_value is None:
             fill_value = np.NaN if continuous else -1
@@ -2041,23 +1991,10 @@ class PropertyCollection():
             shape_list.append(3)
 
         a = np.full(shape_list, fill_value, dtype = dtype)
-
         if fill_missing:
-            for part in self.parts():
-                time_index = self.time_index_for_part(part)
-                assert time_index is not None and 0 <= time_index < ti_extent, 'time index missing (or out of range?)'
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[time_index] = pa
-                self.uncache_part_array(part)
+            return self._time_array_ref_fill_missing(ti_extent, dtype, a)
         else:
-            for index in range(len(ti_list)):
-                time_index = ti_list[index]
-                part = self.singleton(time_index = time_index)
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[index] = pa
-                self.uncache_part_array(part)
-
-        return a
+            return self._time_array_ref_not_fill_missing(ti_list, dtype, a)
 
     def combobulated_face_array(self, resqml_a):
         """Returns a logically ordered copy of RESQML faces-per-cell property array resqml_a.
@@ -3405,6 +3342,83 @@ class PropertyCollection():
         else:
             return None
 
+    def _realizations_array_ref_fill_missing(self, r_extent, dtype, a):
+        for part in self.parts():
+            realization = self.realization_for_part(part)
+            assert realization is not None and 0 <= realization < r_extent, 'realization missing (or out of range?)'
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[realization] = pa
+            self.uncache_part_array(part)
+        return a
+
+    def _realizations_array_ref_not_fill_missing(self, r_list, dtype, a):
+        for index in range(len(r_list)):
+            realization = r_list[index]
+            part = self.singleton(realization = realization)
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[index] = pa
+            self.uncache_part_array(part)
+        return a
+
+    def _realizations_array_ref_get_shape_list(self, indexable_element, r_extent):
+        shape_list = self.supporting_shape(indexable_element = indexable_element)
+        shape_list.insert(0, r_extent)
+        if self.points_for_part(self.parts()[0]):
+            shape_list.append(3)
+        return shape_list
+
+    def _realizations_array_ref_initial_checks(self):
+        assert self.support is not None, 'attempt to build realizations array for property collection without supporting representation'
+        assert self.number_of_parts() > 0, 'attempt to build realizations array for empty property collection'
+        assert self.has_single_property_kind(
+        ), 'attempt to build realizations array for collection with multiple property kinds'
+        assert self.has_single_indexable_element(
+        ), 'attempt to build realizations array for collection containing a variety of indexable elements'
+        assert self.has_single_uom(
+        ), 'attempt to build realizations array for collection containing multiple units of measure'
+        r_list = self.realization_list(sort_list = True)
+        assert self.number_of_parts() == len(r_list), 'collection covers more than realizations of a single property'
+        continuous = self.all_continuous()
+        if not continuous:
+            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        return r_list, continuous
+
+    def _time_array_ref_initial_checks(self):
+        assert self.support is not None, 'attempt to build time series array for property collection without supporting representation'
+        assert self.number_of_parts() > 0, 'attempt to build time series array for empty property collection'
+        assert self.has_single_property_kind(
+        ), 'attempt to build time series array for collection with multiple property kinds'
+        assert self.has_single_indexable_element(
+        ), 'attempt to build time series array for collection containing a variety of indexable elements'
+        assert self.has_single_uom(
+        ), 'attempt to build time series array for collection containing multiple units of measure'
+
+        ti_list = self.time_index_list(sort_list = True)
+        assert self.number_of_parts() == len(ti_list), 'collection covers more than time indices of a single property'
+
+        continuous = self.all_continuous()
+        if not continuous:
+            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        return ti_list, continuous
+
+    def _time_array_ref_fill_missing(self, ti_extent, dtype, a):
+        for part in self.parts():
+            time_index = self.time_index_for_part(part)
+            assert time_index is not None and 0 <= time_index < ti_extent, 'time index missing (or out of range?)'
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[time_index] = pa
+            self.uncache_part_array(part)
+        return a
+
+    def _time_array_ref_not_fill_missing(self, ti_list, dtype, a):
+        for index in range(len(ti_list)):
+            time_index = ti_list[index]
+            part = self.singleton(time_index = time_index)
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[index] = pa
+            self.uncache_part_array(part)
+        return a
+
 
 def _get_indexable_element(indexable_element, support_type):
     if indexable_element is None:
@@ -3824,3 +3838,11 @@ def _process_imported_property_get_add_min_max(points, property_kind, string_loo
     else:
         add_min_max = True
     return add_min_max
+
+
+def _realizations_array_ref_get_r_extent(fill_missing, r_list):
+    if fill_missing:
+        r_extent = r_list[-1] + 1
+    else:
+        r_extent = len(r_list)
+    return r_extent
