@@ -219,3 +219,19 @@ def test_pinchout_and_k_gap_gcs(tmp_path):
     for cell in kg_gcs.cell_index_pairs.flatten():
         assert cell in [74, 73, 69, 68, 99, 98, 94, 93]
     assert np.all(np.abs(kg_gcs.cell_index_pairs[:, 1] - kg_gcs.cell_index_pairs[:, 0]) == 25)
+
+    # test compact indices method
+    ci = po_gcs.compact_indices()
+    assert ci.shape == (4, 2)
+    for cf in ci.flatten():
+        assert cf in [1, 7, 31, 37, 300, 306, 330, 336]
+    assert np.all(np.abs(ci[:, 1] - ci[:, 0]) == 299)
+
+    # test write simulator method
+    files = ('fault_ff.dat', 'fault_tf.dat', 'fault_ft.dat')
+    both_sides = (False, True, False)
+    minus = (False, False, True)
+    for filename, inc_both_sides, use_minus in zip(files, both_sides, minus):
+        dat_path = os.path.join(tmp_path, filename)
+        po_gcs.write_simulator(dat_path, include_both_sides = inc_both_sides, use_minus = use_minus)
+        assert os.path.exists(dat_path)

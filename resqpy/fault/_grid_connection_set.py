@@ -1181,7 +1181,7 @@ class GridConnectionSet(BaseResqpy):
         return gcs
 
     def write_simulator(self, filename, mode = 'w', simulator = 'nexus', include_both_sides = False, use_minus = False):
-        """Creates a Nexus include file holding FAULTS (or MULT) keyword and data."""
+        """Creates a Nexus include file holding MULT keywords and data."""
 
         assert simulator == 'nexus'
 
