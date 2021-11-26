@@ -1,7 +1,6 @@
 """ Shared fixtures for tests """
 
 import logging
-import os
 from pathlib import Path
 from shutil import copytree
 

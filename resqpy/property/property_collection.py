@@ -36,7 +36,7 @@ class PropertyCollection():
     """
 
     def __init__(self, support = None, property_set_root = None, realization = None):
-        """Initialise an empty Property Collection; optionally popululate properties from a supporting representation.        representation.
+        """Initialise an empty Property Collection, optionally populate properties from a supporting representation.
 
         arguments:
            support (optional): a grid.Grid object or a well.WellboreFrame object which belongs to a resqpy.Model which includes
@@ -113,7 +113,7 @@ class PropertyCollection():
                 self.populate_from_property_set(property_set_root)
 
     def set_support(self, support_uuid = None, support = None, model = None, modify_parts = True):
-        """Sets the supporting object associated with this collection, if not done so at initialisation.
+        """Sets the supporting object associated with this collection if not done so at initialisation.
 
         Does not load properties.
 
@@ -200,7 +200,7 @@ class PropertyCollection():
                         self.dict[part] = tuple(modified)
 
     def supporting_shape(self, indexable_element = None, direction = None):
-        """Returns the shape of the supporting representation with respect to the given indexable element
+        """Return the shape of the supporting representation with respect to the given indexable element
 
         arguments:
            indexable_element (string, optional): if None, a hard-coded default depending on the supporting representation class
@@ -755,7 +755,6 @@ class PropertyCollection():
                                                                      citation_title_match_starts_with = False,
                                                                      ignore_clashes = False):
         """Add the example part from other collection and any other parts for same property with different realizations.
-        realizations.
 
         arguments:
            other: another PropertyCollection object related to the same support as this collection, from which to inherit
@@ -1585,7 +1584,6 @@ class PropertyCollection():
 
     def string_lookup_uuid_for_part(self, part):
         """If the property has an associated string lookup (is categorical), return the uuid.
-        lookup.
 
         arguments:
            part (string): the part name for which the string lookup uuid is required
@@ -1655,8 +1653,8 @@ class PropertyCollection():
     def establish_time_set_kind(self):
         """Re-evaulates the time set kind attribute.
 
-        Based on all properties having same time index in the same time series."""
-
+        Based on all properties having same time index in the same time series.
+        """
         self.time_set_kind_attr = 'single time'
         #  note: other option of 'equivalent times' not catered for in this code
         common_time_index = None
@@ -1685,17 +1683,17 @@ class PropertyCollection():
     def time_set_kind(self):
         """Returns the time set kind attribute.
 
-        Based on all properties having same time index in the same time series."""
-
+        Based on all properties having same time index in the same time series.
+        """
         if self.time_set_kind_attr is None:
             self.establish_time_set_kind()
         return self.time_set_kind_attr
 
     def establish_has_single_property_kind(self):
         """Re-evaluates the has single property kind attribute.
-
-        Depends on whether all properties are of the same kind."""
-
+        
+        Depends on whether all properties are of the same kind.
+        """
         self.has_single_property_kind_flag = True
         common_property_kind = None
         for part in self.parts():
@@ -1715,10 +1713,10 @@ class PropertyCollection():
         return self.has_single_property_kind_flag
 
     def establish_has_single_indexable_element(self):
-        """Re-evaluates the has single indexable element attribute.
+        """Re-evaluate the has single indexable element attribute.
 
-        Depends on whether all properties have the same."""
-
+        Depends on whether all properties have the same.
+        """
         self.has_single_indexable_element_flag = True
         common_ie = None
         for part in self.parts():
@@ -1739,9 +1737,8 @@ class PropertyCollection():
 
     def establish_has_multiple_realizations(self):
         """Re-evaluates the has multiple realizations attribute.
-
-        Based on whether properties belong to more than one realization."""
-
+        Based on whether properties belong to more than one realization.
+        """
         self.has_multiple_realizations_flag = False
         common_realization = None
         for part in self.parts():
@@ -2370,7 +2367,7 @@ class PropertyCollection():
                               discrete_cycle = None,
                               trust_min_max = False,
                               fix_zero_at = None):
-        """Return data normalized between 0 and 1, along with the min value and max value.
+        """Return data normalised to between 0 and 1, along with min and max value.
 
         arguments:
            part (string): the part name for which the normalized array reference is required
@@ -2670,7 +2667,7 @@ class PropertyCollection():
                                                             expand_const_arrays = False,
                                                             extra_metadata = {}):
         """Add imported or generated grid property arrays as parts in parent model, creating xml.
-
+        
         hdf5 should already have been written.
 
         arguments:
@@ -3244,6 +3241,7 @@ class PropertyCollection():
         if discrete:
             if string_lookup_uuid is None:
                 self.d_or_c_text = 'Discrete'
+
             else:
                 self.d_or_c_text = 'Categorical'
             self.xsd_type = 'integer'
@@ -3470,6 +3468,7 @@ class PropertyCollection():
                         realization = perms.realization_for_part(perm_i_part),
                         indexable_element = perms.indexable_for_part(perm_i_part),
                         count = 1,
+
                         points = False)
                     self.model.h5_release()
                     kv_collection.write_hdf5_for_imported_list()
@@ -3593,6 +3592,7 @@ def _check_citation_title(citation_title, citation_title_match_starts_with, othe
             if other.citation_title_for_part(part) != citation_title:
                 return True
     return False
+
 
 
 def _check_categorical_and_lookup(categorical, other, part):

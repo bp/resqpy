@@ -1,5 +1,4 @@
-# factors.py
-"""Module providing factorization and functions supporting grid extent determination from corner points."""
+"""Factorization and functions supporting grid extent determination from corner points."""
 
 version = '24th December 2019'
 

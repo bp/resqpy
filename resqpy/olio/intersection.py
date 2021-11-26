@@ -207,8 +207,8 @@ def distilled_intersects(line_set_intersections):
           this array is as returned by the line_set_triangles_intersects() function or the
           poly_line_triangles_intersects() function
 
-       returns:
-          (numpy int array of shape (N,), numpy int array of shape (N,), numpy float array of shape (N, 3)):
+    returns:
+       (numpy int array of shape (N,), numpy int array of shape (N,), numpy float array of shape (N, 3)):
           for N intersections, first array is list of line indices, second is list of triangle indices, the
           third array contains the (x, y, z) coordinates of the intersection points
     """

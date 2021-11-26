@@ -299,9 +299,10 @@ class TriangulatedPatch:
         self.triangle_count = nt
 
     def get_indices_from_sparse_meshxyz(self, mesh_xyz):
-        """Updates self.points and self.node_count with non-nan points in a given mesh_xyz array,
-            and returns the indices of these non_nan points"""
+        """Update self.points and self.node_count with non-nan points in a given mesh_xyz array.
 
+        Returns the indices of these non_nan points.
+        """
         points = np.zeros(mesh_xyz.shape).reshape((-1, 3))
         indices = np.zeros(mesh_xyz.shape[:2], dtype = int) - 1
 
@@ -473,9 +474,11 @@ class TriangulatedPatch:
         return axis, polarity
 
     def vertical_rescale_points(self, ref_depth, scaling_factor):
-        """Modify the z values of points for this patch by stretching the distance from reference depth by scaling
-        factor."""
-
+        """Rescale points along vertical direction.
+        
+        Modifies the z values of points for this patch by stretching the distance
+        from reference depth by scaling factor.
+        """
         _, _ = self.triangles_and_points()  # ensure points are loaded
         z_values = self.points[:, 2].copy()
         self.points[:, 2] = ref_depth + scaling_factor * (z_values - ref_depth)
