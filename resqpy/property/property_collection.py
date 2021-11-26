@@ -239,8 +239,9 @@ class PropertyCollection():
         elif isinstance(support, rqf.GridConnectionSet):
             shape_list = _supporting_shape_gridconnectionset(support, indexable_element)
 
-        elif type(support) in [rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid,
-                               rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid]:
+        elif type(support) in [
+                rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid
+        ]:
             shape_list, support = _supporting_shape_other(support, indexable_element)
 
         else:
@@ -327,7 +328,8 @@ class PropertyCollection():
         time_series_uuid, time_index = _add_part_to_dict_get_timeseries(xml_node)
         minimum, maximum = _add_part_to_dict_get_minmax(xml_node)
         support_uuid = self._add_part_to_dict_get_support_uuid(part)
-        uom = self._add_part_to_dict_get_uom(part, continuous, xml_node, trust_uom, property_kind, minimum, maximum, facet, facet_type)
+        uom = self._add_part_to_dict_get_uom(part, continuous, xml_node, trust_uom, property_kind, minimum, maximum,
+                                             facet, facet_type)
         null_value, const_value = _add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points)
 
         self.dict[part] = (realization, support_uuid, uuid, xml_node, continuous, count, indexable, property_kind,
@@ -2240,7 +2242,8 @@ class PropertyCollection():
         if min_value is None or max_value is None:
             return None, min_value, max_value
 
-        min_value, max_value, p_array = _normalized_part_array_apply_discrete_cycle(discrete_cycle, p_array, min_value, max_value)
+        min_value, max_value, p_array = _normalized_part_array_apply_discrete_cycle(discrete_cycle, p_array, min_value,
+                                                                                    max_value)
         min_value, max_value = _normalized_part_array_nan_if_masked(min_value, max_value, masked)
 
         if min_value == np.nan or max_value == np.nan:
@@ -3296,7 +3299,8 @@ class PropertyCollection():
             support_uuid = bu.uuid_from_string(support_uuid)
         return support_uuid
 
-    def _add_part_to_dict_get_uom(self, part, continuous, xml_node, trust_uom, property_kind, minimum, maximum, facet, facet_type):
+    def _add_part_to_dict_get_uom(self, part, continuous, xml_node, trust_uom, property_kind, minimum, maximum, facet,
+                                  facet_type):
         uom = None
         if continuous:
             uom_node = rqet.find_tag(xml_node, 'UOM')
@@ -3306,7 +3310,7 @@ class PropertyCollection():
                 uom = guess_uom(property_kind, minimum, maximum, self.support, facet_type = facet_type, facet = facet)
         return uom
 
-    def _normalized_part_array_get_minmax(self,trust_min_max, part, p_array, masked):
+    def _normalized_part_array_get_minmax(self, trust_min_max, part, p_array, masked):
         min_value = max_value = None
         if trust_min_max:
             min_value = self.minimum_value_for_part(part)
@@ -3339,23 +3343,23 @@ class PropertyCollection():
         else:
             first_values_node, tag, dtype = _cached_part_array_ref_get_node_values(part_node, dtype)
 
-        h5_key_pair = model.h5_uuid_and_path_for_node(first_values_node, tag=tag)
+        h5_key_pair = model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
         if h5_key_pair is None:
             return None
         model.h5_array_element(h5_key_pair,
-                               index=None,
-                               cache_array=True,
-                               object=self,
-                               array_attribute=cached_array_name,
-                               dtype=dtype)
+                               index = None,
+                               cache_array = True,
+                               object = self,
+                               array_attribute = cached_array_name,
+                               dtype = dtype)
 
     def _cached_part_array_ref_const_notnone(self, part, const_value, cached_array_name):
         assert not self.points_for_part(part), 'constant arrays not supported for points properties'
         assert self.support is not None
-        shape = self.supporting_shape(indexable_element=self.indexable_for_part(part),
-                                      direction=self._part_direction(part))
+        shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
+                                      direction = self._part_direction(part))
         assert shape is not None
-        a = np.full(shape, const_value, dtype=float if self.continuous_for_part(part) else int)
+        a = np.full(shape, const_value, dtype = float if self.continuous_for_part(part) else int)
         setattr(self, cached_array_name, a)
 
 
@@ -3507,6 +3511,7 @@ def _get_facet_title_options_for_direction(direction):
         title_options = ['KK', 'PERMK', 'KZ', 'PERMZ']
     return facet_options, title_options
 
+
 def _add_part_to_dict_get_count_and_indexable(xml_node):
     count_node = rqet.find_tag(xml_node, 'Count')
     assert count_node is not None
@@ -3517,6 +3522,7 @@ def _add_part_to_dict_get_count_and_indexable(xml_node):
     indexable = indexable_node.text
 
     return count, indexable
+
 
 def _add_part_to_dict_get_property_kind(xml_node, citation_title):
     (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
@@ -3534,8 +3540,8 @@ def _add_part_to_dict_get_property_kind(xml_node, citation_title):
             property_kind_uuid = rqet.find_tag_text(lpk_node, 'UUID')
     assert property_kind is not None and len(property_kind) > 0
     if (p_kind_from_keyword and p_kind_from_keyword != property_kind and
-            (p_kind_from_keyword not in ['cell length', 'length', 'thickness'] or
-             property_kind not in ['cell length', 'length', 'thickness'])):
+        (p_kind_from_keyword not in ['cell length', 'length', 'thickness'] or
+         property_kind not in ['cell length', 'length', 'thickness'])):
         log.warning(
             f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
     return property_kind, property_kind_uuid, lpk_node
@@ -3622,6 +3628,7 @@ def _normalized_part_array_nan_if_masked(min_value, max_value, masked):
         max_value = np.nan
     return min_value, max_value
 
+
 def _normalized_part_array_use_logarithm(min_value, n_prop, masked):
     if min_value <= 0.0:
         n_prop[:] = np.where(n_prop < 0.0001, 0.0001, n_prop)
@@ -3671,7 +3678,7 @@ def _supporting_shape_grid(support, indexable_element, direction):
         shape_list[axis] += 1  # note: properties for grid faces include outer faces
     elif indexable_element == 'column edges':
         shape_list = [(support.nj * (support.ni + 1)) + ((support.nj + 1) * support.ni)
-                      ]  # I edges first; include outer edges
+                     ]  # I edges first; include outer edges
     elif indexable_element == 'edges per column':
         shape_list = [support.nj, support.ni, 4]  # assume I-, J+, I+, J- ordering
     elif indexable_element == 'faces per cell':
