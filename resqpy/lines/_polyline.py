@@ -548,13 +548,12 @@ class Polyline(_BasePolyline):
         if rep_int_root is None:
             rep_int_root = self.rep_int_root  # todo: check whether it is legal to have 2 representations for 1 interpretation
 
-        cls = type(self)  # Get class constructor object i.e. Polyline
-        return cls(self.model,
-                   set_bool = self.isclosed,
-                   set_coord = spline_coords,
-                   set_crs = self.crs_uuid,
-                   title = title,
-                   rep_int_root = rep_int_root)
+        return Polyline(self.model,
+                        set_bool = self.isclosed,
+                        set_coord = spline_coords,
+                        set_crs = self.crs_uuid,
+                        title = title,
+                        rep_int_root = rep_int_root)
 
     def area(self):
         """Returns the area in the xy plane of a closed convex polygon."""
