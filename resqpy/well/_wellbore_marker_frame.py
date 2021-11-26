@@ -224,6 +224,7 @@ class WellboreMarkerFrame(BaseResqpy):
                    wellbore_marker_list = None,
                    title = 'wellbore marker framework',
                    originator = None):
+        """Creates the xml tree for this wellbore marker frame and optionally adds as a part to the model."""
 
         assert type(add_as_part) is bool
 

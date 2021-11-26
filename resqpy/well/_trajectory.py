@@ -428,7 +428,7 @@ class Trajectory(BaseResqpy):
         self.set_measured_depths()
 
     def load_from_wellspec(self, grid, wellspec_file, well_name, spline_mode = 'cube', md_uom = 'm'):
-        """Loads the trajectory object from a NEXUS wellspec file."""
+        """Sets the trajectory data based on visiting the cells identified in a Nexus wellspec keyword."""
 
         col_list = ['IW', 'JW', 'L']
         wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list)
