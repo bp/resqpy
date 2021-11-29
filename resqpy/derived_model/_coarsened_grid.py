@@ -14,7 +14,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model._dm_common import __write_grid
+from resqpy.derived_model._common import _write_grid
 
 
 def coarsened_grid(epc_file,
@@ -61,7 +61,7 @@ def coarsened_grid(epc_file,
        set_parent_window argument will relate the coarsened grid back to the original
     """
 
-    new_epc_file, model, source_grid = __establish_files_and_model(epc_file, new_epc_file, source_grid)
+    new_epc_file, model, source_grid = _establish_files_and_model(epc_file, new_epc_file, source_grid)
 
     if set_parent_window is None:
         set_parent_window = (new_epc_file is None)
@@ -147,7 +147,7 @@ def coarsened_grid(epc_file,
                 realization = inherit_realization,
                 copy_all_realizations = inherit_all_realizations)
 
-    __set_parent_window_in_grid(set_parent_window, source_grid, grid, fine_coarse)
+    _set_parent_window_in_grid(set_parent_window, source_grid, grid, fine_coarse)
 
     # write grid
     if new_grid_title is None or len(new_grid_title) == 0:
@@ -155,21 +155,21 @@ def coarsened_grid(epc_file,
 
     model.h5_release()
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     return grid
 
 
-def __set_parent_window_in_grid(set_parent_window, source_grid, grid, fine_coarse):
+def _set_parent_window_in_grid(set_parent_window, source_grid, grid, fine_coarse):
     if set_parent_window:
         pw_grid_uuid = source_grid.uuid
         if isinstance(set_parent_window, str):
@@ -192,7 +192,7 @@ def __set_parent_window_in_grid(set_parent_window, source_grid, grid, fine_coars
         grid.set_parent(pw_grid_uuid, False, fine_coarse)
 
 
-def __establish_files_and_model(epc_file, new_epc_file, source_grid):
+def _establish_files_and_model(epc_file, new_epc_file, source_grid):
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
         (new_epc_file == epc_file) or
