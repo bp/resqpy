@@ -22,7 +22,7 @@ def test_crs(tmp_path):
     crs_mixed = rqc.Crs(model, xy_units = 'm', z_units = 'ft')
     crs_offset = rqc.Crs(model, xy_units = 'm', z_units = 'm', x_offset = 100.0, y_offset = -100.0, z_offset = -50.0)
     assert not crs_offset.null_transform
-    crs_elevation = rqc.Crs(model, z_inc_down = 'False')
+    crs_elevation = rqc.Crs(model, z_inc_down = False)
     crs_rotate = rqc.Crs(model, rotation = maths.pi / 2.0)
     crs_south = rqc.Crs(model, axis_order = 'southing westing')
     crs_time_s = rqc.Crs(model, xy_units = 'm', time_units = 's')
@@ -43,6 +43,14 @@ def test_crs(tmp_path):
         assert depth_crs.resqml_type == 'LocalDepth3dCrs'
         assert not crs_time_s == depth_crs
         assert not crs_time_ms == depth_crs
+
+    # check handedness
+    assert not crs_m.is_right_handed_xy()
+    assert not crs_m.is_right_handed_xyz()
+    assert not crs_elevation.is_right_handed_xy()
+    assert crs_elevation.is_right_handed_xyz()
+    assert crs_south.is_right_handed_xy()
+    assert crs_south.is_right_handed_xyz()
 
     # create some xml
     for crs in [
