@@ -332,24 +332,6 @@ class WellboreMarkerFrame(BaseResqpy):
                    originator = None):
         """Creates the xml tree for this wellbore marker frame and optionally adds as a part to the model."""
 
-         optionally add as part.
-
-         arguments:
-            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the wellbore marker frame arrays
-            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-            in the model
-            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-            new wellbore marker frame part to the trajectory part and each interpretation part in the wellbore marker
-            list
-            title (string): used as the citation Title text; should usually refer to the well name in a
-            human readable way
-            originator (string, optional): the name of the human being who created the deviation survey part;
-            default is to use the login name
-
-        returns:
-           the newly created deviation survey xml node
-        """
-
         assert type(add_as_part) is bool
 
         if ext_uuid is None:

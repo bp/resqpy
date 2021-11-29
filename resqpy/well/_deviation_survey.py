@@ -343,8 +343,10 @@ class DeviationSurvey(BaseResqpy):
         return ds_node
 
     def __get_md_datum_root(self, md_datum_root, md_datum_xyz):
-        """ Ensures that the root node for the MdDatum object that the DeviationSurvey depths are based on exists."""
+        """ Ensures that the root node for the MdDatum object that the DeviationSurvey depths are based on exists.
+
         If not, a root node will be created and returned.
+        """
 
         if md_datum_root is None:
             if self.md_datum is None:
