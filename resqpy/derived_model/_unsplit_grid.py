@@ -9,8 +9,8 @@ import os
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._dm_common import __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model._dm_copy_grid import copy_grid
+from resqpy.derived_model._common import _prepare_simple_inheritance, _write_grid, _establish_model_and_source_grid
+from resqpy.derived_model._copy_grid import copy_grid
 
 
 def unsplit_grid(epc_file,
@@ -50,7 +50,7 @@ def unsplit_grid(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation == 'IjkGrid'
     assert model is not None
 
@@ -75,8 +75,8 @@ def unsplit_grid(epc_file,
     if hasattr(grid, 'pillars_for_column'):
         delattr(grid, 'pillars_for_column')
 
-    collection = __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                              inherit_all_realizations)
+    collection = _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
+                                             inherit_all_realizations)
     # todo: recompute depth properties (and volumes, cell lengths etc. if being strict)
 
     if new_grid_title is None or len(new_grid_title) == 0:
@@ -84,15 +84,15 @@ def unsplit_grid(epc_file,
 
     # write model
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     return grid

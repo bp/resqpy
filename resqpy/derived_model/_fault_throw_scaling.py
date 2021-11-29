@@ -13,8 +13,8 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model._dm_copy_grid import copy_grid
+from resqpy.derived_model._common import _displacement_properties, _prepare_simple_inheritance, _write_grid, _establish_model_and_source_grid
+from resqpy.derived_model._copy_grid import copy_grid
 
 
 def fault_throw_scaling(epc_file,
@@ -83,7 +83,7 @@ def fault_throw_scaling(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation == 'IjkGrid'
     assert model is not None
 
@@ -106,10 +106,10 @@ def fault_throw_scaling(epc_file,
     offsets = np.zeros(grid.points_cached.shape[1:])
 
     if scaling_factor is not None:  # apply global scaling to throws
-        __set_offsets_based_on_scaling_factor(grid, scaling_factor, offsets, ref_k0, primaries)
+        _set_offsets_based_on_scaling_factor(grid, scaling_factor, offsets, ref_k0, primaries)
 
     if connection_set is not None and scaling_dict is not None:  # overwrite any global offsets with named fault throw adjustments
-        __set_offsets_based_on_scaling_dict(grid, connection_set, scaling_dict, offsets, ref_k0)
+        _set_offsets_based_on_scaling_dict(grid, connection_set, scaling_dict, offsets, ref_k0)
 
     # initialise flag array for adjustments
     adjusted = np.zeros((primaries,), dtype = bool)
@@ -123,7 +123,7 @@ def fault_throw_scaling(epc_file,
     # iteratively look for pillars neighbouring adjusted pillars, adjusting by a decayed amount
     adjusted = adjusted.reshape((grid.nj + 1, grid.ni + 1))
     while cell_range > 0:
-        newly_adjusted = __neighbourly_adjustment(grid, offsets, adjusted, cell_range)
+        newly_adjusted = _neighbourly_adjustment(grid, offsets, adjusted, cell_range)
         adjusted = np.logical_or(adjusted, newly_adjusted)
         cell_range -= 1
 
@@ -134,12 +134,12 @@ def fault_throw_scaling(epc_file,
     # build cell displacement property array(s)
     if store_displacement:
         log.debug('generating cell displacement property arrays')
-        displacement_collection = __displacement_properties(grid, source_grid)
+        displacement_collection = _displacement_properties(grid, source_grid)
     else:
         displacement_collection = None
 
-    collection = __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                              inherit_all_realizations)
+    collection = _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
+                                             inherit_all_realizations)
     if collection is None:
         collection = displacement_collection
     elif displacement_collection is not None:
@@ -161,21 +161,21 @@ def fault_throw_scaling(epc_file,
     # write model
     model.h5_release()
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
         epc_file = new_epc_file
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     if len(gcs_list):
         log.debug(f'inheriting grid connection sets related to source grid: {source_grid.uuid}')
-        __inherit_gcs_list(epc_file, gcs_list, source_grid, grid)
+        _inherit_gcs_list(epc_file, gcs_list, source_grid, grid)
 
     return grid
 
@@ -246,7 +246,7 @@ def global_fault_throw_scaling(epc_file,
                                new_epc_file = new_epc_file)
 
 
-def __set_offsets_based_on_scaling_factor(grid, scaling_factor, offsets, ref_k0, primaries):
+def _set_offsets_based_on_scaling_factor(grid, scaling_factor, offsets, ref_k0, primaries):
     # fetch unsplit equivalent of grid points for reference layer interface
     log.debug('fetching unsplit equivalent grid points')
     unsplit_points = grid.unsplit_points_ref().reshape(grid.nk + 1, -1, 3)
@@ -266,7 +266,7 @@ def __set_offsets_based_on_scaling_factor(grid, scaling_factor, offsets, ref_k0,
     offsets[:] = semi_throws * (scaling_factor - 1.0)
 
 
-def __set_offsets_based_on_scaling_dict(grid, connection_set, scaling_dict, offsets, ref_k0):
+def _set_offsets_based_on_scaling_dict(grid, connection_set, scaling_dict, offsets, ref_k0):
     connection_set.cache_arrays()
     for fault_index in range(len(connection_set.feature_list)):
         fault_name = connection_set.fault_name_for_feature_index(fault_index)
@@ -306,7 +306,7 @@ def __set_offsets_based_on_scaling_dict(grid, connection_set, scaling_dict, offs
                     p_list.append(p_b)
 
 
-def __neighbourly_adjustment(grid, offsets, adjusted, cell_range):
+def _neighbourly_adjustment(grid, offsets, adjusted, cell_range):
     offset_decay = (maths.pow(2.0, cell_range) - 1.0) / (maths.pow(2.0, cell_range + 1) - 1.0)
     newly_adjusted = np.zeros((grid.nj + 1, grid.ni + 1), dtype = bool)
     for j in range(grid.nj + 1):
@@ -357,7 +357,7 @@ def __neighbourly_adjustment(grid, offsets, adjusted, cell_range):
     return newly_adjusted
 
 
-def __inherit_gcs_list(epc_file, gcs_list, source_grid, grid):
+def _inherit_gcs_list(epc_file, gcs_list, source_grid, grid):
     gcs_inheritance_model = rq.Model(epc_file)
     for gcs, gcs_title in gcs_list:
         # log.debug(f'inheriting gcs: {gcs_title}; old gcs uuid: {gcs.uuid}')

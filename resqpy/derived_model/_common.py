@@ -12,7 +12,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
 
-def __displacement_properties(new_grid, old_grid):
+def _displacement_properties(new_grid, old_grid):
     """Computes cell centre differences in x, y, & z, between old & new grids, and returns a collection of 3 properties."""
 
     displacement_collection = rqp.GridPropertyCollection()
@@ -47,7 +47,7 @@ def __displacement_properties(new_grid, old_grid):
     return displacement_collection
 
 
-def __pl(n, use_es = False):
+def _pl(n, use_es = False):
     if n == 1:
         return ''
     elif use_es:
@@ -56,7 +56,7 @@ def __pl(n, use_es = False):
         return 's'
 
 
-def __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization, inherit_all_realizations):
+def _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization, inherit_all_realizations):
     collection = None
     if inherit_properties:
         source_collection = source_grid.extract_property_collection()
@@ -69,16 +69,16 @@ def __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_
     return collection
 
 
-def __write_grid(epc_file,
-                 grid,
-                 ext_uuid = None,
-                 property_collection = None,
-                 grid_title = None,
-                 mode = 'a',
-                 geometry = True,
-                 time_series_uuid = None,
-                 string_lookup_uuid = None,
-                 extra_metadata = {}):
+def _write_grid(epc_file,
+                grid,
+                ext_uuid = None,
+                property_collection = None,
+                grid_title = None,
+                mode = 'a',
+                geometry = True,
+                time_series_uuid = None,
+                string_lookup_uuid = None,
+                extra_metadata = {}):
     """Append to or create epc and h5 files, with grid and optionally property collection.
 
     arguments:
@@ -191,7 +191,7 @@ def __write_grid(epc_file,
     return prop_uuid_list
 
 
-def __establish_model_and_source_grid(epc_file, source_grid):
+def _establish_model_and_source_grid(epc_file, source_grid):
     assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
     if epc_file:
         model = rq.Model(epc_file)
