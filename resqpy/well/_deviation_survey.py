@@ -1,6 +1,4 @@
-"""deviation_survey.py: resqpy well module providing deviation survey class.
-
-"""
+"""_deviation_survey.py: resqpy well module providing deviation survey class"""
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
@@ -12,7 +10,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('deviation_survey.py version ' + version)
+log.debug('_deviation_survey.py version ' + version)
 
 import pandas as pd
 
@@ -25,7 +23,7 @@ from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .well_utils import _as_optional_array, extract_xyz, load_hdf5_array
-from .md_datum import MdDatum
+from ._md_datum import MdDatum
 
 
 class DeviationSurvey(BaseResqpy):
@@ -345,10 +343,8 @@ class DeviationSurvey(BaseResqpy):
         return ds_node
 
     def __get_md_datum_root(self, md_datum_root, md_datum_xyz):
-        """ Ensures that the root node for the MdDatum object that the DeviationSurvey depths are based on exists.
+        """ Ensures that the root node for the MdDatum object that the DeviationSurvey depths are based on exists."""
         If not, a root node will be created and returned.
-
-        """
 
         if md_datum_root is None:
             if self.md_datum is None:
@@ -426,7 +422,9 @@ class DeviationSurvey(BaseResqpy):
     def __add_as_part_and_add_relationships(self, ds_node, md_datum_root, interp_root, ext_uuid, add_as_part,
                                             add_relationships):
         """Add the newly created DeviationSurvey object's root node as a part in the model and add reciprocal
-         relationships."""
+
+        relationships.
+        """
 
         if add_as_part:
             self.model.add_part('obj_DeviationSurveyRepresentation', self.uuid, ds_node)

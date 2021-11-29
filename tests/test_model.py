@@ -9,7 +9,6 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
-
 import resqpy.well as rqw
 
 

@@ -131,6 +131,8 @@ class Surface(BaseSurface):
 
     @property
     def represented_interpretation_uuid(self):
+        """Returns the uuid of the represented surface interpretation, or None."""
+
         return rqet.uuid_for_part_root(self.represented_interpretation_root)
 
     def set_represented_interpretation_root(self, interp_root):

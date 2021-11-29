@@ -1,6 +1,4 @@
-"""trajectory.py: resqpy well module providing trajectory class.
-
-"""
+"""_trajectory.py: resqpy well module providing trajectory class"""
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
@@ -12,7 +10,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('trajectory.py version ' + version)
+log.debug('_trajectory.py version ' + version)
 
 import math as maths
 from functools import partial
@@ -31,10 +29,10 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .md_datum import MdDatum
-from .wellbore_frame import WellboreFrame
+from ._md_datum import MdDatum
+from ._wellbore_frame import WellboreFrame
 from .well_utils import load_hdf5_array
-from .deviation_survey import DeviationSurvey
+from ._deviation_survey import DeviationSurvey
 
 
 class Trajectory(BaseResqpy):
@@ -71,6 +69,7 @@ class Trajectory(BaseResqpy):
             originator = None,
             extra_metadata = None):
         """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or
+
         ascii file.
 
         arguments:
@@ -219,9 +218,8 @@ class Trajectory(BaseResqpy):
 
     def __choose_init_method(self, set_tangent_vectors, data_frame, cell_kji0_list, wellspec_file,
                              deviation_survey_file):
-        """Choose an init method based on data source.
+        """Choose an init method based on data source."""
 
-        """
         if set_tangent_vectors and self.knot_count > 1 and self.tangent_vectors is None:
             return 'tangent_vectors'
         elif self.deviation_survey is not None:
@@ -330,9 +328,8 @@ class Trajectory(BaseResqpy):
         self.md_datum = survey.md_datum
 
     def __calculate_trajectory_from_inclination_and_azimuth(self, survey):
-        """ Calculate well trajectory from inclination and azimuth data.
+        """ Calculate well trajectory from inclination and azimuth data."""
 
-        """
         for sp in range(1, self.knot_count):
             i1 = survey.inclinations[sp - 1]
             i2 = survey.inclinations[sp]
@@ -433,6 +430,7 @@ class Trajectory(BaseResqpy):
         self.set_measured_depths()
 
     def load_from_wellspec(self, grid, wellspec_file, well_name, spline_mode = 'cube', md_uom = 'm'):
+        """Sets the trajectory data based on visiting the cells identified in a Nexus wellspec keyword."""
 
         col_list = ['IW', 'JW', 'L']
         wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list)
@@ -506,8 +504,8 @@ class Trajectory(BaseResqpy):
         well_col = None,
     ):
         """Verifies that a valid well_col has been supplied or can be found in the dataframe that has been generated
-        from the trajectory file.
 
+        from the trajectory file.
         """
 
         if well_col and well_col not in df.columns:
@@ -597,6 +595,7 @@ class Trajectory(BaseResqpy):
 
     def xyz_for_md(self, md):
         """Returns an xyz triplet corresponding to the given measured depth; uses simple linear interpolation between
+
         knots.
 
         args:
@@ -726,6 +725,7 @@ class Trajectory(BaseResqpy):
 
     def create_feature_and_interpretation(self):
         """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does
+
         not already exist.
 
         Uses the trajectory citation title as the well name
@@ -755,11 +755,11 @@ class Trajectory(BaseResqpy):
                    originator = None):
         """Create a wellbore trajectory representation node from a Trajectory object, optionally add as part.
 
-           notes:
-              measured depth datum xml node must be in place before calling this function;
-              branching well structures (multi-laterals) are supported by the resqml standard but not yet by
-              this code;
-              optional witsml trajectory reference not yet supported here
+        notes:
+          measured depth datum xml node must be in place before calling this function;
+          branching well structures (multi-laterals) are supported by the resqml standard but not yet by
+          this code;
+          optional witsml trajectory reference not yet supported here
 
         :meta common:
         """
@@ -816,9 +816,7 @@ class Trajectory(BaseResqpy):
         return wbt_node
 
     def __create_wellbore_feature_and_interpretation_xml(self, add_as_part, add_relationships, originator):
-        """ Create root node for WellboreFeature and WellboreInterpretation objects
-
-        """
+        """ Create root node for WellboreFeature and WellboreInterpretation objects."""
 
         if self.feature_and_interpretation_to_be_written:
             if self.wellbore_interpretation is None:
@@ -830,9 +828,8 @@ class Trajectory(BaseResqpy):
                                                     originator = originator)
 
     def __create_md_datum_root(self, md_datum_xyz):
-        """ Create the root node for the MdDatum object
+        """ Create the root node for the MdDatum object."""
 
-        """
         if self.md_datum is None:
             assert md_datum_xyz is not None
             self.md_datum = MdDatum(self.model, location = md_datum_xyz)
@@ -843,9 +840,7 @@ class Trajectory(BaseResqpy):
         return md_datum_root
 
     def __create_wbt_node_non_geometry_sub_elements(self, wbt_node):
-        """ Append sub-elements to the Trajectory object's root node that are unrelated to well geometry.
-
-        """
+        """ Append sub-elements to the Trajectory object's root node that are unrelated to well geometry."""
 
         start_node = rqet.SubElement(wbt_node, ns['resqml2'] + 'StartMd')
         start_node.set(ns['xsi'] + 'type', ns['xsd'] + 'double')
@@ -865,9 +860,7 @@ class Trajectory(BaseResqpy):
             domain_node.text = self.md_domain
 
     def __create_wbt_node_geometry_sub_elements(self, wbt_node):
-        """ Append sub-elements to the Trajectory object's root node that are related to well geometry.
-
-        """
+        """ Append sub-elements to the Trajectory object's root node that are related to well geometry."""
 
         geom = rqet.SubElement(wbt_node, ns['resqml2'] + 'Geometry')
         geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'ParametricLineGeometry')
@@ -916,17 +909,20 @@ class Trajectory(BaseResqpy):
 
     def __get_crs_uuid(self):
         """ Assign the same crs uuid to the Trajectory object.
-        Note: this assumes that the crs is the same for the MdDatum object and the Trajectory object.
 
+        note: this assumes that the crs is the same for the MdDatum object and the Trajectory object.
         """
+
         if self.crs_uuid is None:
             self.crs_uuid = self.md_datum.crs_uuid
         assert self.crs_uuid is not None
 
     def __create_deviation_survey_reference_node(self, wbt_node):
-        """ Create a reference node to a DeviationSurvey object and appends it to the WellboreTrajectory object's root node.
+        """ Create a reference node to a DeviationSurvey object and append it to the WellboreTrajectory
 
+        object's root node.
         """
+
         if self.deviation_survey is not None:
             ds_root = self.deviation_survey.root_node
             self.model.create_ref_node('DeviationSurvey',
@@ -936,9 +932,11 @@ class Trajectory(BaseResqpy):
                                        root = wbt_node)
 
     def __create_wellbore_interpretation_reference_node(self, wbt_node):
-        """Create a reference node to a WellboreInterpretation object and append it to the WellboreTrajectory object's root node.
+        """Create a reference node to a WellboreInterpretation object and append it to the WellboreTrajectory
 
+        object's root node.
         """
+
         interp_root = None
         if self.wellbore_interpretation is not None:
             interp_root = self.wellbore_interpretation.root
@@ -950,8 +948,9 @@ class Trajectory(BaseResqpy):
         return interp_root
 
     def __add_as_part_and_add_relationships(self, wbt_node, interp_root, add_as_part, add_relationships, ext_uuid):
-        """Add the newly created Trajectory object's root node as a part in the model and add reciprocal relationships.
+        """Add the newly created Trajectory object's root node as a part in the model and add reciprocal
 
+        relationships.
         """
 
         if add_as_part:
@@ -974,6 +973,7 @@ class Trajectory(BaseResqpy):
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the measured depths, control points and tangent
+
         vectors.
 
         :meta common:

@@ -16,3 +16,9 @@ from ._stratigraphic_column_rank import StratigraphicColumnRank
 from ._stratigraphic_column import StratigraphicColumn
 from ._stratigraphic_unit_feature import StratigraphicUnitFeature
 from ._stratigraphic_unit_interpretation import StratigraphicUnitInterpretation
+
+# Set "module" attribute of all public objects to this path. Fixes issue #310
+for _name in __all__:
+    _obj = eval(_name)
+    if hasattr(_obj, "__module__"):
+        _obj.__module__ = __name__

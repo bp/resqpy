@@ -1,6 +1,4 @@
-"""wellbore_marker_frame.py: resqpy well module providing marker frame class.
-
-"""
+"""_wellbore_marker_frame.py: resqpy well module providing marker frame class"""
 
 version = '18th November 2021'
 
@@ -10,7 +8,7 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('wellbore_marker_frame.py version ' + version)
+log.debug('_wellbore_marker_frame.py version ' + version)
 
 import numpy as np
 import pandas as pd
@@ -22,7 +20,7 @@ import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .trajectory import Trajectory
+from ._trajectory import Trajectory
 from .well_utils import load_hdf5_array
 
 
@@ -332,7 +330,7 @@ class WellboreMarkerFrame(BaseResqpy):
                    add_relationships = True,
                    title = 'wellbore marker framework',
                    originator = None):
-        """Create a wellbore marker frame representation node from a WellboreMarkerFrame object,
+        """Creates the xml tree for this wellbore marker frame and optionally adds as a part to the model."""
 
          optionally add as part.
 
@@ -428,7 +426,8 @@ class WellboreMarkerFrame(BaseResqpy):
     def __add_as_part_and_add_relationships(self, wbm_node, ext_uuid, add_as_part, add_relationships):
         """Add the newly created WellboreMarkerFrame object's root node as a part in the model
 
-         and add reciprocal relationships."""
+        and add reciprocal relationships.
+        """
 
         if add_as_part:
             self.model.add_part('obj_WellboreMarkerFrameRepresentation', self.uuid, wbm_node)

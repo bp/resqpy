@@ -67,6 +67,7 @@ class Grid(BaseResqpy):
 
     @property
     def nk_plus_k_gaps(self):
+        """Returns the number of layers including any K gaps."""
         if self.nk is None:
             return None
         if self.k_gaps is None:
@@ -792,6 +793,7 @@ class Grid(BaseResqpy):
             self.is_refinement = self_is_refinement
 
     def extract_children(self):
+        """Looks for LGRs related to this grid and sets the local_grid_uuid_list attribute."""
         assert self.uuid is not None
         if self.local_grid_uuid_list is not None:
             return self.local_grid_uuid_list
