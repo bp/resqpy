@@ -20,7 +20,8 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .property_kind import PropertyKind
 from .string_lookup import StringLookup
-from .property_common import same_property_kind, supported_property_kind_list, property_kind_and_facet_from_keyword, dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, guess_uom
+from .property_common import same_property_kind, supported_property_kind_list, property_kind_and_facet_from_keyword, \
+    dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, guess_uom
 
 
 class PropertyCollection():
@@ -58,8 +59,8 @@ class PropertyCollection():
         :meta common:
         """
 
-        assert property_set_root is None or support is not None,  \
-           'support (grid, wellbore frame, blocked well, mesh, or grid connection set) must be specified when populating property collection from property set'
+        assert property_set_root is None or support is not None, \
+            'support (grid, wellbore frame, blocked well, mesh, or grid connection set) must be specified when populating property collection from property set'
 
         self.dict = {}  # main dictionary of model property parts which are members of the collection
         # above is mapping from part_name to:
@@ -127,77 +128,16 @@ class PropertyCollection():
               support_uuid set
         """
 
-        # when at global level was causing circular reference loading issues as grid imports this module
-        import resqpy.fault as rqf
-        import resqpy.grid as grr
-        import resqpy.surface as rqs
-        import resqpy.unstructured as rug
-        import resqpy.well as rqw
-
         # todo: check uuid's of individual parts' supports match that of support being set for whole collection
-
-        if model is None and support is not None:
-            model = support.model
-        if model is None:
-            model = self.model
-        else:
-            self.model = model
+        model = self._set_support_model(model, support)
 
         if support_uuid is None and support is not None:
             support_uuid = support.uuid
 
         if support_uuid is None:
-            if self.support_uuid is not None:
-                log.warning('clearing supporting representation for property collection')
-            # self.model = None
-            self.support = None
-            self.support_root = None
-            self.support_uuid = None
-
+            self._set_support_uuid_none()
         else:
-            assert model is not None, 'model not established when setting support for property collection'
-            if self.support_uuid is not None and not bu.matching_uuids(support_uuid, self.support_uuid):
-                log.warning('changing supporting representation for property collection')
-            self.support_uuid = support_uuid
-            self.support = support
-            if self.support is None:
-                support_part = model.part_for_uuid(support_uuid)
-                assert support_part is not None, 'supporting representation part missing in model'
-                self.support_root = model.root_for_part(support_part)
-                support_type = model.type_of_part(support_part)
-                assert support_type is not None
-                if support_type == 'obj_IjkGridRepresentation':
-                    self.support = grr.any_grid(model, uuid = self.support_uuid, find_properties = False)
-                elif support_type == 'obj_WellboreFrameRepresentation':
-                    self.support = rqw.WellboreFrame(model, uuid = self.support_uuid)
-                elif support_type == 'obj_BlockedWellboreRepresentation':
-                    self.support = rqw.BlockedWell(model, uuid = self.support_uuid)
-                elif support_type == 'obj_Grid2dRepresentation':
-                    self.support = rqs.Mesh(model, uuid = self.support_uuid)
-                elif support_type == 'obj_GridConnectionSetRepresentation':
-                    self.support = rqf.GridConnectionSet(model, uuid = self.support_uuid)
-                elif support_type == 'obj_UnstructuredGridRepresentation':
-                    self.support = rug.UnstructuredGrid(model,
-                                                        uuid = self.support_uuid,
-                                                        geometry_required = False,
-                                                        find_properties = False)
-                else:
-                    raise TypeError('unsupported property supporting representation class: ' + str(support_type))
-            else:
-                if type(self.support) in [
-                        grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
-                        rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
-                        rug.PyramidGrid
-                ]:
-                    self.support_root = self.support.root
-                else:
-                    raise TypeError('unsupported property supporting representation class: ' + str(type(self.support)))
-            if modify_parts:
-                for (part, info) in self.dict.items():
-                    if info[1] is not None:
-                        modified = list(info)
-                        modified[1] = support_uuid
-                        self.dict[part] = tuple(modified)
+            self._set_support_uuid_notnone(support, support_uuid, model, modify_parts)
 
     def supporting_shape(self, indexable_element = None, direction = None):
         """Return the shape of the supporting representation with respect to the given indexable element
@@ -222,75 +162,27 @@ class PropertyCollection():
         import resqpy.unstructured as rug
         import resqpy.well as rqw
 
-        shape_list = None
         support = self.support
 
         if isinstance(support, grr.Grid):
-            if indexable_element is None or indexable_element == 'cells':
-                shape_list = [support.nk, support.nj, support.ni]
-            elif indexable_element == 'columns':
-                shape_list = [support.nj, support.ni]
-            elif indexable_element == 'layers':
-                shape_list = [support.nk]
-            elif indexable_element == 'faces':
-                assert direction is not None and direction.upper() in 'IJK'
-                axis = 'KJI'.index(direction.upper())
-                shape_list = [support.nk, support.nj, support.ni]
-                shape_list[axis] += 1  # note: properties for grid faces include outer faces
-            elif indexable_element == 'column edges':
-                shape_list = [(support.nj * (support.ni + 1)) + ((support.nj + 1) * support.ni)
-                             ]  # I edges first; include outer edges
-            elif indexable_element == 'edges per column':
-                shape_list = [support.nj, support.ni, 4]  # assume I-, J+, I+, J- ordering
-            elif indexable_element == 'faces per cell':
-                shape_list = [support.nk, support.nj, support.ni, 6]  # assume K-, K+, J-, I+, J+, I- ordering
-                # TODO: resolve ordering of edges and make consistent with maps code (edges per column) and fault module (gcs faces)
-            elif indexable_element == 'nodes per cell':
-                shape_list = [support.nk, support.nj, support.ni, 2, 2,
-                              2]  # kp, jp, ip within each cell; todo: check RESQML shaping
-            elif indexable_element == 'nodes':
-                assert not support.k_gaps, 'indexable element of nodes not currently supported for grids with K gaps'
-                if support.has_split_coordinate_lines:
-                    pillar_count = (support.nj + 1) * (support.ni + 1) + support.split_pillars_count
-                    shape_list = [support.nk + 1, pillar_count]
-                else:
-                    shape_list = [support.nk + 1, support.nj + 1, support.ni + 1]
+            shape_list = _supporting_shape_grid(support, indexable_element, direction)
 
         elif isinstance(support, rqw.WellboreFrame):
-            if indexable_element is None or indexable_element == 'nodes':
-                shape_list = [support.node_count]
-            elif indexable_element == 'intervals':
-                shape_list = [support.node_count - 1]
+            shape_list = _supporting_shape_wellboreframe(support, indexable_element)
 
         elif isinstance(support, rqw.BlockedWell):
-            if indexable_element is None or indexable_element == 'intervals':
-                shape_list = [support.node_count - 1]  # all intervals, including unblocked
-
-
-#            shape_list = [support.cell_count]  # for blocked intervals only – use 'cells' as indexable element
-            elif indexable_element == 'nodes':
-                shape_list = [support.node_count]
-            elif indexable_element == 'cells':
-                shape_list = [support.cell_count]  # ie. blocked intervals only
+            shape_list = _supporting_shape_blockedwell(support, indexable_element)
 
         elif isinstance(support, rqs.Mesh):
-            if indexable_element is None or indexable_element == 'cells' or indexable_element == 'columns':
-                shape_list = [support.nj - 1, support.ni - 1]
-            elif indexable_element == 'nodes':
-                shape_list = [support.nj, support.ni]
+            shape_list = _supporting_shape_mesh(support, indexable_element)
 
         elif isinstance(support, rqf.GridConnectionSet):
-            if indexable_element is None or indexable_element == 'faces':
-                shape_list = [support.count]
+            shape_list = _supporting_shape_gridconnectionset(support, indexable_element)
 
         elif type(support) in [
                 rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid
         ]:
-            if indexable_element is None or indexable_element == 'cells':
-                shape_list = [support.cell_count]
-            elif indexable_element == 'faces per cell':
-                support.cache_all_geometry_arrays()
-                shape_list = [len(support.faces_per_cell)]
+            shape_list, support = _supporting_shape_other(support, indexable_element)
 
         else:
             raise Exception(f'unsupported support class {type(support)} for property')
@@ -366,100 +258,20 @@ class PropertyCollection():
         assert xml_node is not None
 
         realization = self._add_part_to_dict_get_realization(realization, xml_node)
-
         type, continuous, points, string_lookup_uuid, sl_ref_node = self._add_part_to_dict_get_type_details(
             part, continuous, xml_node)
-
         extra_metadata = rqet.load_metadata_from_xml(xml_node)
-        count_node = rqet.find_tag(xml_node, 'Count')
-        assert count_node is not None
-        count = int(count_node.text)
-
-        indexable_node = rqet.find_tag(xml_node, 'IndexableElement')
-        assert indexable_node is not None
-        indexable = indexable_node.text
         citation_title = rqet.find_tag(rqet.find_tag(xml_node, 'Citation'), 'Title').text
+        count, indexable = _add_part_to_dict_get_count_and_indexable(xml_node)
+        property_kind, property_kind_uuid, lpk_node = _add_part_to_dict_get_property_kind(xml_node, citation_title)
+        facet_type, facet = _add_part_to_dict_get_facet(xml_node)
+        time_series_uuid, time_index = _add_part_to_dict_get_timeseries(xml_node)
+        minimum, maximum = _add_part_to_dict_get_minmax(xml_node)
+        support_uuid = self._add_part_to_dict_get_support_uuid(part)
+        uom = self._add_part_to_dict_get_uom(part, continuous, xml_node, trust_uom, property_kind, minimum, maximum,
+                                             facet, facet_type)
+        null_value, const_value = _add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points)
 
-        (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
-        prop_kind_node = rqet.find_tag(xml_node, 'PropertyKind')
-        assert (prop_kind_node is not None)
-        kind_node = rqet.find_tag(prop_kind_node, 'Kind')
-        property_kind_uuid = None  # only used for bespoke (local) property kinds
-        if kind_node is not None:
-            property_kind = kind_node.text  # could check for consistency with that derived from citation title
-        else:
-            lpk_node = rqet.find_tag(prop_kind_node, 'LocalPropertyKind')
-            if lpk_node is not None:
-                property_kind = rqet.find_tag_text(lpk_node, 'Title')
-                property_kind_uuid = rqet.find_tag_text(lpk_node, 'UUID')
-        assert property_kind is not None and len(property_kind) > 0
-        if (p_kind_from_keyword and p_kind_from_keyword != property_kind and
-            (p_kind_from_keyword not in ['cell length', 'length', 'thickness'] or
-             property_kind not in ['cell length', 'length', 'thickness'])):
-            log.warning(
-                f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
-
-        facet_type = None
-        facet = None
-        facet_node = rqet.find_tag(xml_node, 'Facet')  # todo: handle more than one facet for a property
-        if facet_node is not None:
-            facet_type = rqet.find_tag(facet_node, 'Facet').text
-            facet = rqet.find_tag(facet_node, 'Value').text
-            if facet_type is not None and facet_type == '':
-                facet_type = None
-            if facet is not None and facet == '':
-                facet = None
-
-        time_series_uuid = None
-        time_index = None
-        time_node = rqet.find_tag(xml_node, 'TimeIndex')
-        if time_node is not None:
-            time_index = int(rqet.find_tag(time_node, 'Index').text)
-            time_series_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(time_node, 'TimeSeries'), 'UUID').text)
-
-        minimum = None
-        min_node = rqet.find_tag(xml_node, 'MinimumValue')
-        if min_node is not None:
-            minimum = min_node.text  # NB: left as text
-        maximum = None
-        max_node = rqet.find_tag(xml_node, 'MaximumValue')
-        if max_node is not None:
-            maximum = max_node.text  # NB: left as text
-        uom = None
-
-        support_uuid = self.model.supporting_representation_for_part(part)
-        if support_uuid is None:
-            support_uuid = self.support_uuid
-        elif self.support_uuid is None:
-            self.set_support(support_uuid)
-        elif not bu.matching_uuids(support_uuid, self.support.uuid):  # multi-support collection
-            self.set_support(None)
-        if isinstance(support_uuid, str):
-            support_uuid = bu.uuid_from_string(support_uuid)
-
-        if continuous:
-            uom_node = rqet.find_tag(xml_node, 'UOM')
-            if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
-                uom = uom_node.text
-            else:
-                uom = guess_uom(property_kind, minimum, maximum, self.support, facet_type = facet_type, facet = facet)
-        null_value = None
-        if not continuous:
-            null_value = rqet.find_nested_tags_int(xml_node, ['PatchOfValues', 'Values', 'NullValue'])
-        const_value = None
-        if points:
-            values_node = rqet.find_nested_tags(xml_node, ['PatchOfPoints', 'Points'])
-        else:
-            values_node = rqet.find_nested_tags(xml_node, ['PatchOfValues', 'Values'])
-        values_type = rqet.node_type(values_node)
-        assert values_type is not None
-        if values_type.endswith('ConstantArray'):
-            if continuous:
-                const_value = rqet.find_tag_float(values_node, 'Value')
-            elif values_type.startswith('Bool'):
-                const_value = rqet.find_tag_bool(values_node, 'Value')
-            else:
-                const_value = rqet.find_tag_int(values_node, 'Value')
         self.dict[part] = (realization, support_uuid, uuid, xml_node, continuous, count, indexable, property_kind,
                            facet_type, facet, citation_title, time_series_uuid, time_index, minimum, maximum, uom,
                            string_lookup_uuid, property_kind_uuid, extra_metadata, null_value, const_value, points)
@@ -1927,60 +1739,7 @@ class PropertyCollection():
             return None
 
         if not hasattr(self, cached_array_name):
-
-            const_value = self.constant_value_for_part(part)
-            if const_value is None:
-                part_node = self.node_for_part(part)
-                if part_node is None:
-                    return None
-                if self.points_for_part(part):
-                    patch_list = rqet.list_of_tag(part_node, 'PatchOfPoints')
-                    assert len(patch_list) == 1  # todo: handle more than one patch of points
-                    first_values_node = rqet.find_tag(patch_list[0], 'Points')
-                    if first_values_node is None:
-                        return None  # could treat as fatal error
-                    if dtype is None:
-                        dtype = 'float'
-                    else:
-                        assert dtype in ['float', float, np.float32, np.float64]
-                    tag = 'Coordinates'
-                else:
-                    patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
-                    assert len(patch_list) == 1  # todo: handle more than one patch of values
-                    first_values_node = rqet.find_tag(patch_list[0], 'Values')
-                    if first_values_node is None:
-                        return None  # could treat as fatal error
-                    if dtype is None:
-                        array_type = rqet.node_type(first_values_node)
-                        assert array_type is not None
-                        if array_type == 'DoubleHdf5Array':
-                            dtype = 'float'
-                        elif array_type == 'IntegerHdf5Array':
-                            dtype = 'int'
-                        elif array_type == 'BooleanHdf5Array':
-                            dtype = 'bool'
-                        else:
-                            raise ValueError('array type not catered for: ' + str(array_type))
-                    tag = 'Values'
-                h5_key_pair = model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
-                if h5_key_pair is None:
-                    return None
-                model.h5_array_element(h5_key_pair,
-                                       index = None,
-                                       cache_array = True,
-                                       object = self,
-                                       array_attribute = cached_array_name,
-                                       dtype = dtype)
-            else:
-                assert not self.points_for_part(part), 'constant arrays not supported for points properties'
-                assert self.support is not None
-                shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
-                                              direction = self._part_direction(part))
-                assert shape is not None
-                a = np.full(shape, const_value, dtype = float if self.continuous_for_part(part) else int)
-                setattr(self, cached_array_name, a)
-            if not hasattr(self, cached_array_name):
-                return None
+            self._cached_part_array_ref_get_array(part, dtype, model, cached_array_name)
 
         if masked:
             exclude_value = self.null_value_for_part(part) if exclude_null else None
@@ -2161,59 +1920,24 @@ class PropertyCollection():
 
         :meta common:
         """
-
-        assert self.support is not None, 'attempt to build realizations array for property collection without supporting representation'
-        assert self.number_of_parts() > 0, 'attempt to build realizations array for empty property collection'
-        assert self.has_single_property_kind(
-        ), 'attempt to build realizations array for collection with multiple property kinds'
-        assert self.has_single_indexable_element(
-        ), 'attempt to build realizations array for collection containing a variety of indexable elements'
-        assert self.has_single_uom(
-        ), 'attempt to build realizations array for collection containing multiple units of measure'
-
-        r_list = self.realization_list(sort_list = True)
-        assert self.number_of_parts() == len(r_list), 'collection covers more than realizations of a single property'
-
-        continuous = self.all_continuous()
-        if not continuous:
-            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        r_list, continuous = self._realizations_array_ref_initial_checks()
 
         if fill_value is None:
             fill_value = np.NaN if continuous else -1
-
         if indexable_element is None:
             indexable_element = self.indexable_for_part(self.parts()[0])
 
-        if fill_missing:
-            r_extent = r_list[-1] + 1
-        else:
-            r_extent = len(r_list)
-
+        r_extent = _realizations_array_ref_get_r_extent(fill_missing, r_list)
         dtype = dtype_flavour(continuous, use_32_bit)
         # todo: handle direction dependent shapes
-        shape_list = self.supporting_shape(indexable_element = indexable_element)
-        shape_list.insert(0, r_extent)
-        if self.points_for_part(self.parts()[0]):
-            shape_list.append(3)
+
+        shape_list = self._realizations_array_ref_get_shape_list(indexable_element, r_extent)
 
         a = np.full(shape_list, fill_value, dtype = dtype)
-
         if fill_missing:
-            for part in self.parts():
-                realization = self.realization_for_part(part)
-                assert realization is not None and 0 <= realization < r_extent, 'realization missing (or out of range?)'
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[realization] = pa
-                self.uncache_part_array(part)
+            return self._realizations_array_ref_fill_missing(r_extent, dtype, a)
         else:
-            for index in range(len(r_list)):
-                realization = r_list[index]
-                part = self.singleton(realization = realization)
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[index] = pa
-                self.uncache_part_array(part)
-
-        return a
+            return self._realizations_array_ref_not_fill_missing(r_list, dtype, a)
 
     def time_series_array_ref(self,
                               use_32_bit = False,
@@ -2246,22 +1970,7 @@ class PropertyCollection():
 
         :meta common:
         """
-
-        assert self.support is not None, 'attempt to build time series array for property collection without supporting representation'
-        assert self.number_of_parts() > 0, 'attempt to build time series array for empty property collection'
-        assert self.has_single_property_kind(
-        ), 'attempt to build time series array for collection with multiple property kinds'
-        assert self.has_single_indexable_element(
-        ), 'attempt to build time series array for collection containing a variety of indexable elements'
-        assert self.has_single_uom(
-        ), 'attempt to build time series array for collection containing multiple units of measure'
-
-        ti_list = self.time_index_list(sort_list = True)
-        assert self.number_of_parts() == len(ti_list), 'collection covers more than time indices of a single property'
-
-        continuous = self.all_continuous()
-        if not continuous:
-            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        ti_list, continuous = self._time_array_ref_initial_checks()
 
         if fill_value is None:
             fill_value = np.NaN if continuous else -1
@@ -2282,23 +1991,10 @@ class PropertyCollection():
             shape_list.append(3)
 
         a = np.full(shape_list, fill_value, dtype = dtype)
-
         if fill_missing:
-            for part in self.parts():
-                time_index = self.time_index_for_part(part)
-                assert time_index is not None and 0 <= time_index < ti_extent, 'time index missing (or out of range?)'
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[time_index] = pa
-                self.uncache_part_array(part)
+            return self._time_array_ref_fill_missing(ti_extent, dtype, a)
         else:
-            for index in range(len(ti_list)):
-                time_index = ti_list[index]
-                part = self.singleton(time_index = time_index)
-                pa = self.cached_part_array_ref(part, dtype = dtype)
-                a[index] = pa
-                self.uncache_part_array(part)
-
-        return a
+            return self._time_array_ref_not_fill_missing(ti_list, dtype, a)
 
     def combobulated_face_array(self, resqml_a):
         """Returns a logically ordered copy of RESQML faces-per-cell property array resqml_a.
@@ -2427,73 +2123,34 @@ class PropertyCollection():
 
         if p_array is None:
             return None, None, None
-        min_value = max_value = None
-        if trust_min_max:
-            min_value = self.minimum_value_for_part(part)
-            max_value = self.maximum_value_for_part(part)
-        if min_value is None or max_value is None:
-            min_value = np.nanmin(p_array)
-            if masked and min_value is ma.masked:
-                min_value = None
-            max_value = np.nanmax(p_array)
-            if masked and max_value is ma.masked:
-                max_value = None
-            self.override_min_max(part, min_value, max_value)  # NB: this does not modify xml
+
+        min_value, max_value = self._normalized_part_array_get_minmax(trust_min_max, part, p_array, masked)
+
         if min_value is None or max_value is None:
             return None, min_value, max_value
-        if 'int' in str(
-                p_array.dtype) and discrete_cycle is not None:  # could use continuous flag in metadata instead of dtype
-            p_array = p_array % discrete_cycle
-            min_value = 0
-            max_value = discrete_cycle - 1
-        elif str(p_array.dtype).startswith('bool'):
-            min_value = int(min_value)
-            max_value = int(max_value)
-        min_value = float(min_value)  # will return np.ma.masked if all values are masked out
-        if masked and min_value is ma.masked:
-            min_value = np.nan
-        max_value = float(max_value)
-        if masked and max_value is ma.masked:
-            max_value = np.nan
+
+        min_value, max_value, p_array = _normalized_part_array_apply_discrete_cycle(discrete_cycle, p_array, min_value,
+                                                                                    max_value)
+        min_value, max_value = _normalized_part_array_nan_if_masked(min_value, max_value, masked)
+
         if min_value == np.nan or max_value == np.nan:
             return None, min_value, max_value
         if max_value < min_value:
             return None, min_value, max_value
+
         n_prop = p_array.astype(float)
         if use_logarithm:
-            if min_value <= 0.0:
-                n_prop[:] = np.where(n_prop < 0.0001, 0.0001, n_prop)
-            n_prop = np.log10(n_prop)
-            min_value = np.nanmin(n_prop)
-            max_value = np.nanmax(n_prop)
-            if masked:
-                if min_value is ma.masked:
-                    min_value = np.nan
-                if max_value is ma.masked:
-                    max_value = np.nan
+            min_value, max_value = _normalized_part_array_use_logarithm(min_value, n_prop, masked)
             if min_value == np.nan or max_value == np.nan:
                 return None, min_value, max_value
+
         if fix_zero_at is not None:
-            if fix_zero_at <= 0.0:
-                if min_value < 0.0:
-                    n_prop[:] = np.where(n_prop < 0.0, 0.0, n_prop)
-                min_value = 0.0
-            elif fix_zero_at >= 1.0:
-                if max_value > 0.0:
-                    n_prop[:] = np.where(n_prop > 0.0, 0.0, n_prop)
-                max_value = 0.0
-            else:
-                upper_scaling = max_value / (1.0 - fix_zero_at)
-                lower_scaling = -min_value / fix_zero_at
-                if upper_scaling >= lower_scaling:
-                    min_value = -upper_scaling * fix_zero_at
-                    n_prop[:] = np.where(n_prop < min_value, min_value, n_prop)
-                else:
-                    max_value = lower_scaling * (1.0 - fix_zero_at)
-                    n_prop[:] = np.where(n_prop > max_value, max_value, n_prop)
+            min_value, max_value, n_prop = _normalized_part_array_fix_zero_at(min_value, max_value, n_prop, fix_zero_at)
+
         if max_value == min_value:
             n_prop[:] = 0.5
             return n_prop, min_value, max_value
+
         return (n_prop - min_value) / (max_value - min_value), min_value, max_value
 
     def uncache_part_array(self, part):
@@ -2645,7 +2302,7 @@ class PropertyCollection():
                 uuid = entry[0]
                 cached_name = _cache_name_for_uuid(uuid)
                 assert self.support is not None
-                # note: will not handle direction dependent shapes
+                #  note: will not handle direction dependent shapes
                 shape = self.supporting_shape(indexable_element = entry[14])
                 value = float(entry[17]) if isinstance(entry[17], str) else entry[17]
                 self.__dict__[cached_name] = np.full(shape, value)
@@ -2724,77 +2381,15 @@ class PropertyCollection():
             ext_uuid = self.model.h5_uuid()
         prop_parts_list = []
         uuid_list = []
-        for (p_uuid, p_file_name, p_keyword, p_cached_name, p_discrete, p_uom, p_time_index, p_null_value, p_min_value,
-             p_max_value, property_kind, facet_type, facet, realization, indexable_element, count,
-             local_property_kind_uuid, const_value, points) in self.imported_list:
-            log.debug('processing imported property ' + str(p_keyword))
-            assert not points or not p_discrete
-            if local_property_kind_uuid is None:
-                local_property_kind_uuid = property_kind_uuid
-            if property_kind is None:
-                if local_property_kind_uuid is not None:
-                    # note: requires local property kind to be present
-                    property_kind = self.model.title(uuid = local_property_kind_uuid)
-                else:
-                    # todo: only if None in ab_property_list
-                    (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(p_keyword)
-            if property_kind is None:
-                # todo: the following are abstract standard property kinds, which shouldn't really have data directly associated with them
-                if p_discrete:
-                    if string_lookup_uuid is not None:
-                        property_kind = 'categorical'
-                    else:
-                        property_kind = 'discrete'
-                elif points:
-                    property_kind = 'length'
-                else:
-                    property_kind = 'continuous'
-            if hasattr(self, p_cached_name):
-                p_array = self.__dict__[p_cached_name]
-            else:
-                p_array = None
-            if points or property_kind == 'categorical':
-                add_min_max = False
-            elif local_property_kind_uuid is not None and string_lookup_uuid is not None:
-                add_min_max = False
-            else:
-                add_min_max = True
-            if selected_time_indices_list is not None and p_time_index is not None:
-                p_time_index = selected_time_indices_list.index(p_time_index)
-            p_node = self.create_xml(
-                ext_uuid = ext_uuid,
-                property_array = p_array,
-                title = p_keyword,
-                property_kind = property_kind,
-                support_uuid = support_uuid,
-                p_uuid = p_uuid,
-                facet_type = facet_type,
-                facet = facet,
-                discrete = p_discrete,  # todo: time series bits
-                time_series_uuid = time_series_uuid,
-                time_index = p_time_index,
-                uom = p_uom,
-                null_value = p_null_value,
-                originator = None,
-                source = p_file_name,
-                add_as_part = True,
-                add_relationships = True,
-                add_min_max = add_min_max,
-                min_value = p_min_value,
-                max_value = p_max_value,
-                realization = realization,
-                string_lookup_uuid = string_lookup_uuid,
-                property_kind_uuid = local_property_kind_uuid,
-                indexable_element = indexable_element,
-                count = count,
-                points = points,
-                find_local_property_kinds = find_local_property_kinds,
-                extra_metadata = extra_metadata,
-                const_value = const_value,
-                expand_const_arrays = expand_const_arrays)
+        for attributes in self.imported_list:
+            p_node = self._process_imported_property(attributes, property_kind_uuid, string_lookup_uuid,
+                                                     time_series_uuid, ext_uuid, support_uuid,
+                                                     selected_time_indices_list, find_local_property_kinds,
+                                                     extra_metadata, expand_const_arrays)
             if p_node is not None:
                 prop_parts_list.append(rqet.part_name_for_part_root(p_node))
                 uuid_list.append(rqet.uuid_for_part_root(p_node))
+
         self.add_parts_list_to_dict(prop_parts_list)
         self.imported_list = []
         return uuid_list
@@ -3517,6 +3112,313 @@ class PropertyCollection():
 
         return type, continuous, points, string_lookup_uuid, sl_ref_node
 
+    def _add_part_to_dict_get_support_uuid(self, part):
+        support_uuid = self.model.supporting_representation_for_part(part)
+        if support_uuid is None:
+            support_uuid = self.support_uuid
+        elif self.support_uuid is None:
+            self.set_support(support_uuid)
+        elif not bu.matching_uuids(support_uuid, self.support.uuid):  # multi-support collection
+            self.set_support(None)
+        if isinstance(support_uuid, str):
+            support_uuid = bu.uuid_from_string(support_uuid)
+        return support_uuid
+
+    def _add_part_to_dict_get_uom(self, part, continuous, xml_node, trust_uom, property_kind, minimum, maximum, facet,
+                                  facet_type):
+        uom = None
+        if continuous:
+            uom_node = rqet.find_tag(xml_node, 'UOM')
+            if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
+                uom = uom_node.text
+            else:
+                uom = guess_uom(property_kind, minimum, maximum, self.support, facet_type = facet_type, facet = facet)
+        return uom
+
+    def _normalized_part_array_get_minmax(self, trust_min_max, part, p_array, masked):
+        min_value = max_value = None
+        if trust_min_max:
+            min_value = self.minimum_value_for_part(part)
+            max_value = self.maximum_value_for_part(part)
+        if min_value is None or max_value is None:
+            min_value = np.nanmin(p_array)
+            if masked and min_value is ma.masked:
+                min_value = None
+            max_value = np.nanmax(p_array)
+            if masked and max_value is ma.masked:
+                max_value = None
+            self.override_min_max(part, min_value, max_value)  # NB: this does not modify xml
+        return min_value, max_value
+
+    def _cached_part_array_ref_get_array(self, part, dtype, model, cached_array_name):
+        const_value = self.constant_value_for_part(part)
+        if const_value is None:
+            self._cached_part_array_ref_const_none(part, dtype, model, cached_array_name)
+        else:
+            self._cached_part_array_ref_const_notnone(part, const_value, cached_array_name)
+        if not hasattr(self, cached_array_name):
+            return None
+
+    def _cached_part_array_ref_const_none(self, part, dtype, model, cached_array_name):
+        part_node = self.node_for_part(part)
+        if part_node is None:
+            return None
+        if self.points_for_part(part):
+            first_values_node, tag, dtype = _cached_part_array_ref_get_node_points(part_node, dtype)
+        else:
+            first_values_node, tag, dtype = _cached_part_array_ref_get_node_values(part_node, dtype)
+
+        h5_key_pair = model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
+        if h5_key_pair is None:
+            return None
+        model.h5_array_element(h5_key_pair,
+                               index = None,
+                               cache_array = True,
+                               object = self,
+                               array_attribute = cached_array_name,
+                               dtype = dtype)
+
+    def _cached_part_array_ref_const_notnone(self, part, const_value, cached_array_name):
+        assert not self.points_for_part(part), 'constant arrays not supported for points properties'
+        assert self.support is not None
+        shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
+                                      direction = self._part_direction(part))
+        assert shape is not None
+        a = np.full(shape, const_value, dtype = float if self.continuous_for_part(part) else int)
+        setattr(self, cached_array_name, a)
+
+    def _set_support_model(self, model, support):
+        if model is None and support is not None:
+            model = support.model
+        if model is None:
+            model = self.model
+        else:
+            self.model = model
+        return model
+
+    def _set_support_uuid_none(self):
+        if self.support_uuid is not None:
+            log.warning('clearing supporting representation for property collection')
+        self.support = None
+        self.support_root = None
+        self.support_uuid = None
+
+    def _set_support_uuid_notnone(self, support, support_uuid, model, modify_parts):
+        # when at global level was causing circular reference loading issues as grid imports this module
+        import resqpy.fault as rqf
+        import resqpy.grid as grr
+        import resqpy.surface as rqs
+        import resqpy.unstructured as rug
+        import resqpy.well as rqw
+
+        assert model is not None, 'model not established when setting support for property collection'
+        if self.support_uuid is not None and not bu.matching_uuids(support_uuid, self.support_uuid):
+            log.warning('changing supporting representation for property collection')
+        self.support_uuid = support_uuid
+        self.support = support
+        if self.support is None:
+            support_part = model.part_for_uuid(support_uuid)
+            assert support_part is not None, 'supporting representation part missing in model'
+            self.support_root = model.root_for_part(support_part)
+            support_type = model.type_of_part(support_part)
+            assert support_type is not None
+            if support_type == 'obj_IjkGridRepresentation':
+                self.support = grr.any_grid(model, uuid = self.support_uuid, find_properties = False)
+            elif support_type == 'obj_WellboreFrameRepresentation':
+                self.support = rqw.WellboreFrame(model, uuid = self.support_uuid)
+            elif support_type == 'obj_BlockedWellboreRepresentation':
+                self.support = rqw.BlockedWell(model, uuid = self.support_uuid)
+            elif support_type == 'obj_Grid2dRepresentation':
+                self.support = rqs.Mesh(model, uuid = self.support_uuid)
+            elif support_type == 'obj_GridConnectionSetRepresentation':
+                self.support = rqf.GridConnectionSet(model, uuid = self.support_uuid)
+            elif support_type == 'obj_UnstructuredGridRepresentation':
+                self.support = rug.UnstructuredGrid(model,
+                                                    uuid = self.support_uuid,
+                                                    geometry_required = False,
+                                                    find_properties = False)
+            else:
+                raise TypeError('unsupported property supporting representation class: ' + str(support_type))
+        else:
+            if type(self.support) in [
+                    grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
+                    rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
+                    rug.PyramidGrid
+            ]:
+                self.support_root = self.support.root
+            else:
+                raise TypeError('unsupported property supporting representation class: ' + str(type(self.support)))
+        if modify_parts:
+            for (part, info) in self.dict.items():
+                if info[1] is not None:
+                    modified = list(info)
+                    modified[1] = support_uuid
+                    self.dict[part] = tuple(modified)
+
+    def _process_imported_property(self, attributes, property_kind_uuid, string_lookup_uuid, time_series_uuid, ext_uuid,
+                                   support_uuid, selected_time_indices_list, find_local_property_kinds, extra_metadata,
+                                   expand_const_arrays):
+        (p_uuid, p_file_name, p_keyword, p_cached_name, p_discrete, p_uom, p_time_index, p_null_value, p_min_value,
+         p_max_value, property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
+         const_value, points) = attributes
+
+        log.debug('processing imported property ' + str(p_keyword))
+        assert not points or not p_discrete
+        if local_property_kind_uuid is None:
+            local_property_kind_uuid = property_kind_uuid
+
+        property_kind = self._process_imported_property_get_property_kind(property_kind, local_property_kind_uuid,
+                                                                          p_keyword, p_discrete, string_lookup_uuid,
+                                                                          points)
+
+        p_array = self._process_imported_property_get_p_array(p_cached_name)
+
+        add_min_max = _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid,
+                                                                 local_property_kind_uuid)
+
+        if selected_time_indices_list is not None and p_time_index is not None:
+            p_time_index = selected_time_indices_list.index(p_time_index)
+        p_node = self.create_xml(
+            ext_uuid = ext_uuid,
+            property_array = p_array,
+            title = p_keyword,
+            property_kind = property_kind,
+            support_uuid = support_uuid,
+            p_uuid = p_uuid,
+            facet_type = facet_type,
+            facet = facet,
+            discrete = p_discrete,  # todo: time series bits
+            time_series_uuid = time_series_uuid,
+            time_index = p_time_index,
+            uom = p_uom,
+            null_value = p_null_value,
+            originator = None,
+            source = p_file_name,
+            add_as_part = True,
+            add_relationships = True,
+            add_min_max = add_min_max,
+            min_value = p_min_value,
+            max_value = p_max_value,
+            realization = realization,
+            string_lookup_uuid = string_lookup_uuid,
+            property_kind_uuid = local_property_kind_uuid,
+            indexable_element = indexable_element,
+            count = count,
+            points = points,
+            find_local_property_kinds = find_local_property_kinds,
+            extra_metadata = extra_metadata,
+            const_value = const_value,
+            expand_const_arrays = expand_const_arrays)
+        if p_node is not None:
+            return p_node
+        else:
+            return None
+
+    def _process_imported_property_get_property_kind(self, property_kind, local_property_kind_uuid, p_keyword,
+                                                     p_discrete, string_lookup_uuid, points):
+        if property_kind is None:
+            if local_property_kind_uuid is not None:
+                # note: requires local property kind to be present
+                property_kind = self.model.title(uuid = local_property_kind_uuid)
+            else:
+                # todo: only if None in ab_property_list
+                (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(p_keyword)
+        if property_kind is None:
+            # todo: the following are abstract standard property kinds, which shouldn't really have data directly associated with them
+            if p_discrete:
+                if string_lookup_uuid is not None:
+                    property_kind = 'categorical'
+                else:
+                    property_kind = 'discrete'
+            elif points:
+                property_kind = 'length'
+            else:
+                property_kind = 'continuous'
+        return property_kind
+
+    def _process_imported_property_get_p_array(self, p_cached_name):
+        if hasattr(self, p_cached_name):
+            return self.__dict__[p_cached_name]
+        else:
+            return None
+
+    def _realizations_array_ref_fill_missing(self, r_extent, dtype, a):
+        for part in self.parts():
+            realization = self.realization_for_part(part)
+            assert realization is not None and 0 <= realization < r_extent, 'realization missing (or out of range?)'
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[realization] = pa
+            self.uncache_part_array(part)
+        return a
+
+    def _realizations_array_ref_not_fill_missing(self, r_list, dtype, a):
+        for index in range(len(r_list)):
+            realization = r_list[index]
+            part = self.singleton(realization = realization)
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[index] = pa
+            self.uncache_part_array(part)
+        return a
+
+    def _realizations_array_ref_get_shape_list(self, indexable_element, r_extent):
+        shape_list = self.supporting_shape(indexable_element = indexable_element)
+        shape_list.insert(0, r_extent)
+        if self.points_for_part(self.parts()[0]):
+            shape_list.append(3)
+        return shape_list
+
+    def _realizations_array_ref_initial_checks(self):
+        assert self.support is not None, 'attempt to build realizations array for property collection without supporting representation'
+        assert self.number_of_parts() > 0, 'attempt to build realizations array for empty property collection'
+        assert self.has_single_property_kind(
+        ), 'attempt to build realizations array for collection with multiple property kinds'
+        assert self.has_single_indexable_element(
+        ), 'attempt to build realizations array for collection containing a variety of indexable elements'
+        assert self.has_single_uom(
+        ), 'attempt to build realizations array for collection containing multiple units of measure'
+        r_list = self.realization_list(sort_list = True)
+        assert self.number_of_parts() == len(r_list), 'collection covers more than realizations of a single property'
+        continuous = self.all_continuous()
+        if not continuous:
+            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        return r_list, continuous
+
+    def _time_array_ref_initial_checks(self):
+        assert self.support is not None, 'attempt to build time series array for property collection without supporting representation'
+        assert self.number_of_parts() > 0, 'attempt to build time series array for empty property collection'
+        assert self.has_single_property_kind(
+        ), 'attempt to build time series array for collection with multiple property kinds'
+        assert self.has_single_indexable_element(
+        ), 'attempt to build time series array for collection containing a variety of indexable elements'
+        assert self.has_single_uom(
+        ), 'attempt to build time series array for collection containing multiple units of measure'
+
+        ti_list = self.time_index_list(sort_list = True)
+        assert self.number_of_parts() == len(ti_list), 'collection covers more than time indices of a single property'
+
+        continuous = self.all_continuous()
+        if not continuous:
+            assert self.all_discrete(), 'mixture of continuous and discrete properties in collection'
+        return ti_list, continuous
+
+    def _time_array_ref_fill_missing(self, ti_extent, dtype, a):
+        for part in self.parts():
+            time_index = self.time_index_for_part(part)
+            assert time_index is not None and 0 <= time_index < ti_extent, 'time index missing (or out of range?)'
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[time_index] = pa
+            self.uncache_part_array(part)
+        return a
+
+    def _time_array_ref_not_fill_missing(self, ti_list, dtype, a):
+        for index in range(len(ti_list)):
+            time_index = ti_list[index]
+            part = self.singleton(time_index = time_index)
+            pa = self.cached_part_array_ref(part, dtype = dtype)
+            a[index] = pa
+            self.uncache_part_array(part)
+        return a
+
 
 def _get_indexable_element(indexable_element, support_type):
     if indexable_element is None:
@@ -3665,3 +3567,282 @@ def _get_facet_title_options_for_direction(direction):
         facet_options = ['K', 'IJK']
         title_options = ['KK', 'PERMK', 'KZ', 'PERMZ']
     return facet_options, title_options
+
+
+def _add_part_to_dict_get_count_and_indexable(xml_node):
+    count_node = rqet.find_tag(xml_node, 'Count')
+    assert count_node is not None
+    count = int(count_node.text)
+
+    indexable_node = rqet.find_tag(xml_node, 'IndexableElement')
+    assert indexable_node is not None
+    indexable = indexable_node.text
+
+    return count, indexable
+
+
+def _add_part_to_dict_get_property_kind(xml_node, citation_title):
+    (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
+    prop_kind_node = rqet.find_tag(xml_node, 'PropertyKind')
+    assert (prop_kind_node is not None)
+    kind_node = rqet.find_tag(prop_kind_node, 'Kind')
+    property_kind_uuid = None  # only used for bespoke (local) property kinds
+    if kind_node is not None:
+        property_kind = kind_node.text  # could check for consistency with that derived from citation title
+        lpk_node = None
+    else:
+        lpk_node = rqet.find_tag(prop_kind_node, 'LocalPropertyKind')
+        if lpk_node is not None:
+            property_kind = rqet.find_tag_text(lpk_node, 'Title')
+            property_kind_uuid = rqet.find_tag_text(lpk_node, 'UUID')
+    assert property_kind is not None and len(property_kind) > 0
+    if (p_kind_from_keyword and p_kind_from_keyword != property_kind and
+        (p_kind_from_keyword not in ['cell length', 'length', 'thickness'] or
+         property_kind not in ['cell length', 'length', 'thickness'])):
+        log.warning(
+            f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
+    return property_kind, property_kind_uuid, lpk_node
+
+
+def _add_part_to_dict_get_facet(xml_node):
+    facet_type = None
+    facet = None
+    facet_node = rqet.find_tag(xml_node, 'Facet')  # todo: handle more than one facet for a property
+    if facet_node is not None:
+        facet_type = rqet.find_tag(facet_node, 'Facet').text
+        facet = rqet.find_tag(facet_node, 'Value').text
+        if facet_type is not None and facet_type == '':
+            facet_type = None
+        if facet is not None and facet == '':
+            facet = None
+    return facet_type, facet
+
+
+def _add_part_to_dict_get_timeseries(xml_node):
+    time_series_uuid = None
+    time_index = None
+    time_node = rqet.find_tag(xml_node, 'TimeIndex')
+    if time_node is not None:
+        time_index = int(rqet.find_tag(time_node, 'Index').text)
+        time_series_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(time_node, 'TimeSeries'), 'UUID').text)
+
+    return time_series_uuid, time_index
+
+
+def _add_part_to_dict_get_minmax(xml_node):
+    minimum = None
+    min_node = rqet.find_tag(xml_node, 'MinimumValue')
+    if min_node is not None:
+        minimum = min_node.text  # NB: left as text
+    maximum = None
+    max_node = rqet.find_tag(xml_node, 'MaximumValue')
+    if max_node is not None:
+        maximum = max_node.text  # NB: left as text
+
+    return minimum, maximum
+
+
+def _add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points):
+    null_value = None
+    if not continuous:
+        null_value = rqet.find_nested_tags_int(xml_node, ['PatchOfValues', 'Values', 'NullValue'])
+    const_value = None
+    if points:
+        values_node = rqet.find_nested_tags(xml_node, ['PatchOfPoints', 'Points'])
+    else:
+        values_node = rqet.find_nested_tags(xml_node, ['PatchOfValues', 'Values'])
+    values_type = rqet.node_type(values_node)
+    assert values_type is not None
+    if values_type.endswith('ConstantArray'):
+        if continuous:
+            const_value = rqet.find_tag_float(values_node, 'Value')
+        elif values_type.startswith('Bool'):
+            const_value = rqet.find_tag_bool(values_node, 'Value')
+        else:
+            const_value = rqet.find_tag_int(values_node, 'Value')
+
+    return null_value, const_value
+
+
+def _normalized_part_array_apply_discrete_cycle(discrete_cycle, p_array, min_value, max_value):
+    if 'int' in str(
+            p_array.dtype) and discrete_cycle is not None:  # could use continuous flag in metadata instead of dtype
+        p_array = p_array % discrete_cycle
+        min_value = 0
+        max_value = discrete_cycle - 1
+    elif str(p_array.dtype).startswith('bool'):
+        min_value = int(min_value)
+        max_value = int(max_value)
+    return min_value, max_value, p_array
+
+
+def _normalized_part_array_nan_if_masked(min_value, max_value, masked):
+    min_value = float(min_value)  # will return np.ma.masked if all values are masked out
+    if masked and min_value is ma.masked:
+        min_value = np.nan
+    max_value = float(max_value)
+    if masked and max_value is ma.masked:
+        max_value = np.nan
+    return min_value, max_value
+
+
+def _normalized_part_array_use_logarithm(min_value, n_prop, masked):
+    if min_value <= 0.0:
+        n_prop[:] = np.where(n_prop < 0.0001, 0.0001, n_prop)
+    n_prop = np.log10(n_prop)
+    min_value = np.nanmin(n_prop)
+    max_value = np.nanmax(n_prop)
+    if masked:
+        if min_value is ma.masked:
+            min_value = np.nan
+        if max_value is ma.masked:
+            max_value = np.nan
+    return min_value, max_value
+
+
+def _normalized_part_array_fix_zero_at(min_value, max_value, n_prop, fix_zero_at):
+    if fix_zero_at <= 0.0:
+        if min_value < 0.0:
+            n_prop[:] = np.where(n_prop < 0.0, 0.0, n_prop)
+        min_value = 0.0
+    elif fix_zero_at >= 1.0:
+        if max_value > 0.0:
+            n_prop[:] = np.where(n_prop > 0.0, 0.0, n_prop)
+        max_value = 0.0
+    else:
+        upper_scaling = max_value / (1.0 - fix_zero_at)
+        lower_scaling = -min_value / fix_zero_at
+        if upper_scaling >= lower_scaling:
+            min_value = -upper_scaling * fix_zero_at
+            n_prop[:] = np.where(n_prop < min_value, min_value, n_prop)
+        else:
+            max_value = lower_scaling * (1.0 - fix_zero_at)
+            n_prop[:] = np.where(n_prop > max_value, max_value, n_prop)
+    return min_value, max_value, n_prop
+
+
+def _supporting_shape_grid(support, indexable_element, direction):
+    if indexable_element is None or indexable_element == 'cells':
+        shape_list = [support.nk, support.nj, support.ni]
+    elif indexable_element == 'columns':
+        shape_list = [support.nj, support.ni]
+    elif indexable_element == 'layers':
+        shape_list = [support.nk]
+    elif indexable_element == 'faces':
+        assert direction is not None and direction.upper() in 'IJK'
+        axis = 'KJI'.index(direction.upper())
+        shape_list = [support.nk, support.nj, support.ni]
+        shape_list[axis] += 1  # note: properties for grid faces include outer faces
+    elif indexable_element == 'column edges':
+        shape_list = [(support.nj * (support.ni + 1)) + ((support.nj + 1) * support.ni)
+                     ]  # I edges first; include outer edges
+    elif indexable_element == 'edges per column':
+        shape_list = [support.nj, support.ni, 4]  # assume I-, J+, I+, J- ordering
+    elif indexable_element == 'faces per cell':
+        shape_list = [support.nk, support.nj, support.ni, 6]  # assume K-, K+, J-, I+, J+, I- ordering
+        # TODO: resolve ordering of edges and make consistent with maps code (edges per column) and fault module (gcs faces)
+    elif indexable_element == 'nodes per cell':
+        shape_list = [support.nk, support.nj, support.ni, 2, 2,
+                      2]  # kp, jp, ip within each cell; todo: check RESQML shaping
+    elif indexable_element == 'nodes':
+        assert not support.k_gaps, 'indexable element of nodes not currently supported for grids with K gaps'
+        if support.has_split_coordinate_lines:
+            pillar_count = (support.nj + 1) * (support.ni + 1) + support.split_pillars_count
+            shape_list = [support.nk + 1, pillar_count]
+        else:
+            shape_list = [support.nk + 1, support.nj + 1, support.ni + 1]
+    return shape_list
+
+
+def _supporting_shape_wellboreframe(support, indexable_element):
+    if indexable_element is None or indexable_element == 'nodes':
+        shape_list = [support.node_count]
+    elif indexable_element == 'intervals':
+        shape_list = [support.node_count - 1]
+    return shape_list
+
+
+def _supporting_shape_blockedwell(support, indexable_element):
+    if indexable_element is None or indexable_element == 'intervals':
+        shape_list = [support.node_count - 1]  # all intervals, including unblocked
+    elif indexable_element == 'nodes':
+        shape_list = [support.node_count]
+    elif indexable_element == 'cells':
+        shape_list = [support.cell_count]  # ie. blocked intervals only
+    return shape_list
+
+
+def _supporting_shape_mesh(support, indexable_element):
+    if indexable_element is None or indexable_element == 'cells' or indexable_element == 'columns':
+        shape_list = [support.nj - 1, support.ni - 1]
+    elif indexable_element == 'nodes':
+        shape_list = [support.nj, support.ni]
+    return shape_list
+
+
+def _supporting_shape_gridconnectionset(support, indexable_element):
+    if indexable_element is None or indexable_element == 'faces':
+        shape_list = [support.count]
+    return shape_list
+
+
+def _supporting_shape_other(support, indexable_element):
+    if indexable_element is None or indexable_element == 'cells':
+        shape_list = [support.cell_count]
+    elif indexable_element == 'faces per cell':
+        support.cache_all_geometry_arrays()
+        shape_list = [len(support.faces_per_cell)]
+    return shape_list, support
+
+
+def _cached_part_array_ref_get_node_points(part_node, dtype):
+    patch_list = rqet.list_of_tag(part_node, 'PatchOfPoints')
+    assert len(patch_list) == 1  # todo: handle more than one patch of points
+    first_values_node = rqet.find_tag(patch_list[0], 'Points')
+    if first_values_node is None:
+        return None  # could treat as fatal error
+    if dtype is None:
+        dtype = 'float'
+    else:
+        assert dtype in ['float', float, np.float32, np.float64]
+    tag = 'Coordinates'
+    return first_values_node, tag, dtype
+
+
+def _cached_part_array_ref_get_node_values(part_node, dtype):
+    patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
+    assert len(patch_list) == 1  # todo: handle more than one patch of values
+    first_values_node = rqet.find_tag(patch_list[0], 'Values')
+    if first_values_node is None:
+        return None  # could treat as fatal error
+    if dtype is None:
+        array_type = rqet.node_type(first_values_node)
+        assert array_type is not None
+        if array_type == 'DoubleHdf5Array':
+            dtype = 'float'
+        elif array_type == 'IntegerHdf5Array':
+            dtype = 'int'
+        elif array_type == 'BooleanHdf5Array':
+            dtype = 'bool'
+        else:
+            raise ValueError('array type not catered for: ' + str(array_type))
+    tag = 'Values'
+    return first_values_node, tag, dtype
+
+
+def _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid, local_property_kind_uuid):
+    if points or property_kind == 'categorical':
+        add_min_max = False
+    elif local_property_kind_uuid is not None and string_lookup_uuid is not None:
+        add_min_max = False
+    else:
+        add_min_max = True
+    return add_min_max
+
+
+def _realizations_array_ref_get_r_extent(fill_missing, r_list):
+    if fill_missing:
+        r_extent = r_list[-1] + 1
+    else:
+        r_extent = len(r_list)
+    return r_extent
