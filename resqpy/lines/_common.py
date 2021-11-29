@@ -252,7 +252,7 @@ def _one_tangent(points, k1, k2, k3, weight):
 
 
 def _prepare_knot_insertions(knot_insertions, max_segment_length, seg_count, seg_lengths, max_degrees_per_knot,
-                             mknot_count, tangent_vectors, points):
+                             knot_count, tangent_vectors, points):
     if max_segment_length is not None:
         for seg in range(seg_count):
             sub_count = maths.ceil(seg_lengths[seg] / max_segment_length)
