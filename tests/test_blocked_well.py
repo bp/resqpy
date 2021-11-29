@@ -90,6 +90,37 @@ def test_set_for_column(example_model_and_crs):
 
     # --------- Act ----------
     # populate empty blocked well object for a 'vertical' well in the given column
-    blocked_well_for_column_df = bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1,1))
+    bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1,1))
+
+    # --------- Assert ----------
     assert bw.cell_count == 5
-    assert bw.node_count  == len(bw.node_mds) # tail added to trajectory measured depths
+    assert bw.node_count  == len(bw.node_mds) == len(bw.trajectory.measured_depths) - 1 # tail added to trajectory measured depths
+    assert (len(bw.grid_list) == 1 ) & (bw.grid_list[0] == grid)
+
+
+def test_derive_from_cell_list(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji=(5, 3, 3),
+                       dxyz=(50.0, -50.0, 50.0),
+                       origin=(0.0, 0.0, 100.0),
+                       crs_uuid=crs.uuid,
+                       set_points_cached=True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry=True)
+    well_name = 'DOGLEG'
+    cell_kji0_list = np.array([(1,1,1), (2,2,2), (3,3,3), (3,3,4)])
+    bw = resqpy.well.BlockedWell(model,
+                                 well_name=well_name,
+                                 use_face_centres=True,
+                                 add_wellspec_properties=True)
+
+    # --------- Act ----------
+    # populate empty blocked well object for a 'vertical' well in the given column
+    bw.derive_from_cell_list(cell_kji0_list = cell_kji0_list, well_name = well_name, grid = grid)
+
+    # --------- Assert ----------
+    # no tail added to trajectory measured depths as well terminates in 4th layer
+    assert bw.node_count  == len(bw.node_mds) == len(bw.trajectory.measured_depths)
