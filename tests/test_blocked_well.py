@@ -69,6 +69,27 @@ def test_wellspec_properties(example_model_and_crs):
     for col in ['SKIN', 'RADW']:
         assert_array_almost_equal(np.array(source_df[col]), np.array(df3[col]))
 
-    grid_uuid_list = bw.grid_uuid_list()
-    assert len(grid_uuid_list) == 1
-    assert grid_uuid_list[0] == grid_uuid
+
+def test_set_for_column(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji=(5, 3, 3),
+                       dxyz=(50.0, -50.0, 50.0),
+                       origin=(0.0, 0.0, 100.0),
+                       crs_uuid=crs.uuid,
+                       set_points_cached=True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry=True)
+    well_name = 'DOGLEG'
+    bw = resqpy.well.BlockedWell(model,
+                                 well_name=well_name,
+                                 use_face_centres=True,
+                                 add_wellspec_properties=True)
+
+    # --------- Act ----------
+    # populate empty blocked well object for a 'vertical' well in the given column
+    blocked_well_for_column_df = bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1,1))
+    assert bw.cell_count == 5
+    assert bw.node_count  == len(bw.node_mds) # tail added to trajectory measured depths
