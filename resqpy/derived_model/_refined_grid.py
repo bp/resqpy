@@ -15,7 +15,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.rq_import as rqi
 
-from resqpy.derived_model._dm_common import __write_grid
+from resqpy.derived_model._common import _write_grid
 
 
 def refined_grid(epc_file,
@@ -68,7 +68,7 @@ def refined_grid(epc_file,
     """
 
     epc_file, model, model_in, source_grid =  \
-        __establish_models_and_source_grid(epc_file, new_epc_file, source_grid, source_grid_uuid)
+        _establish_models_and_source_grid(epc_file, new_epc_file, source_grid, source_grid_uuid)
 
     assert fine_coarse is not None and isinstance(fine_coarse, fc.FineCoarse)
     if set_parent_window is None:
@@ -102,20 +102,20 @@ def refined_grid(epc_file,
 
     if source_grid.has_split_coordinate_lines:
 
-        grid = __refined_faulted_grid(model, source_grid, fine_coarse)
+        grid = _refined_faulted_grid(model, source_grid, fine_coarse)
 
     else:
 
-        grid = __refined_unfaulted_grid(model, source_grid, fine_coarse)
+        grid = _refined_unfaulted_grid(model, source_grid, fine_coarse)
 
     # todo: option of re-draping interpolated pillars to surface
 
     collection = None
     if inherit_properties:
-        collection = __inherit_properties(source_grid, grid, fine_coarse, inherit_realization, inherit_all_realizations)
+        collection = _inherit_properties(source_grid, grid, fine_coarse, inherit_realization, inherit_all_realizations)
 
     if set_parent_window:
-        __set_parent_window(set_parent_window, source_grid, grid, fine_coarse)
+        _set_parent_window(set_parent_window, source_grid, grid, fine_coarse)
 
     # write grid
     if new_grid_title is None or len(new_grid_title) == 0:
@@ -126,21 +126,21 @@ def refined_grid(epc_file,
         model_in.h5_release()
 
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     return grid
 
 
-def __refined_faulted_grid(model, source_grid, fine_coarse):
+def _refined_faulted_grid(model, source_grid, fine_coarse):
 
     source_grid.corner_points(cache_cp_array = True)
     fnk, fnj, fni = fine_coarse.fine_extent_kji
@@ -187,7 +187,7 @@ def __refined_faulted_grid(model, source_grid, fine_coarse):
                             ijk_handedness = 'right' if source_grid.grid_is_right_handed else 'left')
 
 
-def __refined_unfaulted_grid(model, source_grid, fine_coarse):
+def _refined_unfaulted_grid(model, source_grid, fine_coarse):
 
     source_points = source_grid.points_ref()
     assert source_points is not None, 'geometry not available for refinement of unfaulted grid'
@@ -311,7 +311,7 @@ def __refined_unfaulted_grid(model, source_grid, fine_coarse):
     return grid
 
 
-def __inherit_properties(source_grid, grid, fine_coarse, inherit_realization, inherit_all_realizations):
+def _inherit_properties(source_grid, grid, fine_coarse, inherit_realization, inherit_all_realizations):
     source_collection = source_grid.extract_property_collection()
     collection = None
     if source_collection is not None:
@@ -326,7 +326,7 @@ def __inherit_properties(source_grid, grid, fine_coarse, inherit_realization, in
     return collection
 
 
-def __set_parent_window(set_parent_window, source_grid, grid, fine_coarse):
+def _set_parent_window(set_parent_window, source_grid, grid, fine_coarse):
     pw_grid_uuid = source_grid.uuid
     if isinstance(set_parent_window, str):
         if set_parent_window == 'grandparent':
@@ -348,7 +348,7 @@ def __set_parent_window(set_parent_window, source_grid, grid, fine_coarse):
     grid.set_parent(pw_grid_uuid, True, fine_coarse)
 
 
-def __establish_models_and_source_grid(epc_file, new_epc_file, source_grid, source_grid_uuid):
+def _establish_models_and_source_grid(epc_file, new_epc_file, source_grid, source_grid_uuid):
     assert epc_file or source_grid is not None, 'neither epc file name nor source grid supplied'
     if not epc_file:
         epc_file = source_grid.model.epc_file
