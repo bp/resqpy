@@ -15,13 +15,13 @@ import numpy.ma as ma
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.time_series as rts
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .property_kind import PropertyKind
 from .string_lookup import StringLookup
 from .property_common import same_property_kind, supported_property_kind_list, property_kind_and_facet_from_keyword, \
     dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, guess_uom
+import resqpy.property._property_collection_create_xml_functions as pcxml
+import resqpy.property._property_collection_get_attributes as pcga
 
 
 class PropertyCollection():
@@ -395,7 +395,7 @@ class PropertyCollection():
             source += ' from property for ' + str(other.support.title)
         for (part, info) in other.dict.items():
             target_shape = self.supporting_shape(indexable_element = other.indexable_for_part(part),
-                                                 direction = other._part_direction(part))
+                                                 direction = pcga._part_direction(other, part))
             assert np.prod(target_shape) == flattened_indices.size
             a = other.cached_part_array_ref(part).flatten()[flattened_indices].reshape(target_shape)
             self.add_cached_array_to_imported_list(a,
@@ -1860,7 +1860,7 @@ class PropertyCollection():
            the facet_list() method will return the facet values that correspond to slices in the first axis of the
            resulting array
         """
-        self._facets_array_ref_checks()
+        _facet_array_ref_checks(self)
 
         #  could check that facet_type_list() has exactly one value
         facet_list = self.facet_list(sort_list = True)
@@ -1888,16 +1888,6 @@ class PropertyCollection():
             self.uncache_part_array(part)
 
         return a
-
-    def _facet_array_ref_checks(self):
-        assert self.support is not None, 'attempt to build facets array for property collection without supporting representation'
-        assert self.number_of_parts() > 0, 'attempt to build facets array for empty property collection'
-        assert self.has_single_property_kind(
-        ), 'attempt to build facets array for collection containing multiple property kinds'
-        assert self.has_single_indexable_element(
-        ), 'attempt to build facets array for collection containing a variety of indexable elements'
-        assert self.has_single_uom(
-        ), 'attempt to build facets array for collection containing multiple units of measure'
 
     def realizations_array_ref(self,
                                use_32_bit = False,
@@ -2243,7 +2233,7 @@ class PropertyCollection():
         uuid = bu.new_uuid()
         cached_name = _cache_name_for_uuid(uuid)
         if cached_array is not None:
-            min_value, max_value = self._min_max_of_cached_array(cached_name, cached_array, null_value, discrete)
+            min_value, max_value = pcga._min_max_of_cached_array(self, cached_name, cached_array, null_value, discrete)
         else:
             if const_value == null_value or (not discrete and np.isnan(const_value)):
                 min_value = max_value = None
@@ -2253,23 +2243,6 @@ class PropertyCollection():
                                    min_value, max_value, property_kind, facet_type, facet, realization,
                                    indexable_element, count, local_property_kind_uuid, const_value, points))
         return uuid
-
-    def _min_max_of_cached_array(self, cached_name, cached_array, null_value, discrete):
-        self.__dict__[cached_name] = cached_array
-        zorro = self.masked_array(cached_array, exclude_value = null_value)
-        if not discrete and np.all(np.isnan(zorro)):
-            min_value = max_value = None
-        elif discrete:
-            min_value = int(np.nanmin(zorro))
-            max_value = int(np.nanmax(zorro))
-        else:
-            min_value = np.nanmin(zorro)
-            max_value = np.nanmax(zorro)
-        if min_value is ma.masked or min_value == np.NaN:
-            min_value = None
-        if max_value is ma.masked or max_value == np.NaN:
-            max_value = None
-        return min_value, max_value
 
     def remove_cached_imported_arrays(self):
         """Removes any cached arrays that are mentioned in imported list."""
@@ -2509,8 +2482,8 @@ class PropertyCollection():
         #      log.debug('creating property node for ' + title)
         # currently assumes discrete properties to be 32 bit integers and continuous to be 64 bit reals
         # also assumes property_kind is one of the standard resqml property kinds; todo: allow local p kind node as optional arg
-        support_root, support_uuid, ext_uuid, const_value = self._create_xml_get_basics(
-            discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid, expand_const_arrays)
+        support_root, support_uuid, ext_uuid, const_value = pcxml._create_xml_get_basics(
+            self, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid, expand_const_arrays)
 
         support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
         indexable_element = _get_indexable_element(indexable_element, support_type)
@@ -2524,31 +2497,31 @@ class PropertyCollection():
         #    uom are valid units for property_kind
         assert property_kind, 'missing property kind when creating xml for property'
 
-        self._get_property_type_details(discrete, string_lookup_uuid, points)
-        p_node, p_uuid = self._create_xml_get_p_node(p_uuid)
+        pcga._get_property_type_details(self, discrete, string_lookup_uuid, points)
+        p_node, p_uuid = pcxml._create_xml_get_p_node(self, p_uuid)
 
-        self._create_xml_add_basics_to_p_node(p_node, title, originator, extra_metadata, source, count,
-                                              indexable_element)
+        pcxml._create_xml_add_basics_to_p_node(self, p_node, title, originator, extra_metadata, source, count,
+                                               indexable_element)
 
-        self._create_xml_realization_node(realization, p_node)
-        related_time_series_node = self._create_xml_time_series_node(time_series_uuid, time_index, p_node, support_uuid,
-                                                                     support_type, support_root)
-        self._create_xml_property_kind(p_node, find_local_property_kinds, property_kind, uom, discrete,
-                                       property_kind_uuid)
-        self._create_xml_patch_node(p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid)
-        _create_xml_facet_node(facet_type, facet, p_node)
+        pcxml._create_xml_realization_node(realization, p_node)
+        related_time_series_node = pcxml._create_xml_time_series_node(self, time_series_uuid, time_index, p_node,
+                                                                      support_uuid, support_type, support_root)
+        pcxml._create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind, uom, discrete,
+                                        property_kind_uuid)
+        pcxml._create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid)
+        pcxml._create_xml_facet_node(facet_type, facet, p_node)
 
-        self._create_xml_property_min_max(property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                          max_value)
+        pcxml._create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value,
+                                           max_value)
 
         if discrete:
-            sl_root = self._create_xml_lookup_node(p_node, string_lookup_uuid)
+            sl_root = pcxml._create_xml_lookup_node(self, p_node, string_lookup_uuid)
         else:  # continuous
-            self._create_xml_uom_node(p_node, uom, property_kind, min_value, max_value, facet_type, facet, title)
+            pcxml._create_xml_uom_node(self, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title)
             sl_root = None
-        self._create_xml_add_as_part(add_as_part, p_uuid, p_node, add_relationships, support_root, property_kind_uuid,
-                                     related_time_series_node, sl_root, discrete, string_lookup_uuid, const_value,
-                                     ext_uuid)
+        pcxml._create_xml_add_as_part(self, add_as_part, p_uuid, p_node, add_relationships, support_root,
+                                      property_kind_uuid, related_time_series_node, sl_root, discrete,
+                                      string_lookup_uuid, const_value, ext_uuid)
 
         return p_node
 
@@ -2614,21 +2587,10 @@ class PropertyCollection():
                 prop_node_list.append(part_root)
 
         if add_as_part:
-            self._create_property_set_xml_add_as_part(ps_node, ps_uuid, add_relationships, parent_set_ref_node,
-                                                      prop_node_list)
+            pcxml._create_property_set_xml_add_as_part(self, ps_node, ps_uuid, add_relationships, parent_set_ref_node,
+                                                       prop_node_list)
 
         return ps_node
-
-    def _create_property_set_xml_add_as_part(self, ps_node, ps_uuid, add_relationships, parent_set_ref_node,
-                                             prop_node_list):
-        self.model.add_part('obj_PropertySet', ps_uuid, ps_node)
-        if add_relationships:
-            # todo: add relationship with time series if time set kind is not 'not a time set'?
-            if self.parent_set_root is not None:
-                self.model.create_reciprocal_relationship(ps_node, 'destinationObject', parent_set_ref_node,
-                                                          'sourceObject')
-            for prop_node in prop_node_list:
-                self.model.create_reciprocal_relationship(ps_node, 'destinationObject', prop_node, 'sourceObject')
 
     def basic_static_property_parts(self,
                                     realization = None,
@@ -2666,14 +2628,14 @@ class PropertyCollection():
 
         perm_i_part = perm_j_part = perm_k_part = None
 
-        ntg_part = self._find_single_part('net to gross ratio', realization)
-        poro_part = self._find_single_part('porosity', realization)
+        ntg_part = pcga._find_single_part(self, 'net to gross ratio', realization)
+        poro_part = pcga._find_single_part(self, 'porosity', realization)
 
         perms = selective_version_of_collection(self, realization = realization, property_kind = 'permeability rock')
         if perms is None or perms.number_of_parts() == 0:
             log.error('no rock permeabilities present')
         else:
-            perm_i_part, perm_j_part, perm_k_part = self._get_single_perm_ijk_parts(perms, share_perm_parts,
+            perm_i_part, perm_j_part, perm_k_part = pcga._get_single_perm_ijk_parts(self, perms, share_perm_parts,
                                                                                     perm_k_mode, perm_k_ratio, ntg_part)
 
         return ntg_part, poro_part, perm_i_part, perm_j_part, perm_k_part
@@ -2749,12 +2711,6 @@ class PropertyCollection():
             'PERMK': five_uuids[4]
         }
 
-    def _part_direction(self, part):
-        facet_t = self.facet_type_for_part(part)
-        if facet_t is None or facet_t != 'direction':
-            return None
-        return self.facet_for_part(part)
-
     def _check_shape_list(self, indexable_element, direction, property_array, points, count):
         shape_list = self.supporting_shape(indexable_element = indexable_element, direction = direction)
         if shape_list is not None:
@@ -2765,220 +2721,6 @@ class PropertyCollection():
             if property_array is not None:
                 assert tuple(shape_list) == property_array.shape, \
                     f'property array shape {property_array.shape} is not the expected {tuple(shape_list)}'
-
-    def _get_property_kind_uuid(self, property_kind_uuid, property_kind, uom, discrete):
-        if property_kind_uuid is None:
-            pk_parts_list = self.model.parts_list_of_type('PropertyKind')
-            for part in pk_parts_list:
-                if self.model.citation_title_for_part(part) == property_kind:
-                    property_kind_uuid = self.model.uuid_for_part(part)
-                    break
-            if property_kind_uuid is None:
-                # create local property kind object and fetch uuid
-                lpk = PropertyKind(self.model,
-                                   title = property_kind,
-                                   example_uom = uom,
-                                   parent_property_kind = 'discrete' if discrete else 'continuous')
-                lpk.create_xml()
-                property_kind_uuid = lpk.uuid
-        return property_kind_uuid
-
-    def _create_xml_get_basics(self, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid,
-                               expand_const_arrays):
-        assert not discrete or not points
-        assert not points or const_value is None
-        assert not points or facet_type is None
-        assert self.model is not None
-
-        if null_value is not None:
-            self.null_value = null_value
-
-        if support_uuid is None:
-            support_uuid = self.support_uuid
-        assert support_uuid is not None
-        support_root = self.model.root_for_uuid(support_uuid)
-        # assert support_root is not None
-
-        if ext_uuid is None:
-            ext_uuid = self.model.h5_uuid()
-
-        if expand_const_arrays:
-            const_value = None
-
-        return support_root, support_uuid, ext_uuid, const_value
-
-    def _create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind, uom, discrete,
-                                  property_kind_uuid):
-        p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
-        p_kind_node.text = rqet.null_xml_text
-        if find_local_property_kinds and property_kind not in supported_property_kind_list:
-            property_kind_uuid = self._get_property_kind_uuid(property_kind_uuid, property_kind, uom, discrete)
-
-        if property_kind_uuid is None:
-            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'StandardPropertyKind')  # todo: local prop kind ref
-            kind_node = rqet.SubElement(p_kind_node, ns['resqml2'] + 'Kind')
-            kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlPropertyKind')
-            kind_node.text = property_kind
-        else:
-            p_kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'LocalPropertyKind')  # todo: local prop kind ref
-            self.model.create_ref_node('LocalPropertyKind',
-                                       property_kind,
-                                       property_kind_uuid,
-                                       content_type = 'obj_PropertyKind',
-                                       root = p_kind_node)
-
-    def _create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid):
-        # create patch node
-        const_count = None
-        if const_value is not None:
-            s_shape = self.supporting_shape(indexable_element = indexable_element, direction = direction)
-            assert s_shape is not None
-            const_count = np.product(np.array(s_shape, dtype = int))
-        _ = self.model.create_patch(p_uuid,
-                                    ext_uuid,
-                                    root = p_node,
-                                    hdf5_type = self.hdf5_type,
-                                    xsd_type = self.xsd_type,
-                                    null_value = self.null_value,
-                                    const_value = const_value,
-                                    const_count = const_count,
-                                    points = points)
-
-    def _get_property_type_details(self, discrete, string_lookup_uuid, points):
-        if discrete:
-            if string_lookup_uuid is None:
-                self.d_or_c_text = 'Discrete'
-
-            else:
-                self.d_or_c_text = 'Categorical'
-            self.xsd_type = 'integer'
-            self.hdf5_type = 'IntegerHdf5Array'
-        elif points:
-            self.d_or_c_text = 'Points'
-            self.xsd_type = 'double'
-            self.hdf5_type = 'Point3dHdf5Array'
-            self.null_value = None
-        else:
-            self.d_or_c_text = 'Continuous'
-            self.xsd_type = 'double'
-            self.hdf5_type = 'DoubleHdf5Array'
-            self.null_value = None
-
-    def _get_property_array_min_max_value(self, property_array, const_value, discrete, min_value, max_value):
-        if const_value is not None:
-            return _get_property_array_min_max_const(const_value, self.null_value, min_value, max_value, discrete)
-        elif property_array is not None:
-            return _get_property_array_min_max_array(property_array, min_value, max_value, discrete)
-
-    def _create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                     max_value):
-        if add_min_max:
-            # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
-            min_value, max_value = self._get_property_array_min_max_value(property_array, const_value, discrete,
-                                                                          min_value, max_value)
-            if min_value is not None:
-                min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
-                min_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
-                min_node.text = str(min_value)
-            if max_value is not None:
-                max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
-                max_node.set(ns['xsi'] + 'type', ns['xsd'] + self.xsd_type)
-                max_node.text = str(max_value)
-
-    def _create_xml_lookup_node(self, p_node, string_lookup_uuid):
-        sl_root = None
-        if string_lookup_uuid is not None:
-            sl_root = self.model.root_for_uuid(string_lookup_uuid)
-            assert sl_root is not None, 'string table lookup is missing whilst importing categorical property'
-            assert rqet.node_type(sl_root) == 'obj_StringTableLookup', 'referenced uuid is not for string table lookup'
-            self.model.create_ref_node('Lookup',
-                                       self.model.title_for_root(sl_root),
-                                       string_lookup_uuid,
-                                       content_type = 'obj_StringTableLookup',
-                                       root = p_node)
-        return sl_root
-
-    def _create_xml_uom_node(self, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title):
-        if not uom:
-            uom = guess_uom(property_kind, min_value, max_value, self.support, facet_type = facet_type, facet = facet)
-            if not uom:
-                uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
-                log.warning(f'uom set to Euc for property {title} of kind {property_kind}')
-        self.model.uom_node(p_node, uom)
-
-    def _create_xml_add_relationships(self, p_node, support_root, property_kind_uuid, related_time_series_node, sl_root,
-                                      discrete, string_lookup_uuid, const_value, ext_uuid):
-        if support_root is not None:
-            self.model.create_reciprocal_relationship(p_node, 'destinationObject', support_root, 'sourceObject')
-        if property_kind_uuid is not None:
-            pk_node = self.model.root_for_uuid(property_kind_uuid)
-            if pk_node is not None:
-                self.model.create_reciprocal_relationship(p_node, 'destinationObject', pk_node, 'sourceObject')
-        if related_time_series_node is not None:
-            self.model.create_reciprocal_relationship(p_node, 'destinationObject', related_time_series_node,
-                                                      'sourceObject')
-        if discrete and string_lookup_uuid is not None:
-            self.model.create_reciprocal_relationship(p_node, 'destinationObject', sl_root, 'sourceObject')
-
-        if const_value is None:
-            ext_node = self.model.root_for_part(
-                rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False))
-            self.model.create_reciprocal_relationship(p_node, 'mlToExternalPartProxy', ext_node,
-                                                      'externalPartProxyToMl')
-
-    def _create_xml_add_basics_to_p_node(self, p_node, title, originator, extra_metadata, source, count,
-                                         indexable_element):
-        self.model.create_citation(root = p_node, title = title, originator = originator)
-        rqet.create_metadata_xml(node = p_node, extra_metadata = extra_metadata)
-
-        if source is not None and len(source) > 0:
-            self.model.create_source(source = source, root = p_node)
-
-        count_node = rqet.SubElement(p_node, ns['resqml2'] + 'Count')
-        count_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-        count_node.text = str(count)
-
-        ie_node = rqet.SubElement(p_node, ns['resqml2'] + 'IndexableElement')
-        ie_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IndexableElements')
-        ie_node.text = indexable_element
-
-    def _create_xml_realization_node(self, realization, p_node):
-        if realization is not None and realization >= 0:
-            ri_node = rqet.SubElement(p_node, ns['resqml2'] + 'RealizationIndex')
-            ri_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
-            ri_node.text = str(realization)
-
-    def _create_xml_time_series_node(self, time_series_uuid, time_index, p_node, support_uuid, support_type,
-                                     support_root):
-        if time_series_uuid is None or time_index is None:
-            related_time_series_node = None
-        else:
-            related_time_series_node = self.model.root(uuid = time_series_uuid)
-            time_series = rts.any_time_series(self.model, uuid = time_series_uuid)
-            time_series.create_time_index(time_index, root = p_node)
-
-        support_title = '' if support_root is None else rqet.citation_title_for_node(support_root)
-        self.model.create_supporting_representation(support_uuid = support_uuid,
-                                                    root = p_node,
-                                                    title = support_title,
-                                                    content_type = support_type)
-        return related_time_series_node
-
-    def _create_xml_get_p_node(self, p_uuid):
-        p_node = self.model.new_obj_node(self.d_or_c_text + 'Property')
-        if p_uuid is None:
-            p_uuid = bu.uuid_from_string(p_node.attrib['uuid'])
-        else:
-            p_node.attrib['uuid'] = str(p_uuid)
-        return p_node, p_uuid
-
-    def _create_xml_add_as_part(self, add_as_part, p_uuid, p_node, add_relationships, support_root, property_kind_uuid,
-                                related_time_series_node, sl_root, discrete, string_lookup_uuid, const_value, ext_uuid):
-        if add_as_part:
-            self.model.add_part('obj_' + self.d_or_c_text + 'Property', p_uuid, p_node)
-            if add_relationships:
-                self._create_xml_add_relationships(p_node, support_root, property_kind_uuid, related_time_series_node,
-                                                   sl_root, discrete, string_lookup_uuid, const_value, ext_uuid)
 
     def _set_support_and_model_from_collection(self, other, support_uuid, grid):
 
@@ -3041,77 +2783,6 @@ class PropertyCollection():
                 return
             assert (False)
         self.dict[part] = other.dict[part]
-
-    def _find_single_part(self, kind, realization):
-        try:
-            part = self.singleton(realization = realization, property_kind = kind)
-        except Exception:
-            log.error(f'problem with {kind} (more than one array present?)')
-            part = None
-        return part
-
-    def _get_single_perm_ijk_parts(self, perms, share_perm_parts, perm_k_mode, perm_k_ratio, ntg_part):
-        if perms.number_of_parts() == 1:
-            return _get_single_perm_ijk_parts_one(perms, share_perm_parts)
-        else:
-            perm_i_part = _get_single_perm_ijk_for_direction(perms, 'I')
-            perm_j_part = _get_single_perm_ijk_for_direction(perms, 'J')
-            if perm_j_part is None and share_perm_parts:
-                perm_j_part = perm_i_part
-            elif perm_i_part is None and share_perm_parts:
-                perm_i_part = perm_j_part
-            perm_k_part = _get_single_perm_ijk_for_direction(perms, 'K')
-            if perm_k_part is None:
-                assert perm_k_mode in [None, 'none', 'shared', 'ratio', 'ntg', 'ntg squared']
-                # note: could switch ratio mode to shared if perm_k_ratio is 1.0
-                if perm_k_mode is None or perm_k_mode == 'none':
-                    pass
-                else:
-                    perm_k_part = self._get_perm_k_part(perms, perm_k_mode, share_perm_parts, perm_i_part, perm_j_part,
-                                                        perm_k_ratio, ntg_part)
-        return perm_i_part, perm_j_part, perm_k_part
-
-    def _get_perm_k_part(self, perms, perm_k_mode, share_perm_parts, perm_i_part, perm_j_part, perm_k_ratio, ntg_part):
-        if perm_k_mode == 'shared':
-            if share_perm_parts:
-                perm_k_part = perm_i_part
-        elif perm_i_part is not None:
-            log.info('generating K permeability data using mode ' + str(perm_k_mode))
-            if perm_j_part is not None and perm_j_part != perm_i_part:
-                # generate root mean square of I & J permeabilities to use as horizontal perm
-                kh = np.sqrt(perms.cached_part_array_ref(perm_i_part) * perms.cached_part_array_ref(perm_j_part))
-            else:  # use I permeability as horizontal perm
-                kh = perms.cached_part_array_ref(perm_i_part)
-            kv = kh * perm_k_ratio
-            if ntg_part is not None:
-                if perm_k_mode == 'ntg':
-                    kv *= self.cached_part_array_ref(ntg_part)
-                elif perm_k_mode == 'ntg squared':
-                    ntg = self.cached_part_array_ref(ntg_part)
-                    kv *= ntg * ntg
-            kv_collection = PropertyCollection()
-            kv_collection.set_support(support_uuid = self.support_uuid, model = self.model)
-            kv_collection.add_cached_array_to_imported_list(kv,
-                                                            'derived from horizontal perm with mode ' +
-                                                            str(perm_k_mode),
-                                                            'KK',
-                                                            discrete = False,
-                                                            uom = 'mD',
-                                                            time_index = None,
-                                                            null_value = None,
-                                                            property_kind = 'permeability rock',
-                                                            facet_type = 'direction',
-                                                            facet = 'K',
-                                                            realization = perms.realization_for_part(perm_i_part),
-                                                            indexable_element = perms.indexable_for_part(perm_i_part),
-                                                            count = 1,
-                                                            points = False)
-            self.model.h5_release()
-            kv_collection.write_hdf5_for_imported_list()
-            kv_collection.create_xml_for_imported_list_and_add_parts_to_model()
-            self.inherit_parts_from_other_collection(kv_collection)
-            perm_k_part = kv_collection.singleton()
-        return perm_k_part
 
     def _add_part_to_dict_get_realization(self, realization, xml_node):
         if realization is not None and self.realization is not None:
@@ -3213,7 +2884,7 @@ class PropertyCollection():
         assert not self.points_for_part(part), 'constant arrays not supported for points properties'
         assert self.support is not None
         shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
-                                      direction = self._part_direction(part))
+                                      direction = pcga._part_direction(self, part))
         assert shape is not None
         a = np.full(shape, const_value, dtype = float if self.continuous_for_part(part) else int)
         setattr(self, cached_array_name, a)
@@ -3476,67 +3147,6 @@ def _get_indexable_element(indexable_element, support_type):
     return indexable_element
 
 
-def _create_xml_facet_node(facet_type, facet, p_node):
-    if facet_type is not None and facet is not None:
-        facet_node = rqet.SubElement(p_node, ns['resqml2'] + 'Facet')
-        facet_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'PropertyKindFacet')
-        facet_node.text = rqet.null_xml_text
-        facet_type_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Facet')
-        facet_type_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Facet')
-        facet_type_node.text = facet_type
-        facet_value_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Value')
-        facet_value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
-        facet_value_node.text = facet
-
-
-def _get_property_array_min_max_const(const_value, null_value, min_value, max_value, discrete):
-    if (discrete and const_value != null_value) or (not discrete and not np.isnan(const_value)):
-        if min_value is None:
-            min_value = const_value
-        if max_value is None:
-            max_value = const_value
-    return min_value, max_value
-
-
-def _get_property_array_min_max_array(property_array, min_value, max_value, discrete):
-    if discrete:
-        min_value, max_value = _get_property_array_min_max_array_discrete(property_array, min_value, max_value)
-    else:
-        min_value, max_value = _get_property_array_min_max_array_continuous(property_array, min_value, max_value)
-
-    return min_value, max_value
-
-
-def _get_property_array_min_max_array_discrete(property_array, min_value, max_value):
-    if min_value is None:
-        try:
-            min_value = int(property_array.min())
-        except Exception:
-            min_value = None
-            log.warning('no xml minimum value set for discrete property')
-    if max_value is None:
-        try:
-            max_value = int(property_array.max())
-        except Exception:
-            max_value = None
-            log.warning('no xml maximum value set for discrete property')
-    return min_value, max_value
-
-
-def _get_property_array_min_max_array_continuous(property_array, min_value, max_value):
-    if min_value is None or max_value is None:
-        all_nan = np.all(np.isnan(property_array))
-    if min_value is None and not all_nan:
-        min_value = np.nanmin(property_array)
-        if np.isnan(min_value) or min_value is ma.masked:
-            min_value = None
-    if max_value is None and not all_nan:
-        max_value = np.nanmax(property_array)
-        if np.isnan(max_value) or max_value is ma.masked:
-            max_value = None
-    return min_value, max_value
-
-
 def _check_not_none_and_not_equals(attrib, method, part):
     return (attrib is not None and method(part) != attrib)
 
@@ -3565,58 +3175,6 @@ def _check_categorical_and_lookup(categorical, other, part):
             if not (other.continuous_for_part(part) or (other.string_lookup_uuid_for_part(part) is None)):
                 return True
     return False
-
-
-def _get_single_perm_ijk_parts_one(perms, share_perm_parts):
-    perm_i_part = perms.singleton()
-    if share_perm_parts:
-        perm_j_part = perm_k_part = perm_i_part
-    elif perms.facet_type_for_part(perm_i_part) == 'direction':
-        direction = perms.facet_for_part(perm_i_part)
-        if direction == 'J':
-            perm_j_part = perm_i_part
-            perm_i_part = None
-        elif direction == 'IJ':
-            perm_j_part = perm_i_part
-        elif direction == 'K':
-            perm_k_part = perm_i_part
-            perm_i_part = None
-        elif direction == 'IJK':
-            perm_j_part = perm_k_part = perm_i_part
-    return perm_i_part, perm_j_part, perm_k_part
-
-
-def _get_single_perm_ijk_for_direction(perms, direction):
-    facet_options, title_options = _get_facet_title_options_for_direction(direction)
-
-    try:
-        part = None
-        for facet_op in facet_options:
-            if not part:
-                part = perms.singleton(facet_type = 'direction', facet = facet_op)
-        if not part:
-            for title in title_options:
-                if not part:
-                    part = perms.singleton(citation_title = title)
-        if not part:
-            log.error(f'unable to discern which rock permeability to use for {direction} direction')
-    except Exception:
-        log.error(f'problem with permeability data (more than one {direction} direction array present?)')
-        part = None
-    return part
-
-
-def _get_facet_title_options_for_direction(direction):
-    if direction == 'I':
-        facet_options = ['I', 'IJ', 'IJK']
-        title_options = ['KI', 'PERMI', 'KX', 'PERMX']
-    elif direction == 'J':
-        facet_options = ['J', 'IJ', 'IJK']
-        title_options = ['KJ', 'PERMJ', 'KY', 'PERMY']
-    else:
-        facet_options = ['K', 'IJK']
-        title_options = ['KK', 'PERMK', 'KZ', 'PERMZ']
-    return facet_options, title_options
 
 
 def _add_part_to_dict_get_count_and_indexable(xml_node):
@@ -3906,3 +3464,14 @@ def _realizations_array_ref_get_r_extent(fill_missing, r_list):
     else:
         r_extent = len(r_list)
     return r_extent
+
+
+def _facet_array_ref_checks(collection):
+    assert collection.support is not None, 'attempt to build facets array for property collection without supporting representation'
+    assert collection.number_of_parts() > 0, 'attempt to build facets array for empty property collection'
+    assert collection.has_single_property_kind(
+    ), 'attempt to build facets array for collection containing multiple property kinds'
+    assert collection.has_single_indexable_element(
+    ), 'attempt to build facets array for collection containing a variety of indexable elements'
+    assert collection.has_single_uom(
+    ), 'attempt to build facets array for collection containing multiple units of measure'
