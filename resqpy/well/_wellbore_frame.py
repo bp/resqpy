@@ -161,7 +161,8 @@ class WellboreFrame(BaseResqpy):
 
         Uses the wellboreframe citation title as the well name
         """
-        if self.wellbore_interpretation is not None:
+        # if self.wellbore_interpretation is not None: # Kadija: I think this may have been an error
+        if self.wellbore_interpretation is None:
             log.info(f"Creating WellboreInterpretation and WellboreFeature with name {self.title}")
             self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, feature_name = self.title)
             self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model,

@@ -399,7 +399,6 @@ def test_find_marker_from_index(example_model_and_crs):
                                                  sequence_stratigraphy_surface = 'transgressive',
                                                  boundary_relation_list = ['conformable'])
     horizon_interp_2.create_xml()
-    horizon_interp_2_uuid = horizon_interp_2.uuid
 
     fault_feature_1 = rqo.TectonicBoundaryFeature(parent_model = model,
                                                   kind = 'fault',
