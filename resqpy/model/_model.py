@@ -24,6 +24,7 @@ import numpy as np
 import resqpy.crs as rqc
 import resqpy.fault as rqf
 import resqpy.grid as grr
+import resqpy.model._catalogue as m_c
 import resqpy.olio.consolidation as cons
 import resqpy.olio.time as time
 import resqpy.olio.uuid as bu
@@ -235,115 +236,17 @@ class Model():
         :meta common:
         """
 
-        if not parts_list:
-            parts_list = self.list_of_parts()
-        if uuid is not None:
-            part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
-            if part_name is None or part_name not in parts_list:
-                return []
-            parts_list = [part_name]
-        if epc_subdir:
-            if epc_subdir.startswith('/'):
-                epc_subdir = epc_subdir[1:]
-            if epc_subdir:
-                if not epc_subdir.endswith('/'):
-                    epc_subdir += '/'
-                filtered_list = []
-                for part in parts_list:
-                    if part.startswith[epc_subdir]:
-                        filtered_list.append(part)
-                if len(filtered_list) == 0:
-                    return []
-                parts_list = filtered_list
-        if obj_type:
-            if obj_type[0].isupper():
-                obj_type = 'obj_' + obj_type
-            filtered_list = []
-            for part in parts_list:
-                if self.parts_forest[part][0] == obj_type:
-                    filtered_list.append(part)
-            if len(filtered_list) == 0:
-                return []
-            parts_list = filtered_list
-        if title:
-            assert title_mode in [
-                'is', 'starts', 'ends', 'contains', 'is not', 'does not start', 'does not end', 'does not contain'
-            ]
-            if not title_case_sensitive:
-                title = title.upper()
-            filtered_list = []
-            for part in parts_list:
-                part_title = self.citation_title_for_part(part)
-                if not title_case_sensitive:
-                    part_title = part_title.upper()
-                if title_mode == 'is':
-                    if part_title == title:
-                        filtered_list.append(part)
-                elif title_mode == 'starts':
-                    if part_title.startswith(title):
-                        filtered_list.append(part)
-                elif title_mode == 'ends':
-                    if part_title.endswith(title):
-                        filtered_list.append(part)
-                elif title_mode == 'contains':
-                    if title in part_title:
-                        filtered_list.append(part)
-                if title_mode == 'is not':
-                    if part_title != title:
-                        filtered_list.append(part)
-                elif title_mode == 'does not start':
-                    if not part_title.startswith(title):
-                        filtered_list.append(part)
-                elif title_mode == 'does not end':
-                    if not part_title.endswith(title):
-                        filtered_list.append(part)
-                elif title_mode == 'does not contain':
-                    if title not in part_title:
-                        filtered_list.append(part)
-            if len(filtered_list) == 0:
-                return []
-            parts_list = filtered_list
-        if extra:
-            filtered_list = []
-            for part in parts_list:
-                part_extra = rqet.load_metadata_from_xml(self.root_for_part(part))
-                if not part_extra:
-                    continue
-                match = True
-                for key, value in extra.items():
-                    if key not in part_extra or part_extra[key] != value:
-                        match = False
-                        break
-                if match:
-                    filtered_list.append(part)
-            if len(filtered_list) == 0:
-                return []
-            parts_list = filtered_list
-        if related_uuid is not None:
-            parts_list = self.parts_list_filtered_by_related_uuid(parts_list, related_uuid)
-        if len(parts_list) == 0:
-            return []
-        if sort_by:
-            if sort_by == 'type':
-                parts_list.sort()
-            elif sort_by in ['newest', 'oldest']:
-                parts_list = self.sort_parts_list_by_timestamp(parts_list)
-                if sort_by == 'oldest':
-                    parts_list.reverse()
-            elif sort_by in ['uuid', 'title']:
-                sort_list = []
-                for index, part in enumerate(parts_list):
-                    if sort_by == 'uuid':
-                        key = str(self.uuid_for_part(part))
-                    else:
-                        key = self.citation_title_for_part(part)
-                    sort_list.append((key, index))
-                sort_list.sort()
-                sorted_list = []
-                for _, index in sort_list:
-                    sorted_list.append(parts_list[index])
-                parts_list = sorted_list
-        return parts_list
+        return m_c._parts(self,
+                          parts_list = parts_list,
+                          obj_type = obj_type,
+                          uuid = uuid,
+                          title = title,
+                          title_mode = title_mode,
+                          title_case_sensitive = title_case_sensitive,
+                          extra = extra,
+                          related_uuid = related_uuid,
+                          epc_subdir = epc_subdir,
+                          sort_by = sort_by)
 
     def part(self,
              parts_list = None,
@@ -375,28 +278,17 @@ class Model():
         :meta common:
         """
 
-        pl = self.parts(parts_list = parts_list,
-                        obj_type = obj_type,
-                        uuid = uuid,
-                        title = title,
-                        title_mode = title_mode,
-                        title_case_sensitive = title_case_sensitive,
-                        extra = extra,
-                        related_uuid = related_uuid,
-                        epc_subdir = epc_subdir)
-        if len(pl) == 0:
-            return None
-        if len(pl) == 1 or multiple_handling == 'first':
-            return pl[0]
-        if multiple_handling == 'none':
-            return None
-        elif multiple_handling in ['newest', 'oldest']:
-            sorted_list = self.sort_parts_list_by_timestamp(pl)
-            if multiple_handling == 'newest':
-                return sorted_list[0]
-            return sorted_list[-1]
-        else:
-            raise ValueError('more than one part matches criteria')
+        return m_c._part(self,
+                         parts_list = parts_list,
+                         obj_type = obj_type,
+                         uuid = uuid,
+                         title = title,
+                         title_mode = title_mode,
+                         title_case_sensitive = title_case_sensitive,
+                         extra = extra,
+                         related_uuid = related_uuid,
+                         epc_subdir = epc_subdir,
+                         multiple_handling = multiple_handling)
 
     def uuids(self,
               parts_list = None,
@@ -420,27 +312,17 @@ class Model():
         :meta common:
         """
 
-        sort_by_uuid = (sort_by == 'uuid')
-        if sort_by_uuid:
-            sort_by = None
-        pl = self.parts(parts_list = parts_list,
-                        obj_type = obj_type,
-                        uuid = uuid,
-                        title = title,
-                        title_mode = title_mode,
-                        title_case_sensitive = title_case_sensitive,
-                        extra = extra,
-                        related_uuid = related_uuid,
-                        epc_subdir = epc_subdir,
-                        sort_by = sort_by)
-        if len(pl) == 0:
-            return []
-        uuid_list = []
-        for part in pl:
-            uuid_list.append(self.uuid_for_part(part))
-        if sort_by_uuid:
-            uuid_list.sort()
-        return uuid_list
+        return m_c._uuids(self,
+                          parts_list = parts_list,
+                          obj_type = obj_type,
+                          uuid = uuid,
+                          title = title,
+                          title_mode = title_mode,
+                          title_case_sensitive = title_case_sensitive,
+                          extra = extra,
+                          related_uuid = related_uuid,
+                          epc_subdir = epc_subdir,
+                          sort_by = sort_by)
 
     def uuid(self,
              parts_list = None,
@@ -464,7 +346,8 @@ class Model():
         :meta common:
         """
 
-        part = self.part(parts_list = parts_list,
+        return m_c._uuid(self,
+                         parts_list = parts_list,
                          obj_type = obj_type,
                          uuid = uuid,
                          title = title,
@@ -474,9 +357,6 @@ class Model():
                          related_uuid = related_uuid,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
-        if part is None:
-            return None
-        return rqet.uuid_in_part_name(part)
 
     def roots(self,
               parts_list = None,
@@ -500,20 +380,17 @@ class Model():
         :meta common:
         """
 
-        pl = self.parts(parts_list = parts_list,
-                        obj_type = obj_type,
-                        uuid = uuid,
-                        title = title,
-                        title_mode = title_mode,
-                        title_case_sensitive = title_case_sensitive,
-                        extra = extra,
-                        related_uuid = related_uuid,
-                        epc_subdir = epc_subdir,
-                        sort_by = sort_by)
-        root_list = []
-        for part in pl:
-            root_list.append(self.root_for_part(part))
-        return root_list
+        return m_c._roots(self,
+                          parts_list = parts_list,
+                          obj_type = obj_type,
+                          uuid = uuid,
+                          title = title,
+                          title_mode = title_mode,
+                          title_case_sensitive = title_case_sensitive,
+                          extra = extra,
+                          related_uuid = related_uuid,
+                          epc_subdir = epc_subdir,
+                          sort_by = sort_by)
 
     def root(self,
              parts_list = None,
@@ -537,7 +414,8 @@ class Model():
         :meta common:
         """
 
-        part = self.part(parts_list = parts_list,
+        return m_c._root(self,
+                         parts_list = parts_list,
                          obj_type = obj_type,
                          uuid = uuid,
                          title = title,
@@ -547,9 +425,6 @@ class Model():
                          related_uuid = related_uuid,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
-        if part is None:
-            return None
-        return self.root_for_part(part)
 
     def titles(self,
                parts_list = None,
@@ -573,20 +448,17 @@ class Model():
         :meta common:
         """
 
-        pl = self.parts(parts_list = parts_list,
-                        obj_type = obj_type,
-                        uuid = uuid,
-                        title = title,
-                        title_mode = title_mode,
-                        title_case_sensitive = title_case_sensitive,
-                        extra = extra,
-                        related_uuid = related_uuid,
-                        epc_subdir = epc_subdir,
-                        sort_by = sort_by)
-        title_list = []
-        for part in pl:
-            title_list.append(self.citation_title_for_part(part))
-        return title_list
+        return m_c._titles(self,
+                           parts_list = parts_list,
+                           obj_type = obj_type,
+                           uuid = uuid,
+                           title = title,
+                           title_mode = title_mode,
+                           title_case_sensitive = title_case_sensitive,
+                           extra = extra,
+                           related_uuid = related_uuid,
+                           epc_subdir = epc_subdir,
+                           sort_by = sort_by)
 
     def title(self,
               parts_list = None,
@@ -610,19 +482,17 @@ class Model():
         :meta common:
         """
 
-        part = self.part(parts_list = parts_list,
-                         obj_type = obj_type,
-                         uuid = uuid,
-                         title = title,
-                         title_mode = title_mode,
-                         title_case_sensitive = title_case_sensitive,
-                         extra = extra,
-                         related_uuid = related_uuid,
-                         epc_subdir = epc_subdir,
-                         multiple_handling = multiple_handling)
-        if part is None:
-            return None
-        return self.citation_title_for_part(part)
+        return m_c._title(self,
+                          parts_list = parts_list,
+                          obj_type = obj_type,
+                          uuid = uuid,
+                          title = title,
+                          title_mode = title_mode,
+                          title_case_sensitive = title_case_sensitive,
+                          extra = extra,
+                          related_uuid = related_uuid,
+                          epc_subdir = epc_subdir,
+                          multiple_handling = multiple_handling)
 
     def set_modified(self):
         """Marks the model as having been modified and assigns a new uuid.
@@ -1021,40 +891,17 @@ class Model():
            it is equivalent to: self.parts(obj_type = type_of_interest, uuid = uuid)
         """
 
-        if type_of_interest and type_of_interest[0].isupper():
-            type_of_interest = 'obj_' + type_of_interest
-
-        if uuid is not None:
-            part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
-            if part_name is None or (type_of_interest is not None and
-                                     (self.parts_forest[part_name][0] != type_of_interest)):
-                return []
-            return [part_name]
-
-        parts_list = []
-        for part_name in self.parts_forest:
-            if type_of_interest is None or self.parts_forest[part_name][0] == type_of_interest:
-                parts_list.append(part_name)
-        return parts_list
+        return m_c._parts_list_of_type(self, type_of_interest = type_of_interest, uuid = uuid)
 
     def list_of_parts(self, only_objects = True):
         """Return a complete list of parts."""
 
-        pl = list(self.parts_forest.keys())
-        if not only_objects:
-            return pl
-        obj_list = []
-        for part in pl:
-            dir_place = part.rfind('/')
-            dir_free_part = part[dir_place + 1:]
-            if dir_free_part.startswith('obj_') and not dir_free_part.startswith('obj_Epc'):
-                obj_list.append(part)
-        return obj_list
+        return m_c._list_of_parts(self, only_objects = only_objects)
 
     def number_of_parts(self):
         """Retuns the number of parts in the model, including external parts such as the link to an hdf5 file."""
 
-        return len(self.parts_forest)
+        return m_c._number_of_parts(self)
 
     def part_for_uuid(self, uuid):
         """Returns the part name which has the given uuid.
@@ -1068,7 +915,7 @@ class Model():
         :meta common:
         """
 
-        return self.uuid_part_dict.get(bu.uuid_as_int(uuid))
+        return m_c._part_for_uuid(self, uuid)
 
     def root_for_uuid(self, uuid):
         """Returns the xml root for the part which has the given uuid.
@@ -1082,7 +929,7 @@ class Model():
         :meta common:
         """
 
-        return self.root_for_part(self.part_for_uuid(uuid))
+        return m_c._root_for_uuid(self, uuid)
 
     def parts_count_by_type(self, type_of_interest = None):
         """Returns a sorted list of (type, count) for parts.
@@ -1096,32 +943,7 @@ class Model():
            and count
         """
 
-        # note: resqml classes start with 'obj_' whilst witsml classes don't!
-        if type_of_interest and type_of_interest.startswith('obj_'):
-            type_of_interest = type_of_interest[4:]
-
-        type_list = []
-        for part_name in self.parts_forest:
-            part_type = self.parts_forest[part_name][0]
-            if part_type is None:
-                continue
-            if part_type.startswith('obj_'):
-                part_type = part_type[4:]
-            if type_of_interest is None or part_type == type_of_interest:
-                type_list.append(part_type)
-        type_list.sort()
-        type_list.append('END')  # simplifies termination of scan below
-        result_list = []
-        count = 0
-        current_type = ''
-        for index in range(len(type_list)):
-            if type_list[index] != current_type:
-                if count:
-                    result_list.append((current_type, count))
-                current_type = type_list[index]
-                count = 0
-            count += 1
-        return result_list
+        return m_c._parts_count_by_type(self, type_of_interest = type_of_interest)
 
     def parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = None):
         """From a list of parts, returns a list of those parts which have a relationship with the given uuid.
@@ -1142,60 +964,12 @@ class Model():
            this method scans the relationship info for every present part, looking for uuid in rels
         """
 
-        if not self.rels_present or parts_list is None or uuid is None:
-            return None
-        filtered_list = []
-        this_part = self.part_for_uuid(uuid)
-
-        if this_part is not None:
-            rels_part_root = self.root_for_part(rqet.rels_part_name_for_part(this_part), is_rels = True)
-            if rels_part_root is not None:
-                for relation_node in rels_part_root:
-                    if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
-                        continue
-                    target_part = relation_node.attrib['Target']
-                    if target_part not in parts_list:
-                        continue
-                    if uuid_is_source is not None:
-                        source_dest = relation_node.attrib['Type']
-                        if uuid_is_source:
-                            if 'source' not in source_dest:
-                                continue
-                        else:
-                            if 'source' in source_dest:
-                                continue
-                    filtered_list.append(target_part)
-
-        for part in parts_list:
-            if part in filtered_list:
-                continue
-            rels_part_root = self.root_for_part(rqet.rels_part_name_for_part(part), is_rels = True)
-            if rels_part_root is None:
-                continue
-            for relation_node in rels_part_root:
-                if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
-                    continue
-                target_part = relation_node.attrib['Target']
-                relation_uuid = rqet.uuid_in_part_name(target_part)
-                if bu.matching_uuids(uuid, relation_uuid):
-                    if uuid_is_source is not None:
-                        source_dest = relation_node.attrib['Type']
-                        if uuid_is_source:
-                            if 'source' in source_dest:
-                                continue  # relation is source, so uuid is not
-                        else:
-                            if 'source' not in source_dest:
-                                continue  # relation is not source, so uuid is
-                    filtered_list.append(part)
-                    break
-
-        return filtered_list
+        return m_c._parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = uuid_is_source)
 
     def supporting_representation_for_part(self, part):
         """Returns the uuid of the supporting representation for the part, if found, otherwise None."""
 
-        return bu.uuid_from_string(
-            rqet.find_nested_tags_text(self.root_for_part(part), ['SupportingRepresentation', 'UUID']))
+        return m_c._supporting_representation_for_part(self, part)
 
     def parts_list_filtered_by_supporting_uuid(self, parts_list, uuid):
         """From a list of parts, returns a list of those parts which have the given uuid as supporting representation.
@@ -1212,16 +986,7 @@ class Model():
            the part to which the given uuid applies might or might not be in the input parts list
         """
 
-        if parts_list is None or uuid is None:
-            return None
-        filtered_list = []
-        for part in parts_list:
-            support_ref_uuid = self.supporting_representation_for_part(part)
-            if support_ref_uuid is None:
-                continue
-            if bu.matching_uuids(support_ref_uuid, uuid):
-                filtered_list.append(part)
-        return filtered_list
+        return m_c._parts_list_filtered_by_supporting_uuid(self, parts_list, uuid)
 
     def parts_list_related_to_uuid_of_type(self, uuid, type_of_interest = None):
         """Returns a list of parts of type of interest that relate to part with given uuid.
@@ -1235,8 +1000,7 @@ class Model():
            list of strings being the part names of the type of interest, related to the uuid
         """
 
-        parts_list = self.parts_list_of_type(type_of_interest = type_of_interest)
-        return self.parts_list_filtered_by_related_uuid(parts_list, uuid)
+        return m_c._parts_list_related_to_uuid_of_type(self, uuid, type_of_interest = type_of_interest)
 
     def external_parts_list(self):
         """Returns a list of part names for external part references.
@@ -1251,7 +1015,7 @@ class Model():
            a single hdf5 file for a given epc file
         """
 
-        return self.parts_list_of_type('obj_EpcExternalPartReference')
+        return m_c._external_parts_list(self)
 
     def uuid_for_part(self, part_name, is_rels = None):
         """Returns the uuid for the named part.
@@ -1271,13 +1035,7 @@ class Model():
         :meta common:
         """
 
-        if part_name is None:
-            return None
-        if is_rels is None:
-            is_rels = part_name.endswith('.rels')
-        if is_rels:
-            return self.rels_forest[part_name][0]
-        return self.parts_forest[part_name][1]
+        return m_c._uuid_for_part(self, part_name, is_rels = is_rels)
 
     def type_of_part(self, part_name, strip_obj = False):
         """Returns content type for the named part (does not apply to rels parts).
@@ -1293,13 +1051,7 @@ class Model():
         :meta common:
         """
 
-        part_info = self.parts_forest.get(part_name)
-        if part_info is None:
-            return None
-        obj_type = part_info[0]
-        if obj_type is None or not strip_obj or not obj_type.startswith('obj_'):
-            return obj_type
-        return obj_type[4:]
+        return m_c._type_of_part(self, part_name, strip_obj = strip_obj)
 
     def type_of_uuid(self, uuid, strip_obj = False):
         """Returns content type for the uuid.
@@ -1315,8 +1067,7 @@ class Model():
         :meta common:
         """
 
-        part_name = self.uuid_part_dict.get(bu.uuid_as_int(uuid))
-        return self.type_of_part(part_name, strip_obj = strip_obj)
+        return m_c._type_of_uuid(self, uuid, strip_obj = strip_obj)
 
     def tree_for_part(self, part_name, is_rels = None):
         """Returns parsed xml tree for the named part.
@@ -1330,47 +1081,7 @@ class Model():
            parsed xml tree (defined in lxml or ElementTree package) for the named part
         """
 
-        if not part_name:
-            return None
-        if is_rels is None:
-            is_rels = part_name.endswith('.rels')
-        is_other = not is_rels and part_name.startswith('docProps')
-        if is_rels:
-            if part_name not in self.rels_forest:
-                return None
-            (_, tree) = self.rels_forest[part_name]
-            if tree is None:
-                if not self.epc_file:
-                    return None
-                with zf.ZipFile(self.epc_file) as epc:
-                    load_success = self.load_part(epc, part_name, is_rels = True)
-                    if not load_success:
-                        return None
-            return self.rels_forest[part_name][1]
-        elif is_other:
-            if part_name not in self.other_forest:
-                return None
-            (_, tree) = self.other_forest[part_name]
-            if tree is None:
-                if not self.epc_file:
-                    return None
-                with zf.ZipFile(self.epc_file) as epc:
-                    load_success = self.load_part(epc, part_name, is_rels = False)
-                    if not load_success:
-                        return None
-            return self.other_forest[part_name][1]
-        else:
-            if part_name not in self.parts_forest:
-                return None
-            (_, _, tree) = self.parts_forest[part_name]
-            if tree is None:
-                if not self.epc_file:
-                    return None
-                with zf.ZipFile(self.epc_file) as epc:
-                    load_success = self.load_part(epc, part_name, is_rels = False)
-                    if not load_success:
-                        return None
-            return self.parts_forest[part_name][2]
+        return m_c._tree_for_part(self, part_name, is_rels = is_rels)
 
     def root_for_part(self, part_name, is_rels = None):
         """Returns root of parsed xml tree for the named part.
@@ -1386,12 +1097,7 @@ class Model():
         :meta common:
         """
 
-        if not part_name:
-            return None
-        tree = self.tree_for_part(part_name, is_rels = is_rels)
-        if tree is None:
-            return None
-        return tree.getroot()
+        return m_c._root_for_part(self, part_name, is_rels = is_rels)
 
     def change_hdf5_uuid_in_hdf5_references(self, node, old_uuid, new_uuid):
         """Scan node for hdf5 references and set the uuid of the hdf5 file itself to new_uuid.
@@ -1606,7 +1312,7 @@ class Model():
         :meta common:
         """
 
-        return rqet.citation_title_for_node(self.root_for_part(part))
+        return m_c._citation_title_for_part(self, part)
 
     def root_for_time_series(self, uuid = None):
         """Return root for time series part.
@@ -1623,20 +1329,7 @@ class Model():
            date is returned
         """
 
-        time_series_list = self.parts_list_of_type('obj_TimeSeries', uuid = uuid)
-        if len(time_series_list) == 0:
-            return None
-        if len(time_series_list) == 1:
-            return self.root_for_part(time_series_list[0])
-        log.warning('selecting time series with earliest creation date')
-        oldest_root = oldest_creation = None
-        for ts in time_series_list:
-            node = self.root_for_part(ts)
-            created = rqet.creation_date_for_node(node)
-            if oldest_creation is None or created < oldest_creation:
-                oldest_creation = created
-                oldest_root = node
-        return oldest_root
+        return m_c._root_for_time_series(self, uuid = uuid)
 
     def resolve_grid_root(self, grid_root = None, uuid = None):
         """If grid root argument is None, returns the root for the IJK Grid part instead.
@@ -1763,11 +1456,7 @@ class Model():
            is more than one time series part in the model
         """
 
-        if time_series_root is not None:
-            return time_series_root
-        if self.time_series is None:
-            self.time_series = self.root_for_time_series()
-        return self.time_series
+        return m_c._resolve_time_series_root(self, time_series_root = time_series_root)
 
     def h5_uuid_and_path_for_node(self, node, tag = 'Values'):
         """Returns a (hdf5_uuid, hdf5_internal_path) pair for an xml array node.
@@ -2433,11 +2122,7 @@ class Model():
         :meta common:
         """
 
-        title = rqet.find_tag(rqet.find_tag(root, 'Citation'), 'Title')
-        if title is None:
-            return None
-
-        return title.text
+        return m_c._title_for_root(self, root = root)
 
     def title_for_part(self, part_name):  # duplicate functionality to citation_title_for_part()
         """Returns the Title text from the Citation for the given main part name (not for rels).
@@ -2452,7 +2137,7 @@ class Model():
         :meta common:
         """
 
-        return self.title_for_root(self.root_for_part(part_name))
+        return m_c._title_for_part(self, part_name)
 
     def create_unknown(self, root = None):
         """Creates an Unknown node and optionally adds as child of root.
@@ -3289,16 +2974,14 @@ class Model():
         :meta common:
         """
 
-        uuids = self.uuids(obj_type = cls.resqml_type)
-        for uuid in uuids:
-            yield cls(self, uuid = uuid)
+        for obj in m_c._iter_objs(self, cls):
+            yield obj
 
     def iter_grid_connection_sets(self):
         """Yields grid connection set objects, one for each gcs in this model."""
 
-        gcs_uuids = self.uuids(obj_type = 'GridConnectionSetRepresentation')
-        for gcs_uuid in gcs_uuids:
-            yield rqf.GridConnectionSet(self, uuid = gcs_uuid)
+        for gcs in m_c._iter_grid_connection_sets(self):
+            yield gcs
 
     def iter_wellbore_interpretations(self):
         """Iterable of all WellboreInterpretations associated with the model.
@@ -3308,12 +2991,9 @@ class Model():
 
         :meta common:
         """
-        import resqpy.organize  # Imported here for speed, module is not always needed
 
-        uuids = self.uuids(obj_type = 'WellboreInterpretation')
-        if uuids:
-            for uuid in uuids:
-                yield resqpy.organize.WellboreInterpretation(self, uuid = uuid)
+        for wi in m_c._iter_wellbore_interpretations(self):
+            yield wi
 
     def iter_trajectories(self):
         """Iterable of all trajectories associated with the model.
@@ -3323,11 +3003,9 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well  # Imported here for speed, module is not always needed
 
-        uuids = self.uuids(obj_type = "WellboreTrajectoryRepresentation")
-        for uuid in uuids:
-            yield resqpy.well.Trajectory(self, uuid = uuid)
+        for wt in m_c._iter_trajectories(self):
+            yield wt
 
     def iter_md_datums(self):
         """Iterable of all MdDatum objects associated with the model.
@@ -3337,13 +3015,9 @@ class Model():
 
         :meta common:
         """
-        import resqpy.well  # Imported here to avoid circular imports
 
-        uuids = self.uuids(obj_type = 'MdDatum')
-        if uuids:
-            for uuid in uuids:
-                datum = resqpy.well.MdDatum(self, uuid = uuid)
-                yield datum
+        for mdd in m_c._iter_md_datums(self):
+            yield mdd
 
     def iter_crs(self):
         """Iterable of all CRS objects associated with the model.
@@ -3353,29 +3027,14 @@ class Model():
 
         :meta common:
         """
-        import resqpy.crs  # Imported here for speed, module is not always needed
 
-        uuids = self.uuids(obj_type = 'LocalDepth3dCrs') + self.uuids(obj_type = 'LocalTime3dCrs')
-        if uuids:
-            for uuid in uuids:
-                yield resqpy.crs.Crs(self, uuid = uuid)
+        for crs in m_c._iter_crs(self):
+            yield crs
 
     def sort_parts_list_by_timestamp(self, parts_list):
         """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
 
-        if parts_list is None:
-            return None
-        if len(parts_list) == 0:
-            return []
-        sort_list = []
-        for index, part in enumerate(parts_list):
-            timestamp = rqet.find_nested_tags_text(self.root_for_part(part), ['Citation', 'Creation'])
-            sort_list.append((timestamp, index))
-        sort_list.sort()
-        results = []
-        for timestamp, index in reversed(sort_list):
-            results.append(parts_list[index])
-        return results
+        return m_c._sort_parts_list_by_timestamp(self, parts_list)
 
     def as_graph(self, uuids_subset = None):
         """Return representation of model as nodes and edges, suitable for plotting in a graph.
@@ -3420,25 +3079,8 @@ class Model():
 
         :meta common:
         """
-        nodes = {}
-        edges = set()
 
-        if uuids_subset is None:
-            uuids_subset = self.uuids()
-
-        uuids_subset = set(map(str, uuids_subset))
-
-        for uuid in uuids_subset:
-            part = self.part_for_uuid(uuid)
-            nodes[uuid] = dict(
-                resqml_type = self.type_of_part(part, strip_obj = True),
-                title = self.citation_title_for_part(part),
-            )
-            for rel in map(str, self.uuids(related_uuid = uuid)):
-                if rel in uuids_subset:
-                    edges.add(frozenset([uuid, rel]))
-
-        return nodes, edges
+        return m_c._as_graph(self, uuids_subset = uuids_subset)
 
     def _set_uuid_to_part(self, part_name):
         """Adds an entry to the dictionary mapping from uuid to part name."""
