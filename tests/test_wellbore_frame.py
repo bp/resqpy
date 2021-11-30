@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 
 import resqpy.well
-import resqpy.organize as rqo
 from resqpy.model import Model
 
 
@@ -114,4 +113,4 @@ def test_create_feature_and_intrepretation(example_model_and_crs):
 
     # ----------- Assert ---------
     assert wellbore_frame.wellbore_feature is not None
-    wellbore_frame.wellbore_feature.feature_name == wellbore_frame.title
+    assert wellbore_frame.wellbore_feature.feature_name == wellbore_frame.title
