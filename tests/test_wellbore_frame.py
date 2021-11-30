@@ -5,6 +5,7 @@ import resqpy.well
 import resqpy.organize as rqo
 from resqpy.model import Model
 
+
 def test_WellboreFrame(example_model_and_crs):
     # Test that all attributes are correctly saved and loaded from disk
 

@@ -18,8 +18,7 @@ def test_wellspec_properties(example_model_and_crs):
                        dxyz = (50.0, -50.0, 50.0),
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
-                       set_points_cached = True
-                       )
+                       set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
@@ -44,8 +43,7 @@ def test_wellspec_properties(example_model_and_crs):
                                  wellspec_file = wellspec_file,
                                  well_name = well_name,
                                  use_face_centres = True,
-                                 add_wellspec_properties = True
-                                 )
+                                 add_wellspec_properties = True)
     assert bw is not None
     bw_uuid = bw.uuid
     skin_uuid = model.uuid(title = 'SKIN', related_uuid = bw.uuid)
@@ -61,7 +59,8 @@ def test_wellspec_properties(example_model_and_crs):
     assert bw2_uuid is not None
     bw2 = resqpy.well.BlockedWell(model, uuid = bw2_uuid)
     assert bu.matching_uuids(bw_uuid, bw2_uuid)
-    df2 = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'LENGTH', 'SKIN', 'RADW', 'PPERF'], use_properties = True)
+    df2 = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'LENGTH', 'SKIN', 'RADW', 'PPERF'],
+                       use_properties = True)
     assert df2 is not None
     assert len(df2.columns) == 9
     for col in ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF']:

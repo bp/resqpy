@@ -241,7 +241,6 @@ def test_logs_conversion(example_model_with_logs):
 
 # BlockedWell
 
-
 # def test_wellspec_properties(example_model_and_crs):
 #     model, crs = example_model_and_crs
 #     grid = RegularGrid(model,
