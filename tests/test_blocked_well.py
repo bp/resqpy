@@ -178,7 +178,7 @@ def test_verify_grid_name(example_model_and_crs):
 
     # --------- Assert ----------
     assert skipped_warning_grid == 'grid_2'
-    assert skip_row == True
+    assert skip_row
 
 
 def test_calculate_exit_and_entry(example_model_and_crs):
