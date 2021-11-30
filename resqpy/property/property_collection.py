@@ -1827,12 +1827,12 @@ class PropertyCollection():
             assert shape is not None
             return shape, (float if self.continuous_for_part(part) else int)
 
-        h5_key_pair = self._shape_and_type_of_part_get_h5keypair(part, part_node)
+        h5_key_pair = self._shape_and_type_of_part_get_h5keypair(part, part_node, model)
         if h5_key_pair is None:
             return None, None
         return model.h5_array_shape_and_type(h5_key_pair)
 
-    def _shape_and_type_of_part_get_h5keypair(self, part, part_node):
+    def _shape_and_type_of_part_get_h5keypair(self, part, part_node, model):
         if self.points_for_part(part):
             patch_list = rqet.list_of_tag(part_node, 'PatchOfpoints')
             assert len(patch_list) == 1  # todo: handle more than one patch of points
@@ -1841,7 +1841,6 @@ class PropertyCollection():
             patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
             assert len(patch_list) == 1  # todo: handle more than one patch of values
             return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], tag = 'Values'))
-
 
     def facets_array_ref(self, use_32_bit = False, indexable_element = None):  # todo: add masked argument
         """Returns a +1D array of all parts with first axis being over facet values; Use facet_list() for lookup.
@@ -2137,7 +2136,8 @@ class PropertyCollection():
         if min_value is None or max_value is None:
             return None, min_value, max_value
 
-        min_value, max_value, p_array = _normalized_part_array_apply_discrete_cycle(discrete_cycle, p_array, min_value, max_value)
+        min_value, max_value, p_array = _normalized_part_array_apply_discrete_cycle(discrete_cycle, p_array, min_value,
+                                                                                    max_value)
         min_value, max_value = _normalized_part_array_nan_if_masked(min_value, max_value, masked)
 
         if min_value == np.nan or max_value == np.nan:
@@ -2256,7 +2256,7 @@ class PropertyCollection():
 
     def _min_max_of_cached_array(self, cached_name, cached_array, null_value, discrete):
         self.__dict__[cached_name] = cached_array
-        zorro = self.masked_array(cached_array, exclude_value=null_value)
+        zorro = self.masked_array(cached_array, exclude_value = null_value)
         if not discrete and np.all(np.isnan(zorro)):
             min_value = max_value = None
         elif discrete:
@@ -2509,7 +2509,8 @@ class PropertyCollection():
         #      log.debug('creating property node for ' + title)
         # currently assumes discrete properties to be 32 bit integers and continuous to be 64 bit reals
         # also assumes property_kind is one of the standard resqml property kinds; todo: allow local p kind node as optional arg
-        support_root, support_uuid, ext_uuid, const_value = self._create_xml_get_basics(discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid, expand_const_arrays)
+        support_root, support_uuid, ext_uuid, const_value = self._create_xml_get_basics(
+            discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid, expand_const_arrays)
 
         support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
         indexable_element = _get_indexable_element(indexable_element, support_type)
@@ -2526,16 +2527,19 @@ class PropertyCollection():
         self._get_property_type_details(discrete, string_lookup_uuid, points)
         p_node, p_uuid = self._create_xml_get_p_node(p_uuid)
 
-        self._create_xml_add_basics_to_p_node(p_node, title, originator, extra_metadata, source, count, indexable_element)
+        self._create_xml_add_basics_to_p_node(p_node, title, originator, extra_metadata, source, count,
+                                              indexable_element)
 
         self._create_xml_realization_node(realization, p_node)
         related_time_series_node = self._create_xml_time_series_node(time_series_uuid, time_index, p_node, support_uuid,
                                                                      support_type, support_root)
-        self._create_xml_property_kind(p_node, find_local_property_kinds, property_kind, uom, discrete, property_kind_uuid)
+        self._create_xml_property_kind(p_node, find_local_property_kinds, property_kind, uom, discrete,
+                                       property_kind_uuid)
         self._create_xml_patch_node(p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid)
         _create_xml_facet_node(facet_type, facet, p_node)
 
-        self._create_xml_property_min_max(property_array, const_value, discrete, add_min_max, p_node, min_value, max_value)
+        self._create_xml_property_min_max(property_array, const_value, discrete, add_min_max, p_node, min_value,
+                                          max_value)
 
         if discrete:
             sl_root = self._create_xml_lookup_node(p_node, string_lookup_uuid)
@@ -2610,11 +2614,13 @@ class PropertyCollection():
                 prop_node_list.append(part_root)
 
         if add_as_part:
-            self._create_property_set_xml_add_as_part(ps_node, ps_uuid, add_relationships, parent_set_ref_node, prop_node_list)
+            self._create_property_set_xml_add_as_part(ps_node, ps_uuid, add_relationships, parent_set_ref_node,
+                                                      prop_node_list)
 
         return ps_node
 
-    def _create_property_set_xml_add_as_part(self, ps_node, ps_uuid, add_relationships, parent_set_ref_node, prop_node_list):
+    def _create_property_set_xml_add_as_part(self, ps_node, ps_uuid, add_relationships, parent_set_ref_node,
+                                             prop_node_list):
         self.model.add_part('obj_PropertySet', ps_uuid, ps_node)
         if add_relationships:
             # todo: add relationship with time series if time set kind is not 'not a time set'?
@@ -2777,7 +2783,8 @@ class PropertyCollection():
                 property_kind_uuid = lpk.uuid
         return property_kind_uuid
 
-    def _create_xml_get_basics(self, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid, expand_const_arrays):
+    def _create_xml_get_basics(self, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid,
+                               expand_const_arrays):
         assert not discrete or not points
         assert not points or const_value is None
         assert not points or facet_type is None
@@ -2863,7 +2870,8 @@ class PropertyCollection():
         elif property_array is not None:
             return _get_property_array_min_max_array(property_array, min_value, max_value, discrete)
 
-    def _create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value, max_value):
+    def _create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value,
+                                     max_value):
         if add_min_max:
             # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
             min_value, max_value = self._get_property_array_min_max_value(property_array, const_value, discrete,
@@ -2918,12 +2926,13 @@ class PropertyCollection():
             self.model.create_reciprocal_relationship(p_node, 'mlToExternalPartProxy', ext_node,
                                                       'externalPartProxyToMl')
 
-    def _create_xml_add_basics_to_p_node(self, p_node, title, originator, extra_metadata, source, count, indexable_element):
-        self.model.create_citation(root=p_node, title=title, originator=originator)
-        rqet.create_metadata_xml(node=p_node, extra_metadata=extra_metadata)
+    def _create_xml_add_basics_to_p_node(self, p_node, title, originator, extra_metadata, source, count,
+                                         indexable_element):
+        self.model.create_citation(root = p_node, title = title, originator = originator)
+        rqet.create_metadata_xml(node = p_node, extra_metadata = extra_metadata)
 
         if source is not None and len(source) > 0:
-            self.model.create_source(source=source, root=p_node)
+            self.model.create_source(source = source, root = p_node)
 
         count_node = rqet.SubElement(p_node, ns['resqml2'] + 'Count')
         count_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
@@ -3058,7 +3067,8 @@ class PropertyCollection():
                 if perm_k_mode is None or perm_k_mode == 'none':
                     pass
                 else:
-                    perm_k_part = self._get_perm_k_part(perms, perm_k_mode, share_perm_parts, perm_i_part, perm_j_part, perm_k_ratio, ntg_part)
+                    perm_k_part = self._get_perm_k_part(perms, perm_k_mode, share_perm_parts, perm_i_part, perm_j_part,
+                                                        perm_k_ratio, ntg_part)
         return perm_i_part, perm_j_part, perm_k_part
 
     def _get_perm_k_part(self, perms, perm_k_mode, share_perm_parts, perm_i_part, perm_j_part, perm_k_ratio, ntg_part):
@@ -3075,27 +3085,27 @@ class PropertyCollection():
             kv = kh * perm_k_ratio
             if ntg_part is not None:
                 if perm_k_mode == 'ntg':
-                        kv *= self.cached_part_array_ref(ntg_part)
+                    kv *= self.cached_part_array_ref(ntg_part)
                 elif perm_k_mode == 'ntg squared':
                     ntg = self.cached_part_array_ref(ntg_part)
                     kv *= ntg * ntg
             kv_collection = PropertyCollection()
-            kv_collection.set_support(support_uuid=self.support_uuid, model=self.model)
-            kv_collection.add_cached_array_to_imported_list(
-                kv,
-                'derived from horizontal perm with mode ' + str(perm_k_mode),
-                'KK',
-                discrete=False,
-                uom='mD',
-                time_index=None,
-                null_value=None,
-                property_kind='permeability rock',
-                facet_type='direction',
-                facet='K',
-                realization=perms.realization_for_part(perm_i_part),
-                indexable_element=perms.indexable_for_part(perm_i_part),
-                count=1,
-                points=False)
+            kv_collection.set_support(support_uuid = self.support_uuid, model = self.model)
+            kv_collection.add_cached_array_to_imported_list(kv,
+                                                            'derived from horizontal perm with mode ' +
+                                                            str(perm_k_mode),
+                                                            'KK',
+                                                            discrete = False,
+                                                            uom = 'mD',
+                                                            time_index = None,
+                                                            null_value = None,
+                                                            property_kind = 'permeability rock',
+                                                            facet_type = 'direction',
+                                                            facet = 'K',
+                                                            realization = perms.realization_for_part(perm_i_part),
+                                                            indexable_element = perms.indexable_for_part(perm_i_part),
+                                                            count = 1,
+                                                            points = False)
             self.model.h5_release()
             kv_collection.write_hdf5_for_imported_list()
             kv_collection.create_xml_for_imported_list_and_add_parts_to_model()
@@ -3268,20 +3278,20 @@ class PropertyCollection():
         support_type = model.type_of_part(support_part)
         assert support_type is not None
         if support_type == 'obj_IjkGridRepresentation':
-            self.support = grr.any_grid(model, uuid=self.support_uuid, find_properties=False)
+            self.support = grr.any_grid(model, uuid = self.support_uuid, find_properties = False)
         elif support_type == 'obj_WellboreFrameRepresentation':
-            self.support = rqw.WellboreFrame(model, uuid=self.support_uuid)
+            self.support = rqw.WellboreFrame(model, uuid = self.support_uuid)
         elif support_type == 'obj_BlockedWellboreRepresentation':
-            self.support = rqw.BlockedWell(model, uuid=self.support_uuid)
+            self.support = rqw.BlockedWell(model, uuid = self.support_uuid)
         elif support_type == 'obj_Grid2dRepresentation':
-            self.support = rqs.Mesh(model, uuid=self.support_uuid)
+            self.support = rqs.Mesh(model, uuid = self.support_uuid)
         elif support_type == 'obj_GridConnectionSetRepresentation':
-            self.support = rqf.GridConnectionSet(model, uuid=self.support_uuid)
+            self.support = rqf.GridConnectionSet(model, uuid = self.support_uuid)
         elif support_type == 'obj_UnstructuredGridRepresentation':
             self.support = rug.UnstructuredGrid(model,
-                                                uuid=self.support_uuid,
-                                                geometry_required=False,
-                                                find_properties=False)
+                                                uuid = self.support_uuid,
+                                                geometry_required = False,
+                                                find_properties = False)
         else:
             raise TypeError('unsupported property supporting representation class: ' + str(support_type))
 
