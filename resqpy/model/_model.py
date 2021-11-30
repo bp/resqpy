@@ -25,6 +25,8 @@ import resqpy.crs as rqc
 import resqpy.fault as rqf
 import resqpy.grid as grr
 import resqpy.model._catalogue as m_c
+import resqpy.model._grids as m_g
+import resqpy.model._hdf5 as m_h
 import resqpy.olio.consolidation as cons
 import resqpy.olio.time as time
 import resqpy.olio.uuid as bu
@@ -1115,23 +1117,7 @@ class Model():
            use change_uuid_in_hdf5_references() instead
         """
 
-        count = 0
-        old_uuid_str = str(old_uuid)
-        new_uuid_str = str(new_uuid)
-        for ref_node in node.iter(ns['eml'] + 'HdfProxy'):
-            try:
-                uuid_node = rqet.find_tag(ref_node, 'UUID')
-                if old_uuid is None or uuid_node.text == old_uuid_str:
-                    uuid_node.text = new_uuid_str
-                    count += 1
-            except Exception:
-                pass
-        if count == 1:
-            log.debug('one hdf5 reference modified')
-        else:
-            log.debug(str(count) + ' hdf5 references modified')
-        if count > 0:
-            self.set_modified()
+        m_h._change_hdf5_uuid_in_hdf5_references(self, node, old_uuid, new_uuid)
 
     def change_uuid_in_hdf5_references(self, node, old_uuid, new_uuid):
         """Scan node for hdf5 references using the old_uuid and replace with the new_uuid.
@@ -1150,25 +1136,7 @@ class Model():
            internal path names in the hdf5 file itself, if that has already been written
         """
 
-        count = 0
-        old_uuid_str = str(old_uuid)
-        new_uuid_str = str(new_uuid)
-        for ref_node in node.iter(ns['eml'] + 'PathInHdfFile'):
-            try:
-                uuid_place = ref_node.text.index(old_uuid_str)
-                new_path_in_hdf = ref_node.text[:uuid_place] + new_uuid_str + ref_node.text[uuid_place +
-                                                                                            len(old_uuid_str):]
-                log.debug('path in hdf update from: ' + ref_node.text + ' to: ' + new_path_in_hdf)
-                ref_node.text = new_path_in_hdf
-                count += 1
-            except Exception:
-                pass
-        if count == 1:
-            log.debug('one hdf5 reference modified')
-        else:
-            log.debug(str(count) + ' hdf5 references modified')
-        if count > 0:
-            self.set_modified()
+        m_h._change_uuid_in_hdf5_references(self, node, old_uuid, new_uuid)
 
     def change_uuid_in_supporting_representation_reference(self, node, old_uuid, new_uuid, new_title = None):
         """Look for supporting representation reference using the old_uuid and replace with the new_uuid.
@@ -1218,18 +1186,7 @@ class Model():
            all hdf5 file references will be modified
         """
 
-        if not new_hdf5_filename and self.epc_file and self.epc_file.endswith('.epc'):
-            new_hdf5_filename = os.path.split(self.epc_file)[1][:-4] + '.h5'
-        count = 0
-        for rel_name, entry in self.rels_forest.items():
-            rel_root = entry[1].getroot()
-            for child in rel_root:
-                if child.attrib['Id'] == 'Hdf5File' and child.attrib['TargetMode'] == 'External':
-                    child.attrib['Target'] = new_hdf5_filename
-                    count += 1
-        log.info(str(count) + ' hdf5 filename' + _pl(count) + ' set to: ' + new_hdf5_filename)
-        if count > 0:
-            self.set_modified()
+        m_h._change_filename_in_hdf5_rels(self, new_hdf5_filename = new_hdf5_filename)
 
     def copy_part(self, existing_uuid, new_uuid, change_hdf5_refs = False):
         """Makes a new part as a copy of an existing part with only a new uuid set; the new part can then be modified.
@@ -1293,18 +1250,7 @@ class Model():
            failure to find a matching grid part results in an assertion exception
         """
 
-        if title is not None:
-            title = title.strip().upper()
-        if uuid is None and not title:
-            grid_root = self.root(obj_type = 'IjkGridRepresentation', title = 'ROOT', multiple_handling = 'oldest')
-            if grid_root is None:
-                grid_root = self.root(obj_type = 'IjkGridRepresentation')
-        else:
-            grid_root = self.root(obj_type = 'IjkGridRepresentation', uuid = uuid, title = title)
-
-        assert grid_root is not None, 'IJK Grid part not found'
-
-        return grid_root
+        return m_g._root_for_ijk_grid(self, uuid = uuid, title = title)
 
     def citation_title_for_part(self, part):  # duplicate functionality to title_for_part()
         """Returns the citation title for the specified part.
@@ -1348,14 +1294,7 @@ class Model():
            grid part is present in the model
         """
 
-        if grid_root is not None:
-            if self.grid_root is None:
-                self.grid_root = grid_root
-        else:
-            if self.grid_root is None:
-                self.grid_root = self.root_for_ijk_grid(uuid = uuid)
-            grid_root = self.grid_root
-        return grid_root
+        return m_g._resolve_grid_root(self, grid_root = grid_root, uuid = uuid)
 
     def grid(self, title = None, uuid = None, find_properties = True):
         """Returns a shared Grid (or RegularGrid) object for this model, by default the 'main' grid.
@@ -1379,32 +1318,7 @@ class Model():
         :meta common:
         """
 
-        if uuid is None and (title is None or title.upper() == 'ROOT'):
-            if self.main_grid is not None:
-                if find_properties:
-                    self.main_grid.extract_property_collection()
-                return self.main_grid
-            if title is None:
-                grid_root = self.resolve_grid_root()
-            else:
-                grid_root = self.resolve_grid_root(
-                    grid_root = self.root(obj_type = 'IjkGridRepresentation', title = title))
-        else:
-            grid_root = self.root(obj_type = 'IjkGridRepresentation', uuid = uuid, title = title)
-        assert grid_root is not None, 'IJK Grid part not found'
-        if uuid is None:
-            uuid = rqet.uuid_for_part_root(grid_root)
-        for grid in self.grid_list:
-            if grid.root is grid_root:
-                if find_properties:
-                    grid.extract_property_collection()
-                return grid
-        grid = grr.any_grid(self, uuid = uuid, find_properties = find_properties)
-        assert grid is not None, 'failed to instantiate grid object'
-        if find_properties:
-            grid.extract_property_collection()
-        self.add_grid(grid)
-        return grid
+        return m_g._grid(self, title = title, uuid = uuid, find_properties = find_properties)
 
     def add_grid(self, grid_object, check_for_duplicates = False):
         """Add grid object to list of shareable grids for this model.
@@ -1419,27 +1333,17 @@ class Model():
            None
         """
 
-        if check_for_duplicates:
-            for g in self.grid_list:
-                if bu.matching_uuids(g.uuid, grid_object.uuid):
-                    return
-        self.grid_list.append(grid_object)
+        return m_g._add_grid(self, grid_object = grid_object, check_for_duplicates = check_for_duplicates)
 
     def grid_list_uuid_list(self):
         """Returns list of uuid's for the grid objects in the cached grid list."""
 
-        uuid_list = []
-        for grid in self.grid_list:
-            uuid_list.append(grid.uuid)
-        return uuid_list
+        return m_g._grid_list_uuid_list(self)
 
     def grid_for_uuid_from_grid_list(self, uuid):
         """Returns the cached grid object matching the given uuid, if found in the grid list, otherwise None."""
 
-        for grid in self.grid_list:
-            if bu.matching_uuids(uuid, grid.uuid):
-                return grid
-        return None
+        return m_g._grid_for_uuid_from_grid_list(self, uuid)
 
     def resolve_time_series_root(self, time_series_root = None):
         """If time_series_root is None, finds the root for a time series in the model.
@@ -1475,51 +1379,17 @@ class Model():
            the resqml dataset
         """
 
-        child = rqet.find_tag(node, tag)
-        if child is None:
-            return None
-        assert rqet.node_type(child) == 'Hdf5Dataset'
-        h5_path = rqet.find_tag(child, 'PathInHdfFile').text
-        h5_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(child, ['HdfProxy', 'UUID']))
-        return (h5_uuid, h5_path)
+        return m_h._h5_uuid_and_path_for_node(self, node, tag = tag)
 
     def h5_uuid_list(self, node):
         """Returns a list of all uuids for hdf5 external part(s) referred to in recursive tree."""
 
-        def recursive_uuid_set(node):
-            uuid_set = set()
-            for child in node:
-                uuid_set = uuid_set.union(recursive_uuid_set(child))
-            if rqet.node_type(node) == 'Hdf5Dataset':
-                h5_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['HdfProxy', 'UUID']))
-                uuid_set.add(h5_uuid)
-            return uuid_set
-
-        return list(recursive_uuid_set(node))
+        return m_h._h5_uuid_list(self, node)
 
     def h5_uuid(self):
         """Returns the uuid of the 'main' hdf5 file."""
 
-        if self.main_h5_uuid is None:
-            uuid_list = None
-            ext_parts = self.parts_list_of_type('EpcExternalPartReference')
-            if len(ext_parts) == 1:
-                self.main_h5_uuid = self.uuid_for_part(ext_parts[0])
-            else:
-                try:
-                    grid_root = self.resolve_grid_root()
-                    if grid_root is not None:
-                        uuid_list = self.h5_uuid_list(grid_root)
-                except Exception:
-                    uuid_list = None
-                if uuid_list is None or len(uuid_list) == 0:
-                    for part, (_, _, tree) in self.parts_forest.items():
-                        uuid_list = self.h5_uuid_list(tree.getroot())
-                        if uuid_list is not None and len(uuid_list) > 0:
-                            break
-                if uuid_list is not None and len(uuid_list) > 0:
-                    self.main_h5_uuid = uuid_list[0]  # arbitrary use of first hdf5 uuid
-        return self.main_h5_uuid
+        return m_h._h5_uuid(self)
 
     def h5_file_name(self, uuid = None, override = True, file_must_exist = True):
         """Returns full path for hdf5 file with given uuid.
@@ -1550,38 +1420,7 @@ class Model():
            are in the same directory
         """
 
-        if override and self.epc_file and self.epc_file.endswith('.epc'):
-            h5_full_path = self.epc_file[:-4] + '.h5'
-            if not file_must_exist or os.path.exists(h5_full_path):
-                return h5_full_path
-        if uuid is None:
-            uuid = self.h5_uuid()
-        if uuid.bytes in self.h5_dict:
-            return self.h5_dict[uuid.bytes]
-        for rel_name in self.rels_forest:
-            entry = self.rels_forest[rel_name]
-            if bu.matching_uuids(uuid, entry[0]):
-                rel_root = entry[1].getroot()
-                for child in rel_root:
-                    if child.attrib['Id'] == 'Hdf5File' and child.attrib['TargetMode'] == 'External':
-                        h5_full_path = None
-                        target_path = rqet.strip_path(child.attrib['Target'])
-                        if target_path:
-                            if self.epc_directory:
-                                _, target_file = os.path.split(target_path)
-                                h5_full_path = os.path.join(self.epc_directory, target_file)
-                            else:
-                                h5_full_path = target_path
-                            if file_must_exist and not os.path.exists(h5_full_path):
-                                h5_full_path = None
-                        if h5_full_path is None:
-                            h5_full_path = child.attrib['Target']
-                            if file_must_exist and not os.path.exists(h5_full_path):
-                                h5_full_path = None
-                        if h5_full_path is not None:
-                            self.h5_dict[uuid.bytes] = h5_full_path
-                        return h5_full_path
-        return None
+        return m_h._h5_file_name(self, uuid = uuid, override = override, file_must_exist = file_must_exist)
 
     def h5_access(self, uuid = None, mode = 'r', override = True, file_path = None):
         """Returns an open h5 file handle for the hdf5 file with the given uuid.
@@ -1603,22 +1442,7 @@ class Model():
            piece of code accessing the file might cause a 'resource unavailable' exception
         """
 
-        if self.h5_currently_open_mode is not None and self.h5_currently_open_mode != mode:
-            self.h5_release()
-        if file_path:
-            file_name = file_path
-        else:
-            file_name = self.h5_file_name(uuid = uuid, override = override, file_must_exist = (mode == 'r'))
-        if mode == 'a' and not os.path.exists(file_name):
-            mode = 'w'
-        if self.h5_currently_open_path == file_name:
-            return self.h5_currently_open_root
-        if self.h5_currently_open_root is not None:
-            self.h5_release()
-        self.h5_currently_open_path = file_name
-        self.h5_currently_open_mode = mode
-        self.h5_currently_open_root = h5py.File(file_name, mode)  # could use try to trap file in use errors?
-        return self.h5_currently_open_root
+        return m_h._h5_access(self, uuid = uuid, mode = mode, override = override, file_path = file_path)
 
     def h5_release(self):
         """Releases (closes) the currently open hdf5 file.
@@ -1629,11 +1453,7 @@ class Model():
         :meta common:
         """
 
-        if self.h5_currently_open_root is not None:
-            self.h5_currently_open_root.close()
-            self.h5_currently_open_root = None
-        self.h5_currently_open_path = None
-        self.h5_currently_open_mode = None
+        m_h._h5_release(self)
 
     def h5_array_shape_and_type(self, h5_key_pair):
         """Returns the shape and dtype of the array, as stored in the hdf5 file.
@@ -1646,12 +1466,7 @@ class Model():
            if the hdf5 file is not found, or the array is not found within it
         """
 
-        h5_root = self.h5_access(h5_key_pair[0])
-        if h5_root is None:
-            return (None, None)
-        shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
-        dtype = h5_root[h5_key_pair[1]].dtype
-        return (shape_tuple, dtype)
+        return m_h._h5_array_shape_and_type(self, h5_key_pair)
 
     def h5_array_element(self,
                          h5_key_pair,
@@ -1688,76 +1503,14 @@ class Model():
            not have any split pillars
         """
 
-        def reshaped_index(index, shape_tuple, required_shape):
-            tail = len(shape_tuple) - len(index)
-            if tail > 0:
-                assert shape_tuple[-tail:] == required_shape[-tail:], 'not enough indices to allow reshaped indexing'
-            natural = 0
-            extent = 1
-            for axis in range(len(shape_tuple) - tail - 1, -1, -1):
-                natural += index[axis] * extent
-                extent *= shape_tuple[axis]
-            r_extent = np.empty(len(required_shape) - tail, dtype = int)
-            r_extent[-1] = required_shape[-(tail + 1)]
-            for axis in range(len(required_shape) - tail - 2, -1, -1):
-                r_extent[axis] = required_shape[axis] * r_extent[axis + 1]
-            r_index = np.empty(len(required_shape) - tail, dtype = int)
-            for axis in range(len(r_index) - 1):
-                r_index[axis], natural = divmod(natural, r_extent[axis + 1])
-            r_index[-1] = natural
-            return r_index
-
-        if object is None:
-            object = self
-
-        # Check if attribute has already be cached
-        if array_attribute is not None:
-            existing_value = getattr(object, array_attribute, None)
-
-            # Watch out for np.array(None): check existing_value has a valid "shape"
-            if existing_value is not None and getattr(existing_value, "shape", False):
-                if index is None:
-                    return None  # this option allows caching of array without actually referring to any element
-                return existing_value[tuple(index)]
-
-        h5_root = self.h5_access(h5_key_pair[0])
-        if h5_root is None:
-            return None
-        if cache_array:
-            shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
-            if required_shape is None or shape_tuple == required_shape:
-                object.__dict__[array_attribute] = np.zeros(shape_tuple, dtype = dtype)
-                object.__dict__[array_attribute][:] = h5_root[h5_key_pair[1]]
-            else:
-                object.__dict__[array_attribute] = np.zeros(required_shape, dtype = dtype)
-                object.__dict__[array_attribute][:] = np.array(h5_root[h5_key_pair[1]],
-                                                               dtype = dtype).reshape(required_shape)
-            self.h5_release()
-            if index is None:
-                return None
-            return object.__dict__[array_attribute][tuple(index)]
-        else:
-            if index is None:
-                return None
-            if required_shape is None:
-                result = h5_root[h5_key_pair[1]][tuple(index)]
-            else:
-                shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
-                if shape_tuple == required_shape:
-                    result = h5_root[h5_key_pair[1]][tuple(index)]
-                else:
-                    index = reshaped_index(index, required_shape, shape_tuple)
-                    result = h5_root[h5_key_pair[1]][tuple(index)]
-            if dtype is None:
-                return result
-            if result.size == 1:
-                if dtype is float or (isinstance(dtype, str) and dtype.startswith('float')):
-                    return float(result)
-                elif dtype is int or (isinstance(dtype, str) and dtype.startswith('int')):
-                    return int(result)
-                elif dtype is bool or (isinstance(dtype, str) and dtype.startswith('bool')):
-                    return bool(result)
-            return np.array(result, dtype = dtype)
+        return m_h._h5_array_element(self,
+                                     h5_key_pair,
+                                     index = index,
+                                     cache_array = cache_array,
+                                     object = object,
+                                     array_attribute = array_attribute,
+                                     dtype = dtype,
+                                     required_shape = required_shape)
 
     def h5_array_slice(self, h5_key_pair, slice_tuple):
         """Loads a slice of an hdf5 array.
@@ -1777,8 +1530,7 @@ class Model():
            an axis is 1
         """
 
-        h5_root = self.h5_access(h5_key_pair[0])
-        return h5_root[h5_key_pair[1]][slice_tuple]
+        return m_h._h5_array_slice(self, h5_key_pair, slice_tuple)
 
     def h5_overwrite_array_slice(self, h5_key_pair, slice_tuple, array_slice):
         """Overwrites (updates) a slice of an hdf5 array.
@@ -1795,9 +1547,7 @@ class Model():
            metadata (such as uuid or property min, max values) is not modified in any way by the method
         """
 
-        h5_root = self.h5_access(h5_key_pair[0], mode = 'a')
-        dset = h5_root[h5_key_pair[1]]
-        dset[slice_tuple] = array_slice
+        return m_h._h5_overwrite_array_slice(self, h5_key_pair, slice_tuple, array_slice)
 
     def create_root(self):
         """Initialises an empty main xml tree for model.
