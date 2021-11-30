@@ -17,6 +17,7 @@ import resqpy.olio.fine_coarse as rqfc
 import resqpy.olio.uuid as bu
 import resqpy.property as rqp
 import resqpy.surface as rqs
+
 import resqpy.well as rqw
 
 from resqpy.olio.random_seed import seed

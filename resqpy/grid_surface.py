@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
 
 import numpy as np
-import pandas as pd
 
 import resqpy.crs as rqc
 import resqpy.fault as rqf
