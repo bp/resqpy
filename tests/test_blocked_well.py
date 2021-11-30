@@ -148,3 +148,102 @@ def test_grid_uuid_list(example_model_and_crs):
     # --------- Assert ----------
     assert len(grid_uuid_list) == 1
     assert grid_uuid_list[0] == grid_uuid
+
+
+def test_verify_grid_name(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji = (3, 4, 3),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    well_name = 'DOGLEG'
+    source_df = pd.DataFrame(
+        [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
+         [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9, 'grid_2'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9, 'grid_1']],
+        columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
+    row = source_df.iloc[2]
+    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True)
+
+    # --------- Act ----------
+    skipped_warning_grid, skip_row = bw._BlockedWell__verify_grid_name(grid_name_to_check = 'grid_1',
+                                                                       row = row,
+                                                                       skipped_warning_grid = None,
+                                                                       well_name = well_name)
+
+    # --------- Assert ----------
+    assert skipped_warning_grid == 'grid_2'
+    assert skip_row == True
+
+
+def test_calculate_exit_and_entry(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji = (3, 4, 3),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       set_points_cached = True)
+    cp = grid.corner_points(cell_kji0 = (2, 2, 1))
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    well_name = 'DOGLEG'
+    source_df = pd.DataFrame(
+        [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
+         [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9, 'grid_1'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9, 'grid_1']],
+        columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
+    row = source_df.iloc[0]
+    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True)
+
+    # --------- Act ----------
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) = bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name)
+    print((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+
+    # --------- Assert ----------
+    # TODO: less trivial assertion
+    for value in (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz):
+        assert value is not None
+
+
+def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji = (3, 4, 3),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       set_points_cached = True)
+    cp_expected = grid.corner_points(cell_kji0 = (2, 2, 1))
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    well_name = 'DOGLEG'
+    source_df = pd.DataFrame(
+        [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
+         [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9, 'grid_1'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9, 'grid_1']],
+        columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
+    row = source_df.iloc[0]
+    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True)
+
+    # --------- Act ----------
+    cp, cell_centre, entry_vector, exit_vector = bw._BlockedWell__calculate_cell_cp_center_and_vectors(
+        grid = grid,
+        cell_kji0 = (2, 2, 1),
+        entry_xyz = np.array([75, -125, 200]),
+        exit_xyz = np.array([np.nan, np.nan, np.nan]),
+        well_name = well_name)
+
+    # --------- Assert ----------
+    np.testing.assert_equal(cp, cp_expected)
+    np.testing.assert_equal(cell_centre, np.array([75., -125., 225.]))
+    np.testing.assert_equal(entry_vector, np.array([0, 0, -2500]))
+    np.testing.assert_equal(exit_vector, np.array([np.nan, np.nan, np.nan]))
