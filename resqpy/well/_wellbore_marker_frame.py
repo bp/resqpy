@@ -180,13 +180,10 @@ class WellboreMarkerFrame(BaseResqpy):
 
     def get_trajectory_obj(self, trajectory_uuid):
         """Returns a trajectory object.
-
         arguments:
            trajectory_uuid (string or uuid.UUID): the uuid of the trajectory for which a Trajectory object is required
-
         returns:
            well.Trajectory object
-
         note:
            this method is not usually called directly
         """
@@ -198,7 +195,6 @@ class WellboreMarkerFrame(BaseResqpy):
             # create new trajectory object
             trajectory_root_node = self.model.root_for_uuid(trajectory_uuid)
             assert trajectory_root_node is not None, 'referenced wellbore trajectory missing from model'
-            # return Trajectory(self.model, trajectory_root = trajectory_root_node)
             return Trajectory(self.model, uuid = trajectory_uuid)
 
     def get_interpretation_obj(self, interpretation_uuid, interp_type = None):
