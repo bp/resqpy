@@ -180,10 +180,13 @@ class WellboreMarkerFrame(BaseResqpy):
 
     def get_trajectory_obj(self, trajectory_uuid):
         """Returns a trajectory object.
+
         arguments:
            trajectory_uuid (string or uuid.UUID): the uuid of the trajectory for which a Trajectory object is required
+
         returns:
            well.Trajectory object
+
         note:
            this method is not usually called directly
         """

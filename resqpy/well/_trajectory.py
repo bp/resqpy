@@ -312,7 +312,7 @@ class Trajectory(BaseResqpy):
         self.measured_depths = survey.measured_depths.copy()
         self.md_uom = survey.md_uom
         if not self.title:
-            self.title = rqet.find_nested_tags_text(survey.root_node, ['Citation', 'Title'])
+            self.title = rqet.find_nested_tags_text(survey.root, ['Citation', 'Title'])
         self.start_md = self.measured_depths[0]
         self.finish_md = self.measured_depths[-1]
         if md_domain is not None:
