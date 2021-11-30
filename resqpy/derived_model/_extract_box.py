@@ -14,7 +14,7 @@ import resqpy.olio.fine_coarse as fc
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model._dm_common import __write_grid, __establish_model_and_source_grid
+from resqpy.derived_model._common import _write_grid, _establish_model_and_source_grid
 
 
 def extract_box(epc_file = None,
@@ -67,7 +67,7 @@ def extract_box(epc_file = None,
         new_epc_file = None
     if set_parent_window is None:
         set_parent_window = (new_epc_file is None)
-    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
     assert model is not None
     assert box is not None and box.shape == (2, 3)
@@ -96,17 +96,17 @@ def extract_box(epc_file = None,
     grid.crs_uuid = source_grid.crs_uuid
 
     # inherit k_gaps for selected layer range
-    __inherit_k_gaps(source_grid, grid, box)
+    _inherit_k_gaps(source_grid, grid, box)
 
     # extract inactive cell mask
-    __extract_inactive_cell_mask(source_grid, grid, box_inactive, box)
+    _extract_inactive_cell_mask(source_grid, grid, box_inactive, box)
 
     # extract the grid geometry
     source_grid.cache_all_geometry_arrays()
 
     # determine cell geometry is defined
     if hasattr(source_grid, 'array_cell_geometry_is_defined'):
-        grid.array_cell_geometry_is_defined = __array_box(source_grid.array_cell_geometry_is_defined, box)
+        grid.array_cell_geometry_is_defined = _array_box(source_grid.array_cell_geometry_is_defined, box)
         grid.geometry_defined_for_all_cells_cached = np.all(grid.array_cell_geometry_is_defined)
     else:
         grid.geometry_defined_for_all_cells_cached = source_grid.geometry_defined_for_all_cells_cached
@@ -114,7 +114,7 @@ def extract_box(epc_file = None,
     # copy info for pillar geometry is defined
     grid.geometry_defined_for_all_pillars_cached = source_grid.geometry_defined_for_all_pillars_cached
     if hasattr(source_grid, 'array_pillar_geometry_is_defined'):
-        grid.array_pillar_geometry_is_defined = __array_box(source_grid.array_pillar_geometry_is_defined, box)
+        grid.array_pillar_geometry_is_defined = _array_box(source_grid.array_pillar_geometry_is_defined, box)
         grid.geometry_defined_for_all_pillars_cached = np.all(grid.array_pillar_geometry_is_defined)
 
     # get reference to points for source grid geometry
@@ -127,17 +127,17 @@ def extract_box(epc_file = None,
 
     if not source_grid.has_split_coordinate_lines:
         log.debug('no split pillars in source grid')
-        grid.points_cached = __array_box(source_points, pillar_box)  # should work, ie. preserve xyz axis
+        grid.points_cached = _array_box(source_points, pillar_box)  # should work, ie. preserve xyz axis
     else:
-        __process_split_pillars(source_grid, grid, box, pillar_box)
+        _process_split_pillars(source_grid, grid, box, pillar_box)
 
     if set_parent_window:
         fine_coarse = fc.FineCoarse(grid.extent_kji, grid.extent_kji, within_coarse_box = box)
         fine_coarse.set_all_ratios_constant()
         grid.set_parent(source_grid.uuid, True, fine_coarse)
 
-    collection = __inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization,
-                                      inherit_all_realizations)
+    collection = _inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization,
+                                     inherit_all_realizations)
 
     if new_grid_title is None or len(new_grid_title) == 0:
         new_grid_title = 'local grid ' + box_str + ' extracted from ' + str(
@@ -145,25 +145,25 @@ def extract_box(epc_file = None,
 
     model.h5_release()
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     return grid
 
 
-def __array_box(a, box):
+def _array_box(a, box):
     return a[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1].copy()
 
 
-def __local_col_index(extent, box, col):
+def _local_col_index(extent, box, col):
     # return local equivalent natural column index for global column index, or None if outside box
     j, i = divmod(col, extent[2])
     j -= box[0, 1]
@@ -173,7 +173,7 @@ def __local_col_index(extent, box, col):
     return j * (box[1, 2] - box[0, 2] + 1) + i
 
 
-def __local_pillar_index(extent, box, p):
+def _local_pillar_index(extent, box, p):
     # return local equivalent natural pillar index for global pillar index, or None if outside box
     p_j, p_i = divmod(p, extent[2] + 1)
     p_j -= box[0, 1]
@@ -183,7 +183,7 @@ def __local_pillar_index(extent, box, p):
     return p_j * (box[1, 2] - box[0, 2] + 2) + p_i
 
 
-def __cols_for_pillar(extent, p):
+def _cols_for_pillar(extent, p):
     # return 4 naturalized column indices for columns surrounding natural pillar index; -1 where beyond edge of ij space
     cols = np.zeros((4,), dtype = int) - 1
     p_j, p_i = divmod(p, extent[2] + 1)
@@ -198,7 +198,7 @@ def __cols_for_pillar(extent, p):
     return cols
 
 
-def __inherit_k_gaps(source_grid, grid, box):
+def _inherit_k_gaps(source_grid, grid, box):
     if source_grid.k_gaps and box[1, 0] > box[0, 0]:
         k_gaps = np.count_nonzero(source_grid.k_gap_after_array[box[0, 0]:box[1, 0]])
         if k_gaps > 0:
@@ -213,7 +213,7 @@ def __inherit_k_gaps(source_grid, grid, box):
             assert k_offset == k_gaps
 
 
-def __extract_inactive_cell_mask(source_grid, grid, box_inactive, box):
+def _extract_inactive_cell_mask(source_grid, grid, box_inactive, box):
     if source_grid.inactive is None:
         if box_inactive is None:
             log.debug('setting inactive mask to None')
@@ -224,13 +224,13 @@ def __extract_inactive_cell_mask(source_grid, grid, box_inactive, box):
     else:
         if box_inactive is None:
             log.debug('extrating inactive mask')
-            grid.inactive = __array_box(source_grid.inactive, box)
+            grid.inactive = _array_box(source_grid.inactive, box)
         else:
             log.debug('setting inactive mask to merge of source grid extraction and mask passed as argument')
-            grid.inactive = np.logical_or(__array_box(source_grid.inactive, box), box_inactive)
+            grid.inactive = np.logical_or(_array_box(source_grid.inactive, box), box_inactive)
 
 
-def __inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization, inherit_all_realizations):
+def _inherit_collection(source_grid, grid, inherit_properties, box, inherit_realization, inherit_all_realizations):
     collection = None
     if inherit_properties:
         source_collection = source_grid.extract_property_collection()
@@ -254,12 +254,12 @@ def __inherit_collection(source_grid, grid, inherit_properties, box, inherit_rea
     return collection
 
 
-def __process_split_pillars(source_grid, grid, box, pillar_box):
+def _process_split_pillars(source_grid, grid, box, pillar_box):
     source_points = source_grid.points_ref()
     source_base_pillar_count = (source_grid.nj + 1) * (source_grid.ni + 1)
     log.debug('number of base pillars in source grid: ' + str(source_base_pillar_count))
     log.debug('number of extra pillars in source grid: ' + str(len(source_grid.split_pillar_indices_cached)))
-    base_points = __array_box(
+    base_points = _array_box(
         source_points[:, :source_base_pillar_count, :].reshape(
             (source_grid.nk_plus_k_gaps + 1, source_grid.nj + 1, source_grid.ni + 1, 3)),
         pillar_box).reshape(grid.nk_plus_k_gaps + 1, (grid.nj + 1) * (grid.ni + 1), 3)
@@ -271,11 +271,11 @@ def __process_split_pillars(source_grid, grid, box, pillar_box):
     local_index = 0
     for index in range(len(source_grid.split_pillar_indices_cached)):
         source_pi = source_grid.split_pillar_indices_cached[index]
-        local_pi = __local_pillar_index(source_grid.extent_kji, box, source_pi)
+        local_pi = _local_pillar_index(source_grid.extent_kji, box, source_pi)
         if local_pi is None:
             continue
-        cols = __cols_for_pillar(source_grid.extent_kji, source_pi)
-        local_cols = __cols_for_pillar(grid.extent_kji, local_pi)
+        cols = _cols_for_pillar(source_grid.extent_kji, source_pi)
+        local_cols = _cols_for_pillar(grid.extent_kji, local_pi)
         if index == 0:
             start = 0
         else:

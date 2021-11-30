@@ -11,7 +11,7 @@ import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
-from resqpy.derived_model._dm_common import __pl
+from resqpy.derived_model._common import _pl
 
 
 def add_wells_from_ascii_file(epc_file,
@@ -98,7 +98,7 @@ def add_wells_from_ascii_file(epc_file,
     assert len(feature_list) == len(interpretation_list) == len(trajectory_list) == len(md_datum_list)
     count = len(feature_list)
 
-    log.info('features, interpretations, trajectories and md data added for ' + str(count) + ' well' + __pl(count))
+    log.info('features, interpretations, trajectories and md data added for ' + str(count) + ' well' + _pl(count))
 
     # write or re-write model
     model.h5_release()

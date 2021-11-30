@@ -12,7 +12,7 @@ import resqpy.grid as grr
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._dm_common import __prepare_simple_inheritance, __write_grid
+from resqpy.derived_model._common import _prepare_simple_inheritance, _write_grid
 
 
 def interpolated_grid(epc_file,
@@ -88,42 +88,42 @@ def interpolated_grid(epc_file,
     # assert grid_a.geometry_defined_for_all_pillars() and grid_b.geometry_defined_for_all_pillars(),  \
     #     'geometry not defined for all pillars'
 
-    work_from_pillars = __determine_work_from_pillars(grid_a, grid_b)
+    work_from_pillars = _determine_work_from_pillars(grid_a, grid_b)
 
     # create a new, empty grid object
     grid = grr.Grid(model)
 
     # inherit attributes from source grid
-    __inherit_basics(grid, grid_a, grid_b)
+    _inherit_basics(grid, grid_a, grid_b)
 
     if work_from_pillars:
-        __interpolate_points_cached_from_pillars(grid, grid_a, grid_b, a_weight, b_weight)
+        _interpolate_points_cached_from_pillars(grid, grid_a, grid_b, a_weight, b_weight)
     else:
-        __interpolate_points_cached_from_cp(grid, grid_a, grid_b, a_weight, b_weight, split_tolerance)
+        _interpolate_points_cached_from_cp(grid, grid_a, grid_b, a_weight, b_weight, split_tolerance)
 
-    collection = __prepare_simple_inheritance(grid, grid_a, inherit_properties, inherit_realization,
-                                              inherit_all_realizations)
+    collection = _prepare_simple_inheritance(grid, grid_a, inherit_properties, inherit_realization,
+                                             inherit_all_realizations)
 
     if new_grid_title is None or len(new_grid_title) == 0:
         new_grid_title = 'interpolated between two grids with factor: ' + str(a_to_b_0_to_1)
 
     model.h5_release()
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(grid_a.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     return grid
 
 
-def __determine_work_from_pillars(grid_a, grid_b):
+def _determine_work_from_pillars(grid_a, grid_b):
     if not grid_a.has_split_coordinate_lines and not grid_b.has_split_coordinate_lines:
         work_from_pillars = True
     elif (grid_a.has_split_coordinate_lines and grid_b.has_split_coordinate_lines and
@@ -144,7 +144,7 @@ def __determine_work_from_pillars(grid_a, grid_b):
     return work_from_pillars
 
 
-def __inherit_basics(grid, grid_a, grid_b):
+def _inherit_basics(grid, grid_a, grid_b):
     grid.grid_representation = 'IjkGrid'
     grid.extent_kji = grid_a.extent_kji.copy()
     grid.nk, grid.nj, grid.ni = grid.extent_kji
@@ -164,7 +164,7 @@ def __inherit_basics(grid, grid_a, grid_b):
     grid.geometry_defined_for_all_pillars_cached = True
 
 
-def __interpolate_points_cached_from_pillars(grid, grid_a, grid_b, a_weight, b_weight):
+def _interpolate_points_cached_from_pillars(grid, grid_a, grid_b, a_weight, b_weight):
     grid.points_cached = grid_a.points_cached * a_weight + grid_b.points_cached * b_weight
     grid.has_split_coordinate_lines = grid_a.has_split_coordinate_lines
     if grid.has_split_coordinate_lines:
@@ -174,13 +174,13 @@ def __interpolate_points_cached_from_pillars(grid, grid_a, grid_b, a_weight, b_w
         grid.split_pillars_count = grid_a.split_pillars_count
 
 
-def __interpolate_points_cached_from_cp(grid, grid_a, grid_b, a_weight, b_weight, split_tolerance):
+def _interpolate_points_cached_from_cp(grid, grid_a, grid_b, a_weight, b_weight, split_tolerance):
     grid.pillar_shape = 'curved'  # following fesapi approach of non-parametric pillars even if they are in fact straight
     cp_a = grid_a.corner_points(cache_cp_array = True)
     cp_b = grid_b.corner_points(cache_cp_array = True)
     assert cp_a.shape == cp_b.shape
     grid_cp = cp_a * a_weight + cp_b * b_weight
-    __close_vertical_voids(grid, grid_cp, grid_a.z_units())
+    _close_vertical_voids(grid, grid_cp, grid_a.z_units())
     # reduce cp array extent in k
     log.debug('reducing k extent of interpolated corner point array (sharing points vertically)')
     k_reduced_cp_array = np.zeros((grid.nk + 1, grid.nj, grid.ni, 2, 2, 3))  # (nk+1, nj, ni, jp, ip, xyz)
@@ -276,10 +276,10 @@ def __interpolate_points_cached_from_cp(grid, grid_a, grid_b, a_weight, b_weight
     grid.points_cached = points_array
     # add split pillar arrays to grid object
     if grid.has_split_coordinate_lines:
-        __add_split_pillars_for_extras(grid, extras_count, extras_use, extras_list)
+        _add_split_pillars_for_extras(grid, extras_count, extras_use, extras_list)
 
 
-def __add_split_pillars_for_extras(grid, extras_count, extras_use, extras_list):
+def _add_split_pillars_for_extras(grid, extras_count, extras_use, extras_list):
     log.debug('adding split pillar arrays to grid object')
     split_pillar_indices_list = []
     cumulative_length_list = []
@@ -316,7 +316,7 @@ def __add_split_pillars_for_extras(grid, extras_count, extras_use, extras_list):
     grid.split_pillars_count = len(extras_list)
 
 
-def __close_vertical_voids(grid, grid_cp, z_units):
+def _close_vertical_voids(grid, grid_cp, z_units):
     if grid.nk > 1:
         z_gap = grid_cp[1:, :, :, 0, :, :, :] - grid_cp[:-1, :, :, 1, :, :, :]
         max_gap = np.max(np.abs(z_gap))

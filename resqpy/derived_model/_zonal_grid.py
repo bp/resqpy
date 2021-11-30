@@ -13,8 +13,8 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model._dm_common import __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model._dm_zone_layer_ranges_from_array import zone_layer_ranges_from_array
+from resqpy.derived_model._common import _write_grid, _establish_model_and_source_grid
+from resqpy.derived_model._zone_layer_ranges_from_array import zone_layer_ranges_from_array
 
 
 def zonal_grid(epc_file,
@@ -64,7 +64,7 @@ def zonal_grid(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
     if source_grid.grid_representation == 'IjkBlockGrid':
         source_grid.make_regular_points_cached()
@@ -72,11 +72,11 @@ def zonal_grid(epc_file,
     single_layer_mode = (not zone_title and not zone_uuid and
                          (zone_layer_range_list is None or len(zone_layer_range_list) == 1))
 
-    k0_min, k0_max = __set_or_check_k_min_max(k0_min, k0_max, source_grid)
+    k0_min, k0_max = _set_or_check_k_min_max(k0_min, k0_max, source_grid)
 
     if not single_layer_mode:  # process zone array
         if zone_layer_range_list is None:
-            zone_array = __fetch_zone_array(source_grid, zone_title, zone_uuid)
+            zone_array = _fetch_zone_array(source_grid, zone_title, zone_uuid)
             zone_layer_range_list = zone_layer_ranges_from_array(zone_array,
                                                                  k0_min,
                                                                  k0_max,
@@ -93,14 +93,14 @@ def zonal_grid(epc_file,
 
     # create a new, empty grid object
     is_regular = grr.is_regular_grid(source_grid.root) and single_layer_mode
-    grid = __empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count)
+    grid = _empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count)
 
     # aggregate inactive cell mask depending on laissez faire argument
-    __set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_layer_mode, k0_min, k0_max,
-                             zone_layer_range_list, zone_count)
+    _set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_layer_mode, k0_min, k0_max,
+                            zone_layer_range_list, zone_count)
 
     if not is_regular:
-        __process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zone_layer_range_list, zone_count)
+        _process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zone_layer_range_list, zone_count)
 
     # establish title for the new grid
     if new_grid_title is None or len(new_grid_title) == 0:
@@ -113,9 +113,9 @@ def zonal_grid(epc_file,
     # write the new grid
     model.h5_release()
     if new_epc_file:
-        __write_grid(new_epc_file, grid, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, grid_title = new_grid_title, mode = 'w')
     else:
-        __write_grid(epc_file, grid, ext_uuid = None, grid_title = new_grid_title, mode = 'a')
+        _write_grid(epc_file, grid, ext_uuid = None, grid_title = new_grid_title, mode = 'a')
 
     return grid
 
@@ -157,7 +157,7 @@ def single_layer_grid(epc_file,
                       new_epc_file = new_epc_file)
 
 
-def __fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True):
+def _fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True):
     properties = grid.extract_property_collection()
     assert properties is not None and properties.number_of_parts() > 0, 'no properties found in relation to grid'
     properties = rqp.selective_version_of_collection(properties, continuous = False)
@@ -183,7 +183,7 @@ def __fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True)
     return properties.cached_part_array_ref(part_name, masked = masked)  # .copy() needed?
 
 
-def __empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count):
+def _empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count):
     if is_regular:
         dxyz_dkji = source_grid.block_dxyz_dkji.copy()
         dxyz_dkji[0] *= k0_max - k0_min + 1
@@ -208,7 +208,7 @@ def __empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count):
     return grid
 
 
-def __scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_list, zone_count):
+def _scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_list, zone_count):
     source_points = source_grid.points_ref()
     log.debug('scanning columns (split pillars) for reference geometry')
     if not hasattr(source_grid, 'pillars_for_column'):
@@ -238,8 +238,8 @@ def __scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_li
                         break
 
 
-def __set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_layer_mode, k0_min, k0_max,
-                             zone_layer_range_list, zone_count):
+def _set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_layer_mode, k0_min, k0_max,
+                            zone_layer_range_list, zone_count):
     if source_grid.inactive is None:
         log.debug('setting inactive mask to None')
         grid.inactive = None
@@ -260,7 +260,7 @@ def __set_inactive_cell_mask(source_grid, grid, inactive_laissez_faire, single_l
                 grid.inactive[zone_i] = np.any(source_grid.inactive[zk0_min:zk0_max + 1], axis = 0)
 
 
-def __process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zone_layer_range_list, zone_count):
+def _process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zone_layer_range_list, zone_count):
     # rework the grid geometry
     source_grid.cache_all_geometry_arrays()
     # determine cell geometry is defined
@@ -317,7 +317,7 @@ def __process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zon
                             grid.array_cell_geometry_is_defined[zone_i, j, i] = True
                             break
     else:
-        __scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_list, zone_count)
+        _scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_list, zone_count)
     if grid.has_split_coordinate_lines:
         grid.split_pillar_indices_cached = source_grid.split_pillar_indices_cached.copy()
         grid.cols_for_split_pillars = source_grid.cols_for_split_pillars.copy()
@@ -325,7 +325,7 @@ def __process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zon
         grid.split_pillars_count = source_grid.split_pillars_count
 
 
-def __set_or_check_k_min_max(k0_min, k0_max, source_grid):
+def _set_or_check_k_min_max(k0_min, k0_max, source_grid):
     if k0_min is None:
         k0_min = 0
     else:

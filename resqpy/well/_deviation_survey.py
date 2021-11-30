@@ -470,3 +470,6 @@ class DeviationSurvey(BaseResqpy):
         else:
             represented_interp = rqo.WellboreInterpretation(self.model, uuid = interp_uuid)
         return represented_interp
+        else:
+            represented_interp = rqo.WellboreInterpretation(self.model, uuid = interp_uuid)
+        return represented_interp

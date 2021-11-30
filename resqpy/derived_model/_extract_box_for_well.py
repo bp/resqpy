@@ -14,8 +14,8 @@ import resqpy.olio.box_utilities as bx
 import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
-from resqpy.derived_model._dm_add_one_grid_property_array import add_one_grid_property_array
-from resqpy.derived_model._dm_extract_box import extract_box
+from resqpy.derived_model._add_one_grid_property_array import add_one_grid_property_array
+from resqpy.derived_model._extract_box import extract_box
 
 
 def extract_box_for_well(epc_file = None,
@@ -99,7 +99,7 @@ def extract_box_for_well(epc_file = None,
 
     # establish model, source grid, and trajectory model
     new_epc_file, trajectory_epc, model, traj_model, source_grid =  \
-        __establish_files_and_models(epc_file, new_epc_file, trajectory_epc, source_grid)
+        _establish_files_and_models(epc_file, new_epc_file, trajectory_epc, source_grid)
 
     # ensure geometry exists as points in case of a regular (block) grid
     if source_grid.grid_representation == 'IjkBlockGrid':
@@ -160,21 +160,21 @@ def extract_box_for_well(epc_file = None,
             'blocked well does not include cells in specified layer range'
         bw_cells = blocked_well.cell_indices_for_grid_uuid(source_grid.uuid)
     else:
-        column_ji0, well_name = __check_column(source_grid, column_ji0, column_xy, well_name)
+        column_ji0, well_name = _check_column(source_grid, column_ji0, column_xy, well_name)
 
     # create cell mask
-    inclusion_mask, outer_inactive_mask = __build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory,
-                                                             blocked_well, bw_cells, column_ji0, quad_triangles, radius,
-                                                             outer_radius)
+    inclusion_mask, outer_inactive_mask = _build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory,
+                                                            blocked_well, bw_cells, column_ji0, quad_triangles, radius,
+                                                            outer_radius)
 
     # derive box from inclusion mask
-    box = __box_from_inclusion_mask(source_grid, inclusion_mask, min_k0, max_k0)
+    box = _box_from_inclusion_mask(source_grid, inclusion_mask, min_k0, max_k0)
 
     # prepare inactive mask to merge in for new grid
-    box_inactive = __make_inactive_mask(active_cells_shape, inclusion_mask, box)
+    box_inactive = _make_inactive_mask(active_cells_shape, inclusion_mask, box)
 
     # establish title for the new grid
-    new_grid_title = __invent_title(new_grid_title, trajectory, blocked_well, column_ji0)
+    new_grid_title = _invent_title(new_grid_title, trajectory, blocked_well, column_ji0)
 
     # perform the main grid extraction
     grid = extract_box(epc_file,
@@ -190,16 +190,16 @@ def extract_box_for_well(epc_file = None,
 
     # inherit well if requested
     if inherit_well and new_epc_file:
-        __inherit_well(new_epc_file, grid, traj_model, well_name, trajectory, blocked_well, column_ji0, box)
+        _inherit_well(new_epc_file, grid, traj_model, well_name, trajectory, blocked_well, column_ji0, box)
 
     # add mask property for outer radius, if specified
     if outer_radius is not None:
-        __add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name)
+        _add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name)
 
     return grid, box
 
 
-def __box_from_inclusion_mask(source_grid, inclusion_mask, min_k0, max_k0):
+def _box_from_inclusion_mask(source_grid, inclusion_mask, min_k0, max_k0):
     min_j0 = 0
     while min_j0 < source_grid.nj - 1 and not np.any(inclusion_mask[:, min_j0, :]):
         min_j0 += 1
@@ -219,8 +219,8 @@ def __box_from_inclusion_mask(source_grid, inclusion_mask, min_k0, max_k0):
     return box
 
 
-def __build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked_well, bw_cells, column_ji0,
-                       quad_triangles, radius, outer_radius):
+def _build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked_well, bw_cells, column_ji0,
+                      quad_triangles, radius, outer_radius):
     # todo: handle base interfaces above k gaps
     # either work with grid layers of interfaces between layers (grid horizons)
     # intialise masks to False
@@ -232,8 +232,8 @@ def __build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked
     end_k0 = max_k0 + 1 if trajectory is None else max_k0 + 2
     warned = False
     for k in range(min_k0, end_k0):
-        cols, intersect_points = __find_intersections(source_grid, k, trajectory, blocked_well, bw_cells, column_ji0,
-                                                      centres, quad_triangles)
+        cols, intersect_points = _find_intersections(source_grid, k, trajectory, blocked_well, bw_cells, column_ji0,
+                                                     centres, quad_triangles)
         if cols is None or len(cols) == 0:
             if not warned:
                 log.warning(f"no intersection found between well and {h_or_l}(s) such as: {k}")
@@ -285,7 +285,7 @@ def __build_cell_masks(source_grid, centres, min_k0, max_k0, trajectory, blocked
     return inclusion_mask, outer_inactive_mask
 
 
-def __invent_title(new_grid_title, trajectory, blocked_well, column_ji0):
+def _invent_title(new_grid_title, trajectory, blocked_well, column_ji0):
     if not new_grid_title:
         if trajectory is not None:
             new_grid_title = 'local grid extracted for well: ' + str(trajectory.title)
@@ -299,7 +299,7 @@ def __invent_title(new_grid_title, trajectory, blocked_well, column_ji0):
     return new_grid_title
 
 
-def __add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name):
+def _add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source_grid, well_name):
     if new_epc_file:
         # TODO: copy source grid and reassign source_grid to new copy
         outer_epc = new_epc_file
@@ -315,7 +315,7 @@ def __add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, sourc
                                 discrete = True)
 
 
-def __inherit_well(new_epc_file, grid, traj_model, well_name, trajectory, blocked_well, column_ji0, box):
+def _inherit_well(new_epc_file, grid, traj_model, well_name, trajectory, blocked_well, column_ji0, box):
     newer_model = rq.Model(new_epc_file)
     if trajectory is None and blocked_well is None:
         log.info('creating well objects for column')
@@ -337,7 +337,7 @@ def __inherit_well(new_epc_file, grid, traj_model, well_name, trajectory, blocke
     newer_model.store_epc()
 
 
-def __make_inactive_mask(active_cells_shape, inclusion_mask, box):
+def _make_inactive_mask(active_cells_shape, inclusion_mask, box):
     if active_cells_shape in ['tube', 'prism']:
         if active_cells_shape == 'prism':
             layer_mask = np.any(inclusion_mask, axis = 0)
@@ -349,7 +349,7 @@ def __make_inactive_mask(active_cells_shape, inclusion_mask, box):
     return box_inactive
 
 
-def __check_column(source_grid, column_ji0, column_xy, well_name):
+def _check_column(source_grid, column_ji0, column_xy, well_name):
     if column_ji0 is None:
         assert len(column_xy) == 2
         column_ji0 = source_grid.find_cell_for_point_xy(column_xy[0], column_xy[1])
@@ -363,7 +363,7 @@ def __check_column(source_grid, column_ji0, column_xy, well_name):
     return column_ji0, well_name
 
 
-def __establish_files_and_models(epc_file, new_epc_file, trajectory_epc, source_grid):
+def _establish_files_and_models(epc_file, new_epc_file, trajectory_epc, source_grid):
     assert epc_file or new_epc_file, 'epc file name not specified'
     if new_epc_file and epc_file and (
         (new_epc_file == epc_file) or
@@ -388,7 +388,7 @@ def __establish_files_and_models(epc_file, new_epc_file, trajectory_epc, source_
     return new_epc_file, trajectory_epc, model, traj_model, source_grid
 
 
-def __find_intersections(source_grid, k, trajectory, blocked_well, bw_cells, column_ji0, centres, quad_triangles):
+def _find_intersections(source_grid, k, trajectory, blocked_well, bw_cells, column_ji0, centres, quad_triangles):
     if trajectory is None:
         if blocked_well is None:
             cols_ji0 = np.array(column_ji0, dtype = int).reshape((1, 2))

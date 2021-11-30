@@ -135,11 +135,11 @@ def tangents(points, weight = 'linear', closed = False):
     tangent_vectors = np.empty((knot_count, 3))
 
     for knot in range(1, knot_count - 1):
-        tangent_vectors[knot] = __one_tangent(points, knot - 1, knot, knot + 1, weight)
+        tangent_vectors[knot] = _one_tangent(points, knot - 1, knot, knot + 1, weight)
     if closed:
         assert knot_count > 2, 'closed poly line must contain at least 3 knots for tangent generation'
-        tangent_vectors[0] = __one_tangent(points, -1, 0, 1, weight)
-        tangent_vectors[-1] = __one_tangent(points, -2, -1, 0, weight)
+        tangent_vectors[0] = _one_tangent(points, -1, 0, 1, weight)
+        tangent_vectors[-1] = _one_tangent(points, -2, -1, 0, weight)
     else:
         tangent_vectors[0] = vu.unit_vector(points[1] - points[0])
         tangent_vectors[-1] = vu.unit_vector(points[-1] - points[-2])
@@ -207,8 +207,8 @@ def spline(points,
         seg_lengths[-1] = vu.naive_length(points[0] - points[-1])
 
     knot_insertions = np.full(seg_count, min_subdivisions - 1, dtype = int)
-    __prepare_knot_insertions(knot_insertions, max_segment_length, seg_count, seg_lengths, max_degrees_per_knot,
-                              knot_count, tangent_vectors, points)
+    _prepare_knot_insertions(knot_insertions, max_segment_length, seg_count, seg_lengths, max_degrees_per_knot,
+                             knot_count, tangent_vectors, points)
     insertion_count = np.sum(knot_insertions)
     log.debug(f'{insertion_count} knot insertions for spline')
     spline_knot_count = knot_count + insertion_count
@@ -238,7 +238,7 @@ def spline(points,
     return spline_points
 
 
-def __one_tangent(points, k1, k2, k3, weight):
+def _one_tangent(points, k1, k2, k3, weight):
     v1 = points[k2] - points[k1]
     v2 = points[k3] - points[k2]
     l1 = vu.naive_length(v1)
@@ -251,8 +251,8 @@ def __one_tangent(points, k1, k2, k3, weight):
         return vu.unit_vector(v1 / l1 + v2 / l2)
 
 
-def __prepare_knot_insertions(knot_insertions, max_segment_length, seg_count, seg_lengths, max_degrees_per_knot,
-                              knot_count, tangent_vectors, points):
+def _prepare_knot_insertions(knot_insertions, max_segment_length, seg_count, seg_lengths, max_degrees_per_knot,
+                             knot_count, tangent_vectors, points):
     if max_segment_length is not None:
         for seg in range(seg_count):
             sub_count = maths.ceil(seg_lengths[seg] / max_segment_length)

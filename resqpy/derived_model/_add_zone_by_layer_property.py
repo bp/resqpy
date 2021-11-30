@@ -5,8 +5,8 @@ import numpy as np
 import resqpy.grid as grr
 import resqpy.model as rq
 
-from resqpy.derived_model._dm_add_one_grid_property_array import add_one_grid_property_array
-from resqpy.derived_model._dm_zone_layer_ranges_from_array import zone_layer_ranges_from_array
+from resqpy.derived_model._add_one_grid_property_array import add_one_grid_property_array
+from resqpy.derived_model._zone_layer_ranges_from_array import zone_layer_ranges_from_array
 
 
 def add_zone_by_layer_property(epc_file,
