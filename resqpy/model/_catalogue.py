@@ -539,6 +539,7 @@ def _uuid_for_part(model, part_name, is_rels = None):
         return model.rels_forest[part_name][0]
     return model.parts_forest[part_name][1]
 
+
 def _type_of_part(model, part_name, strip_obj = False):
     """Returns content type for the named part (does not apply to rels parts)."""
 
