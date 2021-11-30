@@ -82,12 +82,11 @@ def test_from_dataframe(example_model_and_crs):
     # Create a wellbore marker frame from a dataframe
     wellbore_marker_frame = resqpy.well.WellboreMarkerFrame.from_dataframe(parent_model = model,
                                                                            dataframe = wellbore_marker_frame_dataframe,
-                                                                           trajectory = trajectory
-                                                                           )
+                                                                           trajectory = trajectory)
     # Save to disk
     wellbore_marker_frame.write_hdf5()
     wellbore_marker_frame.create_xml()
-    uuid_wmf = wellbore_marker_frame.uuid # called after create_xml method as it can alter the uuid
+    uuid_wmf = wellbore_marker_frame.uuid  # called after create_xml method as it can alter the uuid
     model.store_epc()
     model.h5_release()
 
@@ -96,15 +95,14 @@ def test_from_dataframe(example_model_and_crs):
 
     # Reload from disk
     model2 = Model(epc_file = epc_path)
-    wellbore_marker_frame2 = resqpy.well.WellboreMarkerFrame(parent_model = model2,
-                                                             uuid = uuid_wmf
-                                                             )
+    wellbore_marker_frame2 = resqpy.well.WellboreMarkerFrame(parent_model = model2, uuid = uuid_wmf)
     # --------- Assert ----------
     # test that the attributes were reloaded correctly
     assert wellbore_marker_frame2.trajectory == trajectory
     assert wellbore_marker_frame2.node_count == len(wellbore_marker_frame_dataframe)
     assert wellbore_marker_frame2.get_marker_count() == 3
     np.testing.assert_equal(wellbore_marker_frame2.node_mds, wellbore_marker_frame_dataframe['MD'].values)
+
 
 def test_dataframe(example_model_and_crs):
     # Test that all attributes are correctly saved and loaded from disk
@@ -160,20 +158,20 @@ def test_dataframe(example_model_and_crs):
     # Create a wellbore marker frame from a dataframe
     wellbore_marker_frame = resqpy.well.WellboreMarkerFrame.from_dataframe(parent_model = model,
                                                                            dataframe = wellbore_marker_frame_dataframe,
-                                                                           trajectory = trajectory
-                                                                           )
+                                                                           trajectory = trajectory)
     # Create the expected dataframe that will be created from the wellbore marker frame object
-    expected_dataframe = pd.DataFrame({'X': np.array([1.5]),
-                                       'Y': np.array([1.5]),
-                                       'Z': np.array([205.0]),
-                                       'MD': np.array([305]),
-                                       'Type': 'Horizon',
-                                       'Surface': '"' + 'horizon_interp_1' + '"',
-                                       'Well': '"' + 'Banoffee' + '"'
-                                       })
+    expected_dataframe = pd.DataFrame({
+        'X': np.array([1.5]),
+        'Y': np.array([1.5]),
+        'Z': np.array([205.0]),
+        'MD': np.array([305]),
+        'Type': 'Horizon',
+        'Surface': '"' + 'horizon_interp_1' + '"',
+        'Well': '"' + 'Banoffee' + '"'
+    })
     # --------- Assert ----------
     # test that the attributes were reloaded correctly
-    assert all(wellbore_marker_frame.dataframe() ==  expected_dataframe)
+    assert all(wellbore_marker_frame.dataframe() == expected_dataframe)
     # TODO: get pandas.testing.assert_frame_equal to work
 
 
@@ -253,8 +251,7 @@ def test_get_interpretation_object(example_model_and_crs):
     # Create a wellbore marker frame from a dataframe
     wellbore_marker_frame = resqpy.well.WellboreMarkerFrame.from_dataframe(parent_model = model,
                                                                            dataframe = wellbore_marker_frame_dataframe,
-                                                                           trajectory = trajectory
-                                                                           )
+                                                                           trajectory = trajectory)
     # --------- Act ----------
     # Get an interpretation based on an uuid
     found_interpretation = wellbore_marker_frame.get_interpretation_obj(interpretation_uuid = horizon_interp_2_uuid)
@@ -339,8 +336,7 @@ def test_find_marker_from_interp(example_model_and_crs):
     # Create a wellbore marker frame from a dataframe
     wellbore_marker_frame = resqpy.well.WellboreMarkerFrame.from_dataframe(parent_model = model,
                                                                            dataframe = wellbore_marker_frame_dataframe,
-                                                                           trajectory = trajectory
-                                                                           )
+                                                                           trajectory = trajectory)
     # --------- Act ----------
     # Get the marker object from an interpretation object and interpretation object uuid
     found_marker1 = wellbore_marker_frame.find_marker_from_interp(interpetation_obj = fault_interp_1)
@@ -349,6 +345,7 @@ def test_find_marker_from_interp(example_model_and_crs):
     # --------- Assert ----------
     assert found_marker1 == wellbore_marker_frame.wellbore_marker_list[2]
     assert found_marker2 == wellbore_marker_frame.wellbore_marker_list[1]
+
 
 def test_find_marker_from_index(example_model_and_crs):
 
@@ -426,8 +423,7 @@ def test_find_marker_from_index(example_model_and_crs):
     # Create a wellbore marker frame from a dataframe
     wellbore_marker_frame = resqpy.well.WellboreMarkerFrame.from_dataframe(parent_model = model,
                                                                            dataframe = wellbore_marker_frame_dataframe,
-                                                                           trajectory = trajectory
-                                                                           )
+                                                                           trajectory = trajectory)
     print(wellbore_marker_frame.wellbore_marker_list)
     # --------- Act ----------
     # Get the marker object from an interpretation object and interpretation object uuid

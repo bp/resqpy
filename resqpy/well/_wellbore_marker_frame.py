@@ -89,10 +89,9 @@ class WellboreMarkerFrame(BaseResqpy):
                        marker_name_col = 'Surface',
                        interp_name_col = 'Interp_Surface',
                        well_col = 'Well',
-                       title=None,
-                       originator=None,
-                       extra_metadata=None
-                       ):
+                       title = None,
+                       originator = None,
+                       extra_metadata = None):
         """Load wellbore marker frame data from a pandas data frame.
 
         arguments:
@@ -119,11 +118,12 @@ class WellboreMarkerFrame(BaseResqpy):
         for col in [md_col, boundary_type_col, marker_name_col]:
             # interpretation does not have to exist
             assert col in dataframe.columns
-        assert (len(set(dataframe[well_col])) == 1) & (dataframe[well_col].unique()[0].lower() ==
-               trajectory.well_name.lower()), 'mismatch between the well name in trajectory object and the dataframe'
+        assert (len(set(dataframe[well_col])) == 1) & (
+            dataframe[well_col].unique()[0].lower()
+            == trajectory.well_name.lower()), 'mismatch between the well name in trajectory object and the dataframe'
         # create a wellbore marker object for each of the rows of the dataframe
         wellbore_marker_list = []
-        for i,row in dataframe.iterrows():
+        for i, row in dataframe.iterrows():
             row_uuid = bu.string_from_uuid(bu.new_uuid())
             row_boundary_type = row[boundary_type_col].lower()
             row_interp_type = WellboreMarkerFrame.__get_interp_type(row_boundary_type)
@@ -142,7 +142,7 @@ class WellboreMarkerFrame(BaseResqpy):
                 else:
                     # No interpretation for the marker
                     row_interp_object = None
-            except KeyError: # no interpretation column in the dataframe
+            except KeyError:  # no interpretation column in the dataframe
                 row_interp_object = None
             wellbore_marker_list.append((row_uuid, row_boundary_type, row_surface, row_interp_object))
 
@@ -153,8 +153,7 @@ class WellboreMarkerFrame(BaseResqpy):
                    wellbore_marker_list = wellbore_marker_list,
                    title = title,
                    originator = originator,
-                   extra_metadata = extra_metadata
-                   )
+                   extra_metadata = extra_metadata)
 
     @staticmethod
     def __get_interp_type(boundary_kind):
