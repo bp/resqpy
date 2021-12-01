@@ -204,6 +204,7 @@ def example_model_with_properties(tmp_path):
 
     return model
 
+
 @pytest.fixture
 def example_model_with_prop_ts_rels(tmp_path):
     """Model with a grid (5x5x3) and properties.
