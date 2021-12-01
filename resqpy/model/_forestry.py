@@ -5,22 +5,11 @@ import logging
 log = logging.getLogger(__name__)
 
 import copy
-import h5py
 import os
 import shutil
-import warnings
 import zipfile as zf
-from typing import Iterable, Optional, Union
 
-import resqpy.crs as rqc
-import resqpy.fault as rqf
-import resqpy.grid as grr
-import resqpy.model._catalogue as m_c
-import resqpy.model._grids as m_g
-import resqpy.model._hdf5 as m_h
-import resqpy.model._xml as m_x
 import resqpy.olio.consolidation as cons
-import resqpy.olio.time as time
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as whdf5
 import resqpy.olio.xml_et as rqet
