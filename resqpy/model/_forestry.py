@@ -145,33 +145,10 @@ def _tidy_up_forests(model, tidy_main_tree = True, tidy_others = False, remove_e
 def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = None):
     """Load xml parts of model from epc file (HDF5 arrays are not loaded)."""
 
-    def exclude(name, epc_subdir):
-        if epc_subdir is None:
-            return False
-        if '/' not in name:
-            return False
-        if name.startswith('docProps') or name.startswith('_rels'):
-            return False
-        if isinstance(epc_subdir, str):
-            epc_subdir = [epc_subdir]
-        for subdir in epc_subdir:
-            if subdir.endswith('/'):
-                head = subdir
-            else:
-                head = subdir + '/'
-            if name.startswith(head):
-                return False
-        return True
-
     if not epc_file.endswith('.epc'):
         epc_file += '.epc'
 
-    if copy_from:
-        if not copy_from.endswith('.epc'):
-            copy_from += '.epc'
-        log.info('copying ' + copy_from + ' to ' + epc_file + ' along with paired .h5 files')
-        shutil.copy(copy_from, epc_file)
-        shutil.copy(copy_from[:-4] + '.h5', epc_file[:-4] + '.h5')
+    _copy_dataset_if_requested(copy_from, epc_file)
 
     log.info('loading resqml model from epc file ' + epc_file)
 
@@ -183,66 +160,106 @@ def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = 
 
     with zf.ZipFile(epc_file) as epc:
         names = epc.namelist()
-        for name in names:
-            if exclude(name, epc_subdir):
-                continue
-            if name != '[Content_Types].xml':
-                if name.startswith('docProps'):
-                    model.other_forest[name] = (None, None)  # used for non-uuid parts, ie. docProps
-                else:
-                    part_uuid = rqet.uuid_in_part_name(name)
-                    if '_rels' in name:
-                        model.rels_forest[name] = (part_uuid, None)
-                    else:
-                        model.parts_forest[name] = (None, part_uuid, None)
-                        _set_uuid_to_part(model, name)
+        _set_part_names_in_forests(model, epc_subdir, names)
         with epc.open('[Content_Types].xml') as main_xml:
             model.main_tree = rqet.parse(main_xml)
             model.main_root = model.main_tree.getroot()
             for child in model.main_root:
-                if rqet.stripped_of_prefix(child.tag) == 'Override':
-                    attrib_dict = child.attrib
-                    part_name = attrib_dict['PartName']
-                    if part_name[0] == '/':
-                        part_name = part_name[1:]
-                    part_type = rqet.content_type(attrib_dict['ContentType'])
-                    if part_name.startswith('docProps'):
-                        if part_name not in model.other_forest:
-                            log.warning('docProps entry in Content_Types does not exist as part in epc: ' + part_name)
-                            continue
-                        model.other_forest[part_name] = (part_type, None)
-                    else:
-                        if part_name not in model.parts_forest:
-                            if epc_subdir is None:
-                                log.warning('entry in Content_Types does not exist as part in epc: ' + part_name)
-                            continue
-                        part_uuid = model.parts_forest[part_name][1]
-                        model.parts_forest[part_name] = (part_type, part_uuid, None)
-                    if full_load:
-                        load_success = _load_part(model, epc, part_name)
-                        if not load_success:
-                            _fell_part(model, part_name)
-                elif rqet.stripped_of_prefix(child.tag) == 'Default':
-                    if 'Extension' in child.attrib.keys() and child.attrib['Extension'] == 'rels':
-                        assert not model.rels_present
-                        model.rels_present = True
-                else:
-                    # todo: check standard for other valid tags
-                    pass
+                _complete_forest_entry_for_part(epc, model, epc_subdir, full_load, child)
         if model.rels_present and full_load:
-            for name in names:
-                if exclude(name, epc_subdir):
-                    continue
-                if name.startswith('_rels/'):
-                    load_success = _load_part(model, epc, name, is_rels = True)
-                    if not load_success:
-                        _fell_part(model, part_name)
+            _load_relationships(epc, model, epc_subdir, names)
             if copy_from:
                 model.change_filename_in_hdf5_rels(os.path.split(epc_file)[1][:-4] + '.h5')
         elif not model.rels_present:
             assert len(model.rels_forest) == 0
         if full_load:
             _tidy_up_forests(model)
+
+
+def _copy_dataset_if_requested(copy_from, epc_file):
+    if copy_from:
+        if not copy_from.endswith('.epc'):
+            copy_from += '.epc'
+        log.info('copying ' + copy_from + ' to ' + epc_file + ' along with paired .h5 files')
+        shutil.copy(copy_from, epc_file)
+        shutil.copy(copy_from[:-4] + '.h5', epc_file[:-4] + '.h5')
+
+
+def _exclude(name, epc_subdir):
+    if epc_subdir is None:
+        return False
+    if '/' not in name:
+        return False
+    if name.startswith('docProps') or name.startswith('_rels'):
+        return False
+    if isinstance(epc_subdir, str):
+        epc_subdir = [epc_subdir]
+    for subdir in epc_subdir:
+        if subdir.endswith('/'):
+            head = subdir
+        else:
+            head = subdir + '/'
+        if name.startswith(head):
+            return False
+    return True
+
+
+def _set_part_names_in_forests(model, epc_subdir, names):
+    for name in names:
+        if _exclude(name, epc_subdir):
+            continue
+        if name != '[Content_Types].xml':
+            if name.startswith('docProps'):
+                model.other_forest[name] = (None, None)  # used for non-uuid parts, ie. docProps
+            else:
+                part_uuid = rqet.uuid_in_part_name(name)
+                if '_rels' in name:
+                    model.rels_forest[name] = (part_uuid, None)
+                else:
+                    model.parts_forest[name] = (None, part_uuid, None)
+                    _set_uuid_to_part(model, name)
+
+
+def _complete_forest_entry_for_part(epc, model, epc_subdir, full_load, child):
+    if rqet.stripped_of_prefix(child.tag) == 'Override':
+        attrib_dict = child.attrib
+        part_name = attrib_dict['PartName']
+        if part_name[0] == '/':
+            part_name = part_name[1:]
+        part_type = rqet.content_type(attrib_dict['ContentType'])
+        if part_name.startswith('docProps'):
+            if part_name not in model.other_forest:
+                log.warning('docProps entry in Content_Types does not exist as part in epc: ' + part_name)
+                return
+            model.other_forest[part_name] = (part_type, None)
+        else:
+            if part_name not in model.parts_forest:
+                if epc_subdir is None:
+                    log.warning('entry in Content_Types does not exist as part in epc: ' + part_name)
+                return
+            part_uuid = model.parts_forest[part_name][1]
+            model.parts_forest[part_name] = (part_type, part_uuid, None)
+        if full_load:
+            load_success = _load_part(model, epc, part_name)
+            if not load_success:
+                _fell_part(model, part_name)
+    elif rqet.stripped_of_prefix(child.tag) == 'Default':
+        if 'Extension' in child.attrib.keys() and child.attrib['Extension'] == 'rels':
+            assert not model.rels_present
+            model.rels_present = True
+    else:
+        # todo: check standard for other valid tags
+        pass
+
+
+def _load_relationships(epc, model, epc_subdir, names):
+    for name in names:
+        if _exclude(name, epc_subdir):
+            continue
+        if name.startswith('_rels/'):
+            load_success = _load_part(model, epc, name, is_rels = True)
+            if not load_success:
+                _fell_part(model, name)
 
 
 def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', only_if_modified = False):
@@ -465,46 +482,21 @@ def _copy_part_from_other_model(model,
         log.error('failed to copy part (missing in source model?): ' + str(part))
         return
 
-    if consolidate and not force:
-        if model.consolidation is None:
-            model.consolidation = cons.Consolidation(model)
-        resident_uuid = model.consolidation.equivalent_uuid_for_part(part, immigrant_model = other_model)
-    else:
-        resident_uuid = None
+    resident_uuid = _unforced_consolidation(model, other_model, consolidate, force, part)
 
     if resident_uuid is None:
 
         root_node = _duplicate_node(model, other_root)  # adds duplicated node as part
         assert root_node is not None
 
-        if realization is not None and rqet.node_type(root_node).endswith('Property'):
-            ri_node = rqet.find_tag(root_node, 'RealizationIndex')
-            if ri_node is None:
-                ri_node = rqet.SubElement(root_node, ns['resqml2'] + 'RealizationIndex')
-                ri_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
-                ri_node.text = str(realization)
-            # NB. this intentionally overwrites any pre-existing realization number
-            ri_node.text = str(realization)
+        _set_realization_index_node_if_required(realization, root_node)
 
         # copy hdf5 data
         hdf5_internal_paths = [node.text for node in rqet.list_of_descendant_tag(other_root, 'PathInHdfFile')]
         hdf5_count = whdf5.copy_h5_path_list(other_h5_file_name, self_h5_file_name, hdf5_internal_paths, mode = 'a')
 
         # create relationship with hdf5 if needed and modify h5 file uuid in xml references
-        if hdf5_count:
-            if h5_uuid is None:
-                h5_uuid = model.h5_uuid()
-            if h5_uuid is None:
-                model.create_hdf5_ext()
-                h5_uuid = model.h5_uuid()
-            model.change_hdf5_uuid_in_hdf5_references(root_node, None, h5_uuid)
-            ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', h5_uuid, prefixed = False)
-            ext_node = model.root_for_part(ext_part)
-            model.create_reciprocal_relationship(root_node,
-                                                 'mlToExternalPartProxy',
-                                                 ext_node,
-                                                 'externalPartProxyToMl',
-                                                 avoid_duplicates = False)
+        _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node)
 
         # cut references to objects to be excluded
         if cut_refs_to_uuids:
@@ -514,25 +506,8 @@ def _copy_part_from_other_model(model,
             rqet.cut_nodes_of_types(root_node, cut_node_types)
 
         # recursively copy in referenced parts where they don't already exist in this model
-        for ref_node in rqet.list_obj_references(root_node):
-            resident_referred_node = None
-            if consolidate:
-                resident_referred_node = model.referenced_node(ref_node, consolidate = True)
-            if force:
-                continue
-            if resident_referred_node is None:
-                referred_node = other_model.referenced_node(ref_node)
-                if referred_node is None:
-                    log.warning(
-                        f'referred node not found in other model for {rqet.find_tag_text(ref_node, "Title")}; uuid: {rqet.find_tag_text(ref_node, "UUID")}'
-                    )
-                else:
-                    referred_part = rqet.part_name_for_part_root(referred_node)
-                    if other_model.type_of_part(referred_part) == 'obj_EpcExternalPartReference':
-                        continue
-                    if referred_part in model.list_of_parts():
-                        continue
-                    _copy_part_from_other_model(model, other_model, referred_part, consolidate = consolidate)
+        _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
+                               self_h5_file_name, h5_uuid, other_h5_file_name, root_node)
 
         resident_uuid = uuid
 
@@ -541,6 +516,80 @@ def _copy_part_from_other_model(model,
         root_node = model.root_for_uuid(resident_uuid)
 
     # copy relationships where target part is present in this model – this part is source, then destination
+    _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node)
+
+
+def _unforced_consolidation(model, other_model, consolidate, force, part):
+    if consolidate and not force:
+        if model.consolidation is None:
+            model.consolidation = cons.Consolidation(model)
+        resident_uuid = model.consolidation.equivalent_uuid_for_part(part, immigrant_model = other_model)
+    else:
+        resident_uuid = None
+    return resident_uuid
+
+
+def _set_realization_index_node_if_required(realization, root_node):
+    if realization is not None and rqet.node_type(root_node).endswith('Property'):
+        ri_node = rqet.find_tag(root_node, 'RealizationIndex')
+        if ri_node is None:
+            ri_node = rqet.SubElement(root_node, ns['resqml2'] + 'RealizationIndex')
+            ri_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
+        # NB. this intentionally overwrites any pre-existing realization number
+        ri_node.text = str(realization)
+
+
+def _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node):
+    if hdf5_count:
+        if h5_uuid is None:
+            h5_uuid = model.h5_uuid()
+        if h5_uuid is None:
+            model.create_hdf5_ext()
+            h5_uuid = model.h5_uuid()
+        model.change_hdf5_uuid_in_hdf5_references(root_node, None, h5_uuid)
+        ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', h5_uuid, prefixed = False)
+        ext_node = model.root_for_part(ext_part)
+        model.create_reciprocal_relationship(root_node,
+                                             'mlToExternalPartProxy',
+                                             ext_node,
+                                             'externalPartProxyToMl',
+                                             avoid_duplicates = False)
+
+
+def _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
+                           self_h5_file_name, h5_uuid, other_h5_file_name, root_node):
+    for ref_node in rqet.list_obj_references(root_node):
+        resident_referred_node = None
+        if consolidate:
+            resident_referred_node = model.referenced_node(ref_node, consolidate = True)
+        if force:
+            continue
+        if resident_referred_node is None:
+            referred_node = other_model.referenced_node(ref_node)
+            if referred_node is None:
+                log.warning('referred node not found in other model for ' +
+                            f'{rqet.find_tag_text(ref_node, "Title")}; ' +
+                            f'uuid: {rqet.find_tag_text(ref_node, "UUID")}')
+            else:
+                referred_part = rqet.part_name_for_part_root(referred_node)
+                if other_model.type_of_part(referred_part) == 'obj_EpcExternalPartReference':
+                    continue
+                if referred_part in model.list_of_parts():
+                    continue
+                _copy_part_from_other_model(model,
+                                            other_model,
+                                            referred_part,
+                                            realization = realization,
+                                            consolidate = consolidate,
+                                            force = force.force,
+                                            cut_refs_to_uuids = cut_refs_to_uuids,
+                                            cut_node_types = cut_node_types,
+                                            self_h5_file_name = self_h5_file_name,
+                                            h5_uuid = h5_uuid,
+                                            other_h5_file_name = other_h5_file_name)
+
+
+def _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node):
     for source_flag in [True, False]:
         other_related_parts = other_model.parts_list_filtered_by_related_uuid(other_model.list_of_parts(),
                                                                               resident_uuid,
