@@ -2149,7 +2149,6 @@ class BlockedWell(BaseResqpy):
             kh = pc.single_array_ref(citation_title = 'KH')[ci]
         else:
             kh = None
-
         return skip_interval, kh
 
     @staticmethod
@@ -2633,6 +2632,7 @@ class BlockedWell(BaseResqpy):
             self.__write_wellspec_file_units_metadata(write_nexus_units = write_nexus_units,
                                                       fp = fp,
                                                       length_uom = length_uom,
+                                                      length_uom_comment = length_uom_comment,
                                                       extra_columns_list = extra_columns_list,
                                                       well_name = well_name)
 
@@ -2690,7 +2690,7 @@ class BlockedWell(BaseResqpy):
             else:
                 log.warning('no well name identified for use in WELLSPEC')
                 well_name = 'WELLNAME'
-        well_name = BlockedWell.tidy_well_name(well_name)
+        well_name = BlockedWell.__tidy_well_name(well_name)
 
         return well_name
 

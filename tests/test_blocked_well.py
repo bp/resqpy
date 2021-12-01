@@ -7,7 +7,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.olio.uuid as bu
 from resqpy.grid import RegularGrid
 from resqpy.model import Model
-from resqpy.property import Property
+import resqpy.property as rqp
 import resqpy.well
 
 
@@ -48,7 +48,7 @@ def test_wellspec_properties(example_model_and_crs):
     bw_uuid = bw.uuid
     skin_uuid = model.uuid(title = 'SKIN', related_uuid = bw.uuid)
     assert skin_uuid is not None
-    skin_prop = Property(model, uuid = skin_uuid)
+    skin_prop = rqp.Property(model, uuid = skin_uuid)
     assert skin_prop is not None
     assert_array_almost_equal(skin_prop.array_ref(), [0.0, 2.5, 1.0, -0.5])
     model.store_epc()
@@ -66,7 +66,8 @@ def test_wellspec_properties(example_model_and_crs):
     for col in ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF']:
         assert_array_almost_equal(np.array(source_df[col]), np.array(df2[col]))
     df3 = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'LENGTH', 'SKIN', 'RADW', 'PPERF'],
-                       use_properties = ['SKIN', 'RADW'])
+                       use_properties = ['SKIN', 'RADW'],
+                       perforation_list = [(125, 175)])
     for col in ['SKIN', 'RADW']:
         assert_array_almost_equal(np.array(source_df[col]), np.array(df3[col]))
 
@@ -299,3 +300,71 @@ def test_import_from_cellio_file(example_model_and_crs):
     assert bw.trajectory is not None
     assert bw.cell_count == 3  # 3 lines in the cellio file
     assert bw.node_count == len(bw.node_mds) == 4  # added tail to trajectory
+
+
+def test_dataframe(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji = (3, 4, 3),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    perm_array = np.random.random(grid.extent_kji)
+    perm_prop = rqp.Property.from_array(model,
+                                        perm_array,
+                                        source_info = 'random',
+                                        keyword = 'PERMI',
+                                        support_uuid = grid.uuid,
+                                        property_kind = 'permeability',
+                                        indexable_element = 'cells',
+                                        uom = 'Euc')
+    perm_prop.write_hdf5()
+    perm_prop.create_xml()
+    perm_uuid = perm_prop.uuid
+    wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
+    well_name = 'DOGLEG'
+    source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25], [2, 2, 2, 45, -90.0, 2.5, 0.25],
+                              [2, 3, 2, 45, -90.0, 1.0, 0.20], [2, 3, 3, 0.0, 0.0, -0.5, 0.20]],
+                             columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW'])
+    with open(wellspec_file, 'w') as fp:
+        fp.write(F'WELLSPEC {well_name}\n')
+        for col in source_df.columns:
+            fp.write(f' {col:>6s}')
+        fp.write('\n')
+        for row_index in range(len(source_df)):
+            row = source_df.iloc[row_index]
+            for col in source_df.columns:
+                if col in ['IW', 'JW', 'L']:
+                    fp.write(f' {int(row[col]):6d}')
+                else:
+                    fp.write(f' {row[col]:6.2f}')
+            fp.write('\n')
+    bw = resqpy.well.BlockedWell(model,
+                                 wellspec_file = wellspec_file,
+                                 well_name = well_name,
+                                 use_face_centres = True,
+                                 add_wellspec_properties = True)
+
+    # --------- Act ----------
+    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH'],
+                      add_as_properties = True,
+                      # perforation_list = [(125, 175)],
+                      # max_depth = 245,
+                      perm_i_uuid = perm_uuid)
+
+    wellspec_file2 = os.path.join(model.epc_directory, 'wellspec2.dat')
+    df2 = bw.write_wellspec(wellspec_file = wellspec_file2, well_name = well_name,
+                            extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW'],
+                            length_uom = 'm',
+                            length_uom_comment = '?')
+
+    # --------- Assert ----------
+    assert len(df['KH']) > 0  # sucessfully added a KH column as an i-direction permeability array was specified
+    pd.testing.assert_frame_equal(df[['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW']], df2, check_dtype = False)
+    # Kadija: initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
+    # Kadija: why are AngleA values of 0 transformed to nan values?
