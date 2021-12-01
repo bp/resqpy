@@ -355,10 +355,16 @@ def test_dataframe(example_model_and_crs):
                       add_as_properties = True,
                       perforation_list = [(125, 175)],
                       max_depth = 245,
-                      perm_i_uuid = perm_uuid)
+                      perm_i_uuid = perm_uuid,
+                      stat = 'ON',
+                      min_k0 = 1,
+                      max_k0 = 3,
+                      use_face_centres = True,
+                      length_uom = 'm')
 
     # --------- Assert ----------
     assert len(df['KH']) > 0  # successfully added a KH column as an i-direction permeability array was specified
+    assert set(df['STAT']) == {'ON'}
     # Kadija: initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
     # Kadija: why are AngleA values of 0 transformed to nan values?
 
@@ -414,7 +420,8 @@ def test_write_wellspec(example_model_and_crs):
     # --------- Act ----------
     df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH'],
                       add_as_properties = True,
-                      perm_i_uuid = perm_uuid)
+                      perm_i_uuid = perm_uuid
+                      )
 
     wellspec_file2 = os.path.join(model.epc_directory, 'wellspec2.dat')
     df2 = bw.write_wellspec(wellspec_file = wellspec_file2,
@@ -425,8 +432,8 @@ def test_write_wellspec(example_model_and_crs):
 
     # --------- Assert ----------
     pd.testing.assert_frame_equal(df[['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW']], df2, check_dtype = False)
-    # Kadija: initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
-    # Kadija: why are AngleA values of 0 transformed to nan values?
+    # TODO find out why initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
+    # TODO find out why AngleA values of 0 transformed to nan values?
 
 
 def test_convenience_methods_xyz_and_kji0_marker(example_model_and_crs):
