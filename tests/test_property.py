@@ -13,6 +13,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
 import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
+import resqpy.surface as rqs
 
 # ---- Test PropertyCollection methods ---
 
