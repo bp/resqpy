@@ -886,21 +886,29 @@ array1 = np.array([[[0, 1, 0, 1, 0], [1, 0, 1, 0, 1], [0, 1, 0, 1, 0], [1, 0, 1,
                    [[0, 1, 0, 1, 0], [1, 0, 1, 0, 1], [0, 1, 0, 1, 0], [1, 0, 1, 0, 1], [0, 1, 0, 1, 0]]])
 
 array2 = np.where(array1 == 0, 0.5, array1)
+
 array3 = np.array([[[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
                     [1, 10, 10, 100, 100]],
                    [[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
                     [1, 10, 10, 100, 100]],
                    [[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
                     [1, 10, 10, 100, 100]]])
+
 array4 = np.where(array3 == 1, 0, array3)
 array4 = np.where(array4 == 100, 1, array4)
 array4 = np.where(array4 == 10, 0.090909, array4)
+
 array5 = np.where(array3 == 1, 0, array3)
 array5 = np.where(array5 == 100, 1, array5)
 array5 = np.where(array5 == 10, 0.5, array5)
+
 array6 = np.where(array3 == 100, np.nan, array3)
 array6 = np.where(array6 == 1, 0, array6)
 array6 = np.where(array6 == 10, 1, array6)
+
+array7 = np.where(array3 == 10, np.nan, array3)
+array7 = np.where(array7 == 1, 0, array7)
+array7 = np.where(array7 == 100, 2, array7)
 
 
 @pytest.mark.parametrize(
@@ -910,7 +918,7 @@ array6 = np.where(array6 == 10, 1, array6)
         ('NTG', False, False, None, True, None, array1, 0, 0.5),  # Simple trust minmax
         ('NTG', False, False, None, False, 0.5, array2, -0.5, 0.5),  # Fix 0 at 0.5
         ('Perm', False, False, None, False, None, array4, 1, 100),
-        ('Perm', False, True, None, False, None, array5, 0, 2)
+        ('Perm', False, True, None, False, None, array5, 0, 2),
     ])  # Logarithmic
 def test_norm_array_ref(example_model_with_properties, name, masked, log, discrete, trust, fix, array, emin, emax):
     # Arrange
@@ -951,12 +959,51 @@ def test_norm_array_ref_mask(example_model_with_properties):
     assert_array_almost_equal(array6, normed)
 
 
+def test_norm_array_ref_mask_equal(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    grid = model.grid()
+    # Set up a mask in the grid
+    minimask = np.array([1, 0, 0, 1, 1])
+    layermask = np.array([minimask] * 5)
+    mask = np.array([layermask, layermask, layermask], dtype = 'bool')
+    grid.inactive = mask
+    pc = model.grid().property_collection
+    cont = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    # Act
+    normed, vmin, vmax = pc.normalized_part_array(cont, masked = True, use_logarithm = False)
+    # Assert
+    assert vmin == 10
+    assert vmax == 10
+    assert_array_almost_equal(np.ones(shape = (3, 5, 5)) / 2, normed)
+
+
+@pytest.mark.skip(reason = 'Need to doublecheck the correct output for this method')
+def test_norm_array_ref_log_mask(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    grid = model.grid()
+    # Set up a mask in the grid
+    minimask = np.array([0, 1, 1, 0, 0])
+    layermask = np.array([minimask] * 5)
+    mask = np.array([layermask, layermask, layermask], dtype = 'bool')
+    grid.inactive = mask
+    pc = model.grid().property_collection
+    cont = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    # Act
+    normed, vmin, vmax = pc.normalized_part_array(cont, masked = True, use_logarithm = True)
+    # Assert
+    assert vmin == 0
+    assert vmax == 2
+    assert_array_almost_equal(array7, normed)
+
+
 def test_normalized_part_array_discrete(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
     disc = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Zone'][0]
-    print(pc.cached_part_array_ref(disc))
+
     # Act
     normed, vmin, vmax = pc.normalized_part_array(disc, discrete_cycle = 3)
     # Assert
