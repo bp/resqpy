@@ -959,6 +959,7 @@ def test_normalized_part_array_discrete(example_model_with_properties):
     print(pc.cached_part_array_ref(disc))
     # Act
     normed, vmin, vmax = pc.normalized_part_array(disc, discrete_cycle = 3)
+    # Assert
     assert vmin == 0
     assert vmax == 2
     assert normed[0, 0, 0] == 0.5
