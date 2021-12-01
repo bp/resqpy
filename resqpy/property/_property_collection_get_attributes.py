@@ -9,6 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('_property_collection_get_attributes.py version ' + version)
 
+import resqpy
 import numpy as np
 import numpy.ma as ma
 import resqpy.olio.xml_et as rqet
@@ -179,8 +180,7 @@ def _get_perm_k_part(collection, perms, perm_k_mode, share_perm_parts, perm_i_pa
             elif perm_k_mode == 'ntg squared':
                 ntg = collection.cached_part_array_ref(ntg_part)
                 kv *= ntg * ntg
-        from resqpy.property import PropertyCollection
-        kv_collection = PropertyCollection()
+        kv_collection = resqpy.property.PropertyCollection()
         kv_collection.set_support(support_uuid = collection.support_uuid, model = collection.model)
         kv_collection.add_cached_array_to_imported_list(kv,
                                                         'derived from horizontal perm with mode ' + str(perm_k_mode),
