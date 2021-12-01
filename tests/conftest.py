@@ -173,19 +173,13 @@ def example_model_with_properties(tmp_path):
                     [1, 0.5, 1, 0.5, 1]])
     sat_array = np.array([sat, sat, sat])
 
-    perm = np.array([[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
-                     [1, 10, 10, 100, 100]])
-    perm_array = np.array([perm, perm, perm])
-
     collection = rqp.GridPropertyCollection()
     collection.set_grid(grid)
-    for array, name, kind, discrete, facet_type, facet in zip(
-        [zone_array, vpc_array, fb_array, facies_array, ntg_array, por_array, sat_array, perm_array],
-        ['Zone', 'VPC', 'Fault block', 'Facies', 'NTG', 'POR', 'SW', 'Perm'], [
-            'discrete', 'discrete', 'discrete', 'discrete', 'net to gross ratio', 'porosity', 'saturation',
-            'permeability rock'
-        ], [True, True, True, True, False, False, False, False],
-        [None, None, None, None, None, None, None, 'direction'], [None, None, None, None, None, None, None, 'J']):
+    for array, name, kind, discrete in zip(
+        [zone_array, vpc_array, fb_array, facies_array, ntg_array, por_array, sat_array],
+        ['Zone', 'VPC', 'Fault block', 'Facies', 'NTG', 'POR', 'SW'],
+        ['discrete', 'discrete', 'discrete', 'discrete', 'net to gross ratio', 'porosity', 'saturation'],
+        [True, True, True, True, False, False, False]):
         collection.add_cached_array_to_imported_list(cached_array = array,
                                                      source_info = '',
                                                      keyword = name,
@@ -194,8 +188,8 @@ def example_model_with_properties(tmp_path):
                                                      time_index = None,
                                                      null_value = None,
                                                      property_kind = kind,
-                                                     facet_type = facet_type,
-                                                     facet = facet,
+                                                     facet_type = None,
+                                                     facet = None,
                                                      realization = None)
         collection.write_hdf5_for_imported_list()
         collection.create_xml_for_imported_list_and_add_parts_to_model()
