@@ -1,6 +1,6 @@
 """_property_collection_create_xml_functions.py: submodule containing functions for creating xml for a property collection."""
 
-version = '30th November 2021'
+version = '1st December 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -15,7 +15,6 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.time_series as rts
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-
 from .property_common import supported_property_kind_list, guess_uom
 import resqpy.property._property_collection_get_attributes as pcga
 
@@ -228,3 +227,15 @@ def _create_xml_facet_node(facet_type, facet, p_node):
         facet_value_node = rqet.SubElement(facet_node, ns['resqml2'] + 'Value')
         facet_value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
         facet_value_node.text = facet
+
+
+def _check_shape_list(collection, indexable_element, direction, property_array, points, count):
+    shape_list = collection.supporting_shape(indexable_element = indexable_element, direction = direction)
+    if shape_list is not None:
+        if count > 1:
+            shape_list.append(count)
+        if points:
+            shape_list.append(3)
+        if property_array is not None:
+            assert tuple(shape_list) == property_array.shape, \
+                f'property array shape {property_array.shape} is not the expected {tuple(shape_list)}'
