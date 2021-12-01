@@ -231,7 +231,6 @@ def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
         [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
          [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9, 'grid_1'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9, 'grid_1']],
         columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
-    row = source_df.iloc[0]
     bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True)
 
     # --------- Act ----------
@@ -239,11 +238,64 @@ def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
         grid = grid,
         cell_kji0 = (2, 2, 1),
         entry_xyz = np.array([75, -125, 200]),
-        exit_xyz = np.array([np.nan, np.nan, np.nan]),
+        exit_xyz = np.array([100, -100, 250]),
         well_name = well_name)
 
     # --------- Assert ----------
     np.testing.assert_equal(cp, cp_expected)
     np.testing.assert_equal(cell_centre, np.array([75., -125., 225.]))
-    np.testing.assert_equal(entry_vector, np.array([0, 0, -2500]))
-    np.testing.assert_equal(exit_vector, np.array([np.nan, np.nan, np.nan]))
+    np.testing.assert_equal(entry_vector, np.array([0., 0., -2500.]))
+    np.testing.assert_equal(exit_vector, np.array([2500., 2500., 2500.]))
+
+
+def test_import_from_cellio_file(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji = (3, 4, 3),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       set_points_cached = True)
+
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    grid_uuid = grid.uuid
+    cellio_file = os.path.join(model.epc_directory, 'cellio.dat')
+    well_name = 'Banoffee'
+    source_df = pd.DataFrame(
+        [[2, 2, 1, 25, -25, 125, 26, -26, 126], [2, 2, 2, 26, -26, 126, 27, -27, 127],
+         [2, 2, 3, 27, -27, 127, 28, -28, 128]],
+        columns = ['i_index', 'j_index', 'k_index', 'x_in', 'y_in', 'z_in', 'x_out', 'y_out', 'z_out'])
+
+    with open(cellio_file, 'w') as fp:
+        fp.write('1.0\n')
+        fp.write('Undefined\n')
+        fp.write(f'{well_name}\n')
+        fp.write('9\n')
+        for col in source_df.columns:
+            fp.write(f' {col}\n')
+        for row_index in range(len(source_df)):
+            row = source_df.iloc[row_index]
+            for col in source_df.columns:
+                fp.write(f' {int(row[col])}')
+            fp.write('\n')
+
+
+#
+# --------- Act ----------
+    bw = resqpy.well.BlockedWell(model, use_face_centres = True)
+    # assert that certain attributes have not bee populated
+    assert bw.grid_list == []
+    assert bw.trajectory is None
+    assert bw.cell_count is None
+    assert bw.node_count is None
+    assert bw.node_mds is None
+
+    bw.import_from_rms_cellio(cellio_file = cellio_file, well_name = well_name, grid = grid)
+    # --------- Assert ----------
+    assert bw.grid_list[0].uuid == grid_uuid
+    assert bw.trajectory is not None
+    assert bw.cell_count == 3  # 3 lines in the cellio file
+    assert bw.node_count == len(bw.node_mds) == 4  # added tail to trajectory

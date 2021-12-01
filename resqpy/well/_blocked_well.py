@@ -1021,7 +1021,6 @@ class BlockedWell(BaseResqpy):
                 ]  # same length as blocked_cells_kji0; each is ((entry axis, entry polarity), (exit axis, exit polarity))
 
                 while not kf.blank_line(fp):
-
                     line = fp.readline()
                     cell_kji0, entry_xyz, exit_xyz = BlockedWell.__parse_non_blank_line_in_cellio_file(
                         line = line,
@@ -1030,7 +1029,11 @@ class BlockedWell(BaseResqpy):
                         grid_z_inc_down = grid_z_inc_down)
 
                     cp, cell_centre, entry_vector, exit_vector = BlockedWell.__calculate_cell_cp_center_and_vectors(
-                        grid = grid, cell_kji0 = cell_kji0, well_name = well_name)
+                        grid = grid,
+                        cell_kji0 = cell_kji0,
+                        entry_xyz = entry_xyz,
+                        exit_xyz = exit_xyz,
+                        well_name = well_name)
 
                     # let's hope everything is in the same coordinate reference system!
                     (entry_axis, entry_polarity, facial_entry_xyz, exit_axis, exit_polarity,
@@ -1067,13 +1070,15 @@ class BlockedWell(BaseResqpy):
                                                                      well_name = well_name,
                                                                      grid_name = grid_name)
 
-                self.create_md_datum_and_trajectory(grid,
-                                                    trajectory_mds,
-                                                    trajectory_points,
-                                                    length_uom,
-                                                    well_name,
-                                                    set_depth_zero = True,
-                                                    set_tangent_vectors = True)
+                self.create_md_datum_and_trajectory(
+                    grid,
+                    trajectory_mds,
+                    trajectory_points,
+                    length_uom,
+                    well_name,
+                    set_depth_zero = True,
+                    set_tangent_vectors = False
+                )  # this is causing issues as the knot_count for the trajectory object is None and so cannot test that knot_count > 1
 
                 self.node_count = len(trajectory_mds)
                 self.node_mds = np.array(trajectory_mds)
@@ -1098,7 +1103,7 @@ class BlockedWell(BaseResqpy):
             kf.skip_blank_lines_and_comments(fp)
             line = fp.readline()  # file format version number?
             assert line, 'well ' + str(well_name) + ' not found in file ' + str(cellio_file)
-            fp.readline()  # 'Undefined' KADIJA: what is this doing?
+            fp.readline()  # 'Undefined'
             words = fp.readline().split()
             assert len(words), 'missing header info in cell I/O file'
             if words[0].upper() == well_name.upper():
