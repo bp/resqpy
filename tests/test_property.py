@@ -684,7 +684,7 @@ def test_establish_time_set_kind(example_model_with_prop_ts_rels):
     assert pc.establish_time_set_kind() == 'single time'
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason='expected to fail currently')
 def test_discombobulated_combobulated_face_arrays(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
@@ -774,7 +774,7 @@ def test_similar_parts_for_realizations_from_other_collection(example_model_with
     assert len(pc_to.parts()) == len(rel1_parts)
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason='expected to fail currently')
 def test_property_over_time_series_from_collection(example_model_with_prop_ts_rels):
     # Arrange
     model = example_model_with_prop_ts_rels
@@ -835,7 +835,7 @@ def test_create_property_set_xml(example_model_with_properties):
     assert len(pset.parts()) == num_parts
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason='expected to fail currently')
 def test_override_min_max(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
