@@ -179,7 +179,7 @@ def _get_perm_k_part(collection, perms, perm_k_mode, share_perm_parts, perm_i_pa
             elif perm_k_mode == 'ntg squared':
                 ntg = collection.cached_part_array_ref(ntg_part)
                 kv *= ntg * ntg
-        import resqpy.property.PropertyCollection as PropertyCollection
+        from resqpy.property import PropertyCollection
         kv_collection = PropertyCollection()
         kv_collection.set_support(support_uuid = collection.support_uuid, model = collection.model)
         kv_collection.add_cached_array_to_imported_list(kv,
