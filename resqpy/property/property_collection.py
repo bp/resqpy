@@ -2138,7 +2138,7 @@ class PropertyCollection():
 
         n_prop = p_array.astype(float)
         if use_logarithm:
-            min_value, max_value = pcga._normalized_part_array_use_logarithm(min_value, n_prop, masked)
+            n_prop, min_value, max_value = pcga._normalized_part_array_use_logarithm(min_value, n_prop, masked)
             if min_value == np.nan or max_value == np.nan:
                 return None, min_value, max_value
 

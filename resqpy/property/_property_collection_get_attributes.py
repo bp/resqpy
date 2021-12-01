@@ -341,7 +341,7 @@ def _normalized_part_array_use_logarithm(min_value, n_prop, masked):
             min_value = np.nan
         if max_value is ma.masked:
             max_value = np.nan
-    return min_value, max_value
+    return n_prop, min_value, max_value
 
 
 def _normalized_part_array_fix_zero_at(min_value, max_value, n_prop, fix_zero_at):
