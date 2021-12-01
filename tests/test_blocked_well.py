@@ -351,14 +351,16 @@ def test_dataframe(example_model_and_crs):
                                  add_wellspec_properties = True)
 
     # --------- Act ----------
-    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH'],
-                      add_as_properties = True,
-                      # perforation_list = [(125, 175)],
-                      # max_depth = 245,
-                      perm_i_uuid = perm_uuid)
+    df = bw.dataframe(
+        extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH'],
+        add_as_properties = True,
+        # perforation_list = [(125, 175)],
+        # max_depth = 245,
+        perm_i_uuid = perm_uuid)
 
     wellspec_file2 = os.path.join(model.epc_directory, 'wellspec2.dat')
-    df2 = bw.write_wellspec(wellspec_file = wellspec_file2, well_name = well_name,
+    df2 = bw.write_wellspec(wellspec_file = wellspec_file2,
+                            well_name = well_name,
                             extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW'],
                             length_uom = 'm',
                             length_uom_comment = '?')
