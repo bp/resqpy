@@ -420,8 +420,7 @@ def test_write_wellspec(example_model_and_crs):
     # --------- Act ----------
     df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH'],
                       add_as_properties = True,
-                      perm_i_uuid = perm_uuid
-                      )
+                      perm_i_uuid = perm_uuid)
 
     wellspec_file2 = os.path.join(model.epc_directory, 'wellspec2.dat')
     df2 = bw.write_wellspec(wellspec_file = wellspec_file2,
