@@ -277,7 +277,7 @@ def test_model_context(tmp_path):
 
 
 def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels):
-    tmp_path = '/users/andy/bifröst/bc'
+
     # get some key data from the full model
     full_model = example_model_with_prop_ts_rels
     full_epc_path = full_model.epc_file
