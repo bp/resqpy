@@ -337,7 +337,8 @@ def test_import_from_cellio_file(example_model_and_crs):
     assert bw.node_count == len(bw.node_mds) == 4  # added tail to trajectory
 
 
-def test_dataframe(example_model_and_crs):
+@pytest.mark.parametrize('ntg_multiplier,length_mode,status', [(0.5, 'straight', 'OFF'), (1, 'MD', 'ON')])
+def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
@@ -350,7 +351,7 @@ def test_dataframe(example_model_and_crs):
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     perm_i_array = np.random.random(grid.extent_kji)
-    ntg_array = np.ones(grid.extent_kji) * 0.8
+    ntg_array = np.ones(grid.extent_kji) * ntg_multiplier
     perm_i_prop = rqp.Property.from_array(model,
                                           perm_i_array,
                                           source_info = 'random',
@@ -399,7 +400,7 @@ def test_dataframe(example_model_and_crs):
                                  add_wellspec_properties = True)
 
     # --------- Act ----------
-    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI'],
+    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI', 'WBC'],
                       add_as_properties = True,
                       perforation_list = [(125, 320)],
                       max_depth = 500,
@@ -407,18 +408,19 @@ def test_dataframe(example_model_and_crs):
                       perm_j_uuid = perm_i_uuid,
                       ntg_uuid = ntg_uuid,
                       preferential_perforation = True,
-                      stat = 'ON',
+                      stat = status,
                       min_k0 = 1,
                       max_k0 = 5,
                       use_face_centres = True,
                       length_uom = 'm',
-                      length_mode = 'straight')
+                      length_mode = length_mode)
 
     # --------- Assert ----------
     print(df)
-    assert len(df['KH']) > 0  # successfully added a KH column as an i-direction permeability array was specified
-    assert set(df['STAT']) == {'ON'}
-    assert len(df['WI']) > 0
+    assert all(df['KH'])  # successfully added a KH column as an i-direction permeability array was specified
+    assert set(df['STAT']) == {status}
+    assert all(df['WI'])
+    assert all(df['WBC'])
     # Kadija: initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
     # Kadija: why are AngleA values of 0 transformed to nan values?
 
