@@ -319,7 +319,6 @@ def test_import_from_cellio_file(example_model_and_crs):
             fp.write('\n')
 
 
-#
 # --------- Act ----------
     bw = resqpy.well.BlockedWell(model, use_face_centres = True)
     # assert that certain attributes have not bee populated
@@ -421,8 +420,6 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
     assert set(df['STAT']) == {status}
     assert all(df['WI'])
     assert all(df['WBC'])
-    # Kadija: initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
-    # Kadija: why are AngleA values of 0 transformed to nan values?
 
 
 def test_dataframe_from_trajectory(example_model_and_crs):

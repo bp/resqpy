@@ -96,6 +96,7 @@ def test_from_dataframe(example_model_and_crs):
     # Reload from disk
     model2 = Model(epc_file = epc_path)
     wellbore_marker_frame2 = resqpy.well.WellboreMarkerFrame(parent_model = model2, uuid = uuid_wmf)
+
     # --------- Assert ----------
     # test that the attributes were reloaded correctly
     assert wellbore_marker_frame2.trajectory == trajectory
@@ -257,7 +258,7 @@ def test_get_interpretation_object(example_model_and_crs):
     found_interpretation = wellbore_marker_frame.get_interpretation_obj(interpretation_uuid = horizon_interp_2_uuid)
 
     # --------- Assert ----------
-    found_interpretation == horizon_interp_2
+    assert found_interpretation == horizon_interp_2
 
 
 def test_find_marker_from_interp(example_model_and_crs):
