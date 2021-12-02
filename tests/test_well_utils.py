@@ -1,8 +1,10 @@
+import os
 import numpy as np
+import pandas as pd
 
 import resqpy.olio.xml_et as rqet
 import resqpy.well
-from resqpy.well.well_utils import load_hdf5_array, extract_xyz, find_entry_and_exit, _as_optional_array, _pl
+from resqpy.well.well_utils import load_hdf5_array, extract_xyz, find_entry_and_exit, _as_optional_array, _pl, well_names_in_cellio_file
 from resqpy.grid import RegularGrid
 
 
@@ -149,3 +151,38 @@ def test_pl():
     assert result1 == ''
     assert result2 == 's'
     assert result3 == 'es'
+
+
+def test_well_names_in_cellio_file(tmp_path):
+
+    # --------- Arrange ----------
+    well_name = 'Banoffee'
+    cellio_file = os.path.join(tmp_path, 'cellio.dat')
+    source_df = pd.DataFrame(
+        [[1, 1, 1, 25, 25, 0, 26, 26, 1, 120, 0.12], [2, 2, 1, 26, -26, 126, 27, -27, 127, 117, 0.20],
+         [2, 3, 1, 27, -27, 127, 28, -28, 128, 135, 0.15]],
+        columns = [
+            'i_index unit1 scale1', 'j_index unit1 scale1', 'k_index unit1 scale1', 'x_in unit1 scale1',
+            'y_in unit1 scale1', 'z_in unit1 scale1', 'x_out unit1 scale1', 'y_out unit1 scale1', 'z_out unit1 scale1',
+            'Perm unit1 scale1', 'Poro unit1 scale1'
+        ])
+
+    with open(cellio_file, 'w') as fp:
+        fp.write('1.0\n')
+        fp.write('Undefined\n')
+        fp.write(f'{well_name} terrible day\n')
+        fp.write('11\n')
+        for col in source_df.columns:
+            fp.write(f' {col}\n')
+        for row_index in range(len(source_df)):
+            row = source_df.iloc[row_index]
+            for col in source_df.columns:
+                fp.write(f' {int(row[col])}')
+            fp.write('\n')
+
+    # --------- Arrange ----------
+    well_list = well_names_in_cellio_file(cellio_file = cellio_file)
+
+    # --------- Assert ----------
+    assert len(well_list) == 1
+    assert set(well_list) == {well_name}
