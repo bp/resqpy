@@ -162,7 +162,7 @@ def test_add_logs_from_cellio_file(example_model_and_crs):
     bw.write_hdf5()
     bw.create_xml()
 
-    cellio_file = os.path.join(r'C:\Users\h6ssk1\OneDrive - BP\Desktop', 'cellio.dat')
+    cellio_file = os.path.join(model.epc_directory, 'cellio.dat')
     source_df = pd.DataFrame(
         [[1, 1, 1, 25, 25, 0, 26, 26, 1, 120, 0.12], [2, 2, 1, 26, -26, 126, 27, -27, 127, 117, 0.20],
          [2, 3, 1, 27, -27, 127, 28, -28, 128, 135, 0.15]],
