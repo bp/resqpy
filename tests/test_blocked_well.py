@@ -1,8 +1,8 @@
 import os
-
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_almost_equal
+import pytest
 
 import resqpy.olio.uuid as bu
 from resqpy.grid import RegularGrid
@@ -39,11 +39,13 @@ def test_wellspec_properties(example_model_and_crs):
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
-    bw = resqpy.well.BlockedWell(model,
-                                 wellspec_file = wellspec_file,
-                                 well_name = well_name,
-                                 use_face_centres = True,
-                                 add_wellspec_properties = True)
+    bw = resqpy.well.BlockedWell(
+        model,
+        wellspec_file = wellspec_file,
+        well_name = well_name,
+        use_face_centres = True,
+        add_wellspec_properties = True,
+    )
     assert bw is not None
     bw_uuid = bw.uuid
     skin_uuid = model.uuid(title = 'SKIN', related_uuid = bw.uuid)
@@ -70,6 +72,39 @@ def test_wellspec_properties(example_model_and_crs):
                        perforation_list = [(125, 175)])
     for col in ['SKIN', 'RADW']:
         assert_array_almost_equal(np.array(source_df[col]), np.array(df3[col]))
+
+
+@pytest.mark.parametrize('check_grid_name,name_for_check,col_list', [(True, 'BATTLESHIP', ['IW', 'JW', 'L', 'GRID']),
+                                                                     (False, None, ['IW', 'JW', 'L'])])
+def test_derive_from_wellspec_check_grid_name(example_model_and_crs, check_grid_name, name_for_check, col_list):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji = (5, 3, 3),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       title = 'Battleship',
+                       set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    well_name = 'DOGLEG'
+    bw = resqpy.well.BlockedWell(model,
+                                 well_name = well_name,
+                                 use_face_centres = True,
+                                 grid = grid,
+                                 add_wellspec_properties = True)
+    col_list_orig = ['IW', 'JW', 'L']
+
+    # --------- Act ----------
+    result = bw._BlockedWell__derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
+                                                                   grid = grid,
+                                                                   col_list = col_list_orig)
+
+    # --------- Assert ----------
+    assert result[0] == name_for_check
+    assert result[1] == col_list
 
 
 def test_set_for_column(example_model_and_crs):
@@ -314,18 +349,30 @@ def test_dataframe(example_model_and_crs):
                        set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
-    perm_array = np.random.random(grid.extent_kji)
-    perm_prop = rqp.Property.from_array(model,
-                                        perm_array,
-                                        source_info = 'random',
-                                        keyword = 'PERMI',
-                                        support_uuid = grid.uuid,
-                                        property_kind = 'permeability',
-                                        indexable_element = 'cells',
-                                        uom = 'Euc')
-    perm_prop.write_hdf5()
-    perm_prop.create_xml()
-    perm_uuid = perm_prop.uuid
+    perm_i_array = np.random.random(grid.extent_kji)
+    ntg_array = np.ones(grid.extent_kji) * 0.8
+    perm_i_prop = rqp.Property.from_array(model,
+                                          perm_i_array,
+                                          source_info = 'random',
+                                          keyword = 'PERMI',
+                                          support_uuid = grid.uuid,
+                                          property_kind = 'permeability rock',
+                                          indexable_element = 'cells',
+                                          uom = 'Euc')
+    ntg_prop = rqp.Property.from_array(model,
+                                       ntg_array,
+                                       keyword = 'NTG',
+                                       source_info = 'random',
+                                       support_uuid = grid.uuid,
+                                       property_kind = 'net to gross ratio',
+                                       indexable_element = 'cells',
+                                       uom = 'Euc')
+    perm_i_prop.write_hdf5()
+    perm_i_prop.create_xml()
+    ntg_prop.write_hdf5()
+    ntg_prop.create_xml()
+    perm_i_uuid = perm_i_prop.uuid
+    ntg_uuid = ntg_prop.uuid
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
     source_df = pd.DataFrame(
@@ -356,12 +403,16 @@ def test_dataframe(example_model_and_crs):
                       add_as_properties = True,
                       perforation_list = [(125, 320)],
                       max_depth = 500,
-                      perm_i_uuid = perm_uuid,
+                      perm_i_uuid = perm_i_uuid,
+                      perm_j_uuid = perm_i_uuid,
+                      ntg_uuid = ntg_uuid,
+                      preferential_perforation = True,
                       stat = 'ON',
                       min_k0 = 1,
                       max_k0 = 5,
                       use_face_centres = True,
-                      length_uom = 'm')
+                      length_uom = 'm',
+                      length_mode = 'straight')
 
     # --------- Assert ----------
     print(df)
