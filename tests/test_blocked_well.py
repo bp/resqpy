@@ -307,7 +307,7 @@ def test_dataframe(example_model_and_crs):
     # --------- Arrange ----------
     model, crs = example_model_and_crs
     grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
+                       extent_kji = (5, 4, 3),
                        dxyz = (50.0, -50.0, 50.0),
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
@@ -328,9 +328,10 @@ def test_dataframe(example_model_and_crs):
     perm_uuid = perm_prop.uuid
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
-    source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25], [2, 2, 2, 45, -90.0, 2.5, 0.25],
-                              [2, 3, 2, 45, -90.0, 1.0, 0.20], [2, 3, 3, 0.0, 0.0, -0.5, 0.20]],
-                             columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW'])
+    source_df = pd.DataFrame(
+        [[2, 2, 1, 0.0, 0.0, 0.0, 0.25], [2, 2, 2, 45, -90.0, 2.5, 0.25], [2, 3, 2, 45, -90.0, 1.0, 0.20],
+         [2, 3, 3, 45, -90.0, -0.5, 0.20], [2, 3, 4, 45, -90.0, 1.1, 0.20], [2, 3, 5, 0.0, 0.0, 1.0, 0.20]],
+        columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW'])
     with open(wellspec_file, 'w') as fp:
         fp.write(F'WELLSPEC {well_name}\n')
         for col in source_df.columns:
@@ -351,20 +352,22 @@ def test_dataframe(example_model_and_crs):
                                  add_wellspec_properties = True)
 
     # --------- Act ----------
-    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH'],
+    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI'],
                       add_as_properties = True,
-                      perforation_list = [(125, 175)],
-                      max_depth = 245,
+                      perforation_list = [(125, 320)],
+                      max_depth = 500,
                       perm_i_uuid = perm_uuid,
                       stat = 'ON',
                       min_k0 = 1,
-                      max_k0 = 3,
+                      max_k0 = 5,
                       use_face_centres = True,
                       length_uom = 'm')
 
     # --------- Assert ----------
+    print(df)
     assert len(df['KH']) > 0  # successfully added a KH column as an i-direction permeability array was specified
     assert set(df['STAT']) == {'ON'}
+    assert len(df['WI']) > 0
     # Kadija: initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
     # Kadija: why are AngleA values of 0 transformed to nan values?
 
