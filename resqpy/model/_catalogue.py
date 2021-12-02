@@ -31,18 +31,7 @@ def _parts(model,
             return []
         parts_list = [part_name]
     if epc_subdir:
-        if epc_subdir.startswith('/'):
-            epc_subdir = epc_subdir[1:]
-        if epc_subdir:
-            if not epc_subdir.endswith('/'):
-                epc_subdir += '/'
-            filtered_list = []
-            for part in parts_list:
-                if part.startswith[epc_subdir]:
-                    filtered_list.append(part)
-            if len(filtered_list) == 0:
-                return []
-            parts_list = filtered_list
+        parts_list = _filtered_by_epc_subdir(model, parts_list, epc_subdir)
     if obj_type:
         if obj_type[0].isupper():
             obj_type = 'obj_' + obj_type
@@ -54,83 +43,13 @@ def _parts(model,
             return []
         parts_list = filtered_list
     if title:
-        assert title_mode in [
-            'is', 'starts', 'ends', 'contains', 'is not', 'does not start', 'does not end', 'does not contain'
-        ]
-        if not title_case_sensitive:
-            title = title.upper()
-        filtered_list = []
-        for part in parts_list:
-            part_title = _citation_title_for_part(model, part)
-            if not title_case_sensitive:
-                part_title = part_title.upper()
-            if title_mode == 'is':
-                if part_title == title:
-                    filtered_list.append(part)
-            elif title_mode == 'starts':
-                if part_title.startswith(title):
-                    filtered_list.append(part)
-            elif title_mode == 'ends':
-                if part_title.endswith(title):
-                    filtered_list.append(part)
-            elif title_mode == 'contains':
-                if title in part_title:
-                    filtered_list.append(part)
-            if title_mode == 'is not':
-                if part_title != title:
-                    filtered_list.append(part)
-            elif title_mode == 'does not start':
-                if not part_title.startswith(title):
-                    filtered_list.append(part)
-            elif title_mode == 'does not end':
-                if not part_title.endswith(title):
-                    filtered_list.append(part)
-            elif title_mode == 'does not contain':
-                if title not in part_title:
-                    filtered_list.append(part)
-        if len(filtered_list) == 0:
-            return []
-        parts_list = filtered_list
+        parts_list = _filtered_by_title(model, parts_list, title, title_mode, title_case_sensitive)
     if extra:
-        filtered_list = []
-        for part in parts_list:
-            part_extra = rqet.load_metadata_from_xml(_root_for_part(model, part))
-            if not part_extra:
-                continue
-            match = True
-            for key, value in extra.items():
-                if key not in part_extra or part_extra[key] != value:
-                    match = False
-                    break
-            if match:
-                filtered_list.append(part)
-        if len(filtered_list) == 0:
-            return []
-        parts_list = filtered_list
+        parts_list = _filtered_by_extra(model, parts_list, extra)
     if related_uuid is not None:
         parts_list = _parts_list_filtered_by_related_uuid(model, parts_list, related_uuid)
-    if len(parts_list) == 0:
-        return []
-    if sort_by:
-        if sort_by == 'type':
-            parts_list.sort()
-        elif sort_by in ['newest', 'oldest']:
-            parts_list = _sort_parts_list_by_timestamp(model, parts_list)
-            if sort_by == 'oldest':
-                parts_list.reverse()
-        elif sort_by in ['uuid', 'title']:
-            sort_list = []
-            for index, part in enumerate(parts_list):
-                if sort_by == 'uuid':
-                    key = str(_uuid_for_part(model, part))
-                else:
-                    key = _citation_title_for_part(model, part)
-                sort_list.append((key, index))
-            sort_list.sort()
-            sorted_list = []
-            for _, index in sort_list:
-                sorted_list.append(parts_list[index])
-            parts_list = sorted_list
+    if sort_by and len(parts_list):
+        parts_list = _sorted_parts_list(model, parts_list, sort_by)
     return parts_list
 
 
@@ -769,3 +688,94 @@ def _as_graph(model, uuids_subset = None):
                 edges.add(frozenset([uuid, rel]))
 
     return nodes, edges
+
+
+def _filtered_by_epc_subdir(model, parts_list, epc_subdir):
+    if epc_subdir.startswith('/'):
+        epc_subdir = epc_subdir[1:]
+    if epc_subdir:
+        if not epc_subdir.endswith('/'):
+            epc_subdir += '/'
+        filtered_list = []
+        for part in parts_list:
+            if part.startswith[epc_subdir]:
+                filtered_list.append(part)
+        return filtered_list
+    else:
+        return parts_list
+
+
+def _filtered_by_title(model, parts_list, title, title_mode, title_case_sensitive):
+    assert title_mode in [
+        'is', 'starts', 'ends', 'contains', 'is not', 'does not start', 'does not end', 'does not contain'
+    ]
+    if not title_case_sensitive:
+        title = title.upper()
+    filtered_list = []
+    for part in parts_list:
+        part_title = _citation_title_for_part(model, part)
+        if not title_case_sensitive:
+            part_title = part_title.upper()
+        if title_mode == 'is':
+            if part_title == title:
+                filtered_list.append(part)
+        elif title_mode == 'starts':
+            if part_title.startswith(title):
+                filtered_list.append(part)
+        elif title_mode == 'ends':
+            if part_title.endswith(title):
+                filtered_list.append(part)
+        elif title_mode == 'contains':
+            if title in part_title:
+                filtered_list.append(part)
+        if title_mode == 'is not':
+            if part_title != title:
+                filtered_list.append(part)
+        elif title_mode == 'does not start':
+            if not part_title.startswith(title):
+                filtered_list.append(part)
+        elif title_mode == 'does not end':
+            if not part_title.endswith(title):
+                filtered_list.append(part)
+        elif title_mode == 'does not contain':
+            if title not in part_title:
+                filtered_list.append(part)
+    return filtered_list
+
+
+def _filtered_by_extra(model, parts_list, extra):
+    filtered_list = []
+    for part in parts_list:
+        part_extra = rqet.load_metadata_from_xml(_root_for_part(model, part))
+        if not part_extra:
+            continue
+        match = True
+        for key, value in extra.items():
+            if key not in part_extra or part_extra[key] != value:
+                match = False
+                break
+        if match:
+            filtered_list.append(part)
+    return filtered_list
+
+
+def _sorted_parts_list(model, parts_list, sort_by):
+    if sort_by == 'type':
+        sorted_list = sorted(parts_list)
+    elif sort_by in ['newest', 'oldest']:
+        sorted_list = _sort_parts_list_by_timestamp(model, parts_list)
+        if sort_by == 'oldest':
+            sorted_list.reverse()
+    elif sort_by in ['uuid', 'title']:
+        sort_list = []
+        for index, part in enumerate(parts_list):
+            if sort_by == 'uuid':
+                key = str(_uuid_for_part(model, part))
+            else:
+                key = _citation_title_for_part(model, part)
+            sort_list.append((key, index))
+        sort_list.sort()
+        sorted_list = []
+        for _, index in sort_list:
+            sorted_list.append(parts_list[index])
+    return sorted_list
