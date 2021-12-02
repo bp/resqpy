@@ -461,6 +461,7 @@ def _copy_part_from_other_model(model,
         other_h5_file_name = other_model.h5_file_name()
     if not self_h5_file_name:
         self_h5_file_name = model.h5_file_name(file_must_exist = False)
+    hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
 
     # check whether already existing in this model
     if part in model.parts_forest.keys():
@@ -491,12 +492,13 @@ def _copy_part_from_other_model(model,
 
         _set_realization_index_node_if_required(realization, root_node)
 
-        # copy hdf5 data
-        hdf5_internal_paths = [node.text for node in rqet.list_of_descendant_tag(other_root, 'PathInHdfFile')]
-        hdf5_count = whdf5.copy_h5_path_list(other_h5_file_name, self_h5_file_name, hdf5_internal_paths, mode = 'a')
-
-        # create relationship with hdf5 if needed and modify h5 file uuid in xml references
-        _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node)
+        if hdf5_copy_needed:
+            # copy hdf5 data
+            hdf5_internal_paths = [node.text for node in rqet.list_of_descendant_tag(other_root, 'PathInHdfFile')]
+            hdf5_count = whdf5.copy_h5_path_list(other_h5_file_name, self_h5_file_name, hdf5_internal_paths, mode = 'a')
+            # create relationship with hdf5 if needed and modify h5 file uuid in xml references
+            _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node)
+        # NB. assumes ext part is already established when sharing a common hdf5 file
 
         # cut references to objects to be excluded
         if cut_refs_to_uuids:
@@ -581,7 +583,7 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
                                             referred_part,
                                             realization = realization,
                                             consolidate = consolidate,
-                                            force = force.force,
+                                            force = force,
                                             cut_refs_to_uuids = cut_refs_to_uuids,
                                             cut_node_types = cut_node_types,
                                             self_h5_file_name = self_h5_file_name,

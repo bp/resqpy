@@ -339,7 +339,7 @@ def _create_hdf5_ext(model, add_as_part = True, root = None, title = 'Hdf Proxy'
         if not file_name:
             file_name = model.h5_file_name(file_must_exist = False)
         assert file_name
-        model.h5_dict[ext_uuid] = file_name
+        model.h5_dict[ext_uuid.bytes] = file_name
         if model.main_h5_uuid is None:
             model.main_h5_uuid = ext_uuid
         if model.rels_present and file_name:

@@ -71,14 +71,19 @@ def _h5_uuid(model):
 def _h5_file_name(model, uuid = None, override = True, file_must_exist = True):
     """Returns full path for hdf5 file with given uuid."""
 
+    if uuid is not None:
+        if isinstance(uuid, str):
+            uuid = bu.uuid_from_string(uuid)
+        if uuid.bytes in model.h5_dict:
+            return model.h5_dict[uuid.bytes]
     if override and model.epc_file and model.epc_file.endswith('.epc'):
         h5_full_path = model.epc_file[:-4] + '.h5'
         if not file_must_exist or os.path.exists(h5_full_path):
             return h5_full_path
     if uuid is None:
         uuid = _h5_uuid(model)
-    if uuid.bytes in model.h5_dict:
-        return model.h5_dict[uuid.bytes]
+        if uuid.bytes in model.h5_dict:
+            return model.h5_dict[uuid.bytes]
     for rel_name in model.rels_forest:
         entry = model.rels_forest[rel_name]
         if bu.matching_uuids(uuid, entry[0]):
