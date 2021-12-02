@@ -186,7 +186,7 @@ def example_model_with_properties(tmp_path):
             'discrete', 'discrete', 'discrete', 'discrete', 'net to gross ratio', 'porosity', 'saturation',
             'permeability rock'
         ], [True, True, True, True, False, False, False, False],
-        [None, None, None, None, None, None, None, 'direction'], [None, None, None, None, None, None, None, 'J']):
+        [None, None, None, None, None, None, None, 'direction'], [None, None, None, None, None, None, None, 'I']):
         collection.add_cached_array_to_imported_list(cached_array = array,
                                                      source_info = '',
                                                      keyword = name,
@@ -287,7 +287,7 @@ def example_model_with_prop_ts_rels(tmp_path):
     # Add non-varying properties
     for array, name, kind, discrete, facet_type, facet in zip([zone_array, vpc_array, fb_array, perm_array],
                                                               ['Zone', 'VPC', 'Fault block', 'Perm'],
-                                                              ['discrete', 'discrete', 'discrete', 'rock permeability'],
+                                                              ['discrete', 'discrete', 'discrete', 'permeability rock'],
                                                               [True, True, True, False],
                                                               [None, None, None, 'direction'], [None, None, None, 'J']):
         collection.add_cached_array_to_imported_list(cached_array = array,
