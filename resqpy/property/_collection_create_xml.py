@@ -1,4 +1,4 @@
-"""_property_collection_create_xml_functions.py: submodule containing functions for creating xml for a property collection."""
+"""_collection_create_xml.py: submodule containing functions for creating xml for a property collection."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,7 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_property_collection_create_xml_functions.py version ' + version)
+log.debug('_collection_create_xml.py version ' + version)
 
 import numpy as np
 
@@ -16,7 +16,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.time_series as rts
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .property_common import supported_property_kind_list, guess_uom
-import resqpy.property._property_collection_get_attributes as pcga
+import resqpy.property._collection_get_attributes as pcga
 
 
 def _create_xml_add_as_part(collection, add_as_part, p_uuid, p_node, add_relationships, support_root,

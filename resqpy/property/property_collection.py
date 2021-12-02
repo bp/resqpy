@@ -19,10 +19,10 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .string_lookup import StringLookup
 from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection
-import resqpy.property._property_collection_create_xml_functions as pcxml
-import resqpy.property._property_collection_get_attributes as pcga
-import resqpy.property._property_collection_support as pcs
-import resqpy.property._property_collection_add_part as pcap
+import resqpy.property._collection_create_xml as pcxml
+import resqpy.property._collection_get_attributes as pcga
+import resqpy.property._collection_support as pcs
+import resqpy.property._collection_add_part as pcap
 
 
 class PropertyCollection():
@@ -263,15 +263,15 @@ class PropertyCollection():
             self, part, continuous, xml_node)
         extra_metadata = rqet.load_metadata_from_xml(xml_node)
         citation_title = rqet.find_tag(rqet.find_tag(xml_node, 'Citation'), 'Title').text
-        count, indexable = pcga._add_part_to_dict_get_count_and_indexable(xml_node)
-        property_kind, property_kind_uuid, lpk_node = pcga._add_part_to_dict_get_property_kind(xml_node, citation_title)
-        facet_type, facet = pcga._add_part_to_dict_get_facet(xml_node)
-        time_series_uuid, time_index = pcga._add_part_to_dict_get_timeseries(xml_node)
-        minimum, maximum = pcga._add_part_to_dict_get_minmax(xml_node)
+        count, indexable = pcap._add_part_to_dict_get_count_and_indexable(xml_node)
+        property_kind, property_kind_uuid, lpk_node = pcap._add_part_to_dict_get_property_kind(xml_node, citation_title)
+        facet_type, facet = pcap._add_part_to_dict_get_facet(xml_node)
+        time_series_uuid, time_index = pcap._add_part_to_dict_get_timeseries(xml_node)
+        minimum, maximum = pcap._add_part_to_dict_get_minmax(xml_node)
         support_uuid = pcap._add_part_to_dict_get_support_uuid(self, part)
         uom = pcap._add_part_to_dict_get_uom(self, part, continuous, xml_node, trust_uom, property_kind, minimum,
                                              maximum, facet, facet_type)
-        null_value, const_value = pcga._add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points)
+        null_value, const_value = pcap._add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points)
 
         self.dict[part] = (realization, support_uuid, uuid, xml_node, continuous, count, indexable, property_kind,
                            facet_type, facet, citation_title, time_series_uuid, time_index, minimum, maximum, uom,

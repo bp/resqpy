@@ -1,4 +1,4 @@
-"""_property_collection_add_part.py: submodule containing functions for adding properties to a property collection."""
+"""_collection_add_part.py: submodule containing functions for adding properties to a property collection."""
 
 version = '1st December 2021'
 
@@ -7,13 +7,13 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_property_collection_add_part.py version ' + version)
+log.debug('_collection_add_part.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
 from .property_common import same_property_kind, guess_uom, property_kind_and_facet_from_keyword
-import resqpy.property._property_collection_get_attributes as pcga
+import resqpy.property._collection_get_attributes as pcga
 
 
 def _add_selected_part_from_other_dict(collection, part, other, realization, support_uuid, uuid, continuous,
@@ -228,3 +228,98 @@ def _process_imported_property_get_p_array(collection, p_cached_name):
         return collection.__dict__[p_cached_name]
     else:
         return None
+
+
+def _add_part_to_dict_get_count_and_indexable(xml_node):
+    count_node = rqet.find_tag(xml_node, 'Count')
+    assert count_node is not None
+    count = int(count_node.text)
+
+    indexable_node = rqet.find_tag(xml_node, 'IndexableElement')
+    assert indexable_node is not None
+    indexable = indexable_node.text
+
+    return count, indexable
+
+
+def _add_part_to_dict_get_property_kind(xml_node, citation_title):
+    (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
+    prop_kind_node = rqet.find_tag(xml_node, 'PropertyKind')
+    assert (prop_kind_node is not None)
+    kind_node = rqet.find_tag(prop_kind_node, 'Kind')
+    property_kind_uuid = None  # only used for bespoke (local) property kinds
+    if kind_node is not None:
+        property_kind = kind_node.text  # could check for consistency with that derived from citation title
+        lpk_node = None
+    else:
+        lpk_node = rqet.find_tag(prop_kind_node, 'LocalPropertyKind')
+        if lpk_node is not None:
+            property_kind = rqet.find_tag_text(lpk_node, 'Title')
+            property_kind_uuid = rqet.find_tag_text(lpk_node, 'UUID')
+    assert property_kind is not None and len(property_kind) > 0
+    if (p_kind_from_keyword and p_kind_from_keyword != property_kind and
+        (p_kind_from_keyword not in ['cell length', 'length', 'thickness'] or
+         property_kind not in ['cell length', 'length', 'thickness'])):
+        log.warning(
+            f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
+    return property_kind, property_kind_uuid, lpk_node
+
+
+def _add_part_to_dict_get_facet(xml_node):
+    facet_type = None
+    facet = None
+    facet_node = rqet.find_tag(xml_node, 'Facet')  # todo: handle more than one facet for a property
+    if facet_node is not None:
+        facet_type = rqet.find_tag(facet_node, 'Facet').text
+        facet = rqet.find_tag(facet_node, 'Value').text
+        if facet_type is not None and facet_type == '':
+            facet_type = None
+        if facet is not None and facet == '':
+            facet = None
+    return facet_type, facet
+
+
+def _add_part_to_dict_get_timeseries(xml_node):
+    time_series_uuid = None
+    time_index = None
+    time_node = rqet.find_tag(xml_node, 'TimeIndex')
+    if time_node is not None:
+        time_index = int(rqet.find_tag(time_node, 'Index').text)
+        time_series_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(time_node, 'TimeSeries'), 'UUID').text)
+
+    return time_series_uuid, time_index
+
+
+def _add_part_to_dict_get_minmax(xml_node):
+    minimum = None
+    min_node = rqet.find_tag(xml_node, 'MinimumValue')
+    if min_node is not None:
+        minimum = min_node.text  # NB: left as text
+    maximum = None
+    max_node = rqet.find_tag(xml_node, 'MaximumValue')
+    if max_node is not None:
+        maximum = max_node.text  # NB: left as text
+
+    return minimum, maximum
+
+
+def _add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points):
+    null_value = None
+    if not continuous:
+        null_value = rqet.find_nested_tags_int(xml_node, ['PatchOfValues', 'Values', 'NullValue'])
+    const_value = None
+    if points:
+        values_node = rqet.find_nested_tags(xml_node, ['PatchOfPoints', 'Points'])
+    else:
+        values_node = rqet.find_nested_tags(xml_node, ['PatchOfValues', 'Values'])
+    values_type = rqet.node_type(values_node)
+    assert values_type is not None
+    if values_type.endswith('ConstantArray'):
+        if continuous:
+            const_value = rqet.find_tag_float(values_node, 'Value')
+        elif values_type.startswith('Bool'):
+            const_value = rqet.find_tag_bool(values_node, 'Value')
+        else:
+            const_value = rqet.find_tag_int(values_node, 'Value')
+
+    return null_value, const_value
