@@ -1,12 +1,10 @@
 import os
-
 import numpy as np
 import pandas as pd
+import pytest
 
 from resqpy.grid import RegularGrid
 import resqpy.well
-
-import pytest
 
 
 def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
