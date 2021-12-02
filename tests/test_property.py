@@ -908,7 +908,7 @@ array6 = np.where(array6 == 10, 1, array6)
 
 array7 = np.where(array3 == 10, np.nan, array3)
 array7 = np.where(array7 == 1, 0, array7)
-array7 = np.where(array7 == 100, 2, array7)
+array7 = np.where(array7 == 100, 1, array7)
 
 
 @pytest.mark.parametrize(
@@ -978,7 +978,6 @@ def test_norm_array_ref_mask_equal(example_model_with_properties):
     assert_array_almost_equal(np.ones(shape = (3, 5, 5)) / 2, normed)
 
 
-@pytest.mark.skip(reason = 'Need to doublecheck the correct output for this method')
 def test_norm_array_ref_log_mask(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
