@@ -400,7 +400,7 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
                                  add_wellspec_properties = True)
 
     # --------- Act ----------
-    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI', 'WBC'],
+    df = bw.dataframe(extra_columns_list = ['X', 'Y', 'DEPTH', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI', 'WBC'],
                       add_as_properties = True,
                       perforation_list = [(125, 320)],
                       max_depth = 500,
@@ -416,13 +416,67 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
                       length_mode = length_mode)
 
     # --------- Assert ----------
-    print(df)
+    # print(df)
     assert all(df['KH'])  # successfully added a KH column as an i-direction permeability array was specified
     assert set(df['STAT']) == {status}
     assert all(df['WI'])
     assert all(df['WBC'])
     # Kadija: initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
     # Kadija: why are AngleA values of 0 transformed to nan values?
+
+
+def test_dataframe_from_trajectory(example_model_and_crs):
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = RegularGrid(model,
+                       extent_kji = (5, 4, 4),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       set_points_cached = True)
+
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    elevation = 100
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds = np.array([100, 210, 230, 240, 250])
+    zs = mds - elevation
+    well_name = 'Coconut'
+    source_dataframe = pd.DataFrame({
+        'MD': mds,
+        'X': [25, 50, 75, 100, 100],
+        'Y': [25, -50, -75, -100, -100],
+        'Z': zs,
+        'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut', 'Coconut']
+    })
+
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        data_frame = source_dataframe,
+                                        well_name = well_name,
+                                        md_datum = datum,
+                                        length_uom = 'm')
+    trajectory.write_hdf5()
+    trajectory.create_xml()
+    bw = resqpy.well.BlockedWell(model,
+                                 well_name = well_name,
+                                 grid = grid,
+                                 trajectory = trajectory,
+                                 use_face_centres = True)
+
+    # --------- Act ----------
+    df = bw.dataframe(extra_columns_list = ['X', 'Y', 'DEPTH', 'RADW'], stat = 'ON', length_uom = 'ft')
+
+    # --------- Assert ----------
+    assert bw.trajectory is not None
+    assert set(df['RADW']) == {0.25}
+    assert set(df['STAT']) == {'ON'}
+    assert all(df['X']) == all(df['Y']) == all(df['DEPTH'])  # successfully got xyz points from trajectory and
+    # converted them to ft
 
 
 def test_write_wellspec(example_model_and_crs):
