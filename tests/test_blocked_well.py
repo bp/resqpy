@@ -156,6 +156,7 @@ def test_derive_from_cell_list(example_model_and_crs):
     # --------- Assert ----------
     # no tail added to trajectory measured depths as well terminates in 4th layer
     assert bw.node_count == len(bw.node_mds) == len(bw.trajectory.measured_depths)
+    assert bw.cell_count == len(cell_kji0_list)
 
 
 def test_grid_uuid_list(example_model_and_crs):
@@ -183,7 +184,7 @@ def test_grid_uuid_list(example_model_and_crs):
 
     # --------- Assert ----------
     assert len(grid_uuid_list) == 1
-    assert grid_uuid_list[0] == grid_uuid
+    assert bu.matching_uuids(grid_uuid_list[0], grid_uuid)
 
 
 def test_verify_grid_name(example_model_and_crs):

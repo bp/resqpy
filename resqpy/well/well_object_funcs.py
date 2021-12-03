@@ -408,7 +408,7 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
 
     log.info(f'{count} blocked wells created based on wellspec file: {wellspec_file}')
 
-    return count  # TODO: Kadija, confirm that this return statement should be here. You added this!
+    return count
 
 
 def add_logs_from_cellio(blockedwell, cellio):
@@ -534,11 +534,8 @@ def lookup_from_cellio(line, model):
                     string = word
 
     # Check if a StringLookupTable already exists in the model, with the same name and values
-    for existing in model.parts_list_of_type('obj_StringTableLookup'):
-        table = rqp.StringLookup(
-            parent_model = model,
-            uuid = model.uuid_for_part(part_name = existing))  #TODO: confirm it is okay to change root_node to uuid
-        #root_node = model.root_for_part(existing)
+    for existing_uuid in model.uuids(obj_type = 'StringTableLookup'):
+        table = rqp.StringLookup(parent_model = model, uuid = existing_uuid)
         if table.title == title:
             if table.str_dict == lookup_dict:
                 return table.uuid  # If the exact table exists, reuse it by returning the uuid

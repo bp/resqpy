@@ -2,8 +2,10 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+import math
 
 from resqpy.grid import RegularGrid
+import resqpy.olio.vector_utilities as vec
 import resqpy.well
 
 
@@ -47,7 +49,7 @@ def test_compute_from_deviation_survey(example_model_with_well):
     array_data = dict(
         measured_depths = np.array([1, 2, 3], dtype = float) + 1000.0,
         azimuths = np.array([4, 5, 6], dtype = float),
-        inclinations = np.array([7, 8, 9], dtype = float),
+        inclinations = np.array([1, 2, 3], dtype = float),
         first_station = np.array([0, -1, 999], dtype = float),
     )
 
@@ -119,7 +121,7 @@ def test_load_from_ascii_file(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    well_names = [None, 'Coconut']
+    well_names = [None, 'SnowCone']
     elevation = 100
     # Create a measured depth datum
     datum = resqpy.well.MdDatum(parent_model = model,
@@ -133,10 +135,10 @@ def test_load_from_ascii_file(example_model_and_crs):
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
         'Z': zs,
-        'WELL': ['Coconut', 'Coconut', 'Mango', 'Mango']
+        'WELL': ['SnowCone', 'SnowCone', 'Paime', 'Paime']
     })
-    deviation_survey_file_path = os.path.join(model.epc_directory, 'deviation_survey.csv')
-    source_dataframe.to_csv(deviation_survey_file_path)
+    trajectory_data_file_path = os.path.join(model.epc_directory, 'trajectory_data.csv')
+    source_dataframe.to_csv(trajectory_data_file_path)
 
     for well_name in well_names:
         if well_name is None:
@@ -144,7 +146,7 @@ def test_load_from_ascii_file(example_model_and_crs):
             # Create a trajectory from the csv file
             with pytest.raises(Exception) as excinfo:
                 trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
-                                                               deviation_survey_file = deviation_survey_file_path,
+                                                               deviation_survey_file = trajectory_data_file_path,
                                                                length_uom = 'm',
                                                                md_datum = datum)
 
@@ -155,7 +157,7 @@ def test_load_from_ascii_file(example_model_and_crs):
             # --------- Act ----------
             # Create a trajectory from the csv file
             trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
-                                                           deviation_survey_file = deviation_survey_file_path,
+                                                           deviation_survey_file = trajectory_data_file_path,
                                                            well_name = well_name,
                                                            length_uom = 'm',
                                                            md_datum = datum)
@@ -174,13 +176,13 @@ def test_set_tangents(example_model_and_crs):
                                 md_reference = 'kelly bushing')
     mds = np.array([300, 310, 330, 340])
     zs = mds - elevation
-    well_name = 'Coconut'
+    well_name = 'JubJub'
     source_dataframe = pd.DataFrame({
         'MD': mds,
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
         'Z': zs,
-        'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut']
+        'WELL': ['JubJub', 'JubJub', 'JubJub', 'JubJub']
     })
 
     # Create a trajectory from dataframe
@@ -193,10 +195,14 @@ def test_set_tangents(example_model_and_crs):
     # --------- Act ----------
     # Calculate tangent vectors based on control points
     trajectory.set_tangents()
-
     # --------- Assert ----------
     assert trajectory.tangent_vectors is not None
     assert trajectory.tangent_vectors.shape == (trajectory.knot_count, 3)
+    assert vec.isclose(trajectory.tangent_vectors[0], trajectory.tangent_vectors[1], tolerance = 0.01)
+    np.testing.assert_equal(vec.azimuths(trajectory.tangent_vectors),
+                            np.array([45, 45, 45, 45]))  # X and Y coordinates follow straight line x = y
+    for v in trajectory.tangent_vectors:
+        assert vec.inclination(v) < 10
 
 
 def test_xyz_for_md(example_model_and_crs):
@@ -211,13 +217,13 @@ def test_xyz_for_md(example_model_and_crs):
                                 md_reference = 'kelly bushing')
     mds = np.array([300, 310, 330, 340])
     zs = mds - elevation
-    well_name = 'Coconut'
+    well_name = 'CoconutDrop'
     source_dataframe = pd.DataFrame({
         'MD': mds,
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
         'Z': zs,
-        'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut']
+        'WELL': ['CoconutDrop', 'CoconutDrop', 'CoconutDrop', 'CoconutDrop']
     })
 
     # Create a trajectory from dataframe
@@ -231,8 +237,7 @@ def test_xyz_for_md(example_model_and_crs):
     x, y, z = trajectory.xyz_for_md(md = 305)
 
     # # -------- Assert ---------
-    assert x == y == 1.5
-    assert z == 205
+    assert (math.isclose(x, 1.5)) & (math.isclose(y, 1.5)) & (math.isclose(z, 205))
 
 
 def test_splined_trajectory(example_model_and_crs):
@@ -245,15 +250,15 @@ def test_splined_trajectory(example_model_and_crs):
                                 crs_uuid = crs.uuid,
                                 location = (0, 0, -elevation),
                                 md_reference = 'kelly bushing')
-    mds = np.array([300, 310, 330, 340])
+    mds = np.array([300, 310, 320, 340])
     zs = mds - elevation
-    well_name = 'Coconut'
+    well_name = 'CoconutDrop'
     source_dataframe = pd.DataFrame({
         'MD': mds,
         'X': [1, 2, 3, 4],
         'Y': [1, 2, 3, 4],
         'Z': zs,
-        'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut']
+        'WELL': ['CoconutDrop', 'CoconutDrop', 'CoconutDrop', 'CoconutDrop']
     })
 
     # Create a trajectory from dataframe

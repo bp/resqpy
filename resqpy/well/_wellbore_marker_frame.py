@@ -54,7 +54,7 @@ class WellboreMarkerFrame(BaseResqpy):
            node_count (int, optional): number of measured depth nodes, each being for a marker
            node_mds = (list, optional): node_count measured depths (in same units and datum as trajectory) of markers
            wellbore_marker_list (list, optional): list of markers, each:
-            (marker UUID, geologic boundary, marker citation title, interp. object)
+            (marker UUID, geologic boundary type, marker citation title, interp. object)
            title (str, optional): the citation title to use for a new wellbore marker frame;
               ignored if uuid or wellbore_marker_frame_root is not None
            originator (str, optional): the name of the person creating the wellbore marker frame, defaults to login id;
@@ -226,17 +226,14 @@ class WellboreMarkerFrame(BaseResqpy):
 
         if interp_type == 'obj_HorizonInterpretation':
             # create new horizon interpretation object
-            # return rqo.HorizonInterpretation(self.model, root_node = interpretation_root_node)
             return rqo.HorizonInterpretation(self.model, uuid = interpretation_uuid)
 
         elif interp_type == 'obj_FaultInterpretation':
             # create new fault interpretation object
-            # return rqo.FaultInterpretation(self.model, root_node = interpretation_root_node)
             return rqo.FaultInterpretation(self.model, uuid = interpretation_uuid)
 
         elif interp_type == 'obj_GeobodyInterpretation':
             # create new geobody interpretation object
-            # return rqo.GeobodyInterpretation(self.model, root_node = interpretation_root_node)
             return rqo.GeobodyInterpretation(self.model, uuid = interpretation_uuid)
         else:
             # No interpretation for the marker
@@ -256,7 +253,7 @@ class WellboreMarkerFrame(BaseResqpy):
         self.trajectory = self.get_trajectory_obj(
             rqet.find_nested_tags_text(wellbore_marker_frame_root, ['Trajectory', 'UUID']))
 
-        # list of Wellbore markers, each: (marker UUID, geologic boundary, marker citation title, interp. object)
+        # list of Wellbore markers, each: (marker UUID, geologic boundary type, marker citation title, interp. object)
         self.wellbore_marker_list = []
         for tag in rqet.list_of_tag(wellbore_marker_frame_root, 'WellboreMarker'):
             interp_tag = rqet.content_type(rqet.find_nested_tags_text(tag, ['Interpretation', 'ContentType']))
@@ -446,7 +443,7 @@ class WellboreMarkerFrame(BaseResqpy):
               interpretation_obj is not None
 
         returns:
-           tuple, list of tuples or None; tuple is (marker UUID, geologic boundary, marker citation title, interp. object)
+           tuple, list of tuples or None; tuple is (marker UUID, geologic boundary type, marker citation title, interp. object)
 
         note:
            if no arguments are passed, then a list of wellbore markers is returned;
@@ -477,7 +474,7 @@ class WellboreMarkerFrame(BaseResqpy):
            idx (int): position of the marker in the wellbore marker list
 
         returns:
-           tuple; tuple is (marker UUID, geologic boundary, marker citation title, interp. o
+           tuple; tuple is (marker UUID, geologic boundary type, marker citation title, interp. object)
         """
 
         return self.wellbore_marker_list[idx - 1]

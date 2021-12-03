@@ -17,31 +17,43 @@ def test_add_wells_from_ascii_file(example_model_and_crs, caplog):
     well_name = 'Well_1'
 
     source_df = pd.DataFrame([[well_name, 200, 1, 1, 150], [well_name, 250, 2, 2, 200], [well_name, 300, 2, 3, 250]],
-                             columns = ['WELL', 'MD', 'X', 'Y', 'Z'])
+                             columns = ['NotaWell', 'MD', 'X', 'Y', 'Z'])
     with open(ascii_file, 'w') as fp:
         for col in source_df.columns:
-            fp.write(f' {col:>6s}')
+            fp.write(f' {col}')
         fp.write('\n')
         for row_index in range(len(source_df)):
             row = source_df.iloc[row_index]
             for col in source_df.columns:
-                if col == 'WELL':
-                    fp.write(f' {(row[col]):6s}')
+                if col == 'NotaWell':
+                    fp.write(f' {(row[col])}')
                 else:
-                    fp.write(f' {row[col]:6.2f}')
+                    fp.write(f' {row[col]}')
             fp.write('\n')
 
-    well_col_name = 'Wellname'
-    with pytest.raises(AssertionError) as exc:
-        # --------- Act ----------
+    # Use incorrect name for the well column
+    # --------- Act ----------
+    with pytest.raises(AssertionError):
         (feature_list, interpretation_list, trajectory_list,
          md_datum_list) = add_wells_from_ascii_file(model = model,
                                                     crs_uuid = crs_uuid,
                                                     trajectory_file = ascii_file,
-                                                    well_col = well_col_name)
+                                                    well_col = None,
+                                                    space_separated_instead_of_csv = True)
+
+    # Use correct name for well column
+    # --------- Act ----------
+    (feature_list2, interpretation_list2, trajectory_list2,
+     md_datum_list2) = add_wells_from_ascii_file(model = model,
+                                                 crs_uuid = crs_uuid,
+                                                 trajectory_file = ascii_file,
+                                                 well_col = 'NotaWell',
+                                                 space_separated_instead_of_csv = True)
+
+    test_trajectory = trajectory_list2[0]
     # --------- Assert ----------
-    assert 'well column ' + str(well_col_name) + ' not found in ascii trajectory file: ' + str(
-        ascii_file) in caplog.text
+    assert len(feature_list2) == len(interpretation_list2) == len(trajectory_list2) == len(md_datum_list2) == 1
+    np.testing.assert_equal(test_trajectory.measured_depths, np.array([200., 250., 300.]))
 
 
 def test_best_root_for_object(example_model_with_well):

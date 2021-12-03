@@ -29,7 +29,7 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
     array_data = dict(
         measured_depths = np.array([1, 2, 3], dtype = float) + 1000.0,
         azimuths = np.array([4, 5, 6], dtype = float),
-        inclinations = np.array([7, 8, 9], dtype = float),
+        inclinations = np.array([1, 2, 3], dtype = float),
         first_station = np.array([0, -1, 999], dtype = float),
     )
 
@@ -120,7 +120,7 @@ def test_get_md_datum(example_model_with_well):
     array_data = dict(
         measured_depths = np.array([1, 2, 3], dtype = float) + 1000.0,
         azimuths = np.array([4, 5, 6], dtype = float),
-        inclinations = np.array([7, 8, 9], dtype = float),
+        inclinations = np.array([1, 2, 3], dtype = float),
         first_station = np.array([0, -1, 999], dtype = float),
     )
 

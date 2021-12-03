@@ -58,7 +58,7 @@ class Trajectory(BaseResqpy):
             cell_kji0_list = None,
             wellspec_file = None,
             spline_mode = 'cube',
-            deviation_survey_file = None,
+            deviation_survey_file = None,  # TODO: this file actually contains trajectory data --> rename argument!
             survey_file_space_separated = False,
             length_uom = None,
             md_domain = None,
@@ -995,7 +995,5 @@ class Trajectory(BaseResqpy):
         """
 
         # TODO: more detailed equality comparison
-        other_uuid = getattr(other, "uuid", None)
-        return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)
         other_uuid = getattr(other, "uuid", None)
         return isinstance(other, self.__class__) and bu.matching_uuids(self.uuid, other_uuid)

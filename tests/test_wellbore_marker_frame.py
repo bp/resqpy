@@ -224,7 +224,7 @@ def test_get_interpretation_object(example_model_and_crs):
     horizon_feature_2.create_xml()
     horizon_interp_2 = rqo.HorizonInterpretation(parent_model = model,
                                                  title = 'horizon_interp_2',
-                                                 genetic_boundary_feature = horizon_feature_1,
+                                                 genetic_boundary_feature = horizon_feature_2,
                                                  sequence_stratigraphy_surface = 'transgressive',
                                                  boundary_relation_list = ['conformable'])
     horizon_interp_2.create_xml()
@@ -255,6 +255,7 @@ def test_get_interpretation_object(example_model_and_crs):
                                                                            trajectory = trajectory)
     # --------- Act ----------
     # Get an interpretation based on an uuid
+    # TODO: alter test as get_interpretation_obj() method will have breaking changes or be removed in the future
     found_interpretation = wellbore_marker_frame.get_interpretation_obj(interpretation_uuid = horizon_interp_2_uuid)
 
     # --------- Assert ----------
@@ -424,10 +425,9 @@ def test_find_marker_from_index(example_model_and_crs):
     wellbore_marker_frame = resqpy.well.WellboreMarkerFrame.from_dataframe(parent_model = model,
                                                                            dataframe = wellbore_marker_frame_dataframe,
                                                                            trajectory = trajectory)
-    print(wellbore_marker_frame.wellbore_marker_list)
     # --------- Act ----------
     # Get the marker object from an interpretation object and interpretation object uuid
-    found_marker1 = wellbore_marker_frame.find_marker_from_index(1)
+    found_marker1 = wellbore_marker_frame.find_marker_from_index(3)
 
     # --------- Assert ----------
-    assert found_marker1[1] == 'horizon'
+    assert found_marker1[1] == wellbore_marker_frame_dataframe.iloc[2]['Type']
