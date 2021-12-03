@@ -30,7 +30,7 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .well_utils import _pl, find_entry_and_exit, load_hdf5_array
+from .well_utils import _pl, find_entry_and_exit, load_hdf5_array, _derive_from_wellspec_check_grid_name, _derive_from_wellspec_verify_col_list
 from ._trajectory import Trajectory
 from ._md_datum import MdDatum
 
@@ -594,11 +594,11 @@ class BlockedWell(BaseResqpy):
 
         well_name = self.__derive_from_wellspec_check_well_name(well_name = well_name)
 
-        col_list = BlockedWell.__derive_from_wellspec_verify_col_list(add_properties = add_properties)
+        col_list = _derive_from_wellspec_verify_col_list(add_properties = add_properties)
 
-        name_for_check, col_list = BlockedWell.__derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
-                                                                                      grid = grid,
-                                                                                      col_list = col_list)
+        name_for_check, col_list = _derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
+                                                                         grid = grid,
+                                                                         col_list = col_list)
 
         wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list)
 
@@ -622,32 +622,6 @@ class BlockedWell(BaseResqpy):
         else:
             well_name = self.well_name
         return well_name
-
-    @staticmethod
-    def __derive_from_wellspec_verify_col_list(add_properties):
-        """ Verify additional properties to be added to the wellspec file."""
-        if add_properties:
-            if isinstance(add_properties, list):
-                col_list = ['IW', 'JW', 'L'] + [col.upper() for col in add_properties if col not in ['IW', 'JW', 'L']]
-            else:
-                col_list = []
-        else:
-            col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
-        return col_list
-
-    @staticmethod
-    def __derive_from_wellspec_check_grid_name(check_grid_name, grid, col_list):
-        """ Verify the grid object to which the cell indices in the wellspec table belong."""
-        if check_grid_name:
-            grid_name = rqet.citation_title_for_node(grid.root).upper()
-            if not grid_name:
-                name_for_check = None
-            else:
-                col_list.append('GRID')
-                name_for_check = grid_name
-        else:
-            name_for_check = None
-        return name_for_check, col_list
 
     def derive_from_cell_list(self, cell_kji0_list, well_name, grid):
         """Populate empty blocked well from numpy int array of shape (N, 3) being list of cells."""

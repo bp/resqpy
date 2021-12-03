@@ -269,7 +269,7 @@ def test_splined_trajectory(example_model_and_crs):
                                         length_uom = 'm')
     # --------- Act ----------
     # Get splined trajectory
-    splined_trajectory = trajectory.splined_trajectory(well_name = 'Coconut')
+    splined_trajectory = trajectory.splined_trajectory(well_name = 'CoconutDrop')
 
     # -------- Assert ---------
     assert splined_trajectory is not None
