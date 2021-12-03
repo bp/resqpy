@@ -156,8 +156,8 @@ def _get_single_perm_ijk_parts(collection, perms, share_perm_parts, perm_k_mode,
             if perm_k_mode is None or perm_k_mode == 'none':
                 pass
             else:
-                perm_k_part = collection._get_perm_k_part(perms, perm_k_mode, share_perm_parts, perm_i_part,
-                                                          perm_j_part, perm_k_ratio, ntg_part)
+                perm_k_part = _get_perm_k_part(collection, perms, perm_k_mode, share_perm_parts, perm_i_part,
+                                               perm_j_part, perm_k_ratio, ntg_part)
     return perm_i_part, perm_j_part, perm_k_part
 
 
@@ -206,6 +206,7 @@ def _get_perm_k_part(collection, perms, perm_k_mode, share_perm_parts, perm_i_pa
 
 def _get_single_perm_ijk_parts_one(perms, share_perm_parts):
     perm_i_part = perms.singleton()
+    perm_j_part = perm_k_part = None
     if share_perm_parts:
         perm_j_part = perm_k_part = perm_i_part
     elif perms.facet_type_for_part(perm_i_part) == 'direction':
