@@ -1239,3 +1239,120 @@ def test_basic_static_property_parts_perm_multiple_name(example_model_with_prope
         else:
             assert actual is not None
             assert pc.citation_title_for_part(actual) == name
+
+
+@pytest.mark.parametrize('name_list,facet', [(['KI', 'KX'], 'I'), (['KJ', 'KY'], 'J'), (['KZ', 'KK'], 'K')])
+def test_basic_static_property_parts_perm_repeat(example_model_with_properties, name_list, facet):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    pc.remove_part_from_dict(part)
+    for name in name_list:
+        pc.add_cached_array_to_imported_list(cached_array = array,
+                                             source_info = '',
+                                             keyword = name,
+                                             discrete = False,
+                                             facet_type = 'direction',
+                                             facet = facet,
+                                             property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    _, _, permi, permj, permk = pc.basic_static_property_parts()
+
+    # Assert
+    assert permi is None
+    assert permj is None
+    assert permk is None
+
+
+def test_basic_static_property_parts_perm_options(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
+    ntgarray = pc.cached_part_array_ref(ntgpart)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'PermK',
+                                         discrete = False,
+                                         facet_type = 'direction',
+                                         facet = 'J',
+                                         property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'none')
+    assert permi is not None
+    assert permj is not None
+    assert permk is None
+
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = None)
+    assert permi is not None
+    assert permj is not None
+    assert permk is None
+
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'ratio', perm_k_ratio = 0.5)
+    assert permi is not None
+    assert permj is not None
+    assert permk is not None
+    karray = pc.cached_part_array_ref(permk)
+    assert_array_almost_equal(karray, array * 0.5)
+
+
+def test_basic_static_property_parts_perm_options_ntg(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
+    ntgarray = pc.cached_part_array_ref(ntgpart)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'PermK',
+                                         discrete = False,
+                                         facet_type = 'direction',
+                                         facet = 'J',
+                                         property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    ntg, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'ntg', perm_k_ratio = 0.5)
+    assert permi is not None
+    assert permj is not None
+    assert permk is not None
+    karray = pc.cached_part_array_ref(permk)
+    assert_array_almost_equal(karray, (array / 2) * ntgarray)
+
+
+def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
+    ntgarray = pc.cached_part_array_ref(ntgpart)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'PermK',
+                                         discrete = False,
+                                         facet_type = 'direction',
+                                         facet = 'J',
+                                         property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'ntg squared', perm_k_ratio = 0.5)
+    assert permi is not None
+    assert permj is not None
+    assert permk is not None
+    karray = pc.cached_part_array_ref(permk)
+    assert_array_almost_equal(karray, (array / 2) * (ntgarray * ntgarray))
