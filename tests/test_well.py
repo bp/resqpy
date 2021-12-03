@@ -1,19 +1,15 @@
 import os
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 from numpy.testing import assert_array_almost_equal
 from pandas.testing import assert_frame_equal
 
 import resqpy.olio.uuid as bu
-import resqpy.well
-from resqpy.crs import Crs
 from resqpy.grid import RegularGrid
 from resqpy.model import Model
-from resqpy.organize import WellboreFeature
 from resqpy.property import Property
+import resqpy.well
 
 
 def test_MdDatum(example_model_and_crs):

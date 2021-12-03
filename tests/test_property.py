@@ -109,7 +109,6 @@ def test_property(tmp_path):
 
 
 def test_create_Property_from_singleton_collection(tmp_model):
-
     # Arrange
     grid = grr.RegularGrid(tmp_model, extent_kji = (2, 3, 4))
     grid.write_hdf5()
@@ -249,7 +248,6 @@ def test_property_extra_metadata(tmp_path):
 
 
 def test_points_properties(tmp_path):
-
     epc = os.path.join(tmp_path, 'points_test.epc')
     model = rq.new_model(epc)
 
@@ -265,7 +263,7 @@ def test_points_properties(tmp_path):
     ts_uuid = ts.uuid
     assert ts.timeframe == 'geologic'
 
-    # create a simple grid without an explicit geometry and ensure it has a property collection initialised
+    #  create a simple grid without an explicit geometry and ensure it has a property collection initialised
     grid = grr.RegularGrid(model,
                            extent_kji = extent_kji,
                            origin = (0.0, 0.0, 1000.0),
@@ -297,7 +295,7 @@ def test_points_properties(tmp_path):
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
-    # create a dynamic points property (indexable cells) related to the geological time series
+    #  create a dynamic points property (indexable cells) related to the geological time series
     for r in range(ensemble_size):
         centres = grid.centre_point().copy()
         for time_index in range(time_series_size):
@@ -314,7 +312,7 @@ def test_points_properties(tmp_path):
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts_uuid)
 
-    # create a dynamic points property (indexable nodes) related to the geological time series
+    #  create a dynamic points property (indexable nodes) related to the geological time series
     # also create a parallel set of active cell properties
     for r in range(ensemble_size):
         nodes = grid.points_ref().copy()
@@ -414,7 +412,7 @@ def test_points_properties(tmp_path):
                                              time_series_uuid = ts_uuid)
     assert cc.number_of_parts() == ensemble_size * time_series_size
 
-    # check that 5 dimensional numpy arrays can be set up, each covering time indices for a single realisation
+    #  check that 5 dimensional numpy arrays can be set up, each covering time indices for a single realisation
     for r in range(ensemble_size):
         rcc = rqp.selective_version_of_collection(cc, realization = r)
         assert rcc.number_of_parts() == time_series_size
@@ -450,7 +448,7 @@ def test_points_properties(tmp_path):
     # and that the inactive array now indicates some cells are inactive
     assert grid.inactive is not None and np.count_nonzero(grid.inactive) > 0
 
-    # check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
+    #  check that 5 dimensional numpy arrays can be set up, each covering realisations for a single time index
     for ti in range(time_series_size):
         tnc = rqp.selective_version_of_collection(nc, time_index = ti)
         assert tnc.number_of_parts() == ensemble_size
@@ -685,7 +683,6 @@ def test_establish_time_set_kind(example_model_with_prop_ts_rels):
     assert pc.establish_time_set_kind() == 'single time'
 
 
-@pytest.mark.skip(reason = 'expected to fail currently')
 def test_discombobulated_combobulated_face_arrays(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
@@ -775,7 +772,6 @@ def test_similar_parts_for_realizations_from_other_collection(example_model_with
     assert len(pc_to.parts()) == len(rel1_parts)
 
 
-@pytest.mark.skip(reason = 'expected to fail currently')
 def test_property_over_time_series_from_collection(example_model_with_prop_ts_rels):
     # Arrange
     model = example_model_with_prop_ts_rels
@@ -836,7 +832,6 @@ def test_create_property_set_xml(example_model_with_properties):
     assert len(pset.parts()) == num_parts
 
 
-@pytest.mark.skip(reason = 'expected to fail currently')
 def test_override_min_max(example_model_with_properties):
     # Arrange
     model = example_model_with_properties

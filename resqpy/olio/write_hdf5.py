@@ -1,4 +1,4 @@
-"""write_hdf5.py: Class to write a resqml hdf5 file."""
+"""write_hdf5.py: Class to write a resqml hdf5 file and functions for copying hdf5 data."""
 
 version = '26th August 2021'
 

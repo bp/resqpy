@@ -4,8 +4,6 @@ version = '29th April 2021'
 
 import logging
 
-import pytest
-
 log = logging.getLogger(__name__)
 
 import math as maths
