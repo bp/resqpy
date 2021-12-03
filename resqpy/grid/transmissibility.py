@@ -15,6 +15,7 @@ import numpy as np
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
 
+
 def transmissibility(grid, tolerance=1.0e-6, use_tr_properties=True, realization=None, modifier_mode=None):
     """Returns transmissibilities for standard (IJK neighbouring) connections within this grid.
 
