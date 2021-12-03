@@ -16,6 +16,8 @@ import resqpy.weights_and_measures as bwam
 import resqpy.surface as rqs
 import resqpy.olio.xml_et as rqet
 
+from resqpy.property import property_kind_and_facet_from_keyword
+
 # ---- Test PropertyCollection methods ---
 
 # TODO
@@ -875,6 +877,7 @@ def test_set_support_mesh(example_model_and_crs):
 
     pc = rqp.PropertyCollection()
     pc.set_support(support = support)
+    assert pc.support_uuid == support.uuid
 
 
 # Set up expected arrays for normalized array tests
@@ -1351,3 +1354,27 @@ def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_
     assert permk is not None
     karray = pc.cached_part_array_ref(permk)
     assert_array_almost_equal(karray, (array / 2) * (ntgarray * ntgarray))
+
+
+@pytest.mark.parametrize('keyword,kind,facet_type,facet', [('bv', 'rock volume', 'netgross', 'gross'),
+                                                           ('brv', 'rock volume', 'netgross', 'gross'),
+                                                           ('pv', 'pore volume', None, None),
+                                                           ('pvr', 'pore volume', None, None),
+                                                           ('porv', 'pore volume', None, None),
+                                                           ('mdep', 'depth', 'what', 'cell centre'),
+                                                           ('depth', 'depth', 'what', 'cell top'),
+                                                           ('tops', 'depth', 'what', 'cell top'),
+                                                           ('mids', 'depth', 'what', 'cell centre'),
+                                                           ('ntg', 'net to gross ratio', None, None),
+                                                           ('netgrs', 'net to gross ratio', None, None),
+                                                           ('netv', 'rock volume', 'netgross', 'net'),
+                                                           ('nrv', 'rock volume', 'netgross', 'net'),
+                                                           ('dzc', 'thickness', 'netgross', 'gross'),
+                                                           ('dzn', 'thickness', 'netgross', 'net'),
+                                                           ('dz', 'thickness', 'netgross', 'gross'),
+                                                           ('dznet', 'thickness', 'netgross', 'net')])
+def test_property_kind_and_facet_from_keyword(keyword, kind, facet_type, facet):
+    out_kind, out_type, out_facet = property_kind_and_facet_from_keyword(keyword)
+    assert out_kind == kind
+    assert out_type == facet_type
+    assert out_facet == facet
