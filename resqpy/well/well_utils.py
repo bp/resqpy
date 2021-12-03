@@ -122,3 +122,49 @@ def _as_optional_array(arr):
 
 def _pl(i, e = False):
     return '' if i == 1 else 'es' if e else 's'
+
+
+def _derive_from_wellspec_verify_col_list(add_properties):
+    """ Verify additional properties to be added to the WELLSPEC file.
+
+    argument:
+       add_properties (boolean): if True, the additional properties specified will be added to the WELLSPEC file
+
+    returns:
+       list of columns to be added to the WELLSPEC file
+    """
+
+    if add_properties:
+        if isinstance(add_properties, list):
+            col_list = ['IW', 'JW', 'L'] + [col.upper() for col in add_properties if col not in ['IW', 'JW', 'L']]
+        else:
+            col_list = []
+    else:
+        col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
+    return col_list
+
+
+def _derive_from_wellspec_check_grid_name(check_grid_name, grid, col_list):
+    """ Verify the grid object to which the cell indices in the WELLSPEC table belong.
+
+    arguments:
+       check_grid_name (boolean): if True, the citation title of the grid will be extracted and returned
+       grid (grid object): the grid object whose citation titles will be returned
+       col_list (list): list of strings of column names to be added to the WELLSPEC file. If a citation title is
+                        extracted from the grid object, 'GRID' will be added to the col_list
+
+    returns:
+       string of grid citation title extracted from the grid object
+       list of columns to be added to the WELLSPEC file
+    """
+
+    if check_grid_name:
+        grid_name = rqet.citation_title_for_node(grid.root).upper()
+        if not grid_name:
+            name_for_check = None
+        else:
+            col_list.append('GRID')
+            name_for_check = grid_name
+    else:
+        name_for_check = None
+    return name_for_check, col_list

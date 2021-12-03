@@ -8,6 +8,7 @@ import resqpy.olio.uuid as bu
 from resqpy.grid import RegularGrid
 from resqpy.model import Model
 import resqpy.property as rqp
+from resqpy.well.well_utils import _derive_from_wellspec_check_grid_name
 import resqpy.well
 
 
@@ -90,17 +91,12 @@ def test_derive_from_wellspec_check_grid_name(example_model_and_crs, check_grid_
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     well_name = 'DOGLEG'
-    bw = resqpy.well.BlockedWell(model,
-                                 well_name = well_name,
-                                 use_face_centres = True,
-                                 grid = grid,
-                                 add_wellspec_properties = True)
     col_list_orig = ['IW', 'JW', 'L']
 
     # --------- Act ----------
-    result = bw._BlockedWell__derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
-                                                                   grid = grid,
-                                                                   col_list = col_list_orig)
+    result = _derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
+                                                   grid = grid,
+                                                   col_list = col_list_orig)
 
     # --------- Assert ----------
     assert result[0] == name_for_check
@@ -322,7 +318,7 @@ def test_import_from_cellio_file(example_model_and_crs):
 
 # --------- Act ----------
     bw = resqpy.well.BlockedWell(model, use_face_centres = True)
-    # assert that certain attributes have not bee populated
+    # assert that certain attributes have not been populated
     assert bw.grid_list == []
     assert bw.trajectory is None
     assert bw.cell_count is None
@@ -330,6 +326,7 @@ def test_import_from_cellio_file(example_model_and_crs):
     assert bw.node_mds is None
 
     bw.import_from_rms_cellio(cellio_file = cellio_file, well_name = well_name, grid = grid)
+
     # --------- Assert ----------
     assert bw.grid_list[0].uuid == grid_uuid
     assert bw.trajectory is not None
@@ -443,13 +440,13 @@ def test_dataframe_from_trajectory(example_model_and_crs):
                                 md_reference = 'kelly bushing')
     mds = np.array([100, 210, 230, 240, 250])
     zs = mds - elevation
-    well_name = 'Coconut'
+    well_name = 'CoconutDrop'
     source_dataframe = pd.DataFrame({
         'MD': mds,
         'X': [25, 50, 75, 100, 100],
         'Y': [25, -50, -75, -100, -100],
         'Z': zs,
-        'WELL': ['Coconut', 'Coconut', 'Coconut', 'Coconut', 'Coconut']
+        'WELL': ['CoconutDrop', 'CoconutDrop', 'CoconutDrop', 'CoconutDrop', 'CoconutDrop']
     })
 
     # Create a trajectory from dataframe
