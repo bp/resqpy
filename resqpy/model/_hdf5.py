@@ -16,6 +16,13 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 # and _create_hdf5_ext() and _create_hdf5_dataset_ref() functions in _xml module
 
 
+def _h5_set_default_override(model, override):
+    """Sets the default hdf5 filename override mode for the model."""
+
+    assert override in ('none', 'dir', 'full')
+    model.default_h5_override = override
+
+
 def _h5_uuid_and_path_for_node(model, node, tag = 'Values'):
     """Returns a (hdf5_uuid, hdf5_internal_path) pair for an xml array node."""
 
@@ -30,6 +37,8 @@ def _h5_uuid_and_path_for_node(model, node, tag = 'Values'):
 
 def _h5_uuid_list(model, node):
     """Returns a list of all uuids for hdf5 external part(s) referred to in recursive tree."""
+
+    # todo: check that uuid.UUID has __EQ__ defined and that set union function applies it correctly
 
     def recursive_uuid_set(node):
         uuid_set = set()
@@ -64,54 +73,64 @@ def _h5_uuid(model):
                     if uuid_list is not None and len(uuid_list) > 0:
                         break
             if uuid_list is not None and len(uuid_list) > 0:
-                model.main_h5_uuid = uuid_list[0]  # arbitrary use of first hdf5 uuid
+                model.main_h5_uuid = uuid_list[0]  # arbitrary use of first hdf5 uuid encountered
     return model.main_h5_uuid
 
 
-def _h5_file_name(model, uuid = None, override = True, file_must_exist = True):
-    """Returns full path for hdf5 file with given uuid."""
+def _h5_file_name(model, uuid = None, override = 'default', file_must_exist = True):
+    """Returns full path for hdf5 file with given ext uuid."""
 
+    if uuid is None:
+        uuid = _h5_uuid(model)
     if uuid is not None:
         if isinstance(uuid, str):
             uuid = bu.uuid_from_string(uuid)
         if uuid.bytes in model.h5_dict:
             return model.h5_dict[uuid.bytes]
-    if override and model.epc_file and model.epc_file.endswith('.epc'):
+    if isinstance(override, bool):
+        # could raise a deprecation warning here
+        override = 'full' if override else 'dir'
+    elif override == 'default':
+        override = model.default_h5_override
+    assert override in ('none', 'dir', 'full')
+    if override == 'full':
+        assert model.epc_file and model.epc_file.endswith('.epc')
         h5_full_path = model.epc_file[:-4] + '.h5'
-        if not file_must_exist or os.path.exists(h5_full_path):
-            return h5_full_path
-    if uuid is None:
-        uuid = _h5_uuid(model)
-        if uuid.bytes in model.h5_dict:
-            return model.h5_dict[uuid.bytes]
+    else:
+        h5_full_path = _h5_target_path_from_rels(model, uuid, override == 'dir')
+    if file_must_exist:
+        if not h5_full_path:
+            raise FileNotFoundError('unable to determine hdf5 file name')
+        if not os.path.exists(h5_full_path):
+            raise FileNotFoundError(f'hdf5 file missing: {h5_full_path}')
+    if h5_full_path and uuid is not None:
+        model.h5_dict[uuid.bytes] = h5_full_path
+    return h5_full_path
+
+
+def _h5_target_path_from_rels(model, uuid, override_dir):
+    """Extracts an hdf5 file name from the Target attribute of relationships xml."""
+
     for rel_name in model.rels_forest:
         entry = model.rels_forest[rel_name]
-        if bu.matching_uuids(uuid, entry[0]):
+        if uuid is None or bu.matching_uuids(uuid, entry[0]):
             rel_root = entry[1].getroot()
             for child in rel_root:
                 if child.attrib['Id'] == 'Hdf5File' and child.attrib['TargetMode'] == 'External':
-                    h5_full_path = None
-                    target_path = rqet.strip_path(child.attrib['Target'])
-                    if target_path:
-                        if model.epc_directory:
-                            _, target_file = os.path.split(target_path)
-                            h5_full_path = os.path.join(model.epc_directory, target_file)
-                        else:
-                            h5_full_path = target_path
-                        if file_must_exist and not os.path.exists(h5_full_path):
-                            h5_full_path = None
-                    if h5_full_path is None:
-                        h5_full_path = child.attrib['Target']
-                        if file_must_exist and not os.path.exists(h5_full_path):
-                            h5_full_path = None
-                    if h5_full_path is not None:
-                        model.h5_dict[uuid.bytes] = h5_full_path
+                    target_path = child.attrib['Target']
+                    if not target_path:
+                        return None
+                    if override_dir:
+                        assert model.epc_directory
+                        h5_full_path = os.path.join(model.epc_directory, os.path.basename(target_path))
+                    else:
+                        h5_full_path = target_path
                     return h5_full_path
     return None
 
 
-def _h5_access(model, uuid = None, mode = 'r', override = True, file_path = None):
-    """Returns an open h5 file handle for the hdf5 file with the given uuid."""
+def _h5_access(model, uuid = None, mode = 'r', override = 'default', file_path = None):
+    """Returns an open h5 file handle for the hdf5 file with the given ext uuid."""
 
     if model.h5_currently_open_mode is not None and model.h5_currently_open_mode != mode:
         _h5_release(model)
@@ -121,7 +140,7 @@ def _h5_access(model, uuid = None, mode = 'r', override = True, file_path = None
         file_name = _h5_file_name(model, uuid = uuid, override = override, file_must_exist = (mode == 'r'))
     if mode == 'a' and not os.path.exists(file_name):
         mode = 'w'
-    if model.h5_currently_open_path == file_name:
+    if model.h5_currently_open_root is not None and os.path.samefile(model.h5_currently_open_path, file_name):
         return model.h5_currently_open_root
     if model.h5_currently_open_root is not None:
         _h5_release(model)
@@ -247,6 +266,13 @@ def _h5_overwrite_array_slice(model, h5_key_pair, slice_tuple, array_slice):
     h5_root = _h5_access(model, h5_key_pair[0], mode = 'a')
     dset = h5_root[h5_key_pair[1]]
     dset[slice_tuple] = array_slice
+
+
+def h5_clear_filename_cache(model):
+    """Clears the cached filenames associated with all ext uuids."""
+
+    _h5_release(model)
+    model.h5_dict = {}
 
 
 def _change_hdf5_uuid_in_hdf5_references(model, node, old_uuid, new_uuid):
