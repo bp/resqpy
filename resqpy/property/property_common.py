@@ -367,53 +367,47 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
        the resqml standard allows a property to have any number of facets; however,
        this module currently only supports zero or one facet per property
     """
+    crs_node, from_crs = _guess_uom_get_crs_info(support)
 
+    if property_kind in ['rock volume', 'pore volume', 'volume', 'fluid volume']:
+        return _guess_uom_volume(property_kind, from_crs, facet_type, facet)
+    if property_kind == 'depth':
+        return _guess_uom_depth(crs_node)
+    if property_kind == 'cell length':  # todo: pass in direction facet to pick up xy_units or z_units
+        return from_crs
+    if property_kind in ['net to gross ratio', 'porosity', 'saturation']:
+        return _guess_uom_ntg_por_sat(maximum, from_crs)
+    if property_kind == 'permeability rock' or property_kind == 'rock permeability':
+        return 'mD'
+    if property_kind in ['permeability thickness', 'permeability length']:
+        return _guess_uom_permeability(property_kind, crs_node)
+    if property_kind.endswith('transmissibility'):
+        return _guess_uom_transmissibility(from_crs)
+    if property_kind == 'pressure':
+        return _guess_uom_pressure(from_crs, maximum)
+    if property_kind in ['solution gas-oil ratio', 'vapor oil-gas ratio']:
+        return _guess_uom_gor_ogr(property_kind, from_crs)
+    if property_kind.endswith('multiplier'):
+        return 'Euc'
+    # todo: 'degC' or 'degF' for thermodynamic temperature
+    return None
+
+
+def _guess_uom_get_crs_info(support):
     if support is None or not hasattr(support, 'extract_crs_root'):
         crs_node = None
     else:
         crs_node = support.extract_crs_root()
-    from_crs = _crs_m_or_ft(crs_node)
+    return crs_node, _crs_m_or_ft(crs_node)
 
-    if property_kind in ['rock volume', 'pore volume', 'volume']:
-        if from_crs is None:
-            return None
-        if from_crs == 'ft' and property_kind == 'pore volume':
-            return 'bbl'  # seems to be Nexus 'ENGLISH' uom for pv out
-        return from_crs + '3'  # ie. m3 or ft3
-    if property_kind == 'depth':
-        if crs_node is None:
-            return None
-        return rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-    if property_kind == 'cell length':  # todo: pass in direction facet to pick up xy_units or z_units
-        return from_crs
-    if property_kind in ['net to gross ratio', 'porosity', 'saturation']:
-        if maximum is not None and str(maximum) != 'unknown':
-            max_real = float(maximum)
-            if max_real > 1.0 and max_real <= 100.0:
-                return '%'
-            if max_real < 0.0 or max_real > 1.0:
-                return None
-        if from_crs == 'm':
-            return 'm3/m3'
-        if from_crs == 'ft':
-            return 'ft3/ft3'
-        return 'Euc'
-    if property_kind == 'permeability rock' or property_kind == 'rock permeability':
-        return 'mD'
-    if property_kind == 'permeability thickness':
-        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-        if z_units == 'm':
-            return 'mD.m'
-        if z_units == 'ft':
-            return 'mD.ft'
+
+def _guess_uom_depth(crs_node):
+    if crs_node is None:
         return None
-    if property_kind == 'permeability length':
-        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-        if xy_units == 'm':
-            return 'mD.m'
-        if xy_units == 'ft':
-            return 'mD.ft'
-        return None
+    return rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+
+
+def _guess_uom_volume(property_kind, from_crs, facet_type, facet):
     if property_kind == 'fluid volume':
         if from_crs == 'm':
             return 'm3'
@@ -423,44 +417,79 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
             else:
                 return 'bbl'  # todo: check whether nexus uses 10^3 or 10^6 units
         return None
-    if property_kind.endswith('transmissibility'
-                             ):  # note: RESQML QuantityClass only includes a unit-viscosity VolumePerTimePerPressureUom
-        if from_crs == 'm':
-            return 'm3.cP/(kPa.d)'  # NB: might actually be m3/(psi.d) or m3/(bar.d)
-        if from_crs == 'ft':
-            return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
+    if from_crs is None:
         return None
-    if property_kind == 'pressure':
-        if from_crs == 'm':
-            return 'kPa'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
+    if from_crs == 'ft' and property_kind == 'pore volume':
+        return 'bbl'  # seems to be Nexus 'ENGLISH' uom for pv out
+    return from_crs + '3'  # ie. m3 or ft3
+
+
+def _guess_uom_permeability(property_kind, crs_node):
+    if 'thickness' in property_kind:
+        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+        if z_units == 'm':
+            return 'mD.m'
+        if z_units == 'ft':
+            return 'mD.ft'
+        return None
+    else:
+        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
+        if xy_units == 'm':
+            return 'mD.m'
+        if xy_units == 'ft':
+            return 'mD.ft'
+        return None
+
+
+def _guess_uom_ntg_por_sat(maximum, from_crs):
+    if maximum is not None and str(maximum) != 'unknown':
+        max_real = float(maximum)
+        if max_real > 1.0 and max_real <= 100.0:
+            return '%'
+        if max_real < 0.0 or max_real > 1.0:
+            return None
+    if from_crs == 'm':
+        return 'm3/m3'
+    if from_crs == 'ft':
+        return 'ft3/ft3'
+    return 'Euc'
+
+
+def _guess_uom_transmissibility(from_crs):
+    # note: RESQML QuantityClass only includes a unit-viscosity VolumePerTimePerPressureUom
+    if from_crs == 'm':
+        return 'm3.cP/(kPa.d)'  # NB: might actually be m3/(psi.d) or m3/(bar.d)
+    if from_crs == 'ft':
+        return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
+    return None
+
+
+def _guess_uom_pressure(from_crs, maximum):
+    if from_crs == 'm':
+        return 'kPa'  # NB: might actually be psi or bar
+    if from_crs == 'ft':
+        return 'psi'
+    if maximum is not None:
+        max_real = float(maximum)
+        if max_real == 0.0:
+            return None
+        if max_real > 10000.0:
+            return 'kPa'
+        if max_real < 500.0:
+            return 'bar'
+        if max_real < 5000.0:
             return 'psi'
-        if maximum is not None:
-            max_real = float(maximum)
-            if max_real == 0.0:
-                return None
-            if max_real > 10000.0:
-                return 'kPa'
-            if max_real < 500.0:
-                return 'bar'
-            if max_real < 5000.0:
-                return 'psi'
-        return None
-    if property_kind == 'solution gas-oil ratio':
-        if from_crs == 'm':
-            return 'm3/m3'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
+    return None
+
+
+def _guess_uom_gor_ogr(property_kind, from_crs):
+    if from_crs == 'm':
+        return 'm3/m3'  # NB: might actually be psi or bar
+    if from_crs == 'ft':
+        if 'solution' in property_kind:
             return '1000 ft3/bbl'
-        return None
-    if property_kind == 'vapor oil-gas ratio':
-        if from_crs == 'm':
-            return 'm3/m3'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
+        else:
             return '0.001 bbl/ft3'
-        return None
-    if property_kind.endswith('multiplier'):
-        return 'Euc'
-    # todo: 'degC' or 'degF' for thermodynamic temperature
     return None
 
 
