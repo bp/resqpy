@@ -111,21 +111,24 @@ def _h5_file_name(model, uuid = None, override = 'default', file_must_exist = Tr
 def _h5_target_path_from_rels(model, uuid, override_dir):
     """Extracts an hdf5 file name from the Target attribute of relationships xml."""
 
-    for rel_name in model.rels_forest:
-        entry = model.rels_forest[rel_name]
+    log.debug(f'looking for ext uuid: {uuid}')
+    for rel_name, entry in model.rels_forest.items():
+        log.debug(f'considering rels: {rel_name}')
         if uuid is None or bu.matching_uuids(uuid, entry[0]):
+            log.debug(f'found hdf5 rels part: {rel_name}')
             rel_root = entry[1].getroot()
             for child in rel_root:
                 if child.attrib['Id'] == 'Hdf5File' and child.attrib['TargetMode'] == 'External':
                     target_path = child.attrib['Target']
                     if not target_path:
                         return None
-                    if override_dir:
+                    if override_dir or os.sep not in target_path:
                         assert model.epc_directory
                         h5_full_path = os.path.join(model.epc_directory, os.path.basename(target_path))
                     else:
                         h5_full_path = target_path
                     return h5_full_path
+    log.warning('h5 target path not found in rels')
     return None
 
 

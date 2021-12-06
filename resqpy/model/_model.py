@@ -1562,7 +1562,8 @@ class Model():
                         root = None,
                         title = 'Hdf Proxy',
                         originator = None,
-                        file_name = None):
+                        file_name = None,
+                        uuid = None):
         """Creates an hdf5 external node and optionally adds as child of root and/or to parts forest.
 
         arguments:
@@ -1573,7 +1574,10 @@ class Model():
            title (string): used as the Title text in the citation node, usually left at the default 'Hdf Proxy'
            originator (string, optional): the name of the human being who created the ext object;
               default is to use the login name
-           file_name (string): the filename to be stored as the Target in the relationship node
+           file_name (string, optional): the filename to be stored as the Target in the relationship node;
+              if None, will default to the epc filename with the extenstion replaced with .h5
+           uuid (uuid.UUID, optional): the ext uuid tp associate with the external part; if None, a new
+              uuid will be generated
 
         returns:
            newly created hdf5 external part xml node
@@ -1584,7 +1588,8 @@ class Model():
                                     root = root,
                                     title = title,
                                     originator = originator,
-                                    file_name = file_name)
+                                    file_name = file_name,
+                                    uuid = uuid)
 
     def create_hdf5_dataset_ref(self, hdf5_uuid, object_uuid, group_tail, root, title = 'Hdf Proxy'):
         """Creates a pair of nodes referencing an hdf5 dataset (array) and adds to root.

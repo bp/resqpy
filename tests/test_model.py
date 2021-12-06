@@ -285,6 +285,8 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
     assert full_count > 4
     hdf5_path = full_model.h5_file_name(override = 'none')
     assert os.path.exists(hdf5_path)
+    ext_uuid = full_model.h5_uuid()
+    assert ext_uuid is not None
     grid_uuid = full_model.uuid(obj_type = 'IjkGridRepresentation')
     assert grid_uuid is not None
     grid = full_model.grid(uuid = grid_uuid)
@@ -308,8 +310,8 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
         # switch off the default hdf5 filename override
         model.h5_set_default_override('none')
 
-        # create an hdf5 external part referring to the full model's hdf5 file
-        ext_node = model.create_hdf5_ext(file_name = hdf5_path)
+        # create an hdf5 external part referring to the full model's hdf5 file, preserving the ext uuid
+        ext_node = model.create_hdf5_ext(file_name = hdf5_path, uuid = ext_uuid)
         assert ext_node is not None
 
         # check that the correct hdf5 path will be returned for the sub model when not overriding

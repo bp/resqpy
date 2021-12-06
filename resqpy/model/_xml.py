@@ -320,10 +320,19 @@ def _create_md_datum_reference(md_datum_root, root = None):
                             root = root)
 
 
-def _create_hdf5_ext(model, add_as_part = True, root = None, title = 'Hdf Proxy', originator = None, file_name = None):
+def _create_hdf5_ext(model,
+                     add_as_part = True,
+                     root = None,
+                     title = 'Hdf Proxy',
+                     originator = None,
+                     file_name = None,
+                     uuid = None):
     """Creates an hdf5 external node and optionally adds as child of root and/or to parts forest."""
 
     ext = _new_obj_node('EpcExternalPartReference', name_space = 'eml')
+    assert ext is not None
+    if uuid is not None:  # preserve ext uuid if supplied
+        ext.set('uuid', str(uuid))
 
     _create_citation(root = ext, title = title, originator = originator)
 
@@ -337,7 +346,7 @@ def _create_hdf5_ext(model, add_as_part = True, root = None, title = 'Hdf Proxy'
         ext_uuid = bu.uuid_from_string(ext.attrib['uuid'])
         model.add_part('obj_EpcExternalPartReference', ext_uuid, ext)
         if not file_name:
-            file_name = model.h5_file_name(file_must_exist = False)
+            file_name = model.h5_file_name(override = 'full', file_must_exist = False)
         assert file_name
         model.h5_dict[ext_uuid.bytes] = file_name
         if model.main_h5_uuid is None:
