@@ -44,3 +44,9 @@ from .rock_fluid_unit_feature import RockFluidUnitFeature
 from .tectonic_boundary_feature import TectonicBoundaryFeature
 from .wellbore_feature import WellboreFeature
 from .wellbore_interpretation import WellboreInterpretation
+
+# Set "module" attribute of all public objects to this path.
+for _name in __all__:
+    _obj = eval(_name)
+    if hasattr(_obj, "__module__"):
+        _obj.__module__ = __name__

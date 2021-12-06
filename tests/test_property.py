@@ -14,6 +14,9 @@ import resqpy.property as rqp
 import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
 import resqpy.surface as rqs
+import resqpy.olio.xml_et as rqet
+
+from resqpy.property import property_kind_and_facet_from_keyword
 
 # ---- Test PropertyCollection methods ---
 
@@ -508,14 +511,14 @@ def test_remove_part_from_dict(example_model_with_properties):
     model = example_model_with_properties
     pc = model.grid().property_collection
     assert pc is not None
-    assert len(pc.parts()) == 7
+    assert len(pc.parts()) == 8
     part = pc.parts()[0]
 
     # Act
     pc.remove_part_from_dict(part)
 
     # Assert
-    assert len(pc.parts()) == 6
+    assert len(pc.parts()) == 7
     assert part not in pc.parts()
 
 
@@ -533,8 +536,8 @@ def test_part_str(example_model_with_prop_ts_rels):
     assert pc.part_str(part_disc, include_citation_title = False) == 'discrete'
     assert pc.part_str(part_cont) == 'saturation: water; timestep: 2 (SW)'
     assert pc.part_str(part_cont, include_citation_title = False) == 'saturation: water; timestep: 2'
-    assert pc.part_str(part_facet) == 'rock permeability: J (Perm)'
-    assert pc.part_str(part_facet, include_citation_title = False) == 'rock permeability: J'
+    assert pc.part_str(part_facet) == 'permeability rock: J (Perm)'
+    assert pc.part_str(part_facet, include_citation_title = False) == 'permeability rock: J'
 
 
 def test_part_filename(example_model_with_prop_ts_rels):
@@ -549,7 +552,7 @@ def test_part_filename(example_model_with_prop_ts_rels):
     # Act / Assert
     assert pc.part_filename(part_disc) == 'discrete'
     assert pc.part_filename(part_cont) == 'saturation_water_ts_2'
-    assert pc.part_filename(part_facet) == 'rock_permeability_J'
+    assert pc.part_filename(part_facet) == 'permeability_rock_J'
 
 
 def test_grid_for_part(example_model_with_properties):
@@ -874,3 +877,504 @@ def test_set_support_mesh(example_model_and_crs):
 
     pc = rqp.PropertyCollection()
     pc.set_support(support = support)
+    assert pc.support_uuid == support.uuid
+
+
+# Set up expected arrays for normalized array tests
+array1 = np.array([[[0, 1, 0, 1, 0], [1, 0, 1, 0, 1], [0, 1, 0, 1, 0], [1, 0, 1, 0, 1], [0, 1, 0, 1, 0]]] * 3)
+
+array2 = np.where(array1 == 0, 0.5, array1)
+
+array3 = np.array([[[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
+                    [1, 10, 10, 100, 100]]] * 3)
+
+array4 = np.where(array3 == 1, 0, array3)
+array4 = np.where(array4 == 100, 1, array4)
+array4 = np.where(array4 == 10, 0.090909, array4)
+
+array5 = np.where(array3 == 1, 0, array3)
+array5 = np.where(array5 == 100, 1, array5)
+array5 = np.where(array5 == 10, 0.5, array5)
+
+array6 = np.where(array3 == 100, np.nan, array3)
+array6 = np.where(array6 == 1, 0, array6)
+array6 = np.where(array6 == 10, 1, array6)
+
+array7 = np.where(array3 == 10, np.nan, array3)
+array7 = np.where(array7 == 1, 0, array7)
+array7 = np.where(array7 == 100, 1, array7)
+
+
+@pytest.mark.parametrize(
+    'name,masked,log,discrete,trust,fix,array,emin,emax',
+    [
+        ('NTG', False, False, None, False, None, array1, 0, 0.5),  # Simple don't trust minmax
+        ('NTG', False, False, None, True, None, array1, 0, 0.5),  # Simple trust minmax
+        ('NTG', False, False, None, False, 0.5, array2, -0.5, 0.5),  # Fix 0 at 0.5
+        ('Perm', False, False, None, False, None, array4, 1, 100),
+        ('Perm', False, True, None, False, None, array5, 0, 2),
+    ])  # Logarithmic
+def test_norm_array_ref(example_model_with_properties, name, masked, log, discrete, trust, fix, array, emin, emax):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    cont = [part for part in pc.parts() if pc.citation_title_for_part(part) == name][0]
+
+    # Act
+    normed, vmin, vmax = pc.normalized_part_array(cont,
+                                                  masked = masked,
+                                                  use_logarithm = log,
+                                                  discrete_cycle = discrete,
+                                                  trust_min_max = trust,
+                                                  fix_zero_at = fix)
+
+    # Assert
+    assert vmin == emin
+    assert vmax == emax
+    assert_array_almost_equal(normed, array)
+
+
+def test_norm_array_ref_mask(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    grid = model.grid()
+    # Set up a mask in the grid
+    minimask = np.array([0, 0, 0, 1, 1])
+    layermask = np.array([minimask] * 5)
+    mask = np.array([layermask, layermask, layermask], dtype = 'bool')
+    grid.inactive = mask
+    pc = model.grid().property_collection
+    cont = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    # Act
+    normed, vmin, vmax = pc.normalized_part_array(cont, masked = True, use_logarithm = False)
+    # Assert
+    assert vmin == 1
+    assert vmax == 10
+    assert_array_almost_equal(array6, normed)
+
+
+def test_norm_array_ref_mask_equal(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    grid = model.grid()
+    # Set up a mask in the grid
+    minimask = np.array([1, 0, 0, 1, 1])
+    layermask = np.array([minimask] * 5)
+    mask = np.array([layermask, layermask, layermask], dtype = 'bool')
+    grid.inactive = mask
+    pc = model.grid().property_collection
+    cont = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    # Act
+    normed, vmin, vmax = pc.normalized_part_array(cont, masked = True, use_logarithm = False)
+    # Assert
+    assert vmin == 10
+    assert vmax == 10
+    assert_array_almost_equal(np.ones(shape = (3, 5, 5)) / 2, normed)
+
+
+def test_norm_array_ref_log_mask(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    grid = model.grid()
+    # Set up a mask in the grid
+    minimask = np.array([0, 1, 1, 0, 0])
+    layermask = np.array([minimask] * 5)
+    mask = np.array([layermask, layermask, layermask], dtype = 'bool')
+    grid.inactive = mask
+    pc = model.grid().property_collection
+    cont = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    # Act
+    normed, vmin, vmax = pc.normalized_part_array(cont, masked = True, use_logarithm = True)
+    # Assert
+    assert vmin == 0
+    assert vmax == 2
+    assert_array_almost_equal(array7, normed)
+
+
+def test_normalized_part_array_discrete(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    disc = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Zone'][0]
+
+    # Act
+    normed, vmin, vmax = pc.normalized_part_array(disc, discrete_cycle = 3)
+    # Assert
+    assert vmin == 0
+    assert vmax == 2
+    assert normed[0, 0, 0] == 0.5
+    assert normed[1, 0, 0] == 1
+    assert normed[2, 0, 0] == 0
+
+
+def test_create_xml_minmax_none(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.ones(shape = (3, 5, 5))
+    array[0, 0, 0] = 2
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    p_node = pc.create_xml(ext_uuid = ext_uuid,
+                           property_array = array,
+                           title = 'Tester',
+                           property_kind = 'continuous',
+                           support_uuid = support_uuid,
+                           p_uuid = bu.new_uuid(),
+                           uom = 'Euc',
+                           add_min_max = True,
+                           min_value = None,
+                           max_value = None,
+                           indexable_element = 'cells',
+                           count = 1)
+
+    assert rqet.find_tag_text(p_node, 'MinimumValue') == '1.0'
+    assert rqet.find_tag_text(p_node, 'MaximumValue') == '2.0'
+
+
+def test_create_xml_minmax_none_discrete(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.ones(shape = (3, 5, 5))
+    array[0, 0, 0] = 2
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    p_node = pc.create_xml(ext_uuid = ext_uuid,
+                           property_array = array,
+                           title = 'Tester',
+                           property_kind = 'discrete',
+                           support_uuid = support_uuid,
+                           p_uuid = bu.new_uuid(),
+                           uom = 'Euc',
+                           discrete = True,
+                           add_min_max = True,
+                           min_value = None,
+                           max_value = None,
+                           indexable_element = 'cells',
+                           count = 1)
+
+    assert rqet.find_tag_text(p_node, 'MinimumValue') == '1'
+    assert rqet.find_tag_text(p_node, 'MaximumValue') == '2'
+
+
+def test_basic_static_property_parts_ntgnone(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act / Assert - Check it finds ntg initially
+    ntg, por, permi, permj, permk = pc.basic_static_property_parts()
+    assert ntg is not None
+    assert pc.citation_title_for_part(ntg) == 'NTG'
+
+    # Arrange - delete ntg
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
+    pc.remove_part_from_dict(part)
+
+    # Act / Assert - check it now finds nothing
+    ntg, por, permi, permj, permk = pc.basic_static_property_parts()
+    assert ntg is None
+
+
+def test_basic_static_property_parts_pornone(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act / Assert - Check it finds por initially
+    ntg, por, permi, permj, permk = pc.basic_static_property_parts()
+    assert por is not None
+    assert pc.citation_title_for_part(por) == 'POR'
+
+    # Arrange - Delete por
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'POR'][0]
+    pc.remove_part_from_dict(part)
+
+    # Act / Assert - Check it now finds nothing
+    ntg, por, permi, permj, permk = pc.basic_static_property_parts()
+    assert por is None
+
+
+def test_basic_static_property_parts_permnone(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act / Assert - Check it finds permi initially
+    ntg, por, permi, permj, permk = pc.basic_static_property_parts()
+    assert permi is not None
+    assert permj is None
+    assert permk is None
+    assert pc.citation_title_for_part(permi) == 'Perm'
+
+    # Arrange - Delete permi
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    pc.remove_part_from_dict(part)
+    # Act / Assert - Check it now finds nothing
+    ntg, por, permi, permj, permk = pc.basic_static_property_parts()
+    assert permi is None
+    assert permj is None
+    assert permk is None
+
+
+def test_basic_static_property_parts_permshared(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act
+    ntg, por, permi, permj, permk = pc.basic_static_property_parts(share_perm_parts = True)
+
+    # Assert
+    assert permi is not None
+    assert permj is not None
+    assert permk is not None
+    assert permi == permj == permk
+    assert pc.citation_title_for_part(permi) == 'Perm'
+    assert pc.facet_for_part(permi) == 'I'
+
+
+@pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
+                                                 ('IJ', [False, False, True]), ('IJK', [False, False, False]),
+                                                 ('Invalid', [False, True, True])])
+def test_basic_static_property_parts_perm_facet(example_model_with_properties, facet, expected_none):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    pc.remove_part_from_dict(part)
+
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'Testfacet',
+                                         discrete = False,
+                                         property_kind = 'permeability rock',
+                                         facet_type = 'direction',
+                                         facet = facet)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    _, _, permi, permj, permk = pc.basic_static_property_parts()
+
+    # Assert
+    for actual, expected in zip([permi, permj, permk], expected_none):
+        if expected:
+            assert actual is None
+        else:
+            assert actual is not None
+            assert pc.citation_title_for_part(actual) == 'Testfacet'
+
+
+@pytest.mark.parametrize('facet_list,expected_none,expected_names',
+                         [(['K', 'I'], [False, True, False], ['Testfacet_I', None, 'Testfacet_K']),
+                          (['K', 'J'], [True, False, False], [None, 'Testfacet_J', 'Testfacet_K']),
+                          (['IJ', 'K'], [False, False, False], ['Testfacet_IJ', 'Testfacet_IJ', 'Testfacet_K']),
+                          (['IJK'], [False, False, False], ['Testfacet_IJK', 'Testfacet_IJK', 'Testfacet_IJK']),
+                          (['Invalid', 'K'], [True, True, False], [None, None, 'Testfacet_K'])])
+def test_basic_static_property_parts_perm_multiple_facet(example_model_with_properties, facet_list, expected_none,
+                                                         expected_names):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    pc.remove_part_from_dict(part)
+    for facet in facet_list:
+        pc.add_cached_array_to_imported_list(cached_array = array,
+                                             source_info = '',
+                                             keyword = f'Testfacet_{facet}',
+                                             discrete = False,
+                                             property_kind = 'permeability rock',
+                                             facet_type = 'direction',
+                                             facet = facet)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    _, _, permi, permj, permk = pc.basic_static_property_parts()
+
+    # Assert
+    for actual, expected, name in zip([permi, permj, permk], expected_none, expected_names):
+        if expected:
+            assert actual is None, f'Expected none for {name}'
+        else:
+            assert actual is not None
+            assert pc.citation_title_for_part(actual) == name
+
+
+@pytest.mark.parametrize('name_list,expected_none', [(['KI', 'KJ', 'KK'], [False, False, False]),
+                                                     (['KX', 'KY', 'KZ'], [False, False, False]),
+                                                     (['PERMI', 'PERMJ', 'PERMK'], [False, False, False]),
+                                                     (['PERMX', 'PERMY', 'PERMZ'], [False, False, False])])
+def test_basic_static_property_parts_perm_multiple_name(example_model_with_properties, name_list, expected_none):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    pc.remove_part_from_dict(part)
+    for name in name_list:
+        pc.add_cached_array_to_imported_list(cached_array = array,
+                                             source_info = '',
+                                             keyword = name,
+                                             discrete = False,
+                                             property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    _, _, permi, permj, permk = pc.basic_static_property_parts()
+
+    # Assert
+    for actual, expected, name in zip([permi, permj, permk], expected_none, name_list):
+        if expected:
+            assert actual is None, f'Expected none for {name}'
+        else:
+            assert actual is not None
+            assert pc.citation_title_for_part(actual) == name
+
+
+@pytest.mark.parametrize('name_list,facet', [(['KI', 'KX'], 'I'), (['KJ', 'KY'], 'J'), (['KZ', 'KK'], 'K')])
+def test_basic_static_property_parts_perm_repeat(example_model_with_properties, name_list, facet):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    pc.remove_part_from_dict(part)
+    for name in name_list:
+        pc.add_cached_array_to_imported_list(cached_array = array,
+                                             source_info = '',
+                                             keyword = name,
+                                             discrete = False,
+                                             facet_type = 'direction',
+                                             facet = facet,
+                                             property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    _, _, permi, permj, permk = pc.basic_static_property_parts()
+
+    # Assert
+    assert permi is None
+    assert permj is None
+    assert permk is None
+
+
+def test_basic_static_property_parts_perm_options(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
+    ntgarray = pc.cached_part_array_ref(ntgpart)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'PermK',
+                                         discrete = False,
+                                         facet_type = 'direction',
+                                         facet = 'J',
+                                         property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'none')
+    assert permi is not None
+    assert permj is not None
+    assert permk is None
+
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = None)
+    assert permi is not None
+    assert permj is not None
+    assert permk is None
+
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'ratio', perm_k_ratio = 0.5)
+    assert permi is not None
+    assert permj is not None
+    assert permk is not None
+    karray = pc.cached_part_array_ref(permk)
+    assert_array_almost_equal(karray, array * 0.5)
+
+
+def test_basic_static_property_parts_perm_options_ntg(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
+    ntgarray = pc.cached_part_array_ref(ntgpart)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'PermK',
+                                         discrete = False,
+                                         facet_type = 'direction',
+                                         facet = 'J',
+                                         property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    ntg, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'ntg', perm_k_ratio = 0.5)
+    assert permi is not None
+    assert permj is not None
+    assert permk is not None
+    karray = pc.cached_part_array_ref(permk)
+    assert_array_almost_equal(karray, (array / 2) * ntgarray)
+
+
+def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
+    array = pc.cached_part_array_ref(part)
+    ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
+    ntgarray = pc.cached_part_array_ref(ntgpart)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'PermK',
+                                         discrete = False,
+                                         facet_type = 'direction',
+                                         facet = 'J',
+                                         property_kind = 'permeability rock')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    _, _, permi, permj, permk = pc.basic_static_property_parts(perm_k_mode = 'ntg squared', perm_k_ratio = 0.5)
+    assert permi is not None
+    assert permj is not None
+    assert permk is not None
+    karray = pc.cached_part_array_ref(permk)
+    assert_array_almost_equal(karray, (array / 2) * (ntgarray * ntgarray))
+
+
+@pytest.mark.parametrize('keyword,kind,facet_type,facet', [('bv', 'rock volume', 'netgross', 'gross'),
+                                                           ('brv', 'rock volume', 'netgross', 'gross'),
+                                                           ('pv', 'pore volume', None, None),
+                                                           ('pvr', 'pore volume', None, None),
+                                                           ('porv', 'pore volume', None, None),
+                                                           ('mdep', 'depth', 'what', 'cell centre'),
+                                                           ('depth', 'depth', 'what', 'cell top'),
+                                                           ('tops', 'depth', 'what', 'cell top'),
+                                                           ('mids', 'depth', 'what', 'cell centre'),
+                                                           ('ntg', 'net to gross ratio', None, None),
+                                                           ('netgrs', 'net to gross ratio', None, None),
+                                                           ('netv', 'rock volume', 'netgross', 'net'),
+                                                           ('nrv', 'rock volume', 'netgross', 'net'),
+                                                           ('dzc', 'thickness', 'netgross', 'gross'),
+                                                           ('dzn', 'thickness', 'netgross', 'net'),
+                                                           ('dz', 'thickness', 'netgross', 'gross'),
+                                                           ('dznet', 'thickness', 'netgross', 'net')])
+def test_property_kind_and_facet_from_keyword(keyword, kind, facet_type, facet):
+    out_kind, out_type, out_facet = property_kind_and_facet_from_keyword(keyword)
+    assert out_kind == kind
+    assert out_type == facet_type
+    assert out_facet == facet

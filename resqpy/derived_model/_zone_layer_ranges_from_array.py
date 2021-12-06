@@ -33,7 +33,7 @@ def zone_layer_ranges_from_array(zone_array, min_k0 = 0, max_k0 = None, use_domi
     if max_k0 is None:
         max_k0 = zone_array.shape[0] - 1
     if use_dominant_zone:
-        __dominant_zone(zone_array)
+        _dominant_zone(zone_array)
     zone_list = np.unique(zone_array)
     log.debug('list of zones: ' + str(zone_list))
     assert len(zone_list) > 0, 'no zone values present (all cells inactive?)'
@@ -70,7 +70,7 @@ def zone_layer_ranges_from_array(zone_array, min_k0 = 0, max_k0 = None, use_domi
     return zone_layer_range_list
 
 
-def __dominant_zone(zone_array):
+def _dominant_zone(zone_array):
     # modifies data in zone_array such that each layer has a single (most common) value
     for k in range(zone_array.shape[0]):
         unique_zones = np.unique(zone_array[k])

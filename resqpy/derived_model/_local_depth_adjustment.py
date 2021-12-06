@@ -11,8 +11,8 @@ import numpy as np
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._dm_common import __displacement_properties, __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model._dm_copy_grid import copy_grid
+from resqpy.derived_model._common import _displacement_properties, _prepare_simple_inheritance, _write_grid, _establish_model_and_source_grid
+from resqpy.derived_model._copy_grid import copy_grid
 
 
 def local_depth_adjustment(epc_file,
@@ -78,7 +78,7 @@ def local_depth_adjustment(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation == 'IjkGrid'
     assert model is not None
 
@@ -130,7 +130,7 @@ def local_depth_adjustment(epc_file,
             continue
         distance = maths.sqrt(distance_sqr)
         # compute decayed shift as function of distance
-        shift = __decayed_shift(centre_shift, distance, radius, decay_shape)
+        shift = _decayed_shift(centre_shift, distance, radius, decay_shape)
         # adjust depth values for pillar in cached array
         log.debug('adjusting pillar number {0} at x: {1:3.1f}, y: {2:3.1f}, distance: {3:3.1f} by {4:5.3f}'.format(
             pillar, x, y, distance, shift))
@@ -155,12 +155,12 @@ def local_depth_adjustment(epc_file,
     # build cell displacement property array(s)
     if store_displacement:
         log.debug('generating cell displacement property arrays')
-        displacement_collection = __displacement_properties(grid, source_grid)
+        displacement_collection = _displacement_properties(grid, source_grid)
     else:
         displacement_collection = None
 
-    collection = __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                              inherit_all_realizations)
+    collection = _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
+                                             inherit_all_realizations)
     if collection is None:
         collection = displacement_collection
     elif displacement_collection is not None:
@@ -173,21 +173,21 @@ def local_depth_adjustment(epc_file,
     # write model
     model.h5_release()
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     return grid
 
 
-def __decayed_shift(centre_shift, distance, radius, decay_shape):
+def _decayed_shift(centre_shift, distance, radius, decay_shape):
     norm_dist = min(distance / radius, 1.0)  # 0..1
     if decay_shape == 'linear':
         return (1.0 - norm_dist) * centre_shift

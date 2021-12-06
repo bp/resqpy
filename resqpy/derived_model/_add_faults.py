@@ -16,8 +16,8 @@ import resqpy.olio.simple_lines as sl
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._dm_common import __prepare_simple_inheritance, __write_grid, __establish_model_and_source_grid
-from resqpy.derived_model._dm_copy_grid import copy_grid
+from resqpy.derived_model._common import _prepare_simple_inheritance, _write_grid, _establish_model_and_source_grid
+from resqpy.derived_model._copy_grid import copy_grid
 
 
 def add_faults(epc_file,
@@ -87,7 +87,7 @@ def add_faults(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = __establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']  # unstructured grids not catered for
     assert model is not None
     assert len([arg for arg in (polylines, lines_file_list, full_pillar_list_dict) if arg is not None]) == 1
@@ -106,18 +106,18 @@ def add_faults(epc_file,
     # build pillar list dict for polylines if necessary
     if full_pillar_list_dict is None:
         full_pillar_list_dict = {}
-        __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
-                                                     full_pillar_list_dict, composite_face_set_dict)
+        _populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
+                                                    full_pillar_list_dict, composite_face_set_dict)
 
     else:  # populate composite face set dictionary from full pillar list
-        __populate_composite_face_sets_for_pillar_lists(source_grid, full_pillar_list_dict, composite_face_set_dict)
+        _populate_composite_face_sets_for_pillar_lists(source_grid, full_pillar_list_dict, composite_face_set_dict)
 
     # log.debug(f'full_pillar_list_dict:\n{full_pillar_list_dict}')
 
-    __process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict)
+    _process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict)
 
-    collection = __prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                              inherit_all_realizations)
+    collection = _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
+                                             inherit_all_realizations)
     # todo: recompute depth properties (and volumes, cell lengths etc. if being strict)
 
     if new_grid_title is None or len(new_grid_title) == 0:
@@ -125,24 +125,24 @@ def add_faults(epc_file,
 
     # write model
     if new_epc_file:
-        __write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
     else:
         ext_uuid = model.h5_uuid()
 
-        __write_grid(epc_file,
-                     grid,
-                     ext_uuid = ext_uuid,
-                     property_collection = collection,
-                     grid_title = new_grid_title,
-                     mode = 'a')
+        _write_grid(epc_file,
+                    grid,
+                    ext_uuid = ext_uuid,
+                    property_collection = collection,
+                    grid_title = new_grid_title,
+                    mode = 'a')
 
     # create grid connection set if requested
-    __create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file, grid)
+    _create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file, grid)
 
     return grid
 
 
-def __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict):
+def _make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict):
     """Adds entries to full_pillar_list_dict & composite_face_set_dict for new lines."""
     pillar_list_list = sl.nearest_pillars(new_lines, grid)
     face_set_dict, full_pll_dict = grid.make_face_sets_from_pillar_lists(pillar_list_list, face_set_id)
@@ -152,14 +152,14 @@ def __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_lis
         composite_face_set_dict[key] = fs_info
 
 
-def __populate_composite_face_sets_for_pillar_lists(grid, full_pillar_list_dict, composite_face_set_dict):
+def _populate_composite_face_sets_for_pillar_lists(grid, full_pillar_list_dict, composite_face_set_dict):
     for key, pillar_list in full_pillar_list_dict.items():
         face_set_dict, _ = grid.make_face_sets_from_pillar_lists([pillar_list], key)
         for k, fs_info in face_set_dict.items():
             composite_face_set_dict[k] = fs_info
 
 
-def __fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_throw_right):
+def _fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_throw_right):
     """Creates and/or adjusts throw on a single fault defined by a full pillar list, in memory.
 
     arguments:
@@ -199,7 +199,7 @@ def __fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_thr
     for p_index in range(1, len(full_pillar_list) - 1):
         primary_ji0 = full_pillar_list[p_index]
         primary = primary_ji0[0] * (grid.ni + 1) + primary_ji0[1]
-        p_vector = np.array(__pillar_vector(grid, primary), dtype = float)
+        p_vector = np.array(_pillar_vector(grid, primary), dtype = float)
         if p_vector is None:
             continue
         throw_left_vector = np.expand_dims(delta_throw_left * p_vector, axis = 0)
@@ -207,11 +207,11 @@ def __fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_thr
         # log.debug(f'T: p ji0: {primary_ji0}; p vec: {p_vector}; left v: {throw_left_vector}; right v: {throw_right_vector}')
         existing_foursome = grid.pillar_foursome(primary_ji0, none_if_unsplit = False)
         lr_foursome = gf.left_right_foursome(full_pillar_list, p_index)
-        cl = __processs_foursome(grid, n_primaries, primary, original_p, existing_foursome, lr_foursome, primary_ji0,
-                                 throw_right_vector, throw_left_vector, cl)
+        cl = _processs_foursome(grid, n_primaries, primary, original_p, existing_foursome, lr_foursome, primary_ji0,
+                                throw_right_vector, throw_left_vector, cl)
 
 
-def __pillar_vector(grid, p_index):
+def _pillar_vector(grid, p_index):
     # return a unit vector for direction of pillar, in direction of increasing k
     if np.all(np.isnan(grid.points_cached[:, p_index])):
         return None
@@ -236,7 +236,7 @@ def __pillar_vector(grid, p_index):
         return vec.unit_vector(grid.points_cached[k_bot, p_index] - grid.points_cached[k_top, p_index])
 
 
-def __extend_points_cached(grid, exist_p):
+def _extend_points_cached(grid, exist_p):
     s = grid.points_cached.shape
     e = np.empty((s[0], s[1] + 1, s[2]), dtype = float)
     e[:, :-1, :] = grid.points_cached
@@ -244,14 +244,14 @@ def __extend_points_cached(grid, exist_p):
     grid.points_cached = e
 
 
-def __np_int_extended(a, i):
+def _np_int_extended(a, i):
     e = np.empty(a.size + 1, dtype = int)
     e[:-1] = a
     e[-1] = i
     return e
 
 
-def __create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file, grid):
+def _create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file, grid):
     if create_gcs and len(composite_face_set_dict) > 0:
         if new_epc_file is not None:
             grid_uuid = grid.uuid
@@ -267,8 +267,8 @@ def __create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file,
         grid.model.store_epc()
 
 
-def __processs_foursome(grid, n_primaries, primary, original_p, existing_foursome, lr_foursome, primary_ji0,
-                        throw_right_vector, throw_left_vector, cl):
+def _processs_foursome(grid, n_primaries, primary, original_p, existing_foursome, lr_foursome, primary_ji0,
+                       throw_right_vector, throw_left_vector, cl):
     p_j, p_i = primary_ji0
     # log.debug(f'P: p ji0: {primary_ji0}; e foursome:\n{existing_foursome}; lr foursome:\n{lr_foursome}')
     for exist_p in np.unique(existing_foursome):
@@ -315,27 +315,27 @@ def __processs_foursome(grid, n_primaries, primary, original_p, existing_foursom
                 # log.debug(f'post re-split: cols: {grid.cols_for_split_pillars}')
                 # log.debug(f'post re-split: ccl:  {grid.cols_for_split_pillars_cl}')
                 if not new_p_made:  # create a new split of pillar
-                    __extend_points_cached(grid, exist_p)
+                    _extend_points_cached(grid, exist_p)
                     # log.debug(f'B: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; lr: {lr_foursome[jp, ip]}; c ji0: {natural_col}')
                     grid.points_cached[:, -1, :] = original_p + (throw_right_vector
                                                                  if lr_foursome[jp, ip] else throw_left_vector)
-                    grid.split_pillar_indices_cached = __np_int_extended(grid.split_pillar_indices_cached, primary)
+                    grid.split_pillar_indices_cached = _np_int_extended(grid.split_pillar_indices_cached, primary)
                     if grid.split_pillars_count is None:
                         grid.split_pillars_count = 0
                     grid.split_pillars_count += 1
-                    grid.cols_for_split_pillars = __np_int_extended(grid.cols_for_split_pillars, natural_col)
+                    grid.cols_for_split_pillars = _np_int_extended(grid.cols_for_split_pillars, natural_col)
                     cl += 1
-                    grid.cols_for_split_pillars_cl = __np_int_extended(grid.cols_for_split_pillars_cl, cl)
+                    grid.cols_for_split_pillars_cl = _np_int_extended(grid.cols_for_split_pillars_cl, cl)
                     new_p_made = True
                 else:  # include this column in newly split version of pillar
                     # log.debug(f'C: p ji0: {primary_ji0}; exist_p: {exist_p}; jp,ip: {(jp,ip)}; lr: {lr_foursome[jp, ip]}; c ji0: {natural_col}')
-                    grid.cols_for_split_pillars = __np_int_extended(grid.cols_for_split_pillars, natural_col)
+                    grid.cols_for_split_pillars = _np_int_extended(grid.cols_for_split_pillars, natural_col)
                     cl += 1
                     grid.cols_for_split_pillars_cl[-1] = cl
     return cl
 
 
-def __process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict):
+def _process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict):
     for fault_key in full_pillar_list_dict:
         full_pillar_list = full_pillar_list_dict[fault_key]
         left_right_throw = None
@@ -345,11 +345,11 @@ def __process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_thro
             left_right_throw = (+0.5, -0.5)
         log.debug(
             f'generating fault {fault_key} pillar count {len(full_pillar_list)}; left, right throw {left_right_throw}')
-        __fault_from_pillar_list(grid, full_pillar_list, left_right_throw[0], left_right_throw[1])
+        _fault_from_pillar_list(grid, full_pillar_list, left_right_throw[0], left_right_throw[1])
 
 
-def __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
-                                                 full_pillar_list_dict, composite_face_set_dict):
+def _populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
+                                                full_pillar_list_dict, composite_face_set_dict):
     lines_crs = None if lines_crs_uuid is None else rqcrs.Crs(model, uuid = lines_crs_uuid)
     if polylines:
         for i, polyline in enumerate(polylines):
@@ -360,7 +360,7 @@ def __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_c
             if lines_crs:
                 lines_crs.convert_array_to(grid_crs, new_line)
             title = polyline.title if polyline.title else 'fault_' + str(i)
-            __make_face_sets_for_new_lines([new_line], title, grid, full_pillar_list_dict, composite_face_set_dict)
+            _make_face_sets_for_new_lines([new_line], title, grid, full_pillar_list_dict, composite_face_set_dict)
     else:
         for filename in lines_file_list:
             new_lines = sl.read_lines(filename)
@@ -372,4 +372,4 @@ def __populate_composite_face_sets_for_polylines(model, grid, polylines, lines_c
                 face_set_id = f_name[:-4]
             else:
                 face_set_id = f_name
-            __make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict)
+            _make_face_sets_for_new_lines(new_lines, face_set_id, grid, full_pillar_list_dict, composite_face_set_dict)

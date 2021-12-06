@@ -8,29 +8,29 @@ __all__ = [
     'zonal_grid', 'single_layer_grid', 'zone_layer_ranges_from_array'
 ]
 
-from ._dm_add_edges_per_column_property_array import add_edges_per_column_property_array
-from ._dm_add_faults import add_faults
-from ._dm_add_one_blocked_well_property import add_one_blocked_well_property
-from ._dm_add_one_grid_property_array import add_one_grid_property_array
-from ._dm_add_single_cell_grid import add_single_cell_grid
-from ._dm_add_wells_from_ascii_file import add_wells_from_ascii_file
-from ._dm_add_zone_by_layer_property import add_zone_by_layer_property
-from ._dm_coarsened_grid import coarsened_grid
-from ._dm_copy_grid import copy_grid
-from ._dm_drape_to_surface import drape_to_surface
-from ._dm_extract_box_for_well import extract_box_for_well
-from ._dm_extract_box import extract_box
-from ._dm_fault_throw_scaling import fault_throw_scaling, global_fault_throw_scaling
-from ._dm_gather_ensemble import gather_ensemble
-from ._dm_interpolated_grid import interpolated_grid
-from ._dm_local_depth_adjustment import local_depth_adjustment
-from ._dm_refined_grid import refined_grid
-from ._dm_tilted_grid import tilted_grid
-from ._dm_unsplit_grid import unsplit_grid
-from ._dm_zonal_grid import zonal_grid, single_layer_grid
-from ._dm_zone_layer_ranges_from_array import zone_layer_ranges_from_array
+from ._add_edges_per_column_property_array import add_edges_per_column_property_array
+from ._add_faults import add_faults
+from ._add_one_blocked_well_property import add_one_blocked_well_property
+from ._add_one_grid_property_array import add_one_grid_property_array
+from ._add_single_cell_grid import add_single_cell_grid
+from ._add_wells_from_ascii_file import add_wells_from_ascii_file
+from ._add_zone_by_layer_property import add_zone_by_layer_property
+from ._coarsened_grid import coarsened_grid
+from ._copy_grid import copy_grid
+from ._drape_to_surface import drape_to_surface
+from ._extract_box_for_well import extract_box_for_well
+from ._extract_box import extract_box
+from ._fault_throw_scaling import fault_throw_scaling, global_fault_throw_scaling
+from ._gather_ensemble import gather_ensemble
+from ._interpolated_grid import interpolated_grid
+from ._local_depth_adjustment import local_depth_adjustment
+from ._refined_grid import refined_grid
+from ._tilted_grid import tilted_grid
+from ._unsplit_grid import unsplit_grid
+from ._zonal_grid import zonal_grid, single_layer_grid
+from ._zone_layer_ranges_from_array import zone_layer_ranges_from_array
 
-# Set "module" attribute of all public objects to this path. Fixes issue #310
+# Set "module" attribute of all public objects to this path.
 for _name in __all__:
     _obj = eval(_name)
     if hasattr(_obj, "__module__"):
