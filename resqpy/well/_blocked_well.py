@@ -30,7 +30,7 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .well_utils import _pl, find_entry_and_exit, load_hdf5_array
+from .well_utils import _pl, find_entry_and_exit, load_hdf5_array, _derive_from_wellspec_check_grid_name, _derive_from_wellspec_verify_col_list
 from ._trajectory import Trajectory
 from ._md_datum import MdDatum
 
@@ -594,11 +594,11 @@ class BlockedWell(BaseResqpy):
 
         well_name = self.__derive_from_wellspec_check_well_name(well_name = well_name)
 
-        col_list = BlockedWell.__derive_from_wellspec_verify_col_list(add_properties = add_properties)
+        col_list = _derive_from_wellspec_verify_col_list(add_properties = add_properties)
 
-        name_for_check, col_list = BlockedWell.__derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
-                                                                                      grid = grid,
-                                                                                      col_list = col_list)
+        name_for_check, col_list = _derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
+                                                                         grid = grid,
+                                                                         col_list = col_list)
 
         wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list)
 
@@ -622,32 +622,6 @@ class BlockedWell(BaseResqpy):
         else:
             well_name = self.well_name
         return well_name
-
-    @staticmethod
-    def __derive_from_wellspec_verify_col_list(add_properties):
-        """ Verify additional properties to be added to the wellspec file."""
-        if add_properties:
-            if isinstance(add_properties, list):
-                col_list = ['IW', 'JW', 'L'] + [col.upper() for col in add_properties if col not in ['IW', 'JW', 'L']]
-            else:
-                col_list = []
-        else:
-            col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
-        return col_list
-
-    @staticmethod
-    def __derive_from_wellspec_check_grid_name(check_grid_name, grid, col_list):
-        """ Verify the grid object to which the cell indices in the wellspec table belong."""
-        if check_grid_name:
-            grid_name = rqet.citation_title_for_node(grid.root).upper()
-            if not grid_name:
-                name_for_check = None
-            else:
-                col_list.append('GRID')
-                name_for_check = grid_name
-        else:
-            name_for_check = None
-        return name_for_check, col_list
 
     def derive_from_cell_list(self, cell_kji0_list, well_name, grid):
         """Populate empty blocked well from numpy int array of shape (N, 3) being list of cells."""
@@ -1021,7 +995,6 @@ class BlockedWell(BaseResqpy):
                 ]  # same length as blocked_cells_kji0; each is ((entry axis, entry polarity), (exit axis, exit polarity))
 
                 while not kf.blank_line(fp):
-
                     line = fp.readline()
                     cell_kji0, entry_xyz, exit_xyz = BlockedWell.__parse_non_blank_line_in_cellio_file(
                         line = line,
@@ -1030,7 +1003,11 @@ class BlockedWell(BaseResqpy):
                         grid_z_inc_down = grid_z_inc_down)
 
                     cp, cell_centre, entry_vector, exit_vector = BlockedWell.__calculate_cell_cp_center_and_vectors(
-                        grid = grid, cell_kji0 = cell_kji0, well_name = well_name)
+                        grid = grid,
+                        cell_kji0 = cell_kji0,
+                        entry_xyz = entry_xyz,
+                        exit_xyz = exit_xyz,
+                        well_name = well_name)
 
                     # let's hope everything is in the same coordinate reference system!
                     (entry_axis, entry_polarity, facial_entry_xyz, exit_axis, exit_polarity,
@@ -1067,13 +1044,15 @@ class BlockedWell(BaseResqpy):
                                                                      well_name = well_name,
                                                                      grid_name = grid_name)
 
-                self.create_md_datum_and_trajectory(grid,
-                                                    trajectory_mds,
-                                                    trajectory_points,
-                                                    length_uom,
-                                                    well_name,
-                                                    set_depth_zero = True,
-                                                    set_tangent_vectors = True)
+                self.create_md_datum_and_trajectory(
+                    grid,
+                    trajectory_mds,
+                    trajectory_points,
+                    length_uom,
+                    well_name,
+                    set_depth_zero = True,
+                    set_tangent_vectors = False
+                )  # this is causing issues as the knot_count for the trajectory object is None and so cannot test that knot_count > 1
 
                 self.node_count = len(trajectory_mds)
                 self.node_mds = np.array(trajectory_mds)
@@ -1098,7 +1077,7 @@ class BlockedWell(BaseResqpy):
             kf.skip_blank_lines_and_comments(fp)
             line = fp.readline()  # file format version number?
             assert line, 'well ' + str(well_name) + ' not found in file ' + str(cellio_file)
-            fp.readline()  # 'Undefined' KADIJA: what is this doing?
+            fp.readline()  # 'Undefined'
             words = fp.readline().split()
             assert len(words), 'missing header info in cell I/O file'
             if words[0].upper() == well_name.upper():
@@ -2144,7 +2123,6 @@ class BlockedWell(BaseResqpy):
             kh = pc.single_array_ref(citation_title = 'KH')[ci]
         else:
             kh = None
-
         return skip_interval, kh
 
     @staticmethod
@@ -2628,6 +2606,7 @@ class BlockedWell(BaseResqpy):
             self.__write_wellspec_file_units_metadata(write_nexus_units = write_nexus_units,
                                                       fp = fp,
                                                       length_uom = length_uom,
+                                                      length_uom_comment = length_uom_comment,
                                                       extra_columns_list = extra_columns_list,
                                                       well_name = well_name)
 
@@ -2685,7 +2664,7 @@ class BlockedWell(BaseResqpy):
             else:
                 log.warning('no well name identified for use in WELLSPEC')
                 well_name = 'WELLNAME'
-        well_name = BlockedWell.tidy_well_name(well_name)
+        well_name = BlockedWell.__tidy_well_name(well_name)
 
         return well_name
 

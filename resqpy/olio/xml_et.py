@@ -1,6 +1,6 @@
 """xml_et.py: Resqml xml element tree utilities module."""
 
-version = '20th July 2021'
+version = '30th November 2021'
 
 import logging
 
@@ -651,6 +651,18 @@ def creation_date_for_node(node):
 def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     """Recursively write an xml node to an open file; return number of nodes written."""
 
+    def _escaped_text(text):
+        d = {'<': '&lt;', '>': '&gt;', '&': '&amp;'}
+        esc = '<&>'
+        # todo: include quotes if needed
+        e = ''
+        for ch in str(text):
+            if ch in esc:
+                e += d[ch]
+            else:
+                e += ch
+        return e
+
     if root is None:
         return 0
 
@@ -669,7 +681,7 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
         line = (level * '\t')
     else:
         line = (3 * level * ' ')
-    line += '<' + tag
+    line += '<' + tag  # todo: if any tags involve special characters, use _escaped_text(tag)
     if pre_colon and pre_colon not in ns_keys:
         line += ' xmlns'
         if not ct_special:
@@ -715,7 +727,7 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
         line += '>'
 
         if root.text and not root.text.isspace():
-            line += root.text
+            line += _escaped_text(root.text)
 
         xml_fp.write(line.encode())
         #      print(line, end = '') # debug
