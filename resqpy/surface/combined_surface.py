@@ -14,8 +14,10 @@ import numpy as np
 
 
 class CombinedSurface:
-    """Class allowing a collection of Surface objects to be treated as a single surface (not a RESQML class in its own
-    right)."""
+    """Class allowing a collection of Surface objects to be treated as a single surface.
+    
+    Not a RESQML class in its own right.
+    """
 
     def __init__(self, surface_list, crs_uuid = None):
         """Initialise a CombinedSurface object from a list of Surface (and/or CombinedSurface) objects.
@@ -53,9 +55,11 @@ class CombinedSurface:
             self.points_count_list.append(len(p))
 
     def surface_index_for_triangle_index(self, tri_index):
-        """For a triangle index in the combined surface, returns the index of the surface containing rhe triangle and
-        local triangle index."""
-
+        """Return the index of the surface containing the triangle and local triangle index.
+        
+        Arguments:
+            tri_index: triangle index in the combined surface
+        """
         for s_i in range(len(self.surface_list)):
             if tri_index < self.triangle_count_list[s_i]:
                 return s_i, tri_index
