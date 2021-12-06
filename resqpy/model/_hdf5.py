@@ -87,17 +87,7 @@ def _h5_file_name(model, uuid = None, override = 'default', file_must_exist = Tr
             uuid = bu.uuid_from_string(uuid)
         if uuid.bytes in model.h5_dict:
             return model.h5_dict[uuid.bytes]
-    if isinstance(override, bool):
-        # could raise a deprecation warning here
-        override = 'full' if override else 'dir'
-    elif override == 'default':
-        override = model.default_h5_override
-    assert override in ('none', 'dir', 'full')
-    if override == 'full':
-        assert model.epc_file and model.epc_file.endswith('.epc')
-        h5_full_path = model.epc_file[:-4] + '.h5'
-    else:
-        h5_full_path = _h5_target_path_from_rels(model, uuid, override == 'dir')
+    h5_full_path = _h5_apply_override(model, override, None, uuid)
     if file_must_exist:
         if not h5_full_path:
             raise FileNotFoundError('unable to determine hdf5 file name')
@@ -106,6 +96,23 @@ def _h5_file_name(model, uuid = None, override = 'default', file_must_exist = Tr
     if h5_full_path and uuid is not None:
         model.h5_dict[uuid.bytes] = h5_full_path
     return h5_full_path
+
+
+def _h5_apply_override(model, override, supplied, uuid):
+    if isinstance(override, bool):
+        # could raise a deprecation warning here
+        override = 'full' if override else 'dir'
+    elif override == 'default':
+        override = model.default_h5_override
+    assert override in ('none', 'dir', 'full')
+    if override == 'full':
+        assert model.epc_file and model.epc_file.endswith('.epc')
+        return model.epc_file[:-4] + '.h5'
+    if not supplied:
+        return _h5_target_path_from_rels(model, uuid, override == 'dir')
+    if (override == 'dir' or os.sep not in supplied) and model.epc_directory:
+        return os.path.join(model.epc_directory, os.path.basename(supplied))
+    return supplied
 
 
 def _h5_target_path_from_rels(model, uuid, override_dir):
@@ -122,12 +129,7 @@ def _h5_target_path_from_rels(model, uuid, override_dir):
                     target_path = child.attrib['Target']
                     if not target_path:
                         return None
-                    if override_dir or os.sep not in target_path:
-                        assert model.epc_directory
-                        h5_full_path = os.path.join(model.epc_directory, os.path.basename(target_path))
-                    else:
-                        h5_full_path = target_path
-                    return h5_full_path
+                    return _h5_apply_override(model, 'dir' if override_dir else 'none', target_path, uuid)
     log.warning('h5 target path not found in rels')
     return None
 
@@ -138,7 +140,7 @@ def _h5_access(model, uuid = None, mode = 'r', override = 'default', file_path =
     if model.h5_currently_open_mode is not None and model.h5_currently_open_mode != mode:
         _h5_release(model)
     if file_path:
-        file_name = file_path
+        file_name = _h5_apply_override(model, override, file_path, uuid)
     else:
         file_name = _h5_file_name(model, uuid = uuid, override = override, file_must_exist = (mode == 'r'))
     if mode == 'a' and not os.path.exists(file_name):

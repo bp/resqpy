@@ -120,6 +120,7 @@ class H5Register():
         if file is None:
             file = self.model.h5_access(mode = mode)
         elif isinstance(file, str):
+            log.debug(f'writing to hdf5 file: {file}')
             file = self.model.h5_access(mode = mode, file_path = file)
         if mode == 'a' and isinstance(file, str) and not os.path.exists(file):
             mode = 'w'

@@ -1581,6 +1581,11 @@ class Model():
 
         returns:
            newly created hdf5 external part xml node
+
+        note:
+           this method is typically called when creating a new dataset (Model); if the intention is to
+           share an existing hdf5 file, then pass the file_name and (ext) uuid arguments; if the intention
+           is to create a new hdf5 file amongst many used by the Model, then pass the file_name
         """
 
         return m_x._create_hdf5_ext(self,

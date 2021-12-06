@@ -379,3 +379,72 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
         prop_1 = grid_1.property_collection.single_array_ref(property_kind = pk)
         assert prop_1 is not None
         assert not np.any(np.isclose(prop_0, prop_1))
+
+
+def test_one_epc_using_multiple_hdf5(tmp_path, example_model_with_prop_ts_rels):
+
+    model = example_model_with_prop_ts_rels
+    epc = model.epc_file
+    model.h5_set_default_override('dir')
+    grid = model.grid()
+    assert grid is not None and grid.property_collection is not None
+    pc = grid.property_collection
+
+    # add a couple of new hdf5 parts
+    jitter_ext_files = []
+    jitter_ext_nodes = []
+    jitter_ext_uuids = []
+    for i in range(2):
+        filename = f'jitter_{i}.h5'
+        jitter_ext_files.append(filename)
+        jitter_ext_nodes.append(model.create_hdf5_ext(file_name = filename))
+        jitter_ext_uuids.append(bu.uuid_from_string(jitter_ext_nodes[-1].attrib['uuid']))
+    assert None not in jitter_ext_nodes and None not in jitter_ext_uuids
+
+    # generate a couple of new permeability arrays
+    k_original = pc.single_array_ref(property_kind = 'rock permeability', indexable = 'cells')
+    assert k_original is not None
+    k_new = []
+    for i in range(2):
+        k_new.append(k_original + 1.0 + 5.0 * float(i) + np.random.random(k_original.shape))
+
+    # add the new arrays to the property collection but writing to the new, distinct hdf5 files
+    for i, (k_a, hdf5_file, ext_uuid) in enumerate(zip(k_new, jitter_ext_files, jitter_ext_uuids)):
+        pc.add_cached_array_to_imported_list(k_a,
+                                             source_info = 'testing multi hdf5',
+                                             keyword = 'Jittery Permeability',
+                                             discrete = False,
+                                             uom = 'mD',
+                                             property_kind = 'permeability rock',
+                                             facet_type = 'direction',
+                                             facet = 'IJK',
+                                             realization = i,
+                                             indexable_element = 'cells')
+        pc.write_hdf5_for_imported_list(file_name = jitter_ext_files[i])
+        pc.create_xml_for_imported_list_and_add_parts_to_model(ext_uuid = ext_uuid)
+
+    # store the updated epc
+    model.store_epc()
+
+    # check that the new hdf5 files exist and are the expected size
+    for filename in jitter_ext_files:
+        file_path = os.path.join(model.epc_directory, filename)
+        assert os.path.exists(file_path)
+        assert os.path.getsize(file_path) >= 8 * grid.cell_count()
+
+    # re-open the model and check that multiple ext parts are present
+    model = rq.Model(epc)
+    assert len(model.external_parts_list()) == 3
+
+    # check that we can access the stored arrays
+    model.h5_set_default_override('none')
+    grid = model.grid()
+    assert grid is not None
+    pc = grid.property_collection
+    assert pc is not None
+    jitter_pc = rqp.selective_version_of_collection(pc, citation_title = 'Jittery Permeability')
+    assert jitter_pc.number_of_parts() == 2
+    k_0 = jitter_pc.single_array_ref(realization = 0)
+    k_1 = jitter_pc.single_array_ref(realization = 1)
+    assert k_0 is not None and k_1 is not None
+    assert np.mean(k_1) >= 4.0 + np.mean(k_0)

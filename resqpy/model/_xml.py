@@ -347,7 +347,10 @@ def _create_hdf5_ext(model,
         model.add_part('obj_EpcExternalPartReference', ext_uuid, ext)
         if not file_name:
             file_name = model.h5_file_name(override = 'full', file_must_exist = False)
+        elif os.sep not in file_name:
+            file_name = os.path.join(model.epc_directory, file_name)
         assert file_name
+        log.debug(f'creating ext part for hdf5 file: {file_name}')
         model.h5_dict[ext_uuid.bytes] = file_name
         if model.main_h5_uuid is None:
             model.main_h5_uuid = ext_uuid
@@ -358,7 +361,7 @@ def _create_hdf5_ext(model,
             rel_node = rqet.SubElement(rel_tree.getroot(), ns['rels'] + 'Relationship')
             rel_node.set('Id', 'Hdf5File')
             rel_node.set('Type', ns_url['rels_ext'] + 'externalResource')
-            rel_node.set('Target', rqet.strip_path(file_name))
+            rel_node.set('Target', file_name)
             rel_node.set('TargetMode', 'External')
     return ext
 
