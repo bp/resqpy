@@ -21,8 +21,9 @@ def add_ab_properties(
     ab_property_list = None
 ):  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value,
     #          discrete, realization)
-    """Process a list of pure binary property array files, adding as parts of model, related to grid (hdf5 file is
-    appended to)."""
+    """Process a list of pure binary property array files.
+
+    Adds as parts of model, related to grid (hdf5 file is appended to)."""
 
     assert ab_property_list, 'property list is empty or missing'
 

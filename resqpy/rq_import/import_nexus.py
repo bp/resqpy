@@ -73,10 +73,12 @@ def import_nexus(
         grid_title = 'ROOT',
         mode = 'w',
         progress_fn = None):
-    """Read a simulation grid geometry and optionally grid properties and return a resqml model in memory & written to
-    disc.
+    """Read a simulation grid geometry and optionally grid properties.
 
     Input may be from nexus ascii input files, or nexus vdb output.
+
+    Returns:
+        resqml model in memory & written to disc
     """
 
     if resqml_file_root.endswith('.epc'):

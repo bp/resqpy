@@ -48,8 +48,9 @@ def import_vdb_ensemble(
         split_pillars = True,
         split_tolerance = 0.01,  # applies to each of x, y, z differences
         progress_fn = None):
-    """Adds properties from all vdb's within an ensemble directory tree to a single RESQML dataset, referencing a shared
-    grid.
+    """Adds properties from all vdb's within an ensemble directory tree to a single RESQML dataset.
+
+    Referencing a shared grid.
 
     args:
        epc_file (string): filename of epc file to be extended with ensemble properties
