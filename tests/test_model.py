@@ -479,6 +479,10 @@ def test_grid_list(example_model_and_crs):
     assert len(model.grid_list_uuid_list()) == len(model.grid_list) == 1
     assert model.grid_list[0] == grid_c, 'grid comparison based on uuids failed'
     assert model.grid_list[0] is grid_1
+    # access another grid by uuid and check that it is added to cached list
+    grid_2 = model.grid(uuid = grid_a.uuid)
+    assert grid_2 == grid_a
+    assert len(model.grid_list_uuid_list()) == len(model.grid_list) == 2
     # add all 3 grids to the grid cache list, checking for duplicates
     model.add_grid(grid_a, check_for_duplicates = True)
     model.add_grid(grid_b, check_for_duplicates = True)
@@ -486,9 +490,9 @@ def test_grid_list(example_model_and_crs):
     assert len(model.parts(obj_type = 'IjkGridRepresentation')) == 3
     assert len(model.grid_list_uuid_list()) == 3
     # check use of cached grids
-    grid_2a = model.grid_for_uuid_from_grid_list(grid_b.uuid)
-    assert grid_2a == grid_b, 'grid comparison based on uuids failed'
-    assert grid_2a is grid_b
-    grid_2b = model.grid_for_uuid_from_grid_list(grid_b.uuid)
-    assert grid_2a is grid_2b
-    assert tuple(grid_2a.extent_kji) == (3, 3, 3)
+    grid_3a = model.grid_for_uuid_from_grid_list(grid_b.uuid)
+    assert grid_3a == grid_b, 'grid comparison based on uuids failed'
+    assert grid_3a is grid_b
+    grid_3b = model.grid_for_uuid_from_grid_list(grid_b.uuid)
+    assert grid_3a is grid_3b
+    assert tuple(grid_3a.extent_kji) == (3, 3, 3)
