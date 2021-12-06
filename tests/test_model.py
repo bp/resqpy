@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import resqpy.crs as rqc
+import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
@@ -450,8 +451,44 @@ def test_one_epc_using_multiple_hdf5(tmp_path, example_model_with_prop_ts_rels):
     assert np.mean(k_1) >= 4.0 + np.mean(k_0)
 
 
-def test_(example_model_with_prop_ts_rels):
+def test_root_for_time_series(example_model_with_prop_ts_rels):
     model = example_model_with_prop_ts_rels
     ts_root = model.root_for_time_series()
     assert ts_root is not None
     assert rqet.node_type(ts_root, strip_obj = True) == 'TimeSeries'
+
+
+def test_grid_list(example_model_and_crs):
+    model, crs = example_model_and_crs
+    # create some grid objects
+    grid_a = grr.RegularGrid(model, extent_kji = (2, 2, 2), crs_uuid = crs.uuid, title = 'GRID A')
+    grid_a.write_hdf5()
+    grid_a.create_xml(write_active = False, add_cell_length_properties = False)
+    grid_b = grr.RegularGrid(model, extent_kji = (3, 3, 3), crs_uuid = crs.uuid, title = 'GRID B')
+    grid_b.write_hdf5()
+    grid_b.create_xml(write_active = False, add_cell_length_properties = False)
+    grid_c = grr.RegularGrid(model, extent_kji = (4, 4, 4), crs_uuid = crs.uuid, title = 'GRID C')
+    grid_c.write_hdf5()
+    grid_c.create_xml(write_active = False, add_cell_length_properties = False)
+    # access a grid part
+    grid_1 = model.grid(title = 'GRID C')
+    assert grid_1 is not None
+    assert grid_1 == grid_c, 'grid comparison based on uuids failed'
+    assert len(model.parts(obj_type = 'IjkGridRepresentation')) == 3
+    # check that the call to grid() has added the returned grid to the cache list
+    assert len(model.grid_list_uuid_list()) == len(model.grid_list) == 1
+    assert model.grid_list[0] == grid_c, 'grid comparison based on uuids failed'
+    assert model.grid_list[0] is grid_1
+    # add all 3 grids to the grid cache list, checking for duplicates
+    model.add_grid(grid_a, check_for_duplicates = True)
+    model.add_grid(grid_b, check_for_duplicates = True)
+    model.add_grid(grid_c, check_for_duplicates = True)
+    assert len(model.parts(obj_type = 'IjkGridRepresentation')) == 3
+    assert len(model.grid_list_uuid_list()) == 3
+    # check use of cached grids
+    grid_2a = model.grid_for_uuid_from_grid_list(grid_b.uuid)
+    assert grid_2a == grid_b, 'grid comparison based on uuids failed'
+    assert grid_2a is grid_b
+    grid_2b = model.grid_for_uuid_from_grid_list(grid_b.uuid)
+    assert grid_2a is grid_2b
+    assert tuple(grid_2a.extent_kji) == (3, 3, 3)
