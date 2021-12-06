@@ -434,7 +434,7 @@ def test_one_epc_using_multiple_hdf5(tmp_path, example_model_with_prop_ts_rels):
 
     # re-open the model and check that multiple ext parts are present
     model = rq.Model(epc)
-    assert len(model.external_parts_list()) == 3
+    assert len(model.external_parts_list()) == model.parts_count_by_type('EpcExternalPartReference')[0][1] == 3
 
     # check that we can access the stored arrays
     model.h5_set_default_override('none')
@@ -448,3 +448,10 @@ def test_one_epc_using_multiple_hdf5(tmp_path, example_model_with_prop_ts_rels):
     k_1 = jitter_pc.single_array_ref(realization = 1)
     assert k_0 is not None and k_1 is not None
     assert np.mean(k_1) >= 4.0 + np.mean(k_0)
+
+
+def test_(example_model_with_prop_ts_rels):
+    model = example_model_with_prop_ts_rels
+    ts_root = model.root_for_time_series()
+    assert ts_root is not None
+    assert rqet.node_type(ts_root, strip_obj = True) == 'TimeSeries'
