@@ -116,155 +116,203 @@ def property_kind_and_facet_from_keyword(keyword):
        this function may now return the local property kind 'transmissibility multiplier'; calling code must ensure that
        the local property kind object is created if not already present
     """
-
     # note: this code doesn't cater for a property having more than one facet, eg. direction and phase
-
-    def facet_info_for_dir_ch(dir_ch):
-        facet_type = None
-        facet = None
-        if dir_ch in ['i', 'j', 'k', 'x', 'y', 'z']:
-            facet_type = 'direction'
-            if dir_ch in ['i', 'x']:
-                facet = 'I'
-            elif dir_ch in ['j', 'y']:
-                facet = 'J'
-            else:
-                facet = 'K'
-            # NB: resqml also allows for combinations, eg. IJ, IJK
-        return (facet_type, facet)
-
     # note: 'what' facet_type for made-up uses might be better changed to the generic 'qualifier' facet type
 
     property_kind = None
     facet_type = None
     facet = None
     lk = keyword.lower()
-    if lk in ['bv', 'brv']:  # bulk rock volume
-        property_kind = 'rock volume'
-        facet_type = 'netgross'
-        facet = 'gross'  # todo: check this is the facet in xsd
-    elif lk in ['pv', 'pvr', 'porv']:
-        property_kind = 'pore volume'  # pore volume
-    elif lk in ['mdep', 'depth', 'tops', 'mids']:
-        property_kind = 'depth'  # depth (nexus) and tops mean top depth
-        facet_type = 'what'  # this might need to be something different
-        if lk in ['mdep', 'mids']:
-            facet = 'cell centre'
-        else:
-            facet = 'cell top'
+
+    if lk in ['bv', 'brv', 'pv', 'pvr', 'porv', 'netv', 'nrv']:
+        property_kind, facet_type, facet = _pkf_from_keyword_rock_volume(lk)
     elif lk in ['ntg', 'netgrs']:
         property_kind = 'net to gross ratio'  # net-to-gross
-    elif lk in ['netv', 'nrv']:  # net volume
-        property_kind = 'rock volume'
-        facet_type = 'netgross'
-        facet = 'net'
-    elif lk in ['dzc', 'dzn', 'dz', 'dznet']:
-        property_kind = 'thickness'  # or should these keywords use cell length in K direction?
-        facet_type = 'netgross'
-        if lk.startswith('dzn'):
-            facet = 'net'
-        else:
-            facet = 'gross'
-    elif lk in ['dxc', 'dyc', 'dx', 'dy']:
-        property_kind = 'cell length'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[1])
-    elif len(lk) > 2 and lk[0] == 'd' and lk[1] in 'xyz':
-        property_kind = 'length'
-        facet_type = 'direction'
-        facet = lk[1].upper()  # keep as 'X', 'Y' or 'Z'
     elif lk in ['por', 'poro', 'porosity']:
         property_kind = 'porosity'  # porosity
     elif lk == 'kh':
         property_kind = 'permeability thickness'  # K.H (not horizontal permeability)
-    elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):  # permeability
-        property_kind = 'permeability rock'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
-    elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
-        property_kind = 'transmissibility'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
     elif lk in ['p', 'pressure']:
         property_kind = 'pressure'  # pressure; todo: phase pressures
-    elif lk in ['sw', 'so', 'sg', 'satw', 'sato', 'satg', 'soil']:  # saturations
-        property_kind = 'saturation'
-        facet_type = 'what'  # todo: check use of 'what' for phase
-        if lk in ['sw', 'satw', 'swat']:
-            facet = 'water'
-        elif lk in ['so', 'sato', 'soil']:
-            facet = 'oil'
-        elif lk in ['sg', 'satg', 'sgas']:
-            facet = 'gas'
-    elif lk in ['swl', 'swr', 'sgl', 'sgr', 'swro', 'sgro', 'sor', 'swu', 'sgu']:  # nexus saturation end points
-        property_kind = 'saturation'
-        facet_type = 'what'  # note: use of 'what' for phase is a guess
-        if lk[1] == 'w':
-            facet = 'water'
-        elif lk[1] == 'g':
-            facet = 'gas'
-        elif lk[1] == 'o':
-            facet = 'oil'
-        if lk[-1] == 'l':
-            facet += ' minimum'
-        elif lk[-1] == 'u':
-            facet += ' maximum'
-        elif lk[2:] == 'ro':
-            facet += ' residual to oil'
-        elif lk[-1] == 'r':
-            facet += ' residual'
-        else:
-            assert False, 'problem deciphering saturation end point keyword: ' + lk
-#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
-    elif lk in ['wip', 'oip', 'gip', 'mobw', 'mobo', 'mobg', 'ocip']:  # todo: check these, especially ocip
-        property_kind = 'fluid volume'
-        facet_type = 'what'  # todo: check use of 'what' for phase
-        if lk in ['wip', 'mobw']:
-            facet = 'water'  # todo: add another facet indicating mobile volume
-        elif lk in ['oip', 'mobo']:
-            facet = 'oil'
-        elif lk in ['gip', 'mobg']:
-            facet = 'gas'
-        elif lk == 'ocip':
-            facet = 'oil condensate'  # todo: this seems unlikely: check
-        if lk[:3] == 'mob':
-            facet += ' (mobile)'
-    elif lk in ['tmx', 'tmy', 'tmz', 'tmflx', 'tmfly', 'tmflz', 'multx', 'multy', 'multz']:
-        property_kind = 'transmissibility multiplier'  # NB: resqpy local property kind
-        facet_type = 'direction'
-        _, facet = facet_info_for_dir_ch(lk[-1])
-    elif lk in ['multbv', 'multpv']:
-        property_kind = 'property multiplier'
-        facet_type = 'what'  # here 'what' facet indicates property affected
-        if lk == 'multbv':
-            facet = 'rock volume'  # NB: making this up as I go along
-        elif lk == 'multpv':
-            facet = 'pore volume'
     elif lk == 'rs':
         property_kind = 'solution gas-oil ratio'
     elif lk == 'rv':
         property_kind = 'vapor oil-gas ratio'
     elif lk in ['temp', 'temperature']:
         property_kind = 'thermodynamic temperature'
-    elif lk in ['dad', 'kid', 'unpack', 'deadcell', 'inactive']:
-        property_kind = 'code'
-        facet_type = 'what'
-        # todo: kid can only be used as an inactive cell indication for the root grid
-        if lk in ['kid', 'deadcell', 'inactive']:
-            facet = 'inactive'  # standize on 'inactive' to indicate use as mask
-        else:
-            facet = lk  # note: use deadcell or unpack for inactive, if nothing better?
-    elif lk == 'livecell' or lk.startswith('act'):
-        property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
-
-
-#      property_kind = 'code'
-#      facet_type = 'what'
-#      facet = 'active'
-    elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
-        property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
+    elif lk in ['sw', 'so', 'sg', 'satw', 'sato', 'satg', 'soil']:  # saturations
+        property_kind, facet_type, facet = _pkf_from_keyword_saturation(lk)
+    elif lk in ['swl', 'swr', 'sgl', 'sgr', 'swro', 'sgro', 'sor', 'swu', 'sgu']:  # nexus saturation end points
+        property_kind, facet_type, facet = _pkf_from_keyword_saturation_end(lk)
+    elif lk in ['dzc', 'dzn', 'dz', 'dznet']:
+        property_kind, facet_type, facet = _pkf_from_keyword_thickness(lk)
+    elif lk in ['mdep', 'depth', 'tops', 'mids']:
+        property_kind, facet_type, facet = _pkf_from_keyword_depth(lk)
     elif lk == 'uid':
         property_kind = 'index'
         facet_type = 'what'
         facet = 'uid'
-    return (property_kind, facet_type, facet)
+    elif lk in ['wip', 'oip', 'gip', 'mobw', 'mobo', 'mobg', 'ocip']:  # todo: check these, especially ocip
+        property_kind, facet_type, facet = _pkf_from_keyword_fluid_volume(lk)
+    elif lk in ['tmx', 'tmy', 'tmz', 'tmflx', 'tmfly', 'tmflz', 'multx', 'multy', 'multz']:
+        property_kind, facet_type, facet = _pkf_from_keyword_transmissibility_multiplier(lk)
+    elif lk in ['multbv', 'multpv']:
+        property_kind, facet_type, facet = _pkf_from_keyword_property_multiplier(lk)
+    elif lk in ['dad', 'kid', 'unpack', 'deadcell', 'inactive']:
+        property_kind, facet_type, facet = _pkf_from_keyword_inactive(lk)
+    elif len(lk) >= 2 and lk[0] == 'd' and lk[1] in 'xyz':
+        property_kind, facet_type, facet = _pkf_from_keyword_length(lk)
+    elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):  # permeability
+        property_kind = 'permeability rock'
+        (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
+    elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
+        property_kind = 'transmissibility'
+        (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
+
+
+#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
+    elif lk == 'livecell' or lk.startswith('act'):
+        property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
+    elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
+        property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_length(lk):
+    if lk in ['dxc', 'dyc', 'dx', 'dy']:
+        property_kind = 'cell length'
+        (facet_type, facet) = _facet_info_for_dir_ch(lk[1])
+    else:
+        property_kind = 'length'
+        facet_type = 'direction'
+        facet = lk[1].upper()  # keep as 'X', 'Y' or 'Z'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_rock_volume(lk):
+    if lk in ['bv', 'brv']:  # bulk rock volume
+        return 'rock volume', 'netgross', 'gross'  # todo: check this is the facet in xsd
+    elif lk in ['pv', 'pvr', 'porv']:
+        return 'pore volume', None, None
+    elif lk in ['netv', 'nrv']:  # net volume
+        return 'rock volume', 'netgross', 'net'
+    else:
+        return None, None, None  # should never come to this
+
+
+def _pkf_from_keyword_fluid_volume(lk):
+    property_kind = 'fluid volume'
+    facet_type = 'what'  # todo: check use of 'what' for phase
+    facet = ''
+    if lk in ['wip', 'mobw']:
+        facet = 'water'  # todo: add another facet indicating mobile volume
+    elif lk in ['oip', 'mobo']:
+        facet = 'oil'
+    elif lk in ['gip', 'mobg']:
+        facet = 'gas'
+    elif lk == 'ocip':
+        facet = 'oil condensate'  # todo: this seems unlikely: check
+    if lk[:3] == 'mob':
+        facet += ' (mobile)'
+    return property_kind, facet_type, facet
+
+
+def _facet_info_for_dir_ch(dir_ch):
+    facet_type = None
+    facet = None
+    if dir_ch in ['i', 'j', 'k', 'x', 'y', 'z']:
+        facet_type = 'direction'
+        if dir_ch in ['i', 'x']:
+            facet = 'I'
+        elif dir_ch in ['j', 'y']:
+            facet = 'J'
+        else:
+            facet = 'K'
+        # NB: resqml also allows for combinations, eg. IJ, IJK
+    return facet_type, facet
+
+
+def _pkf_from_keyword_property_multiplier(lk):
+    property_kind = 'property multiplier'
+    facet_type = 'what'  # here 'what' facet indicates property affected
+    if lk == 'multbv':
+        facet = 'rock volume'  # NB: making this up as I go along
+    elif lk == 'multpv':
+        facet = 'pore volume'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_inactive(lk):
+    property_kind = 'code'
+    facet_type = 'what'
+    # todo: kid can only be used as an inactive cell indication for the root grid
+    if lk in ['kid', 'deadcell', 'inactive']:
+        facet = 'inactive'  # standize on 'inactive' to indicate use as mask
+    else:
+        facet = lk  # note: use deadcell or unpack for inactive, if nothing better?
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_saturation_end(lk):
+    property_kind = 'saturation'
+    facet_type = 'what'  # note: use of 'what' for phase is a guess
+    facet = ''
+    if lk[1] == 'w':
+        facet = 'water'
+    elif lk[1] == 'g':
+        facet = 'gas'
+    elif lk[1] == 'o':
+        facet = 'oil'
+    if lk[-1] == 'l':
+        facet += ' minimum'
+    elif lk[-1] == 'u':
+        facet += ' maximum'
+    elif lk[2:] == 'ro':
+        facet += ' residual to oil'
+    elif lk[-1] == 'r':
+        facet += ' residual'
+    else:
+        assert False, 'problem deciphering saturation end point keyword: ' + lk
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_saturation(lk):
+    property_kind = 'saturation'
+    facet_type = 'what'  # todo: check use of 'what' for phase
+    if lk in ['sw', 'satw', 'swat']:
+        facet = 'water'
+    elif lk in ['so', 'sato', 'soil']:
+        facet = 'oil'
+    elif lk in ['sg', 'satg', 'sgas']:
+        facet = 'gas'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_thickness(lk):
+    property_kind = 'thickness'  # or should these keywords use cell length in K direction?
+    facet_type = 'netgross'
+    if lk.startswith('dzn'):
+        facet = 'net'
+    else:
+        facet = 'gross'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_depth(lk):
+    property_kind = 'depth'  # depth (nexus) and tops mean top depth
+    facet_type = 'what'  # this might need to be something different
+    if lk in ['mdep', 'mids']:
+        facet = 'cell centre'
+    else:
+        facet = 'cell top'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_transmissibility_multiplier(lk):
+    property_kind = 'transmissibility multiplier'  # NB: resqpy local property kind
+    facet_type = 'direction'
+    _, facet = _facet_info_for_dir_ch(lk[-1])
+    return property_kind, facet_type, facet
 
 
 def infer_property_kind(name, unit):
@@ -285,6 +333,18 @@ def infer_property_kind(name, unit):
     facet = None
 
     return kind, facet_type, facet
+
+
+def _crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and feet for z
+    if crs_node is None:
+        return None
+    xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
+    z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+    if xy_units == 'm' and z_units == 'm':
+        return 'm'
+    if xy_units == 'ft' and z_units == 'ft':
+        return 'ft'
+    return None
 
 
 def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet = None):
@@ -308,22 +368,11 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
        this module currently only supports zero or one facet per property
     """
 
-    def crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and feet for z
-        if crs_node is None:
-            return None
-        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-        if xy_units == 'm' and z_units == 'm':
-            return 'm'
-        if xy_units == 'ft' and z_units == 'ft':
-            return 'ft'
-        return None
-
     if support is None or not hasattr(support, 'extract_crs_root'):
         crs_node = None
     else:
         crs_node = support.extract_crs_root()
-    from_crs = crs_m_or_ft(crs_node)
+    from_crs = _crs_m_or_ft(crs_node)
 
     if property_kind in ['rock volume', 'pore volume', 'volume']:
         if from_crs is None:
