@@ -15,8 +15,9 @@ import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
 import resqpy.surface as rqs
 import resqpy.olio.xml_et as rqet
+from resqpy.crs import Crs
 
-from resqpy.property import property_kind_and_facet_from_keyword
+from resqpy.property import property_kind_and_facet_from_keyword, guess_uom
 
 # ---- Test PropertyCollection methods ---
 
@@ -1396,9 +1397,9 @@ def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_
                                                            ('sw', 'saturation', 'what', 'water'),
                                                            ('so', 'saturation', 'what', 'oil'),
                                                            ('sg', 'saturation', 'what', 'gas'),
-                                                           ('satw',  'saturation', 'what', 'water'),
-                                                           ('sato',  'saturation', 'what', 'oil'),
-                                                           ('satg',  'saturation', 'what', 'gas'),
+                                                           ('satw', 'saturation', 'what', 'water'),
+                                                           ('sato', 'saturation', 'what', 'oil'),
+                                                           ('satg', 'saturation', 'what', 'gas'),
                                                            ('soil', 'saturation', 'what', 'oil'),
                                                            ('swl', 'saturation', 'what', 'water minimum'),
                                                            ('swr', 'saturation', 'what', 'water residual'),
@@ -1448,3 +1449,76 @@ def test_property_kind_and_facet_from_keyword(keyword, kind, facet_type, facet):
     assert out_kind == kind
     assert out_type == facet_type
     assert out_facet == facet
+
+
+@pytest.mark.parametrize('expected,xy_uom,z_uom,property_kind,minimum,maximum,facet_type,facet',
+                         [('m3', 'm', 'm', 'rock volume', None, None, None, None),
+                          ('m3', 'm', 'm', 'volume', None, None, None, None),
+                          ('ft3', 'ft', 'ft', 'rock volume', None, None, None, None),
+                          ('ft3', 'ft', 'ft', 'volume', None, None, None, None),
+                          ('m3', 'm', 'm', 'pore volume', None, None, None, None),
+                          ('bbl', 'ft', 'ft', 'pore volume', None, None, None, None),
+                          (None, 'm', 'ft', 'volume', None, None, None, None),
+                          ('m', 'm', 'm', 'depth', None, None, None, None),
+                          ('ft', 'ft', 'ft', 'depth', None, None, None, None),
+                          ('m', 'ft', 'm', 'depth', None, None, None, None),
+                          ('ft', 'm', 'ft', 'depth', None, None, None, None),
+                          ('m', 'm', 'm', 'cell length', None, None, None, None),
+                          ('ft', 'ft', 'ft', 'cell length', None, None, None, None),
+                          ('%', 'm', 'ft', 'net to gross ratio', None, 50, None, None),
+                          (None, 'm', 'm', 'net to gross ratio', None, -1, None, None),
+                          ('m3/m3', 'm', 'm', 'net to gross ratio', None, 0.5, None, None),
+                          ('ft3/ft3', 'ft', 'ft', 'net to gross ratio', None, 0.5, None, None),
+                          ('Euc', 'm', 'ft', 'net to gross ratio', None, None, None, None),
+                          ('%', 'm', 'm', 'porosity', None, 50, None, None),
+                          ('%', 'm', 'm', 'saturation', None, 50, None, None),
+                          ('mD', 'm', 'm', 'permeability rock', None, None, None, None),
+                          ('mD', 'm', 'm', 'rock permeability', None, None, None, None),
+                          ('mD.m', 'm', 'm', 'permeability thickness', None, None, None, None),
+                          ('mD.ft', 'ft', 'ft', 'permeability thickness', None, None, None, None),
+                          ('mD.m', 'm', 'm', 'permeability length', None, None, None, None),
+                          ('mD.ft', 'ft', 'ft', 'permeability length', None, None, None, None),
+                          ('m3', 'm', 'm', 'fluid volume', None, None, None, None),
+                          ('1000 ft3', 'ft', 'ft', 'fluid volume', None, None, 'what', 'gas'),
+                          ('bbl', 'ft', 'ft', 'fluid volume', None, None, 'what', 'oil'),
+                          ('bbl', 'ft', 'ft', 'fluid volume', None, None, None, None),
+                          ('m3.cP/(kPa.d)', 'm', 'm', 'transmissibility', None, None, None, None),
+                          ('bbl.cP/(psi.d)', 'ft', 'ft', 'transmissibility', None, None, None, None),
+                          ('kPa', 'm', 'm', 'pressure', None, None, None, None),
+                          ('psi', 'ft', 'ft', 'pressure', None, None, None, None),
+                          (None, 'ft', 'm', 'pressure', None, 0, None, None),
+                          ('kPa', 'ft', 'm', 'pressure', None, 20000, None, None),
+                          ('bar', 'ft', 'm', 'pressure', None, 450, None, None),
+                          ('psi', 'ft', 'm', 'pressure', None, 4500, None, None),
+                          (None, 'ft', 'm', 'pressure', None, None, None, None),
+                          ('m3/m3', 'm', 'm', 'solution gas-oil ratio', None, None, None, None),
+                          ('1000 ft3/bbl', 'ft', 'ft', 'solution gas-oil ratio', None, None, None, None),
+                          ('m3/m3', 'm', 'm', 'vapor oil-gas ratio', None, None, None, None),
+                          ('0.001 bbl/ft3', 'ft', 'ft', 'vapor oil-gas ratio', None, None, None, None),
+                          ('Euc', 'm', 'm', 'some kind of multiplier', None, None, None, None),
+                          (None, 'm', 'm', 'none of the above', None, None, None, None)])
+def test_guess_uom(tmp_model, expected, xy_uom, z_uom, property_kind, minimum, maximum, facet_type, facet):
+    model = tmp_model
+    crs = Crs(parent_model = model, z_inc_down = True, xy_units = xy_uom, z_units = z_uom)
+    crs.create_xml()
+    support = grr.RegularGrid(parent_model = model,
+                              origin = (0, 0, 0),
+                              extent_kji = (3, 5, 5),
+                              crs_uuid = rqet.uuid_for_part_root(model.crs_root),
+                              set_points_cached = True)
+    support.cache_all_geometry_arrays()
+    support.write_hdf5_from_caches(file = model.h5_file_name(file_must_exist = False), mode = 'w')
+
+    support.create_xml(ext_uuid = model.h5_uuid(),
+                       title = 'grid',
+                       write_geometry = True,
+                       add_cell_length_properties = False)
+    model.store_epc()
+
+    uom = guess_uom(property_kind,
+                    minimum = minimum,
+                    maximum = maximum,
+                    support = support,
+                    facet_type = facet_type,
+                    facet = facet)
+    assert uom == expected
