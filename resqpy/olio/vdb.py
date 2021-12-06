@@ -93,6 +93,7 @@ def ensemble_vdb_list(run_dir, sort_list = True):
         return K
 
     def comparison(a, b):
+        """Comparison function for a pair of case names."""
         pa = 0
         pb = 0
         while True:
@@ -478,6 +479,7 @@ class VDB():
         visited = []
 
         def print_tree(fp, place = 4, level = 0, dots = False, file_size = None):
+            """Recursive function for printing vdb tree."""
             try:
                 if file_size is None:
                     fp.seek(0, 2)
@@ -942,6 +944,7 @@ class VDB():
         """Returns list of recurrent property keywords present in the vdb for named grid for given timestep."""
 
         def keyword_list_from_fp(fp, path):
+            """Returns a list of keywords (strings) found in a recurrent file."""
             assert fp.read(4) == b'NT32', 'first 4 characters not NT32 in file ' + path
             kp = KP(fp)
             keyword_list = kp.sub_key_list('MAPDATA', filter = True)
