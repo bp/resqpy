@@ -34,6 +34,7 @@ class GridFromCp:
                  split_tolerance = 0.01,
                  ijk_handedness = 'right',
                  known_to_be_straight = False):
+        """Class to build a resqpy grid from a Nexus CORP array"""
 
         self.__model = model
         self.__cp_array = cp_array
@@ -486,7 +487,7 @@ class GridFromCp:
             self.grid.grid_is_right_handed = (self.__ijk_handedness == 'right')
 
     def create_grid(self):
-        """make the grid"""
+        """Make the grid"""
         # Find out which cells to treat as nans
         self.__get_treat_as_nan()
 

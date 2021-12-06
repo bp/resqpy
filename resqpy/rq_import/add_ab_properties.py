@@ -23,7 +23,8 @@ def add_ab_properties(
     #          discrete, realization)
     """Process a list of pure binary property array files.
 
-    Adds as parts of model, related to grid (hdf5 file is appended to)."""
+    Adds as parts of model, related to grid (hdf5 file is appended to).
+    """
 
     assert ab_property_list, 'property list is empty or missing'
 
