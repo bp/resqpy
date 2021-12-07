@@ -1,4 +1,5 @@
 """property_common.py: module containing common methods for properties"""
+import warnings
 import resqpy.property
 
 version = '24th November 2021'
@@ -116,155 +117,203 @@ def property_kind_and_facet_from_keyword(keyword):
        this function may now return the local property kind 'transmissibility multiplier'; calling code must ensure that
        the local property kind object is created if not already present
     """
-
     # note: this code doesn't cater for a property having more than one facet, eg. direction and phase
-
-    def facet_info_for_dir_ch(dir_ch):
-        facet_type = None
-        facet = None
-        if dir_ch in ['i', 'j', 'k', 'x', 'y', 'z']:
-            facet_type = 'direction'
-            if dir_ch in ['i', 'x']:
-                facet = 'I'
-            elif dir_ch in ['j', 'y']:
-                facet = 'J'
-            else:
-                facet = 'K'
-            # NB: resqml also allows for combinations, eg. IJ, IJK
-        return (facet_type, facet)
-
     # note: 'what' facet_type for made-up uses might be better changed to the generic 'qualifier' facet type
 
     property_kind = None
     facet_type = None
     facet = None
     lk = keyword.lower()
-    if lk in ['bv', 'brv']:  # bulk rock volume
-        property_kind = 'rock volume'
-        facet_type = 'netgross'
-        facet = 'gross'  # todo: check this is the facet in xsd
-    elif lk in ['pv', 'pvr', 'porv']:
-        property_kind = 'pore volume'  # pore volume
-    elif lk in ['mdep', 'depth', 'tops', 'mids']:
-        property_kind = 'depth'  # depth (nexus) and tops mean top depth
-        facet_type = 'what'  # this might need to be something different
-        if lk in ['mdep', 'mids']:
-            facet = 'cell centre'
-        else:
-            facet = 'cell top'
+
+    if lk in ['bv', 'brv', 'pv', 'pvr', 'porv', 'netv', 'nrv']:
+        property_kind, facet_type, facet = _pkf_from_keyword_rock_volume(lk)
     elif lk in ['ntg', 'netgrs']:
         property_kind = 'net to gross ratio'  # net-to-gross
-    elif lk in ['netv', 'nrv']:  # net volume
-        property_kind = 'rock volume'
-        facet_type = 'netgross'
-        facet = 'net'
-    elif lk in ['dzc', 'dzn', 'dz', 'dznet']:
-        property_kind = 'thickness'  # or should these keywords use cell length in K direction?
-        facet_type = 'netgross'
-        if lk.startswith('dzn'):
-            facet = 'net'
-        else:
-            facet = 'gross'
-    elif lk in ['dxc', 'dyc', 'dx', 'dy']:
-        property_kind = 'cell length'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[1])
-    elif len(lk) > 2 and lk[0] == 'd' and lk[1] in 'xyz':
-        property_kind = 'length'
-        facet_type = 'direction'
-        facet = lk[1].upper()  # keep as 'X', 'Y' or 'Z'
     elif lk in ['por', 'poro', 'porosity']:
         property_kind = 'porosity'  # porosity
     elif lk == 'kh':
         property_kind = 'permeability thickness'  # K.H (not horizontal permeability)
-    elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):  # permeability
-        property_kind = 'permeability rock'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
-    elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
-        property_kind = 'transmissibility'
-        (facet_type, facet) = facet_info_for_dir_ch(lk[-1])
     elif lk in ['p', 'pressure']:
         property_kind = 'pressure'  # pressure; todo: phase pressures
-    elif lk in ['sw', 'so', 'sg', 'satw', 'sato', 'satg', 'soil']:  # saturations
-        property_kind = 'saturation'
-        facet_type = 'what'  # todo: check use of 'what' for phase
-        if lk in ['sw', 'satw', 'swat']:
-            facet = 'water'
-        elif lk in ['so', 'sato', 'soil']:
-            facet = 'oil'
-        elif lk in ['sg', 'satg', 'sgas']:
-            facet = 'gas'
-    elif lk in ['swl', 'swr', 'sgl', 'sgr', 'swro', 'sgro', 'sor', 'swu', 'sgu']:  # nexus saturation end points
-        property_kind = 'saturation'
-        facet_type = 'what'  # note: use of 'what' for phase is a guess
-        if lk[1] == 'w':
-            facet = 'water'
-        elif lk[1] == 'g':
-            facet = 'gas'
-        elif lk[1] == 'o':
-            facet = 'oil'
-        if lk[-1] == 'l':
-            facet += ' minimum'
-        elif lk[-1] == 'u':
-            facet += ' maximum'
-        elif lk[2:] == 'ro':
-            facet += ' residual to oil'
-        elif lk[-1] == 'r':
-            facet += ' residual'
-        else:
-            assert False, 'problem deciphering saturation end point keyword: ' + lk
-#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
-    elif lk in ['wip', 'oip', 'gip', 'mobw', 'mobo', 'mobg', 'ocip']:  # todo: check these, especially ocip
-        property_kind = 'fluid volume'
-        facet_type = 'what'  # todo: check use of 'what' for phase
-        if lk in ['wip', 'mobw']:
-            facet = 'water'  # todo: add another facet indicating mobile volume
-        elif lk in ['oip', 'mobo']:
-            facet = 'oil'
-        elif lk in ['gip', 'mobg']:
-            facet = 'gas'
-        elif lk == 'ocip':
-            facet = 'oil condensate'  # todo: this seems unlikely: check
-        if lk[:3] == 'mob':
-            facet += ' (mobile)'
-    elif lk in ['tmx', 'tmy', 'tmz', 'tmflx', 'tmfly', 'tmflz', 'multx', 'multy', 'multz']:
-        property_kind = 'transmissibility multiplier'  # NB: resqpy local property kind
-        facet_type = 'direction'
-        _, facet = facet_info_for_dir_ch(lk[-1])
-    elif lk in ['multbv', 'multpv']:
-        property_kind = 'property multiplier'
-        facet_type = 'what'  # here 'what' facet indicates property affected
-        if lk == 'multbv':
-            facet = 'rock volume'  # NB: making this up as I go along
-        elif lk == 'multpv':
-            facet = 'pore volume'
     elif lk == 'rs':
         property_kind = 'solution gas-oil ratio'
     elif lk == 'rv':
         property_kind = 'vapor oil-gas ratio'
     elif lk in ['temp', 'temperature']:
         property_kind = 'thermodynamic temperature'
-    elif lk in ['dad', 'kid', 'unpack', 'deadcell', 'inactive']:
-        property_kind = 'code'
-        facet_type = 'what'
-        # todo: kid can only be used as an inactive cell indication for the root grid
-        if lk in ['kid', 'deadcell', 'inactive']:
-            facet = 'inactive'  # standize on 'inactive' to indicate use as mask
-        else:
-            facet = lk  # note: use deadcell or unpack for inactive, if nothing better?
-    elif lk == 'livecell' or lk.startswith('act'):
-        property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
-
-
-#      property_kind = 'code'
-#      facet_type = 'what'
-#      facet = 'active'
-    elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
-        property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
+    elif lk in ['sw', 'so', 'sg', 'satw', 'sato', 'satg', 'soil']:  # saturations
+        property_kind, facet_type, facet = _pkf_from_keyword_saturation(lk)
+    elif lk in ['swl', 'swr', 'sgl', 'sgr', 'swro', 'sgro', 'sor', 'swu', 'sgu']:  # nexus saturation end points
+        property_kind, facet_type, facet = _pkf_from_keyword_saturation_end(lk)
+    elif lk in ['dzc', 'dzn', 'dz', 'dznet']:
+        property_kind, facet_type, facet = _pkf_from_keyword_thickness(lk)
+    elif lk in ['mdep', 'depth', 'tops', 'mids']:
+        property_kind, facet_type, facet = _pkf_from_keyword_depth(lk)
     elif lk == 'uid':
         property_kind = 'index'
         facet_type = 'what'
         facet = 'uid'
-    return (property_kind, facet_type, facet)
+    elif lk in ['wip', 'oip', 'gip', 'mobw', 'mobo', 'mobg', 'ocip']:  # todo: check these, especially ocip
+        property_kind, facet_type, facet = _pkf_from_keyword_fluid_volume(lk)
+    elif lk in ['tmx', 'tmy', 'tmz', 'tmflx', 'tmfly', 'tmflz', 'multx', 'multy', 'multz']:
+        property_kind, facet_type, facet = _pkf_from_keyword_transmissibility_multiplier(lk)
+    elif lk in ['multbv', 'multpv']:
+        property_kind, facet_type, facet = _pkf_from_keyword_property_multiplier(lk)
+    elif lk in ['dad', 'kid', 'unpack', 'deadcell', 'inactive']:
+        property_kind, facet_type, facet = _pkf_from_keyword_inactive(lk)
+    elif len(lk) >= 2 and lk[0] == 'd' and lk[1] in 'xyz':
+        property_kind, facet_type, facet = _pkf_from_keyword_length(lk)
+    elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):  # permeability
+        property_kind = 'permeability rock'
+        (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
+    elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
+        property_kind = 'transmissibility'
+        (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
+
+
+#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
+    elif lk == 'livecell' or lk.startswith('act'):
+        property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
+    elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
+        property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_length(lk):
+    if lk in ['dxc', 'dyc', 'dx', 'dy']:
+        property_kind = 'cell length'
+        (facet_type, facet) = _facet_info_for_dir_ch(lk[1])
+    else:
+        property_kind = 'length'
+        facet_type = 'direction'
+        facet = lk[1].upper()  # keep as 'X', 'Y' or 'Z'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_rock_volume(lk):
+    if lk in ['bv', 'brv']:  # bulk rock volume
+        return 'rock volume', 'netgross', 'gross'  # todo: check this is the facet in xsd
+    elif lk in ['pv', 'pvr', 'porv']:
+        return 'pore volume', None, None
+    elif lk in ['netv', 'nrv']:  # net volume
+        return 'rock volume', 'netgross', 'net'
+    else:
+        return None, None, None  # should never come to this
+
+
+def _pkf_from_keyword_fluid_volume(lk):
+    property_kind = 'fluid volume'
+    facet_type = 'what'  # todo: check use of 'what' for phase
+    facet = ''
+    if lk in ['wip', 'mobw']:
+        facet = 'water'  # todo: add another facet indicating mobile volume
+    elif lk in ['oip', 'mobo']:
+        facet = 'oil'
+    elif lk in ['gip', 'mobg']:
+        facet = 'gas'
+    elif lk == 'ocip':
+        facet = 'oil condensate'  # todo: this seems unlikely: check
+    if lk[:3] == 'mob':
+        facet += ' (mobile)'
+    return property_kind, facet_type, facet
+
+
+def _facet_info_for_dir_ch(dir_ch):
+    facet_type = None
+    facet = None
+    if dir_ch in ['i', 'j', 'k', 'x', 'y', 'z']:
+        facet_type = 'direction'
+        if dir_ch in ['i', 'x']:
+            facet = 'I'
+        elif dir_ch in ['j', 'y']:
+            facet = 'J'
+        else:
+            facet = 'K'
+        # NB: resqml also allows for combinations, eg. IJ, IJK
+    return facet_type, facet
+
+
+def _pkf_from_keyword_property_multiplier(lk):
+    property_kind = 'property multiplier'
+    facet_type = 'what'  # here 'what' facet indicates property affected
+    if lk == 'multbv':
+        facet = 'rock volume'  # NB: making this up as I go along
+    elif lk == 'multpv':
+        facet = 'pore volume'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_inactive(lk):
+    property_kind = 'code'
+    facet_type = 'what'
+    # todo: kid can only be used as an inactive cell indication for the root grid
+    if lk in ['kid', 'deadcell', 'inactive']:
+        facet = 'inactive'  # standize on 'inactive' to indicate use as mask
+    else:
+        facet = lk  # note: use deadcell or unpack for inactive, if nothing better?
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_saturation_end(lk):
+    property_kind = 'saturation'
+    facet_type = 'what'  # note: use of 'what' for phase is a guess
+    facet = ''
+    if lk[1] == 'w':
+        facet = 'water'
+    elif lk[1] == 'g':
+        facet = 'gas'
+    elif lk[1] == 'o':
+        facet = 'oil'
+    if lk[-1] == 'l':
+        facet += ' minimum'
+    elif lk[-1] == 'u':
+        facet += ' maximum'
+    elif lk[2:] == 'ro':
+        facet += ' residual to oil'
+    elif lk[-1] == 'r':
+        facet += ' residual'
+    else:
+        assert False, 'problem deciphering saturation end point keyword: ' + lk
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_saturation(lk):
+    property_kind = 'saturation'
+    facet_type = 'what'  # todo: check use of 'what' for phase
+    if lk in ['sw', 'satw', 'swat']:
+        facet = 'water'
+    elif lk in ['so', 'sato', 'soil']:
+        facet = 'oil'
+    elif lk in ['sg', 'satg', 'sgas']:
+        facet = 'gas'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_thickness(lk):
+    property_kind = 'thickness'  # or should these keywords use cell length in K direction?
+    facet_type = 'netgross'
+    if lk.startswith('dzn'):
+        facet = 'net'
+    else:
+        facet = 'gross'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_depth(lk):
+    property_kind = 'depth'  # depth (nexus) and tops mean top depth
+    facet_type = 'what'  # this might need to be something different
+    if lk in ['mdep', 'mids']:
+        facet = 'cell centre'
+    else:
+        facet = 'cell top'
+    return property_kind, facet_type, facet
+
+
+def _pkf_from_keyword_transmissibility_multiplier(lk):
+    property_kind = 'transmissibility multiplier'  # NB: resqpy local property kind
+    facet_type = 'direction'
+    _, facet = _facet_info_for_dir_ch(lk[-1])
+    return property_kind, facet_type, facet
 
 
 def infer_property_kind(name, unit):
@@ -287,6 +336,18 @@ def infer_property_kind(name, unit):
     return kind, facet_type, facet
 
 
+def _crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and feet for z
+    if crs_node is None:
+        return None
+    xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
+    z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+    if xy_units == 'm' and z_units == 'm':
+        return 'm'
+    if xy_units == 'ft' and z_units == 'ft':
+        return 'ft'
+    return None
+
+
 def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet = None):
     """Returns a guess at the units of measure for the given kind of property.
 
@@ -307,64 +368,48 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
        the resqml standard allows a property to have any number of facets; however,
        this module currently only supports zero or one facet per property
     """
+    crs_node, from_crs = _guess_uom_get_crs_info(support)
+    warnings.warn(f'Guessing unit of measure for property kind {property_kind}')
 
-    def crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and feet for z
-        if crs_node is None:
-            return None
-        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-        if xy_units == 'm' and z_units == 'm':
-            return 'm'
-        if xy_units == 'ft' and z_units == 'ft':
-            return 'ft'
-        return None
+    if property_kind in ['rock volume', 'pore volume', 'volume', 'fluid volume']:
+        return _guess_uom_volume(property_kind, from_crs, facet_type, facet)
+    if property_kind == 'depth':
+        return _guess_uom_depth(crs_node)
+    if property_kind == 'cell length':  # todo: pass in direction facet to pick up xy_units or z_units
+        return from_crs
+    if property_kind in ['net to gross ratio', 'porosity', 'saturation']:
+        return _guess_uom_ntg_por_sat(maximum, from_crs)
+    if property_kind == 'permeability rock' or property_kind == 'rock permeability':
+        return 'mD'
+    if property_kind in ['permeability thickness', 'permeability length']:
+        return _guess_uom_permeability(property_kind, crs_node, from_crs)
+    if property_kind.endswith('transmissibility'):
+        return _guess_uom_transmissibility(from_crs)
+    if property_kind == 'pressure':
+        return _guess_uom_pressure(from_crs, maximum)
+    if property_kind in ['solution gas-oil ratio', 'vapor oil-gas ratio']:
+        return _guess_uom_gor_ogr(property_kind, from_crs)
+    if property_kind.endswith('multiplier'):
+        return 'Euc'
+    # todo: 'degC' or 'degF' for thermodynamic temperature
+    return None
 
+
+def _guess_uom_get_crs_info(support):
     if support is None or not hasattr(support, 'extract_crs_root'):
         crs_node = None
     else:
         crs_node = support.extract_crs_root()
-    from_crs = crs_m_or_ft(crs_node)
+    return crs_node, _crs_m_or_ft(crs_node)
 
-    if property_kind in ['rock volume', 'pore volume', 'volume']:
-        if from_crs is None:
-            return None
-        if from_crs == 'ft' and property_kind == 'pore volume':
-            return 'bbl'  # seems to be Nexus 'ENGLISH' uom for pv out
-        return from_crs + '3'  # ie. m3 or ft3
-    if property_kind == 'depth':
-        if crs_node is None:
-            return None
-        return rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-    if property_kind == 'cell length':  # todo: pass in direction facet to pick up xy_units or z_units
-        return from_crs
-    if property_kind in ['net to gross ratio', 'porosity', 'saturation']:
-        if maximum is not None and str(maximum) != 'unknown':
-            max_real = float(maximum)
-            if max_real > 1.0 and max_real <= 100.0:
-                return '%'
-            if max_real < 0.0 or max_real > 1.0:
-                return None
-        if from_crs == 'm':
-            return 'm3/m3'
-        if from_crs == 'ft':
-            return 'ft3/ft3'
-        return 'Euc'
-    if property_kind == 'permeability rock' or property_kind == 'rock permeability':
-        return 'mD'
-    if property_kind == 'permeability thickness':
-        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-        if z_units == 'm':
-            return 'mD.m'
-        if z_units == 'ft':
-            return 'mD.ft'
+
+def _guess_uom_depth(crs_node):
+    if crs_node is None:
         return None
-    if property_kind == 'permeability length':
-        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-        if xy_units == 'm':
-            return 'mD.m'
-        if xy_units == 'ft':
-            return 'mD.ft'
-        return None
+    return rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+
+
+def _guess_uom_volume(property_kind, from_crs, facet_type, facet):
     if property_kind == 'fluid volume':
         if from_crs == 'm':
             return 'm3'
@@ -374,44 +419,78 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
             else:
                 return 'bbl'  # todo: check whether nexus uses 10^3 or 10^6 units
         return None
-    if property_kind.endswith('transmissibility'
-                             ):  # note: RESQML QuantityClass only includes a unit-viscosity VolumePerTimePerPressureUom
-        if from_crs == 'm':
-            return 'm3.cP/(kPa.d)'  # NB: might actually be m3/(psi.d) or m3/(bar.d)
-        if from_crs == 'ft':
-            return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
+    if from_crs is None:
         return None
-    if property_kind == 'pressure':
-        if from_crs == 'm':
-            return 'kPa'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
+    if from_crs == 'ft' and property_kind == 'pore volume':
+        return 'bbl'  # seems to be Nexus 'ENGLISH' uom for pv out
+    return from_crs + '3'  # ie. m3 or ft3
+
+
+def _guess_uom_permeability(property_kind, crs_node, from_crs):
+    if 'thickness' in property_kind:
+        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+        if z_units == 'm':
+            return 'mD.m'
+        if z_units == 'ft':
+            return 'mD.ft'
+        return None
+    else:
+        if from_crs is not None:
+            return f'mD.{from_crs}'
+        else:
+            return None
+        return None
+
+
+def _guess_uom_ntg_por_sat(maximum, from_crs):
+    if maximum is not None and str(maximum) != 'unknown':
+        max_real = float(maximum)
+        if max_real > 1.0 and max_real <= 100.0:
+            return '%'
+        if max_real < 0.0 or max_real > 1.0:
+            return None
+    if from_crs == 'm':
+        return 'm3/m3'
+    if from_crs == 'ft':
+        return 'ft3/ft3'
+    return 'Euc'
+
+
+def _guess_uom_transmissibility(from_crs):
+    # note: RESQML QuantityClass only includes a unit-viscosity VolumePerTimePerPressureUom
+    if from_crs == 'm':
+        return 'm3.cP/(kPa.d)'  # NB: might actually be m3/(psi.d) or m3/(bar.d)
+    if from_crs == 'ft':
+        return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
+    return None
+
+
+def _guess_uom_pressure(from_crs, maximum):
+    if from_crs == 'm':
+        return 'kPa'  # NB: might actually be psi or bar
+    if from_crs == 'ft':
+        return 'psi'
+    if maximum is not None:
+        max_real = float(maximum)
+        if max_real == 0.0:
+            return None
+        if max_real > 10000.0:
+            return 'kPa'
+        if max_real < 500.0:
+            return 'bar'
+        if max_real < 5000.0:
             return 'psi'
-        if maximum is not None:
-            max_real = float(maximum)
-            if max_real == 0.0:
-                return None
-            if max_real > 10000.0:
-                return 'kPa'
-            if max_real < 500.0:
-                return 'bar'
-            if max_real < 5000.0:
-                return 'psi'
-        return None
-    if property_kind == 'solution gas-oil ratio':
-        if from_crs == 'm':
-            return 'm3/m3'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
+    return None
+
+
+def _guess_uom_gor_ogr(property_kind, from_crs):
+    if from_crs == 'm':
+        return 'm3/m3'  # NB: might actually be psi or bar
+    if from_crs == 'ft':
+        if 'solution' in property_kind:
             return '1000 ft3/bbl'
-        return None
-    if property_kind == 'vapor oil-gas ratio':
-        if from_crs == 'm':
-            return 'm3/m3'  # NB: might actually be psi or bar
-        if from_crs == 'ft':
+        else:
             return '0.001 bbl/ft3'
-        return None
-    if property_kind.endswith('multiplier'):
-        return 'Euc'
-    # todo: 'degC' or 'degF' for thermodynamic temperature
     return None
 
 

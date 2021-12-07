@@ -8,7 +8,7 @@ __all__ = [
     'reformat_column_edges_from_resqml_format', 'same_property_kind', 'selective_version_of_collection',
     'supported_local_property_kind_list', 'supported_property_kind_list', 'supported_facet_type_list',
     'expected_facet_type_dict', 'create_transmisibility_multiplier_property_kind',
-    'property_kind_and_facet_from_keyword'
+    'property_kind_and_facet_from_keyword', 'guess_uom'
 ]
 
 from .property_common import property_collection_for_keyword, \
@@ -22,7 +22,9 @@ from .property_common import property_collection_for_keyword, \
     supported_property_kind_list, \
     supported_local_property_kind_list, \
     supported_facet_type_list, \
-    expected_facet_type_dict, property_kind_and_facet_from_keyword
+    expected_facet_type_dict, \
+    property_kind_and_facet_from_keyword, \
+    guess_uom
 from .property_kind import PropertyKind, create_transmisibility_multiplier_property_kind
 from .string_lookup import StringLookup
 from .property_collection import PropertyCollection
