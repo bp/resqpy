@@ -1,4 +1,5 @@
 """property_common.py: module containing common methods for properties"""
+import warnings
 import resqpy.property
 
 version = '24th November 2021'
@@ -368,6 +369,7 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
        this module currently only supports zero or one facet per property
     """
     crs_node, from_crs = _guess_uom_get_crs_info(support)
+    warnings.warn(f'Guessing unit of measure for property kind {property_kind}')
 
     if property_kind in ['rock volume', 'pore volume', 'volume', 'fluid volume']:
         return _guess_uom_volume(property_kind, from_crs, facet_type, facet)
@@ -380,7 +382,7 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
     if property_kind == 'permeability rock' or property_kind == 'rock permeability':
         return 'mD'
     if property_kind in ['permeability thickness', 'permeability length']:
-        return _guess_uom_permeability(property_kind, crs_node)
+        return _guess_uom_permeability(property_kind, crs_node, from_crs)
     if property_kind.endswith('transmissibility'):
         return _guess_uom_transmissibility(from_crs)
     if property_kind == 'pressure':
@@ -424,7 +426,7 @@ def _guess_uom_volume(property_kind, from_crs, facet_type, facet):
     return from_crs + '3'  # ie. m3 or ft3
 
 
-def _guess_uom_permeability(property_kind, crs_node):
+def _guess_uom_permeability(property_kind, crs_node, from_crs):
     if 'thickness' in property_kind:
         z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
         if z_units == 'm':
@@ -433,11 +435,10 @@ def _guess_uom_permeability(property_kind, crs_node):
             return 'mD.ft'
         return None
     else:
-        xy_units = rqet.find_tag(crs_node, 'ProjectedUom').text.lower()
-        if xy_units == 'm':
-            return 'mD.m'
-        if xy_units == 'ft':
-            return 'mD.ft'
+        if from_crs is not None:
+            return f'mD.{from_crs}'
+        else:
+            return None
         return None
 
 
