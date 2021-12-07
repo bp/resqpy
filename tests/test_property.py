@@ -950,7 +950,7 @@ def test_norm_array_ref_mask(example_model_with_properties):
     # Assert
     assert vmin == 1
     assert vmax == 10
-    assert_array_almost_equal(array6, normed)
+    np.all(np.isclose(np.ma.array(array6, mask = np.isnan(array6)), normed))
 
 
 def test_norm_array_ref_mask_equal(example_model_with_properties):
@@ -988,7 +988,7 @@ def test_norm_array_ref_log_mask(example_model_with_properties):
     # Assert
     assert vmin == 0
     assert vmax == 2
-    assert_array_almost_equal(array7, normed)
+    np.all(np.isclose(np.ma.array(array7, mask = np.isnan(array7)), normed))
 
 
 def test_normalized_part_array_discrete(example_model_with_properties):
