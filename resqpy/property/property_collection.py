@@ -1837,11 +1837,11 @@ class PropertyCollection():
         if self.points_for_part(part):
             patch_list = rqet.list_of_tag(part_node, 'PatchOfpoints')
             assert len(patch_list) == 1  # todo: handle more than one patch of points
-            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], tag = 'Coordinates'))
+            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], 'Coordinates'))
         else:
             patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
             assert len(patch_list) == 1  # todo: handle more than one patch of values
-            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], tag = 'Values'))
+            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], 'Values'))
 
     def facets_array_ref(self, use_32_bit = False, indexable_element = None):  # todo: add masked argument
         """Returns a +1D array of all parts with first axis being over facet values; Use facet_list() for lookup.
