@@ -44,10 +44,10 @@ class WellboreMarkerFrame(BaseResqpy):
                  title = None,
                  originator = None,
                  extra_metadata = None):
-        """Creates a new wellbore marker object and optionally loads it from xml, or trajectory, or Nexus wellspec file.
+        """Creates a new wellbore marker frame object and optionally loads it from xml.
 
         arguments:
-           parent_model (model.Model object): the model which the new blocked well belongs to
+           parent_model (model.Model object): the model which the new wellbore marker frame belongs to
            wellbore_marker_root (DEPRECATED): the root node of an xml tree representing the wellbore marker;
            trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
               not used if wellbore_marker_root is not None;

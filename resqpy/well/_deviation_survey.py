@@ -254,7 +254,7 @@ class DeviationSurvey(BaseResqpy):
         This is invoked as part of the init method when an existing uuid is given.
 
         Returns:
-           [bool]: True if sucessful
+           [bool]: True if successful
         """
 
         # Get node from self.uuid
