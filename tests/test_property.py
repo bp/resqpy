@@ -1620,7 +1620,7 @@ def test_shape_and_type_of_part(example_model_with_properties):
     # Act / Assert
     for part in pc.parts():
         shape, dtype = pc.shape_and_type_of_part(part)
-        assert shape == (3,5,5)
+        assert shape == (3, 5, 5)
         if pc.continuous_for_part(part):
             assert dtype == '<f8'
         else:
@@ -1637,24 +1637,40 @@ def test_well_interval_property_collection(example_model_and_cellio):
     bw.create_xml()
     model.store_epc()
 
-    pc = rqp.PropertyCollection(support=bw)
+    pc = rqp.PropertyCollection(support = bw)
 
     # Add parts to collection
-    zones = np.array([1,2,3])
+    zones = np.array([1, 2, 3])
     sw = np.array([0.1, 0.2, 1])
     por = np.array([0, 0.3, 0.24])
-    for array, keyword, discrete in zip([zones, sw, por],
-                                        ['Zone', 'sw', 'por'],
-                                        [True, False, True]):
+    for array, keyword, discrete in zip([zones, sw, por], ['Zone', 'sw', 'por'], [True, False, False]):
         pc.add_cached_array_to_imported_list(array,
                                              source_info = 'testing data',
-                                             keyword=keyword,
-                                             discrete=discrete)
+                                             keyword = keyword,
+                                             discrete = discrete)
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
     model.store_epc()
 
-    wipc = rqp.WellIntervalPropertyCollection(frame=bw)
-    print (list(wipc.logs()))
-    print (wipc.to_pandas())
-    assert False
+    # Reload the model
+    reload = rq.Model(model.epc_file)
+    loadbw = rqw.BlockedWell(parent_model = reload, uuid = bw.uuid)
+
+    # Act
+    wipc = rqp.WellIntervalPropertyCollection(frame = loadbw)
+    df = wipc.to_pandas()
+
+    # Assert
+    assert len(list(wipc.logs())) == 3
+    assert list(df.columns) == ['Zone', 'sw', 'por']
+    assert all(df['Zone'].values == zones)
+    assert all(df['por'].values == por)
+    assert all(df['sw'].values == sw)
+
+    for log in wipc.logs():
+        if log.name == 'Zone':
+            assert all(log.values() == zones)
+        elif log.name == 'sw':
+            assert all(log.values() == sw)
+        else:
+            assert all(log.values() == por)

@@ -151,7 +151,7 @@ def example_model_with_properties(tmp_path):
     model.store_epc()
 
     zone = np.ones(shape = (5, 5))
-    zone_array = np.array([zone, zone + 1, zone + 2], dtype='int')
+    zone_array = np.array([zone, zone + 1, zone + 2], dtype = 'int')
 
     vpc = np.array([[1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2]])
     vpc_array = np.array([vpc, vpc, vpc])
@@ -176,7 +176,7 @@ def example_model_with_properties(tmp_path):
 
     perm = np.array([[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
                      [1, 10, 10, 100, 100]])
-    perm_array = np.array([perm, perm, perm], dtype='float')
+    perm_array = np.array([perm, perm, perm], dtype = 'float')
 
     collection = rqp.GridPropertyCollection()
     collection.set_grid(grid)
@@ -246,7 +246,7 @@ def example_model_with_prop_ts_rels(tmp_path):
     facies_array = np.array([facies, facies, facies], dtype = 'int')
 
     perm = np.array([[1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10]])
-    perm_array = np.array([perm, perm, perm], dtype='float')
+    perm_array = np.array([perm, perm, perm], dtype = 'float')
 
     fb = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2]], dtype = 'int')
     fb_array = np.array([fb, fb, fb], dtype = 'int')
@@ -356,15 +356,16 @@ def example_model_with_prop_ts_rels(tmp_path):
 
     return model
 
+
 @pytest.fixture
 def example_model_and_cellio(example_model_and_crs, tmp_path):
     model, crs = example_model_and_crs
     grid = grr.RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
 
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
