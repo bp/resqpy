@@ -790,7 +790,7 @@ def test_property_over_time_series_from_collection(example_model_with_prop_ts_re
     assert len(new_pc.parts()) == len(sw_parts)
 
 
-def test_property_for_keword_from_collection(example_model_with_prop_ts_rels):
+def test_property_for_keyword_from_collection(example_model_with_prop_ts_rels):
     # Arrange
     model = example_model_with_prop_ts_rels
     pc = model.grid().property_collection
@@ -1689,29 +1689,32 @@ def test_load_grid_property_collection(example_model_with_prop_ts_rels):
     assert len(pc.parts()) == 12
 
 
-def test_write_read_nexus_array(example_model_with_properties, tmp_path):
+def test_write_read_nexus_array(example_model_with_prop_ts_rels, tmp_path):
     # Arrange
-    model = example_model_with_properties
+    model = example_model_with_prop_ts_rels
     grid = model.grid()
-    outfile = os.path.join(tmp_path, 'nexus_property.txt')
+    directory = str(tmp_path)
 
     # Act
     pc = rqp.GridPropertyCollection(grid = grid)
     assert pc is not None
     numparts = len(pc.parts())
-    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Zone'][0]
-    pc.write_nexus_property(part = part, file_name = outfile)
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW'][0]
+    pc.write_nexus_property_generating_filename(part = part, directory = directory)
+
+    outfile = os.path.join(tmp_path, 'SW_what_water_t_0')
+    assert os.path.exists(outfile)
 
     with open(outfile, 'r') as f:
         lines = f.readlines()
         assert lines[1] == '! Extent of array is: [5, 5, 3]\n'
-        assert lines[-1] == '3\t3\t3\t3\t3\n'
+        assert lines[-1] == '1.000\t0.500\t1.000\t0.500\t1.000\n'
 
-    _ = pc.import_nexus_property_to_cache(file_name = outfile, keyword = 'Zone1', discrete = True)
+    _ = pc.import_nexus_property_to_cache(file_name = outfile, keyword = 'Sw1', discrete = False)
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
     model.store_epc()
 
     reload = rq.Model(model.epc_file)
-    newpc = rqp.GridPropertyCollection(grid = grid)
+    newpc = rqp.GridPropertyCollection(grid = reload.grid())
     assert len(newpc.parts()) == numparts + 1
