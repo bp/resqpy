@@ -1,4 +1,4 @@
-"""add_surfaces.py: Module to import a list of surfaces into a RESQML model, as triangulatedsets or mesh objects."""
+"""_add_surfaces.py: Module to import a list of surfaces into a RESQML model, as triangulatedsets or mesh objects."""
 
 version = '15th November 2021'
 
@@ -7,7 +7,7 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('add_surfaces.py version ' + version)
+log.debug('_add_surfaces.py version ' + version)
 
 import os
 
@@ -28,7 +28,22 @@ def add_surfaces(
     quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
     surface_file_list = None,  # list of full file names (paths), each holding one surface
     make_horizon_interpretations_and_features = True):  # if True, feature and interpretation objects are created
-    """Process a list of surface files, adding each surface as a new part in the resqml model."""
+    """Process a list of surface files, adding each surface as a new part in the resqml model.
+
+    Arguments:
+        epc_file (str): file name and path to an existing resqml model
+        crs_uuid (uuid.UUID, default None): uuid for a coordinate reference system. Defaults to crs associated with model (usually the main grid crs)
+        ext_uuid (uuid.UUID, default None): uuid for h5 file. If None, uuid for hdf5 file holding main grid geometry will be used
+        surface_file_format (str, default 'zmap'): 'zmap', 'rms', 'roxar' or 'GOCAD-Tsurf'. The format of the input file
+        rq_class (str, default 'surface'): 'surface' or 'mesh'. The class of object ot be
+        surface_role (str, default 'map'): 'map' or 'pick'
+        quad_triangles (bool, default False): if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
+        surface_file_list (list, default None): list of full file names (paths), each holding one surface
+        make_horizon_interpretations_and_features (bool, default True): if True, feature and interpretation objects are created
+
+    Returns:
+        resqml model object with added surfaces
+    """
 
     assert surface_file_list, 'surface file list is empty or missing'
     assert surface_file_format in ['zmap', 'rms', 'roxar',

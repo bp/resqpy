@@ -1,11 +1,11 @@
-"""add_ab_properties.py: Module to add binary grid properties to an existing RESQMl grid object."""
+"""_add_ab_properties.py: Module to add binary grid properties to an existing RESQMl grid object."""
 
 version = '15th November 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('add_ab_properties.py version ' + version)
+log.debug('_add_ab_properties.py version ' + version)
 
 import resqpy.grid as grr
 import resqpy.model as rq

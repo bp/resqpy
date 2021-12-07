@@ -1,4 +1,4 @@
-"""import_vdb_ensemble.py: Module to import a vdb ensemble into resqml format."""
+"""_import_vdb_ensemble.py: Module to import a vdb ensemble into resqml format."""
 
 version = '15th November 2021'
 
@@ -7,7 +7,7 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('import_vdb_ensemble.py version ' + version)
+log.debug('_import_vdb_ensemble.py version ' + version)
 
 import resqpy.model as rq
 import resqpy.olio.vdb as vdb

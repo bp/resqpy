@@ -1,4 +1,4 @@
-"""GridFromCp.py: Class to generate a RESQML grid object from an input corner point array, and other optional inputs."""
+"""_GridFromCp.py: Class to generate a RESQML grid object from an input corner point array, and other optional inputs."""
 
 version = '15th November 2021'
 
@@ -7,7 +7,7 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('GridFromCp.py version ' + version)
+log.debug('_GridFromCp.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma
@@ -108,7 +108,7 @@ class GridFromCp:
         morse_tol_sqr = self.__morse_tolerance * self.__morse_tolerance
         # compare face vecs lengths in xy against max for active cells: where much greater set to NaN
         len_j_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * j_face_vecs[..., :2], axis = -1)
-        len_i_face_vecs_sqr = np.sum(j_face_vecs[..., :2] * i_face_vecs[..., :2], axis = -1)
+        len_i_face_vecs_sqr = np.sum(i_face_vecs[..., :2] * i_face_vecs[..., :2], axis = -1)
         dead_mask = self.__inactive_mask.reshape(self.__nk, self.__nj, self.__ni, 1).repeat(2, -1)
         #                  mean_len_active_j_face_vecs_sqr = np.mean(ma.masked_array(len_j_face_vecs_sqr, mask = dead_mask))
         #                  mean_len_active_i_face_vecs_sqr = np.mean(ma.masked_array(len_i_face_vecs_sqr, mask = dead_mask))

@@ -1,4 +1,4 @@
-"""import_vdb_all_grids.py: Module to import a vdb into resqml format."""
+"""_import_vdb_all_grids.py: Module to import a vdb into resqml format."""
 
 version = '15th November 2021'
 
@@ -7,7 +7,7 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('import_vdb_all_grids.py version ' + version)
+log.debug('_import_vdb_all_grids.py version ' + version)
 
 import resqpy.olio.vdb as vdb
 # import resqpy.olio.grid_functions as gf

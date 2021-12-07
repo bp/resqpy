@@ -1,4 +1,4 @@
-"""import_nexus.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
+"""_import_nexus.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
 version = '15th November 2021'
 
@@ -7,7 +7,7 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('import_nexus.py version ' + version)
+log.debug('_import_nexus.py version ' + version)
 
 import glob
 import os
@@ -76,6 +76,46 @@ def import_nexus(
     """Read a simulation grid geometry and optionally grid properties.
 
     Input may be from nexus ascii input files, or nexus vdb output.
+
+    Arguments:
+        resqml_file_root (str): output path and file name without .epc or .h5 extension
+        extent_ijk (triple float, optional): ijk extents (fortran ordering)
+        vdb_file (str, optional): vdb input file, either this or corp_file should be not None. Required if importing from a vdb
+        vdb_case (str, optional): required if the vdb contains more than one case. If None, first case in vdb is used
+        corp_file (str, optional): required if importing from corp ascii file. corp ascii input file: nexus corp data without keyword
+        corp_bin_file (str, optional): required if importing from corp binary file
+        corp_xy_units (str, default 'm'): xy length units
+        corp_z_units (str, default 'm'): z length units
+        corp_z_inc_down (bool, default True): if True z values increase with depth
+        ijk_handedness (str, default 'right'): 'right' or 'left'
+        corp_eight_mode (bool, default False): if True the ordering of corner point data is in nexus EIGHT mode
+        geometry_defined_everywhere (bool, default True): if False then inactive cells are marked as not having geometry
+        treat_as_nan (float, default None): if a value is provided corner points with this value will be assigned nan
+        active_mask_file (str, default None): ascii property file holding values 0 or 1, with 1 indicating active cells
+        use_binary (bool, default False): if True a cached binary version of ascii files will be used (pure binary, not corp bin format)
+        resqml_xy_units (str, default 'm'): output xy units for resqml file
+        resqml_z_units (str, default 'm'): output z units for resqml file
+        resqml_z_inc_down (bool, default True): if True z values increase with depth for output resqml file
+        shift_to_local (bool, default False): if True then a local origin will be used in the CRS
+        local_origin_place (str, default 'centre'): 'centre' or 'minimum'. If 'centre' the local origin is placed at the centre of the grid; ignored if shift_to_local is False
+        max_z_void (float, default 0.1): maximum z gap between vertically neighbouring corner points. Vertical gaps greater than this will introduce k gaps into resqml grid. Units are corp z units
+        split_pillars (bool, default True): if False an unfaulted grid will be generated
+        split_tolerance (float, default 0.01): maximum distance between neighbouring corner points before a pillar is considered 'split'. Applies to each of x, y, z differences
+        property_array_files (list, default None): list of (filename, keyword, uom, time_index, null_value, discrete)
+        summary_file (str, default None): nexus output summary file, used to extract timestep dates when loading recurrent data from vdb
+        vdb_static_properties (bool, default True): if True, static vdb properties are imported (only relevant if vdb_file is not None)
+        vdb_recurrent_properties (bool, default False): # if True, recurrent vdb properties are imported (only relevant if vdb_file is not None)
+        timestep_selection (str, default 'all): 'first', 'last', 'first and last', 'all', or list of ints being reporting timestep numbers. Ignored if vdb_recurrent_properties is False
+        use_compressed_time_series (bool, default True): generates reduced time series containing timesteps with recurrent properties from vdb, rather than full nexus summary time series
+        decoarsen (bool, default True): where ICOARSE is present, redistribute data to uncoarse cells
+        ab_property_list (list, default None):  list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
+        create_property_set (bool, default False): if True a resqml PropertySet is created
+        ensemble_case_dirs_root (str, default None): path up to but excluding realisation number
+        ensemble_property_dictionary (str, default None): dictionary mapping title (or keyword) to (filename, property_kind, facet_type, facet, uom, time_index, null_value, discrete)
+        ensemble_size_limit (int, default None): if present processing of ensemble will terminate after this number of cases is reached
+        grid_title (str, default 'ROOT'): grid citation title
+        mode (str, default 'w'): 'w' or 'a', mode to write or append to hdf5
+        progress_fn (function, default None): if present function must have one floating argument with value increasing from 0 to 1, and is called at intervals to indicate progress
 
     Returns:
         resqml model in memory & written to disc
