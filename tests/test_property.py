@@ -1718,3 +1718,19 @@ def test_write_read_nexus_array(example_model_with_prop_ts_rels, tmp_path):
     reload = rq.Model(model.epc_file)
     newpc = rqp.GridPropertyCollection(grid = reload.grid())
     assert len(newpc.parts()) == numparts + 1
+
+
+def test_slice_for_box(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = rqp.GridPropertyCollection(grid = model.grid())
+    assert pc is not None
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW'][0]
+
+    # Act
+    myslice = pc.h5_slice_for_box(part = part, box = np.array([[0, 0, 0], [1, 2, 2]]))
+
+    expected = np.array([[[1, 0.5, 1], [1, 0.5, 1], [1, 0.5, 1]], [[1, 0.5, 1], [1, 0.5, 1], [1, 0.5, 1]]])
+
+    # Assert
+    assert_array_almost_equal(expected, myslice)
