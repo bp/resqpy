@@ -1674,3 +1674,15 @@ def test_well_interval_property_collection(example_model_and_cellio):
             assert all(log.values() == sw)
         else:
             assert all(log.values() == por)
+
+
+def test_load_grid_property_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    grid = model.grid()
+
+    # Act
+    pc = rqp.GridPropertyCollection(grid = grid)
+
+    # Assert
+    assert pc is not None
