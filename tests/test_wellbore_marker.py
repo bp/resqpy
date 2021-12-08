@@ -97,6 +97,6 @@ def test_load_from_xml(example_model_and_crs):
     assert wellbore_marker_3 is not None
     assert wellbore_marker_3.title == 'Horizon1_marker'
     assert wellbore_marker_3.marker_type == 'horizon'
-    assert bu.matching_uuids(wellbore_marker_3.interpretation_uuid, horizon_interp_uuid) == True
+    assert bu.matching_uuids(wellbore_marker_3.interpretation_uuid, horizon_interp_uuid)
     assert wellbore_marker_3.extra_metadata == {'FormationName': 'Banoffee'}
     assert bu.matching_uuids(wellbore_marker_3.uuid, wellbore_marker_1_uuid)

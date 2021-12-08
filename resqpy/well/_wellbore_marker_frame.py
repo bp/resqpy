@@ -232,10 +232,8 @@ class WellboreMarkerFrame(BaseResqpy):
     def dataframe(self):
         """Returns a pandas dataframe with columns X, Y, Z, MD, Boundary_Feature_Type, Marker_Citation_Title,
 
-         Interp_Citation_Title.
+        Interp_Citation_Title.
         """
-
-        # todo: handle fractures and geobody boundaries as well as horizons and faults
 
         xyz = np.empty((self.node_count, 3))
         boundary_feature_type_list = []
