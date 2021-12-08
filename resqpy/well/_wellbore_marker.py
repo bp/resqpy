@@ -1,6 +1,6 @@
 """_wellbore_marker.py: resqpy well module providing wellbore marker class"""
 
-version = '6th December 2021'
+version = '8th December 2021'
 
 # following should be kept in line with major.minor tag values in repository
 citation_format = 'bp:resqpy:1.3'
@@ -12,12 +12,10 @@ import logging
 
 log = logging.getLogger(__name__)
 log.debug('_wellbore_marker.py version ' + version)
-import getpass
 
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 import resqpy.olio.uuid as bu
-import resqpy.olio.time as time
 
 
 class WellboreMarker():
@@ -47,7 +45,7 @@ class WellboreMarker():
            marker_index (int): index of the wellbore marker in the parent WellboreMarkerFrame object
            marker_node (xml node, optional): if given, loads from xml. Else, creates new
            marker_type (str, optional): the type of geologic, fluid or contact feature
-              e.g. "fault", "geobody", "horizon", "gas/oil/water down to", "gas/oil/water up to",
+             e.g. "fault", "geobody", "horizon ", "gas/oil/water down to", "gas/oil/water up to",
               "free water contact", "gas oil contact", "gas water contact", "water oil contact", "seal"
            interpretation_uuid (uuid.UUID or string, optional): uuid of the boundary feature Interpretation
               organizational object that the marker refers to.
@@ -64,10 +62,10 @@ class WellboreMarker():
         """
         # verify that marker type is valid
         if marker_type is not None:
-            assert marker_type in(["fault", "geobody", "horizon", "gas down to", "oil down to", "water down to",
-                                      "gas up to", "oil up to", "water up to", "free water contact", "gas oil contact",
-                                      "gas water contact", "water oil contact", "seal"]
-                                    ) , "invalid marker type specified"
+            assert marker_type in ([
+                "fault", "geobody", "horizon", "gas down to", "oil down to", "water down to", "gas up to", "oil up to",
+                "water up to", "free water contact", "gas oil contact", "gas water contact", "water oil contact", "seal"
+            ]), "invalid marker type specified"
 
         self.model = parent_model
         self.wellbore_frame = parent_frame
@@ -85,25 +83,36 @@ class WellboreMarker():
         assert self.uuid is not None
 
     def create_xml(self, parent_node, title = 'wellbore marker'):
-        """Creates the xml tree for this wellbore marker."""
+        """Creates the xml tree for this wellbore marker.
+
+        arguments:
+           parent_node (xml node): the root node of the WellboreMarkerFrame object to which the newly created node will be appended
+           title (string, optional): the citation title of the newly created node
+             note: if not None, self.title will be used instead of "wellbore marker"
+
+        returns:
+           the newly created xml node
+        """
 
         assert self.uuid is not None
-        wbm_node = self.model.new_obj_node('WellboreMarker', is_top_lvl_obj=False)
+        wbm_node = self.model.new_obj_node('WellboreMarker', is_top_lvl_obj = False)
         wbm_node.set('uuid', str(self.uuid))
 
         # Citation block
-        citation = self.__create_citation(root = wbm_node, title = title, originator = self.originator)
+        if self.title is not None:
+            title = self.title
+        citation = self.model.create_citation(root = wbm_node, title = title, originator = self.originator)
 
         # Add sub-elements to root node
-        boundary_feature_dict = {'GeologicBoundaryKind': ['fault', 'geobody', 'horizon'],
-                                 'FluidMarker': ['gas down to', 'gas up to', 'oil down to', 'oil up to', 'water down to',
-                                                 'water up to'],
-                                 'FluidContact': ['free water contact', 'gas oil contact', 'gas water contact', 'seal',
-                                                  'water oil contact']
-                                 }
-        for k,v in boundary_feature_dict.items():
+        boundary_feature_dict = {
+            'GeologicBoundaryKind': ['fault', 'geobody', 'horizon'],
+            'FluidMarker': ['gas down to', 'gas up to', 'oil down to', 'oil up to', 'water down to', 'water up to'],
+            'FluidContact': ['free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact']
+        }
+        for k, v in boundary_feature_dict.items():
             if self.marker_type in v:
                 boundary_kind = k
+                break
 
         wbm_gb_node = rqet.SubElement(wbm_node, ns['resqml2'] + boundary_kind)
         wbm_gb_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
@@ -116,69 +125,15 @@ class WellboreMarker():
                                        title = rqet.find_tag(rqet.find_tag(interp_root, 'Citation'), 'Title').text,
                                        uuid = self.interpretation_uuid,
                                        content_type = interp_content_type,
-                                       root=wbm_node)
+                                       root = wbm_node)
         # Extra metadata
-        if self.extra_metadata is None:
-            self.extra_metadata = {}
-        for key, value in self.extra_metadata.items():
-            self.extra_metadata[str(key)] = str(value)
         if hasattr(self, 'extra_metadata') and self.extra_metadata:
-            rqet.create_metadata_xml(node=wbm_node, extra_metadata=self.extra_metadata)
+            rqet.create_metadata_xml(node = wbm_node, extra_metadata = self.extra_metadata)
 
         if parent_node is not None:
             parent_node.append(wbm_node)
+
         return wbm_node
-
-    def __create_citation(self, root = None, title = '', originator = None):
-        """Creates a citation xml node and optionally appends as a child of root.
-
-        arguments:
-           root (optional): if not None, the newly created citation node is appended as
-              a child to this node
-           title (string): the citation title: a human readable string; this is the main point
-              of having a citation node, so the argument should be used wisely
-           originator (string, optional): the name of the human being who created the object
-              which this citation is for; default is to use the login name
-
-        returns:
-           newly created citation xml node
-        """
-
-        if not title:
-            title = '(no title)'
-
-        citation = rqet.Element(ns['eml'] + 'Citation')
-        citation.set(ns['xsi'] + 'type', ns['eml'] + 'Citation')
-        citation.text = rqet.null_xml_text
-
-        title_node = rqet.SubElement(citation, ns['eml'] + 'Title')
-        title_node.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
-        title_node.text = title
-
-        originator_node = rqet.SubElement(citation, ns['eml'] + 'Originator')
-        if originator is None:
-            try:
-                originator = str(getpass.getuser())
-            except Exception:
-                originator = 'unknown'
-        originator_node.set(ns['xsi'] + 'type', ns['eml'] + 'NameString')
-        originator_node.text = originator
-
-        creation_node = rqet.SubElement(citation, ns['eml'] + 'Creation')
-        creation_node.set(ns['xsi'] + 'type', ns['xsd'] + 'dateTime')
-        creation_node.text = time.now()
-
-        format_node = rqet.SubElement(citation, ns['eml'] + 'Format')
-        format_node.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
-        if rqet.pretend_to_be_fesapi:
-            format_node.text = '[F2I-CONSULTING:fesapi]'
-        else:
-            format_node.text = citation_format
-
-        if root is not None:
-            root.append(citation)
-
-        return citation
 
     def _load_from_xml(self, marker_node):
         """Load attributes from xml.
@@ -191,28 +146,22 @@ class WellboreMarker():
 
         assert marker_node is not None
         # Load XML data
-        uuid_str = rqet.find_tag_text(root = marker_node, tag_name = 'UUID')
+        uuid_str = marker_node.attrib.get('uuid')
         if uuid_str:
             self.uuid = bu.uuid_from_string(uuid_str)
-        citation_tag = rqet.find_nested_tags(root = marker_node, tag_list=['Citation'])
+        citation_tag = rqet.find_nested_tags(root = marker_node, tag_list = ['Citation'])
         assert citation_tag is not None
-        self.title = rqet.find_tag_text(root = citation_tag,
-                                        tag_name = 'Title')
-        self.originator = rqet.find_tag_text(root = citation_tag,
-                                        tag_name = 'Originator')
+        self.title = rqet.find_tag_text(root = citation_tag, tag_name = 'Title')
+        self.originator = rqet.find_tag_text(root = citation_tag, tag_name = 'Originator')
 
         for boundary_feature_type in ['GeologicBoundaryKind', 'FluidMarker', 'FluidContact']:
-            found_tag_text = rqet.find_tag_text(root = marker_node,
-                                           tag_name = boundary_feature_type)
+            found_tag_text = rqet.find_tag_text(root = marker_node, tag_name = boundary_feature_type)
             if found_tag_text is not None:
                 self.marker_type = found_tag_text
                 break
 
-        self.interpretation_uuid = rqet.find_nested_tags_text(root = marker_node, tag_list = ['Interpretation', 'UUID'])
+        self.interpretation_uuid = bu.uuid_from_string(
+            rqet.find_nested_tags_text(root = marker_node, tag_list = ['Interpretation', 'UUID']))
         self.extra_metadata = rqet.load_metadata_from_xml(node = marker_node)
 
         return True
-
-
-
-

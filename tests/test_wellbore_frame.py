@@ -58,7 +58,7 @@ def test_WellboreFrame(example_model_and_crs):
 
     # Reload from disk
     model2 = Model(epc_file = epc_path)
-    wellbore_frame_2 = resqpy.well.WellboreMarkerFrame(parent_model = model2, uuid = wellbore_frame_uuid)
+    wellbore_frame_2 = resqpy.well.WellboreFrame(parent_model = model2, uuid = wellbore_frame_uuid)
 
     # ----------- Assert ---------
     assert wellbore_frame_2.node_count == 2
