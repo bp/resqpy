@@ -141,8 +141,8 @@ def azimuths(va):  # 'azimuth' is synonymous with 'compass bearing'
         np.abs(x) >= np.abs(y),
         np.where(x < 0.0, maths.pi * 3.0 / 2.0 - np.arctan(y / x), maths.pi / 2.0 - np.arctan(y / x)),
         np.where(y < 0.0, maths.pi + np.arctan(x / y), np.arctan(x / y)))
-    np.seterr(**restore)
     radians = radians % (2.0 * maths.pi)
+    np.seterr(**restore)
     return np.degrees(radians)
 
 
