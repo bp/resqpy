@@ -256,18 +256,9 @@ class TriangulatedPatch:
         mesh_shape = mesh_xyz.shape
         assert len(mesh_shape) == 3 and mesh_shape[0] > 1 and mesh_shape[1] > 1 and mesh_shape[2] == 3
         self.quad_triangles = False
-        points = np.zeros(mesh_xyz.shape).reshape((-1, 3))
-        indices = np.zeros(mesh_xyz.shape[:2], dtype = int) - 1
-        n_p = 0
-        # this could probably be speeded up with some numpy where operation
-        for j in range(mesh_shape[0]):
-            for i in range(mesh_shape[1]):
-                if not np.isnan(mesh_xyz[j, i, 2]):
-                    points[n_p] = mesh_xyz[j, i]
-                    indices[j, i] = n_p
-                    n_p += 1
-        self.points = points[:n_p, :]
-        self.node_count = n_p
+
+        indices = self.get_indices_from_sparse_meshxyz(mesh_xyz)
+
         triangles = np.zeros((2 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1), 3), dtype = int)  # truncate later
         nt = 0
         for j in range(mesh_shape[0] - 1):
@@ -306,6 +297,23 @@ class TriangulatedPatch:
         self.ni = None
         self.triangles = triangles[:nt, :]
         self.triangle_count = nt
+
+    def get_indices_from_sparse_meshxyz(self, mesh_xyz):
+        """Update self.points and self.node_count with non-nan points in a given mesh_xyz array.
+
+        Returns the indices of these non_nan points.
+        """
+        points = np.zeros(mesh_xyz.shape).reshape((-1, 3))
+        indices = np.zeros(mesh_xyz.shape[:2], dtype = int) - 1
+
+        non_nans = np.where(~np.isnan(mesh_xyz[:, :, 2]))
+        for i in range(len(non_nans[0])):
+            points[i] = mesh_xyz[non_nans[0][i], non_nans[1][i]]
+            indices[non_nans[0][i], non_nans[1][i]] = i
+        self.points = points[:len(non_nans[0]), :]
+        self.node_count = len(non_nans[0])
+
+        return indices
 
     def set_from_torn_mesh(self, mesh_xyz, quad_triangles = False):
         """Populate this (empty) patch from a torn mesh array of shape (nj, ni, 2, 2, 3)."""
@@ -388,54 +396,68 @@ class TriangulatedPatch:
         assert cp.shape == (2, 2, 2, 3)
         self.quad_triangles = quad_triangles
         if quad_triangles:
-            self.triangle_count = 24
-            quad_centres = np.empty((3, 2, 3))
-            quad_centres[0, 0, :] = 0.25 * np.sum(cp[0, :, :, :], axis = (0, 1))  # K-
-            quad_centres[0, 1, :] = 0.25 * np.sum(cp[1, :, :, :], axis = (0, 1))  # K+
-            quad_centres[1, 0, :] = 0.25 * np.sum(cp[:, 0, :, :], axis = (0, 1))  # J-
-            quad_centres[1, 1, :] = 0.25 * np.sum(cp[:, 1, :, :], axis = (0, 1))  # J+
-            quad_centres[2, 0, :] = 0.25 * np.sum(cp[:, :, 0, :], axis = (0, 1))  # I-
-            quad_centres[2, 1, :] = 0.25 * np.sum(cp[:, :, 1, :], axis = (0, 1))  # I+
-            self.node_count = 14
-            self.points = np.concatenate((cp.copy().reshape((-1, 3)), quad_centres.reshape((-1, 3))))
-            triangles = np.empty((3, 2, 4, 3), dtype = int)  # flatten later
-            for axis in range(3):
-                if axis == 0:
-                    ip1, ip2 = 2, 1
-                elif axis == 1:
-                    ip1, ip2 = 4, 1
-                else:
-                    ip1, ip2 = 4, 2
-                for ip in range(2):
-                    centre_p = 8 + 2 * axis + ip
-                    ips = -2 * ip + 1  # +1 for -ve face; -1 for +ve face!
-                    base_p = 7 * ip
-                    triangles[axis, ip, :, 0] = centre_p  # quad centre
-                    triangles[axis, ip, 0, 1] = base_p
-                    triangles[axis, ip, 0, 2] = triangles[axis, ip, 1, 1] = base_p + ips * (ip2)
-                    triangles[axis, ip, 1, 2] = triangles[axis, ip, 2, 1] = base_p + ips * (ip1 + ip2)
-                    triangles[axis, ip, 2, 2] = triangles[axis, ip, 3, 1] = base_p + ips * (ip1)
-                    triangles[axis, ip, 3, 2] = base_p
+            triangles = self.get_triangles_for_cell_faces_quad_true(cp)
         else:
-            self.triangle_count = 12
-            self.node_count = 8
-            self.points = cp.copy().reshape((-1, 3))
-            triangles = np.empty((3, 2, 2, 3), dtype = int)  # flatten later
-            for axis in range(3):
-                if axis == 0:
-                    ip1, ip2 = 2, 1
-                elif axis == 1:
-                    ip1, ip2 = 4, 1
-                else:
-                    ip1, ip2 = 4, 2
-                for ip in range(2):
-                    ips = -2 * ip + 1  # +1 for -ve face; -1 for +ve face!
-                    base_p = 7 * ip
-                    triangles[axis, ip, :, 0] = base_p
-                    triangles[axis, ip, :, 1] = base_p + ips * (ip1 + ip2)
-                    triangles[axis, ip, 0, 2] = base_p + ips * (ip2)
-                    triangles[axis, ip, 1, 2] = base_p + ips * (ip1)
+            triangles = self.get_triangles_for_cell_faces_quad_false(cp)
         self.triangles = triangles.reshape((-1, 3))
+
+    def get_triangles_for_cell_faces_quad_false(self, cp):
+        """Returns the triangles for corner points representing cell faces, where quad_triangles is False."""
+
+        self.triangle_count = 12
+        self.node_count = 8
+        self.points = cp.copy().reshape((-1, 3))
+        triangles = np.empty((3, 2, 2, 3), dtype = int)  # flatten later
+        for axis in range(3):
+            if axis == 0:
+                ip1, ip2 = 2, 1
+            elif axis == 1:
+                ip1, ip2 = 4, 1
+            else:
+                ip1, ip2 = 4, 2
+            for ip in range(2):
+                ips = -2 * ip + 1  # +1 for -ve face; -1 for +ve face!
+                base_p = 7 * ip
+                triangles[axis, ip, :, 0] = base_p
+                triangles[axis, ip, :, 1] = base_p + ips * (ip1 + ip2)
+                triangles[axis, ip, 0, 2] = base_p + ips * (ip2)
+                triangles[axis, ip, 1, 2] = base_p + ips * (ip1)
+
+        return triangles
+
+    def get_triangles_for_cell_faces_quad_true(self, cp):
+        """Returns the triangles for corner points representing cell faces, where quad_triangles is True."""
+
+        self.triangle_count = 24
+        quad_centres = np.empty((3, 2, 3))
+        quad_centres[0, 0, :] = 0.25 * np.sum(cp[0, :, :, :], axis = (0, 1))  # K-
+        quad_centres[0, 1, :] = 0.25 * np.sum(cp[1, :, :, :], axis = (0, 1))  # K+
+        quad_centres[1, 0, :] = 0.25 * np.sum(cp[:, 0, :, :], axis = (0, 1))  # J-
+        quad_centres[1, 1, :] = 0.25 * np.sum(cp[:, 1, :, :], axis = (0, 1))  # J+
+        quad_centres[2, 0, :] = 0.25 * np.sum(cp[:, :, 0, :], axis = (0, 1))  # I-
+        quad_centres[2, 1, :] = 0.25 * np.sum(cp[:, :, 1, :], axis = (0, 1))  # I+
+        self.node_count = 14
+        self.points = np.concatenate((cp.copy().reshape((-1, 3)), quad_centres.reshape((-1, 3))))
+        triangles = np.empty((3, 2, 4, 3), dtype = int)  # flatten later
+        for axis in range(3):
+            if axis == 0:
+                ip1, ip2 = 2, 1
+            elif axis == 1:
+                ip1, ip2 = 4, 1
+            else:
+                ip1, ip2 = 4, 2
+            for ip in range(2):
+                centre_p = 8 + 2 * axis + ip
+                ips = -2 * ip + 1  # +1 for -ve face; -1 for +ve face!
+                base_p = 7 * ip
+                triangles[axis, ip, :, 0] = centre_p  # quad centre
+                triangles[axis, ip, 0, 1] = base_p
+                triangles[axis, ip, 0, 2] = triangles[axis, ip, 1, 1] = base_p + ips * (ip2)
+                triangles[axis, ip, 1, 2] = triangles[axis, ip, 2, 1] = base_p + ips * (ip1 + ip2)
+                triangles[axis, ip, 2, 2] = triangles[axis, ip, 3, 1] = base_p + ips * (ip1)
+                triangles[axis, ip, 3, 2] = base_p
+
+        return triangles
 
     def face_from_triangle_index(self, triangle_index):
         """For patch freshly built for cell faces, returns (axis, polarity) for given triangle index."""
@@ -452,9 +474,11 @@ class TriangulatedPatch:
         return axis, polarity
 
     def vertical_rescale_points(self, ref_depth, scaling_factor):
-        """Modify the z values of points for this patch by stretching the distance from reference depth by scaling
-        factor."""
-
+        """Rescale points along vertical direction.
+        
+        Modifies the z values of points for this patch by stretching the distance
+        from reference depth by scaling factor.
+        """
         _, _ = self.triangles_and_points()  # ensure points are loaded
         z_values = self.points[:, 2].copy()
         self.points[:, 2] = ref_depth + scaling_factor * (z_values - ref_depth)

@@ -54,21 +54,23 @@ def test_faces_for_surface(tmp_model):
     surf = resqpy.surface.Surface(tmp_model, crs_uuid = crs.uuid)
     surf.set_from_triangles_and_points(triangles, points.reshape((-1, 3)))
     assert surf is not None
-    gcs = rqgs.find_faces_to_represent_surface(grid, surf, 'staffa', mode = 'staffa')
-    assert gcs is not None
-    assert gcs.count == 12
-    cip = set([tuple(pair) for pair in gcs.cell_index_pairs])
-    expected_cip = grid.natural_cell_indices(
-        np.array([[[0, 0, 0], [1, 0, 0]], [[0, 1, 0], [1, 1, 0]], [[0, 2, 0], [1, 2, 0]], [[1, 0, 0], [1, 0, 1]],
-                  [[1, 1, 0], [1, 1, 1]], [[1, 2, 0], [1, 2, 1]], [[1, 0, 1], [2, 0, 1]], [[1, 1, 1], [2, 1, 1]],
-                  [[1, 2, 1], [2, 2, 1]], [[2, 0, 1], [2, 0, 2]], [[2, 1, 1], [2, 1, 2]], [[2, 2, 1], [2, 2, 2]]],
-                 dtype = int))
-    e_cip = set([tuple(pair) for pair in expected_cip])
-    assert cip == e_cip  # note: this assumes lower cell index is first, which happens to be true
-    # todo: check face indices
-    gcs.write_hdf5()
-    gcs.create_xml()
-    assert bu.matching_uuids(tmp_model.uuid(obj_type = 'GridConnectionSetRepresentation'), gcs.uuid)
+    for mode in ['staffa', 'regular', 'auto']:
+        gcs = rqgs.find_faces_to_represent_surface(grid, surf, name = mode, mode = mode)
+        assert gcs is not None
+        assert gcs.count == 12
+        cip = set([tuple(pair) for pair in gcs.cell_index_pairs])
+        expected_cip = grid.natural_cell_indices(
+            np.array([[[0, 0, 0], [1, 0, 0]], [[0, 1, 0], [1, 1, 0]], [[0, 2, 0], [1, 2, 0]], [[1, 0, 0], [1, 0, 1]],
+                      [[1, 1, 0], [1, 1, 1]], [[1, 2, 0], [1, 2, 1]], [[1, 0, 1], [2, 0, 1]], [[1, 1, 1], [2, 1, 1]],
+                      [[1, 2, 1], [2, 2, 1]], [[2, 0, 1], [2, 0, 2]], [[2, 1, 1], [2, 1, 2]], [[2, 2, 1], [2, 2, 2]]],
+                     dtype = int))
+        e_cip = set([tuple(pair) for pair in expected_cip])
+        assert cip == e_cip  # note: this assumes lower cell index is first, which happens to be true
+        # todo: check face indices
+        gcs.write_hdf5()
+        gcs.create_xml()
+        assert bu.matching_uuids(
+            tmp_model.uuid(obj_type = 'GridConnectionSetRepresentation', multiple_handling = 'newest'), gcs.uuid)
 
 
 def test_delaunay_triangulation(example_model_and_crs):
@@ -209,7 +211,7 @@ def test_regular_mesh(example_model_and_crs):
     assert len(surf.distinct_edges()) == 6 * (ni - 1) * (nj - 1) + (ni - 1) + (nj - 1)
 
 
-@pytest.mark.skip(reason = "Bug in Mesh for ref&z flavou needs fixing first")
+# @pytest.mark.skip(reason = "Bug in Mesh for ref&z flavou needs fixing first")
 def test_refandz_mesh(example_model_and_crs):
     model, crs = example_model_and_crs
 
@@ -249,12 +251,11 @@ def test_refandz_mesh(example_model_and_crs):
                                ni = ni,
                                nj = nj,
                                z_supporting_mesh_uuid = support_uuid,
-                               title = 'random ref&z mesh',
+                               title = 'random refz mesh',
                                originator = 'Emma',
                                extra_metadata = {'testing mode': 'automated'})
 
     assert refz is not None
-    print(refz.title)
     refz.write_hdf5()
     refz.create_xml()
     refz_uuid = refz.uuid
@@ -264,20 +265,16 @@ def test_refandz_mesh(example_model_and_crs):
 
     # re-open model and check the mesh object is there
     reload = rq.Model(model.epc_file)
-    print(reload.parts())
 
-    print(support_uuid)
-    assert bu.matching_uuids(reload.uuid(obj_type = 'Grid2dRepresentation', title = 'random ref&z mesh'), refz_uuid)
+    assert bu.matching_uuids(reload.uuid(obj_type = 'Grid2dRepresentation', title = 'random refz mesh'), refz_uuid)
 
     # establish a resqpy Mesh from the object in the RESQML dataset
-    reload_refzmesh = resqpy.surface.Mesh(model, uuid = refz_uuid)
+    reload_refzmesh = resqpy.surface.Mesh(reload, uuid = refz_uuid)
 
     # check some of the metadata
     assert reload_refzmesh.ni == ni and reload_refzmesh.nj == nj
     assert reload_refzmesh.flavour == 'ref&z'
-    assert_array_almost_equal(np.array(reload_refzmesh.regular_origin), np.array(origin))
-    assert_array_almost_equal(np.array(reload_refzmesh.regular_dxyz_dij), np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]))
-    assert reload_refzmesh.ref_uuid == support_uuid
+    assert bu.matching_uuids(reload_refzmesh.ref_uuid, support_uuid)
 
     # check a fully expanded version of the points
     assert_array_almost_equal(reload_refzmesh.full_array_ref(), refz.full_array_ref())
@@ -327,6 +324,53 @@ def test_explicit_mesh(example_model_and_crs):
 
     # check a fully expanded version of the points
     assert_array_almost_equal(persistent_mesh.full_array_ref(), mesh.full_array_ref())
+
+
+@pytest.mark.parametrize('flavour,infile,filetype', [('explicit', 'Surface_roxartext.txt', 'roxar'),
+                                                     ('explicit', 'Surface_roxartext.txt', 'rms'),
+                                                     ('explicit', 'Surface_zmap.dat', 'zmap'),
+                                                     ('regular', 'Surface_roxartext.txt', 'roxar'),
+                                                     ('regular', 'Surface_roxartext.txt', 'rms'),
+                                                     ('regular', 'Surface_zmap.dat', 'zmap'),
+                                                     ('reg&z', 'Surface_roxartext.txt', 'roxar'),
+                                                     ('reg&z', 'Surface_roxartext.txt', 'rms'),
+                                                     ('reg&z', 'Surface_zmap.dat', 'zmap')])
+def test_mesh_file(example_model_and_crs, test_data_path, flavour, infile, filetype):
+    model, crs = example_model_and_crs
+
+    mesh_file = test_data_path / infile
+
+    # make an explicit mesh representation
+    mesh = resqpy.surface.Mesh(model,
+                               crs_uuid = crs.uuid,
+                               mesh_flavour = flavour,
+                               mesh_file = mesh_file,
+                               mesh_format = filetype,
+                               title = 'mesh from file',
+                               originator = 'Emma',
+                               extra_metadata = {'testing mode': 'automated'})
+    assert mesh is not None
+    mesh.write_hdf5()
+    mesh.create_xml()
+    mesh_uuid = mesh.uuid
+
+    # fully write model to disc
+    model.store_epc()
+    epc = model.epc_file
+
+    # re-open model and check the mesh object is there
+    model = rq.Model(epc)
+    assert bu.matching_uuids(model.uuid(obj_type = 'Grid2dRepresentation', title = 'mesh from file'), mesh_uuid)
+
+    # establish a resqpy Mesh from the object in the RESQML dataset
+    persistent_mesh = resqpy.surface.Mesh(model, uuid = mesh_uuid)
+
+    # check some of the metadata
+    assert persistent_mesh.flavour == flavour
+
+    # check a fully expanded version of the points
+    if flavour != 'regular':
+        assert_array_almost_equal(persistent_mesh.full_array_ref(), mesh.full_array_ref())
 
 
 def test_pointset_from_array(example_model_and_crs):
@@ -570,3 +614,217 @@ def test_pointset_from_polylineset(example_model_and_crs):
     reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
 
     assert_array_almost_equal(reload.full_array_ref(), np.concatenate((coords1, coords2), axis = 0))
+
+
+def test_tripatch_set_to_triangle(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_triangle(corners)
+
+    # Assert
+    assert tripatch is not None
+    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2]]))
+    assert_array_almost_equal(tripatch.points, corners)
+
+
+def test_tripatch_verticalscale(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_triangle(corners)
+
+    # Assert
+    assert tripatch is not None
+    # Scale without a reference depth initially
+    tripatch.vertical_rescale_points(0, 10)
+    assert_array_almost_equal(tripatch.points[:, 2], np.array([0, 10, 10]))
+    # Scale with a reference depth
+    tripatch.vertical_rescale_points(5, 2)
+    assert_array_almost_equal(tripatch.points[:, 2], np.array([-5, 15, 15]))
+
+
+def test_tripatch_set_from_irregularmesh(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 4
+    assert tripatch.points.shape == (4, 3)
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
+    assert_array_almost_equal(tripatch.points[3], mesh_xyz[1, 1])
+    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2], [3, 1, 2]]))
+
+
+def test_tripatch_columnfromindex(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
+    assert tripatch is not None
+    j0, i0 = tripatch.column_from_triangle_index(0)
+    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 3]))
+
+    # Assert
+    assert j0 == 0
+    assert i0 == 0
+    assert_array_almost_equal(j1, np.array([0, 0]))
+    assert_array_almost_equal(i1, np.array([0, 1]))
+
+
+def test_tripatch_columnfromindex_quad(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
+    assert tripatch is not None
+    j0, i0 = tripatch.column_from_triangle_index(0)
+    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 7]))
+    j2, i2 = tripatch.column_from_triangle_index(8)
+    j3, i3 = tripatch.column_from_triangle_index(np.array([0, 8]))
+
+    # Assert
+    assert j0 == 0
+    assert i0 == 0
+    assert_array_almost_equal(j1, np.array([0, 0]))
+    assert_array_almost_equal(i1, np.array([0, 1]))
+    assert j2 is None
+    assert i2 is None
+    assert j3 is None
+    assert i3 is None
+
+
+def test_tripatch_set_from_irregularmesh_quad(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 5
+    assert tripatch.points.shape == (5, 3)
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
+    assert_array_almost_equal(tripatch.points[3], mesh_xyz[1, 1])
+    assert_array_almost_equal(tripatch.triangles, np.array([[4, 0, 1], [4, 1, 3], [4, 3, 2], [4, 2, 0]]))
+
+
+def test_tripatch_set_from_sparse(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, np.nan], [2, 1, 1]],
+                         [[0, 2, 1], [1, 2, 1], [2, 2, 1]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_sparse_mesh(mesh_xyz = mesh_xyz)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 8
+    assert tripatch.points.shape == (8, 3)
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
+    assert_array_almost_equal(tripatch.points[7], mesh_xyz[2, 2])
+    assert_array_almost_equal(tripatch.triangles[0], np.array([1, 3, 0]))
+    assert_array_almost_equal(tripatch.triangles[3], np.array([4, 6, 7]))
+
+
+def test_tripatch_set_from_torn(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, np.nan]]],
+                          [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 8
+    assert tripatch.points.shape == (8, 3)
+    assert tripatch.ni == 2
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], mesh_xyz[0, 0, 1, 0])
+    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2], [3, 1, 2], [4, 5, 6], [7, 5, 6]]))
+
+
+def test_tripatch_set_from_torn_quad(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    mesh_xyz = np.array([[[[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, np.nan]]],
+                          [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 10
+    assert tripatch.points.shape == (10, 3)
+    assert tripatch.ni == 2
+    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], mesh_xyz[0, 0, 1, 0])
+    assert_array_almost_equal(
+        tripatch.triangles,
+        np.array([[8, 0, 1], [8, 1, 3], [8, 3, 2], [8, 2, 0], [9, 4, 5], [9, 5, 7], [9, 7, 6], [9, 6, 4]]))
+
+
+def test_tripatch_set_cellface_corp(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_cell_faces_from_corner_points(cp = cp)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 14
+    assert tripatch.points.shape == (14, 3)
+    assert_array_almost_equal(tripatch.points[0], cp[0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
+    assert_array_almost_equal(tripatch.triangles[0], np.array([8, 0, 1]))
+    assert_array_almost_equal(tripatch.triangles[-1], np.array([13, 3, 7]))
+
+
+def test_tripatch_set_cellface_corp_quadfalse(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
+
+    # Act
+    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch.set_to_cell_faces_from_corner_points(cp = cp, quad_triangles = False)
+
+    # Assert
+    assert tripatch is not None
+    assert tripatch.node_count == 8
+    assert tripatch.points.shape == (8, 3)
+    assert_array_almost_equal(tripatch.points[0], cp[0, 0, 0])
+    assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
+    assert_array_almost_equal(tripatch.triangles[0], np.array([0, 3, 1]))
+    assert_array_almost_equal(tripatch.triangles[-1], np.array([7, 1, 3]))

@@ -75,12 +75,14 @@ def import_nexus(
         grid_title = 'ROOT',
         mode = 'w',
         progress_fn = None):
-    """Read a simulation grid geometry and optionally grid properties and return a resqml model in memory & written to
-    disc.
+    """Read a simulation grid geometry and optionally grid properties.
 
     Input may be from nexus ascii input files, or nexus vdb output.
-    """
 
+    Returns:
+        resqml model in memory & written to disc
+    
+    """
     if resqml_file_root.endswith('.epc'):
         resqml_file_root = resqml_file_root[:-4]
     assert mode in ['w', 'a']
@@ -638,8 +640,9 @@ def import_vdb_ensemble(
         split_pillars = True,
         split_tolerance = 0.01,  # applies to each of x, y, z differences
         progress_fn = None):
-    """Adds properties from all vdb's within an ensemble directory tree to a single RESQML dataset, referencing a shared
-    grid.
+    """Adds properties from all vdbs within an ensemble directory tree to a single RESQML dataset.
+    
+    Referencing a shared grid.
 
     args:
        epc_file (string): filename of epc file to be extended with ensemble properties
@@ -955,9 +958,10 @@ def add_ab_properties(
     ab_property_list = None
 ):  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value,
     #          discrete, realization)
-    """Process a list of pure binary property array files, adding as parts of model, related to grid (hdf5 file is
-    appended to)."""
-
+    """Process a list of pure binary property array files.
+    
+    Adds as parts of model, related to grid (hdf5 file is appended to).
+    """
     assert ab_property_list, 'property list is empty or missing'
 
     model = rq.Model(epc_file = epc_file)

@@ -1,6 +1,7 @@
-# keyword_files module
-# provides basic functions for searching for keywords in an ascii control file such as a nexus deck
-# ascii file must already have been opened for reading before calling any of these functions
+"""Basic functions for searching for keywords in an ascii control file such as a nexus deck.
+
+Ascii file must already have been opened for reading before calling any of these functions.
+"""
 
 version = '4th September 2020'
 
