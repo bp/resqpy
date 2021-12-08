@@ -101,7 +101,7 @@ class AnyTimeSeries(BaseResqpy):
 
         :meta common:
         """
-        for index in len(self.timestamps):
+        for index in range(len(self.timestamps)):
             yield self.timestamp(index, as_string=as_string)
 
     def last_timestamp(self, as_string=True):

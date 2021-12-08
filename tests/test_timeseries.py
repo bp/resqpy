@@ -6,10 +6,6 @@ import resqpy.model as rq
 import resqpy.time_series as rqts
 
 
-# reversemode=True
-
-
-# @pytest.mark.parametrize("reversemode", [True, False])
 def test_merge_timeseries():
     model = rq.Model(create_basics=True)
 
@@ -140,5 +136,3 @@ def test_geologic_time_str(years_value, expected_result):
     result = rqts.geologic_time_str(test_years_value)
     # assert
     assert result == expected_result
-
-

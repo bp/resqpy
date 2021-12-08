@@ -8,11 +8,12 @@ import os
 from.time_series_any_time_series import TimeSeries
 
 
-def __process_summary_entries(summary_entries, parent_model=None):
+def process_summary_entries(summary_entries, parent_model=None):
+    """Create a TimeSeries object based on time steps reported in a nexus summary file (.sum)."""
     if len(summary_entries) == 0:
         return None  # no entries extracted from summary file, could raise error?
     summary_entries.sort()
-    if summary_entries[0][0] == 0:  # first entry is for time zero
+    if summary_entries[0][0] == 0:  # first entry is for time step zero
         tz_date = summary_entries[0][2]
         summary_entries.pop(0)
     else:  # back calculate time zero from first entry
@@ -80,7 +81,7 @@ def time_series_from_nexus_summary(summary_file, parent_model=None):
 
         summary_entries = open_file(summary_file)
 
-        __process_summary_entries(summary_entries, parent_model)
+        process_summary_entries(summary_entries, parent_model)
 
     except Exception:
         log.exception('failed to create TimeSeries object from summary file: ' + summary_file)

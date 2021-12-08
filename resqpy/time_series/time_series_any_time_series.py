@@ -131,7 +131,7 @@ class TimeSeries(AnyTimeSeries):
         """
         if not self.timestamps:
             return None
-        before = self.index_for_timestamp_not_later_than(self, timestamp)
+        before = self.index_for_timestamp_not_later_than(timestamp)
         if not before:
             return 0
         if before == len(self.timestamps) - 1 or self.timestamps[before] == timestamp:
@@ -139,7 +139,7 @@ class TimeSeries(AnyTimeSeries):
         after = before + 1
         early_delta = TimeDuration(earlier_timestamp=self.timestamps[before], later_timestamp=timestamp)
         later_delta = TimeDuration(earlier_timestamp=timestamp, later_timestamp=self.timestamps[after])
-        return before if early_delta <= later_delta else after
+        return before if early_delta.duration <= later_delta.duration else after
 
     def duration_between_timestamps(self, earlier_index, later_index):
         """Returns the duration between a pair of timestamps.
@@ -199,7 +199,7 @@ class TimeSeries(AnyTimeSeries):
                 index = 0
             else:
                 index += 1
-            self.timestamps.insert(new_timestamp, index)
+            self.timestamps.insert(index, new_timestamp)
         else:
             last = self.last_timestamp()
             if last is not None:

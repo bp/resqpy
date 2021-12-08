@@ -7,3 +7,4 @@ from .time_series import TimeSeries, GeologicTimeSeries, selected_time_series, \
 from .time_series_from_nexus_summary import time_series_from_nexus_summary
 from .time_duration import TimeDuration
 from .any_time_series_base_resqpy import AnyTimeSeries
+
