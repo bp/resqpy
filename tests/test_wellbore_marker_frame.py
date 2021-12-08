@@ -127,7 +127,7 @@ def test_from_dataframe_and_dataframe(example_model_and_crs):
 
 
 def test_from_marker_list(example_model_and_crs):
-    # Test that a WellboreMarkerFrame object can be corretly instantiated from a list of Wellbore Marker objects
+    # Test that a WellboreMarkerFrame object's attributes can be corretly loaded from a list of WellboreMarker objects
 
     # --------- Arrange ----------
     # Create a WellboreMarkerFrame object in memory
