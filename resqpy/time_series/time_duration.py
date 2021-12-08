@@ -7,7 +7,7 @@ import datetime as dt
 
 
 class TimeDuration:
-    """A thin wrapper around python's datatime timedelta objects (not a RESQML class)."""
+    """A thin wrapper around python's datetime timedelta objects (not a RESQML class)."""
 
     def __init__(self,
                  days=None,

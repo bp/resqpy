@@ -1,14 +1,6 @@
-import logging
-import pytest
-
-import resqpy.time_series.time_series_from_nexus_summary
-from resqpy.time_series.time_series_from_nexus_summary import process_summary_entries, time_series_from_nexus_summary
 import datetime
 
-
-import datetime as dt
-import os
-from resqpy.time_series import TimeSeries
+from resqpy.time_series.time_series_from_nexus_summary import process_summary_entries, time_series_from_nexus_summary
 
 
 def test_process_summary_entries_none():
@@ -132,4 +124,3 @@ def test_time_series_from_nexus_summary_if_no_file():
 #     # assert
 #     assert result is None
 #     open_file_mock.assert_called_once_with('test')
-

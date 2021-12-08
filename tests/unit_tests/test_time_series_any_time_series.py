@@ -1,12 +1,11 @@
 import logging
+
 import pytest
 
 log = logging.getLogger(__name__)
 log.debug('resqml_time_series.py version ')
 
-import datetime as dt
-import warnings
-from resqpy.time_series import TimeSeries, TimeDuration
+from resqpy.time_series import TimeSeries
 
 
 @pytest.mark.parametrize('timestamps', [['2014-01-01T00:00:00.588Z',
@@ -314,5 +313,4 @@ def test_add_timestamp_between(timestamps, example_model_and_crs):
     assert any_time_series.timestamps[0] == '2014-01-01T00:00:00.588Z'
     assert any_time_series.timestamps[1] == new_timestamp
     assert any_time_series.timestamps[2] == '2014-01-03T00:00:00.588Z'
-
 

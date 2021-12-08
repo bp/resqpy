@@ -85,9 +85,9 @@ def time_series_from_list(timestamp_list, parent_model=None, title=None):
 
 
 def merge_timeseries_from_uuid(model, timeseries_uuid_iter):
-    """Create a TimeSeries object from an iteratable object of existing timeseries UUIDs of timeseries.
+    """Create a TimeSeries object from an iterable object of existing timeseries UUIDs of timeseries.
 
-    iterable can be a list, array, or iteratable generator (model must be provided). The new timeseries is sorted in
+    iterable can be a list, array, or iterable generator (model must be provided). The new timeseries is sorted in
     ascending order. Returns the new time series, the new time series uuid, and the list of timeseries objects used to
     generate the list
     """

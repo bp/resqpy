@@ -172,7 +172,7 @@ class TimeSeries(AnyTimeSeries):
         return self.duration_since_start(index).duration.days
 
     def step_duration(self, index):
-        """Returns the duration of the time step between the indexed timestamp and preceeding one.
+        """Returns the duration of the time step between the indexed timestamp and preceding one.
 
         :meta common:
         """
@@ -181,7 +181,7 @@ class TimeSeries(AnyTimeSeries):
         return self.duration_between_timestamps(index - 1, index)
 
     def step_days(self, index):
-        """Returns the number of days between the indexed timestamp and preceeding one."""
+        """Returns the number of days between the indexed timestamp and preceding one."""
         delta = self.step_duration(index)
         if delta is None:
             return None
