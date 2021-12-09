@@ -116,7 +116,6 @@ def _add_single_surface(model, surf_file, surface_file_format, surface_role, qua
     surface.create_xml(ext_uuid,
                        add_as_part = True,
                        add_relationships = True,
-                       crs_uuid = rqet.uuid_for_part_root(crs_root),
                        title = short_name + ' sourced from ' + surf_file,
                        originator = None)
 
