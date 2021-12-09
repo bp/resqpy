@@ -43,7 +43,6 @@ def import_vdb_all_grids(
     create_property_set = False):
     """Creates a RESQML dataset containing grids and grid properties, including LGRs, for a single realisation.
 
-
     Arguments:
         resqml_file_root (str): output path and file name without .epc or .h5 extension
         extent_ijk (triple float, optional): ijk extents (fortran ordering)
@@ -68,7 +67,7 @@ def import_vdb_all_grids(
         decoarsen (bool, default True): where ICOARSE is present, redistribute data to uncoarse cells
         timestep_selection (str, default 'all): 'first', 'last', 'first and last', 'all', or list of ints being reporting timestep numbers. Ignored if vdb_recurrent_properties is False
         create_property_set (bool, default False): if True a resqml PropertySet is created
-"""
+    """
 
     vdbase = vdb.VDB(vdb_file)
     case_list = vdbase.cases()
