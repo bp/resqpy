@@ -56,7 +56,7 @@ def test_Trajectory_load_from_xml(example_model_and_crs):
     # Check all attributes were loaded from disk correctly
     assert trajectory2 is not None
     assert trajectory2.well_name == well_name
-    np.testing.assert_equal(trajectory2.measured_depths, mds)
+    np.testing.assert_almost_equal(trajectory2.measured_depths, mds)
     assert trajectory2.md_datum == datum
     assert trajectory2.md_uom == 'm'
 

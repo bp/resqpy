@@ -2,9 +2,6 @@
 
 version = '8th December 2021'
 
-# following should be kept in line with major.minor tag values in repository
-citation_format = 'bp:resqpy:1.3'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -26,6 +23,12 @@ class WellboreMarker():
     """
 
     resqml_type = 'WellboreMarker'
+
+    boundary_feature_dict = {
+        'GeologicBoundaryKind': ['fault', 'geobody', 'horizon'],
+        'FluidMarker': ['gas down to', 'gas up to', 'oil down to', 'oil up to', 'water down to', 'water up to'],
+        'FluidContact': ['free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact']
+    }
 
     def __init__(self,
                  parent_model,
@@ -104,12 +107,7 @@ class WellboreMarker():
         citation = self.model.create_citation(root = wbm_node, title = title, originator = self.originator)
 
         # Add sub-elements to root node
-        boundary_feature_dict = {
-            'GeologicBoundaryKind': ['fault', 'geobody', 'horizon'],
-            'FluidMarker': ['gas down to', 'gas up to', 'oil down to', 'oil up to', 'water down to', 'water up to'],
-            'FluidContact': ['free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact']
-        }
-        for k, v in boundary_feature_dict.items():
+        for k, v in WellboreMarker.boundary_feature_dict.items():
             if self.marker_type in v:
                 boundary_kind = k
                 break
@@ -145,6 +143,7 @@ class WellboreMarker():
         """
 
         assert marker_node is not None
+
         # Load XML data
         uuid_str = marker_node.attrib.get('uuid')
         if uuid_str:
@@ -154,11 +153,13 @@ class WellboreMarker():
         self.title = rqet.find_tag_text(root = citation_tag, tag_name = 'Title')
         self.originator = rqet.find_tag_text(root = citation_tag, tag_name = 'Originator')
 
+        self.marker_type = None
         for boundary_feature_type in ['GeologicBoundaryKind', 'FluidMarker', 'FluidContact']:
             found_tag_text = rqet.find_tag_text(root = marker_node, tag_name = boundary_feature_type)
             if found_tag_text is not None:
                 self.marker_type = found_tag_text
                 break
+        assert self.marker_type is not None
 
         self.interpretation_uuid = bu.uuid_from_string(
             rqet.find_nested_tags_text(root = marker_node, tag_list = ['Interpretation', 'UUID']))

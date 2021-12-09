@@ -24,12 +24,12 @@ def test_from_dataframe_and_dataframe(example_model_and_crs):
                                 crs_uuid = crs.uuid,
                                 location = (0, 0, -elevation),
                                 md_reference = 'kelly bushing')
-    mds = np.array([300, 310, 330])
+    mds = np.array([300.0, 310.0, 330.0])
     zs = mds - elevation
     source_dataframe = pd.DataFrame({
         'MD': mds,
-        'X': [150, 165, 180],
-        'Y': [240, 260, 290],
+        'X': [150.0, 165.0, 180.0],
+        'Y': [240.0, 260.0, 290.0],
         'Z': zs,
     })
     trajectory = resqpy.well.Trajectory(parent_model = model,
@@ -69,7 +69,7 @@ def test_from_dataframe_and_dataframe(example_model_and_crs):
     fault_interp_1.create_xml()
 
     df = pd.DataFrame({
-        'MD': [400, 410, 430],
+        'MD': [400.0, 410.0, 430.0],
         'Boundary_Feature_Type': ['horizon', 'water oil contact', 'fault'],
         'Marker_Citation_Title': ['marker_horizon_1', 'marker_woc_1', 'marker_fault_1'],
         'Interp_Citation_Title': ['horizon_interp_1', None, 'fault_interp_1'],
@@ -119,7 +119,7 @@ def test_from_dataframe_and_dataframe(example_model_and_crs):
     assert wellbore_marker_frame2.title == 'WBF1'
     assert wellbore_marker_frame2.originator == 'Human'
     assert wellbore_marker_frame2.extra_metadata == {'target_reservoir': 'treacle'}
-    np.testing.assert_equal(wellbore_marker_frame2.node_mds, np.array([400, 410, 430]))
+    np.testing.assert_almost_equal(wellbore_marker_frame2.node_mds, np.array([400.0, 410.0, 430.0]))
     for uuid1, uuid2 in zip(marker_uuids, marker_uuids2):
         assert bu.matching_uuids(uuid1, uuid2)
     # test that the generated dataframe contains the same data as the original df
@@ -142,12 +142,12 @@ def test_from_marker_list(example_model_and_crs):
                                 crs_uuid = crs.uuid,
                                 location = (0, 0, -elevation),
                                 md_reference = 'kelly bushing')
-    mds = np.array([300, 310, 330])
+    mds = np.array([300.0, 310.0, 330.0])
     zs = mds - elevation
     source_dataframe = pd.DataFrame({
         'MD': mds,
-        'X': [150, 165, 180],
-        'Y': [240, 260, 290],
+        'X': [150.0, 165.0, 180.0],
+        'Y': [240.0, 260.0, 290.0],
         'Z': zs,
     })
     trajectory = resqpy.well.Trajectory(parent_model = model,
@@ -220,7 +220,7 @@ def test_from_marker_list(example_model_and_crs):
                                               interpretation_uuid = fault_interp_1_uuid,
                                               title = 'fault_marker')
     marker_list = [horizon_marker, woc_marker, fault_marker]
-    node_mds = np.array([400, 410, 430])
+    node_mds = np.array([400.0, 410.0, 430.0])
 
     # --------- Act ----------
     # Add attributes to the wellbore marker frame from the marker list
@@ -230,7 +230,7 @@ def test_from_marker_list(example_model_and_crs):
     # Verify that attributes have been added correctly
     assert wellbore_marker_frame.node_count == len(wellbore_marker_frame.node_mds) == len(
         wellbore_marker_frame.marker_list) == 3
-    np.testing.assert_equal(node_mds, wellbore_marker_frame.node_mds)
+    np.testing.assert_almost_equal(node_mds, wellbore_marker_frame.node_mds)
     for m1, m2 in zip(marker_list, wellbore_marker_frame.marker_list):
         assert bu.matching_uuids(m1.uuid, m2.uuid)
 
@@ -249,12 +249,12 @@ def test_find_marker_index_from_interp_uuid(example_model_and_crs):
                                 crs_uuid = crs.uuid,
                                 location = (0, 0, -elevation),
                                 md_reference = 'kelly bushing')
-    mds = np.array([300, 310, 330])
+    mds = np.array([300.0, 310.0, 330.0])
     zs = mds - elevation
     source_dataframe = pd.DataFrame({
         'MD': mds,
-        'X': [150, 165, 180],
-        'Y': [240, 260, 290],
+        'X': [150.0, 165.0, 180.0],
+        'Y': [240.0, 260.0, 290.0],
         'Z': zs,
     })
     trajectory = resqpy.well.Trajectory(parent_model = model,
@@ -295,7 +295,7 @@ def test_find_marker_index_from_interp_uuid(example_model_and_crs):
     fault_interp_1.create_xml()
 
     df = pd.DataFrame({
-        'MD': [400, 410, 430],
+        'MD': [400.0, 410.0, 430.0],
         'Boundary_Feature_Type': ['horizon', 'water oil contact', 'fault'],
         'Marker_Citation_Title': ['marker_horizon_1', 'marker_woc_1', 'marker_fault_1'],
         'Interp_Citation_Title': ['horizon_interp_1', None, 'fault_interp_1'],
@@ -334,12 +334,12 @@ def test_find_marker_from_index(example_model_and_crs):
                                 crs_uuid = crs.uuid,
                                 location = (0, 0, -elevation),
                                 md_reference = 'kelly bushing')
-    mds = np.array([300, 310, 330])
+    mds = np.array([300.0, 310.0, 330.0])
     zs = mds - elevation
     source_dataframe = pd.DataFrame({
         'MD': mds,
-        'X': [150, 165, 180],
-        'Y': [240, 260, 290],
+        'X': [150.0, 165.0, 180.0],
+        'Y': [240.0, 260.0, 290.0],
         'Z': zs,
     })
     trajectory = resqpy.well.Trajectory(parent_model = model,
@@ -379,7 +379,7 @@ def test_find_marker_from_index(example_model_and_crs):
     fault_interp_1.create_xml()
 
     df = pd.DataFrame({
-        'MD': [400, 410, 430],
+        'MD': [400.0, 410.0, 430.0],
         'Boundary_Feature_Type': ['horizon', 'water oil contact', 'fault'],
         'Marker_Citation_Title': ['marker_horizon_1', 'marker_woc_1', 'marker_fault_1'],
         'Interp_Citation_Title': ['horizon_interp_1', None, 'fault_interp_1'],
