@@ -5,8 +5,60 @@ import pytest
 import math
 
 from resqpy.grid import RegularGrid
+from resqpy.model import Model
 import resqpy.olio.vector_utilities as vec
 import resqpy.well
+
+
+def test_Trajectory_load_from_xml(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    epc_path = model.epc_file
+    elevation = 100
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    datum.create_xml()
+    mds = np.array([300, 310, 330, 340])
+    zs = mds - elevation
+    well_name = 'JubJub'
+    source_dataframe = pd.DataFrame({
+        'MD': mds,
+        'X': [100, 120, 140, 160],
+        'Y': [345, 365, 386, 400],
+        'Z': zs,
+        'WELL': ['JubJub', 'JubJub', 'JubJub', 'JubJub']
+    })
+
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        data_frame = source_dataframe,
+                                        well_name = well_name,
+                                        md_datum = datum,
+                                        length_uom = 'm')
+
+    # --------- Act ----------
+    # Save to disk
+    trajectory.write_hdf5()
+    trajectory.create_xml()
+    trajectory_uuid = trajectory.uuid
+    model.store_epc()
+    model.h5_release()
+
+    # Reload from disk
+    model2 = Model(epc_file = epc_path)
+    trajectory2 = resqpy.well.Trajectory(model2, uuid = trajectory_uuid)
+
+    # --------- Assert --------------
+    # Check all attributes were loaded from disk correctly
+    assert trajectory2 is not None
+    assert trajectory2.well_name == well_name
+    np.testing.assert_almost_equal(trajectory2.measured_depths, mds)
+    assert trajectory2.md_datum == datum
+    assert trajectory2.md_uom == 'm'
 
 
 def test_Trajectory_add_well_feature_and_interp(example_model_and_crs):
