@@ -33,6 +33,12 @@ class WellboreMarkerFrame(BaseResqpy):
 
     resqml_type = 'WellboreMarkerFrameRepresentation'
 
+    boundary_feature_dict = {
+        'GeologicBoundaryKind': ['fault', 'geobody', 'horizon'],
+        'FluidMarker': ['gas down to', 'gas up to', 'oil down to', 'oil up to', 'water down to', 'water up to'],
+        'FluidContact': ['free water contact', 'gas oil contact', 'gas water contact', 'seal', 'water oil contact']
+    }
+
     def __init__(self,
                  parent_model,
                  uuid = None,
@@ -149,7 +155,6 @@ class WellboreMarkerFrame(BaseResqpy):
         wellbore_marker_frame.node_count = len(dataframe)
         wellbore_marker_frame.node_mds = np.array(dataframe['MD'])
         wellbore_marker_frame.marker_list = marker_list
-        # TODO: check whether the following assertion is redundant
         # check that the number of measured depths matches the node count and the number of markers
         assert wellbore_marker_frame.node_count == wellbore_marker_frame.node_mds.shape[0] == len(marker_list)
 
@@ -176,29 +181,6 @@ class WellboreMarkerFrame(BaseResqpy):
             row_interp_uuid = None
 
         return row_interp_uuid
-
-    # TODO: discuss making this a regular method as the markers require a parent wellbore marker frame
-    def from_marker_list(self, md_array, marker_list):
-        """Load wellbore marker frame data from a list of wellbore marker objects.
-
-        arguments:
-           md_array (np.array): numpy array of measured depths associated with the list of wellbore markers
-           marker_list (list): list of Wellbore Marker objects;
-            note: the number of wellbore markers should match the length of the md_array
-        """
-
-        assert md_array.shape[0] == len(
-            marker_list), 'mismatch between the number of measured depths and the number of wellbore markers'
-
-        # verify the type of each of the wellbore markers
-        for i, marker in enumerate(marker_list):
-            assert type(marker) == WellboreMarker, f'marker {i} is not a WellboreMarker object'
-        self.node_count = md_array.shape[0]
-        self.node_mds = md_array
-        self.marker_list = marker_list
-        # TODO: check whether the following assertion is redundant
-        # check that the number of measured depths matches the node count and the number of markers
-        assert self.node_count == self.node_mds.shape[0] == len(self.marker_list)
 
     def _load_from_xml(self):
         """Loads the wellbore marker frame object from an xml node (and associated hdf5 data).
@@ -278,9 +260,7 @@ class WellboreMarkerFrame(BaseResqpy):
             ext_uuid = self.model.h5_uuid()
 
         wbm_node = super().create_xml(originator = originator, add_as_part = False)
-
         node_count, nodeMd, md_values_node = self.__add_sub_elements_to_root_node(wbm_node = wbm_node)
-
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'Mds', root = md_values_node)
 
         if self.trajectory is not None:
@@ -294,10 +274,12 @@ class WellboreMarkerFrame(BaseResqpy):
             log.error('trajectory object is missing and must be included')
 
         # fill wellbore marker
-        if self.marker_list is not None:  # TODO: confirm that you can have an empty wellbore marker frame with no marker list
+        if self.marker_list is not None:
             for marker in self.marker_list:
-                wbm_node_obj = marker.create_xml(parent_node = wbm_node, title = 'wellbore marker')
+                title = self.__get_wbm_node_title(marker)
+                wbm_node_obj = marker.create_xml(parent_node = wbm_node, title = title)
                 assert wbm_node_obj is not None
+
         # add as part
         self.__add_as_part_and_add_relationships(wbm_node = wbm_node,
                                                  ext_uuid = ext_uuid,
@@ -305,6 +287,18 @@ class WellboreMarkerFrame(BaseResqpy):
                                                  add_relationships = add_relationships)
 
         return wbm_node
+
+    def __get_wbm_node_title(self, marker):
+        """ Generate the title of the newly created wellbore marker object node."""
+
+        well_name = self.trajectory.well_name
+        for k, v in WellboreMarkerFrame.boundary_feature_dict.items():
+            if marker.marker_type in v:
+                boundary_feature = k
+                break
+        interp_title = self.model.title_for_root(root = self.model.root_for_uuid(uuid = marker.interpretation_uuid))
+        title = ' '.join([x for x in [well_name, boundary_feature, marker.marker_type, interp_title] if x is not None])
+        return title
 
     def __add_sub_elements_to_root_node(self, wbm_node):
         """Appends sub-elements to the WellboreMarkerFrame object's root node."""
