@@ -90,6 +90,7 @@ class PropertyCollection():
         ]  # list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
         #                                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                                   indexable_element, count, local_property_kind_uuid, const_value, points)
+        self.guessing = False
         if support is not None:
             self.model = support.model
             self.set_support(support = support)

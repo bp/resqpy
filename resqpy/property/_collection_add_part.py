@@ -107,6 +107,9 @@ def _add_part_to_dict_get_uom(collection, part, continuous, xml_node, trust_uom,
         if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
             uom = uom_node.text
         else:
+            if not collection.guess_warning:
+                collection.guess_warning = True
+                log.warning("Guessing unit of measure for one or more properties")
             uom = guess_uom(property_kind, minimum, maximum, collection.support, facet_type = facet_type, facet = facet)
     return uom
 

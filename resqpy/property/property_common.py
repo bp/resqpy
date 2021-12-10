@@ -369,7 +369,6 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
        this module currently only supports zero or one facet per property
     """
     crs_node, from_crs = _guess_uom_get_crs_info(support)
-    warnings.warn(f'Guessing unit of measure for property kind {property_kind}')
 
     if property_kind in ['rock volume', 'pore volume', 'volume', 'fluid volume']:
         return _guess_uom_volume(property_kind, from_crs, facet_type, facet)
