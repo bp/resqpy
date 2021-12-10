@@ -1,3 +1,5 @@
+"""Geologic time series"""
+
 import logging
 from .any_time_series_base_resqpy import AnyTimeSeries
 

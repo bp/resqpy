@@ -1,3 +1,5 @@
+"""Time series from nexus summary"""
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -39,6 +41,8 @@ def process_summary_entries(summary_entries, parent_model = None):
 
 
 def open_file(summary_file):
+    """opening the nexus summary file"""
+
     us_date_format = True
     summary_entries = []  # list of (time step no., cumulative time (days), date (dd/mm/yyyy))
 

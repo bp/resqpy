@@ -105,8 +105,7 @@ def test_timestamp(timestamp, example_model_and_crs):
     assert result is None
 
 
-@pytest.mark.parametrize('timestamp', [['2014-01-01T00:00:00.588Z',
-                                        '2015-02-02T00:00:00.588Z']])
+@pytest.mark.parametrize('timestamp', [['2014-01-01T00:00:00.588Z', '2015-02-02T00:00:00.588Z']])
 def test_valid_timestamp(timestamp, example_model_and_crs):
     # arrange
     model, crs = example_model_and_crs
@@ -118,8 +117,7 @@ def test_valid_timestamp(timestamp, example_model_and_crs):
     assert result == '2014-01-01T00:00:00.588Z'
 
 
-@pytest.mark.parametrize('timestamps', [['2014-01-01T00:00:00.588Z',
-                                         '2015-02-02T00:00:00.588Z']])
+@pytest.mark.parametrize('timestamps', [['2014-01-01T00:00:00.588Z', '2015-02-02T00:00:00.588Z']])
 def test_itr_timestamp(timestamps, example_model_and_crs):
     # arrange
     model, crs = example_model_and_crs
@@ -131,8 +129,7 @@ def test_itr_timestamp(timestamps, example_model_and_crs):
     assert list(result) == ['2014-01-01T00:00:00.588Z', '2015-02-02T00:00:00.588Z']
 
 
-@pytest.mark.parametrize('timestamps', [['2014-01-01T00:00:00.588Z',
-                                         '2015-02-02T00:00:00.588Z']])
+@pytest.mark.parametrize('timestamps', [['2014-01-01T00:00:00.588Z', '2015-02-02T00:00:00.588Z']])
 def test_index_timestamp(timestamps, example_model_and_crs):
     # arrange
     model, crs = example_model_and_crs
@@ -144,8 +141,7 @@ def test_index_timestamp(timestamps, example_model_and_crs):
     assert result == 0
 
 
-@pytest.mark.parametrize('timestamps', [['2014-01-01T00:00:00.588Z',
-                                         '2015-02-02T00:00:00.588Z']])
+@pytest.mark.parametrize('timestamps', [['2014-01-01T00:00:00.588Z', '2015-02-02T00:00:00.588Z']])
 def test_index_timestamp_not_present(timestamps, example_model_and_crs):
     # arrange
     model, crs = example_model_and_crs

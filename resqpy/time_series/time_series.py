@@ -21,8 +21,7 @@ from .time_series_any_time_series import TimeSeries
 
 
 def selected_time_series(full_series, indices_list, title = None):
-    """Returns a new TimeSeries or GeologicTimeSeries object with timestamps selected from the full series by a list of
-    indices."""
+    """Returns a new TimeSeries or GeologicTimeSeries object with timestamps selected from the full series by a list of indices."""
 
     if isinstance(full_series, TimeSeries):
         selected_ts = TimeSeries(full_series.model, title = title)

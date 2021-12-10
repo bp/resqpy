@@ -1,3 +1,5 @@
+"""Time series module"""
+
 __all__ = [
     'time_series', 'time_series_from_nexus_summary', 'time_duration', 'any_time_series_base_resqpy', 'TimeSeries'
 ]

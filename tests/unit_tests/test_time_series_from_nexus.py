@@ -11,6 +11,7 @@ def test_process_summary_entries_none():
     # assert
     assert result is None
 
+
 # (time step no., cumulative time (days), date (dd/mm/yyyy))
 
 
@@ -90,7 +91,7 @@ def test_process_summary_entries_incorrect_days():
 
 def test_time_series_from_nexus_summary_is_not_file(mocker):
     # arrange
-    is_file_mock = mocker.MagicMock(return_value=False)
+    is_file_mock = mocker.MagicMock(return_value = False)
     mocker.patch('os.path.isfile', is_file_mock)
     # log_warning_mock = mocker.MagicMock()
     # logging_mock = mocker.MagicMock()

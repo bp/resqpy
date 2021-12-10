@@ -18,8 +18,7 @@ def test_timestamp_before_duration(later_timestamp, later_timestamp_end):
     assert test_later_timestamp == test_later_timestamp_end
 
 
-@pytest.mark.parametrize('later_timestamp_end',
-                         ['2014-01-01T00:00:00.588'])
+@pytest.mark.parametrize('later_timestamp_end', ['2014-01-01T00:00:00.588'])
 def test_timestamp_iso(later_timestamp_end):
     # arrange
     test_later_timestamp = later_timestamp_end

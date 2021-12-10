@@ -1,3 +1,5 @@
+"""Any time series base resqpy"""
+
 import logging
 
 log = logging.getLogger(__name__)
