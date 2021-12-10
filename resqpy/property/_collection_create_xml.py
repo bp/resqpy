@@ -1,4 +1,4 @@
-"""_collection_create_xml.py: submodule containing functions for creating xml for a property collection."""
+"""Submodule containing functions for creating xml for a property collection."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_collection_create_xml.py version ' + version)
 
 import numpy as np
 

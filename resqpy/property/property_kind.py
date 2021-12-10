@@ -1,4 +1,4 @@
-"""property_kind.py: containing resqml propertykind class"""
+"""Containing resqml propertykind class"""
 
 version = '24th November 2021'
 
@@ -7,7 +7,6 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property_kind.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet

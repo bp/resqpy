@@ -1,4 +1,4 @@
-"""property_common.py: module containing common methods for properties"""
+"""Module containing common methods for properties"""
 import warnings
 import resqpy.property
 
@@ -7,7 +7,6 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property_common.py version ' + version)
 
 import numpy as np
 

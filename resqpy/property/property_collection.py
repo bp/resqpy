@@ -1,4 +1,4 @@
-"""propertycollection.py: class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property_collection.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma

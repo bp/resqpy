@@ -1,4 +1,4 @@
-"""well_log_collection.py: class for a collection of well logs"""
+"""Class for a collection of well logs"""
 
 version = '24th November 2021'
 
@@ -7,7 +7,6 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('well_log_collection.py version ' + version)
 
 from datetime import datetime
 

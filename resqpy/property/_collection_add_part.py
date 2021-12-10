@@ -1,4 +1,4 @@
-"""_collection_add_part.py: submodule containing functions for adding properties to a property collection."""
+"""Submodule containing functions for adding properties to a property collection."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_collection_add_part.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet

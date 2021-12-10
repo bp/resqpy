@@ -1,4 +1,4 @@
-"""grid_property_collection.py: class for a collection of grid properties"""
+"""Class for a collection of grid properties"""
 
 version = '24th November 2021'
 
@@ -511,7 +511,7 @@ class GridPropertyCollection(PropertyCollection):
                                                    data_free_of_comments = False,
                                                    use_binary = use_binary)
         except Exception:
-            log.exception('failed to import {} arrau from file {}'.format(keyword, file_name))
+            log.exception('failed to import {} array from file {}'.format(keyword, file_name))
             return None
 
         self.add_cached_array_to_imported_list(import_array,
