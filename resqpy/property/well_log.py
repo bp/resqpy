@@ -7,7 +7,7 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
+log.debug('well_log.py version ' + version)
 
 from .property_collection import PropertyCollection
 

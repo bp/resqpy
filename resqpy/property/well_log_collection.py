@@ -7,7 +7,7 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
+log.debug('well_log_collection.py version ' + version)
 
 from datetime import datetime
 

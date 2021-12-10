@@ -7,7 +7,7 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
+log.debug('string_lookup.py version ' + version)
 
 # import xml.etree.ElementTree as et
 

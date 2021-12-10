@@ -7,7 +7,7 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
+log.debug('well_interval_property_collection.py version ' + version)
 
 import pandas as pd
 from .property_collection import PropertyCollection

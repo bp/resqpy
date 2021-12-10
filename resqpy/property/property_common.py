@@ -7,7 +7,7 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
+log.debug('property_common.py version ' + version)
 
 import numpy as np
 

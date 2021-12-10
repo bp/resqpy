@@ -7,7 +7,7 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
+log.debug('property_collection.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma
