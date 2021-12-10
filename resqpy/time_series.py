@@ -1,4 +1,4 @@
-"""time_series.py: RESQML time series class."""
+"""RESQML time series classes."""
 
 version = '16th September 2021'
 
