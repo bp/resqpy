@@ -124,6 +124,7 @@ class Property(BaseResqpy):
                    string_lookup_uuid = None,
                    find_local_property_kind = True,
                    expand_const_arrays = False,
+                   dtype = None,
                    extra_metadata = {}):
         """Populates a new Property from a numpy array and metadata; NB. Writes data to hdf5 and adds part to model.
 
@@ -167,6 +168,7 @@ class Property(BaseResqpy):
               long as the property_kind is set to match the title of the appropriate local property kind object
            expand_const_arrays (boolean, default False): if True, and a const_value is given, the array will be fully
               expanded and written to the hdf5 file; the xml will then not indicate that it is constant
+           dtype (numpy dtype, optional): if present, the elemental data type to use when writing the array to hdf5
            extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
 
         returns:
@@ -212,7 +214,7 @@ class Property(BaseResqpy):
                             count = count,
                             points = points,
                             const_value = const_value)
-        prop.write_hdf5(expand_const_arrays = expand_const_arrays)
+        prop.write_hdf5(expand_const_arrays = expand_const_arrays, dtype = dtype)
         prop.create_xml(support_uuid = support_uuid,
                         time_series_uuid = time_series_uuid,
                         string_lookup_uuid = string_lookup_uuid,
@@ -386,8 +388,15 @@ class Property(BaseResqpy):
                                                           const_value = const_value,
                                                           points = points)
 
-    def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False):
+    def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None):
         """Writes the array data to the hdf5 file; not usually called directly.
+
+           file_name (str, optional): if present, the path of the hdf5 file to use; strongly recommended not to
+              set this argument
+           mode (str, default 'a'): 'a' or 'w' being the mode to open the hdf5 file in; strongly recommended to use 'a'
+           expand_const_arrays (bool, default False): if True and the array is a constant array then a fully populated
+              array is generated and stored (otherwise the constant value is held in xml and no hdf5 data is needed)
+           dtype (numpy dtype, optional): if present, the elemental data type to use when writing the array to hdf5
 
         notes:
            see the documentation for the convenience method from_array();
@@ -397,7 +406,8 @@ class Property(BaseResqpy):
             return
         self.collection.write_hdf5_for_imported_list(file_name = file_name,
                                                      mode = mode,
-                                                     expand_const_arrays = expand_const_arrays)
+                                                     expand_const_arrays = expand_const_arrays,
+                                                     dtype = dtype)
 
     def create_xml(self,
                    ext_uuid = None,
