@@ -68,7 +68,7 @@ class AnyTimeSeries(BaseResqpy):
         """
         return len(self.timestamps)
 
-    def timestamp(self, index, as_string=True):
+    def timestamp(self, index, as_string = True):
         """Returns an individual timestamp, indexed by its position in the series.
 
         arguments:
@@ -96,20 +96,20 @@ class AnyTimeSeries(BaseResqpy):
             stamp = resqpy.time_series.geologic_time_str(stamp)
         return stamp
 
-    def iter_timestamps(self, as_string=True):
+    def iter_timestamps(self, as_string = True):
         """Iterator over timestamps.
 
         :meta common:
         """
         for index in range(len(self.timestamps)):
-            yield self.timestamp(index, as_string=as_string)
+            yield self.timestamp(index, as_string = as_string)
 
-    def last_timestamp(self, as_string=True):
+    def last_timestamp(self, as_string = True):
         """Returns the last timestamp in the series.
 
         :meta common:
         """
-        return self.timestamp(-1, as_string=as_string) if self.timestamps else None
+        return self.timestamp(-1, as_string = as_string) if self.timestamps else None
 
     def index_for_timestamp(self, timestamp):
         """Returns the index for a given timestamp.
@@ -122,11 +122,11 @@ class AnyTimeSeries(BaseResqpy):
         """
         as_string = not isinstance(timestamp, int)
         for index in range(len(self.timestamps)):
-            if self.timestamp(index, as_string=as_string) == timestamp:
+            if self.timestamp(index, as_string = as_string) == timestamp:
                 return index
         return None
 
-    def create_xml(self, add_as_part=True, title=None, originator=None, reuse=True):
+    def create_xml(self, add_as_part = True, title = None, originator = None, reuse = True):
         """Create a RESQML time series xml node from a TimeSeries or GeologicTimeSeries object, optionally add as part.
 
         arguments:
@@ -149,7 +149,7 @@ class AnyTimeSeries(BaseResqpy):
             self.extra_metadata = {}
         self.extra_metadata['timeframe'] = self.timeframe
 
-        ts_node = super().create_xml(add_as_part=False, title=title, originator=originator)
+        ts_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
         for index in range(self.number_of_timestamps()):
             time_node = rqet.SubElement(ts_node, ns['resqml2'] + 'Time')
@@ -171,7 +171,7 @@ class AnyTimeSeries(BaseResqpy):
 
         return ts_node
 
-    def create_time_index(self, time_index, root=None, check_valid_index=True):
+    def create_time_index(self, time_index, root = None, check_valid_index = True):
         """Create a time index node, including time series reference, optionally add to root.
 
         arguments:
@@ -203,7 +203,7 @@ class AnyTimeSeries(BaseResqpy):
         index_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
         index_node.text = str(time_index)
 
-        self.model.create_time_series_ref(self.uuid, root=t_node)
+        self.model.create_time_series_ref(self.uuid, root = t_node)
 
         if root is not None:
             root.append(t_node)

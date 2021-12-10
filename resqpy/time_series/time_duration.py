@@ -10,12 +10,12 @@ class TimeDuration:
     """A thin wrapper around python's datetime timedelta objects (not a RESQML class)."""
 
     def __init__(self,
-                 days=None,
-                 hours=None,
-                 minutes=None,
-                 seconds=None,
-                 earlier_timestamp=None,
-                 later_timestamp=None):
+                 days = None,
+                 hours = None,
+                 minutes = None,
+                 seconds = None,
+                 earlier_timestamp = None,
+                 later_timestamp = None):
         """Create a TimeDuration object either from days and seconds or from a pair of timestamps."""
 
         # for negative durations, earlier_timestamp should be later than later_timestamp
@@ -40,7 +40,7 @@ class TimeDuration:
                 minutes = 0
             if seconds is None:
                 seconds = 0
-            self.duration = dt.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
+            self.duration = dt.timedelta(days = days, hours = hours, minutes = minutes, seconds = seconds)
 
     def timestamp_after_duration(self, earlier_timestamp):
         """Create a new timestamp from this duration and an earlier timestamp."""

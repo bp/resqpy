@@ -1,5 +1,5 @@
 import logging
-from.any_time_series_base_resqpy import AnyTimeSeries
+from .any_time_series_base_resqpy import AnyTimeSeries
 
 log = logging.getLogger(__name__)
 log.debug('resqml_time_series.py version ')
@@ -10,11 +10,11 @@ class GeologicTimeSeries(AnyTimeSeries):
 
     def __init__(self,
                  parent_model,
-                 uuid=None,
-                 time_series_root=None,
-                 title=None,
-                 originator=None,
-                 extra_metadata=None):
+                 uuid = None,
+                 time_series_root = None,
+                 title = None,
+                 originator = None,
+                 extra_metadata = None):
         """Create a GeologicTimeSeries object, either from a time series node in parent model, or empty.
 
         arguments:
@@ -38,17 +38,17 @@ class GeologicTimeSeries(AnyTimeSeries):
         """
         self.timeframe = 'geologic'
         self.timestamps = []  # ordered list of (large negative) ints being year offsets from present
-        super().__init__(model=parent_model,
-                         uuid=uuid,
-                         title=title,
-                         originator=originator,
-                         extra_metadata=extra_metadata,
-                         root_node=time_series_root)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata,
+                         root_node = time_series_root)
         if self.extra_metadata is not None and self.extra_metadata.get('timeframe') == 'human':
             raise ValueError('attempt to instantiate a geologic time series for a human timeframe time series')
 
     @classmethod
-    def from_year_list(cls, parent_model, year_list, title=None, originator=None, extra_metadata={}):
+    def from_year_list(cls, parent_model, year_list, title = None, originator = None, extra_metadata = {}):
         """Creates a new GeologicTimeSeries from a list of large integers representing years before present.
 
         note:
@@ -67,7 +67,7 @@ class GeologicTimeSeries(AnyTimeSeries):
             else:
                 negative_list.append(year)
 
-        gts = cls(parent_model, title=title, originator=originator, extra_metadata=extra_metadata)
+        gts = cls(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
 
         gts.timestamps = sorted(negative_list)
 

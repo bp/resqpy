@@ -5,10 +5,10 @@ log.debug('resqml_time_series.py version ')
 
 import datetime as dt
 import os
-from.time_series_any_time_series import TimeSeries
+from .time_series_any_time_series import TimeSeries
 
 
-def process_summary_entries(summary_entries, parent_model=None):
+def process_summary_entries(summary_entries, parent_model = None):
     """Create a TimeSeries object based on time steps reported in a nexus summary file (.sum)."""
     if len(summary_entries) == 0:
         return None  # no entries extracted from summary file, could raise error?
@@ -17,9 +17,9 @@ def process_summary_entries(summary_entries, parent_model=None):
         tz_date = summary_entries[0][2]
         summary_entries.pop(0)
     else:  # back calculate time zero from first entry
-        delta = dt.timedelta(days=summary_entries[0][1])
+        delta = dt.timedelta(days = summary_entries[0][1])
         tz_date = summary_entries[0][2] - delta
-    time_series = TimeSeries(parent_model=parent_model, first_timestamp=tz_date.isoformat() + 'T00:00:00Z')
+    time_series = TimeSeries(parent_model = parent_model, first_timestamp = tz_date.isoformat() + 'T00:00:00Z')
     last_timestep = 0
     last_cumulative_time = 0.0
     for entry in summary_entries:
@@ -69,7 +69,7 @@ def open_file(summary_file):
     return summary_entries
 
 
-def time_series_from_nexus_summary(summary_file, parent_model=None):
+def time_series_from_nexus_summary(summary_file, parent_model = None):
     """Create a TimeSeries object based on time steps reported in a nexus summary file (.sum)."""
 
     if not summary_file:

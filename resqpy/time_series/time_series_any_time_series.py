@@ -5,8 +5,8 @@ log.debug('resqml_time_series.py version ')
 
 import datetime as dt
 import warnings
-from.any_time_series_base_resqpy import AnyTimeSeries
-from.time_duration import TimeDuration
+from .any_time_series_base_resqpy import AnyTimeSeries
+from .time_duration import TimeDuration
 
 
 class TimeSeries(AnyTimeSeries):
@@ -19,16 +19,16 @@ class TimeSeries(AnyTimeSeries):
 
     def __init__(self,
                  parent_model,
-                 uuid=None,
-                 time_series_root=None,
-                 first_timestamp=None,
-                 daily=None,
-                 monthly=None,
-                 quarterly=None,
-                 yearly=None,
-                 title=None,
-                 originator=None,
-                 extra_metadata=None):
+                 uuid = None,
+                 time_series_root = None,
+                 first_timestamp = None,
+                 daily = None,
+                 monthly = None,
+                 quarterly = None,
+                 yearly = None,
+                 title = None,
+                 originator = None,
+                 extra_metadata = None):
         """Create a TimeSeries object, either from a time series node in parent model, or from given data.
 
         arguments:
@@ -77,25 +77,25 @@ class TimeSeries(AnyTimeSeries):
             if yearly is not None:
                 for _ in range(yearly):
                     self.extend_by_days(365)  # could use 360
-        super().__init__(model=parent_model,
-                         uuid=uuid,
-                         title=title,
-                         originator=originator,
-                         extra_metadata=extra_metadata,
-                         root_node=time_series_root)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata,
+                         root_node = time_series_root)
         if self.extra_metadata is not None and self.extra_metadata.get('timeframe') == 'geologic':
             raise ValueError('attempt to instantiate a human timeframe time series for a geologic time series')
 
-    def is_equivalent(self, other_ts, tol_seconds=1):
+    def is_equivalent(self, other_ts, tol_seconds = 1):
         """Returns True if the this timestep series is essentially identical to the other; otherwise False."""
 
         super_equivalence = super().is_equivalent(other_ts)
         if super_equivalence is not None:
             return super_equivalence
-        tolerance = TimeDuration(seconds=tol_seconds)
+        tolerance = TimeDuration(seconds = tol_seconds)
         for t_index in range(self.number_of_timestamps()):
-            diff = TimeDuration(earlier_timestamp=self.timestamps[t_index],
-                                later_timestamp=other_ts.timestamps[t_index])
+            diff = TimeDuration(earlier_timestamp = self.timestamps[t_index],
+                                later_timestamp = other_ts.timestamps[t_index])
             if abs(diff.duration) > tolerance.duration:
                 return False
         return True
@@ -137,8 +137,8 @@ class TimeSeries(AnyTimeSeries):
         if before == len(self.timestamps) - 1 or self.timestamps[before] == timestamp:
             return before
         after = before + 1
-        early_delta = TimeDuration(earlier_timestamp=self.timestamps[before], later_timestamp=timestamp)
-        later_delta = TimeDuration(earlier_timestamp=timestamp, later_timestamp=self.timestamps[after])
+        early_delta = TimeDuration(earlier_timestamp = self.timestamps[before], later_timestamp = timestamp)
+        later_delta = TimeDuration(earlier_timestamp = timestamp, later_timestamp = self.timestamps[after])
         return before if early_delta.duration <= later_delta.duration else after
 
     def duration_between_timestamps(self, earlier_index, later_index):
@@ -148,8 +148,8 @@ class TimeSeries(AnyTimeSeries):
         """
         if earlier_index < 0 or later_index >= len(self.timestamps) or later_index < earlier_index:
             return None
-        return TimeDuration(earlier_timestamp=self.timestamps[earlier_index],
-                            later_timestamp=self.timestamps[later_index])
+        return TimeDuration(earlier_timestamp = self.timestamps[earlier_index],
+                            later_timestamp = self.timestamps[later_index])
 
     def days_between_timestamps(self, earlier_index, later_index):
         """Returns the number of whole days between a pair of timestamps, as an integer."""
@@ -189,7 +189,7 @@ class TimeSeries(AnyTimeSeries):
 
     # NB: Following functions modify the time series, which is dangerous if the series is in use by a model
     # Could check for relationships involving the time series and disallow changes if any found?
-    def add_timestamp(self, new_timestamp, allow_insertion=False):
+    def add_timestamp(self, new_timestamp, allow_insertion = False):
         """Inserts a new timestamp into the time series."""
         # todo: check that new_timestamp is in valid format (iso format + 'Z')
         if allow_insertion:
@@ -214,7 +214,7 @@ class TimeSeries(AnyTimeSeries):
 
     def extend_by_days(self, days):
         """Adds a timestamp to the end of the series, at a duration of days beyond the last timestamp."""
-        duration = TimeDuration(days=days)
+        duration = TimeDuration(days = days)
         self.extend_by_duration(duration)
 
     def datetimes(self):
