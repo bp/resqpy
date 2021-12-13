@@ -1,16 +1,14 @@
-"""Any time series base resqpy"""
+"""Code common to resqpy TimeSeries and GeologicTimeSeries classes."""
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('resqml_time_series.py version ')
 
+import resqpy.time_series._functions as tsf
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-# from.time_series import geologic_time_str
-import resqpy
 
 
 class AnyTimeSeries(BaseResqpy):
@@ -95,7 +93,7 @@ class AnyTimeSeries(BaseResqpy):
             return None
         stamp = self.timestamps[index]
         if as_string and isinstance(stamp, int):
-            stamp = resqpy.time_series.geologic_time_str(stamp)
+            stamp = tsf.geologic_time_str(stamp)
         return stamp
 
     def iter_timestamps(self, as_string = True):

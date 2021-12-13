@@ -1,13 +1,13 @@
 import datetime
 
-from resqpy.time_series.time_series_from_nexus_summary import process_summary_entries, time_series_from_nexus_summary
+from resqpy.time_series._from_nexus_summary import _process_summary_entries, time_series_from_nexus_summary
 
 
 def test_process_summary_entries_none():
     # arrange
     summary_entries = []
     # act
-    result = process_summary_entries(summary_entries)
+    result = _process_summary_entries(summary_entries)
     # assert
     assert result is None
 
@@ -19,7 +19,7 @@ def test_process_summary_entries_first():
     # arrange
     summary_entries = [(0, 1, datetime.datetime.strptime('24052010', '%d%m%Y').date())]
     # act
-    result = process_summary_entries(summary_entries)
+    result = _process_summary_entries(summary_entries)
     # assert
     assert len(result.timestamps) == 1
     assert result.timestamps[0] == '2010-05-24T00:00:00Z'
@@ -29,7 +29,7 @@ def test_process_summary_entries_delta():
     # arrange
     summary_entries = [(1, 1, datetime.datetime.strptime('24052010', '%d%m%Y').date())]
     # act
-    result = process_summary_entries(summary_entries)
+    result = _process_summary_entries(summary_entries)
     # assert
     assert len(result.timestamps) == 2
     assert result.timestamps[1] == '2010-05-24T00:00:00Z'
@@ -41,7 +41,7 @@ def test_process_summary_entries_out_of_sequence():
     summary_entries = [(0, 1, datetime.datetime.strptime('24052010', '%d%m%Y').date()),
                        (0, 1, datetime.datetime.strptime('24052010', '%d%m%Y').date())]
     # act
-    result = process_summary_entries(summary_entries)
+    result = _process_summary_entries(summary_entries)
     # assert
     assert len(result.timestamps) == 1
     assert result.timestamps[0] == '2010-05-24T00:00:00Z'
@@ -53,7 +53,7 @@ def test_process_summary_entries_out_of_sequence_v2():
                        (3, 4, datetime.datetime.strptime('28052010', '%d%m%Y').date()),
                        (2, 2, datetime.datetime.strptime('26052010', '%d%m%Y').date())]
     # act
-    result = process_summary_entries(summary_entries)
+    result = _process_summary_entries(summary_entries)
     # assert
     assert len(result.timestamps) == 4
     assert result.timestamps[0] == '2010-05-23T00:00:00Z'
@@ -67,7 +67,7 @@ def test_process_summary_entries_in_sequence():
     summary_entries = [(1, 1, datetime.datetime.strptime('24052010', '%d%m%Y').date()),
                        (3, 4, datetime.datetime.strptime('28052010', '%d%m%Y').date())]
     # act
-    result = process_summary_entries(summary_entries)
+    result = _process_summary_entries(summary_entries)
     # assert
     assert len(result.timestamps) == 4
     assert result.timestamps[0] == '2010-05-23T00:00:00Z'
@@ -81,7 +81,7 @@ def test_process_summary_entries_incorrect_days():
     summary_entries = [(1, 1, datetime.datetime.strptime('24052010', '%d%m%Y').date()),
                        (2, 0, datetime.datetime.strptime('28052010', '%d%m%Y').date())]
     # act
-    result = process_summary_entries(summary_entries)
+    result = _process_summary_entries(summary_entries)
     # assert
     assert len(result.timestamps) == 3
     assert result.timestamps[0] == '2010-05-23T00:00:00Z'

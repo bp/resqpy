@@ -1,13 +1,13 @@
-"""Geologic time series"""
+"""Geologic time series."""
 
 import logging
-from .any_time_series_base_resqpy import AnyTimeSeries
 
 log = logging.getLogger(__name__)
-log.debug('resqml_time_series.py version ')
+
+import resqpy.time_series._any_time_series as ats
 
 
-class GeologicTimeSeries(AnyTimeSeries):
+class GeologicTimeSeries(ats.AnyTimeSeries):
     """Class for RESQML Time Series using only year offsets (for geological time frames)."""
 
     def __init__(self,

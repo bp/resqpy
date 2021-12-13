@@ -1,14 +1,13 @@
-"""Any time series"""
+"""TimeSeries class handling normal (non-geological) time series."""
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('resqml_time_series.py version ')
 
 import datetime as dt
 import warnings
-from .any_time_series_base_resqpy import AnyTimeSeries
-from .time_duration import TimeDuration
+from ._any_time_series import AnyTimeSeries
+from ._time_duration import TimeDuration
 
 
 class TimeSeries(AnyTimeSeries):

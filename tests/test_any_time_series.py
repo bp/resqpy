@@ -1,4 +1,4 @@
-from resqpy.time_series.any_time_series_base_resqpy import AnyTimeSeries
+from resqpy.time_series._any_time_series import AnyTimeSeries
 import uuid
 import pytest
 

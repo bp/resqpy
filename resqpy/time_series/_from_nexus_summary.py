@@ -1,17 +1,41 @@
-"""Time series from nexus summary"""
+"""Function for creating a time series from a Nexus summary file."""
+
+# Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('resqml_time_series.py version ')
 
 import datetime as dt
 import os
-from .time_series_any_time_series import TimeSeries
+from ._time_series import TimeSeries
 
 
-def process_summary_entries(summary_entries, parent_model = None):
-    """Create a TimeSeries object based on time steps reported in a nexus summary file (.sum)."""
+def time_series_from_nexus_summary(summary_file, parent_model = None):
+    """Create a TimeSeries object based on time steps reported in a Nexus summary file (.sum).
+
+    note:
+        this function does not create the xml for the new TimeSeries, nor add it as a part to the parent model
+    """
+
+    if not summary_file:
+        return None
+    if not os.path.isfile(summary_file):
+        log.warning('Summary file not found: ' + summary_file)
+        return None
+    try:
+
+        summary_entries = _open_file(summary_file)
+
+        _process_summary_entries(summary_entries, parent_model)
+
+    except Exception:
+        log.exception('failed to create TimeSeries object from summary file: ' + summary_file)
+    return None
+
+
+def _process_summary_entries(summary_entries, parent_model = None):
+    """Create a TimeSeries object based on time steps reported in a Nexus summary file (.sum)."""
     if len(summary_entries) == 0:
         return None  # no entries extracted from summary file, could raise error?
     summary_entries.sort()
@@ -40,8 +64,8 @@ def process_summary_entries(summary_entries, parent_model = None):
     return time_series
 
 
-def open_file(summary_file):
-    """Opening the nexus summary file"""
+def _open_file(summary_file):
+    """Opens the Nexus summary file."""
 
     us_date_format = True
     summary_entries = []  # list of (time step no., cumulative time (days), date (dd/mm/yyyy))
@@ -71,22 +95,3 @@ def open_file(summary_file):
                 date = dt.date(int(date_str[-4:]), int(date_str[-7:-5]), int(date_str[:-8]))
             summary_entries.append((ts_number, time_in_days, date))
     return summary_entries
-
-
-def time_series_from_nexus_summary(summary_file, parent_model = None):
-    """Create a TimeSeries object based on time steps reported in a nexus summary file (.sum)."""
-
-    if not summary_file:
-        return None
-    if not os.path.isfile(summary_file):
-        log.warning('Summary file not found: ' + summary_file)
-        return None
-    try:
-
-        summary_entries = open_file(summary_file)
-
-        process_summary_entries(summary_entries, parent_model)
-
-    except Exception:
-        log.exception('failed to create TimeSeries object from summary file: ' + summary_file)
-    return None

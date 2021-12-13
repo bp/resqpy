@@ -1,8 +1,4 @@
-"""time_series.py: RESQML time series class."""
-
-version = '16th September 2021'
-
-# Nexus is a registered trademark of the Halliburton Company
+"""Auxilliary functions for working with time series."""
 
 # At present, no time zone information is handled
 
@@ -13,15 +9,15 @@ version = '16th September 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('resqml_time_series.py version ' + version)
 
 import resqpy.olio.xml_et as rqet
-from .geologic_time_series_any_time_series import GeologicTimeSeries
-from .time_series_any_time_series import TimeSeries
 
 
 def selected_time_series(full_series, indices_list, title = None):
     """Returns a new TimeSeries or GeologicTimeSeries object with timestamps selected from the full series by a list of indices."""
+
+    from resqpy.time_series._geologic_time_series import GeologicTimeSeries
+    from resqpy.time_series._time_series import TimeSeries
 
     if isinstance(full_series, TimeSeries):
         selected_ts = TimeSeries(full_series.model, title = title)
@@ -65,6 +61,9 @@ def time_series_from_list(timestamp_list, parent_model = None, title = None):
        timestamps in the list should be in the correct string format for human timeframe series,
        or large negative integers for geologic timeframe series
     """
+
+    from resqpy.time_series._geologic_time_series import GeologicTimeSeries
+    from resqpy.time_series._time_series import TimeSeries
 
     assert (len(timestamp_list) > 0)
     sorted_timestamps = sorted(timestamp_list)
@@ -150,6 +149,9 @@ def timeframe_for_time_series_uuid(model, uuid):
 
 def any_time_series(parent_model, uuid):
     """Returns a resqpy TimeSeries or GeologicTimeSeries object for an existing RESQML time series with a given uuid."""
+
+    from resqpy.time_series._geologic_time_series import GeologicTimeSeries
+    from resqpy.time_series._time_series import TimeSeries
 
     timeframe = timeframe_for_time_series_uuid(parent_model, uuid)
     if timeframe == 'human':

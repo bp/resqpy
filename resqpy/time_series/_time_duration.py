@@ -3,7 +3,6 @@
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('resqml_time_series.py version ')
 
 import datetime as dt
 
