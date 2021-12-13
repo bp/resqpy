@@ -51,11 +51,11 @@ def add_surfaces(
 
     rq_class = _get_rq_class(rq_class)
 
-    model, crs_uuid, crs_root, h5_mode, ext_uuid, hdf5_file = _get_model_details(epc_file, crs_uuid, ext_uuid)
+    model, crs_uuid, h5_mode, ext_uuid, hdf5_file = _get_model_details(epc_file, crs_uuid, ext_uuid)
 
     for surf_file in surface_file_list:
         model = _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
-                                    crs_root, rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features,
+                                    rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features,
                                     ext_uuid)
 
     # mark model as modified
@@ -68,7 +68,7 @@ def add_surfaces(
     return model
 
 
-def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid, crs_root,
+def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
                         rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features, ext_uuid):
     _, short_name = os.path.split(surf_file)
     dot = short_name.rfind('.')
@@ -140,7 +140,6 @@ def _get_model_details(epc_file, crs_uuid, ext_uuid):
         assert model.crs_root is not None, 'no crs uuid given and no default in model'
         crs_uuid = rqet.uuid_for_part_root(model.crs_root)
         assert crs_uuid is not None
-    crs_root = model.root_for_uuid(crs_uuid)
 
     if ext_uuid is None:
         ext_uuid = model.h5_uuid()
@@ -158,4 +157,4 @@ def _get_model_details(epc_file, crs_uuid, ext_uuid):
     # append to hdf5 file using arrays from Surface object's patch(es)
     log.info('will append to hdf5 file: ' + hdf5_file)
 
-    return model, crs_uuid, crs_root, h5_mode, ext_uuid, hdf5_file
+    return model, crs_uuid, h5_mode, ext_uuid, hdf5_file
