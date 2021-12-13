@@ -55,8 +55,7 @@ def add_surfaces(
 
     for surf_file in surface_file_list:
         model = _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
-                                    rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features,
-                                    ext_uuid)
+                                    rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features, ext_uuid)
 
     # mark model as modified
     model.set_modified()
@@ -68,8 +67,8 @@ def add_surfaces(
     return model
 
 
-def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
-                        rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features, ext_uuid):
+def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid, rq_class,
+                        hdf5_file, h5_mode, make_horizon_interpretations_and_features, ext_uuid):
     _, short_name = os.path.split(surf_file)
     dot = short_name.rfind('.')
     if dot > 0:
