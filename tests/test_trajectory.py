@@ -38,8 +38,7 @@ def test_Trajectory_load_from_xml(example_model_and_crs):
                                         data_frame = source_dataframe,
                                         well_name = well_name,
                                         md_datum = datum,
-                                        length_uom = 'm'
-                                        )
+                                        length_uom = 'm')
 
     # --------- Act ----------
     # Save to disk
