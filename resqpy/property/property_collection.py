@@ -1,4 +1,4 @@
-"""propertycollection.py: class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma
@@ -90,6 +89,7 @@ class PropertyCollection():
         ]  # list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
         #                                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                                   indexable_element, count, local_property_kind_uuid, const_value, points)
+        self.guess_warning = False
         if support is not None:
             self.model = support.model
             self.set_support(support = support)
