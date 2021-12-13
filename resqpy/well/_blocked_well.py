@@ -1044,15 +1044,13 @@ class BlockedWell(BaseResqpy):
                                                                      well_name = well_name,
                                                                      grid_name = grid_name)
 
-                self.create_md_datum_and_trajectory(
-                    grid,
-                    trajectory_mds,
-                    trajectory_points,
-                    length_uom,
-                    well_name,
-                    set_depth_zero = True,
-                    set_tangent_vectors = False
-                )  # this is causing issues as the knot_count for the trajectory object is None and so cannot test that knot_count > 1
+                self.create_md_datum_and_trajectory(grid,
+                                                    trajectory_mds,
+                                                    trajectory_points,
+                                                    length_uom,
+                                                    well_name,
+                                                    set_depth_zero = True,
+                                                    set_tangent_vectors = True)
 
                 self.node_count = len(trajectory_mds)
                 self.node_mds = np.array(trajectory_mds)

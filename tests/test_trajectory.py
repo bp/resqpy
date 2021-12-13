@@ -198,7 +198,7 @@ def test_load_from_ascii_file(example_model_and_crs):
             # Create a trajectory from the csv file
             with pytest.raises(Exception) as excinfo:
                 trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
-                                                               deviation_survey_file = trajectory_data_file_path,
+                                                               ascii_trajectory_file = trajectory_data_file_path,
                                                                length_uom = 'm',
                                                                md_datum = datum)
 
@@ -209,7 +209,7 @@ def test_load_from_ascii_file(example_model_and_crs):
             # --------- Act ----------
             # Create a trajectory from the csv file
             trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
-                                                           deviation_survey_file = trajectory_data_file_path,
+                                                           ascii_trajectory_file = trajectory_data_file_path,
                                                            well_name = well_name,
                                                            length_uom = 'm',
                                                            md_datum = datum)
