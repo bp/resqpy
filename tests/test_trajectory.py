@@ -38,7 +38,8 @@ def test_Trajectory_load_from_xml(example_model_and_crs):
                                         data_frame = source_dataframe,
                                         well_name = well_name,
                                         md_datum = datum,
-                                        length_uom = 'm')
+                                        length_uom = 'm'
+                                        )
 
     # --------- Act ----------
     # Save to disk
@@ -50,7 +51,7 @@ def test_Trajectory_load_from_xml(example_model_and_crs):
 
     # Reload from disk
     model2 = Model(epc_file = epc_path)
-    trajectory2 = resqpy.well.Trajectory(model2, uuid = trajectory_uuid)
+    trajectory2 = resqpy.well.Trajectory(model2, uuid = trajectory_uuid, set_tangent_vectors = True)
 
     # --------- Assert --------------
     # Check all attributes were loaded from disk correctly
