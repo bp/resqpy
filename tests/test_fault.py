@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 import pytest
 from numpy.testing import assert_array_almost_equal
 
@@ -35,9 +36,9 @@ def test_add_connection_set_and_tmults(example_model_with_properties, test_data_
     for fault in faults:
         metadata = rqet.load_metadata_from_xml(reload_model.root_for_part(fault))
         title = reload_model.citation_title_for_part(fault)
-        assert metadata["Transmissibility multiplier"] == str(
-            float(expected_mult[title])
-        ), f'Expected mult for fault {title} to be {float(expected_mult[title])}, found {metadata["Transmissibility multiplier"]}'
+        expected_str = str(float(expected_mult[title]))
+        assert metadata["Transmissibility multiplier"] == expected_str,  \
+            f'Expected mult for fault {title} to be {expected_str}, found {metadata["Transmissibility multiplier"]}'
 
     # check that a transmissibility multiplier property has been created
     gcs = rqf.GridConnectionSet(reload_model, uuid = gcs_uuid, find_properties = True)
@@ -61,7 +62,7 @@ def test_add_connection_set_and_tmults(example_model_with_properties, test_data_
 
 def test_gcs_property_inheritance(tmp_path):
 
-    epc = os.path.join(tmp_path)
+    epc = os.path.join(tmp_path, 'gcs_prop_inherit.epc')
 
     model = rq.Model(epc, new_epc = True, create_basics = True, create_hdf5_ext = True)
 
@@ -143,9 +144,173 @@ def test_gcs_property_inheritance(tmp_path):
     np.seterr(**restore)
 
 
-# no longer a failure mode
-# def test_add_connection_set_and_tmults_fails(example_model_with_properties, test_data_path, include = 'fault_3.inc'):
-#   model = example_model_with_properties
-#   inc_list = [os.path.join(test_data_path, include)]
-#   with pytest.raises(NotImplementedError):
-#      rqf.add_connection_set_and_tmults(model, inc_list)
+def test_pinchout_and_k_gap_gcs(tmp_path):
+
+    epc = os.path.join(tmp_path, 'gcs_pinchout_k_gap.epc')
+    model = rq.new_model(epc)
+
+    # create a grid
+    g = grr.RegularGrid(model, (5, 5, 5), dxyz = (100.0, 100.0, 10.0), as_irregular_grid = True)
+    # patch points to generate a pinchout
+    p = g.points_cached
+    assert p.shape == (6, 6, 6, 3)
+    p[2, :3, :3] = p[1, :3, :3]
+    # convert one layer to a K gap with pinchout
+    p[4, 3:, 3:] = p[3, 3:, 3:]
+    g.nk -= 1
+    g.extent_kji = np.array((g.nk, g.nj, g.ni), dtype = int)
+    g.k_gaps = 1
+    g.k_gap_after_array = np.zeros(g.nk - 1, dtype = bool)
+    g.k_gap_after_array[2] = True
+    g._set_k_raw_index_array()
+    g.write_hdf5()
+    g.create_xml(title = 'pinchout k gap grid')
+    model.store_epc()
+
+    # reload the grid
+    model = rq.Model(epc)
+    grid = model.grid()
+    assert grid is not None
+    assert grid.k_gaps == 1
+    assert tuple(grid.extent_kji) == (4, 5, 5)
+
+    # create a pinchout connection set
+    po_gcs = rqf.pinchout_connection_set(grid)
+    assert po_gcs is not None
+    po_gcs.write_hdf5()
+    po_gcs.create_xml()
+    po_uuid = po_gcs.uuid
+
+    # create a K gap connection set
+    kg_gcs = rqf.k_gap_connection_set(grid)
+    assert kg_gcs is not None
+    kg_gcs.write_hdf5()
+    kg_gcs.create_xml()
+    kg_uuid = kg_gcs.uuid
+
+    model.store_epc()
+
+    # re-open the model and load the connection sets
+    model = rq.Model(epc)
+    po_gcs = rqf.GridConnectionSet(model, uuid = po_uuid)
+    assert po_gcs is not None
+    po_gcs.cache_arrays()
+    kg_gcs = rqf.GridConnectionSet(model, uuid = kg_uuid)
+    assert kg_gcs is not None
+    kg_gcs.cache_arrays()
+
+    # check face pairs in the pinchout connection set
+    assert po_gcs.count == 4
+    assert po_gcs.cell_index_pairs.shape == (4, 2)
+    assert po_gcs.face_index_pairs.shape == (4, 2)
+    assert np.all(po_gcs.cell_index_pairs[:, 0] != po_gcs.cell_index_pairs[:, 1])
+    assert np.all(po_gcs.face_index_pairs[:, 0] != po_gcs.cell_index_pairs[:, 1])
+    assert np.all(np.logical_or(po_gcs.face_index_pairs == 0, po_gcs.face_index_pairs == 1))
+    for cell in po_gcs.cell_index_pairs.flatten():
+        assert cell in [0, 1, 5, 6, 50, 51, 55, 56]
+    assert np.all(np.abs(po_gcs.cell_index_pairs[:, 1] - po_gcs.cell_index_pairs[:, 0]) == 50)
+
+    # check face pairs in K gap connection set
+    assert kg_gcs.count == 4
+    assert kg_gcs.cell_index_pairs.shape == (4, 2)
+    assert kg_gcs.face_index_pairs.shape == (4, 2)
+    assert np.all(kg_gcs.cell_index_pairs[:, 0] != kg_gcs.cell_index_pairs[:, 1])
+    assert np.all(kg_gcs.face_index_pairs[:, 0] != kg_gcs.cell_index_pairs[:, 1])
+    assert np.all(np.logical_or(kg_gcs.face_index_pairs == 0, kg_gcs.face_index_pairs == 1))
+    for cell in kg_gcs.cell_index_pairs.flatten():
+        assert cell in [74, 73, 69, 68, 99, 98, 94, 93]
+    assert np.all(np.abs(kg_gcs.cell_index_pairs[:, 1] - kg_gcs.cell_index_pairs[:, 0]) == 25)
+
+    # test compact indices method
+    ci = po_gcs.compact_indices()
+    assert ci.shape == (4, 2)
+    for cf in ci.flatten():
+        assert cf in [1, 7, 31, 37, 300, 306, 330, 336]
+    assert np.all(np.abs(ci[:, 1] - ci[:, 0]) == 299)
+
+    # test write simulator method
+    files = ('fault_ff.dat', 'fault_tf.dat', 'fault_ft.dat')
+    both_sides = (False, True, False)
+    minus = (False, False, True)
+    for filename, inc_both_sides, use_minus in zip(files, both_sides, minus):
+        dat_path = os.path.join(tmp_path, filename)
+        po_gcs.write_simulator(dat_path, include_both_sides = inc_both_sides, use_minus = use_minus)
+        assert os.path.exists(dat_path)
+
+
+def test_two_fault_gcs(tmp_path):
+
+    epc = os.path.join(tmp_path, 'two_fault.epc')
+    model = rq.new_model(epc)
+
+    # create a grid
+    g = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0))
+    g.create_xml()
+
+    # create an empty grid connection set
+    gcs = rqf.GridConnectionSet(model, grid = g)
+
+    # prepare two named faults as a dataframe
+    df = pd.DataFrame(columns = ['name', 'face', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult'])
+    df = df.append({
+        'name': 'F1',
+        'face': 'I+',
+        'i1': 1,
+        'i2': 1,
+        'j1': 0,
+        'j2': 3,
+        'k1': 0,
+        'k2': 4,
+        'mult': 0.1
+    },
+                   ignore_index = True)
+    df = df.append({
+        'name': 'F2',
+        'face': 'J-',
+        'i1': 0,
+        'i2': 2,
+        'j1': 2,
+        'j2': 2,
+        'k1': 0,
+        'k2': 4,
+        'mult': 0.05
+    },
+                   ignore_index = True)
+
+    # set grid connection set from dataframe
+    gcs.set_pairs_from_faces_df(df,
+                                create_organizing_objects_where_needed = True,
+                                create_mult_prop = True,
+                                fault_tmult_dict = None,
+                                one_based_indexing = False)
+
+    # save the grid connection set
+    gcs.write_hdf5()
+    gcs.create_xml(title = 'two fault gcs')
+    gcs_uuid = gcs.uuid
+    model.store_epc()
+
+    # re-open the model and check the gcs
+    model = rq.Model(epc)
+    gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+    assert gcs is not None
+    assert gcs.number_of_features() == 2
+    feature_names = gcs.list_of_feature_names()
+    assert len(feature_names) == 2
+    assert 'F1' in feature_names and 'F2' in feature_names
+    fault_names = gcs.list_of_fault_names()
+    assert fault_names == feature_names
+    for fi in (0, 1):
+        assert gcs.feature_name_for_feature_index(fi) in ('F1', 'F2')
+    assert gcs.feature_name_for_feature_index(0) != gcs.feature_name_for_feature_index(1)
+    fi, f_uuid = gcs.feature_index_and_uuid_for_fault_name('F1')
+    assert fi is not None and fi in (0, 1)
+    assert f_uuid is not None
+    assert gcs.fault_name_for_feature_index(fi) == 'F1'
+    assert gcs.feature_index_for_cell_face((1, 1, 1), 0, 1) is None
+    fi_a = gcs.feature_index_for_cell_face((1, 1, 1), 2, 1)
+    assert fi_a in (0, 1)
+    fi_b = gcs.feature_index_for_cell_face((1, 1, 1), 1, 1)
+    assert fi_b in (0, 1)
+    assert fi_a != fi_b
+    gcs.rework_face_pairs()

@@ -1,4 +1,4 @@
-"""Units of measure module."""
+"""Units of measure."""
 
 import json
 import warnings

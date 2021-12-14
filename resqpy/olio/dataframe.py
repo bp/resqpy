@@ -1,8 +1,8 @@
 """dataframe.py: classes for storing and retrieving dataframes as RESQML objects.
 
-   note that this module uses the obj_Grid2dRepresentation class in a way that was not envisaged
-   when the RESQML standard was defined; software that does not use resqpy is unlikely to be
-   able to do much with data stored in this way
+Note that this module uses the obj_Grid2dRepresentation class in a way that was not envisaged
+when the RESQML standard was defined; software that does not use resqpy is unlikely to be
+able to do much with data stored in this way
 """
 
 version = '6th May 2021'

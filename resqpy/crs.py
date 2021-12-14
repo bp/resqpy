@@ -1,6 +1,6 @@
-"""crs.py: RESQML coordinate reference system module."""
+"""RESQML coordinate reference systems."""
 
-version = '5th July 2021'
+version = '29th November 2021'
 
 import logging
 
@@ -30,6 +30,8 @@ class Crs(BaseResqpy):
 
     @property
     def resqml_type(self):
+        """Returns the RESQML class for this crs."""
+
         return 'LocalTime3dCrs' if hasattr(self, 'time_units') and self.time_units else 'LocalDepth3dCrs'
 
     valid_axis_orders = ("easting northing", "northing easting", "westing southing", "southing westing",
@@ -88,7 +90,8 @@ class Crs(BaseResqpy):
             is used, when instantiating from values;
             it is strongly encourage to call the create_xml() method immediately after instantiation (unless the resqpy
             crs is a temporary object) as the uuid may be modified at that point to re-use any existing equivalent RESQML
-            crs object in the model
+            crs object in the model;
+            a positive rotation implies that local coordinates are clockwise from global coordinates
 
         :meta common:
         """
@@ -115,13 +118,19 @@ class Crs(BaseResqpy):
                          extra_metadata = extra_metadata,
                          root_node = crs_root)
 
+        assert self.xy_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS xy units: {self.xy_units}'
+        assert self.z_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS z units: {self.z_units}'
+        if self.time_units:
+            assert self.time_units in wam.valid_uoms(quantity = 'time'), f'invalid CRS time units: {self.time_units}'
         assert self.axis_order in self.valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
 
         self.rotated = (not maths.isclose(self.rotation, 0.0, abs_tol = 1e-8) and
                         not maths.isclose(self.rotation, 2.0 * maths.pi, abs_tol = 1e-8))
         if self.rotated:
-            self.rotation_matrix = vec.rotation_matrix_3d_axial(2, maths.degrees(self.rotation))
-            self.reverse_rotation_matrix = vec.rotation_matrix_3d_axial(2, maths.degrees(-self.rotation))
+            self.rotation_matrix = vec.rotation_matrix_3d_axial(2, maths.degrees(-self.rotation))
+            self.reverse_rotation_matrix = vec.rotation_matrix_3d_axial(2, maths.degrees(self.rotation))
+            if self.is_right_handed_xy():
+                self.rotation_matrix, self.reverse_rotation_matrix = self.reverse_rotation_matrix, self.rotation_matrix
 
         self.null_transform = (maths.isclose(self.x_offset, 0.0, abs_tol = 1e-8) and
                                maths.isclose(self.y_offset, 0.0, abs_tol = 1e-8) and
@@ -150,10 +159,15 @@ class Crs(BaseResqpy):
         else:
             self.epsg_code = None
 
+    def is_right_handed_xy(self) -> bool:
+        """Returns True if the xy axes are right handed when viewed from above; False if left handed."""
+
+        return self.axis_order in ["northing easting", "southing westing", "westing northing"]
+
     def is_right_handed_xyz(self) -> bool:
         """Returns True if the xyz axes are right handed; False if left handed."""
 
-        return self.axis_order in ["northing easting", "southing westing", "westing northing"] == self.z_inc_down
+        return self.is_right_handed_xy() == self.z_inc_down
 
     def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
         """Convert a single xyz point from the parent coordinate reference system to this one."""
@@ -234,12 +248,16 @@ class Crs(BaseResqpy):
             return True
         if bu.matching_uuids(self.uuid, other_crs.uuid):
             return True
+        if self.resqml_type != other_crs.resqml_type:
+            return False
         if self.xy_units != other_crs.xy_units or self.z_units != other_crs.z_units:
             return False
         if self.z_inc_down != other_crs.z_inc_down:
             return False
         if (self.time_units is not None or
                 other_crs.time_units is not None) and self.time_units != other_crs.time_units:
+            return False
+        if self.axis_order != other_crs.axis_order:
             return False
         if not self.has_same_epsg_code(other_crs):
             return False
@@ -261,11 +279,19 @@ class Crs(BaseResqpy):
 
         if self is other_crs:
             return _as_xyz_tuple(xyz)
+        assert self.resqml_type == other_crs.resqml_type
         assert self.has_same_epsg_code(other_crs)
         xyz = self.local_to_global(xyz)
-        xyz = (wam.convert_lengths(xyz[0], self.xy_units,
-                                   other_crs.xy_units), wam.convert_lengths(xyz[1], self.xy_units, other_crs.xy_units),
-               wam.convert_lengths(xyz[2], self.z_units, other_crs.z_units))
+        # yapf: disable
+        if self.resqml_type == 'LocalDepth3dCrs':
+            xyz = (wam.convert_lengths(xyz[0], self.xy_units, other_crs.xy_units),
+                   wam.convert_lengths(xyz[1], self.xy_units, other_crs.xy_units),
+                   wam.convert_lengths(xyz[2], self.z_units, other_crs.z_units))
+        else:
+            xyz = (wam.convert_lengths(xyz[0], self.xy_units, other_crs.xy_units),
+                   wam.convert_lengths(xyz[1], self.xy_units, other_crs.xy_units),
+                   wam.convert_times(xyz[2], self.time_units, other_crs.time_units))
+        # yapf: enable
         xyz = other_crs.global_to_local(xyz)
         return _as_xyz_tuple(xyz)
 
@@ -277,13 +303,18 @@ class Crs(BaseResqpy):
 
         if self.is_equivalent(other_crs):
             return
+        assert self.resqml_type == other_crs.resqml_type
         assert self.has_same_epsg_code(other_crs)
         self.local_to_global_array(xyz)
-        if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
-            wam.convert_lengths(xyz, self.xy_units, other_crs.xy_units)
+        if self.resqml_type == 'LocalDepth3dCrs':
+            if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
+                wam.convert_lengths(xyz, self.xy_units, other_crs.xy_units)
+            else:
+                wam.convert_lengths(xyz[..., :2], self.xy_units, other_crs.xy_units)
+                wam.convert_lengths(xyz[..., 2], self.z_units, other_crs.z_units)
         else:
             wam.convert_lengths(xyz[..., :2], self.xy_units, other_crs.xy_units)
-            wam.convert_lengths(xyz[..., 2], self.z_units, other_crs.z_units)
+            wam.convert_times(xyz[..., 2], self.time_units, other_crs.time_units)
         other_crs.global_to_local_array(xyz)
         return xyz
 
@@ -295,11 +326,19 @@ class Crs(BaseResqpy):
 
         if self is other_crs:
             return _as_xyz_tuple(xyz)
+        assert self.resqml_type == other_crs.resqml_type
         assert self.has_same_epsg_code(other_crs)
         xyz = other_crs.local_to_global(xyz)
-        xyz = (wam.convert_lengths(xyz[0], other_crs.xy_units,
-                                   self.xy_units), wam.convert_lengths(xyz[1], other_crs.xy_units, self.xy_units),
-               wam.convert_lengths(xyz[2], other_crs.z_units, self.z_units))
+        # yapf: disable
+        if self.resqml_type == 'LocalDepth3dCrs':
+            xyz = (wam.convert_lengths(xyz[0], other_crs.xy_units, self.xy_units),
+                   wam.convert_lengths(xyz[1], other_crs.xy_units, self.xy_units),
+                   wam.convert_lengths(xyz[2], other_crs.z_units, self.z_units))
+        else:
+            xyz = (wam.convert_lengths(xyz[0], other_crs.xy_units, self.xy_units),
+                   wam.convert_lengths(xyz[1], other_crs.xy_units, self.xy_units),
+                   wam.convert_times(xyz[2], other_crs.time_units, self.time_units))
+        # yapf: enable
         xyz = self.global_to_local(xyz)
         return _as_xyz_tuple(xyz)
 
@@ -311,13 +350,18 @@ class Crs(BaseResqpy):
 
         if self.is_equivalent(other_crs):
             return
+        assert self.resqml_type == other_crs.resqml_type
         assert self.has_same_epsg_code(other_crs)
         other_crs.local_to_global_array(xyz)
-        if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
-            wam.convert_lengths(xyz, other_crs.xy_units, self.xy_units)
+        if self.resqml_type == 'LocalDepth3dCrs':
+            if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
+                wam.convert_lengths(xyz, other_crs.xy_units, self.xy_units)
+            else:
+                wam.convert_lengths(xyz[..., :2], other_crs.xy_units, self.xy_units)
+                wam.convert_lengths(xyz[..., 2], other_crs.z_units, self.z_units)
         else:
             wam.convert_lengths(xyz[..., :2], other_crs.xy_units, self.xy_units)
-            wam.convert_lengths(xyz[..., 2], other_crs.z_units, self.z_units)
+            wam.convert_times(xyz[..., 2], other_crs.time_units, self.time_units)
         self.global_to_local_array(xyz)
         return xyz
 
@@ -447,4 +491,4 @@ class Crs(BaseResqpy):
 def _as_xyz_tuple(xyz):
     """Coerce into 3-tuple of floats."""
 
-    return tuple(float(xyz[0]), float(xyz[1]), float(xyz[2]))
+    return tuple((float(xyz[0]), float(xyz[1]), float(xyz[2])))

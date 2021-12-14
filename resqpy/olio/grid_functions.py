@@ -1,4 +1,4 @@
-# grid functions module
+"""Miscellaneous functions relating to grids"""
 
 version = '29th April 2021'
 
@@ -415,7 +415,7 @@ def triangles_for_cell_faces(cp):
     returns:
        numpy float array of shape (3, 2, 4, 3, 3) holding triangle corner coordinates for cell faces represented with
        quad triangles
-
+       
     note:
        resqpy.surface also contains methods for working with cell faces as triangulated sets
     """
@@ -468,8 +468,11 @@ def triangles_for_cell_faces(cp):
 
 
 def actual_pillar_shape(pillar_points, tolerance = 0.001):
-    """Returns 'curved', 'straight' or 'vertical' for shape of fully defined points array of shape (nk + k_gaps + 1,
-    ..., 3)."""
+    """Returns 'curved', 'straight' or 'vertical' for shape of pillar points.
+
+    Args:
+        pillar_points: fully defined points array of shape (nk + k_gaps + 1,..., 3).
+    """
 
     assert pillar_points.ndim >= 3 and pillar_points.shape[-1] == 3
 
@@ -501,9 +504,10 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
 
 
 def columns_to_nearest_split_face(grid):
-    """Returns a numpy integer array of shape (NJ, NI) being number of cells to nearest split edge (Manhattan
-    distance)."""
+    """Return an int array of shape (NJ, NI) being number of cells to nearest split edge.
 
+    Uses Manhattan distance.
+    """
     if not grid.has_split_coordinate_lines:
         return None
 

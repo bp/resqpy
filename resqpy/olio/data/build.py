@@ -15,6 +15,7 @@ from lxml import etree
 
 
 def main():
+    """Main function for parsing schema definition files and generating json file."""
 
     uom_dict_xml_path = Path(__file__).parent / 'Energistics_Unit_of_Measure_Dictionary_V1.0.xml'
     properties_xsd_path = Path(__file__).parent / 'Properties.xsd'
@@ -39,6 +40,7 @@ def main():
 
 
 def parse_dimensions(root):
+    """Returns a dictionary of dimensionalities."""
 
     dims = {}
     for node in root.find("{*}unitDimensionSet"):
@@ -53,6 +55,7 @@ def parse_dimensions(root):
 
 
 def parse_quantities(root):
+    """Returns a dictionary of quanitity classes."""
 
     quantities = {}
     for node in root.find("{*}quantityClassSet"):
@@ -75,6 +78,7 @@ def parse_quantities(root):
 
 
 def parse_units(root):
+    """Returns a dictionary of units of measure."""
 
     units = {}
     for node in root.find("{*}unitSet"):
@@ -105,6 +109,8 @@ def parse_units(root):
 
 
 def parse_prefixes(root):
+    """Returns a dictionary of unit of measure prefixes."""
+
     prefixes = {}
     for node in root.find("{*}prefixSet"):
         name = node.find('{*}name').text
@@ -146,10 +152,14 @@ def get_nodes_with_name(root, name):
 
 
 def as_bool(a_string):
+    """Returns python bool value from string."""
+
     return a_string.lower() == "true"
 
 
 def as_numeric(a_string):
+    """Returns numeric (int or float) value from a string."""
+
     if a_string == 'PI':
         return maths.pi
     elif a_string == "2*PI":
