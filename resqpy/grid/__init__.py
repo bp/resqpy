@@ -9,5 +9,5 @@ from .grid_functions import is_regular_grid
 from .grid_functions import grid_flavour
 from .grid_functions import extent_kji_from_root
 from .grid_functions import find_cell_for_x_sect_xz
-from .extract_grid_parent import extract_grid_parent
+from .extract_functions import extract_grid_parent
 from .create_grid_xml import create_grid_xml

@@ -29,7 +29,10 @@ import resqpy.property as rprop
 import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from .transmissibility import transmissibility
-from .extract_grid_parent import extract_grid_parent
+from .extract_functions import extract_grid_parent, extract_extent_kji, extract_grid_is_right_handed, \
+    extract_k_direction_is_down, extract_geometry_time_index, extract_crs_uuid, extract_crs_root, extract_k_gaps, \
+    extract_pillar_shape, extract_has_split_coordinate_lines, extract_children, extract_stratigraphy, \
+    extract_inactive_mask, extract_property_collection
 from .grid_functions import _add_to_kelp_list
 from .create_grid_xml import create_grid_xml
 from .write_functions import write_hdf5_from_caches, write_nexus_corp
@@ -39,7 +42,6 @@ from .defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defin
 from .faults import find_faults, fault_throws, fault_throws_per_edge_per_column
 
 import warnings
-
 
 
 class Grid(BaseResqpy):
@@ -226,23 +228,6 @@ class Grid(BaseResqpy):
         self.model.set_modified()
         return self.uuid
 
-    def extract_extent_kji(self):
-        """Returns the grid extent; for IJK grids this is a 3 integer numpy array, order is Nk, Nj, Ni.
-
-        returns:
-           numpy int array of shape (3,) being number of cells in k, j & i axes respectively;
-           the return value is cached in attribute extent_kji, which can alternatively be referenced
-           directly by calling code as the value is set from xml on initialisation
-        """
-
-        if self.extent_kji is not None:
-            return self.extent_kji
-        self.extent_kji = np.ones(3, dtype='int')  # todo: handle other varieties of grid
-        self.extent_kji[0] = int(rqet.find_tag(self.root, 'Nk').text)
-        self.extent_kji[1] = int(rqet.find_tag(self.root, 'Nj').text)
-        self.extent_kji[2] = int(rqet.find_tag(self.root, 'Ni').text)
-        return self.extent_kji
-
     def cell_count(self, active_only=False, non_pinched_out_only=False, geometry_defined_only=False):
         """Returns number of cells in grid; optionally limited by active, non-pinched-out, or having geometry.
 
@@ -333,103 +318,6 @@ class Grid(BaseResqpy):
             return child_node
         return rqet.find_tag(self.geometry_root, tag)
 
-    def extract_crs_uuid(self):
-        """Returns uuid for coordinate reference system, as stored in geometry xml tree.
-
-        returns:
-           uuid.UUID object
-        """
-
-        if self.crs_uuid is not None:
-            return self.crs_uuid
-        crs_root = self.resolve_geometry_child('LocalCrs')
-        uuid_str = rqet.find_tag_text(crs_root, 'UUID')
-        if uuid_str:
-            self.crs_uuid = bu.uuid_from_string(uuid_str)
-        return self.crs_uuid
-
-    def extract_crs_root(self):
-        """Returns root in parent model xml parts forest of coordinate reference system used by this grid geomwtry.
-
-        returns:
-           root node in xml tree for coordinate reference system
-
-        note:
-           resqml allows a part to refer to another part that is not actually present in the same epc package;
-           in practice, the crs is a tiny part and has always been included in datasets encountered so far;
-           if the crs is not present, this method will return None (I think)
-        """
-
-        if self.crs_root is not None:
-            return self.crs_root
-        crs_uuid = self.extract_crs_uuid()
-        if crs_uuid is None:
-            return None
-        self.crs_root = self.model.root(uuid=crs_uuid)
-        return self.crs_root
-
-    def extract_grid_is_right_handed(self):
-        """Returns boolean indicating whether grid IJK axes are right handed, as stored in xml.
-
-        returns:
-           boolean: True if grid is right handed; False if left handed
-
-        notes:
-           this is the actual handedness of the IJK indexing of grid cells;
-           the coordinate reference system has its own implicit handedness for xyz axes;
-           Nexus requires the IJK space to be righthanded so if it is not, the handedness of the xyz space is
-           falsified when exporting for Nexus (as Nexus allows xyz to be right or lefthanded and it is the
-           handedness of the IJK space with respect to the xyz space that matters)
-        """
-
-        if self.grid_is_right_handed is not None:
-            return self.grid_is_right_handed
-        rh_node = self.resolve_geometry_child('GridIsRighthanded')
-        if rh_node is None:
-            return None
-        self.grid_is_right_handed = (rh_node.text.lower() == 'true')
-        return self.grid_is_right_handed
-
-    def extract_k_direction_is_down(self):
-        """Returns boolean indicating whether increasing K indices are generally for deeper cells, as stored in xml.
-
-        returns:
-           boolean: True if increasing K generally indicates increasing depth
-
-        notes:
-           resqml allows layers to fold back over themselves, so the relationship between k and depth might not
-           be monotonic;
-           higher level code sometimes requires k to increase with depth;
-           independently of this, z values may increase upwards or downwards in a coordinate reference system;
-           this method does not modify the grid_is_righthanded indicator
-        """
-
-        if self.k_direction_is_down is not None:
-            return self.k_direction_is_down
-        k_dir_node = self.resolve_geometry_child('KDirection')
-        if k_dir_node is None:
-            return None
-        self.k_direction_is_down = (k_dir_node.text.lower() == 'down')
-        return self.k_direction_is_down
-
-    def extract_geometry_time_index(self):
-        """Returns integer time index, or None, for the grid geometry, as stored in xml for dynamic geometries.
-
-        notes:
-           if the value is not None, it represents the time index as stored in the xml, or the time index as
-           updated when setting the node points from a points property
-        """
-        if self.time_index is not None and self.time_series_uuid is not None:
-            return self.time_index
-        self.time_index = None
-        self.time_series_uuid = None
-        ti_node = self.resolve_geometry_child('TimeIndex')
-        if ti_node is None:
-            return None
-        self.time_index = rqet.find_tag_int(ti_node, 'Index')
-        self.time_series_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(ti_node, ['TimeSeries', 'UUID']))
-        return self.time_index
-
     def set_k_direction_from_points(self):
         """Sets the K direction indicator based on z direction and mean z values for top and base.
 
@@ -445,87 +333,6 @@ class Grid(BaseResqpy):
                 self.k_direction_is_down = ((diff >= 0.0) == self.z_inc_down())
         return self.k_direction_is_down
 
-    def extract_pillar_shape(self):
-        """Returns string indicating whether whether pillars are curved, straight, or vertical as stored in xml.
-
-        returns:
-           string: either 'curved', 'straight' or 'vertical'
-
-        note:
-           resqml datasets often have 'curved', even when the pillars are actually 'vertical' or 'straight';
-           use actual_pillar_shape() method to determine the shape from the actual xyz points data
-        """
-
-        if self.pillar_shape is not None:
-            return self.pillar_shape
-        ps_node = self.resolve_geometry_child('PillarShape')
-        if ps_node is None:
-            return None
-        self.pillar_shape = ps_node.text
-        return self.pillar_shape
-
-    def extract_has_split_coordinate_lines(self):
-        """Returns boolean indicating whether grid geometry has any split coordinate lines (split pillars, ie. faults).
-
-        returns:
-           boolean: True if the grid has one or more split pillars; False if all pillars are unsplit
-
-        notes:
-           the return value is based on the array elements present in the xml tree, unless it has already been
-           determined;
-           resqml ijk grids with split coordinate lines have extra arrays compared to unfaulted grids, and the main
-           Points array is indexed differently: [k', pillar_index, xyz] instead of [k', j', i', xyz] (where k', j', i'
-           range of nk+k_gaps+1, nj+1, ni+1 respectively)
-        """
-
-        if self.has_split_coordinate_lines is not None:
-            return self.has_split_coordinate_lines
-        split_node = self.resolve_geometry_child('SplitCoordinateLines')
-        self.has_split_coordinate_lines = (split_node is not None)
-        if split_node is not None:
-            self.split_pillars_count = int(rqet.find_tag(split_node, 'Count').text.strip())
-        return self.has_split_coordinate_lines
-
-    def extract_k_gaps(self):
-        """Returns information about gaps (voids) between layers in the grid.
-
-        returns:
-           (int, numpy bool array, numpy int array) being the number of gaps between layers;
-           a 1D bool array of extent nk-1 set True where there is a gap below the layer; and
-           a 1D int array being the k index to actually use in the points data for each layer k0
-
-        notes:
-           all returned elements are stored as attributes in the grid object; int and bool array elements
-           will be None if there are no k gaps; each k gap implies an extra element in the points data for
-           each pillar; when wanting to index k interfaces (horizons) rather than layers, the last of the
-           returned values can be used to index the k axis of the points data to yield the top face of the
-           layer and the successor in k will always index the basal face of the same layer
-        """
-
-        if self.k_gaps is not None:
-            return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
-        self.k_gaps = rqet.find_nested_tags_int(self.root, ['KGaps', 'Count'])
-        if self.k_gaps:
-            k_gap_after_root = rqet.find_nested_tags(self.root, ['KGaps', 'GapAfterLayer'])
-            assert k_gap_after_root is not None
-            bool_array_type = rqet.node_type(k_gap_after_root)
-            assert bool_array_type == 'BooleanHdf5Array'  # could be a constant array but not handled by this code
-            h5_key_pair = self.model.h5_uuid_and_path_for_node(k_gap_after_root)
-            assert h5_key_pair is not None
-            self.model.h5_array_element(h5_key_pair,
-                                        index=None,
-                                        cache_array=True,
-                                        object=self,
-                                        array_attribute='k_gap_after_array',
-                                        dtype='bool')
-            assert hasattr(self, 'k_gap_after_array')
-            assert self.k_gap_after_array.ndim == 1 and self.k_gap_after_array.size == self.nk - 1
-            self._set_k_raw_index_array()
-        else:
-            self.k_gap_after_array = None
-            self.k_raw_index_array = np.arange(self.nk, dtype=int)
-        return self.k_gaps, self.k_gap_after_array, self.k_raw_index_array
-
     def _set_k_raw_index_array(self):
         """Sets the layering raw index array based on the k gap after boolean array."""
         if self.k_gap_after_array is None:
@@ -538,31 +345,6 @@ class Grid(BaseResqpy):
             if k < self.nk - 1 and self.k_gap_after_array[k]:
                 gap_count += 1
         assert gap_count == self.k_gaps, 'inconsistency in k gap data'
-
-    def extract_stratigraphy(self):
-        """Loads stratigraphic information from xml."""
-
-        self.stratigraphic_column_rank_uuid = None
-        self.stratigraphic_units = None
-        strata_node = rqet.find_tag(self.root, 'IntervalStratigraphicUnits')
-        if strata_node is None:
-            return
-        self.stratigraphic_column_rank_uuid = \
-            bu.uuid_from_string(rqet.find_nested_tags_text(strata_node, ['StratigraphicOrganization', 'UUID']))
-        assert self.stratigraphic_column_rank_uuid is not None
-        unit_indices_node = rqet.find_tag(strata_node, 'UnitIndices')
-        h5_key_pair = self.model.h5_uuid_and_path_for_node(unit_indices_node)
-        self.model.h5_array_element(h5_key_pair,
-                                    index=None,
-                                    cache_array=True,
-                                    object=self,
-                                    array_attribute='stratigraphic_units',
-                                    dtype='int')
-        assert len(self.stratigraphic_units) == self.nk_plus_k_gaps
-
-    def extract_parent(self):
-        """Loads fine:coarse mapping information between this grid and parent, if any, returning parent grid uuid."""
-        return extract_grid_parent(self)
 
     def set_parent(self, parent_grid_uuid, self_is_refinement, parent_window):
         """Set relationship with respect to a parent grid.
@@ -585,108 +367,6 @@ class Grid(BaseResqpy):
             parent_window.assert_valid()
             self.parent_window = parent_window
             self.is_refinement = self_is_refinement
-
-    def extract_children(self):
-        """Looks for LGRs related to this grid and sets the local_grid_uuid_list attribute."""
-        assert self.uuid is not None
-        if self.local_grid_uuid_list is not None:
-            return self.local_grid_uuid_list
-        self.local_grid_uuid_list = []
-        related_grid_roots = self.model.roots(obj_type='IjkGridRepresentation', related_uuid=self.uuid)
-        if related_grid_roots is not None:
-            for related_root in related_grid_roots:
-                parent_uuid = rqet.find_nested_tags_text(related_root, ['ParentWindow', 'ParentGrid', 'UUID'])
-                if parent_uuid is None:
-                    continue
-                parent_uuid = bu.uuid_from_string(parent_uuid)
-                if bu.matching_uuids(self.uuid, parent_uuid):
-                    self.local_grid_uuid_list.append(parent_uuid)
-        return self.local_grid_uuid_list
-
-    def extract_property_collection(self):
-        """Load grid property collection object holding lists of all properties in model that relate to this grid.
-
-        returns:
-           resqml_property.GridPropertyCollection object
-
-        note:
-           a reference to the grid property collection is cached in this grid object; if the properties change,
-           for example by generating some new properties, the property_collection attribute of the grid object
-           would need to be reset to None elsewhere before calling this method again
-        """
-
-        if self.property_collection is not None:
-            return self.property_collection
-        self.property_collection = rprop.GridPropertyCollection(grid=self)
-        return self.property_collection
-
-    def extract_inactive_mask(self, check_pinchout=False):
-        """Returns boolean numpy array indicating which cells are inactive, if (in)active property found in this grid.
-
-        returns:
-           numpy array of booleans, of shape (nk, nj, ni) being True for cells which are inactive; False for active
-
-        note:
-           RESQML does not have a built-in concept of inactive (dead) cells, though the usage guide advises to use a
-           discrete property with a local property kind of 'active'; this resqpy code can maintain an 'inactive'
-           attribute for the grid object, which is a boolean numpy array indicating which cells are inactive
-        """
-
-        if self.inactive is not None and not check_pinchout:
-            return self.inactive
-        geom_defined = cell_geometry_is_defined_ref(self)
-        if self.inactive is None:
-            if geom_defined is None or geom_defined is True:
-                self.inactive = np.zeros(tuple(self.extent_kji))  # ie. all active
-            else:
-                self.inactive = np.logical_not(cell_geometry_is_defined_ref(self))
-        if check_pinchout:
-            self.inactive = np.logical_or(self.inactive, self.pinched_out())
-        gpc = self.extract_property_collection()
-        if gpc is None:
-            self.all_inactive = np.all(self.inactive)
-            return self.inactive
-        active_gpc = rprop.GridPropertyCollection()
-        # note: use of bespoke (local) property kind 'active' as suggested in resqml usage guide
-        active_gpc.inherit_parts_selectively_from_other_collection(other=gpc,
-                                                                   property_kind='active',
-                                                                   continuous=False)
-        active_parts = active_gpc.parts()
-        if len(active_parts) > 1:
-            # try further filtering based on grid's time index data (or filtering out time based arrays)
-            self.extract_geometry_time_index()
-            if self.time_index is not None and self.time_series_uuid is not None:
-                active_gpc = rprop.selective_version_of_collection(active_gpc,
-                                                                   time_index=self.time_index,
-                                                                   time_series_uuid=self.time_series_uuid)
-            else:
-                active_parts = []
-                for part in active_gpc.parts():
-                    if active_gpc.time_series_uuid_for_part(part) is None and active_gpc.time_index_for_part(
-                            part) is None:
-                        active_parts.append(part)
-        if len(active_parts) > 0:
-            if len(active_parts) > 1:
-                log.warning('more than one property found with bespoke kind "active", using last encountered')
-            active_part = active_parts[-1]
-            active_array = active_gpc.cached_part_array_ref(active_part, dtype='bool')
-            self.inactive = np.logical_or(self.inactive, np.logical_not(active_array))
-            self.active_property_uuid = active_gpc.uuid_for_part(active_part)
-            active_gpc.uncache_part_array(active_part)
-        else:  # for backward compatibility with earlier versions of resqpy
-            inactive_gpc = rprop.GridPropertyCollection()
-            inactive_gpc.inherit_parts_selectively_from_other_collection(other=gpc,
-                                                                         property_kind='code',
-                                                                         facet_type='what',
-                                                                         facet='inactive')
-            if inactive_gpc.number_of_parts() == 1:
-                inactive_part = inactive_gpc.parts()[0]
-                inactive_array = inactive_gpc.cached_part_array_ref(inactive_part, dtype='bool')
-                self.inactive = np.logical_or(self.inactive, inactive_array)
-                inactive_gpc.uncache_part_array(inactive_part)
-
-        self.all_inactive = np.all(self.inactive)
-        return self.inactive
 
     def actual_pillar_shape(self, patch_metadata=False, tolerance=0.001):
         """Returns actual shape of pillars.
@@ -2800,55 +2480,6 @@ class Grid(BaseResqpy):
 
         return half_t
 
-    def transmissibility(self, tolerance=1.0e-6, use_tr_properties=True, realization=None, modifier_mode=None):
-        """Returns transmissibilities for standard (IJK neighbouring) connections within this grid.
-
-        arguments:
-           tolerance (float, default 1.0e-6): the minimum half cell transmissibility below which zero inter-cell
-              transmissibility will be set; units are as for returned values (see notes)
-           use_tr_properties (boolean, default True): if True, the grid's property collection is inspected for
-              possible transmissibility arrays and if found, they are used instead of calculation; note that
-              when this argument is False, the property collection is still used for the feed arrays to the
-              calculation
-           realization (int, optional) if present, only properties with this realization number will be used;
-              applies to pre-computed transmissibility properties or permeability and net to gross ratio
-              properties when computing
-           modifier_mode (string, optional): if None, no transmissibility modifiers are applied; other
-              options are: 'faces multiplier', for which directional transmissibility properties with indexable
-              element of 'faces' will be used; 'faces per cell multiplier', in which case a transmissibility
-              property with 'faces per cell' as the indexable element will be used to modify the half cell
-              transmissibilities prior to combination; or 'absolute' in which case directional properties
-              of local property kind 'fault transmissibility' (or 'mat transmissibility') and indexable
-              element of 'faces' will be used as a third transmissibility term along with the two half
-              cell transmissibilities at each face; see also the notes below
-
-        returns:
-           3 numpy float arrays of shape (nk + 1, nj, ni), (nk, nj + 1, ni), (nk, nj, ni + 1) being the
-           neighbourly transmissibilities in K, J & I axes respectively
-
-        notes:
-           the 3 permeability arrays (and net to gross ratio if in use) must be identifiable in the property
-           collection as they are used for the calculation;
-           implicit units of measure of returned values will be m3.cP/(kPa.d) if grid crs length units are metres,
-           bbl.cP/(psi.d) if length units are feet; the computation is compatible with the Nexus NEWTRAN formulation;
-           values will be zero at pinchouts, and at column edges where there is a split pillar, even if there is
-           juxtapostion of faces; the same is true of K gap faces (even where the gap is zero); NaNs in any of
-           the feed properties also result in transmissibility values of zero;
-           outer facing values will always be zero (included to be in accordance with RESQML faces properties);
-           array caching in the grid object will only be used if realization is None; if a modifier mode of
-           'faces multiplier' or 'faces per cell multiplier' is specified, properties will be searched for with
-           local property kind 'transmissibility multiplier' and the appropriate indexable element (and direction
-           facet in the case of 'faces multiplier'); the modifier mode of 'absolute' can be used to model the
-           effect of faults and thin shales, tar mats etc. in a way which is independent of cell size;
-           for 'aboslute' directional properties with indexable element of 'faces' and local property kind
-           'fault transmissibility' (or 'mat transmissibility') will be used; such absolute faces transmissibilities
-           should have a value of np.inf or np.nan where no modification is required; note that this method is only
-           dealing with logically neighbouring cells and will not compute values for faces with a split pillar,
-           which should be handled elsewhere
-        """
-
-        return transmissibility(self, tolerance, use_tr_properties, realization, modifier_mode)
-
     def fault_connection_set(self,
                              skip_inactive=True,
                              compute_transmissibility=False,
@@ -3567,8 +3198,6 @@ class Grid(BaseResqpy):
 
         return create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry)
 
-
-
     # Moved Functions
 
     def cell_geometry_is_defined(self, cell_kji0=None, cell_geometry_is_defined_root=None, cache_array=True):
@@ -3617,3 +3246,49 @@ class Grid(BaseResqpy):
     def fault_throws_per_edge_per_column(self, mode='maximum', simple_z=False, axis_polarity_mode=True):
         return fault_throws_per_edge_per_column(self, mode=mode, simple_z=simple_z,
                                                 axis_polarity_mode=axis_polarity_mode)
+
+    def extract_parent(self):
+        """Loads fine:coarse mapping information between this grid and parent, if any, returning parent grid uuid."""
+        return extract_grid_parent(self)
+
+    def transmissibility(self, tolerance=1.0e-6, use_tr_properties=True, realization=None, modifier_mode=None):
+        return transmissibility(self, tolerance, use_tr_properties, realization, modifier_mode)
+
+    def extract_extent_kji(self):
+        return extract_extent_kji(self)
+
+    def extract_grid_is_right_handed(self):
+        return extract_grid_is_right_handed(self)
+
+    def extract_k_direction_is_down(self):
+        return extract_k_direction_is_down(self)
+
+    def extract_geometry_time_index(self):
+        return extract_geometry_time_index(self)
+
+    def extract_crs_uuid(self):
+        return extract_crs_uuid(self)
+
+    def extract_crs_root(self):
+        return extract_crs_root(self)
+
+    def extract_pillar_shape(self):
+        return extract_pillar_shape(self)
+
+    def extract_has_split_coordinate_lines(self):
+        return extract_has_split_coordinate_lines(self)
+
+    def extract_k_gaps(self):
+        return extract_k_gaps(self)
+
+    def extract_stratigraphy(self):
+        return extract_stratigraphy(self)
+
+    def extract_children(self):
+        return extract_children(self)
+
+    def extract_property_collection(self):
+        return extract_property_collection(self)
+
+    def extract_inactive_mask(self, check_pinchout=False):
+        return extract_inactive_mask(self, check_pinchout=check_pinchout)
