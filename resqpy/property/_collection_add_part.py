@@ -1,4 +1,4 @@
-"""_collection_add_part.py: submodule containing functions for adding properties to a property collection."""
+"""Submodule containing functions for adding properties to a property collection."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_collection_add_part.py version ' + version)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
@@ -107,6 +106,9 @@ def _add_part_to_dict_get_uom(collection, part, continuous, xml_node, trust_uom,
         if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
             uom = uom_node.text
         else:
+            if not collection.guess_warning:
+                collection.guess_warning = True
+                log.warning("Guessing unit of measure for one or more properties")
             uom = guess_uom(property_kind, minimum, maximum, collection.support, facet_type = facet_type, facet = facet)
     return uom
 

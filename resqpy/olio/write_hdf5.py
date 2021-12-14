@@ -34,7 +34,7 @@ class H5Register():
         self.hdf5_path_dict = {}  # dictionary optionally mapping from (object_uuid, group_tail) to hdf5 internal path
         self.model = model
 
-    def register_dataset(self, object_uuid, group_tail, a, dtype = None, hdf5_path = None):
+    def register_dataset(self, object_uuid, group_tail, a, dtype = None, hdf5_path = None, copy = False):
         """Register an array to be included as a dataset in the hdf5 file.
 
         arguments:
@@ -42,21 +42,30 @@ class H5Register():
            group_tail (string): the remainder of the hdf5 internal path (following RESQML and
               uuid elements)
            a (numpy array): the dataset (array) to be registered for writing
-           dtype (type or string): the type of the individual elements within the dataset
+           dtype (type or string): the required type of the individual elements within the dataset
            hdf5_path (string, optional): if present, a full hdf5 internal path to use instead of
               the default generated from the uuid
+           copy (boolean, default False): if True, a copy of the array will be made at the time of
+              registering, otherwise changes made to the array before the write() method is called
+              are likely to be in the data that is written
 
         returns:
            None
 
-        note:
-           several arrays might belong to the same object
+        notes:
+           several arrays might belong to the same object;
+           if a dtype is given and necessitates a conversion of the array data, the behaviour will
+           be as if the copy argument is True regardless of its setting
         """
 
         #     print('registering dataset with uuid ' + str(object_uuid) + ' and group tail ' + group_tail)
         assert (len(group_tail) > 0)
         assert a is not None
         assert isinstance(a, np.ndarray)
+        if dtype is not None:
+            a = a.astype(dtype, copy = copy)
+        elif copy:
+            a = a.copy()
         if group_tail[0] == '/':
             group_tail = group_tail[1:]
         if group_tail[-1] == '/':
@@ -120,6 +129,7 @@ class H5Register():
         if file is None:
             file = self.model.h5_access(mode = mode)
         elif isinstance(file, str):
+            log.debug(f'writing to hdf5 file: {file}')
             file = self.model.h5_access(mode = mode, file_path = file)
         if mode == 'a' and isinstance(file, str) and not os.path.exists(file):
             mode = 'w'

@@ -1,4 +1,4 @@
-"""well_log.py: class for a welllog, representing resqml properties for well logs"""
+"""Class for a welllog, representing resqml properties for well logs"""
 
 version = '24th November 2021'
 
@@ -7,7 +7,6 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
 
 from .property_collection import PropertyCollection
 

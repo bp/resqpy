@@ -1,4 +1,4 @@
-"""well_interval_property.py: class for wellintervalproperty, for resqml wellbore frame of blocked wellbore supports."""
+"""Class for wellintervalproperty, for resqml wellbore frame of blocked wellbore supports."""
 
 version = '24th November 2021'
 
@@ -7,7 +7,6 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
 
 from .property_collection import PropertyCollection
 

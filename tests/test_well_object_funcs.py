@@ -62,7 +62,7 @@ def test_best_root_for_object(example_model_with_well):
     model, well_interp, datum, traj = example_model_with_well
     traj_title = traj.title
     wellbore_feature_uuid = model.uuid_for_part(part_name = model.part(obj_type = 'obj_WellboreFeature'))
-    wellbore_marker_frame = resqpy.well.WellboreMarkerFrame(parent_model = model, trajectory = traj)
+    wellbore_marker_frame = resqpy.well.WellboreMarkerFrame(parent_model = model, trajectory_uuid = traj.uuid)
     wellbore_marker_frame.create_xml()
     wellbore_frame = resqpy.well.WellboreFrame(parent_model = model, trajectory = traj)
     wellbore_frame.create_xml()

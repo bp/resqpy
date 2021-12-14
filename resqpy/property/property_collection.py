@@ -1,4 +1,4 @@
-"""propertycollection.py: class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma
@@ -90,6 +89,7 @@ class PropertyCollection():
         ]  # list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
         #                                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                                   indexable_element, count, local_property_kind_uuid, const_value, points)
+        self.guess_warning = False
         if support is not None:
             self.model = support.model
             self.set_support(support = support)
@@ -2266,7 +2266,7 @@ class PropertyCollection():
         self.remove_cached_imported_arrays()
         self.remove_cached_part_arrays()
 
-    def write_hdf5_for_imported_list(self, file_name = None, mode = 'a', expand_const_arrays = False):
+    def write_hdf5_for_imported_list(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None):
         """Create or append to an hdf5 file, writing datasets for the imported arrays.
 
         arguments:
@@ -2274,6 +2274,9 @@ class PropertyCollection():
            mode (str, default 'a'): the mode to open the hdf5 file in, either 'a' (append), or 'w' (overwrite)
            expand_const_arrays (boolean, default False): if True, constant arrays will be written in full to
               the hdf5 file and the same argument should be used when creating the xml
+           dtype (numpy dtype, optional): the required numpy element type to use when writing to hdf5;
+              eg. np.float16, np.float32, np.float64, np.uint8, np.int16, np.int32, np.int64 etc.;
+              defaults to the dtype of each individual numpy array in the imported list
 
         :meta common:
         """
@@ -2291,12 +2294,12 @@ class PropertyCollection():
                 #  note: will not handle direction dependent shapes
                 shape = self.supporting_shape(indexable_element = entry[14])
                 value = float(entry[17]) if isinstance(entry[17], str) else entry[17]
-                self.__dict__[cached_name] = np.full(shape, value)
+                self.__dict__[cached_name] = np.full(shape, value, dtype = dtype)
             else:
                 uuid = entry[0]
                 cached_name = entry[3]
             tail = 'points_patch0' if entry[18] else 'values_patch0'
-            h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name])
+            h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name], dtype = dtype)
         h5_reg.write(file = file_name, mode = mode)
 
     def write_hdf5_for_part(self, part, file_name = None, mode = 'a'):
