@@ -212,9 +212,13 @@ def test_load_from_ascii_file(example_model_and_crs):
                                                            ascii_trajectory_file = trajectory_data_file_path,
                                                            well_name = well_name,
                                                            length_uom = 'm',
-                                                           md_datum = datum)
+                                                           md_datum = datum,
+                                                           set_tangent_vectors = True)
             # -------- Assert ---------
             assert trajectory_from_ascii is not None
+            np.testing.assert_almost_equal(trajectory_from_ascii.tangent_vectors[0],
+                                           trajectory_from_ascii.tangent_vectors[1])
+            vec.isclose(trajectory_from_ascii.tangent_vectors[:, 2], np.array([1, 1]), 0.01)
 
 
 def test_set_tangents(example_model_and_crs):
