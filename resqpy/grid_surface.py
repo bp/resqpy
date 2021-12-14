@@ -539,7 +539,7 @@ def generate_untorn_surface_for_x_section(grid,
 
     assert axis.upper() in ['I', 'J']
 
-    x_sect_points = grid.x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
+    x_sect_points = grid.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
     if as_single_layer:
         shape = np.array(x_sect_points.shape)
         shape[0] = 1

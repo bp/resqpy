@@ -279,7 +279,7 @@ def drape_lines_to_rods(line_list,
     assert axis.upper() in ['I', 'J']
     assert len(line_list) == len(rod_list_list)
 
-    x_sect = grid.x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
+    x_sect = grid.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
 
     draped_list = []
     for line, rod_list in zip(line_list, rod_list_list):
