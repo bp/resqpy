@@ -644,6 +644,62 @@ def test_interpolated_faulted_grid(tmp_path):
             assert_array_almost_equal(grid.points_cached, grid_b.points_cached)
 
 
+def test_interpolated_grid_using_cp(tmp_path):
+    # create an empty model and add a crs
+    epc = os.path.join(tmp_path, 'cp_interpolation.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    # create a regular grid
+    grid0 = grr.RegularGrid(model,
+                            crs_uuid = model.crs_uuid,
+                            origin = (0.0, 0.0, 1000.0),
+                            extent_kji = (5, 4, 3),
+                            dxyz = (100.0, 150.0, 50.0),
+                            as_irregular_grid = True)
+    grid0.grid_representation = 'IjkGrid'  # overwrite block grid setting
+    grid0.write_hdf5()
+    grid0.create_xml(write_geometry = True, add_cell_length_properties = False)
+    model.store_epc()
+    # prepare fault data and add faults to a copy of the grid
+    pl_dict = {}
+    pl_dict['f1'] = [(2, 0), (2, 1), (1, 1), (1, 2), (1, 3)]
+    pl_dict['f2'] = [(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)]
+    lr_dict = {}
+    lr_dict['f1'] = (23.0, -23.0)
+    lr_dict['f2'] = (-37.3, 14.8)
+    grid_a = rqdm.add_faults(epc,
+                             source_grid = grid0,
+                             full_pillar_list_dict = pl_dict,
+                             left_right_throw_dict = lr_dict,
+                             new_grid_title = 'grid a')
+    # interpolate between the two grids
+    between_grid_uuids = []
+    for f in [0.0, 0.23, 0.5, 1.0]:
+        grid = rqdm.interpolated_grid(epc,
+                                      grid0,
+                                      grid_a,
+                                      a_to_b_0_to_1 = f,
+                                      split_tolerance = 0.01,
+                                      inherit_properties = False,
+                                      inherit_realization = None,
+                                      inherit_all_realizations = False,
+                                      new_grid_title = 'between_' + str(f))
+        assert grid is not None
+        between_grid_uuids.append(grid.uuid)
+    # re-open model and check end point interpolated grid geometries
+    model = rq.Model(epc)
+    for i, g_uuid in enumerate(between_grid_uuids):
+        grid = grr.Grid(model, uuid = g_uuid)
+        assert grid is not None
+        grid.cache_all_geometry_arrays()
+        assert hasattr(grid, 'points_cached') and grid.points_cached is not None
+        if i == 0:
+            assert_array_almost_equal(grid.corner_points(), grid0.corner_points(), decimal = 3)
+        elif i == len(between_grid_uuids) - 1:
+            assert_array_almost_equal(grid.corner_points(), grid_a.corner_points(), decimal = 3)
+
+
 def test_refined_and_coarsened_grid(tmp_path):
 
     # create a model and a coarse grid
