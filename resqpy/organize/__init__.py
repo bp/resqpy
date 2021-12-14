@@ -1,4 +1,4 @@
-""" Package for RESQML organizational objects """
+"""Organizational object classes: features and interpretations."""
 
 __all__ = [
     # Classes

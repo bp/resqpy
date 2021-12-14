@@ -1,4 +1,4 @@
-"""grid_surface.py: Functions relating to intsection of resqml grid with surface or trajectory objects."""
+"""Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
 version = '15th November 2021'
 

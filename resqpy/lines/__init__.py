@@ -1,4 +1,4 @@
-"""Package containing Polyline and PolylineSet classes."""
+"""Polyline and PolylineSet classes and associated functions."""
 
 __all__ = ['Polyline', 'PolylineSet', 'load_hdf5_array', 'shift_polyline', 'flatten_polyline', 'tangents', 'spline']
 

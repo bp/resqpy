@@ -1,4 +1,4 @@
-"""Model class package, roughly equivalent to an epc file."""
+"""Model class, roughly equivalent to a RESQML epc file."""
 
 __all__ = ['Model', 'ModelContext', 'new_model']
 

@@ -1,4 +1,4 @@
-"""Time series module"""
+"""Time series classes and functions."""
 
 __all__ = [
     'AnyTimeSeries', 'GeologicTimeSeries', 'TimeDuration', 'TimeSeries', 'selected_time_series', 'simplified_timestamp',

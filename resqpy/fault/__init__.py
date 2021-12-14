@@ -1,4 +1,4 @@
-"""Package providing Grid Connection Set class and related functions."""
+"""Grid Connection Set class and related functions."""
 
 __all__ = [
     'GridConnectionSet', 'pinchout_connection_set', 'k_gap_connection_set', 'add_connection_set_and_tmults',
