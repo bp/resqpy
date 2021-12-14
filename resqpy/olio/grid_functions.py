@@ -409,11 +409,14 @@ def translate_corp(corner_points, x_shift=None, y_shift=None, min_xy=None, prese
 
 def triangles_for_cell_faces(cp):
     """Returns numpy array of shape (3, 2, 4, 3, 3) with axes being kji, -+, triangle within face, triangle corner, xyz.
+
     args:
        cp (numpy float array of shape (2, 2, 2, 3)): single cell corner point array in pagoda protocol
+
     returns:
        numpy float array of shape (3, 2, 4, 3, 3) holding triangle corner coordinates for cell faces represented with
        quad triangles
+       
     note:
        resqpy.surface also contains methods for working with cell faces as triangulated sets
     """
