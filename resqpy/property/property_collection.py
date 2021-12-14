@@ -1,4 +1,4 @@
-"""propertycollection.py: class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma
@@ -90,6 +89,7 @@ class PropertyCollection():
         ]  # list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
         #                                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                                   indexable_element, count, local_property_kind_uuid, const_value, points)
+        self.guess_warning = False
         if support is not None:
             self.model = support.model
             self.set_support(support = support)
@@ -1837,11 +1837,11 @@ class PropertyCollection():
         if self.points_for_part(part):
             patch_list = rqet.list_of_tag(part_node, 'PatchOfpoints')
             assert len(patch_list) == 1  # todo: handle more than one patch of points
-            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], tag = 'Coordinates'))
+            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], 'Coordinates'))
         else:
             patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
             assert len(patch_list) == 1  # todo: handle more than one patch of values
-            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], tag = 'Values'))
+            return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], 'Values'))
 
     def facets_array_ref(self, use_32_bit = False, indexable_element = None):  # todo: add masked argument
         """Returns a +1D array of all parts with first axis being over facet values; Use facet_list() for lookup.

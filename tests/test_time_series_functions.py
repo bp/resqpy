@@ -5,10 +5,7 @@ import pytest
 import resqpy.model as rq
 import resqpy.time_series as rqts
 
-#reversemode=True
 
-
-#@pytest.mark.parametrize("reversemode", [True, False])
 def test_merge_timeseries():
     model = rq.Model(create_basics = True)
 
@@ -33,7 +30,7 @@ def test_merge_timeseries():
     for idx, timestamp in enumerate(newts.datetimes()):
         assert timestamp == sortedtimestamps[idx]
 
-    #Now test duplication doesn't create duplicate timestamps during merge, I want a unique set of merged timestamps
+    # Now test duplication doesn't create duplicate timestamps during merge, I want a unique set of merged timestamps
 
     timestamps3 = [timestamp for timestamp in timestamps1]
     timeseries3 = rqts.time_series_from_list(timestamps3, parent_model = model)
@@ -118,3 +115,21 @@ def test_geologic_time_series(tmp_path):
         assert ts.number_of_timestamps() == 12
         assert ((ts.timestamps[0] == -145000000 and ts.timestamps[-1] == -72100000) or
                 (ts.timestamps[0] == -145000000 * 2 and ts.timestamps[-1] == -72100000 * 2))
+
+
+def test_geologic_time_str_fails_when_not_int():
+    with pytest.raises(AssertionError):
+        rqts.geologic_time_str('hello world')
+
+
+@pytest.mark.parametrize('years_value, expected_result', [(10_000_000, '-10 Ma'), (1_000_000, '-1 Ma'),
+                                                          (11_000_000, '-11 Ma'), (1, '-0.000 Ma'),
+                                                          (1_500_000, '-1.500 Ma'), (15_060_000, '-16 Ma'),
+                                                          (15_040_000, '-16 Ma')])
+def test_geologic_time_str(years_value, expected_result):
+    # arrange
+    test_years_value = years_value
+    # act
+    result = rqts.geologic_time_str(test_years_value)
+    # assert
+    assert result == expected_result

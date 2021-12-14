@@ -1,4 +1,4 @@
-"""string_lookup.py: class containing resqml stringlookup class."""
+"""Class containing resqml stringlookup class."""
 
 version = '24th November 2021'
 
@@ -7,7 +7,6 @@ version = '24th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
 
 # import xml.etree.ElementTree as et
 

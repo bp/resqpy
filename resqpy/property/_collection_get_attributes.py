@@ -1,4 +1,4 @@
-"""_collection_get_attributes.py: submodule containing functions for attribute extraction for a property collection."""
+"""Submodule containing functions for attribute extraction for a property collection."""
 
 version = '1st December 2021'
 
@@ -7,7 +7,6 @@ version = '1st December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_collection_get_attributes.py version ' + version)
 
 import resqpy
 import numpy as np

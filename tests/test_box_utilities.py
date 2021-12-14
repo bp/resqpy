@@ -79,19 +79,41 @@ def test_box_utilities():
     # the parent cell is outside the box in the following test
     assert bx.local_box_cell_from_parent_cell(b3, cell) is None
 
-    # test the function that returns a boolean indicating whether two boxes have any overlap
+    # test the functions that return a boolean indicating whether two boxes have any overlap
+    trim_box = np.zeros((2, 3), dtype = int)
     assert bx.boxes_overlap(b1, b2)
+    assert bx.overlapping_boxes(b1, b2, trim_box = trim_box)  # has side effect of setting trim box values
     assert bx.boxes_overlap(b2, b1)
+    assert bx.overlapping_boxes(b2, b1, trim_box = trim_box)  # has side effect of setting trim box values
     for ba, bb in ((b1, b3), (b2, b4), (b3, b4)):
         assert not bx.boxes_overlap(ba, bb)
+        assert not bx.overlapping_boxes(ba, bb, trim_box = trim_box)  # has side effect of setting trim box values
+        assert np.all(trim_box == 0)
         assert not bx.boxes_overlap(bb, ba)
+        assert not bx.overlapping_boxes(bb, ba, trim_box = trim_box)  # has side effect of setting trim box values
+        assert np.all(trim_box == 0)
 
     by = b1 + 2
     assert bx.boxes_overlap(b1, by)
+    assert bx.overlapping_boxes(b1, by, trim_box = trim_box)  # has side effect of setting trim box values
+    assert bx.volume_of_box(trim_box) == 60
     assert bx.boxes_overlap(by, b1)
+    assert bx.overlapping_boxes(by, b1, trim_box = trim_box)  # has side effect of setting trim box values
+    assert bx.volume_of_box(trim_box) == 60
 
     bz = b4 + 3
     assert not bx.boxes_overlap(b1, bz)
     assert not bx.boxes_overlap(bz, b2)
 
-    # todo: test box trimming functions
+    b1c = b1.copy()
+    mask = bx.trim_box_by_box_returning_new_mask(b1c, trim_box, np.ones(bx.extent_of_box(b1c), dtype = bool))
+    assert bx.volume_of_box(b1) == bx.volume_of_box(b1c) + 60
+    assert bx.volume_of_box(b1c) == mask.size
+
+    mask = np.zeros((5, 6, 7), dtype = bool)
+    mask[2:4, 3:5, 6] = True
+    b567 = np.array([[0, 0, 0], [4, 5, 6]], dtype = int)
+    trimmed_mask = bx.trim_box_to_mask_returning_new_mask(b567, mask)
+    assert trimmed_mask.shape == (2, 2, 1)
+    assert np.all(trimmed_mask)
+    assert np.all(b567 == np.array([[2, 3, 6], [3, 4, 6]], dtype = int))
