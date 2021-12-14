@@ -29,6 +29,7 @@ import numpy as np
 import resqpy.olio.factors as factors
 import resqpy.olio.vector_utilities as vec
 
+
 ##########################################################################################
 # infill_block_geometry():
 # scans each logically vertical column of cells,
@@ -52,109 +53,64 @@ def infill_block_geometry(extent,
                           thickness,
                           x,
                           y,
-                          k_increase_direction = 'down',
-                          depth_zero_tolerance = 0.01,
-                          x_y_zero_tolerance = 0.01,
-                          vertical_cell_overlap_tolerance = 0.01,
-                          snap_to_top_and_base = True,
-                          nudge = True):
+                          k_increase_direction='down',
+                          depth_zero_tolerance=0.01,
+                          x_y_zero_tolerance=0.01,
+                          vertical_cell_overlap_tolerance=0.01,
+                          snap_to_top_and_base=True,
+                          nudge=True):
     """Scans logically vertical columns of cells setting depth (& thickness) of inactive cells."""
 
-    k_dir_sign = __get_k_dir_sign(k_increase_direction = k_increase_direction)
-    # if k_increase_direction == 'down':
-    #     k_dir_sign = 1.0
-    # elif k_increase_direction == 'up':
-    #     k_dir_sign = -1.0
-    # else:
-    #     assert (False)
+    if k_increase_direction == 'down':
+        k_dir_sign = 1.0
+    elif k_increase_direction == 'up':
+        k_dir_sign = -1.0
+    else:
+        assert (False)
 
     for j in range(extent[1]):
         for i in range(extent[2]):
             k_top = 0  # NB: 'top' & 'bottom' are misleading if k_increase_direction == 'up'
-            k_top, x, y, depth, thickness, whole_column_inactive = __clean_up_tiny_values(
-                k = k_top,
-                x = x,
-                y = y,
-                i = i,
-                j = j,
-                extent = extent,
-                depth = depth,
-                thickness = thickness,
-                depth_zero_tolerance = depth_zero_tolerance,
-                x_y_zero_tolerance = x_y_zero_tolerance)
-            if whole_column_inactive:
-                continue
-            x, y, depth = __snap_to_top_and_base(snap_to_top_and_base = snap_to_top_and_base,
-                                                 x = x,
-                                                 y = y,
-                                                 i = i,
-                                                 j = j,
-                                                 depth = depth,
-                                                 thickness = thickness,
-                                                 k_top = k_top,
-                                                 k_dir_sign = k_dir_sign)
-            # k_top = 0  # NB: 'top' & 'bottom' are misleading if k_increase_direction == 'up'
-            # while k_top < extent[0] and abs(depth[k_top, j, i]) <= depth_zero_tolerance:
-            #     depth[k_top, j, i] = 0.0  # clean up tiny values
-            #     thickness[k_top, j, i] = 0.0
-            #     if abs(x[k_top, j, i]) <= x_y_zero_tolerance:
-            #         x[k_top, j, i] = 0.0
-            #     if abs(y[k_top, j, i]) <= x_y_zero_tolerance:
-            #         y[k_top, j, i] = 0.0
-            #     k_top += 1  # skip topmost inactive batch
-            # if k_top >= extent[0]:
-            #     continue  # whole column is inactive
-            # if snap_to_top_and_base:
-            #     snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
-            #     snap_x = x[k_top, j, i]
-            #     snap_y = y[k_top, j, i]
-            #     for k_snap in range(k_top):
-            #         depth[k_snap, j, i] = snap_depth
-            #         x[k_snap, j, i] = snap_x
-            #         y[k_snap, j, i] = snap_y
-            break_loop = False
-            while not break_loop:
+            while k_top < extent[0] and abs(depth[k_top, j, i]) <= depth_zero_tolerance:
+                depth[k_top, j, i] = 0.0  # clean up tiny values
+                thickness[k_top, j, i] = 0.0
+                if abs(x[k_top, j, i]) <= x_y_zero_tolerance:
+                    x[k_top, j, i] = 0.0
+                if abs(y[k_top, j, i]) <= x_y_zero_tolerance:
+                    y[k_top, j, i] = 0.0
+                k_top += 1  # skip topmost inactive batch
+            if k_top >= extent[0]:
+                continue  # whole column is inactive
+            if snap_to_top_and_base:
+                snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
+                snap_x = x[k_top, j, i]
+                snap_y = y[k_top, j, i]
+                for k_snap in range(k_top):
+                    depth[k_snap, j, i] = snap_depth
+                    x[k_snap, j, i] = snap_x
+                    y[k_snap, j, i] = snap_y
+            while True:
                 while k_top < extent[0] and abs(depth[k_top, j, i]) > depth_zero_tolerance:  # skip active layers
                     k_top += 1
                 k_base = k_top + 1
-                k_base, x, y, depth, thickness, _ = __clean_up_tiny_values(k = k_base,
-                                                                           x = x,
-                                                                           y = y,
-                                                                           i = i,
-                                                                           j = j,
-                                                                           extent = extent,
-                                                                           depth = depth,
-                                                                           thickness = thickness,
-                                                                           depth_zero_tolerance = depth_zero_tolerance,
-                                                                           x_y_zero_tolerance = x_y_zero_tolerance)
-                # while k_base < extent[0] and abs(depth[k_base, j, i]) <= depth_zero_tolerance:
-                #     depth[k_base, j, i] = 0.0  # clean up tiny depth values
-                #     thickness[k_base, j, i] = 0.0
-                #     if abs(x[k_base, j, i]) <= x_y_zero_tolerance:
-                #         x[k_base, j, i] = 0.0
-                #     if abs(y[k_base, j, i]) <= x_y_zero_tolerance:
-                #         y[k_base, j, i] = 0.0
-                #     k_base += 1  # look for deeper active layer
+                while k_base < extent[0] and abs(depth[k_base, j, i]) <= depth_zero_tolerance:
+                    depth[k_base, j, i] = 0.0  # clean up tiny depth values
+                    thickness[k_base, j, i] = 0.0
+                    if abs(x[k_base, j, i]) <= x_y_zero_tolerance:
+                        x[k_base, j, i] = 0.0
+                    if abs(y[k_base, j, i]) <= x_y_zero_tolerance:
+                        y[k_base, j, i] = 0.0
+                    k_base += 1  # look for deeper active layer
                 if k_base >= extent[0]:  # no deeper active cells found
-                    x, y, depth = __snap_to_top_and_base(snap_to_top_and_base = snap_to_top_and_base,
-                                                         x = x,
-                                                         y = y,
-                                                         i = i,
-                                                         j = j,
-                                                         depth = depth,
-                                                         thickness = thickness,
-                                                         k_top = k_top,
-                                                         k_dir_sign = k_dir_sign)
-                    # if snap_to_top_and_base:
-                    #     snap_depth = depth[k_top - 1, j, i] + k_dir_sign * thickness[k_top - 1, j, i] / 2.0
-                    #     snap_x = x[k_top - 1, j, i]
-                    #     snap_y = y[k_top - 1, j, i]
-                    #     for k_snap in range(extent[0] - k_top):
-                    #         depth[k_top + k_snap, j, i] = snap_depth
-                    #         x[k_top + k_snap, j, i] = snap_x
-                    #         y[k_top + k_snap, j, i] = snap_y
-                    # break
-                    break_loop = True
+                    if snap_to_top_and_base:
+                        snap_depth = depth[k_top - 1, j, i] + k_dir_sign * thickness[k_top - 1, j, i] / 2.0
+                        snap_x = x[k_top - 1, j, i]
+                        snap_y = y[k_top - 1, j, i]
+                        for k_snap in range(extent[0] - k_top):
+                            depth[k_top + k_snap, j, i] = snap_depth
+                            x[k_top + k_snap, j, i] = snap_x
+                            y[k_top + k_snap, j, i] = snap_y
+                    break
                 void_cell_count = k_base - k_top
                 assert (void_cell_count > 0)
                 void_top_depth = depth[k_top - 1, j, i] + (thickness[k_top - 1, j, i] / 2.0) * k_dir_sign
@@ -192,76 +148,6 @@ def infill_block_geometry(extent,
                 k_top = k_base
 
 
-def __get_k_dir_sign(k_increase_direction):
-    """ Set whether depth increases with increasingly positive or negative values."""
-
-    if k_increase_direction == 'down':
-        k_dir_sign = 1.0
-    elif k_increase_direction == 'up':
-        k_dir_sign = -1.0
-    else:
-        assert (False)
-    return k_dir_sign
-
-
-def __clean_up_tiny_values(k, x, y, i, j, extent, depth, thickness, depth_zero_tolerance, x_y_zero_tolerance):
-    """ Set x, y, depth and thickness values to zero if values are below tolerances."""
-
-    whole_column_inactive = False
-    while k < extent[0] and abs(depth[k, j, i]) <= depth_zero_tolerance:
-        depth[k, j, i] = 0.0  # clean up tiny values
-        thickness[k, j, i] = 0.0
-        if abs(x[k, j, i]) <= x_y_zero_tolerance:
-            x[k, j, i] = 0.0
-        if abs(y[k, j, i]) <= x_y_zero_tolerance:
-            y[k, j, i] = 0.0
-        k += 1  # skip topmost inactive batch
-    if k >= extent[0]:
-        whole_column_inactive = True
-    return k, x, y, depth, thickness, whole_column_inactive
-
-
-def __snap_to_top_and_base(snap_to_top_and_base, x, y, i, j, depth, thickness, k_top, k_dir_sign):
-    """ Cells above topmost active and below deepest active will be populated with pinched out cells at the top and
-    bottom faces respectively.
-    """
-    if snap_to_top_and_base:
-        snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
-        snap_x = x[k_top, j, i]
-        snap_y = y[k_top, j, i]
-        for k_snap in range(k_top):
-            depth[k_snap, j, i] = snap_depth
-            x[k_snap, j, i] = snap_x
-            y[k_snap, j, i] = snap_y
-    return x, y, depth
-
-
-def __nudge_overlapping_cells_if_requested(nudge, i, j, k_top, k_base, extent, depth, infill_cell_thickness,
-                                           void_interval, void_bottom_depth, vertical_cell_overlap_tolerance,
-                                           depth_zero_tolerance, k_dir_sign):
-    """ Clean up overlap over pinchouts by moving the depths of cells with greater k."""
-
-    if void_interval < 0.0:  # overlapping cells
-        if -void_interval < vertical_cell_overlap_tolerance:
-            if nudge:
-                nudge_count = 0  # debug
-                for k_nudge in range(extent[0] - k_base):
-                    if depth[k_base + k_nudge, j, i] > depth_zero_tolerance:
-                        depth[k_base + k_nudge, j, i] += -void_interval * k_dir_sign
-                        nudge_count += 1  # debug
-                log.debug('%1d cells nudged in [ i j ] column [%1d, %1d]', nudge_count, i + 1, j + 1)
-                void_bottom_depth += -void_interval
-            void_interval = 0.0
-            infill_cell_thickness = 0.0
-        else:
-            log.warn('Cells [%1d, %1d, %1d] and [%1d, %1d, %1d] overlap ...', i + 1, j + 1, k_top, i + 1, j + 1,
-                     k_base + 1)
-            log.warn('   check k_increase_direction and tolerances')
-            log.warn('Skipping rest of i,j column')  # todo: could abort here
-            break_loop = True
-        return depth, infill_cell_thickness, void_interval, break_loop
-
-
 # end of def infill_block_geometry()
 ##########################################################################################
 
@@ -269,12 +155,12 @@ def __nudge_overlapping_cells_if_requested(nudge, i, j, k_top, k_base, extent, d
 # def resequence_nexus_corp():
 
 
-def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
+def resequence_nexus_corp(corner_points, eight_mode=False, undo=False):
     """Reorders corner point data in situ, to handle bizarre nexus orderings."""
 
     # undo False for corp to internal; undo True for internal to corp; only relevant in eight_mode
     assert (corner_points.ndim == 7)
-    extent = np.array(corner_points.shape, dtype = 'int')
+    extent = np.array(corner_points.shape, dtype='int')
     if eight_mode:
         for k in range(extent[0]):
             for j in range(extent[1]):
@@ -309,24 +195,24 @@ def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
 # def random_cell():
 
 
-def random_cell(corner_points, border = 0.25, max_tries = 20, tolerance = 0.003):
+def random_cell(corner_points, border=0.25, max_tries=20, tolerance=0.003):
     """Returns a random cell's (k,j,i) tuple for a cell with non-zero lengths on all 3 primary edges."""
 
     assert (corner_points.ndim == 7)
     assert (border >= 0.0 and border < 0.5)
     assert (max_tries > 0)
 
-    extent = np.array(corner_points.shape, dtype = 'int')
+    extent = np.array(corner_points.shape, dtype='int')
     kji_extent = extent[:3]
-    kji_border = np.zeros(3, dtype = 'int')
-    kji_upper = np.zeros(3, dtype = 'int')
+    kji_border = np.zeros(3, dtype='int')
+    kji_upper = np.zeros(3, dtype='int')
     for axis in range(3):
         kji_border[axis] = int(float(kji_extent[axis]) * border)
         kji_upper[axis] = kji_extent[axis] - kji_border[axis] - 1
         if kji_upper[axis] < kji_border[axis]:
             kji_upper[axis] = kji_border[axis]
 
-    kji_cell = np.empty(3, dtype = 'int')
+    kji_cell = np.empty(3, dtype='int')
     attempt = 0
     while attempt < max_tries:
         attempt += 1
@@ -356,7 +242,7 @@ def random_cell(corner_points, border = 0.25, max_tries = 20, tolerance = 0.003)
 # def determine_corp_ijk_handedness():
 
 
-def determine_corp_ijk_handedness(corner_points, xyz_is_left_handed = True):
+def determine_corp_ijk_handedness(corner_points, xyz_is_left_handed=True):
     """Determine true ijk handedness from corner point data in pagoda style 7D array; returns 'right' or 'left'."""
 
     assert (corner_points.ndim == 7)
@@ -386,7 +272,7 @@ def determine_corp_ijk_handedness(corner_points, xyz_is_left_handed = True):
 # def determine_corp_extent():
 
 
-def determine_corp_extent(corner_points, tolerance = 0.003):
+def determine_corp_extent(corner_points, tolerance=0.003):
     """Returns extent of grid derived from 7D corner points with all cells temporarily in I."""
 
     def neighbours(corner_points, sextuple_cell_a_p1, sextuple_cell_a_p2, sextuple_cell_b_p1, sextuple_cell_b_p2,
@@ -418,7 +304,7 @@ def determine_corp_extent(corner_points, tolerance = 0.003):
     redundancy = confirmation
     remaining_attempts = max_failures
     while redundancy:
-        kji_cell = random_cell(corner_points, tolerance = min_cell_length)
+        kji_cell = random_cell(corner_points, tolerance=min_cell_length)
         found = False
         for e in possible_extents:
             candidate = kji_cell[2] + e
@@ -491,7 +377,7 @@ def determine_corp_extent(corner_points, tolerance = 0.003):
 # def translate_corp():
 
 
-def translate_corp(corner_points, x_shift = None, y_shift = None, min_xy = None, preserve_digits = None):
+def translate_corp(corner_points, x_shift=None, y_shift=None, min_xy=None, preserve_digits=None):
     """Adjusts x and y values of corner points by a constant offset."""
 
     assert (corner_points.ndim == 7)
@@ -523,14 +409,11 @@ def translate_corp(corner_points, x_shift = None, y_shift = None, min_xy = None,
 
 def triangles_for_cell_faces(cp):
     """Returns numpy array of shape (3, 2, 4, 3, 3) with axes being kji, -+, triangle within face, triangle corner, xyz.
-
     args:
        cp (numpy float array of shape (2, 2, 2, 3)): single cell corner point array in pagoda protocol
-
     returns:
        numpy float array of shape (3, 2, 4, 3, 3) holding triangle corner coordinates for cell faces represented with
        quad triangles
-
     note:
        resqpy.surface also contains methods for working with cell faces as triangulated sets
     """
@@ -538,11 +421,11 @@ def triangles_for_cell_faces(cp):
     tri = np.empty((3, 2, 4, 3, 3))
 
     # create face centre points and assign as one vertex in each of 4 trangles for face
-    tri[0, :, :, 0] = np.mean(cp, axis = (1, 2)).reshape((2, 1, 3)).repeat(4, axis = 1).reshape(
+    tri[0, :, :, 0] = np.mean(cp, axis=(1, 2)).reshape((2, 1, 3)).repeat(4, axis=1).reshape(
         (2, 4, 3))  # k face centres
-    tri[1, :, :, 0] = np.mean(cp, axis = (0, 2)).reshape((2, 1, 3)).repeat(4, axis = 1).reshape(
+    tri[1, :, :, 0] = np.mean(cp, axis=(0, 2)).reshape((2, 1, 3)).repeat(4, axis=1).reshape(
         (2, 4, 3))  # j face centres
-    tri[2, :, :, 0] = np.mean(cp, axis = (0, 1)).reshape((2, 1, 3)).repeat(4, axis = 1).reshape(
+    tri[2, :, :, 0] = np.mean(cp, axis=(0, 1)).reshape((2, 1, 3)).repeat(4, axis=1).reshape(
         (2, 4, 3))  # i face centres
 
     # k faces
@@ -582,9 +465,9 @@ def triangles_for_cell_faces(cp):
 ##########################################################################################
 
 
-def actual_pillar_shape(pillar_points, tolerance = 0.001):
+def actual_pillar_shape(pillar_points, tolerance=0.001):
     """Returns 'curved', 'straight' or 'vertical' for shape of pillar points.
-    
+
     Args:
         pillar_points: fully defined points array of shape (nk + k_gaps + 1,..., 3).
     """
@@ -608,7 +491,7 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
     z_fraction = from_top[:, :, 2] / from_top[-1, :, 2]
     xy_drift = from_top[:, :, :2] - z_fraction.reshape((pp.shape[0], pp.shape[1], 1)) * from_top[-1, :, :2].reshape(
         (1, pp.shape[1], 2))
-    straight = (np.max(np.sum(np.abs(xy_drift), axis = -1), axis = 0) <= tolerance)
+    straight = (np.max(np.sum(np.abs(xy_drift), axis=-1), axis=0) <= tolerance)
     masked_straight = np.where(null_pillar_mask, True, straight)
     if np.all(masked_straight):
         return 'straight'
@@ -620,19 +503,19 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
 
 def columns_to_nearest_split_face(grid):
     """Return an int array of shape (NJ, NI) being number of cells to nearest split edge.
-    
+
     Uses Manhattan distance.
     """
     if not grid.has_split_coordinate_lines:
         return None
 
     j_col_faces_split, i_col_faces_split = grid.split_column_faces()
-    abutting = np.zeros((grid.nj, grid.ni), dtype = bool)
+    abutting = np.zeros((grid.nj, grid.ni), dtype=bool)
     abutting[:-1, :] = j_col_faces_split
     abutting[1:, :] = np.logical_or(abutting[1:, :], j_col_faces_split)
     abutting[:, :-1] = np.logical_or(abutting[:, :-1], i_col_faces_split)
     abutting[:, 1:] = np.logical_or(abutting[:, 1:], i_col_faces_split)
-    framed = np.full((grid.nj + 2, grid.ni + 2), grid.nj + grid.ni, dtype = int)
+    framed = np.full((grid.nj + 2, grid.ni + 2), grid.nj + grid.ni, dtype=int)
     framed[1:-1, 1:-1] = np.where(abutting, 0, grid.nj + grid.ni)
 
     while True:
@@ -655,50 +538,49 @@ def left_right_foursome(full_pillar_list, p_index):
     """Returns (2, 2) bool numpy array indicating which columns around a primary pillar are to the right of a line."""
 
     assert 0 < p_index < len(full_pillar_list) - 1
-    here = np.array(full_pillar_list[p_index], dtype = int)
-    previous = np.array(full_pillar_list[p_index - 1], dtype = int)
-    next = np.array(full_pillar_list[p_index + 1], dtype = int)
+    here = np.array(full_pillar_list[p_index], dtype=int)
+    previous = np.array(full_pillar_list[p_index - 1], dtype=int)
+    next = np.array(full_pillar_list[p_index + 1], dtype=int)
     entry = tuple(here - previous)
     exit = tuple(next - here)
     if entry == (0, 1):
         if exit == (-1, 0):
-            return np.array([[False, True], [True, True]], dtype = bool)
+            return np.array([[False, True], [True, True]], dtype=bool)
         elif exit == (0, 1):
-            return np.array([[False, False], [True, True]], dtype = bool)
+            return np.array([[False, False], [True, True]], dtype=bool)
         elif exit == (1, 0):
-            return np.array([[False, False], [True, False]], dtype = bool)
+            return np.array([[False, False], [True, False]], dtype=bool)
         else:
             raise Exception('code failure whilst taking exit sides from dubious full pillar list')
     elif entry == (0, -1):
         if exit == (-1, 0):
-            return np.array([[False, True], [False, False]], dtype = bool)
+            return np.array([[False, True], [False, False]], dtype=bool)
         elif exit == (0, -1):
-            return np.array([[True, True], [False, False]], dtype = bool)
+            return np.array([[True, True], [False, False]], dtype=bool)
         elif exit == (1, 0):
-            return np.array([[True, True], [True, False]], dtype = bool)
+            return np.array([[True, True], [True, False]], dtype=bool)
         else:
             raise Exception('code failure whilst taking exit sides from dubious full pillar list')
     elif entry == (1, 0):
         if exit == (0, -1):
-            return np.array([[True, False], [False, False]], dtype = bool)
+            return np.array([[True, False], [False, False]], dtype=bool)
         elif exit == (1, 0):
-            return np.array([[True, False], [True, False]], dtype = bool)
+            return np.array([[True, False], [True, False]], dtype=bool)
         elif exit == (0, 1):
-            return np.array([[True, False], [True, True]], dtype = bool)
+            return np.array([[True, False], [True, True]], dtype=bool)
         else:
             raise Exception('code failure whilst taking exit sides from dubious full pillar list')
     elif entry == (-1, 0):
         if exit == (0, -1):
-            return np.array([[True, True], [False, True]], dtype = bool)
+            return np.array([[True, True], [False, True]], dtype=bool)
         elif exit == (-1, 0):
-            return np.array([[False, True], [False, True]], dtype = bool)
+            return np.array([[False, True], [False, True]], dtype=bool)
         elif exit == (0, 1):
-            return np.array([[False, False], [False, True]], dtype = bool)
+            return np.array([[False, False], [False, True]], dtype=bool)
         else:
             raise Exception('code failure whilst taking exit sides from dubious full pillar list')
     else:
         log.debug(f'entry pair: {entry}')
         raise Exception('code failure whilst taking entry sides from dubious full pillar list')
-
 
 ##########################################################################################
