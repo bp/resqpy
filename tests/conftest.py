@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 from shutil import copytree
+import os
 
 import numpy as np
 import pandas as pd
@@ -150,7 +151,7 @@ def example_model_with_properties(tmp_path):
     model.store_epc()
 
     zone = np.ones(shape = (5, 5))
-    zone_array = np.array([zone, zone + 1, zone + 2])
+    zone_array = np.array([zone, zone + 1, zone + 2], dtype = 'int')
 
     vpc = np.array([[1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2], [1, 1, 1, 2, 2]])
     vpc_array = np.array([vpc, vpc, vpc])
@@ -175,7 +176,7 @@ def example_model_with_properties(tmp_path):
 
     perm = np.array([[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
                      [1, 10, 10, 100, 100]])
-    perm_array = np.array([perm, perm, perm])
+    perm_array = np.array([perm, perm, perm], dtype = 'float')
 
     collection = rqp.GridPropertyCollection()
     collection.set_grid(grid)
@@ -245,7 +246,7 @@ def example_model_with_prop_ts_rels(tmp_path):
     facies_array = np.array([facies, facies, facies], dtype = 'int')
 
     perm = np.array([[1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10], [1, 1, 1, 10, 10]])
-    perm_array = np.array([perm, perm, perm])
+    perm_array = np.array([perm, perm, perm], dtype = 'float')
 
     fb = np.array([[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2]], dtype = 'int')
     fb_array = np.array([fb, fb, fb], dtype = 'int')
@@ -354,3 +355,39 @@ def example_model_with_prop_ts_rels(tmp_path):
     model.store_epc()
 
     return model
+
+
+@pytest.fixture
+def example_model_and_cellio(example_model_and_crs, tmp_path):
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
+
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True)
+    grid_uuid = grid.uuid
+    cellio_file = os.path.join(model.epc_directory, 'cellio.dat')
+    well_name = 'Banoffee'
+    source_df = pd.DataFrame(
+        [[2, 2, 1, 25, -25, 125, 26, -26, 126], [2, 2, 2, 26, -26, 126, 27, -27, 127],
+         [2, 2, 3, 27, -27, 127, 28, -28, 128]],
+        columns = ['i_index', 'j_index', 'k_index', 'x_in', 'y_in', 'z_in', 'x_out', 'y_out', 'z_out'])
+
+    with open(cellio_file, 'w') as fp:
+        fp.write('1.0\n')
+        fp.write('Undefined\n')
+        fp.write(f'{well_name}\n')
+        fp.write('9\n')
+        for col in source_df.columns:
+            fp.write(f' {col}\n')
+        for row_index in range(len(source_df)):
+            row = source_df.iloc[row_index]
+            for col in source_df.columns:
+                fp.write(f' {int(row[col])}')
+            fp.write('\n')
+
+    return model, cellio_file, well_name

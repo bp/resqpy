@@ -15,6 +15,7 @@ import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
 import resqpy.surface as rqs
 import resqpy.olio.xml_et as rqet
+import resqpy.well as rqw
 from resqpy.crs import Crs
 
 from resqpy.property import property_kind_and_facet_from_keyword, guess_uom
@@ -789,7 +790,7 @@ def test_property_over_time_series_from_collection(example_model_with_prop_ts_re
     assert len(new_pc.parts()) == len(sw_parts)
 
 
-def test_property_for_keword_from_collection(example_model_with_prop_ts_rels):
+def test_property_for_keyword_from_collection(example_model_with_prop_ts_rels):
     # Arrange
     model = example_model_with_prop_ts_rels
     pc = model.grid().property_collection
@@ -1523,3 +1524,213 @@ def test_guess_uom(tmp_model, expected, xy_uom, z_uom, property_kind, minimum, m
                     facet_type = facet_type,
                     facet = facet)
     assert uom == expected
+
+
+def test_property_kind_list(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act
+    element = pc.property_kind_list()
+
+    # Assert
+    assert element == ['discrete', 'net to gross ratio', 'permeability rock', 'porosity', 'saturation']
+
+
+def test_indexable_list(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act
+    element = pc.unique_indexable_element_list()
+
+    # Assert
+    assert element == ['cells']
+
+
+def test_facet_type_list(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act
+    element = pc.facet_type_list()
+
+    # Assert
+    assert element == ['direction']
+
+
+def test_facet_list(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act
+    element = pc.facet_list()
+
+    # Assert
+    assert element == ['I']
+
+
+def test_time_series_uuid_list(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    ts_uuid = [model.uuid_for_part(part) for part in model.parts_list_of_type('obj_TimeSeries')]
+
+    # Act
+    element = pc.time_series_uuid_list()
+
+    # Assert
+    assert element == ts_uuid
+
+
+def test_uom_list(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act
+    element = pc.uom_list()
+
+    # Assert
+    assert element == ['m3/m3', 'mD']
+
+
+def test_string_lookup_uuid_list(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    pc = model.grid().property_collection
+    lookup_uuid = [model.uuid_for_part(part) for part in model.parts_list_of_type('obj_StringTableLookup')]
+
+    # Act
+    element = pc.string_lookup_uuid_list()
+
+    # Assert
+    assert element == lookup_uuid
+
+
+def test_shape_and_type_of_part(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Act / Assert
+    for part in pc.parts():
+        shape, dtype = pc.shape_and_type_of_part(part)
+        assert shape == (3, 5, 5)
+        if pc.continuous_for_part(part):
+            assert dtype == '<f8'
+        else:
+            assert dtype == 'int32'
+
+
+def test_well_interval_property_collection(example_model_and_cellio):
+    # Arrange
+    model, cellio_file, well_name = example_model_and_cellio
+    grid = model.grid()
+    bw = rqw.BlockedWell(model, use_face_centres = True)
+    bw.import_from_rms_cellio(cellio_file = cellio_file, well_name = well_name, grid = grid)
+    bw.write_hdf5()
+    bw.create_xml()
+    model.store_epc()
+
+    pc = rqp.PropertyCollection(support = bw)
+
+    # Add parts to collection
+    zones = np.array([1, 2, 3])
+    sw = np.array([0.1, 0.2, 1])
+    por = np.array([0, 0.3, 0.24])
+    for array, keyword, discrete in zip([zones, sw, por], ['Zone', 'sw', 'por'], [True, False, False]):
+        pc.add_cached_array_to_imported_list(array,
+                                             source_info = 'testing data',
+                                             keyword = keyword,
+                                             discrete = discrete)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    model.store_epc()
+
+    # Reload the model
+    reload = rq.Model(model.epc_file)
+    loadbw = rqw.BlockedWell(parent_model = reload, uuid = bw.uuid)
+
+    # Act
+    wipc = rqp.WellIntervalPropertyCollection(frame = loadbw)
+    df = wipc.to_pandas()
+
+    # Assert
+    assert len(list(wipc.logs())) == 3
+    assert list(df.columns) == ['Zone', 'sw', 'por']
+    assert all(df['Zone'].values == zones)
+    assert all(df['por'].values == por)
+    assert all(df['sw'].values == sw)
+
+    for log in wipc.logs():
+        if log.name == 'Zone':
+            assert all(log.values() == zones)
+        elif log.name == 'sw':
+            assert all(log.values() == sw)
+        else:
+            assert all(log.values() == por)
+
+
+def test_load_grid_property_collection(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    grid = model.grid()
+
+    # Act
+    pc = rqp.GridPropertyCollection(grid = grid)
+
+    # Assert
+    assert pc is not None
+    assert len(pc.parts()) == 12
+
+
+def test_write_read_nexus_array(example_model_with_prop_ts_rels, tmp_path):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    grid = model.grid()
+    directory = str(tmp_path)
+
+    # Act
+    pc = rqp.GridPropertyCollection(grid = grid)
+    assert pc is not None
+    numparts = len(pc.parts())
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW'][0]
+    pc.write_nexus_property_generating_filename(part = part, directory = directory)
+
+    outfile = os.path.join(tmp_path, 'SW_what_water_t_0')
+    assert os.path.exists(outfile)
+
+    with open(outfile, 'r') as f:
+        lines = f.readlines()
+        assert lines[1] == '! Extent of array is: [5, 5, 3]\n'
+        assert lines[-1] == '1.000\t0.500\t1.000\t0.500\t1.000\n'
+
+    _ = pc.import_nexus_property_to_cache(file_name = outfile, keyword = 'Sw1', discrete = False)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    model.store_epc()
+
+    reload = rq.Model(model.epc_file)
+    newpc = rqp.GridPropertyCollection(grid = reload.grid())
+    assert len(newpc.parts()) == numparts + 1
+
+
+def test_slice_for_box(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = rqp.GridPropertyCollection(grid = model.grid())
+    assert pc is not None
+    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW'][0]
+
+    # Act
+    myslice = pc.h5_slice_for_box(part = part, box = np.array([[0, 0, 0], [1, 2, 2]]))
+
+    expected = np.array([[[1, 0.5, 1], [1, 0.5, 1], [1, 0.5, 1]], [[1, 0.5, 1], [1, 0.5, 1], [1, 0.5, 1]]])
+
+    # Assert
+    assert_array_almost_equal(expected, myslice)
