@@ -23,7 +23,6 @@ import resqpy.well as rqw
 
 
 def pl(n, use_e = False):
-    """Returns a string suffix for indicating plurality of n."""
     if n == 1:
         return ''
     if use_e:
@@ -32,7 +31,6 @@ def pl(n, use_e = False):
 
 
 def required(value):
-    """Returns value as str, '(missing)', or '(empty)'."""
     if value is None:
         return '(missing)'
     text = str(value)
@@ -42,7 +40,6 @@ def required(value):
 
 
 def optional(value):
-    """Returns value as str, '(not present)', or '(empty)'."""
     if value is None:
         return '(not present)'
     text = str(value)
@@ -52,7 +49,6 @@ def optional(value):
 
 
 def format_xyz(xyz):
-    """Returns a formatted string representing triple float xyz values."""
     x, y, z = xyz
     if x is None or y is None or z is None:
         return '(invalid)'
@@ -60,7 +56,6 @@ def format_xyz(xyz):
 
 
 def point_3d(node, flavour):
-    """Extracts and returns a triple float xyz from a RESQML Point3d xml node."""
     p3d_node = rqet.find_tag(node, flavour)
     if p3d_node is None:
         return '(missing)'

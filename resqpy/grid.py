@@ -41,6 +41,9 @@ always_write_cell_geometry_is_defined_array = False
 
 
 def _add_to_kelp_list(extent_kji, kelp_list, face_axis, ji):
+    """
+      :meta private:
+   """
     if isinstance(face_axis, bool):
         face_axis = 'J' if face_axis else 'I'
     # ignore external faces
@@ -67,7 +70,6 @@ class Grid(BaseResqpy):
 
     @property
     def nk_plus_k_gaps(self):
-        """Returns the number of layers including any K gaps."""
         if self.nk is None:
             return None
         if self.k_gaps is None:
@@ -319,7 +321,8 @@ class Grid(BaseResqpy):
         return (k0, j0, i0)
 
     def denaturalized_cell_indices(self, c0s):
-        """Returns an integer array holding kji0 indices for the cells with given natural indices.
+        """Returns an integer numpy array of shape (..., 3) holding kji0 indices for the cells with given natural
+        indices.
 
         argument:
            c0s: numpy integer array of shape (...,) being natural cell indices (for a flattened array)
@@ -793,7 +796,6 @@ class Grid(BaseResqpy):
             self.is_refinement = self_is_refinement
 
     def extract_children(self):
-        """Looks for LGRs related to this grid and sets the local_grid_uuid_list attribute."""
         assert self.uuid is not None
         if self.local_grid_uuid_list is not None:
             return self.local_grid_uuid_list
@@ -895,9 +897,8 @@ class Grid(BaseResqpy):
         return self.inactive
 
     def cell_geometry_is_defined(self, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
-        """Returns True if the geometry of the specified cell is defined.
-        
-        Can also be used to cache (load) the boolean array.
+        """Returns True if the geometry of the specified cell is defined; can also be used to cache (load) the boolean
+        array.
 
         arguments:
            cell_kji0 (triplet of integer, optional): if present, the index of the cell of interest, in kji0 protocol;
@@ -954,9 +955,8 @@ class Grid(BaseResqpy):
             return result
 
     def pillar_geometry_is_defined(self, pillar_ji0 = None, pillar_geometry_is_defined_root = None, cache_array = True):
-        """Returns True if the geometry of the specified pillar is defined; False otherwise.
-        
-        Can also be used to cache (load) the boolean array.
+        """Returns True if the geometry of the specified pillar is defined; False otherwise; can also be used to cache
+        (load) the boolean array.
 
         arguments:
            pillar_ji0 (pair of integers, optional): if present, the index of the pillar of interest, in ji0 protocol;
@@ -1111,7 +1111,8 @@ class Grid(BaseResqpy):
                                 complete_partial_pillars = False,
                                 nullify_partial_pillars = False,
                                 complete_all = False):
-        """Set cached flags and/or arrays indicating which primary pillars have any points defined and which cells all points.
+        """Sets cached flags and/or arrays indicating which primary pillars have any points defined and which cells all
+        points.
 
         arguments:
            treat_as_nan (float, optional): if present, any point with this value as x, y or z is changed
@@ -1761,7 +1762,8 @@ class Grid(BaseResqpy):
         return self.pillars_for_column
 
     def pillar_foursome(self, ji0, none_if_unsplit = False):
-        """Returns an int array of the natural pillar indices applicable to each column around primary.
+        """Returns a numpy int array of shape (2, 2) being the natural pillar indices applicable to each column around
+        primary.
 
         arguments:
            ji0 (pair of ints): the pillar indices (j0, i0) of the primary pillar of interest
@@ -1994,7 +1996,8 @@ class Grid(BaseResqpy):
         return (self.fault_throw_j, self.fault_throw_i)
 
     def fault_throws_per_edge_per_column(self, mode = 'maximum', simple_z = False, axis_polarity_mode = True):
-        """Return array holding max, mean or min throw based on split node separations.
+        """Returns numpy array of shape (nj, ni, 2, 2) or (nj, ni, 4) holding max, mean or min throw based on split node
+        separations.
 
         arguments:
            mode (string, default 'maximum'): one of 'minimum', 'mean', 'maximum'; determines how to resolve variation in throw for
@@ -2300,12 +2303,9 @@ class Grid(BaseResqpy):
         return local_face_set_dict, full_pillar_list_dict
 
     def check_top_and_base_cell_edge_directions(self):
-        """Check grid top face I & J edge vectors (in x,y) against basal equivalents.
-        
-        Max 90 degree angle tolerated.
+        """checks grid top face I & J edge vectors (in x,y) against basal equivalents: max 90 degree angle tolerated.
 
-        returns:
-            boolean: True if all checks pass; False if one or more checks fail
+        returns: boolean: True if all checks pass; False if one or more checks fail
 
         notes:
            similarly checks cell edge directions in neighbouring cells in top (and separately in base)
@@ -2775,7 +2775,8 @@ class Grid(BaseResqpy):
             return points[:, cpm[ref_slice0, :, ij_p, :], :]
 
     def split_gap_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
-        """Return array of points representing cell corners from an I or J interface slice for a faulted grid.
+        """Returns an array of points representing cell corners from an I or J interface slice for a faulted grid with k
+        gaps.
 
         arguments:
            axis (string): 'I' or 'J' being the axis of the cross-sectional slice (ie. dimension being dropped)
@@ -2853,7 +2854,7 @@ class Grid(BaseResqpy):
             return points[:, ref_slice0, :, :]
 
     def x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
-        """Deprecated: please use `unsplit_x_section_points` instead."""
+        """Deprecated: please use unsplit_x_section_points() instead."""
 
         return self.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
@@ -3343,17 +3344,15 @@ class Grid(BaseResqpy):
         return cp
 
     def invalidate_corner_points(self):
-        """Deletes cached copy of corner points, if present.
-        
-        Use if any pillar geometry changes, or to reclaim memory.
-        """
+        """Deletes cached copy of corner points, if present; use if any pillar geometry changes, or to reclaim
+        memory."""
+
         if hasattr(self, 'array_corner_points'):
             delattr(self, 'array_corner_points')
 
     def centre_point(self, cell_kji0 = None, cache_centre_array = False):
-        """Returns centre point of a cell or array of centre points of all cells.
-        
-        Optionally cache centre points for all cells.
+        """Returns centre point of a cell or array of centre points of all cells; optionally cache centre points for all
+        cells.
 
         arguments:
            cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
@@ -3577,10 +3576,8 @@ class Grid(BaseResqpy):
         return abs(np.mean(cp[1, :, :, 2]) - np.mean(cp[0, :, :, 2]))
 
     def point_areally(self, tolerance = 0.001):
-        """Returns array indicating which cells are reduced to a point in both I & J axes.
-
-        Returns:
-            numopy bool array of shape extent_kji
+        """Returns a numpy boolean array of shape extent_kji indicating which cells are reduced to a point in both I & J
+        axes.
 
         Note:
            Any NaN point values will yield True for a cell
@@ -3725,9 +3722,8 @@ class Grid(BaseResqpy):
                     cache_cp_array = False,
                     cache_thickness_array = False,
                     cache_pinchout_array = None):
-        """Returns boolean or boolean array indicating whether cell is pinched out.
-        
-        Pinched out means cell has a thickness less than tolerance.
+        """Returns boolean or boolean array indicating whether cell is pinched out; ie. has a thickness less than
+        tolerance.
 
         :meta common:
         """
@@ -4320,10 +4316,9 @@ class Grid(BaseResqpy):
                            points_root = None,
                            cache_resqml_array = True,
                            cache_cp_array = False):
-        """Returns xyz point interpolated from corners of cell.
-        
-        Depends on 3 interpolation fractions in range 0 to 1.
-        """
+        """Returns xyz point interpolated from corners of cell depending on 3 interpolation fractions in range 0 to
+        1."""
+
         # todo: think about best ordering of axes operations given high aspect ratio of cells (for best accuracy)
         fp = np.empty(3)
         fm = np.empty(3)
@@ -4349,9 +4344,8 @@ class Grid(BaseResqpy):
                             points_root = None,
                             cache_resqml_array = True,
                             cache_cp_array = False):
-        """Returns xyz points interpolated from corners of cell.
-        
-        Depending on 3 interpolation fraction numpy vectors, each value in range 0 to 1.
+        """Returns xyz points interpolated from corners of cell depending on 3 interpolation fraction numpy vectors,
+        each value in range 0 to 1.
 
         arguments:
            cell_kji0 (triple int): indices of individual cell whose corner points are to be interpolated
@@ -4539,7 +4533,8 @@ class Grid(BaseResqpy):
                 bwam.convert_lengths(flat_a[:, 2], crs_z_units_text, global_z_units)  # z
 
     def z_inc_down(self):
-        """Return True if z increases downwards in the coordinate reference system used by the grid geometry
+        """Returns True if z increases downwards in the coordinate reference system used by the grid geometry, False
+        otherwise.
 
         :meta common:
         """
@@ -4596,10 +4591,9 @@ class Grid(BaseResqpy):
                                write_active = None,
                                stratigraphy = True,
                                expand_const_arrays = False):
-        """Create or append to an hdf5 file.
-        
-        Writes datasets for the grid geometry (and parent grid mapping) and properties from cached arrays.
-        """
+        """Create or append to an hdf5 file, writing datasets for the grid geometry (and parent grid mapping) and
+        properties from cached arrays."""
+
         # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
         # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
         # xml is not created here for property objects
@@ -4863,10 +4857,9 @@ class Grid(BaseResqpy):
         return rqet.find_tag(crs_root, 'VerticalUom').text
 
     def poly_line_for_cell(self, cell_kji0, vertical_ref = 'top'):
-        """Returns a numpy array of shape (4, 3) being the 4 corners.
-        
-        Corners are in order J-I-, J-I+, J+I+, J+I-; from the top or base face.
-        """
+        """Returns a numpy array of shape (4, 3) being the 4 corners in order J-I-, J-I+, J+I+, J+I-; from the top or
+        base face."""
+
         if vertical_ref == 'top':
             kp = 0
         elif vertical_ref == 'base':
@@ -4923,8 +4916,7 @@ class Grid(BaseResqpy):
 
         arguments:
            x_sect (numpy float array of shape (nk, nj or ni, 2, 2, 2 or 3): the cross section x,z or x,y,z data
-           x (float) x-coordinate of point of interest in the cross section space
-           z (float): y-coordinate of  point of interest in the cross section space
+           x, z (floats): the point of interest in the cross section space
 
         note:
            the x_sect data is in the form returned by x_section_corner_points() or split_gap_x_section_points();
@@ -5623,9 +5615,8 @@ class RegularGrid(Grid):
     # override of Grid methods
 
     def point_raw(self, index = None, points_root = None, cache_array = True):
-        """Returns element from points data, indexed as corner point (k0, j0, i0).
-        
-        Can optionally be used to cache points data.
+        """Returns element from points data, indexed as corner point (k0, j0, i0); can optionally be used to cache
+        points data.
 
         arguments:
            index (3 integers, optional): if not None, the index into the raw points data for the point of interest

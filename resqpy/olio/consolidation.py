@@ -29,17 +29,8 @@ consolidatable_list = [
 
 
 class Consolidation:
-    """Class supporting equivalence mapping of high level RESQML parts between models."""
 
     def __init__(self, resident_model):
-        """Initialise a new Consolidation object prior to merging parts from another model.
-
-        arguments:
-           resident_model (model.Model): the model into which potentially equivalent parts will be merged
-
-        returns:
-           the new Consolidation object
-        """
 
         self.model = resident_model
         log.debug(f'new consolidation for {self.model.epc_file} with {len(self.model.uuids())} uuids')
@@ -47,7 +38,7 @@ class Consolidation:
         self.stale = True
 
     def equivalent_uuid_for_part(self, part, immigrant_model = None, ignore_identical_part = False):
-        """Returns uuid of an equivalent part in resident model, or None if no equivalent found."""
+        """Returns uuid of an equivalent part in primary model, or None if no equivalent found."""
 
         #      log.debug('Looking for equivalent uuid for: ' + str(part))
         if not part:

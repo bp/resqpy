@@ -13,6 +13,7 @@ log.debug('model.py version ' + version)
 import copy
 import getpass
 import os
+import pathlib
 import shutil
 import warnings
 import zipfile as zf
@@ -43,6 +44,7 @@ class Model():
     """Class for RESQML (v2) based models.
 
     Examples:
+
           To open an existing dataset::
 
              Model(epc_file = 'filename.epc')
@@ -2536,26 +2538,26 @@ class Model():
                    z_inc_down = True):
         """DEPRECATED: Creates a Coordinate Reference System node and optionally adds as child of root and/or to parts forest.
 
-        arguments:
-            add_as_part (boolean, default True): if True the newly created crs node is added to the model
+      arguments:
+         add_as_part (boolean, default True): if True the newly created crs node is added to the model
             as a part
-            title (string): used as the Title text in the citation node
-            epsg_code (integer): EPSG code of the parent coordinate reference system that this crs sits within;
+         title (string): used as the Title text in the citation node
+         epsg_code (integer): EPSG code of the parent coordinate reference system that this crs sits within;
             used for both projected and vertical frames of reference; if None then unknown settings are used
-            originator (string, optional): the name of the human being who created the crs object;
+         originator (string, optional): the name of the human being who created the crs object;
             default is to use the login name
-            x_offset, y_offset, z_offset (floats, default 0.0): the local origin within the parent coordinate
+         x_offset, y_offset, z_offset (floats, default 0.0): the local origin within the parent coordinate
             reference system space
-            areal_rotation_radians (float, default 0.0): the areal rotation of the xy axes of this crs relative
+         areal_rotation_radians (float, default 0.0): the areal rotation of the xy axes of this crs relative
             to the parent coordinate reference system
-            xy_units (string, default 'm'): the length units of x & y values in this crs; 'm' or 'ft'
-            z_units (string, default 'm'): the length units of z values in this crs; 'm' or 'ft'
-            z_inc_down (boolean, default True): if True, z values increase with depth; if False, z values increase
+         xy_units (string, default 'm'): the length units of x & y values in this crs; 'm' or 'ft'
+         z_units (string, default 'm'): the length units of z values in this crs; 'm' or 'ft'
+         z_inc_down (boolean, default True): if True, z values increase with depth; if False, z values increase
             with elevation
 
-        returns:
-            newly created coordinate reference system xml node
-        """
+      returns:
+         newly created coordinate reference system xml node
+      """
 
         warnings.warn("model.create_crs is Deprecated, will be removed", DeprecationWarning)
         crs = rqc.Crs(self,
@@ -3038,7 +3040,8 @@ class Model():
         return new_node
 
     def force_consolidation_uuid_equivalence(self, immigrant_uuid, resident_uuid):
-        """Force immigrant object to be teated as equivalent to resident during consolidation."""
+        """Forces object identified by immigrant uuid to be teated as equivalent to that with resident uuid during
+        consolidation."""
 
         if self.consolidation is None:
             self.consolidation = cons.Consolidation(self)
@@ -3469,6 +3472,7 @@ class ModelContext:
             print(model.uuids())
 
     Note:
+
         The "write_hdf5" and "create_xml" methods of individual resqpy objects
         still need to be invoked as usual.
     """
@@ -3502,7 +3506,7 @@ class ModelContext:
         self._model: Optional[Model] = None
 
     def __enter__(self) -> Model:
-        """Enter the runtime context, return a model."""
+        # Enter the runtime context, return a model
 
         if self.mode in ["read", "read/write"]:
             if not os.path.exists(self.epc_file):
@@ -3520,7 +3524,7 @@ class ModelContext:
         return self._model
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        """Exit the runtime context, close the model."""
+        # Exit the runtime context, close the model
 
         # Only write to disk if no exception has occured
         if self.mode in ["read/write", "create"] and exc_type is None:

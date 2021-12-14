@@ -158,11 +158,8 @@ class FineCoarse:
         return tuple(base)
 
     def fine_box_for_coarse(self, c_kji0):
-        """Return the min, max for k, j, i0 in fine grid for given coarse cell.
-        
-        Returns:
-            Numpy int array of shape (2, 3) being the min, max for k, j, i0
-        """
+        """Returns a numpy int array of shape (2, 3) being the min, max for k, j, i0 in fine grid for given coarse
+        cell."""
 
         box = np.empty((2, 3), dtype = int)
         box[0] = self.fine_base_for_coarse(c_kji0)
@@ -170,11 +167,8 @@ class FineCoarse:
         return box
 
     def proportion(self, axis, c0):
-        """Return the axial relative proportions of fine within coarse.
-        
-        Returns:
-            numpy vector of floats, summing to one
-        """
+        """Return a numpy vector of floats (summing to one) being the axial relative proportions of fine within
+        coarse."""
 
         if self.equal_proportions[axis]:
             count = self.ratio(axis, c0)
@@ -183,7 +177,8 @@ class FineCoarse:
         return self.vector_proportions[axis][c0]
 
     def proportions_for_axis(self, axis):
-        """Return the axial relative proportions as array of floats summing to one."""
+        """Return a numpy vector of floats for fine (summing to one for each coarse slice) being the axial relative
+        proportions."""
 
         if self.equal_proportions[axis]:
             count = self.constant_ratios[axis]
@@ -192,10 +187,9 @@ class FineCoarse:
         return np.concatenate(self.vector_proportions[axis])
 
     def interpolation(self, axis, c0):
-        """Return a float array ready for interpoltion.
-        
-        Returns floats starting at zero and increasing monotonically to less than one.
-        """
+        """Return a numpy vector of floats starting at zero and increasing monotonically to less than one, ready for
+        interpolation."""
+
         count = self.ratio(axis, c0)
         fractions = np.zeros((count,))
         proport = self.proportion(axis, c0)

@@ -1,4 +1,4 @@
-"""uuid.py: Thin wrapper around python uuid (universally unique identifier) module."""
+"""uuid.py: Thin bifrost wrapper around python uuid (universally unique identifier) module."""
 
 # NB: at present the code does not enforce multiprocessor safe generation of unique identifiers
 # it calls uuid.uuid1() to generate new uuids, ie. using version 1 of the iso standard options

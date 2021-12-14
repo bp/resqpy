@@ -1,4 +1,4 @@
-"""Array writing functions"""
+# module containing array writing functions
 
 version = '29th April 2021'
 
@@ -28,8 +28,6 @@ import resqpy.olio.ab_toolbox as abt
 
 
 def write_pure_binary_data(binary_file_name, numpy_array):
-    """Writes a numpy array to a file in 'pure binary' format."""
-
     with open(binary_file_name, 'wb') as binary_file_out:
         numpy_array.tofile(binary_file_out)
     log.info('Binary data file %s created', binary_file_name)

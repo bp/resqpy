@@ -207,7 +207,7 @@ class BaseResqpy(metaclass = ABCMeta):
         return f"{self.__class__.__name__}(uuid={self.uuid}, title={self.title})"
 
     def _repr_html_(self):
-        """Return HTML for IPython / Jupyter representation."""
+        """IPython / Jupyter representation."""
 
         keys_to_display = ('uuid', 'title', 'originator')
         html = f"<h3>{self.__class__.__name__}</h3>\n"

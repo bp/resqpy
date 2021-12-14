@@ -1,4 +1,4 @@
-"""Functions for reading zmap and roxar format files."""
+# function for reading a zmap file
 
 version = '13th May 2021'
 
@@ -13,11 +13,6 @@ import numpy as np
 
 
 def read_zmap_header(inputfile):
-    """Reads header lines from a zmap format file.
-
-    returns:
-       header_lines_count, no_rows, no_cols, minx, maxx, miny, maxy, null_value
-    """
 
     # read header, read until second '@', record header lines and content
     with open(inputfile, 'r') as infile:
@@ -72,11 +67,6 @@ def read_zmap_header(inputfile):
 
 
 def read_roxar_header(inputfile):
-    """Reads header lines from a roxar format file.
-
-    returns:
-       header_lines_count, no_rows, no_cols, minx, maxx, miny, maxy, null_value
-    """
 
     with open(inputfile, 'r') as fp:
         words = fp.readline().split()
@@ -97,11 +87,6 @@ def read_roxar_header(inputfile):
 
 
 def read_mesh(inputfile, dtype = np.float64, format = None):
-    """Reads a mesh (lattice) from a zmap or roxar format file.
-
-    returns:
-       x, y, f: each a numpy float array of shape (no_rows, no_cols)
-    """
 
     if format == 'zmap':
         headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value = read_zmap_header(inputfile)

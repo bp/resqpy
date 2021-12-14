@@ -85,9 +85,8 @@ def pip_wn(p, poly):
 
 
 def pip_array_cn(p_a, poly):
-    """Return bool array of 2D points inclusion, True where point is inside polygon.
-    
-    Uses crossing number algorithm.
+    """array of 2D points inclusion: returns bool array True where point is inside polygon (uses crossing number
+    algorithm).
 
     arguments:
        p_a (2D numpy float array): set of xy points to test for inclusion in polygon
