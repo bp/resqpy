@@ -1,4 +1,4 @@
-"""grid.py: Resqml grid module handling IJK cartesian grids"""
+"""grid.py: Resqml grid module handling IJK cartesian grids."""
 
 # note: only IJK Grid format supported at present
 # see also rq_import.py
