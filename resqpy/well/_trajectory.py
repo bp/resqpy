@@ -58,7 +58,7 @@ class Trajectory(BaseResqpy):
             cell_kji0_list = None,
             wellspec_file = None,
             spline_mode = 'cube',
-            deviation_survey_file = None,  # TODO: this file actually contains trajectory data --> rename argument!
+            ascii_trajectory_file = None,
             survey_file_space_separated = False,
             length_uom = None,
             md_domain = None,
@@ -91,7 +91,7 @@ class Trajectory(BaseResqpy):
               and length_uom arguments must be passed
            spline_mode (string, default 'cube'): one of 'none', 'linear', 'square', or 'cube'; affects spline
               tangent generation; only relevant if initialising from list of cells
-           deviation_survey_file (string): filename of an ascii file holding the trajectory
+           ascii_trajectory_file (string): filename of an ascii file holding the trajectory
               in a tabular form; ignored if uuid or trajectory_root is not None
            survey_file_space_separated (boolean, default False): if True, deviation survey file is
               space separated; if False, comma separated (csv); ignored unless loading from survey file
@@ -160,13 +160,14 @@ class Trajectory(BaseResqpy):
                          root_node = trajectory_root)
 
         if self.root is not None:
+            if set_tangent_vectors and type(self.knot_count) is int and self.tangent_vectors is None:
+                if self.knot_count > 1:
+                    self.set_tangents()
             return
 
         # Using dictionary mapping to replicate a switch statement. The init_function key is chosen based on the
         # data source and the correct function is then called based on the init_function_dict
         init_function_dict = {
-            'tangent_vectors':
-                self.set_tangents,
             'deviation_survey':
                 partial(self.compute_from_deviation_survey,
                         method = 'minimum curvature',
@@ -181,9 +182,9 @@ class Trajectory(BaseResqpy):
                 partial(self.load_from_cell_list, grid, cell_kji0_list, spline_mode, length_uom),
             'wellspec_file':
                 partial(self.load_from_wellspec, grid, wellspec_file, well_name, spline_mode, length_uom),
-            'deviation_survey_file':
+            'ascii_trajectory_file':
                 partial(self.load_from_ascii_file,
-                        deviation_survey_file,
+                        ascii_trajectory_file,
                         space_separated_instead_of_csv = survey_file_space_separated,
                         md_uom = length_uom,
                         md_datum = md_datum,
@@ -191,16 +192,15 @@ class Trajectory(BaseResqpy):
                         set_tangent_vectors = set_tangent_vectors)
         }
 
-        chosen_init_method = self.__choose_init_method(set_tangent_vectors = set_tangent_vectors,
-                                                       data_frame = data_frame,
+        chosen_init_method = self.__choose_init_method(data_frame = data_frame,
                                                        cell_kji0_list = cell_kji0_list,
                                                        wellspec_file = wellspec_file,
-                                                       deviation_survey_file = deviation_survey_file)
+                                                       deviation_survey_file = ascii_trajectory_file)
 
         try:
             init_function_dict[chosen_init_method]()
         except KeyError:
-            pass
+            log.warning('invalid combination of input arguments specified')
 
         # todo: create from already loaded deviation_survey node (ie. derive xyz points)
 
@@ -216,13 +216,14 @@ class Trajectory(BaseResqpy):
         if self.md_datum is None and self.control_points is not None:
             self.md_datum = MdDatum(self.model, crs_uuid = self.crs_uuid, location = self.control_points[0])
 
-    def __choose_init_method(self, set_tangent_vectors, data_frame, cell_kji0_list, wellspec_file,
-                             deviation_survey_file):
+        if set_tangent_vectors and type(self.knot_count) is int and self.tangent_vectors is None:
+            if self.knot_count > 1:
+                self.set_tangents()
+
+    def __choose_init_method(self, data_frame, cell_kji0_list, wellspec_file, deviation_survey_file):
         """Choose an init method based on data source."""
 
-        if set_tangent_vectors and self.knot_count > 1 and self.tangent_vectors is None:
-            return 'tangent_vectors'
-        elif self.deviation_survey is not None:
+        if self.deviation_survey is not None:
             return 'deviation_survey'
         elif data_frame is not None:
             return 'data_frame'
@@ -231,7 +232,9 @@ class Trajectory(BaseResqpy):
         elif wellspec_file:
             return 'wellspec_file'
         elif deviation_survey_file:
-            return 'deviation_survey_file'
+            return 'ascii_trajectory_file'
+        else:
+            return None
 
     @property
     def crs_root(self):

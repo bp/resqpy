@@ -955,7 +955,12 @@ class BlockedWell(BaseResqpy):
                 property_columns = df.columns[3:]
             self._add_df_properties(df, property_columns, length_uom = length_uom)
 
-    def import_from_rms_cellio(self, cellio_file, well_name, grid, include_overburden_unblocked_interval = False):
+    def import_from_rms_cellio(self,
+                               cellio_file,
+                               well_name,
+                               grid,
+                               include_overburden_unblocked_interval = False,
+                               set_tangent_vectors = False):
         """Populates empty blocked well from RMS cell I/O data; creates simulation trajectory and md datum.
 
         args:
@@ -963,6 +968,8 @@ class BlockedWell(BaseResqpy):
               exit points are expected
            well_name (string): the name of the well as used in the cell I/O file
            grid (grid.Grid object): the grid object which the cell indices in the cell I/O data relate to
+           set_tangent_vectors (boolean, default False): if True, tangent vectors will be computed from the well
+              trajectory's control points
 
         returns:
            self if successful; None otherwise
@@ -1044,15 +1051,13 @@ class BlockedWell(BaseResqpy):
                                                                      well_name = well_name,
                                                                      grid_name = grid_name)
 
-                self.create_md_datum_and_trajectory(
-                    grid,
-                    trajectory_mds,
-                    trajectory_points,
-                    length_uom,
-                    well_name,
-                    set_depth_zero = True,
-                    set_tangent_vectors = False
-                )  # this is causing issues as the knot_count for the trajectory object is None and so cannot test that knot_count > 1
+                self.create_md_datum_and_trajectory(grid,
+                                                    trajectory_mds,
+                                                    trajectory_points,
+                                                    length_uom,
+                                                    well_name,
+                                                    set_depth_zero = True,
+                                                    set_tangent_vectors = set_tangent_vectors)
 
                 self.node_count = len(trajectory_mds)
                 self.node_mds = np.array(trajectory_mds)
