@@ -1,4 +1,4 @@
-"""Package of stratigraphy related classes."""
+"""Stratigraphy related classes and valid values."""
 
 __all__ = [
     'valid_compositions', 'valid_implacements', 'valid_domains', 'valid_deposition_modes', 'valid_ordering_criteria',
