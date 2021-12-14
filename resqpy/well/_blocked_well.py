@@ -960,7 +960,7 @@ class BlockedWell(BaseResqpy):
                                well_name,
                                grid,
                                include_overburden_unblocked_interval = False,
-                               set_tangent_vectors = True):
+                               set_tangent_vectors = False):
         """Populates empty blocked well from RMS cell I/O data; creates simulation trajectory and md datum.
 
         args:
@@ -968,7 +968,7 @@ class BlockedWell(BaseResqpy):
               exit points are expected
            well_name (string): the name of the well as used in the cell I/O file
            grid (grid.Grid object): the grid object which the cell indices in the cell I/O data relate to
-           set_tangent_vectors (boolean, default True): if True, tangent vectors will be computed from the well
+           set_tangent_vectors (boolean, default False): if True, tangent vectors will be computed from the well
               trajectory's control points
 
         returns:

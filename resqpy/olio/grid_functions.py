@@ -60,56 +60,101 @@ def infill_block_geometry(extent,
                           nudge = True):
     """Scans logically vertical columns of cells setting depth (& thickness) of inactive cells."""
 
-    if k_increase_direction == 'down':
-        k_dir_sign = 1.0
-    elif k_increase_direction == 'up':
-        k_dir_sign = -1.0
-    else:
-        assert (False)
+    k_dir_sign = __get_k_dir_sign(k_increase_direction = k_increase_direction)
+    # if k_increase_direction == 'down':
+    #     k_dir_sign = 1.0
+    # elif k_increase_direction == 'up':
+    #     k_dir_sign = -1.0
+    # else:
+    #     assert (False)
 
     for j in range(extent[1]):
         for i in range(extent[2]):
             k_top = 0  # NB: 'top' & 'bottom' are misleading if k_increase_direction == 'up'
-            while k_top < extent[0] and abs(depth[k_top, j, i]) <= depth_zero_tolerance:
-                depth[k_top, j, i] = 0.0  # clean up tiny values
-                thickness[k_top, j, i] = 0.0
-                if abs(x[k_top, j, i]) <= x_y_zero_tolerance:
-                    x[k_top, j, i] = 0.0
-                if abs(y[k_top, j, i]) <= x_y_zero_tolerance:
-                    y[k_top, j, i] = 0.0
-                k_top += 1  # skip topmost inactive batch
-            if k_top >= extent[0]:
-                continue  # whole column is inactive
-            if snap_to_top_and_base:
-                snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
-                snap_x = x[k_top, j, i]
-                snap_y = y[k_top, j, i]
-                for k_snap in range(k_top):
-                    depth[k_snap, j, i] = snap_depth
-                    x[k_snap, j, i] = snap_x
-                    y[k_snap, j, i] = snap_y
-            while True:
+            k_top, x, y, depth, thickness, whole_column_inactive = __clean_up_tiny_values(
+                k = k_top,
+                x = x,
+                y = y,
+                i = i,
+                j = j,
+                extent = extent,
+                depth = depth,
+                thickness = thickness,
+                depth_zero_tolerance = depth_zero_tolerance,
+                x_y_zero_tolerance = x_y_zero_tolerance)
+            if whole_column_inactive:
+                continue
+            x, y, depth = __snap_to_top_and_base(snap_to_top_and_base = snap_to_top_and_base,
+                                                 x = x,
+                                                 y = y,
+                                                 i = i,
+                                                 j = j,
+                                                 depth = depth,
+                                                 thickness = thickness,
+                                                 k_top = k_top,
+                                                 k_dir_sign = k_dir_sign)
+            # k_top = 0  # NB: 'top' & 'bottom' are misleading if k_increase_direction == 'up'
+            # while k_top < extent[0] and abs(depth[k_top, j, i]) <= depth_zero_tolerance:
+            #     depth[k_top, j, i] = 0.0  # clean up tiny values
+            #     thickness[k_top, j, i] = 0.0
+            #     if abs(x[k_top, j, i]) <= x_y_zero_tolerance:
+            #         x[k_top, j, i] = 0.0
+            #     if abs(y[k_top, j, i]) <= x_y_zero_tolerance:
+            #         y[k_top, j, i] = 0.0
+            #     k_top += 1  # skip topmost inactive batch
+            # if k_top >= extent[0]:
+            #     continue  # whole column is inactive
+            # if snap_to_top_and_base:
+            #     snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
+            #     snap_x = x[k_top, j, i]
+            #     snap_y = y[k_top, j, i]
+            #     for k_snap in range(k_top):
+            #         depth[k_snap, j, i] = snap_depth
+            #         x[k_snap, j, i] = snap_x
+            #         y[k_snap, j, i] = snap_y
+            break_loop = False
+            while not break_loop:
                 while k_top < extent[0] and abs(depth[k_top, j, i]) > depth_zero_tolerance:  # skip active layers
                     k_top += 1
                 k_base = k_top + 1
-                while k_base < extent[0] and abs(depth[k_base, j, i]) <= depth_zero_tolerance:
-                    depth[k_base, j, i] = 0.0  # clean up tiny depth values
-                    thickness[k_base, j, i] = 0.0
-                    if abs(x[k_base, j, i]) <= x_y_zero_tolerance:
-                        x[k_base, j, i] = 0.0
-                    if abs(y[k_base, j, i]) <= x_y_zero_tolerance:
-                        y[k_base, j, i] = 0.0
-                    k_base += 1  # look for deeper active layer
+                k_base, x, y, depth, thickness, _ = __clean_up_tiny_values(k = k_base,
+                                                                           x = x,
+                                                                           y = y,
+                                                                           i = i,
+                                                                           j = j,
+                                                                           extent = extent,
+                                                                           depth = depth,
+                                                                           thickness = thickness,
+                                                                           depth_zero_tolerance = depth_zero_tolerance,
+                                                                           x_y_zero_tolerance = x_y_zero_tolerance)
+                # while k_base < extent[0] and abs(depth[k_base, j, i]) <= depth_zero_tolerance:
+                #     depth[k_base, j, i] = 0.0  # clean up tiny depth values
+                #     thickness[k_base, j, i] = 0.0
+                #     if abs(x[k_base, j, i]) <= x_y_zero_tolerance:
+                #         x[k_base, j, i] = 0.0
+                #     if abs(y[k_base, j, i]) <= x_y_zero_tolerance:
+                #         y[k_base, j, i] = 0.0
+                #     k_base += 1  # look for deeper active layer
                 if k_base >= extent[0]:  # no deeper active cells found
-                    if snap_to_top_and_base:
-                        snap_depth = depth[k_top - 1, j, i] + k_dir_sign * thickness[k_top - 1, j, i] / 2.0
-                        snap_x = x[k_top - 1, j, i]
-                        snap_y = y[k_top - 1, j, i]
-                        for k_snap in range(extent[0] - k_top):
-                            depth[k_top + k_snap, j, i] = snap_depth
-                            x[k_top + k_snap, j, i] = snap_x
-                            y[k_top + k_snap, j, i] = snap_y
-                    break
+                    x, y, depth = __snap_to_top_and_base(snap_to_top_and_base = snap_to_top_and_base,
+                                                         x = x,
+                                                         y = y,
+                                                         i = i,
+                                                         j = j,
+                                                         depth = depth,
+                                                         thickness = thickness,
+                                                         k_top = k_top,
+                                                         k_dir_sign = k_dir_sign)
+                    # if snap_to_top_and_base:
+                    #     snap_depth = depth[k_top - 1, j, i] + k_dir_sign * thickness[k_top - 1, j, i] / 2.0
+                    #     snap_x = x[k_top - 1, j, i]
+                    #     snap_y = y[k_top - 1, j, i]
+                    #     for k_snap in range(extent[0] - k_top):
+                    #         depth[k_top + k_snap, j, i] = snap_depth
+                    #         x[k_top + k_snap, j, i] = snap_x
+                    #         y[k_top + k_snap, j, i] = snap_y
+                    # break
+                    break_loop = True
                 void_cell_count = k_base - k_top
                 assert (void_cell_count > 0)
                 void_top_depth = depth[k_top - 1, j, i] + (thickness[k_top - 1, j, i] / 2.0) * k_dir_sign
@@ -145,6 +190,76 @@ def infill_block_geometry(extent,
                     x[k_top + void_k, j, i] = void_top_x + (0.5 + void_k) * void_x_interval / void_cell_count
                     y[k_top + void_k, j, i] = void_top_y + (0.5 + void_k) * void_y_interval / void_cell_count
                 k_top = k_base
+
+
+def __get_k_dir_sign(k_increase_direction):
+    """ Set whether depth increases with increasingly positive or negative values."""
+
+    if k_increase_direction == 'down':
+        k_dir_sign = 1.0
+    elif k_increase_direction == 'up':
+        k_dir_sign = -1.0
+    else:
+        assert (False)
+    return k_dir_sign
+
+
+def __clean_up_tiny_values(k, x, y, i, j, extent, depth, thickness, depth_zero_tolerance, x_y_zero_tolerance):
+    """ Set x, y, depth and thickness values to zero if values are below tolerances."""
+
+    whole_column_inactive = False
+    while k < extent[0] and abs(depth[k, j, i]) <= depth_zero_tolerance:
+        depth[k, j, i] = 0.0  # clean up tiny values
+        thickness[k, j, i] = 0.0
+        if abs(x[k, j, i]) <= x_y_zero_tolerance:
+            x[k, j, i] = 0.0
+        if abs(y[k, j, i]) <= x_y_zero_tolerance:
+            y[k, j, i] = 0.0
+        k += 1  # skip topmost inactive batch
+    if k >= extent[0]:
+        whole_column_inactive = True
+    return k, x, y, depth, thickness, whole_column_inactive
+
+
+def __snap_to_top_and_base(snap_to_top_and_base, x, y, i, j, depth, thickness, k_top, k_dir_sign):
+    """ Cells above topmost active and below deepest active will be populated with pinched out cells at the top and
+    bottom faces respectively.
+    """
+    if snap_to_top_and_base:
+        snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
+        snap_x = x[k_top, j, i]
+        snap_y = y[k_top, j, i]
+        for k_snap in range(k_top):
+            depth[k_snap, j, i] = snap_depth
+            x[k_snap, j, i] = snap_x
+            y[k_snap, j, i] = snap_y
+    return x, y, depth
+
+
+def __nudge_overlapping_cells_if_requested(nudge, i, j, k_top, k_base, extent, depth, infill_cell_thickness,
+                                           void_interval, void_bottom_depth, vertical_cell_overlap_tolerance,
+                                           depth_zero_tolerance, k_dir_sign):
+    """ Clean up overlap over pinchouts by moving the depths of cells with greater k."""
+
+    if void_interval < 0.0:  # overlapping cells
+        if -void_interval < vertical_cell_overlap_tolerance:
+            if nudge:
+                nudge_count = 0  # debug
+                for k_nudge in range(extent[0] - k_base):
+                    if depth[k_base + k_nudge, j, i] > depth_zero_tolerance:
+                        depth[k_base + k_nudge, j, i] += -void_interval * k_dir_sign
+                        nudge_count += 1  # debug
+                log.debug('%1d cells nudged in [ i j ] column [%1d, %1d]', nudge_count, i + 1, j + 1)
+                void_bottom_depth += -void_interval
+            void_interval = 0.0
+            infill_cell_thickness = 0.0
+        else:
+            log.warn('Cells [%1d, %1d, %1d] and [%1d, %1d, %1d] overlap ...', i + 1, j + 1, k_top, i + 1, j + 1,
+                     k_base + 1)
+            log.warn('   check k_increase_direction and tolerances')
+            log.warn('Skipping rest of i,j column')  # todo: could abort here
+            break_loop = True
+        return depth, infill_cell_thickness, void_interval, break_loop
 
 
 # end of def infill_block_geometry()
