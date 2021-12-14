@@ -1,4 +1,4 @@
-"""Classes for RESQML objects related to surfaces"""
+"""Classes for RESQML objects related to surfaces."""
 
 __all__ = ['BaseSurface', 'CombinedSurface', 'Mesh', 'TriangulatedPatch', 'PointSet', 'Surface']
 

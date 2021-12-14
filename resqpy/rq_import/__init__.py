@@ -1,4 +1,6 @@
-"""Functions for RESQML objects related to importing"""
+"""Miscellaneous functions for importing from other formats."""
+
+# Nexus is a trademark of Halliburton
 
 __all__ = [
     'import_nexus', 'import_vdb_all_grids', 'grid_from_cp', 'import_vdb_ensemble', 'add_ab_properties', 'add_surfaces'

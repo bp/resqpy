@@ -1,4 +1,4 @@
-"""Module handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
+"""Collections of properties for grids, wellbore frames, grid connection sets etc."""
 
 __all__ = [
     'PropertyCollection', 'Property', 'WellLog', 'WellIntervalProperty', 'WellIntervalPropertyCollection',

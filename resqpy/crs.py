@@ -1,4 +1,4 @@
-"""crs.py: RESQML coordinate reference system module."""
+"""RESQML coordinate reference systems."""
 
 version = '29th November 2021'
 

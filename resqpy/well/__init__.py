@@ -1,4 +1,4 @@
-"""Classes for RESQML objects related to wells"""
+"""Classes relating to wells."""
 
 __all__ = [
     'MdDatum', 'BlockedWell', 'Trajectory', 'DeviationSurvey', 'WellboreFrame', 'WellboreMarkerFrame', 'WellboreMarker',
