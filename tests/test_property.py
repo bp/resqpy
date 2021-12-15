@@ -1740,23 +1740,23 @@ def test_coarsening_length(example_fine_coarse_model):
     # Arrange
     model, coarse, fine, fc = example_fine_coarse_model
     # Remove existing length parts
-    coarse_pc = rqp.GridPropertyCollection(grid=coarse)
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
     for part in coarse_pc.parts():
         if coarse_pc.citation_title_for_part(part) in ['DX', 'DY', 'DZ']:
             coarse_pc.remove_part_from_dict(part)
     # Check on number of properties
     numc = len(coarse_pc.parts())
-    fine_pc = rqp.GridPropertyCollection(grid=fine)
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
     numf = len(fine_pc.parts())
 
     # Act
-    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other=fine_pc, coarsening=fc)
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc, coarsening = fc)
     coarse_pc.write_hdf5_for_imported_list()
     coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
     # Assert
     assert len(coarse_pc.parts()) == numc + numf
-    all_tens = np.zeros(shape=(3, 5, 5)) + 10
+    all_tens = np.zeros(shape = (3, 5, 5)) + 10
     for length in ['DX', 'DY', 'DZ']:
         dpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == length][0]
         array = coarse_pc.cached_part_array_ref(dpart)
@@ -1768,32 +1768,33 @@ def test_coarsening_volume(example_fine_coarse_model):
     model, coarse, fine, fc = example_fine_coarse_model
 
     # Set up property collections
-    coarse_pc = rqp.GridPropertyCollection(grid=coarse)
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
     numc = len(coarse_pc.parts())
-    fine_pc = rqp.GridPropertyCollection(grid=fine)
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
 
     # Add a volume to the fine collection
-    inarray = np.zeros(shape=(6,10,10)) + 125 # fine grid dimensions are 5x5x5 so gross volume of 125
-    fine_pc.add_cached_array_to_imported_list(cached_array=inarray,
-                                              source_info='',
-                                              keyword='brv',
-                                              discrete=False,
-                                              uom='m3/m3',
-                                              property_kind='rock volume',
-                                              facet_type='netgross',
-                                              facet='gross')
+    inarray = np.zeros(shape = (6, 10, 10)) + 125  # fine grid dimensions are 5x5x5 so gross volume of 125
+    fine_pc.add_cached_array_to_imported_list(cached_array = inarray,
+                                              source_info = '',
+                                              keyword = 'brv',
+                                              discrete = False,
+                                              uom = 'm3/m3',
+                                              property_kind = 'rock volume',
+                                              facet_type = 'netgross',
+                                              facet = 'gross')
     fine_pc.write_hdf5_for_imported_list()
     fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
     numf = len(fine_pc.parts())
 
     # Act
-    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other=fine_pc, coarsening=fc)
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc, coarsening = fc)
     coarse_pc.write_hdf5_for_imported_list()
     coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
     # Assert
     assert len(coarse_pc.parts()) == numc + numf
-    all_thousand = np.zeros(shape=(3, 5, 5)) + 1000 # we have coarsened by 2 in all 3 directions, so expected vol of 1000
+    all_thousand = np.zeros(shape = (3, 5,
+                                     5)) + 1000  # we have coarsened by 2 in all 3 directions, so expected vol of 1000
     vpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'brv'][0]
     array = coarse_pc.cached_part_array_ref(vpart)
     assert_array_almost_equal(array, all_thousand)
@@ -1804,65 +1805,65 @@ def test_coarsening_reservoir_properties(example_fine_coarse_model):
     model, coarse, fine, fc = example_fine_coarse_model
 
     # Set up property collections
-    coarse_pc = rqp.GridPropertyCollection(grid=coarse)
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
     numc = len(coarse_pc.parts())
-    fine_pc = rqp.GridPropertyCollection(grid=fine)
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
 
     # Add porosity and ntg to the fine collection
-    porarray = np.zeros(shape=(6,10,10)) + 0.3
-    porarray[0,:,:] = 0
-    porarray[5,:,:] = 0
-    fine_pc.add_cached_array_to_imported_list(cached_array=porarray,
-                                              source_info='',
-                                              keyword='por',
-                                              discrete=False,
-                                              property_kind='porosity')
-    ntgarray = np.zeros(shape=(6,10,10)) + 0.5
-    ntgarray[:,:,0] = 0
-    ntgarray[:,:,9] = 0
-    fine_pc.add_cached_array_to_imported_list(cached_array=ntgarray,
-                                              source_info='',
-                                              keyword='NTG',
-                                              discrete=False,
-                                              property_kind='net to gross ratio')
-    satarray = np.zeros(shape=(6,10,10)) + 0.7
-    satarray[:,0,:] = 1
-    satarray[:,9,:] = 1
-    fine_pc.add_cached_array_to_imported_list(cached_array=satarray,
-                                              source_info='',
-                                              keyword='sw',
-                                              discrete=False,
-                                              property_kind='saturation')
+    porarray = np.zeros(shape = (6, 10, 10)) + 0.3
+    porarray[0, :, :] = 0
+    porarray[5, :, :] = 0
+    fine_pc.add_cached_array_to_imported_list(cached_array = porarray,
+                                              source_info = '',
+                                              keyword = 'por',
+                                              discrete = False,
+                                              property_kind = 'porosity')
+    ntgarray = np.zeros(shape = (6, 10, 10)) + 0.5
+    ntgarray[:, :, 0] = 0
+    ntgarray[:, :, 9] = 0
+    fine_pc.add_cached_array_to_imported_list(cached_array = ntgarray,
+                                              source_info = '',
+                                              keyword = 'NTG',
+                                              discrete = False,
+                                              property_kind = 'net to gross ratio')
+    satarray = np.zeros(shape = (6, 10, 10)) + 0.7
+    satarray[:, 0, :] = 1
+    satarray[:, 9, :] = 1
+    fine_pc.add_cached_array_to_imported_list(cached_array = satarray,
+                                              source_info = '',
+                                              keyword = 'sw',
+                                              discrete = False,
+                                              property_kind = 'saturation')
 
     fine_pc.write_hdf5_for_imported_list()
     fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
     numf = len(fine_pc.parts())
 
     # Act
-    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other=fine_pc, coarsening=fc)
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc, coarsening = fc)
     coarse_pc.write_hdf5_for_imported_list()
     coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
     # Assert
     assert len(coarse_pc.parts()) == numc + numf
 
-    expected_por = np.zeros(shape=(3,5,5)) + 0.3
-    expected_por[0,:,:] = 0.15
-    expected_por[2,:,:] = 0.15
+    expected_por = np.zeros(shape = (3, 5, 5)) + 0.3
+    expected_por[0, :, :] = 0.15
+    expected_por[2, :, :] = 0.15
 
     porpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'por'][0]
     por_out = coarse_pc.cached_part_array_ref(porpart)
 
-    expected_ntg = np.zeros(shape=(3,5,5)) + 0.5
-    expected_ntg[:,:,0] = 0.25
-    expected_ntg[:,:,4] = 0.25
+    expected_ntg = np.zeros(shape = (3, 5, 5)) + 0.5
+    expected_ntg[:, :, 0] = 0.25
+    expected_ntg[:, :, 4] = 0.25
 
     ntgpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'NTG'][0]
     ntg_out = coarse_pc.cached_part_array_ref(ntgpart)
 
-    expected_sat = np.zeros(shape=(3,5,5)) + 0.7
-    expected_sat[:,0,:] = 0.85
-    expected_sat[:,4,:] = 0.85
+    expected_sat = np.zeros(shape = (3, 5, 5)) + 0.7
+    expected_sat[:, 0, :] = 0.85
+    expected_sat[:, 4, :] = 0.85
 
     satpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'sw'][0]
     sat_out = coarse_pc.cached_part_array_ref(satpart)

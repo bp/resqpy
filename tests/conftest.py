@@ -398,37 +398,37 @@ def example_model_and_cellio(example_model_and_crs, tmp_path):
 def example_fine_coarse_model(example_model_and_crs):
     model, crs = example_model_and_crs
 
-    coarse_grid = grr.RegularGrid(parent_model=model,
-                                  origin=(0,0,0),
-                                  extent_kji=(3,5,5),
-                                  crs_uuid=crs.uuid,
-                                  dxyz=(10,10,10))
+    coarse_grid = grr.RegularGrid(parent_model = model,
+                                  origin = (0, 0, 0),
+                                  extent_kji = (3, 5, 5),
+                                  crs_uuid = crs.uuid,
+                                  dxyz = (10, 10, 10))
     coarse_grid.cache_all_geometry_arrays()
-    coarse_grid.write_hdf5_from_caches(file = model.h5_file_name(file_must_exist=False), mode='w')
-    coarse_grid.create_xml(ext_uuid=model.h5_uuid(),
-                           title='Coarse',
-                           write_geometry=True,
-                           add_cell_length_properties=True)
+    coarse_grid.write_hdf5_from_caches(file = model.h5_file_name(file_must_exist = False), mode = 'w')
+    coarse_grid.create_xml(ext_uuid = model.h5_uuid(),
+                           title = 'Coarse',
+                           write_geometry = True,
+                           add_cell_length_properties = True)
 
-    fine_grid = grr.RegularGrid(parent_model=model,
-                                  origin=(0,0,0),
-                                  extent_kji=(6,10,10),
-                                  crs_uuid=crs.uuid,
-                                  dxyz=(5,5,5))
+    fine_grid = grr.RegularGrid(parent_model = model,
+                                origin = (0, 0, 0),
+                                extent_kji = (6, 10, 10),
+                                crs_uuid = crs.uuid,
+                                dxyz = (5, 5, 5))
     fine_grid.cache_all_geometry_arrays()
-    fine_grid.write_hdf5_from_caches(file = model.h5_file_name(file_must_exist=True), mode='a')
-    fine_grid.create_xml(ext_uuid=model.h5_uuid(),
-                           title='Fine',
-                           write_geometry=True,
-                           add_cell_length_properties=True)
+    fine_grid.write_hdf5_from_caches(file = model.h5_file_name(file_must_exist = True), mode = 'a')
+    fine_grid.create_xml(ext_uuid = model.h5_uuid(),
+                         title = 'Fine',
+                         write_geometry = True,
+                         add_cell_length_properties = True)
 
     model.store_epc()
     model = Model(model.epc_file)
 
-    coarse = grr.Grid(parent_model=model, uuid=coarse_grid.uuid)
-    fine = grr.Grid(parent_model=model, uuid=fine_grid.uuid)
+    coarse = grr.Grid(parent_model = model, uuid = coarse_grid.uuid)
+    fine = grr.Grid(parent_model = model, uuid = fine_grid.uuid)
 
-    fc = rqfc.FineCoarse(fine_extent_kji=(6, 10, 10), coarse_extent_kji=(3, 5, 5))
+    fc = rqfc.FineCoarse(fine_extent_kji = (6, 10, 10), coarse_extent_kji = (3, 5, 5))
     fc.set_all_ratios_constant()
     fc.set_all_proprtions_equal()
 
