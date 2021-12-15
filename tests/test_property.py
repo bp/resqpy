@@ -1834,6 +1834,16 @@ def test_coarsening_reservoir_properties(example_fine_coarse_model):
                                               keyword = 'sw',
                                               discrete = False,
                                               property_kind = 'saturation')
+    karray = np.zeros(shape = (6, 10, 10)) + 1000
+    karray[:, 0, :] = 100
+    karray[:, 9, :] = 10
+    fine_pc.add_cached_array_to_imported_list(cached_array = karray,
+                                              source_info = '',
+                                              keyword = 'kx',
+                                              discrete = False,
+                                              property_kind = 'permeability rock',
+                                              facet_type = 'direction',
+                                              facet = 'I')
 
     fine_pc.write_hdf5_for_imported_list()
     fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -1868,6 +1878,14 @@ def test_coarsening_reservoir_properties(example_fine_coarse_model):
     satpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'sw'][0]
     sat_out = coarse_pc.cached_part_array_ref(satpart)
 
+    expected_k = np.zeros(shape = (3, 5, 5)) + 1000  # simple weighted mean for now
+    expected_k[:, 0, :] = 550
+    expected_k[:, 4, :] = 505
+
+    kpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'kx'][0]
+    k_out = coarse_pc.cached_part_array_ref(kpart)
+
     assert_array_almost_equal(expected_por, por_out)
     assert_array_almost_equal(expected_ntg, ntg_out)
     assert_array_almost_equal(expected_sat, sat_out)
+    assert_array_almost_equal(expected_k, k_out)
