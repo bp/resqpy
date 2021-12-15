@@ -5,7 +5,6 @@ version = '30th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('xml_et.py version ' + version)
 
 import os
 

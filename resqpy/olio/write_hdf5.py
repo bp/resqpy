@@ -10,7 +10,6 @@ version = '26th August 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('write_hdf5.py version ' + version)
 
 import os
 

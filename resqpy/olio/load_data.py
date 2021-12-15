@@ -7,7 +7,6 @@ version = '29th April 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('load_data.py version %s', version)
 
 # defs:
 #    def file_exists(file_name):

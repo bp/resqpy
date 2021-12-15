@@ -11,7 +11,6 @@ import logging
 import warnings
 
 log = logging.getLogger(__name__)
-log.debug(f'dataframe.py version {version}')
 
 import numpy as np
 import pandas as pd

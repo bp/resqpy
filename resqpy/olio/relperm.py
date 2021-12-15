@@ -19,7 +19,6 @@ from resqpy.olio.dataframe import DataFrame
 version = '27th July 2021'
 
 log = logging.getLogger(__name__)
-log.debug(f'dataframe.py version {version}')
 
 
 class RelPerm(DataFrame):

@@ -5,7 +5,6 @@ version = '29th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('crs.py version ' + version)
 
 import math as maths
 import uuid
