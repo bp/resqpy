@@ -7,7 +7,6 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_import_vdb_ensemble.py version ' + version)
 
 import resqpy.model as rq
 import resqpy.olio.vdb as vdb

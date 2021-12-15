@@ -8,7 +8,6 @@ version = '8th December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_wellbore_marker_frame.py version ' + version)
 
 import numpy as np
 import pandas as pd

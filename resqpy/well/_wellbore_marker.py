@@ -8,7 +8,6 @@ version = '8th December 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_wellbore_marker.py version ' + version)
 
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns

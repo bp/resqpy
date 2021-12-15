@@ -7,7 +7,6 @@ version = '15th March 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('vdb.py version ' + version)
 
 import glob
 import os

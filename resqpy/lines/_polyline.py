@@ -5,7 +5,6 @@ version = '23rd November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_polyline.py version ' + version)
 
 import math as maths
 import numpy as np

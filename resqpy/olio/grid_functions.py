@@ -7,7 +7,6 @@ version = '29th April 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('grid_functions.py version %s', version)
 
 # defs:
 # def infill_block_geometry(extent, depth, thickness, x, y,
