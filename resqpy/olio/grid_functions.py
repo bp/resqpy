@@ -1,6 +1,6 @@
 """Miscellaneous functions relating to grids"""
 
-version = '29th April 2021'
+version = '15 December 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -60,6 +60,7 @@ def infill_block_geometry(extent,
                           nudge = True):
     """Scans logically vertical columns of cells setting depth (& thickness) of inactive cells."""
 
+    # k_dir_sign = __get_k_dir_sign(k_increase_direction=k_increase_direction)
     if k_increase_direction == 'down':
         k_dir_sign = 1.0
     elif k_increase_direction == 'up':
@@ -69,6 +70,29 @@ def infill_block_geometry(extent,
 
     for j in range(extent[1]):
         for i in range(extent[2]):
+            # k_top = 0  # NB: 'top' & 'bottom' are misleading if k_increase_direction == 'up'
+            # k_top, x, y, depth, thickness, whole_column_inactive = __clean_up_tiny_values(
+            #     k=k_top,
+            #     x=x,
+            #     y=y,
+            #     i=i,
+            #     j=j,
+            #     extent=extent,
+            #     depth=depth,
+            #     thickness=thickness,
+            #     depth_zero_tolerance=depth_zero_tolerance,
+            #     x_y_zero_tolerance=x_y_zero_tolerance)
+            # if whole_column_inactive:
+            #     continue
+            # x, y, depth = __snap_to_top_and_base(snap_to_top_and_base=snap_to_top_and_base,
+            #                                      x=x,
+            #                                      y=y,
+            #                                      i=i,
+            #                                      j=j,
+            #                                      depth=depth,
+            #                                      thickness=thickness,
+            #                                      k_top=k_top,
+            #                                      k_dir_sign=k_dir_sign)
             k_top = 0  # NB: 'top' & 'bottom' are misleading if k_increase_direction == 'up'
             while k_top < extent[0] and abs(depth[k_top, j, i]) <= depth_zero_tolerance:
                 depth[k_top, j, i] = 0.0  # clean up tiny values
@@ -88,10 +112,22 @@ def infill_block_geometry(extent,
                     depth[k_snap, j, i] = snap_depth
                     x[k_snap, j, i] = snap_x
                     y[k_snap, j, i] = snap_y
+            # break_loop = False
+            # while not break_loop:
             while True:
                 while k_top < extent[0] and abs(depth[k_top, j, i]) > depth_zero_tolerance:  # skip active layers
                     k_top += 1
                 k_base = k_top + 1
+                # k_base, x, y, depth, thickness, _ = __clean_up_tiny_values(k=k_base,
+                #                                                            x=x,
+                #                                                            y=y,
+                #                                                            i=i,
+                #                                                            j=j,
+                #                                                            extent=extent,
+                #                                                            depth=depth,
+                #                                                            thickness=thickness,
+                #                                                            depth_zero_tolerance=depth_zero_tolerance,
+                #                                                            x_y_zero_tolerance=x_y_zero_tolerance)
                 while k_base < extent[0] and abs(depth[k_base, j, i]) <= depth_zero_tolerance:
                     depth[k_base, j, i] = 0.0  # clean up tiny depth values
                     thickness[k_base, j, i] = 0.0
@@ -101,6 +137,15 @@ def infill_block_geometry(extent,
                         y[k_base, j, i] = 0.0
                     k_base += 1  # look for deeper active layer
                 if k_base >= extent[0]:  # no deeper active cells found
+                    # x, y, depth = __snap_to_top_and_base(snap_to_top_and_base=snap_to_top_and_base,
+                    #                                      x=x,
+                    #                                      y=y,
+                    #                                      i=i,
+                    #                                      j=j,
+                    #                                      depth=depth,
+                    #                                      thickness=thickness,
+                    #                                      k_top=k_top,
+                    #                                      k_dir_sign=k_dir_sign)
                     if snap_to_top_and_base:
                         snap_depth = depth[k_top - 1, j, i] + k_dir_sign * thickness[k_top - 1, j, i] / 2.0
                         snap_x = x[k_top - 1, j, i]
@@ -110,6 +155,7 @@ def infill_block_geometry(extent,
                             x[k_top + k_snap, j, i] = snap_x
                             y[k_top + k_snap, j, i] = snap_y
                     break
+                    # break_loop = True
                 void_cell_count = k_base - k_top
                 assert (void_cell_count > 0)
                 void_top_depth = depth[k_top - 1, j, i] + (thickness[k_top - 1, j, i] / 2.0) * k_dir_sign
@@ -120,6 +166,12 @@ def infill_block_geometry(extent,
                 void_x_interval = x[k_base, j, i] - void_top_x
                 void_y_interval = y[k_base, j, i] - void_top_y
                 infill_cell_thickness = void_interval / void_cell_count
+                # depth, infill_cell_thickness, void_interval, break_loop = __nudge_overlapping_cells_if_requested(
+                #     nudge = nudge, i = i, j = j, k_top = k_top, k_base = k_base, extent = extent, depth = depth,
+                #     infill_cell_thickness = infill_cell_thickness, void_interval = void_interval,
+                #     void_bottom_depth = void_bottom_depth, vertical_cell_overlap_tolerance = vertical_cell_overlap_tolerance,
+                #     depth_zero_tolerance = depth_zero_tolerance, k_dir_sign = k_dir_sign
+                # )
                 if void_interval < 0.0:  # overlapping cells
                     if -void_interval < vertical_cell_overlap_tolerance:
                         if nudge:
@@ -145,6 +197,78 @@ def infill_block_geometry(extent,
                     x[k_top + void_k, j, i] = void_top_x + (0.5 + void_k) * void_x_interval / void_cell_count
                     y[k_top + void_k, j, i] = void_top_y + (0.5 + void_k) * void_y_interval / void_cell_count
                 k_top = k_base
+    print(depth)
+    print(x)
+
+
+def __get_k_dir_sign(k_increase_direction):
+    """ Set whether depth increases with increasingly positive or negative values."""
+
+    if k_increase_direction == 'down':
+        k_dir_sign = 1.0
+    elif k_increase_direction == 'up':
+        k_dir_sign = -1.0
+    else:
+        assert (False)
+    return k_dir_sign
+
+
+def __clean_up_tiny_values(k, x, y, i, j, extent, depth, thickness, depth_zero_tolerance, x_y_zero_tolerance):
+    """ Set x, y, depth and thickness values to zero if values are below tolerances."""
+
+    whole_column_inactive = False
+    while k < extent[0] and abs(depth[k, j, i]) <= depth_zero_tolerance:
+        depth[k, j, i] = 0.0  # clean up tiny values
+        thickness[k, j, i] = 0.0
+        if abs(x[k, j, i]) <= x_y_zero_tolerance:
+            x[k, j, i] = 0.0
+        if abs(y[k, j, i]) <= x_y_zero_tolerance:
+            y[k, j, i] = 0.0
+        k += 1  # skip topmost inactive batch
+    if k >= extent[0]:
+        whole_column_inactive = True
+    return k, x, y, depth, thickness, whole_column_inactive
+
+
+def __snap_to_top_and_base(snap_to_top_and_base, x, y, i, j, depth, thickness, k_top, k_dir_sign):
+    """ Cells above topmost active and below deepest active will be populated with pinched out cells at the top and
+    bottom faces respectively.
+    """
+    if snap_to_top_and_base:
+        snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
+        snap_x = x[k_top, j, i]
+        snap_y = y[k_top, j, i]
+        for k_snap in range(k_top):
+            depth[k_snap, j, i] = snap_depth
+            x[k_snap, j, i] = snap_x
+            y[k_snap, j, i] = snap_y
+    return x, y, depth
+
+
+def __nudge_overlapping_cells_if_requested(nudge, i, j, k_top, k_base, extent, depth, infill_cell_thickness,
+                                           void_interval, void_bottom_depth, vertical_cell_overlap_tolerance,
+                                           depth_zero_tolerance, k_dir_sign):
+    """ Clean up overlap over pinchouts by moving the depths of cells with greater k."""
+
+    if void_interval < 0.0:  # overlapping cells
+        if -void_interval < vertical_cell_overlap_tolerance:
+            if nudge:
+                nudge_count = 0  # debug
+                for k_nudge in range(extent[0] - k_base):
+                    if depth[k_base + k_nudge, j, i] > depth_zero_tolerance:
+                        depth[k_base + k_nudge, j, i] += -void_interval * k_dir_sign
+                        nudge_count += 1  # debug
+                log.debug('%1d cells nudged in [ i j ] column [%1d, %1d]', nudge_count, i + 1, j + 1)
+                void_bottom_depth += -void_interval
+            void_interval = 0.0
+            infill_cell_thickness = 0.0
+        else:
+            log.warn('Cells [%1d, %1d, %1d] and [%1d, %1d, %1d] overlap ...', i + 1, j + 1, k_top, i + 1, j + 1,
+                     k_base + 1)
+            log.warn('   check k_increase_direction and tolerances')
+            log.warn('Skipping rest of i,j column')  # todo: could abort here
+            break_loop = True
+        return depth, infill_cell_thickness, void_interval, break_loop
 
 
 # end of def infill_block_geometry()
@@ -415,7 +539,7 @@ def triangles_for_cell_faces(cp):
     returns:
        numpy float array of shape (3, 2, 4, 3, 3) holding triangle corner coordinates for cell faces represented with
        quad triangles
-       
+
     note:
        resqpy.surface also contains methods for working with cell faces as triangulated sets
     """
@@ -545,45 +669,41 @@ def left_right_foursome(full_pillar_list, p_index):
     next = np.array(full_pillar_list[p_index + 1], dtype = int)
     entry = tuple(here - previous)
     exit = tuple(next - here)
-    if entry == (0, 1):
-        if exit == (-1, 0):
-            return np.array([[False, True], [True, True]], dtype = bool)
-        elif exit == (0, 1):
-            return np.array([[False, False], [True, True]], dtype = bool)
-        elif exit == (1, 0):
-            return np.array([[False, False], [True, False]], dtype = bool)
-        else:
-            raise Exception('code failure whilst taking exit sides from dubious full pillar list')
-    elif entry == (0, -1):
-        if exit == (-1, 0):
-            return np.array([[False, True], [False, False]], dtype = bool)
-        elif exit == (0, -1):
-            return np.array([[True, True], [False, False]], dtype = bool)
-        elif exit == (1, 0):
-            return np.array([[True, True], [True, False]], dtype = bool)
-        else:
-            raise Exception('code failure whilst taking exit sides from dubious full pillar list')
-    elif entry == (1, 0):
-        if exit == (0, -1):
-            return np.array([[True, False], [False, False]], dtype = bool)
-        elif exit == (1, 0):
-            return np.array([[True, False], [True, False]], dtype = bool)
-        elif exit == (0, 1):
-            return np.array([[True, False], [True, True]], dtype = bool)
-        else:
-            raise Exception('code failure whilst taking exit sides from dubious full pillar list')
-    elif entry == (-1, 0):
-        if exit == (0, -1):
-            return np.array([[True, True], [False, True]], dtype = bool)
-        elif exit == (-1, 0):
-            return np.array([[False, True], [False, True]], dtype = bool)
-        elif exit == (0, 1):
-            return np.array([[False, False], [False, True]], dtype = bool)
-        else:
-            raise Exception('code failure whilst taking exit sides from dubious full pillar list')
-    else:
+    entry_tuples_list = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+    exit_tuples_list = [[(-1, 0), (0, 1), (1, 0)], [(-1, 0), (0, -1), (1, 0)], [(0, -1), (1, 0), (0, 1)],
+                        [(0, -1), (-1, 0), (0, 1)]]
+    result_arrays_list = [[
+        np.array([[False, True], [True, True]], dtype = bool),
+        np.array([[False, False], [True, True]], dtype = bool),
+        np.array([[False, False], [True, False]], dtype = bool)
+    ],
+                          [
+                              np.array([[False, True], [False, False]], dtype = bool),
+                              np.array([[True, True], [False, False]], dtype = bool),
+                              np.array([[True, True], [True, False]], dtype = bool)
+                          ],
+                          [
+                              np.array([[True, False], [False, False]], dtype = bool),
+                              np.array([[True, False], [True, False]], dtype = bool),
+                              np.array([[True, False], [True, True]], dtype = bool)
+                          ],
+                          [
+                              np.array([[True, True], [False, True]], dtype = bool),
+                              np.array([[False, True], [False, True]], dtype = bool),
+                              np.array([[False, False], [False, True]], dtype = bool)
+                          ]]
+
+    try:
+        list_index = entry_tuples_list.index(entry)
+    except ValueError:
         log.debug(f'entry pair: {entry}')
         raise Exception('code failure whilst taking entry sides from dubious full pillar list')
+    try:
+        result_array_index = exit_tuples_list[list_index].index(exit)
+        result_array = result_arrays_list[list_index][result_array_index]
+        return result_array
+    except ValueError:
+        raise Exception('code failure whilst taking exit sides from dubious full pillar list')
 
 
 ##########################################################################################
