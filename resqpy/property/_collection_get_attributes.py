@@ -79,6 +79,7 @@ def _get_property_array_min_max_value(collection, property_array, const_value, d
         return _get_property_array_min_max_const(const_value, collection.null_value, min_value, max_value, discrete)
     elif property_array is not None:
         return _get_property_array_min_max_array(property_array, min_value, max_value, discrete)
+    return None, None
 
 
 def _get_property_array_min_max_const(const_value, null_value, min_value, max_value, discrete):
