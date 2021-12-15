@@ -2487,7 +2487,6 @@ class PropertyCollection():
         #      log.debug('creating property node for ' + title)
         # currently assumes discrete properties to be 32 bit integers and continuous to be 64 bit reals
         # also assumes property_kind is one of the standard resqml property kinds; todo: allow local p kind node as optional arg
-        assert property_array is not None or const_value is not None
         support_root, support_uuid, ext_uuid = pcxml._create_xml_get_basics(self, discrete, points, const_value,
                                                                             facet_type, null_value, support_uuid,
                                                                             ext_uuid)
