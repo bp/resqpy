@@ -41,8 +41,7 @@ def _create_property_set_xml_add_as_part(collection, ps_node, ps_uuid, add_relat
             collection.model.create_reciprocal_relationship(ps_node, 'destinationObject', prop_node, 'sourceObject')
 
 
-def _create_xml_get_basics(collection, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid,
-                           expand_const_arrays):
+def _create_xml_get_basics(collection, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid):
     assert not discrete or not points
     assert not points or const_value is None
     assert not points or facet_type is None
@@ -60,10 +59,7 @@ def _create_xml_get_basics(collection, discrete, points, const_value, facet_type
     if ext_uuid is None:
         ext_uuid = collection.model.h5_uuid()
 
-    if expand_const_arrays:
-        const_value = None
-
-    return support_root, support_uuid, ext_uuid, const_value
+    return support_root, support_uuid, ext_uuid
 
 
 def _create_xml_property_kind(collection, p_node, find_local_property_kinds, property_kind, uom, discrete,
@@ -87,13 +83,16 @@ def _create_xml_property_kind(collection, p_node, find_local_property_kinds, pro
                                          root = p_kind_node)
 
 
-def _create_xml_patch_node(collection, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid):
+def _create_xml_patch_node(collection, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid,
+                           expand_const_arrays):
     # create patch node
     const_count = None
-    if const_value is not None:
+    if const_value is not None and not expand_const_arrays:
         s_shape = collection.supporting_shape(indexable_element = indexable_element, direction = direction)
         assert s_shape is not None
         const_count = np.product(np.array(s_shape, dtype = int))
+    else:
+        const_value = None
     _ = collection.model.create_patch(p_uuid,
                                       ext_uuid,
                                       root = p_node,
