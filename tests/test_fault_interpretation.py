@@ -18,7 +18,7 @@ def test_is_equivalent_no_other(tmp_model):
     result = fault_interp.is_equivalent(other = None)
 
     #Assert
-    assert result == False
+    assert result is False
 
 
 def test_is_equivalent_other_not_FaultInterpretation(tmp_model):
@@ -34,7 +34,7 @@ def test_is_equivalent_other_not_FaultInterpretation(tmp_model):
     result = fault_interp.is_equivalent(other = 55)
 
     # Assert
-    assert result == False
+    assert result is False
 
 
 def test_is_equivalent_is_other(tmp_model):
@@ -48,7 +48,7 @@ def test_is_equivalent_is_other(tmp_model):
     result = fault_interp.is_equivalent(other = other)
 
     # Assert
-    assert result == True
+    assert result is True
 
 
 def test_is_equivalent_is_sameUUIDs(tmp_model):
@@ -70,7 +70,7 @@ def test_is_equivalent_is_sameUUIDs(tmp_model):
     result = fault_interp.is_equivalent(other = other)
 
     # Assert
-    assert result == True
+    assert result is True
 
 
 def test_is_equivalent_is_tectonic_boundary_one_none(tmp_model):
@@ -91,7 +91,7 @@ def test_is_equivalent_is_tectonic_boundary_one_none(tmp_model):
     result = fault_interp.is_equivalent(other = other)
 
     # Assert
-    assert result == False
+    assert result is False
 
 
 def test_is_equivalent_non_equivalent_tectonic_boundary(tmp_model):
@@ -116,7 +116,7 @@ def test_is_equivalent_non_equivalent_tectonic_boundary(tmp_model):
     result = fault_interp.is_equivalent(other = other)
 
     # Assert
-    assert result == False
+    assert result is False
 
 
 def test_is_equivalent_throw_math_is_close(tmp_model):
@@ -139,4 +139,4 @@ def test_is_equivalent_throw_math_is_close(tmp_model):
     result = fault_interp.is_equivalent(other = other)
 
     # Assert
-    assert result == False
+    assert result is False
