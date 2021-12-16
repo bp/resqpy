@@ -8,7 +8,6 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_blocked_well.py version ' + version)
 
 import math as maths
 

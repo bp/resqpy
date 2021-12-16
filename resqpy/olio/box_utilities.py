@@ -12,7 +12,6 @@ version = '13th July 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('box_utilities.py version %s', version)
 
 import numpy as np
 

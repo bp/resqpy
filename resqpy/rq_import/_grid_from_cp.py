@@ -5,7 +5,6 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_grid_from_cp.py version ' + version)
 
 import numpy as np
 import numpy.ma as ma

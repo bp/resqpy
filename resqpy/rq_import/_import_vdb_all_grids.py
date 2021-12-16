@@ -7,7 +7,6 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_import_vdb_all_grids.py version ' + version)
 
 import resqpy.olio.vdb as vdb
 # import resqpy.olio.grid_functions as gf

@@ -10,7 +10,6 @@ version = '4th September 2020'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('keyword_files.py version %s', version)
 
 # defs:
 # def substring(shorter, longer):

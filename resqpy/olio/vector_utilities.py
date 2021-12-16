@@ -11,7 +11,6 @@ version = '15th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('vector_utilities.py version %s', version)
 
 import math as maths
 

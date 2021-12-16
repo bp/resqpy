@@ -8,7 +8,6 @@ version = '10th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('well_object_funcs.py version ' + version)
 
 import warnings
 import os

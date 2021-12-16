@@ -7,7 +7,6 @@ version = '29th April 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('write_data.py version %s', version)
 
 # only nexus format currently fully supported
 

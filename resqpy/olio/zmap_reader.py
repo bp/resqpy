@@ -7,7 +7,6 @@ version = '13th May 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('zmap_reader.py version ' + version)
 
 import numpy as np
 

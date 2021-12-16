@@ -7,7 +7,6 @@ version = '14th October 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('transmission.py version ' + version)
 
 import numpy as np
 
