@@ -232,8 +232,10 @@ def __clean_up_tiny_values(k, x, y, i, j, extent, depth, thickness, depth_zero_t
 
 def __snap_to_top_and_base(snap_to_top_and_base, x, y, i, j, depth, thickness, k_top, k_dir_sign):
     """ Cells above topmost active and below deepest active will be populated with pinched out cells at the top and
+
     bottom faces respectively.
     """
+
     if snap_to_top_and_base:
         snap_depth = depth[k_top, j, i] - k_dir_sign * thickness[k_top, j, i] / 2.0
         snap_x = x[k_top, j, i]
