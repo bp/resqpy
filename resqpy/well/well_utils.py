@@ -8,7 +8,6 @@ version = '10th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('well_utils.py version ' + version)
 
 import numpy as np
 

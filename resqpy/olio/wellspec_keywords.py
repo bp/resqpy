@@ -8,7 +8,6 @@ import logging
 from typing import Any, Dict, Tuple, Type
 
 log = logging.getLogger(__name__)
-log.debug('wellspec_keywords.py version %s', version)
 
 import numpy as np
 import pandas as pd

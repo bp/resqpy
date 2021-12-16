@@ -1,6 +1,6 @@
 """base_surface.py: base_surface class based on resqml standard."""
 
-version = '04th November 2021'
+version = '4th November 2021'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -8,7 +8,6 @@ version = '04th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('surface.py version ' + version)
 
 import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy

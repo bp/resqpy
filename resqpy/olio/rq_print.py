@@ -5,7 +5,6 @@ version = '1st July 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('rq_print.py version ' + version)
 
 import h5py
 import numpy as np

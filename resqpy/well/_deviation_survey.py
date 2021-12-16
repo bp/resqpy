@@ -10,7 +10,6 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_deviation_survey.py version ' + version)
 
 import pandas as pd
 

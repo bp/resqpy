@@ -20,18 +20,22 @@ def time_series_from_nexus_summary(summary_file, parent_model = None):
 
     if not summary_file:
         return None
+
     if not os.path.isfile(summary_file):
         log.warning('Summary file not found: ' + summary_file)
         return None
+
     try:
 
         summary_entries = _open_file(summary_file)
 
-        _process_summary_entries(summary_entries, parent_model)
+        time_series = _process_summary_entries(summary_entries, parent_model)
 
     except Exception:
         log.exception('failed to create TimeSeries object from summary file: ' + summary_file)
-    return None
+        return None
+
+    return time_series
 
 
 def _process_summary_entries(summary_entries, parent_model = None):

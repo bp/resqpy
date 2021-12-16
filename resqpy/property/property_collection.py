@@ -2487,8 +2487,9 @@ class PropertyCollection():
         #      log.debug('creating property node for ' + title)
         # currently assumes discrete properties to be 32 bit integers and continuous to be 64 bit reals
         # also assumes property_kind is one of the standard resqml property kinds; todo: allow local p kind node as optional arg
-        support_root, support_uuid, ext_uuid, const_value = pcxml._create_xml_get_basics(
-            self, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid, expand_const_arrays)
+        support_root, support_uuid, ext_uuid = pcxml._create_xml_get_basics(self, discrete, points, const_value,
+                                                                            facet_type, null_value, support_uuid,
+                                                                            ext_uuid)
 
         support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
         indexable_element = pcga._get_indexable_element(indexable_element, support_type)
@@ -2513,7 +2514,8 @@ class PropertyCollection():
                                                                       support_uuid, support_type, support_root)
         pcxml._create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind, uom, discrete,
                                         property_kind_uuid)
-        pcxml._create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid)
+        pcxml._create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid,
+                                     expand_const_arrays)
         pcxml._create_xml_facet_node(facet_type, facet, p_node)
 
         pcxml._create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value,

@@ -5,7 +5,6 @@ version = '5th November 2020'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('point_inclusion.py version ' + version)
 
 import numpy as np
 

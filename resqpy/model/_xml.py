@@ -1,7 +1,7 @@
 """_xml.py: functions to support xml creation methods in the Model class."""
 
 # following should be kept in line with major.minor tag values in repository
-citation_format = 'bp:resqpy:1.5'
+citation_format = 'bp:resqpy:1.6'
 use_version_string = False
 
 import logging
