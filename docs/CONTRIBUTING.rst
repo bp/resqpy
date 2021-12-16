@@ -8,6 +8,7 @@ Resqpy was created by Andy Beer.
 
 All contributors (alphabetical order):
 
+* Andrew Ediriscoriya
 * Andy Beer
 * Casey Warshauer
 * Connor Tann
@@ -16,6 +17,7 @@ All contributors (alphabetical order):
 * Jeremy Tillay
 * Kadija Hassanali
 * Nathan Lane
+* Nirjhor Chakraborty
 
 Ways of contributing
 --------------------
