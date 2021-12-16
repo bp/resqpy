@@ -1926,3 +1926,35 @@ def test_coarsening_realization(example_fine_coarse_model):
     result = coarse_pc.cached_part_array_ref(newparts[0])
 
     assert_array_almost_equal(np.ones(shape = (3, 5, 5)), result)
+
+
+def test_import_ab_properties(example_model_with_properties, test_data_path):
+    # Arrange
+    model = example_model_with_properties
+    pc = rqp.GridPropertyCollection(grid = model.grid())
+    init_num = len(pc.parts())
+    ab_facies = os.path.join(test_data_path, 'facies.ib')
+    ab_ntg = os.path.join(test_data_path, 'ntg_355.db')
+
+    # Act
+    pc.import_ab_property_to_cache(ab_facies, keyword = 'ab_facies', discrete = True, property_kind = 'discrete')
+
+    pc.import_ab_property_to_cache(ab_ntg, keyword = 'ab_ntg', discrete = False, property_kind = 'net to gross ratio')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    assert len(pc.parts()) == init_num + 2
+    # Check NTG array
+    ntg = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_ntg'][0]
+    ntg_array = pc.cached_part_array_ref(ntg)
+    assert np.min(ntg_array) > 0.4
+    assert np.max(ntg_array) < 0.7
+    assert np.allclose(np.mean(ntg_array), 0.550265)
+
+    # Check facies array
+    facies = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_facies'][0]
+    facies_array = pc.cached_part_array_ref(facies)
+    assert np.min(facies_array) == 0
+    assert np.max(facies_array) == 5
+    assert np.sum(facies_array) == 170
