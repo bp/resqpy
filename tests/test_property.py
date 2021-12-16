@@ -1800,7 +1800,55 @@ def test_coarsening_volume(example_fine_coarse_model):
     assert_array_almost_equal(array, all_thousand)
 
 
-def test_coarsening_reservoir_properties(example_fine_coarse_model):
+# Array set up for coarsening tests
+porarray = np.zeros(shape = (6, 10, 10)) + 0.3
+porarray[0, :, :] = 0
+porarray[5, :, :] = 0
+
+expected_por = np.zeros(shape = (3, 5, 5)) + 0.3
+expected_por[0, :, :] = 0.15
+expected_por[2, :, :] = 0.15
+
+ntgarray = np.zeros(shape = (6, 10, 10)) + 0.5
+ntgarray[:, :, 0] = 0
+ntgarray[:, :, 9] = 0
+
+expected_ntg = np.zeros(shape = (3, 5, 5)) + 0.5
+expected_ntg[:, :, 0] = 0.25
+expected_ntg[:, :, 4] = 0.25
+
+satarray = np.zeros(shape = (6, 10, 10)) + 0.7
+satarray[:, 0, :] = 1
+satarray[:, 9, :] = 1
+
+expected_sat = np.zeros(shape = (3, 5, 5)) + 0.7
+expected_sat[:, 0, :] = 0.85
+expected_sat[:, 4, :] = 0.85
+
+karray = np.zeros(shape = (6, 10, 10)) + 1000
+karray[:, 0, :] = 100
+karray[:, 9, :] = 10
+
+expected_k = np.zeros(shape = (3, 5, 5)) + 1000  # simple weighted mean for now
+expected_k[:, 0, :] = 550
+expected_k[:, 4, :] = 505
+
+single_disc = np.array([[1, 2], [3, 4]])  # Creating a 6x10x10 array with each 'box' of 8 cells numbered 1-8
+single_layer = np.tile(np.tile(single_disc, 5).T, 5).T
+discarray = np.array([single_layer, single_layer + 4, single_layer, single_layer + 4, single_layer, single_layer + 4])
+
+expected_disc = np.ones(shape = (3, 5, 5))  # for discrete array result is the value of first cell
+
+
+@pytest.mark.parametrize('inarray,keyword,discrete,kind,facettype,facet,outarray',
+                         [(porarray, 'por', False, 'porosity', None, None, expected_por),
+                          (ntgarray, 'NTG', False, 'net to gross ratio', None, None, expected_ntg),
+                          (porarray, 'por', False, 'porosity', None, None, expected_por),
+                          (satarray, 'sw', False, 'saturation', None, None, expected_sat),
+                          (karray, 'kx', False, 'permeability rock', 'direction', 'I', expected_k),
+                          (discarray, 'zone', True, 'discrete', None, None, expected_disc)])
+def test_coarsening_reservoir_properties(example_fine_coarse_model, inarray, keyword, discrete, kind, facettype, facet,
+                                         outarray):
     # Arrange
     model, coarse, fine, fc = example_fine_coarse_model
 
@@ -1809,41 +1857,13 @@ def test_coarsening_reservoir_properties(example_fine_coarse_model):
     numc = len(coarse_pc.parts())
     fine_pc = rqp.GridPropertyCollection(grid = fine)
 
-    # Add porosity and ntg to the fine collection
-    porarray = np.zeros(shape = (6, 10, 10)) + 0.3
-    porarray[0, :, :] = 0
-    porarray[5, :, :] = 0
-    fine_pc.add_cached_array_to_imported_list(cached_array = porarray,
+    fine_pc.add_cached_array_to_imported_list(cached_array = inarray,
                                               source_info = '',
-                                              keyword = 'por',
-                                              discrete = False,
-                                              property_kind = 'porosity')
-    ntgarray = np.zeros(shape = (6, 10, 10)) + 0.5
-    ntgarray[:, :, 0] = 0
-    ntgarray[:, :, 9] = 0
-    fine_pc.add_cached_array_to_imported_list(cached_array = ntgarray,
-                                              source_info = '',
-                                              keyword = 'NTG',
-                                              discrete = False,
-                                              property_kind = 'net to gross ratio')
-    satarray = np.zeros(shape = (6, 10, 10)) + 0.7
-    satarray[:, 0, :] = 1
-    satarray[:, 9, :] = 1
-    fine_pc.add_cached_array_to_imported_list(cached_array = satarray,
-                                              source_info = '',
-                                              keyword = 'sw',
-                                              discrete = False,
-                                              property_kind = 'saturation')
-    karray = np.zeros(shape = (6, 10, 10)) + 1000
-    karray[:, 0, :] = 100
-    karray[:, 9, :] = 10
-    fine_pc.add_cached_array_to_imported_list(cached_array = karray,
-                                              source_info = '',
-                                              keyword = 'kx',
-                                              discrete = False,
-                                              property_kind = 'permeability rock',
-                                              facet_type = 'direction',
-                                              facet = 'I')
+                                              keyword = keyword,
+                                              discrete = discrete,
+                                              property_kind = kind,
+                                              facet_type = facettype,
+                                              facet = facet)
 
     fine_pc.write_hdf5_for_imported_list()
     fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -1857,35 +1877,7 @@ def test_coarsening_reservoir_properties(example_fine_coarse_model):
     # Assert
     assert len(coarse_pc.parts()) == numc + numf
 
-    expected_por = np.zeros(shape = (3, 5, 5)) + 0.3
-    expected_por[0, :, :] = 0.15
-    expected_por[2, :, :] = 0.15
+    newpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == keyword][0]
+    result = coarse_pc.cached_part_array_ref(newpart)
 
-    porpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'por'][0]
-    por_out = coarse_pc.cached_part_array_ref(porpart)
-
-    expected_ntg = np.zeros(shape = (3, 5, 5)) + 0.5
-    expected_ntg[:, :, 0] = 0.25
-    expected_ntg[:, :, 4] = 0.25
-
-    ntgpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'NTG'][0]
-    ntg_out = coarse_pc.cached_part_array_ref(ntgpart)
-
-    expected_sat = np.zeros(shape = (3, 5, 5)) + 0.7
-    expected_sat[:, 0, :] = 0.85
-    expected_sat[:, 4, :] = 0.85
-
-    satpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'sw'][0]
-    sat_out = coarse_pc.cached_part_array_ref(satpart)
-
-    expected_k = np.zeros(shape = (3, 5, 5)) + 1000  # simple weighted mean for now
-    expected_k[:, 0, :] = 550
-    expected_k[:, 4, :] = 505
-
-    kpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'kx'][0]
-    k_out = coarse_pc.cached_part_array_ref(kpart)
-
-    assert_array_almost_equal(expected_por, por_out)
-    assert_array_almost_equal(expected_ntg, ntg_out)
-    assert_array_almost_equal(expected_sat, sat_out)
-    assert_array_almost_equal(expected_k, k_out)
+    assert_array_almost_equal(outarray, result)
