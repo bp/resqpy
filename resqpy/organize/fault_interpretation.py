@@ -117,8 +117,7 @@ class FaultInterpretation(BaseResqpy):
             return False
 
         # List of attributes that are not None in either self or other
-        non_none_attr_list = list(
-            filter(lambda v: not ((getattr(self, v) is None) and (getattr(other, v) is None)), attr_list))
+        non_none_attr_list = [a for a in attr_list if getattr(self, a) is not None]
 
         # Additional tests for attributes that are not None
         check_dict = {
@@ -130,7 +129,7 @@ class FaultInterpretation(BaseResqpy):
         }
 
         check_outcomes = [check_dict[v] for v in non_none_attr_list]
-        if not all(check_outcomes):
+        if not all(check_outcomes):  # If any of the Additional tests fail then self and other are not equivalent
             return False
 
         if (not equivalent_chrono_pairs(self.main_has_occurred_during, other.main_has_occurred_during) or
