@@ -1997,3 +1997,42 @@ def test_facet_array_ref(example_model_with_properties):
     names = [satpc.citation_title_for_part(part) for part in satpc.parts()]
     assert names == ['sw', 'sg', 'so']
     assert_array_almost_equal(farray[:, 0, 0, 0], np.array([0.2, 0.7, 0.1]))  # facets will be sorted so gas, oil, water
+
+
+def test_copy_imported_from_other(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+
+    pc = model.grid().property_collection
+
+    array = np.full(shape = (3, 5, 5), fill_value = 0.1)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'testimport',
+                                         property_kind = 'porosity')
+    old_list = pc.imported_list
+
+    # Act
+    newpc = rqp.PropertyCollection()
+    newpc.set_support(support = model.grid())
+    newpc.inherit_imported_list_from_other_collection(pc)
+
+    assert newpc.imported_list == old_list
+
+
+def test_remove_cached_from_imported_list(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.full(shape = (3, 5, 5), fill_value = 0.1)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'testimport',
+                                         property_kind = 'porosity')
+    assert pc.imported_list != []
+    array_name = pc.imported_list[0][3]
+    assert hasattr(pc, array_name)
+    # Act
+    pc.remove_cached_imported_arrays()
+    # Assert
+    assert not hasattr(pc, array_name)
