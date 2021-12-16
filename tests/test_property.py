@@ -1881,3 +1881,48 @@ def test_coarsening_reservoir_properties(example_fine_coarse_model, inarray, key
     result = coarse_pc.cached_part_array_ref(newpart)
 
     assert_array_almost_equal(outarray, result)
+
+
+def test_coarsening_realization(example_fine_coarse_model):
+    # Arrange
+    model, coarse, fine, fc = example_fine_coarse_model
+
+    # Set up property collections
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
+    numc = len(coarse_pc.parts())
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
+
+    ntg1 = np.ones(shape = (6, 10, 10))
+    ntg2 = np.zeros(shape = (6, 10, 10))
+
+    fine_pc.add_cached_array_to_imported_list(cached_array = ntg1,
+                                              source_info = '',
+                                              keyword = 'ntg',
+                                              discrete = False,
+                                              property_kind = 'net to gross ratio',
+                                              realization = 1)
+
+    fine_pc.add_cached_array_to_imported_list(cached_array = ntg2,
+                                              source_info = '',
+                                              keyword = 'ntg',
+                                              discrete = False,
+                                              property_kind = 'net to gross ratio',
+                                              realization = 2)
+    fine_pc.write_hdf5_for_imported_list()
+    fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc,
+                                                                                 coarsening = fc,
+                                                                                 realization = 1)
+    coarse_pc.write_hdf5_for_imported_list()
+    coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    assert len(coarse_pc.parts()) == numc + 1
+
+    newparts = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'ntg']
+    assert len(newparts) == 1
+    result = coarse_pc.cached_part_array_ref(newparts[0])
+
+    assert_array_almost_equal(np.ones(shape = (3, 5, 5)), result)
