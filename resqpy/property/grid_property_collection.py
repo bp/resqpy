@@ -139,312 +139,15 @@ class GridPropertyCollection(PropertyCollection):
 
         # todo: optional use of active cell mask in coarsening
 
-        def array_box(collection, part, box = None, uncache_other_arrays = True):
-            full_array = collection.cached_part_array_ref(part)
-            if box is None:
-                a = full_array.copy()
-            else:
-                a = full_array[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1].copy()
-            full_array = None
-            if uncache_other_arrays:
-                other.uncache_part_array(part)
-            return a
-
-        def coarsening_sample(coarsening, a):
-            # for now just take value from first cell in box
-            # todo: find most common element in box
-            a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji), dtype = a.dtype)
-            assert a.shape == tuple(coarsening.fine_extent_kji)
-            # todo: try to figure out some numpy slice operations to avoid use of for loops
-            for k in range(coarsening.coarse_extent_kji[0]):
-                for j in range(coarsening.coarse_extent_kji[1]):
-                    for i in range(coarsening.coarse_extent_kji[2]):
-                        # local box within lgc space of fine cells, for 1 coarse cell
-                        cell_box = coarsening.fine_box_for_coarse((k, j, i))
-                        a_coarsened[k, j, i] = a[tuple(cell_box[0])]
-            return a_coarsened
-
-        def coarsening_sum(coarsening, a, axis = None):
-            a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
-            assert a.shape == tuple(coarsening.fine_extent_kji)
-            # todo: try to figure out some numpy slice operations to avoid use of for loops
-            for k in range(coarsening.coarse_extent_kji[0]):
-                for j in range(coarsening.coarse_extent_kji[1]):
-                    for i in range(coarsening.coarse_extent_kji[2]):
-                        cell_box = coarsening.fine_box_for_coarse(
-                            (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
-                        # yapf: disable
-                        a_coarsened[k, j, i] = np.nansum(a[cell_box[0, 0]:cell_box[1, 0] + 1,
-                                                           cell_box[0, 1]:cell_box[1, 1] + 1,
-                                                           cell_box[0, 2]:cell_box[1, 2] + 1])
-                        # yapf: enable
-                        if axis is not None:
-                            axis_1 = (axis + 1) % 3
-                            axis_2 = (axis + 2) % 3
-                            # yapf: disable
-                            divisor = ((cell_box[1, axis_1] + 1 - cell_box[0, axis_1]) *
-                                       (cell_box[1, axis_2] + 1 - cell_box[0, axis_2]))
-                            # yapf: enable
-                            a_coarsened[k, j, i] = a_coarsened[k, j, i] / float(divisor)
-            return a_coarsened
-
-        def coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, zero_weight_result = np.NaN):
-            a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
-            assert a.shape == tuple(coarsening.fine_extent_kji)
-            assert fine_weight.shape == a.shape
-            if coarse_weight is not None:
-                assert coarse_weight.shape == a_coarsened.shape
-            for k in range(coarsening.coarse_extent_kji[0]):
-                for j in range(coarsening.coarse_extent_kji[1]):
-                    for i in range(coarsening.coarse_extent_kji[2]):
-                        cell_box = coarsening.fine_box_for_coarse(
-                            (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
-                        a_coarsened[k, j, i] = np.nansum(
-                            a[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
-                              cell_box[0, 2]:cell_box[1, 2] + 1] *
-                            fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
-                                        cell_box[0, 2]:cell_box[1, 2] + 1])
-                        if coarse_weight is None:
-                            weight = np.nansum(fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1,
-                                                           cell_box[0, 1]:cell_box[1, 1] + 1,
-                                                           cell_box[0, 2]:cell_box[1, 2] + 1])
-                            if np.isnan(weight) or weight == 0.0:
-                                a_coarsened[k, j, i] = zero_weight_result
-                            else:
-                                a_coarsened[k, j, i] /= weight
-            if coarse_weight is not None:
-                mask = np.logical_or(np.isnan(coarse_weight), coarse_weight == 0.0)
-                a_coarsened = np.where(mask, zero_weight_result, a_coarsened / coarse_weight)
-            return a_coarsened
-
-        def add_to_imported(collection, a, title, info, null_value = None, const_value = None):
-            collection.add_cached_array_to_imported_list(
-                a,
-                title,
-                info[10],  # citation_title
-                discrete = not info[4],
-                indexable_element = 'cells',
-                uom = info[15],
-                time_index = info[12],
-                null_value = null_value,
-                property_kind = info[7],
-                local_property_kind_uuid = info[17],
-                facet_type = info[8],
-                facet = info[9],
-                realization = info[0],
-                const_value = const_value,
-                points = info[21])
-
-        import resqpy.grid as grr  # at global level was causing issues due to circular references, ie. grid importing this module
-
-        assert other.support is not None and isinstance(other.support,
-                                                        grr.Grid), 'other property collection has no grid support'
-        assert refinement is None or coarsening is None, 'refinement and coarsening both specified simultaneously'
-
-        if box is not None:
-            assert bxu.valid_box(box, other.grid.extent_kji)
-            if refinement is not None:
-                assert tuple(bxu.extent_of_box(box)) == tuple(refinement.coarse_extent_kji)
-            elif coarsening is not None:
-                assert tuple(bxu.extent_of_box(box)) == tuple(coarsening.fine_extent_kji)
-        # todo: any contraints on realization numbers ?
+        _extend_imported_initial_assertions(other, box, refinement, coarsening)
 
         if coarsening is not None:  # static upscaling of key property kinds, simple sampling of others
-
-            assert self.support is not None and tuple(self.support.extent_kji) == tuple(coarsening.coarse_extent_kji)
-
-            # look for properties by kind, process in order: rock volume, net to gross ratio, porosity, permeability, saturation
-            source_rv = selective_version_of_collection(other, realization = realization, property_kind = 'rock volume')
-            source_ntg = selective_version_of_collection(other,
-                                                         realization = realization,
-                                                         property_kind = 'net to gross ratio')
-            source_poro = selective_version_of_collection(other, realization = realization, property_kind = 'porosity')
-            source_sat = selective_version_of_collection(other, realization = realization, property_kind = 'saturation')
-            source_perm = selective_version_of_collection(other,
-                                                          realization = realization,
-                                                          property_kind = 'permeability rock')
-            # todo: add kh and some other property kinds
-
-            # bulk rock volume
-            fine_rv_array = coarse_rv_array = None
-            if source_rv.number_of_parts() == 0:
-                log.debug('computing bulk rock volume from fine and coarse grid geometries')
-                source_rv_array = other.support.volume()
-                if box is None:
-                    fine_rv_array = source_rv_array
-                else:
-                    fine_rv_array = source_rv_array[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1,
-                                                    box[0, 2]:box[1, 2] + 1]
-                coarse_rv_array = self.support.volume()
-            else:
-                for (part, info) in source_rv.dict.items():
-                    if not copy_all_realizations and info[0] != realization:
-                        continue
-                    fine_rv_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                    coarse_rv_array = coarsening_sum(coarsening, fine_rv_array)
-                    add_to_imported(self, coarse_rv_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # net to gross ratio
-            # note that coarsened ntg values may exceed one when reference bulk rock volumes are from grid geometries
-            fine_ntg_array = coarse_ntg_array = None
-            for (part, info) in source_ntg.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_ntg_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_ntg_array = coarsening_weighted_mean(coarsening,
-                                                            fine_ntg_array,
-                                                            fine_rv_array,
-                                                            coarse_weight = coarse_rv_array,
-                                                            zero_weight_result = 0.0)
-                add_to_imported(self, coarse_ntg_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            if fine_ntg_array is None:
-                fine_nrv_array = fine_rv_array
-                coarse_nrv_array = coarse_rv_array
-            else:
-                fine_nrv_array = fine_rv_array * fine_ntg_array
-                coarse_nrv_array = coarse_rv_array * coarse_ntg_array
-
-            fine_poro_array = coarse_poro_array = None
-            for (part, info) in source_poro.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_poro_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_poro_array = coarsening_weighted_mean(coarsening,
-                                                             fine_poro_array,
-                                                             fine_nrv_array,
-                                                             coarse_weight = coarse_nrv_array,
-                                                             zero_weight_result = 0.0)
-                add_to_imported(self, coarse_poro_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # saturations
-            fine_sat_array = coarse_sat_array = None
-            fine_sat_weight = fine_nrv_array
-            coarse_sat_weight = coarse_nrv_array
-            if fine_poro_array is not None:
-                fine_sat_weight *= fine_poro_array
-                coarse_sat_weight *= coarse_poro_array
-            for (part, info) in source_sat.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_sat_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_sat_array = coarsening_weighted_mean(coarsening,
-                                                            fine_sat_array,
-                                                            fine_sat_weight,
-                                                            coarse_weight = coarse_sat_weight,
-                                                            zero_weight_result = 0.0)
-                add_to_imported(self, coarse_sat_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # permeabilities
-            # todo: use more harmonic, arithmetic mean instead of just bulk rock volume weighted; consider ntg
-            for (part, info) in source_perm.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_perm_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                coarse_perm_array = coarsening_weighted_mean(coarsening,
-                                                             fine_perm_array,
-                                                             fine_nrv_array,
-                                                             coarse_weight = coarse_nrv_array,
-                                                             zero_weight_result = 0.0)
-                add_to_imported(self, coarse_perm_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # cell lengths
-            source_cell_lengths = selective_version_of_collection(other,
-                                                                  realization = realization,
-                                                                  property_kind = 'cell length')
-            for (part, info) in source_cell_lengths.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                fine_cl_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                assert info[5] == 1 and info[8] == 'direction'
-                axis = 'KJI'.index(info[9][0].upper())
-                coarse_cl_array = coarsening_sum(coarsening, fine_cl_array, axis = axis)
-                add_to_imported(self, coarse_cl_array, 'coarsened from grid ' + str(other.support.uuid), info)
-
-            # TODO: all other supported property kinds requiring special treatment
-            # default behaviour is bulk volume weighted mean for continuous data, first cell in box for discrete
-            handled_kinds = ('rock volume', 'net to gross ratio', 'porosity', 'saturation', 'permeability rock',
-                             'rock permeability', 'cell length')
-            for (part, info) in other.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-                if info[7] in handled_kinds:
-                    continue
-                fine_ordinary_array = array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                if info[4]:
-                    coarse_ordinary_array = coarsening_weighted_mean(coarsening,
-                                                                     fine_ordinary_array,
-                                                                     fine_rv_array,
-                                                                     coarse_weight = coarse_rv_array)
-                else:
-                    coarse_ordinary_array = coarsening_sample(coarsening, fine_ordinary_array)
-                add_to_imported(self, coarse_ordinary_array, 'coarsened from grid ' + str(other.support.uuid), info)
+            _extend_imported_with_coarsening(self, other, box, coarsening, realization, copy_all_realizations,
+                                             uncache_other_arrays)
 
         else:
-
-            if realization is None:
-                source_collection = other
-            else:
-                source_collection = selective_version_of_collection(other, realization = realization)
-
-            for (part, info) in source_collection.dict.items():
-                if not copy_all_realizations and info[0] != realization:
-                    continue
-
-                const_value = info[20]
-                if const_value is None:
-                    a = array_box(source_collection, part, box = box, uncache_other_arrays = uncache_other_arrays)
-                else:
-                    a = None
-
-                if refinement is not None and a is not None:  # simple resampling
-                    if info[6] != 'cells':
-                        # todo: appropriate refinement of data for other indexable elements
-                        continue
-                    # todo: dividing up of values when needed, eg. volumes, areas, lengths
-                    assert tuple(a.shape) == tuple(refinement.coarse_extent_kji)
-                    assert self.support is not None and tuple(self.support.extent_kji) == tuple(
-                        refinement.fine_extent_kji)
-                    k_ratio_vector = refinement.coarse_for_fine_axial_vector(0)
-                    a_refined_k = np.empty((refinement.fine_extent_kji[0], refinement.coarse_extent_kji[1],
-                                            refinement.coarse_extent_kji[2]),
-                                           dtype = a.dtype)
-                    a_refined_k[:, :, :] = a[k_ratio_vector, :, :]
-                    j_ratio_vector = refinement.coarse_for_fine_axial_vector(1)
-                    a_refined_kj = np.empty(
-                        (refinement.fine_extent_kji[0], refinement.fine_extent_kji[1], refinement.coarse_extent_kji[2]),
-                        dtype = a.dtype)
-                    a_refined_kj[:, :, :] = a_refined_k[:, j_ratio_vector, :]
-                    i_ratio_vector = refinement.coarse_for_fine_axial_vector(2)
-                    a = np.empty(tuple(refinement.fine_extent_kji), dtype = a.dtype)
-                    a[:, :, :] = a_refined_kj[:, :, i_ratio_vector]
-                    # for cell length properties, scale down the values in accordance with refinement
-                    if info[4] and info[7] == 'cell length' and info[8] == 'direction' and info[5] == 1:
-                        dir_ch = info[9].upper()
-                        log.debug(f'refining cell lengths for axis {dir_ch}')
-                        if dir_ch == 'K':
-                            a *= refinement.proportions_for_axis(0).reshape((-1, 1, 1))
-                        elif dir_ch == 'J':
-                            a *= refinement.proportions_for_axis(1).reshape((1, -1, 1))
-                        elif dir_ch == 'I':
-                            a *= refinement.proportions_for_axis(2).reshape((1, 1, -1))
-
-                self.add_cached_array_to_imported_list(
-                    a,
-                    'copied from grid ' + str(other.support.uuid),
-                    info[10],  # citation_title
-                    discrete = not info[4],
-                    indexable_element = 'cells',
-                    uom = info[15],
-                    time_index = info[12],
-                    null_value = None,  # todo: extract from other's xml
-                    property_kind = info[7],
-                    local_property_kind_uuid = info[17],
-                    facet_type = info[8],
-                    facet = info[9],
-                    realization = info[0],
-                    const_value = const_value,
-                    points = info[21])
+            _extend_imported_no_coarsening(self, other, box, refinement, realization, copy_all_realizations,
+                                           uncache_other_arrays)
 
     def import_nexus_property_to_cache(self,
                                        file_name,
@@ -1044,3 +747,328 @@ class GridPropertyCollection(PropertyCollection):
                                                           use_binary = use_binary,
                                                           binary_only = binary_only,
                                                           nan_substitute_value = nan_substitute_value)
+
+
+def _array_box(collection, part, box = None, uncache_other_arrays = True):
+    full_array = collection.cached_part_array_ref(part)
+    if box is None:
+        a = full_array.copy()
+    else:
+        a = full_array[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1].copy()
+    full_array = None
+    if uncache_other_arrays:
+        collection.uncache_part_array(part)
+    return a
+
+
+def _coarsening_sample(coarsening, a):
+    # for now just take value from first cell in box
+    # todo: find most common element in box
+    a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji), dtype = a.dtype)
+    assert a.shape == tuple(coarsening.fine_extent_kji)
+    # todo: try to figure out some numpy slice operations to avoid use of for loops
+    for k in range(coarsening.coarse_extent_kji[0]):
+        for j in range(coarsening.coarse_extent_kji[1]):
+            for i in range(coarsening.coarse_extent_kji[2]):
+                # local box within lgc space of fine cells, for 1 coarse cell
+                cell_box = coarsening.fine_box_for_coarse((k, j, i))
+                a_coarsened[k, j, i] = a[tuple(cell_box[0])]
+    return a_coarsened
+
+
+def _coarsening_sum(coarsening, a, axis = None):
+    a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
+    assert a.shape == tuple(coarsening.fine_extent_kji)
+    # todo: try to figure out some numpy slice operations to avoid use of for loops
+    for k in range(coarsening.coarse_extent_kji[0]):
+        for j in range(coarsening.coarse_extent_kji[1]):
+            for i in range(coarsening.coarse_extent_kji[2]):
+                cell_box = coarsening.fine_box_for_coarse(
+                    (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
+                # yapf: disable
+                a_coarsened[k, j, i] = np.nansum(a[cell_box[0, 0]:cell_box[1, 0] + 1,
+                                                 cell_box[0, 1]:cell_box[1, 1] + 1,
+                                                 cell_box[0, 2]:cell_box[1, 2] + 1])
+                # yapf: enable
+                if axis is not None:
+                    axis_1 = (axis + 1) % 3
+                    axis_2 = (axis + 2) % 3
+                    # yapf: disable
+                    divisor = ((cell_box[1, axis_1] + 1 - cell_box[0, axis_1]) *
+                               (cell_box[1, axis_2] + 1 - cell_box[0, axis_2]))
+                    # yapf: enable
+                    a_coarsened[k, j, i] = a_coarsened[k, j, i] / float(divisor)
+    return a_coarsened
+
+
+def _coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, zero_weight_result = np.NaN):
+    a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
+    assert a.shape == tuple(coarsening.fine_extent_kji)
+    assert fine_weight.shape == a.shape
+    if coarse_weight is not None:
+        assert coarse_weight.shape == a_coarsened.shape
+    for k in range(coarsening.coarse_extent_kji[0]):
+        for j in range(coarsening.coarse_extent_kji[1]):
+            for i in range(coarsening.coarse_extent_kji[2]):
+                cell_box = coarsening.fine_box_for_coarse(
+                    (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
+                a_coarsened[k, j, i] = np.nansum(
+                    a[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
+                      cell_box[0, 2]:cell_box[1, 2] + 1] *
+                    fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
+                                cell_box[0, 2]:cell_box[1, 2] + 1])
+                if coarse_weight is None:
+                    weight = np.nansum(fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
+                                                   cell_box[0, 2]:cell_box[1, 2] + 1])
+                    if np.isnan(weight) or weight == 0.0:
+                        a_coarsened[k, j, i] = zero_weight_result
+                    else:
+                        a_coarsened[k, j, i] /= weight
+    if coarse_weight is not None:
+        mask = np.logical_or(np.isnan(coarse_weight), coarse_weight == 0.0)
+        a_coarsened = np.where(mask, zero_weight_result, a_coarsened / coarse_weight)
+    return a_coarsened
+
+
+def _add_to_imported(collection, a, title, info, null_value = None, const_value = None):
+    collection.add_cached_array_to_imported_list(
+        a,
+        title,
+        info[10],  # citation_title
+        discrete = not info[4],
+        indexable_element = 'cells',
+        uom = info[15],
+        time_index = info[12],
+        null_value = null_value,
+        property_kind = info[7],
+        local_property_kind_uuid = info[17],
+        facet_type = info[8],
+        facet = info[9],
+        realization = info[0],
+        const_value = const_value,
+        points = info[21])
+
+
+def _extend_imported_initial_assertions(other, box, refinement, coarsening):
+    import resqpy.grid as grr  # at global level was causing issues due to circular references, ie. grid importing this module
+    assert other.support is not None and isinstance(other.support,
+                                                    grr.Grid), 'other property collection has no grid support'
+    assert refinement is None or coarsening is None, 'refinement and coarsening both specified simultaneously'
+
+    if box is not None:
+        assert bxu.valid_box(box, other.grid.extent_kji)
+        if refinement is not None:
+            assert tuple(bxu.extent_of_box(box)) == tuple(refinement.coarse_extent_kji)
+        elif coarsening is not None:
+            assert tuple(bxu.extent_of_box(box)) == tuple(coarsening.fine_extent_kji)
+    # todo: any contraints on realization numbers ?
+
+
+def _extend_imported_with_coarsening(collection, other, box, coarsening, realization, copy_all_realizations,
+                                     uncache_other_arrays):
+    assert collection.support is not None and tuple(collection.support.extent_kji) == tuple(
+        coarsening.coarse_extent_kji)
+
+    # look for properties by kind, process in order: rock volume, net to gross ratio, porosity, permeability, saturation
+    source_rv = selective_version_of_collection(other, realization = realization, property_kind = 'rock volume')
+    source_ntg = selective_version_of_collection(other, realization = realization, property_kind = 'net to gross ratio')
+    source_poro = selective_version_of_collection(other, realization = realization, property_kind = 'porosity')
+    source_sat = selective_version_of_collection(other, realization = realization, property_kind = 'saturation')
+    source_perm = selective_version_of_collection(other, realization = realization, property_kind = 'permeability rock')
+    # todo: add kh and some other property kinds
+
+    # bulk rock volume
+    fine_rv_array = coarse_rv_array = None
+    if source_rv.number_of_parts() == 0:
+        log.debug('computing bulk rock volume from fine and coarse grid geometries')
+        source_rv_array = other.support.volume()
+        if box is None:
+            fine_rv_array = source_rv_array
+        else:
+            fine_rv_array = source_rv_array[box[0, 0]:box[1, 0] + 1, box[0, 1]:box[1, 1] + 1, box[0, 2]:box[1, 2] + 1]
+        coarse_rv_array = collection.support.volume()
+    else:
+        for (part, info) in source_rv.dict.items():
+            if not copy_all_realizations and info[0] != realization:
+                continue
+            fine_rv_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+            coarse_rv_array = _coarsening_sum(coarsening, fine_rv_array)
+            _add_to_imported(collection, coarse_rv_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+    # net to gross ratio
+    # note that coarsened ntg values may exceed one when reference bulk rock volumes are from grid geometries
+    fine_ntg_array = coarse_ntg_array = None
+    for (part, info) in source_ntg.dict.items():
+        if not copy_all_realizations and info[0] != realization:
+            continue
+        fine_ntg_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+        coarse_ntg_array = _coarsening_weighted_mean(coarsening,
+                                                     fine_ntg_array,
+                                                     fine_rv_array,
+                                                     coarse_weight = coarse_rv_array,
+                                                     zero_weight_result = 0.0)
+        _add_to_imported(collection, coarse_ntg_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+    if fine_ntg_array is None:
+        fine_nrv_array = fine_rv_array
+        coarse_nrv_array = coarse_rv_array
+    else:
+        fine_nrv_array = fine_rv_array * fine_ntg_array
+        coarse_nrv_array = coarse_rv_array * coarse_ntg_array
+
+    fine_poro_array = coarse_poro_array = None
+    for (part, info) in source_poro.dict.items():
+        if not copy_all_realizations and info[0] != realization:
+            continue
+        fine_poro_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+        coarse_poro_array = _coarsening_weighted_mean(coarsening,
+                                                      fine_poro_array,
+                                                      fine_nrv_array,
+                                                      coarse_weight = coarse_nrv_array,
+                                                      zero_weight_result = 0.0)
+        _add_to_imported(collection, coarse_poro_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+    # saturations
+    fine_sat_array = coarse_sat_array = None
+    fine_sat_weight = fine_nrv_array
+    coarse_sat_weight = coarse_nrv_array
+    if fine_poro_array is not None:
+        fine_sat_weight *= fine_poro_array
+        coarse_sat_weight *= coarse_poro_array
+    for (part, info) in source_sat.dict.items():
+        if not copy_all_realizations and info[0] != realization:
+            continue
+        fine_sat_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+        coarse_sat_array = _coarsening_weighted_mean(coarsening,
+                                                     fine_sat_array,
+                                                     fine_sat_weight,
+                                                     coarse_weight = coarse_sat_weight,
+                                                     zero_weight_result = 0.0)
+        _add_to_imported(collection, coarse_sat_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+    # permeabilities
+    # todo: use more harmonic, arithmetic mean instead of just bulk rock volume weighted; consider ntg
+    for (part, info) in source_perm.dict.items():
+        if not copy_all_realizations and info[0] != realization:
+            continue
+        fine_perm_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+        coarse_perm_array = _coarsening_weighted_mean(coarsening,
+                                                      fine_perm_array,
+                                                      fine_nrv_array,
+                                                      coarse_weight = coarse_nrv_array,
+                                                      zero_weight_result = 0.0)
+        _add_to_imported(collection, coarse_perm_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+    # cell lengths
+    source_cell_lengths = selective_version_of_collection(other,
+                                                          realization = realization,
+                                                          property_kind = 'cell length')
+    for (part, info) in source_cell_lengths.dict.items():
+        if not copy_all_realizations and info[0] != realization:
+            continue
+        fine_cl_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+        assert info[5] == 1 and info[8] == 'direction'
+        axis = 'KJI'.index(info[9][0].upper())
+        coarse_cl_array = _coarsening_sum(coarsening, fine_cl_array, axis = axis)
+        _add_to_imported(collection, coarse_cl_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+    # TODO: all other supported property kinds requiring special treatment
+    # default behaviour is bulk volume weighted mean for continuous data, first cell in box for discrete
+    handled_kinds = ('rock volume', 'net to gross ratio', 'porosity', 'saturation', 'permeability rock',
+                     'rock permeability', 'cell length')
+    for (part, info) in other.dict.items():
+        if not copy_all_realizations and info[0] != realization:
+            continue
+        if info[7] in handled_kinds:
+            continue
+        fine_ordinary_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
+        if info[4]:
+            coarse_ordinary_array = _coarsening_weighted_mean(coarsening,
+                                                              fine_ordinary_array,
+                                                              fine_rv_array,
+                                                              coarse_weight = coarse_rv_array)
+        else:
+            coarse_ordinary_array = _coarsening_sample(coarsening, fine_ordinary_array)
+        _add_to_imported(collection, coarse_ordinary_array, 'coarsened from grid ' + str(other.support.uuid), info)
+
+
+def _extend_imported_no_coarsening(collection, other, box, refinement, realization, copy_all_realizations,
+                                   uncache_other_arrays):
+    if realization is None:
+        source_collection = other
+    else:
+        source_collection = selective_version_of_collection(other, realization = realization)
+
+    for (part, info) in source_collection.dict.items():
+        _extend_imported_no_coarsening_single(source_collection, part, info, collection, other, box, refinement,
+                                              realization, copy_all_realizations, uncache_other_arrays)
+
+
+def _extend_imported_no_coarsening_single(source_collection, part, info, collection, other, box, refinement,
+                                          realization, copy_all_realizations, uncache_other_arrays):
+    if not copy_all_realizations and info[0] != realization:
+        return
+
+    const_value = info[20]
+    if const_value is None:
+        a = _array_box(source_collection, part, box = box, uncache_other_arrays = uncache_other_arrays)
+    else:
+        a = None
+
+    if refinement is not None and a is not None:  # simple resampling
+        a = _extend_imported_no_coarsening_single_resampling(a, info, collection, refinement)
+
+    collection.add_cached_array_to_imported_list(
+        a,
+        'copied from grid ' + str(other.support.uuid),
+        info[10],  # citation_title
+        discrete = not info[4],
+        indexable_element = 'cells',
+        uom = info[15],
+        time_index = info[12],
+        null_value = None,  # todo: extract from other's xml
+        property_kind = info[7],
+        local_property_kind_uuid = info[17],
+        facet_type = info[8],
+        facet = info[9],
+        realization = info[0],
+        const_value = const_value,
+        points = info[21])
+
+
+def _extend_imported_no_coarsening_single_resampling(a, info, collection, refinement):
+    if info[6] != 'cells':
+        # todo: appropriate refinement of data for other indexable elements
+        return
+    # todo: dividing up of values when needed, eg. volumes, areas, lengths
+    assert tuple(a.shape) == tuple(refinement.coarse_extent_kji)
+    assert collection.support is not None and tuple(collection.support.extent_kji) == tuple(refinement.fine_extent_kji)
+    k_ratio_vector = refinement.coarse_for_fine_axial_vector(0)
+    a_refined_k = np.empty(
+        (refinement.fine_extent_kji[0], refinement.coarse_extent_kji[1], refinement.coarse_extent_kji[2]),
+        dtype = a.dtype)
+    a_refined_k[:, :, :] = a[k_ratio_vector, :, :]
+    j_ratio_vector = refinement.coarse_for_fine_axial_vector(1)
+    a_refined_kj = np.empty(
+        (refinement.fine_extent_kji[0], refinement.fine_extent_kji[1], refinement.coarse_extent_kji[2]),
+        dtype = a.dtype)
+    a_refined_kj[:, :, :] = a_refined_k[:, j_ratio_vector, :]
+    i_ratio_vector = refinement.coarse_for_fine_axial_vector(2)
+    a = np.empty(tuple(refinement.fine_extent_kji), dtype = a.dtype)
+    a[:, :, :] = a_refined_kj[:, :, i_ratio_vector]
+    # for cell length properties, scale down the values in accordance with refinement
+    if info[4] and info[7] == 'cell length' and info[8] == 'direction' and info[5] == 1:
+        a = _extend_imported_no_coarsening_single_resampling_length(a, info, refinement)
+    return a
+
+
+def _extend_imported_no_coarsening_single_resampling_length(a, info, refinement):
+    dir_ch = info[9].upper()
+    log.debug(f'refining cell lengths for axis {dir_ch}')
+    if dir_ch == 'K':
+        a *= refinement.proportions_for_axis(0).reshape((-1, 1, 1))
+    elif dir_ch == 'J':
+        a *= refinement.proportions_for_axis(1).reshape((1, -1, 1))
+    elif dir_ch == 'I':
+        a *= refinement.proportions_for_axis(2).reshape((1, 1, -1))
+    return a
