@@ -121,11 +121,16 @@ class FaultInterpretation(BaseResqpy):
 
         # Additional tests for attributes that are not None
         check_dict = {
-            'tectonic_boundary_feature': lambda: self.tectonic_boundary_feature.is_equivalent(other.tectonic_boundary_feature),
-            'root': lambda: rqet.citation_title_for_node(self.root) != rqet.citation_title_for_node(other.root),
-            'maximum_throw': lambda: maths.isclose(self.maximum_throw, other.maximum_throw, rel_tol = 1e-3),
-            'mean_azimuth': lambda: maths.isclose(self.mean_azimuth, other.mean_azimuth, abs_tol = 0.5),
-            'mean_dip': lambda: maths.isclose(self.mean_dip, other.mean_dip, abs_tol = 0.5)
+            'tectonic_boundary_feature':
+                lambda: self.tectonic_boundary_feature.is_equivalent(other.tectonic_boundary_feature),
+            'root':
+                lambda: rqet.citation_title_for_node(self.root) != rqet.citation_title_for_node(other.root),
+            'maximum_throw':
+                lambda: maths.isclose(self.maximum_throw, other.maximum_throw, rel_tol = 1e-3),
+            'mean_azimuth':
+                lambda: maths.isclose(self.mean_azimuth, other.mean_azimuth, abs_tol = 0.5),
+            'mean_dip':
+                lambda: maths.isclose(self.mean_dip, other.mean_dip, abs_tol = 0.5)
         }
 
         check_outcomes = [check_dict[v]() for v in non_none_attr_list]
