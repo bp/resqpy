@@ -1756,7 +1756,7 @@ def test_coarsening_length(example_fine_coarse_model):
 
     # Assert
     assert len(coarse_pc.parts()) == numc + numf
-    all_tens = np.zeros(shape = (3, 5, 5)) + 10
+    all_tens = np.full(shape = (3, 5, 5), fill_value = 10, dtype = 'float')
     for length in ['DX', 'DY', 'DZ']:
         dpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == length][0]
         array = coarse_pc.cached_part_array_ref(dpart)
@@ -1773,7 +1773,7 @@ def test_coarsening_volume(example_fine_coarse_model):
     fine_pc = rqp.GridPropertyCollection(grid = fine)
 
     # Add a volume to the fine collection
-    inarray = np.zeros(shape = (6, 10, 10)) + 125  # fine grid dimensions are 5x5x5 so gross volume of 125
+    inarray = np.full(shape = (6, 10, 10), fill_value = 125)  # fine grid dimensions are 5x5x5 so gross volume of 125
     fine_pc.add_cached_array_to_imported_list(cached_array = inarray,
                                               source_info = '',
                                               keyword = 'brv',
@@ -1793,43 +1793,43 @@ def test_coarsening_volume(example_fine_coarse_model):
 
     # Assert
     assert len(coarse_pc.parts()) == numc + numf
-    all_thousand = np.zeros(shape = (3, 5,
-                                     5)) + 1000  # we have coarsened by 2 in all 3 directions, so expected vol of 1000
+    all_thousand = np.full(shape = (3, 5, 5),
+                           fill_value = 1000)  # we have coarsened by 2 in all 3 directions, so expected vol of 1000
     vpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'brv'][0]
     array = coarse_pc.cached_part_array_ref(vpart)
     assert_array_almost_equal(array, all_thousand)
 
 
 # Array set up for coarsening tests
-porarray = np.zeros(shape = (6, 10, 10)) + 0.3
+porarray = np.full(shape = (6, 10, 10), fill_value = 0.3)
 porarray[0, :, :] = 0
 porarray[5, :, :] = 0
 
-expected_por = np.zeros(shape = (3, 5, 5)) + 0.3
+expected_por = np.full(shape = (3, 5, 5), fill_value = 0.3)
 expected_por[0, :, :] = 0.15
 expected_por[2, :, :] = 0.15
 
-ntgarray = np.zeros(shape = (6, 10, 10)) + 0.5
+ntgarray = np.full(shape = (6, 10, 10), fill_value = 0.5)
 ntgarray[:, :, 0] = 0
 ntgarray[:, :, 9] = 0
 
-expected_ntg = np.zeros(shape = (3, 5, 5)) + 0.5
+expected_ntg = np.full(shape = (3, 5, 5), fill_value = 0.5)
 expected_ntg[:, :, 0] = 0.25
 expected_ntg[:, :, 4] = 0.25
 
-satarray = np.zeros(shape = (6, 10, 10)) + 0.7
+satarray = np.full(shape = (6, 10, 10), fill_value = 0.7)
 satarray[:, 0, :] = 1
 satarray[:, 9, :] = 1
 
-expected_sat = np.zeros(shape = (3, 5, 5)) + 0.7
+expected_sat = np.full(shape = (3, 5, 5), fill_value = 0.7)
 expected_sat[:, 0, :] = 0.85
 expected_sat[:, 4, :] = 0.85
 
-karray = np.zeros(shape = (6, 10, 10)) + 1000
+karray = np.full(shape = (6, 10, 10), fill_value = 1000)
 karray[:, 0, :] = 100
 karray[:, 9, :] = 10
 
-expected_k = np.zeros(shape = (3, 5, 5)) + 1000  # simple weighted mean for now
+expected_k = np.full(shape = (3, 5, 5), fill_value = 1000)  # simple weighted mean for now
 expected_k[:, 0, :] = 550
 expected_k[:, 4, :] = 505
 
@@ -1948,6 +1948,8 @@ def test_import_ab_properties(example_model_with_properties, test_data_path):
     # Check NTG array
     ntg = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_ntg'][0]
     ntg_array = pc.cached_part_array_ref(ntg)
+    assert pc.continuous_for_part(ntg)
+    assert pc.property_kind_for_part(ntg) == 'net to gross ratio'
     assert np.min(ntg_array) > 0.4
     assert np.max(ntg_array) < 0.7
     assert np.allclose(np.mean(ntg_array), 0.550265)
@@ -1955,6 +1957,43 @@ def test_import_ab_properties(example_model_with_properties, test_data_path):
     # Check facies array
     facies = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_facies'][0]
     facies_array = pc.cached_part_array_ref(facies)
+    assert not pc.continuous_for_part(facies)
+    assert pc.property_kind_for_part(facies) == 'discrete'
     assert np.min(facies_array) == 0
     assert np.max(facies_array) == 5
     assert np.sum(facies_array) == 170
+
+
+def test_facet_array_ref(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+
+    pc = model.grid().property_collection
+    existing = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW'][0]
+    pc.remove_part_from_dict(existing)
+
+    swarray = np.full(shape = (3, 5, 5), fill_value = 0.1)
+    sgarray = np.full(shape = (3, 5, 5), fill_value = 0.2)
+    soarray = np.full(shape = (3, 5, 5), fill_value = 0.7)
+    for name, facet, array in zip(['sw', 'sg', 'so'], ['water', 'gas', 'oil'], [swarray, sgarray, soarray]):
+        pc.add_cached_array_to_imported_list(cached_array = array,
+                                             source_info = '',
+                                             keyword = name,
+                                             property_kind = 'saturation',
+                                             facet_type = 'what',
+                                             facet = facet)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    satpc = rqp.PropertyCollection()
+    satpc.set_support(support = model.grid())
+    satpc.inherit_parts_selectively_from_other_collection(pc, property_kind = 'saturation')
+
+    # Assert
+    assert len(satpc.parts()) == 3  # added 3 parts
+    farray = satpc.facets_array_ref()
+    assert farray.shape == (3, 3, 5, 5)
+    names = [satpc.citation_title_for_part(part) for part in satpc.parts()]
+    assert names == ['sw', 'sg', 'so']
+    assert_array_almost_equal(farray[:, 0, 0, 0], np.array([0.2, 0.7, 0.1]))  # facets will be sorted so gas, oil, water
