@@ -339,3 +339,14 @@ def test_add_ab_properties(example_model_with_properties, test_data_path):
     property_names = [pc.citation_title_for_part(part) for part in pc.parts()]
     assert 'facies_ab' in property_names
     assert 'ntg_ab' in property_names
+    for part in pc.parts():
+        if pc.citation_title_for_part(part) == 'facies_ab':
+            assert not pc.continuous_for_part(part)
+            farray = pc.cached_part_array_ref(part)
+            assert np.min(farray) == 0
+            assert np.max(farray) == 5
+        elif pc.citation_title_for_part(part) == 'ntg_ab':
+            assert pc.continuous_for_part(part)
+            ntgarray = pc.cached_part_array_ref(part)
+            assert np.min(ntgarray) > 0.4
+            assert np.max(ntgarray) < 0.7
