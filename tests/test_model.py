@@ -492,13 +492,8 @@ def test_grid_list(example_model_and_crs):
 
 def test_catalogue_functions(example_model_and_crs):
     model, crs = example_model_and_crs
-    # temp override of above
-    model = rq.new_model('/users/andy/bifröst/bc/catalogue.epc')
-    crs = rqc.Crs(model)
-    crs.create_xml()
     # create some grid objects with some boring properties
     add_grids(model, crs, True)
-    model.store_epc()  # temp
     # test parts() method with various options
     all_parts = model.parts()
     assert isinstance(all_parts, list)
