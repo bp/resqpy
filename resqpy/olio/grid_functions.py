@@ -9,42 +9,12 @@ import logging
 log = logging.getLogger(__name__)
 log.debug('grid_functions.py version %s', version)
 
-# defs:
-# def infill_block_geometry(extent, depth, thickness, x, y,
-#    k_increase_direction = 'down', depth_zero_tolerance = 0.01,
-#    x_y_zero_tolerance = 0.01,
-#    vertical_cell_overlap_tolerance = 0.01,
-#    snap_to_top_and_base = True, nudge = True):
-# def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
-# def random_cell(corner_points, border = 0.25, max_tries = 20, tolerance = 0.003):
-# def determine_corp_ijk_handedness(corner_points, xyz_is_left_handed = True):
-# def determine_corp_extent(corner_points, tolerance = 0.003):
-# def translate_corp(corner_points, x_shift = None, y_shift = None, min_xy = 0.0, shift_rounding_digits = None):
-
 import math as maths
 import random
-
 import numpy as np
 
 import resqpy.olio.factors as factors
 import resqpy.olio.vector_utilities as vec
-
-##########################################################################################
-# infill_block_geometry():
-# scans each logically vertical column of cells,
-# assigning depth and thickness values for inactive cells sandwiched between active cells
-# extent is a 3 element vector: nk,nj,ni
-# depth is a 3D numpy float array of size matching extent
-# depth values assumed more positive with increasing depth
-# zero values in depth input array indicate inactive cells
-# thickness is a 3D numpy float array of size matching extent
-# x and y are each a 3D numpy float array of size matching extent
-# k_increase_direction is either 'up' or 'down'
-# depth_zero_tolerance is maximum value for which depth is considered zero
-# vertical_cell_overlap_tolerance is the maximum acceptable overlap of cells on input
-# snap_to_top_and_base, when True, causes cells above topmost active and below deepest active
-# to be populated with pinched out cells at the top and bottom faces respectively
-# nudge causes the depth of cells with greater k to be moved to clean up overlap over pinchouts
 
 
 def infill_block_geometry(extent,
@@ -58,7 +28,24 @@ def infill_block_geometry(extent,
                           vertical_cell_overlap_tolerance = 0.01,
                           snap_to_top_and_base = True,
                           nudge = True):
-    """Scans logically vertical columns of cells setting depth (& thickness) of inactive cells."""
+    """Scans logically vertical columns of cells setting depth (& thickness) of inactive cells.
+
+    args:
+       extent (numpy integer vector of shape (3,)): corresponds to nk, nj and ni
+       depth (3D numpy float array): size matches extent.
+        note: Depth values are assumed more positive with increasing depth. Zero values indicate inactive cells
+       thickness (3D numpy float array): size matches extent
+       x (3D numpy float array): size matches extent
+       y (3D numpy float array): size matches extent
+       k_increase_direction (string, default 'down'): direction of increasing values. Either 'up' or 'down'
+       depth_zero_tolerance (float, optional, default 0.01): maximum value for which the depth is considered zero
+       vertical_cell_overlap_tolerance (float, optional, default 0.01): maximum acceptable overlap of cells on input
+       snap_to_top_and_base (boolean, optional, default True): when True, causes cells above topmost active and below
+        deepest active to be populated with pinched out cells at the top and bottom faces respectively
+        nudge (boolean, optional, default True): when True causes the depth of cells with greater k to be moved to
+         clean up overlap over pinchouts
+
+    """
 
     k_dir_sign = __get_k_dir_sign(k_increase_direction = k_increase_direction)
 
@@ -223,13 +210,6 @@ def __nudge_overlapping_cells_if_requested(nudge, i, j, k_base, extent, depth, v
     return depth, infill_cell_thickness, void_interval
 
 
-# end of def infill_block_geometry()
-##########################################################################################
-
-##########################################################################################
-# def resequence_nexus_corp():
-
-
 def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
     """Reorders corner point data in situ, to handle bizarre nexus orderings."""
 
@@ -251,23 +231,18 @@ def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
                         corner_points[k, j, i] = xyz.reshape((2, 2, 2, 3))
                     else:
                         xyz = corner_points[k, j, i].reshape((3, 8)).copy()
+                        print(xyz)
                         c = 0
                         for kp in range(2):
                             for jp in range(2):
                                 for ip in range(2):
+                                    print(corner_points[k, j, i, kp, jp, ip, :])
                                     corner_points[k, j, i, kp, jp, ip, :] = xyz[:, c]
                                     c += 1
     else:  # reversible, so not dependent on undo argument
         jp_slice = corner_points[:, :, :, :, 1, 0, :].copy()
         corner_points[:, :, :, :, 1, 0, :] = corner_points[:, :, :, :, 1, 1, :]
         corner_points[:, :, :, :, 1, 1, :] = jp_slice
-
-
-# end of def resequence_nexus_corp()
-##########################################################################################
-
-##########################################################################################
-# def random_cell():
 
 
 def random_cell(corner_points, border = 0.25, max_tries = 20, tolerance = 0.003):
@@ -310,13 +285,6 @@ def random_cell(corner_points, border = 0.25, max_tries = 20, tolerance = 0.003)
     return None
 
 
-# end of def random_cell()
-##########################################################################################
-
-##########################################################################################
-# def determine_corp_ijk_handedness():
-
-
 def determine_corp_ijk_handedness(corner_points, xyz_is_left_handed = True):
     """Determine true ijk handedness from corner point data in pagoda style 7D array; returns 'right' or 'left'."""
 
@@ -338,13 +306,6 @@ def determine_corp_ijk_handedness(corner_points, xyz_is_left_handed = True):
     if ijk_is_left_handed:
         return 'left'
     return 'right'
-
-
-# end of def determine_corp_ijk_handedness()
-##########################################################################################
-
-##########################################################################################
-# def determine_corp_extent():
 
 
 def determine_corp_extent(corner_points, tolerance = 0.003):
@@ -445,13 +406,6 @@ def determine_corp_extent(corner_points, tolerance = 0.003):
     return [nk, nj, ni]
 
 
-# end def determine_corp_extent():
-##########################################################################################
-
-##########################################################################################
-# def translate_corp():
-
-
 def translate_corp(corner_points, x_shift = None, y_shift = None, min_xy = None, preserve_digits = None):
     """Adjusts x and y values of corner points by a constant offset."""
 
@@ -476,10 +430,6 @@ def translate_corp(corner_points, x_shift = None, y_shift = None, min_xy = None,
     log.info('translating corner points by %3.1f in x and %3.1f in y', -x_sub, -y_sub)
     corner_points[:, :, :, :, :, :, 0] -= x_sub
     corner_points[:, :, :, :, :, :, 1] -= y_sub
-
-
-# end of def translate_corp()
-##########################################################################################
 
 
 def triangles_for_cell_faces(cp):
@@ -539,10 +489,6 @@ def triangles_for_cell_faces(cp):
     return tri
 
 
-# end of grid_functions module
-##########################################################################################
-
-
 def actual_pillar_shape(pillar_points, tolerance = 0.001):
     """Returns 'curved', 'straight' or 'vertical' for shape of pillar points.
 
@@ -557,6 +503,7 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
     from_top = pp - pp[0]
     xy_drift = np.abs(from_top[:, :, 0]) + np.abs(
         from_top[:, :, 1])  # use Manhattan distance as cheap proxy for true distance
+    print(xy_drift)
     if np.max(xy_drift) <= tolerance:
         return 'vertical'
     if np.max(xy_drift[-1]) <= tolerance:
@@ -574,9 +521,6 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
     if np.all(masked_straight):
         return 'straight'
     return 'curved'
-
-
-##########################################################################################
 
 
 def columns_to_nearest_split_face(grid):
@@ -607,9 +551,6 @@ def columns_to_nearest_split_face(grid):
         framed[1:-1, 1:-1] = updated
 
     return framed[1:-1, 1:-1]
-
-
-##########################################################################################
 
 
 def left_right_foursome(full_pillar_list, p_index):
@@ -656,6 +597,3 @@ def left_right_foursome(full_pillar_list, p_index):
         return result_array
     except ValueError:
         raise Exception('code failure whilst taking exit sides from dubious full pillar list')
-
-
-##########################################################################################
