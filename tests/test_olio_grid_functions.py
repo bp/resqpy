@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pytest
 
-from resqpy.olio.grid_functions import left_right_foursome, infill_block_geometry, resequence_nexus_corp, random_cell, determine_corp_ijk_handedness, determine_corp_extent, translate_corp
+from resqpy.olio.grid_functions import left_right_foursome, infill_block_geometry, resequence_nexus_corp, random_cell, determine_corp_ijk_handedness, determine_corp_extent, translate_corp, triangles_for_cell_faces, actual_pillar_shape
 import resqpy.model as rq
 import resqpy.grid as grr
 
@@ -98,7 +98,6 @@ def test_left_right_foursome_error_handling():
 
 def test_resequence_nexus_corp():
 
-    # TODO: What is eight-mode?
     # TODO: confirm you used the correct cornerpoint ordering from Nexus (pg 1424 Nexus Keyword file)
     # --------- Arrange ----------
     corner_points = np.array([[[[[[[0., 0., 0.], [10., 0., 0.]], [[10., -10., 0.], [0., -10., 0.]]],
@@ -134,6 +133,43 @@ def test_random_cell(tmp_path):
     assert k <= 4
     assert j <= 3
     assert i <= 2
+
+
+def test_triangles_for_cell_faces():
+    # --------- Arrange----------
+    corner_points = np.array([[[[0., 0., 0.], [10., 0., 0.]], [[0., -10., 0.], [10., -10., 0.]]],
+                              [[[0., 0., 10.], [10., 0., 10.]], [[0., -10., 10.], [10., -10., 10.]]]])
+    # --------- Act----------
+    tri = triangles_for_cell_faces(cp = corner_points)
+    # face centre points
+    k_face_centre_points = [np.array([5., -5., 0.]), np.array([5., -5., 10])]
+    j_face_centre_points = [np.array([5., 0., 5.]), np.array([5., -10., 5.])]
+    i_face_centre_points = [np.array([0., -5., 5.]), np.array([10., -5., 5.])]
+
+    # --------- Assert----------
+    np.testing.assert_almost_equal(tri[0, :, :, 0][0][0], k_face_centre_points[0])
+    np.testing.assert_almost_equal(tri[0, :, :, 0][1][0], k_face_centre_points[1])
+    np.testing.assert_almost_equal(tri[1, :, :, 0][0][0], j_face_centre_points[0])
+    np.testing.assert_almost_equal(tri[1, :, :, 0][1][0], j_face_centre_points[1])
+    np.testing.assert_almost_equal(tri[2, :, :, 0][0][0], i_face_centre_points[0])
+    np.testing.assert_almost_equal(tri[2, :, :, 0][1][0], i_face_centre_points[1])
+
+
+def test_actual_pillar_shape(tmp_path):  # TODO: test with more complicated grid geometries
+
+    # --------- Arrange----------
+    epc = os.path.join(tmp_path, 'grid.epc')
+    model = rq.new_model(epc)
+
+    # create a basic block grid
+    dxyz = (10.0, 10.0, 10.0)
+    grid = grr.RegularGrid(model, extent_kji = (3, 3, 2), title = 'grid1', origin = (0.0, 0.0, 1000.0), dxyz = dxyz)
+
+    # --------- Act----------
+    pillar_shape = actual_pillar_shape(pillar_points = grid.corner_points())
+
+    # --------- Assert----------
+    assert pillar_shape == 'vertical'
 
 
 def test_determine_corp_ijk_handedness():
