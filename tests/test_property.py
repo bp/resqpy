@@ -2094,5 +2094,13 @@ def test_mesh_support(example_model_and_crs):
     for part in pc.parts():
         if pc.citation_title_for_part(part) == 'TESTnode':
             assert pc.indexable_for_part(part) == 'nodes'
+            shape, _ = pc.shape_and_type_of_part(part)
+            assert shape == (3, 3)
+            array = pc.cached_part_array_ref(part)
+            assert_array_almost_equal(array, node_prop)
         else:
             assert pc.indexable_for_part(part) == 'cells'
+            shape, _ = pc.shape_and_type_of_part(part)
+            assert shape == (2, 2)
+            array = pc.cached_part_array_ref(part)
+            assert_array_almost_equal(array, cell_prop)
