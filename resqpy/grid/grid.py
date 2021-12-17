@@ -1721,37 +1721,37 @@ class Grid(BaseResqpy):
                    extra_metadata = {}):
         """Creates an IJK grid node from a grid object and optionally adds as child of root and/or to parts forest.
 
-            arguments:
-               ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the array data for the grid geometry
-               add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-                  in the model
-               add_relationships (boolean, default True): if True, relationship xml parts are created relating the
-                  new grid part to: the crs, and the hdf5 external part
-               set_as_grid_root (boolean, default True): if True, the new grid node is noted as being the 'main' grid
-                  for the model
-               title (string, default 'ROOT'): used as the citation Title text; careful consideration should be given
-                  to this argument when dealing with multiple grids in one model, as it is the means by which a
-                  human will distinguish them
-               originator (string, optional): the name of the human being who created the ijk grid part;
-                  default is to use the login name
-               write_active (boolean, default True): if True, xml for an active cell property is also generated, but
-                  only if the active_property_uuid is set and no part exists in the model for that uuid
-               write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
-               extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
+        arguments:
+           ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the array data for the grid geometry
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           add_relationships (boolean, default True): if True, relationship xml parts are created relating the
+              new grid part to: the crs, and the hdf5 external part
+           set_as_grid_root (boolean, default True): if True, the new grid node is noted as being the 'main' grid
+              for the model
+           title (string, default 'ROOT'): used as the citation Title text; careful consideration should be given
+              to this argument when dealing with multiple grids in one model, as it is the means by which a
+              human will distinguish them
+           originator (string, optional): the name of the human being who created the ijk grid part;
+              default is to use the login name
+           write_active (boolean, default True): if True, xml for an active cell property is also generated, but
+              only if the active_property_uuid is set and no part exists in the model for that uuid
+           write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
+           extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
 
-            returns:
-               the newly created ijk grid xml node
+        returns:
+           the newly created ijk grid xml node
 
-            notes:
-               this code has the concept of a 'main' grid for a model, which resqml does not; it is vaguely
-                  equivalent to a 'root' grid in a simulation model
-               the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
-               the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
-               the explicit geometry may be omitted for regular grids, in which case the arrays should not be written to the hdf5
-               file either
+        notes:
+           this code has the concept of a 'main' grid for a model, which resqml does not; it is vaguely
+              equivalent to a 'root' grid in a simulation model
+           the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
+           the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
+           the explicit geometry may be omitted for regular grids, in which case the arrays should not be written to the hdf5
+           file either
 
-            :meta common:
-            """
+        :meta common:
+        """
 
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
@@ -1773,29 +1773,35 @@ class Grid(BaseResqpy):
     # The implementations of the below functions have been moved to separate modules.
 
     def cell_geometry_is_defined(self, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return cell_geometry_is_defined(self,
                                         cell_kji0 = cell_kji0,
                                         cell_geometry_is_defined_root = cell_geometry_is_defined_root,
                                         cache_array = cache_array)
 
     def pillar_geometry_is_defined(self, pillar_ji0 = None, pillar_geometry_is_defined_root = None, cache_array = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return pillar_geometry_is_defined(self,
                                           pillar_ji0 = pillar_ji0,
                                           pillar_geometry_is_defined_root = pillar_geometry_is_defined_root,
                                           cache_array = cache_array)
 
     def geometry_defined_for_all_cells(self, cache_array = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return geometry_defined_for_all_cells(self, cache_array = cache_array)
 
     def geometry_defined_for_all_pillars(self, cache_array = True, pillar_geometry_is_defined_root = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return geometry_defined_for_all_pillars(self,
                                                 cache_array = cache_array,
                                                 pillar_geometry_is_defined_root = pillar_geometry_is_defined_root)
 
     def cell_geometry_is_defined_ref(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return cell_geometry_is_defined_ref(self)
 
     def pillar_geometry_is_defined_ref(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return pillar_geometry_is_defined_ref(self)
 
     def set_geometry_is_defined(self,
@@ -1804,6 +1810,7 @@ class Grid(BaseResqpy):
                                 complete_partial_pillars = False,
                                 nullify_partial_pillars = False,
                                 complete_all = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return set_geometry_is_defined(self,
                                        treat_as_nan = treat_as_nan,
                                        treat_dots_as_nan = treat_dots_as_nan,
@@ -1812,81 +1819,103 @@ class Grid(BaseResqpy):
                                        complete_all = complete_all)
 
     def find_faults(self, set_face_sets = False, create_organizing_objects_where_needed = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return find_faults(self,
                            set_face_sets = set_face_sets,
                            create_organizing_objects_where_needed = create_organizing_objects_where_needed)
 
     def fault_throws(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return fault_throws(self)
 
     def fault_throws_per_edge_per_column(self, mode = 'maximum', simple_z = False, axis_polarity_mode = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return fault_throws_per_edge_per_column(self,
                                                 mode = mode,
                                                 simple_z = simple_z,
                                                 axis_polarity_mode = axis_polarity_mode)
 
     def extract_parent(self):
-        """Loads fine:coarse mapping information between this grid and parent, if any, returning parent grid uuid."""
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_grid_parent(self)
 
     def transmissibility(self, tolerance = 1.0e-6, use_tr_properties = True, realization = None, modifier_mode = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return transmissibility(self, tolerance, use_tr_properties, realization, modifier_mode)
 
     def extract_extent_kji(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_extent_kji(self)
 
     def extract_grid_is_right_handed(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_grid_is_right_handed(self)
 
     def extract_k_direction_is_down(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_k_direction_is_down(self)
 
     def extract_geometry_time_index(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_geometry_time_index(self)
 
     def extract_crs_uuid(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_crs_uuid(self)
 
     def extract_crs_root(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_crs_root(self)
 
     def extract_pillar_shape(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_pillar_shape(self)
 
     def extract_has_split_coordinate_lines(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_has_split_coordinate_lines(self)
 
     def extract_k_gaps(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_k_gaps(self)
 
     def extract_stratigraphy(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_stratigraphy(self)
 
     def extract_children(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_children(self)
 
     def extract_property_collection(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_property_collection(self)
 
     def extract_inactive_mask(self, check_pinchout = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_inactive_mask(self, check_pinchout = check_pinchout)
 
     def is_split_column_face(self, j0, i0, axis, polarity):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return is_split_column_face(self, j0, i0, axis, polarity)
 
     def split_column_faces(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return split_column_faces(self)
 
     def clear_face_sets(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return clear_face_sets(self)
 
     def set_face_set_gcs_list_from_dict(self, face_set_dict = None, create_organizing_objects_where_needed = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return set_face_set_gcs_list_from_dict(
             self,
             face_set_dict = face_set_dict,
             create_organizing_objects_where_needed = create_organizing_objects_where_needed)
 
     def make_face_set_from_dataframe(self, df):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return make_face_set_from_dataframe(self, df)
 
     def make_face_sets_from_pillar_lists(self,
@@ -1896,6 +1925,7 @@ class Grid(BaseResqpy):
                                          ref_slice0 = 0,
                                          plus_face = False,
                                          projection = 'xy'):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return make_face_sets_from_pillar_lists(self,
                                                 pillar_list_list,
                                                 face_set_id,
@@ -1911,6 +1941,7 @@ class Grid(BaseResqpy):
                     points_root = None,
                     cache_resqml_array = True,
                     cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return face_centre(self,
                            cell_kji0,
                            axis,
@@ -1920,6 +1951,7 @@ class Grid(BaseResqpy):
                            cache_cp_array = cache_cp_array)
 
     def face_centres_kji_01(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return face_centres_kji_01(self,
                                    cell_kji0,
                                    points_root = points_root,
@@ -1935,6 +1967,7 @@ class Grid(BaseResqpy):
                                         set_inactive = True,
                                         active_property_uuid = None,
                                         active_collection = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return set_cached_points_from_property(self,
                                                points_property_uuid = points_property_uuid,
                                                property_collection = property_collection,
@@ -1946,6 +1979,7 @@ class Grid(BaseResqpy):
                                                active_collection = active_collection)
 
     def point_raw(self, index = None, points_root = None, cache_array = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return point_raw(self, index = index, points_root = points_root, cache_array = cache_array)
 
     def point(self,
@@ -1953,6 +1987,7 @@ class Grid(BaseResqpy):
               corner_index = np.zeros(3, dtype = 'int'),
               points_root = None,
               cache_array = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return point(self,
                      cell_kji0 = cell_kji0,
                      corner_index = corner_index,
@@ -1960,27 +1995,35 @@ class Grid(BaseResqpy):
                      cache_array = cache_array)
 
     def points_ref(self, masked = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return points_ref(self, masked = masked)
 
     def uncache_points(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return uncache_points(self)
 
     def unsplit_points_ref(self, cache_array = False, masked = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return unsplit_points_ref(self, cache_array = cache_array, masked = masked)
 
     def horizon_points(self, ref_k0 = 0, heal_faults = False, kp = 0):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return horizon_points(self, ref_k0 = ref_k0, heal_faults = heal_faults, kp = kp)
 
     def split_horizon_points(self, ref_k0 = 0, masked = False, kp = 0):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return split_horizon_points(self, ref_k0 = ref_k0, masked = masked, kp = kp)
 
     def split_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return split_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
     def split_gap_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return split_gap_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
     def unsplit_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return unsplit_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
     def x_section_corner_points(self,
@@ -1990,6 +2033,7 @@ class Grid(BaseResqpy):
                                 masked = False,
                                 rotate = False,
                                 azimuth = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return x_section_corner_points(self,
                                        axis,
                                        ref_slice0 = ref_slice0,
@@ -1999,15 +2043,19 @@ class Grid(BaseResqpy):
                                        azimuth = azimuth)
 
     def pixel_map_for_split_horizon_points(self, horizon_points, origin, width, height, dx, dy = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return pixel_map_for_split_horizon_points(self, horizon_points, origin, width, height, dx, dy = dy)
 
     def coordinate_line_end_points(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return coordinate_line_end_points(self)
 
     def z_corner_point_depths(self, order = 'cellular'):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return z_corner_point_depths(self, order = order)
 
     def corner_points(self, cell_kji0 = None, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return corner_points(self,
                              cell_kji0 = cell_kji0,
                              points_root = points_root,
@@ -2015,15 +2063,19 @@ class Grid(BaseResqpy):
                              cache_cp_array = cache_cp_array)
 
     def invalidate_corner_points(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return invalidate_corner_points(self)
 
     def centre_point(self, cell_kji0 = None, cache_centre_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return centre_point(self, cell_kji0 = cell_kji0, cache_centre_array = cache_centre_array)
 
     def centre_point_list(self, cell_kji0s):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return centre_point_list(self, cell_kji0s)
 
     def point_areally(self, tolerance = 0.001):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return point_areally(self, tolerance = tolerance)
 
     def interpolated_point(self,
@@ -2032,6 +2084,7 @@ class Grid(BaseResqpy):
                            points_root = None,
                            cache_resqml_array = True,
                            cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return interpolated_point(self,
                                   cell_kji0,
                                   interpolation_fraction,
@@ -2045,6 +2098,7 @@ class Grid(BaseResqpy):
                             points_root = None,
                             cache_resqml_array = True,
                             cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
         return interpolated_points(self,
                                    cell_kji0,
                                    interpolation_fractions,

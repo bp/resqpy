@@ -1,3 +1,5 @@
+"""Submodule containing the face related grid functions."""
+
 import logging
 
 log = logging.getLogger(__name__)

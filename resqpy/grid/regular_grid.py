@@ -1,7 +1,8 @@
+"""Submodule containing the RegularGrid class."""
+
 import logging
-version = '29th November 2021'
+
 log = logging.getLogger(__name__)
-log.debug('grid.py version ' + version)
 
 import numpy as np
 

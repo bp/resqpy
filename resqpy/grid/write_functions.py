@@ -1,3 +1,5 @@
+"""Submodule containing the functions relating to writing grid information."""
+
 import logging
 
 import numpy as np

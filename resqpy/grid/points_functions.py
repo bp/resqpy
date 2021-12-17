@@ -1,3 +1,5 @@
+"""Submodule containing the functions relating to grid points."""
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -999,12 +1001,12 @@ def centre_point_list(grid, cell_kji0s):
 def point_areally(grid, tolerance = 0.001):
     """Returns array indicating which cells are reduced to a point in both I & J axes.
 
-        Returns:
-            numopy bool array of shape extent_kji
+    Returns:
+        numopy bool array of shape extent_kji
 
-        Note:
-           Any NaN point values will yield True for a cell
-        """
+    Note:
+       Any NaN point values will yield True for a cell
+    """
 
     points = grid.points_ref(masked = False)
     # todo: turn off NaN warning for numpy > ?

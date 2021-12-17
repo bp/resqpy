@@ -1,3 +1,5 @@
+"""Submodule containing some general grid functions."""
+
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
 import resqpy

@@ -1,11 +1,9 @@
-version = '20th October 2021'
+"""Submodule containing functions to create a grid xml file."""
 
-# Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('grid.py version ' + version)
 
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
