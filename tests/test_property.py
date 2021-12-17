@@ -2036,3 +2036,71 @@ def test_remove_cached_from_imported_list(example_model_with_properties):
     pc.remove_cached_imported_arrays()
     # Assert
     assert not hasattr(pc, array_name)
+
+
+def test_mesh_support(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    # create some random depths
+    z = (np.random.random(3 * 3) * 20.0 + 1000.0).reshape((3, 3))
+    # Create some properties
+    cell_prop = np.full(shape = (2, 2), fill_value = 2)
+    cell_prop[:, 0] = 1
+    node_prop = np.full(shape = (3, 3), fill_value = 10)
+    node_prop[:, 0] = 0
+
+    # make a regular mesh representation
+    mesh = rqs.Mesh(model,
+                    crs_uuid = crs.uuid,
+                    mesh_flavour = 'reg&z',
+                    ni = 3,
+                    nj = 3,
+                    origin = (0, 0, 0),
+                    dxyz_dij = np.array([[50.0, 0.0, 0.0], [0.0, 50.0, 0.0]]),
+                    z_values = z,
+                    title = 'random mesh',
+                    originator = 'Emma')
+    assert mesh is not None
+    mesh.write_hdf5()
+    mesh.create_xml()
+
+    # Act - make a property collection and set the support to be the mesh
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = mesh)
+
+    # Assert
+    assert pc.support is not None
+    assert isinstance(pc.support, rqs.Mesh)
+    assert pc.support == mesh
+    assert pc.support_uuid == mesh.uuid
+
+    # Act - add different indexable element properties to collection
+    pc.add_cached_array_to_imported_list(cell_prop,
+                                         source_info = 'cellarray',
+                                         keyword = 'TESTcell',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         indexable_element = 'cells')
+    pc.add_cached_array_to_imported_list(node_prop,
+                                         source_info = 'nodearray',
+                                         keyword = 'TESTnode',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         indexable_element = 'nodes')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    for part in pc.parts():
+        if pc.citation_title_for_part(part) == 'TESTnode':
+            assert pc.indexable_for_part(part) == 'nodes'
+            shape, _ = pc.shape_and_type_of_part(part)
+            assert shape == (3, 3)
+            array = pc.cached_part_array_ref(part)
+            assert_array_almost_equal(array, node_prop)
+        else:
+            assert pc.indexable_for_part(part) == 'cells'
+            shape, _ = pc.shape_and_type_of_part(part)
+            assert shape == (2, 2)
+            array = pc.cached_part_array_ref(part)
+            assert_array_almost_equal(array, cell_prop)
