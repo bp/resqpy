@@ -1,14 +1,11 @@
+"""A submodule containing grid transmissibility functions"""
+
 # note: only IJK Grid format supported at present
 # see also rq_import.py
-
-version = '20th October 2021'
-
-# Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('grid.py version ' + version)
 
 import numpy as np
 

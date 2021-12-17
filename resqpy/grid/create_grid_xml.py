@@ -1,6 +1,5 @@
 """Submodule containing functions to create a grid xml file."""
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -20,6 +19,7 @@ def create_grid_xml(grid,
                     add_relationships = True,
                     write_active = True,
                     write_geometry = True):
+    """Function that creates an xml file containing grid information"""
 
     if grid.grid_representation and not write_geometry:
         rqet.create_metadata_xml(node = ijk, extra_metadata = {'grid_flavour': grid.grid_representation})

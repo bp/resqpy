@@ -1,3 +1,5 @@
+"""A submodule containing functions for extracting grid information"""
+
 import logging
 
 import numpy as np
@@ -13,6 +15,7 @@ log = logging.getLogger(__name__)
 
 
 def extract_grid_parent(grid):
+    """Returns the uuid of the parent grid for the supplied grid"""
     if grid.extent_kji is None:
         grid.extract_extent_kji()
     if grid.parent_grid_uuid is not None:

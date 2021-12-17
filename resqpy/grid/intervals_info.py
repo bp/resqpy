@@ -1,7 +1,8 @@
 """Submodule containing the IntervalsInfo class."""
 
-"""A class representing intervals"""
+
 class IntervalsInfo:
+    """A class representing intervals"""
 
     def __init__(self):
         """Declaring the properties of the Intervals Info class"""
