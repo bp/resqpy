@@ -7,7 +7,7 @@ import numpy as np
 import resqpy.olio.vector_utilities as vec
 
 
-def find_faults(grid, set_face_sets=False, create_organizing_objects_where_needed=False):
+def find_faults(grid, set_face_sets = False, create_organizing_objects_where_needed = False):
     """Searches for column-faces that are faulted and assigns fault ids; creates list of column-faces per fault id.
 
     note:
@@ -35,8 +35,8 @@ def find_faults(grid, set_face_sets=False, create_organizing_objects_where_neede
         return None
 
     # note: if Ni or Nj is 1, the kelp array has zero size, but that seems to be handled okay
-    kelp_j = np.zeros((grid.extent_kji[1] - 1, grid.extent_kji[2]), dtype='int')  # fault id between cols j, j+1
-    kelp_i = np.zeros((grid.extent_kji[1], grid.extent_kji[2] - 1), dtype='int')  # fault id between cols i, i+1
+    kelp_j = np.zeros((grid.extent_kji[1] - 1, grid.extent_kji[2]), dtype = 'int')  # fault id between cols j, j+1
+    kelp_i = np.zeros((grid.extent_kji[1], grid.extent_kji[2] - 1), dtype = 'int')  # fault id between cols i, i+1
 
     last_fault_id = 0
 
@@ -72,8 +72,7 @@ def find_faults(grid, set_face_sets=False, create_organizing_objects_where_neede
     if kelp_j.size and kelp_i.size:
         for j in range(grid.extent_kji[1] - 1):
             for i in range(grid.extent_kji[2] - 1):
-                if (bool(kelp_j[j, i]) != bool(kelp_j[j, i + 1])) and (bool(kelp_i[j, i]) != bool(kelp_i[j + 1,
-                                                                                                         i])):
+                if (bool(kelp_j[j, i]) != bool(kelp_j[j, i + 1])) and (bool(kelp_i[j, i]) != bool(kelp_i[j + 1, i])):
                     j_id = kelp_j[j, i] + kelp_j[j, i + 1]  # ie. the non-zero value
                     i_id = kelp_i[j, i] + kelp_i[j + 1, i]
                     if j_id == i_id:
@@ -86,11 +85,10 @@ def find_faults(grid, set_face_sets=False, create_organizing_objects_where_neede
         (np.unique(kelp_i.flatten()), np.unique(kelp_j.flatten()))))[1:]  # discard zero from list
     log.info('number of distinct faults: ' + str(fault_id_list.size))
     # for each fault id, make pair of tuples of kelp locations
-    grid.fault_dict = {
-    }  # maps fault_id to pair (j faces, i faces) of array of [j, i] kelp indices for that fault_id
+    grid.fault_dict = {}  # maps fault_id to pair (j faces, i faces) of array of [j, i] kelp indices for that fault_id
     for fault_id in fault_id_list:
         grid.fault_dict[fault_id] = (np.stack(np.where(kelp_j == fault_id),
-                                              axis=1), np.stack(np.where(kelp_i == fault_id), axis=1))
+                                              axis = 1), np.stack(np.where(kelp_i == fault_id), axis = 1))
     grid.fault_id_j = kelp_j.copy()  # fault_id for each internal j kelp, zero is none; extent nj-1, ni
     grid.fault_id_i = kelp_i.copy()  # fault_id for each internal i kelp, zero is none; extent nj, ni-1
     if set_face_sets:
@@ -98,6 +96,7 @@ def find_faults(grid, set_face_sets=False, create_organizing_objects_where_neede
             grid.face_set_dict[f] = (j_list, i_list, 'K')
         grid.set_face_set_gcs_list_from_dict(grid.fault_dict, create_organizing_objects_where_needed)
     return (grid.fault_id_j, grid.fault_id_i)
+
 
 def fault_throws(grid):
     """Finds mean throw of each J and I face; adds throw arrays as attributes to this grid and returns them.
@@ -118,18 +117,17 @@ def fault_throws(grid):
         if not hasattr(grid, 'fault_id_j'):
             return None
     log.debug('computing fault throws (deprecated method)')
-    cp = grid.corner_points(cache_cp_array=True)
+    cp = grid.corner_points(cache_cp_array = True)
     grid.fault_throw_j = np.zeros((grid.nk, grid.nj - 1, grid.ni))
     grid.fault_throw_i = np.zeros((grid.nk, grid.nj, grid.ni - 1))
-    grid.fault_throw_j = np.where(
-        grid.fault_id_j == 0, 0.0,
-        0.25 * np.sum(cp[:, 1:, :, :, 0, :, 2] - cp[:, :-1, :, :, 1, :, 2], axis=(3, 4)))
-    grid.fault_throw_i = np.where(
-        grid.fault_id_i == 0, 0.0,
-        0.25 * np.sum(cp[:, :, 1:, :, :, 0, 2] - cp[:, :, -1:, :, :, 1, 2], axis=(3, 4)))
+    grid.fault_throw_j = np.where(grid.fault_id_j == 0, 0.0,
+                                  0.25 * np.sum(cp[:, 1:, :, :, 0, :, 2] - cp[:, :-1, :, :, 1, :, 2], axis = (3, 4)))
+    grid.fault_throw_i = np.where(grid.fault_id_i == 0, 0.0,
+                                  0.25 * np.sum(cp[:, :, 1:, :, :, 0, 2] - cp[:, :, -1:, :, :, 1, 2], axis = (3, 4)))
     return (grid.fault_throw_j, grid.fault_throw_i)
 
-def fault_throws_per_edge_per_column(grid, mode='maximum', simple_z=False, axis_polarity_mode=True):
+
+def fault_throws_per_edge_per_column(grid, mode = 'maximum', simple_z = False, axis_polarity_mode = True):
     """Return array holding max, mean or min throw based on split node separations.
 
     arguments:
@@ -170,9 +168,9 @@ def fault_throws_per_edge_per_column(grid, mode='maximum', simple_z=False, axis_
         return np.zeros((grid.nj, grid.ni, 4))
     grid.create_column_pillar_mapping()
     i_pillar_throws = (
-            grid.points_cached[:, grid.pillars_for_column[:, :-1, :, 1], 2]
-            -  # (nk+1, nj, ni-1, jp) +ve dz I- cell > I+ cell
-            grid.points_cached[:, grid.pillars_for_column[:, 1:, :, 0], 2])
+        grid.points_cached[:, grid.pillars_for_column[:, :-1, :, 1], 2]
+        -  # (nk+1, nj, ni-1, jp) +ve dz I- cell > I+ cell
+        grid.points_cached[:, grid.pillars_for_column[:, 1:, :, 0], 2])
     j_pillar_throws = (grid.points_cached[:, grid.pillars_for_column[:-1, :, 1, :], 2] -
                        grid.points_cached[:, grid.pillars_for_column[1:, :, 0, :], 2])
     if not simple_z:
@@ -185,13 +183,13 @@ def fault_throws_per_edge_per_column(grid, mode='maximum', simple_z=False, axis_
                                              grid.points_cached[:, grid.pillars_for_column[1:, :, 0, :], :])
 
     if mode == 'mean':
-        i_edge_throws = np.nanmean(i_pillar_throws, axis=(0, -1))  # (nj, ni-1)
-        j_edge_throws = np.nanmean(j_pillar_throws, axis=(0, -1))  # (nj-1, ni)
+        i_edge_throws = np.nanmean(i_pillar_throws, axis = (0, -1))  # (nj, ni-1)
+        j_edge_throws = np.nanmean(j_pillar_throws, axis = (0, -1))  # (nj-1, ni)
     else:
-        min_i_edge_throws = np.nanmean(np.nanmin(i_pillar_throws, axis=0), axis=-1)
-        max_i_edge_throws = np.nanmean(np.nanmax(i_pillar_throws, axis=0), axis=-1)
-        min_j_edge_throws = np.nanmean(np.nanmin(j_pillar_throws, axis=0), axis=-1)
-        max_j_edge_throws = np.nanmean(np.nanmax(j_pillar_throws, axis=0), axis=-1)
+        min_i_edge_throws = np.nanmean(np.nanmin(i_pillar_throws, axis = 0), axis = -1)
+        max_i_edge_throws = np.nanmean(np.nanmax(i_pillar_throws, axis = 0), axis = -1)
+        min_j_edge_throws = np.nanmean(np.nanmin(j_pillar_throws, axis = 0), axis = -1)
+        max_j_edge_throws = np.nanmean(np.nanmax(j_pillar_throws, axis = 0), axis = -1)
         i_flip_mask = (np.abs(min_i_edge_throws) > np.abs(max_i_edge_throws))
         j_flip_mask = (np.abs(min_j_edge_throws) > np.abs(max_j_edge_throws))
         if mode == 'maximum':

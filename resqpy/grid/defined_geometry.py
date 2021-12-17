@@ -9,7 +9,7 @@ import numpy as np
 import resqpy.olio.xml_et as rqet
 
 
-def cell_geometry_is_defined(grid, cell_kji0=None, cell_geometry_is_defined_root=None, cache_array=True):
+def cell_geometry_is_defined(grid, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
     """Returns True if the geometry of the specified cell is defined.
 
     Can also be used to cache (load) the boolean array.
@@ -38,9 +38,9 @@ def cell_geometry_is_defined(grid, cell_kji0=None, cell_geometry_is_defined_root
         if cell_kji0 is None:
             return False
         return grid.array_cell_geometry_is_defined[tuple(cell_kji0)]
-    is_def_root = grid.resolve_geometry_child('CellGeometryIsDefined', child_node=cell_geometry_is_defined_root)
+    is_def_root = grid.resolve_geometry_child('CellGeometryIsDefined', child_node = cell_geometry_is_defined_root)
     if is_def_root is None:
-        points = grid.points_ref(masked=False)
+        points = grid.points_ref(masked = False)
         assert points is not None
         grid.geometry_defined_for_all_cells_cached = not np.any(np.isnan(points))
         if grid.geometry_defined_for_all_cells_cached or cell_kji0 is None:
@@ -55,11 +55,11 @@ def cell_geometry_is_defined(grid, cell_kji0=None, cell_geometry_is_defined_root
         if h5_key_pair is None:
             return None
         result = grid.model.h5_array_element(h5_key_pair,
-                                             index=cell_kji0,
-                                             cache_array=cache_array,
-                                             object=grid,
-                                             array_attribute='array_cell_geometry_is_defined',
-                                             dtype='bool')
+                                             index = cell_kji0,
+                                             cache_array = cache_array,
+                                             object = grid,
+                                             array_attribute = 'array_cell_geometry_is_defined',
+                                             dtype = 'bool')
         if grid.geometry_defined_for_all_cells_cached is None and cache_array and hasattr(
                 grid, 'array_cell_geometry_is_defined'):
             grid.geometry_defined_for_all_cells_cached = (np.count_nonzero(
@@ -69,7 +69,7 @@ def cell_geometry_is_defined(grid, cell_kji0=None, cell_geometry_is_defined_root
         return result
 
 
-def pillar_geometry_is_defined(grid, pillar_ji0=None, pillar_geometry_is_defined_root=None, cache_array=True):
+def pillar_geometry_is_defined(grid, pillar_ji0 = None, pillar_geometry_is_defined_root = None, cache_array = True):
     """Returns True if the geometry of the specified pillar is defined; False otherwise.
 
     Can also be used to cache (load) the boolean array.
@@ -93,8 +93,7 @@ def pillar_geometry_is_defined(grid, pillar_ji0=None, pillar_geometry_is_defined
         if pillar_ji0 is None:
             return None  # this option allows caching of array without actually referring to any pillar
         return grid.array_pillar_geometry_is_defined[tuple(pillar_ji0)]
-    is_def_root = grid.resolve_geometry_child('PillarGeometryIsDefined',
-                                              child_node=pillar_geometry_is_defined_root)
+    is_def_root = grid.resolve_geometry_child('PillarGeometryIsDefined', child_node = pillar_geometry_is_defined_root)
     if is_def_root is None:
         return True  # maybe default should be False?
     is_def_type = rqet.node_type(is_def_root)
@@ -108,11 +107,11 @@ def pillar_geometry_is_defined(grid, pillar_ji0=None, pillar_geometry_is_defined
         if h5_key_pair is None:
             return None
         result = grid.model.h5_array_element(h5_key_pair,
-                                             index=pillar_ji0,
-                                             cache_array=cache_array,
-                                             object=grid,
-                                             array_attribute='array_pillar_geometry_is_defined',
-                                             dtype='bool')
+                                             index = pillar_ji0,
+                                             cache_array = cache_array,
+                                             object = grid,
+                                             array_attribute = 'array_pillar_geometry_is_defined',
+                                             dtype = 'bool')
         if grid.geometry_defined_for_all_pillars_cached is None and cache_array and hasattr(
                 grid, 'array_pillar_geometry_is_defined'):
             grid.geometry_defined_for_all_pillars_cached = (np.count_nonzero(
@@ -122,7 +121,7 @@ def pillar_geometry_is_defined(grid, pillar_ji0=None, pillar_geometry_is_defined
         return result
 
 
-def geometry_defined_for_all_cells(grid, cache_array=True):
+def geometry_defined_for_all_cells(grid, cache_array = True):
     """Returns True if geometry is defined for all cells; False otherwise.
 
     argument:
@@ -136,7 +135,7 @@ def geometry_defined_for_all_cells(grid, cache_array=True):
     if grid.geometry_defined_for_all_cells_cached is not None:
         return grid.geometry_defined_for_all_cells_cached
     if cache_array:
-        grid.cell_geometry_is_defined(cache_array=True)
+        grid.cell_geometry_is_defined(cache_array = True)
         return grid.geometry_defined_for_all_cells_cached
     # loop over all cells (until a False is encountered) – only executes if cache_array is False
     cell_geom_defined_root = grid.resolve_geometry_child('CellGeometryIsDefined')
@@ -144,16 +143,16 @@ def geometry_defined_for_all_cells(grid, cache_array=True):
         for k0 in range(grid.nk):
             for j0 in range(grid.nj):
                 for i0 in range(grid.ni):
-                    if not grid.cell_geometry_is_defined(cell_kji0=(k0, j0, i0),
-                                                         cell_geometry_is_defined_root=cell_geom_defined_root,
-                                                         cache_array=False):
+                    if not grid.cell_geometry_is_defined(cell_kji0 = (k0, j0, i0),
+                                                         cell_geometry_is_defined_root = cell_geom_defined_root,
+                                                         cache_array = False):
                         grid.geometry_defined_for_all_cells_cached = False
                         return False
     grid.geometry_defined_for_all_cells_cached = True
     return True
 
 
-def geometry_defined_for_all_pillars(grid, cache_array=True, pillar_geometry_is_defined_root=None):
+def geometry_defined_for_all_pillars(grid, cache_array = True, pillar_geometry_is_defined_root = None):
     """Returns True if geometry is defined for all pillars; False otherwise.
 
     arguments:
@@ -169,16 +168,15 @@ def geometry_defined_for_all_pillars(grid, cache_array=True, pillar_geometry_is_
     if grid.geometry_defined_for_all_pillars_cached is not None:
         return grid.geometry_defined_for_all_pillars_cached
     if cache_array:
-        grid.pillar_geometry_is_defined(cache_array=cache_array)
+        grid.pillar_geometry_is_defined(cache_array = cache_array)
         return grid.geometry_defined_for_all_pillars_cached
-    is_def_root = grid.resolve_geometry_child('PillarGeometryIsDefined',
-                                              child_node=pillar_geometry_is_defined_root)
+    is_def_root = grid.resolve_geometry_child('PillarGeometryIsDefined', child_node = pillar_geometry_is_defined_root)
     grid.geometry_defined_for_all_pillars_cached = True
     if is_def_root is not None:
         for pillar_j in range(grid.nj):
             for pillar_i in range(grid.ni):
                 if not grid.pillar_geometry_is_defined(
-                        [pillar_j, pillar_i], pillar_geometry_is_defined_root=is_def_root, cache_array=False):
+                    [pillar_j, pillar_i], pillar_geometry_is_defined_root = is_def_root, cache_array = False):
                     grid.geometry_defined_for_all_pillars_cached = False
                     break
             if not grid.geometry_defined_for_all_pillars_cached:
@@ -199,7 +197,7 @@ def cell_geometry_is_defined_ref(grid):
     """
 
     # todo: treat this array like any other property?; handle constant array seamlessly?
-    grid.cell_geometry_is_defined(cache_array=True)
+    grid.cell_geometry_is_defined(cache_array = True)
     if hasattr(grid, 'array_cell_geometry_is_defined'):
         return grid.array_cell_geometry_is_defined
     return None  # can happen, if geometry is defined for all cells
@@ -220,18 +218,18 @@ def pillar_geometry_is_defined_ref(grid):
 
     # todo: double-check behaviour in presence of split pillars
     # todo: treat this array like any other property?; handle constant array seamlessly?
-    grid.pillar_geometry_is_defined(cache_array=True)
+    grid.pillar_geometry_is_defined(cache_array = True)
     if hasattr(grid, 'array_pillar_geometry_is_defined'):
         return grid.array_pillar_geometry_is_defined
     return None  # can happen, if geometry is defined for all pillars
 
 
 def set_geometry_is_defined(grid,
-                            treat_as_nan=None,
-                            treat_dots_as_nan=False,
-                            complete_partial_pillars=False,
-                            nullify_partial_pillars=False,
-                            complete_all=False):
+                            treat_as_nan = None,
+                            treat_dots_as_nan = False,
+                            complete_partial_pillars = False,
+                            nullify_partial_pillars = False,
+                            complete_all = False):
     """Set cached flags and/or arrays indicating which primary pillars have any points defined and which cells all points.
 
     arguments:
@@ -262,12 +260,12 @@ def set_geometry_is_defined(grid,
     if complete_all and not nullify_partial_pillars:
         complete_partial_pillars = True
 
-    points = grid.points_ref(masked=False)
+    points = grid.points_ref(masked = False)
 
     if treat_as_nan is not None:
-        nan_mask = np.any(np.logical_or(np.isnan(points), points == treat_as_nan), axis=-1)
+        nan_mask = np.any(np.logical_or(np.isnan(points), points == treat_as_nan), axis = -1)
     else:
-        nan_mask = np.any(np.isnan(points), axis=-1)
+        nan_mask = np.any(np.isnan(points), axis = -1)
 
     if treat_dots_as_nan:
         areal_dots = grid.point_areally()
@@ -293,18 +291,17 @@ def set_geometry_is_defined(grid,
 
     assert not np.all(nan_mask), 'grid does not have any geometry defined'
 
-    points[:] = np.where(np.repeat(np.expand_dims(nan_mask, axis=nan_mask.ndim), 3, axis=-1), np.NaN, points)
+    points[:] = np.where(np.repeat(np.expand_dims(nan_mask, axis = nan_mask.ndim), 3, axis = -1), np.NaN, points)
 
-    surround_z = grid.xyz_box(lazy=False)[1 if grid.z_inc_down() else 0, 2]
+    surround_z = grid.xyz_box(lazy = False)[1 if grid.z_inc_down() else 0, 2]
 
-    pillar_defined_mask = np.logical_not(np.all(nan_mask, axis=0)).flatten()
+    pillar_defined_mask = np.logical_not(np.all(nan_mask, axis = 0)).flatten()
     primary_count = (grid.nj + 1) * (grid.ni + 1)
     if np.all(pillar_defined_mask):
         grid.geometry_defined_for_all_pillars_cached = True
     else:
         grid.geometry_defined_for_all_pillars_cached = False
-        grid.array_pillar_geometry_is_defined = pillar_defined_mask[:primary_count].reshape(
-            (grid.nj + 1, grid.ni + 1))
+        grid.array_pillar_geometry_is_defined = pillar_defined_mask[:primary_count].reshape((grid.nj + 1, grid.ni + 1))
     if pillar_defined_mask.size > primary_count and not np.all(pillar_defined_mask[primary_count:]):
         log.warning('at least one split pillar has geometry undefined')
 
@@ -319,8 +316,7 @@ def set_geometry_is_defined(grid,
         grid.array_cell_geometry_is_defined = np.logical_not(
             np.logical_or(column_nan_mask[grid.k_raw_index_array], column_nan_mask[grid.k_raw_index_array + 1]))
     else:
-        grid.array_cell_geometry_is_defined = np.logical_not(
-            np.logical_or(column_nan_mask[:-1], column_nan_mask[1:]))
+        grid.array_cell_geometry_is_defined = np.logical_not(np.logical_or(column_nan_mask[:-1], column_nan_mask[1:]))
 
     if hasattr(grid, 'inactive') and grid.inactive is not None:
         grid.inactive = np.logical_or(grid.inactive, np.logical_not(grid.array_cell_geometry_is_defined))
@@ -334,12 +330,12 @@ def set_geometry_is_defined(grid,
     cells_update_needed = False
 
     if nullify_partial_pillars:
-        partial_pillar_mask = np.logical_and(pillar_defined_mask, np.any(nan_mask, axis=0).flatten())
+        partial_pillar_mask = np.logical_and(pillar_defined_mask, np.any(nan_mask, axis = 0).flatten())
         if np.any(partial_pillar_mask):
             points.reshape((grid.nk_plus_k_gaps + 1, -1, 3))[:, partial_pillar_mask, :] = np.NaN
             cells_update_needed = True
     elif complete_partial_pillars:
-        partial_pillar_mask = np.logical_and(pillar_defined_mask, np.any(nan_mask, axis=0).flatten())
+        partial_pillar_mask = np.logical_and(pillar_defined_mask, np.any(nan_mask, axis = 0).flatten())
         if np.any(partial_pillar_mask):
             log.warning('completing geometry for partially defined pillars')
             for pillar_index in np.where(partial_pillar_mask)[0]:
@@ -360,7 +356,7 @@ def set_geometry_is_defined(grid,
                 (grid.nj + 1, grid.ni + 1)))
             column_nan_mask = np.logical_or(np.logical_or(top_nan_mask[:-1, :-1], top_nan_mask[:-1, 1:]),
                                             np.logical_or(top_nan_mask[1:, :-1], top_nan_mask[1:, 1:]))
-            grid.array_cell_geometry_is_defined = np.repeat(np.expand_dims(column_nan_mask, 0), grid.nk, axis=0)
+            grid.array_cell_geometry_is_defined = np.repeat(np.expand_dims(column_nan_mask, 0), grid.nk, axis = 0)
             grid.geometry_defined_for_all_cells_cached = np.all(grid.array_cell_geometry_is_defined)
             if grid.geometry_defined_for_all_cells_cached:
                 del grid.array_cell_geometry_is_defined
@@ -380,7 +376,7 @@ def __complete_all_pillars(cells_update_needed, grid, points, surround_z):
     surround_mask = np.logical_or(surround_mask, coastal_mask).flatten()
     if np.any(surround_mask):
         points.reshape(grid.nk_plus_k_gaps + 1, -1, 3)[:, :(grid.nj + 1) * (grid.ni + 1)][:, surround_mask,
-        2] = surround_z
+                                                                                          2] = surround_z
     grid.geometry_defined_for_all_pillars_cached = True
     if hasattr(grid, 'array_pillar_geometry_is_defined'):
         del grid.array_pillar_geometry_is_defined
@@ -395,12 +391,12 @@ def __complete_all_pillars(cells_update_needed, grid, points, surround_z):
 def __handle_areal_dots(areal_dots, grid, nan_mask):
     # inject NaNs into the pillars around any cell that has zero length in I and J
     if grid.k_gaps:
-        dot_mask = np.zeros((grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1), dtype=bool)
+        dot_mask = np.zeros((grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1), dtype = bool)
         dot_mask[grid.k_raw_index_array, :-1, :-1] = areal_dots
-        dot_mask[grid.k_raw_index_array + 1, :-1, :-1] = np.logical_or(
-            dot_mask[grid.k_raw_index_array + 1, :-1, :-1], areal_dots)
+        dot_mask[grid.k_raw_index_array + 1, :-1, :-1] = np.logical_or(dot_mask[grid.k_raw_index_array + 1, :-1, :-1],
+                                                                       areal_dots)
     else:
-        dot_mask = np.zeros((grid.nk + 1, grid.nj + 1, grid.ni + 1), dtype=bool)
+        dot_mask = np.zeros((grid.nk + 1, grid.nj + 1, grid.ni + 1), dtype = bool)
         dot_mask[:-1, :-1, :-1] = areal_dots
         dot_mask[1:, :-1, :-1] = np.logical_or(dot_mask[:-1, :-1, :-1], areal_dots)
     dot_mask[:, 1:, :-1] = np.logical_or(dot_mask[:, :-1, :-1], dot_mask[:, 1:, :-1])
@@ -415,7 +411,7 @@ def __handle_areal_dots(areal_dots, grid, nan_mask):
 
 
 def __infill_partial_pillar(grid, pillar_index):
-    points = grid.points_ref(masked=False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
+    points = grid.points_ref(masked = False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
     nan_mask = np.isnan(points[:, pillar_index, 0])
     first_k = 0
     while first_k < grid.nk_plus_k_gaps + 1 and nan_mask[first_k]:
@@ -441,11 +437,12 @@ def __infill_partial_pillar(grid, pillar_index):
                         num=scan_k - first_k + 1, endpoint=False)
         first_k = scan_k
 
+
 def __create_surround_masks(top_nan_mask):
     assert top_nan_mask.ndim == 2
     nj1, ni1 = top_nan_mask.shape  # nj + 1, ni + 1
-    surround_mask = np.zeros(top_nan_mask.shape, dtype=bool)
-    coastal_mask = np.zeros(top_nan_mask.shape, dtype=bool)
+    surround_mask = np.zeros(top_nan_mask.shape, dtype = bool)
+    coastal_mask = np.zeros(top_nan_mask.shape, dtype = bool)
     for j in range(nj1):
         i = 0
         while i < ni1 and top_nan_mask[j, i]:
@@ -474,17 +471,18 @@ def __create_surround_masks(top_nan_mask):
             coastal_mask[:, i] = False
     return surround_mask, coastal_mask
 
+
 def __fill_holes(grid, holes_mask):
     log.debug(f'filling {np.count_nonzero(holes_mask)} pillars for holes')
-    points = grid.points_ref(masked=False).reshape(grid.nk_plus_k_gaps + 1, -1, 3)
+    points = grid.points_ref(masked = False).reshape(grid.nk_plus_k_gaps + 1, -1, 3)
     ni_plus_1 = grid.ni + 1
-    mask_01 = np.empty(holes_mask.shape, dtype=int)
+    mask_01 = np.empty(holes_mask.shape, dtype = int)
     while np.any(holes_mask):
         flat_holes_mask = holes_mask.flatten()
         mask_01[:] = np.where(holes_mask, 0, 1)
         modified = False
         # fix isolated NaN pillars with 4 neighbours
-        neighbours = np.zeros(holes_mask.shape, dtype=int)
+        neighbours = np.zeros(holes_mask.shape, dtype = int)
         neighbours[:-1, :] += mask_01[1:, :]
         neighbours[1:, :] += mask_01[:-1, :]
         neighbours[:, :-1] += mask_01[:, 1:]
@@ -577,10 +575,11 @@ def __fill_holes(grid, holes_mask):
             log.warning('failed to fill all holes in grid geometry')
             break
 
+
 def __fill_surround(grid, surround_mask):
     # note: only fills x,y; based on bottom layer of points; assumes surround mask is a regularly shaped frame of columns
     log.debug(f'filling {np.count_nonzero(surround_mask)} pillars for surround')
-    points = grid.points_ref(masked=False)
+    points = grid.points_ref(masked = False)
     points_view = points[-1, :, :2].reshape((-1, 2))[:(grid.nj + 1) * (grid.ni + 1), :].reshape(
         (grid.nj + 1, grid.ni + 1, 2))
     modified = False

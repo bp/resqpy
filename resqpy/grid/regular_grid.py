@@ -1,4 +1,3 @@
-
 import logging
 version = '29th November 2021'
 log = logging.getLogger(__name__)
@@ -17,6 +16,7 @@ from .grid_functions import is_regular_grid
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
 
+
 class RegularGrid(Grid):
     """Class for completely regular block grids aligned with xyz axes."""
 
@@ -25,21 +25,21 @@ class RegularGrid(Grid):
 
     def __init__(self,
                  parent_model,
-                 extent_kji=None,
-                 dxyz=None,
-                 dxyz_dkji=None,
-                 origin=(0.0, 0.0, 0.0),
-                 crs_uuid=None,
-                 use_vertical=False,
-                 mesh=None,
-                 mesh_dz_dk=1.0,
-                 uuid=None,
-                 set_points_cached=False,
-                 as_irregular_grid=False,
-                 find_properties=True,
-                 title=None,
-                 originator=None,
-                 extra_metadata={}):
+                 extent_kji = None,
+                 dxyz = None,
+                 dxyz_dkji = None,
+                 origin = (0.0, 0.0, 0.0),
+                 crs_uuid = None,
+                 use_vertical = False,
+                 mesh = None,
+                 mesh_dz_dk = 1.0,
+                 uuid = None,
+                 set_points_cached = False,
+                 as_irregular_grid = False,
+                 find_properties = True,
+                 title = None,
+                 originator = None,
+                 extra_metadata = {}):
         """Creates a regular grid object based on dxyz, or derived from a Mesh object.
 
         arguments:
@@ -99,7 +99,7 @@ class RegularGrid(Grid):
         self.is_aligned = None  #: boolean indicating alignment of IJK axes with +/- xyz respectively
 
         if uuid is None:
-            super().__init__(parent_model, title=title, originator=originator, extra_metadata=extra_metadata)
+            super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
             self.grid_representation = 'IjkGrid' if as_irregular_grid else 'IjkBlockGrid'
             self.extent_kji = np.array(extent_kji).copy()
             self.nk, self.nj, self.ni = self.extent_kji
@@ -113,29 +113,29 @@ class RegularGrid(Grid):
             self.all_inactive = None
             self.geometry_defined_for_all_cells_cached = True
             self.geometry_defined_for_all_pillars_cached = True
-            self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype=bool)
+            self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype = bool)
         else:
             assert is_regular_grid(parent_model.root_for_uuid(uuid))
             super().__init__(parent_model,
-                             uuid=uuid,
-                             find_properties=find_properties,
-                             geometry_required=False,
-                             title=title,
-                             originator=originator,
-                             extra_metadata=extra_metadata)
+                             uuid = uuid,
+                             find_properties = find_properties,
+                             geometry_required = False,
+                             title = title,
+                             originator = originator,
+                             extra_metadata = extra_metadata)
             self.grid_representation = 'IjkBlockGrid'
             if dxyz is None and dxyz_dkji is None:
                 # find cell length properties and populate dxyz from those values
                 assert self.property_collection is not None
-                dxi_part = self.property_collection.singleton(property_kind='cell length',
-                                                              facet_type='direction',
-                                                              facet='I')
-                dyj_part = self.property_collection.singleton(property_kind='cell length',
-                                                              facet_type='direction',
-                                                              facet='J')
-                dzk_part = self.property_collection.singleton(property_kind='cell length',
-                                                              facet_type='direction',
-                                                              facet='K')
+                dxi_part = self.property_collection.singleton(property_kind = 'cell length',
+                                                              facet_type = 'direction',
+                                                              facet = 'I')
+                dyj_part = self.property_collection.singleton(property_kind = 'cell length',
+                                                              facet_type = 'direction',
+                                                              facet = 'J')
+                dzk_part = self.property_collection.singleton(property_kind = 'cell length',
+                                                              facet_type = 'direction',
+                                                              facet = 'K')
                 if dxi_part is not None and dyj_part is not None and dzk_part is not None:
                     dxi = self.property_collection.constant_value_for_part(dxi_part)
                     dyj = self.property_collection.constant_value_for_part(dyj_part)
@@ -176,7 +176,7 @@ class RegularGrid(Grid):
             crs_uuid = parent_model.crs_uuid
         if crs_uuid is None:
             new_crs = rqc.Crs(parent_model)
-            self.crs_root = new_crs.create_xml(reuse=True)
+            self.crs_root = new_crs.create_xml(reuse = True)
             self.crs_uuid = new_crs.uuid
         else:
             self.crs_uuid = crs_uuid
@@ -207,7 +207,7 @@ class RegularGrid(Grid):
 
     # override of Grid methods
 
-    def point_raw(self, index=None, points_root=None, cache_array=True):
+    def point_raw(self, index = None, points_root = None, cache_array = True):
         """Returns element from points data, indexed as corner point (k0, j0, i0).
 
         Can optionally be used to cache points data.
@@ -235,10 +235,10 @@ class RegularGrid(Grid):
             return self.points_cached[tuple(index)]
 
         return self.block_origin + np.sum(np.repeat(np.array(index).reshape(
-            (3, 1)), 3, axis=-1) * self.block_dxyz_dkji,
-                                          axis=0)
+            (3, 1)), 3, axis = -1) * self.block_dxyz_dkji,
+                                          axis = 0)
 
-    def half_cell_transmissibility(self, use_property=None, realization=None, tolerance=None):
+    def half_cell_transmissibility(self, use_property = None, realization = None, tolerance = None):
         """Returns (and caches if realization is None) half cell transmissibilities for this regular grid.
 
         arguments:
@@ -266,19 +266,19 @@ class RegularGrid(Grid):
             return self.array_half_cell_t
 
         half_t = rqtr.half_cell_t(
-            self, realization=realization)  # note: properties must be identifiable in property_collection
+            self, realization = realization)  # note: properties must be identifiable in property_collection
 
         # introduce facial polarity axis for compatibility with parent Grid class
         assert half_t.ndim == 4
         half_t = np.expand_dims(half_t, -1)
-        half_t = np.repeat(half_t, 2, axis=-1)
+        half_t = np.repeat(half_t, 2, axis = -1)
 
         if realization is None:
             self.array_half_cell_t = half_t
 
         return half_t
 
-    def centre_point(self, cell_kji0=None, cache_centre_array=False):
+    def centre_point(self, cell_kji0 = None, cache_centre_array = False):
         """Returns centre point of a cell or array of centre points of all cells.
 
         arguments:
@@ -307,20 +307,20 @@ class RegularGrid(Grid):
                 centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
             for i in range(self.ni - 1):
                 centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
-            centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis=0)
+            centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
             self.array_centre_point = centres
 
         if cell_kji0 is not None:
             if hasattr(self, 'array_centre_point') and self.array_centre_point is not None:
                 return self.array_centre_point[tuple(cell_kji0)]
-            float_kji0 = np.array(cell_kji0, dtype=float) + 0.5
+            float_kji0 = np.array(cell_kji0, dtype = float) + 0.5
             centre = self.block_origin + np.sum(
-                self.block_dxyz_dkji * np.expand_dims(float_kji0, axis=-1).repeat(3, axis=-1), axis=0)
+                self.block_dxyz_dkji * np.expand_dims(float_kji0, axis = -1).repeat(3, axis = -1), axis = 0)
             return centre
 
         return self.array_centre_point
 
-    def volume(self, cell_kji0=None):
+    def volume(self, cell_kji0 = None):
         """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
 
         arguments:
@@ -343,7 +343,7 @@ class RegularGrid(Grid):
             return vol
         return np.full((self.nk, self.nj, self.ni), vol)
 
-    def thickness(self, cell_kji0=None, **kwargs):
+    def thickness(self, cell_kji0 = None, **kwargs):
         """Returns cell thickness (K axial length) for a single cell or full array.
 
         arguments:
@@ -358,9 +358,9 @@ class RegularGrid(Grid):
         thick = self.axial_lengths_kji()[0]
         if cell_kji0 is not None:
             return thick
-        return np.full((self.nk, self.nj, self.ni), thick, dtype=float)
+        return np.full((self.nk, self.nj, self.ni), thick, dtype = float)
 
-    def pinched_out(self, cell_kji0=None, **kwargs):
+    def pinched_out(self, cell_kji0 = None, **kwargs):
         """Returns pinched out boolean (always False) for a single cell or full array.
 
         arguments:
@@ -374,9 +374,9 @@ class RegularGrid(Grid):
 
         if cell_kji0 is not None:
             return False
-        return np.full((self.nk, self.nj, self.ni), False, dtype=bool)
+        return np.full((self.nk, self.nj, self.ni), False, dtype = bool)
 
-    def actual_pillar_shape(self, patch_metadata=False, tolerance=0.001):
+    def actual_pillar_shape(self, patch_metadata = False, tolerance = 0.001):
         """Returns actual shape of pillars.
 
         arguments:
@@ -396,18 +396,18 @@ class RegularGrid(Grid):
         return 'straight'
 
     def create_xml(self,
-                   ext_uuid=None,
-                   add_as_part=True,
-                   add_relationships=True,
-                   set_as_grid_root=True,
-                   root=None,
-                   title=None,
-                   originator=None,
-                   write_active=True,
-                   write_geometry=None,
-                   extra_metadata={},
-                   expand_const_arrays=False,
-                   add_cell_length_properties=True):
+                   ext_uuid = None,
+                   add_as_part = True,
+                   add_relationships = True,
+                   set_as_grid_root = True,
+                   root = None,
+                   title = None,
+                   originator = None,
+                   write_active = True,
+                   write_geometry = None,
+                   extra_metadata = {},
+                   expand_const_arrays = False,
+                   add_cell_length_properties = True):
         """Creates xml for this RegularGrid object; by default the explicit geometry is not included.
 
         see docstring for Grid.create_xml()
@@ -423,15 +423,15 @@ class RegularGrid(Grid):
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
 
-        node = super().create_xml(ext_uuid=ext_uuid,
-                                  add_as_part=add_as_part,
-                                  add_relationships=add_relationships,
-                                  set_as_grid_root=set_as_grid_root,
-                                  title=title,
-                                  originator=originator,
-                                  write_active=write_active,
-                                  write_geometry=write_geometry,
-                                  extra_metadata=extra_metadata)
+        node = super().create_xml(ext_uuid = ext_uuid,
+                                  add_as_part = add_as_part,
+                                  add_relationships = add_relationships,
+                                  set_as_grid_root = set_as_grid_root,
+                                  title = title,
+                                  originator = originator,
+                                  write_active = write_active,
+                                  write_geometry = write_geometry,
+                                  extra_metadata = extra_metadata)
 
         if add_cell_length_properties:
             axes_lengths_kji = self.axial_lengths_kji()
@@ -441,22 +441,22 @@ class RegularGrid(Grid):
                 dpc.add_cached_array_to_imported_list(None,
                                                       'regular grid',
                                                       'D' + 'ZYX'[axis],
-                                                      discrete=False,
-                                                      uom=self.xy_units(),
-                                                      property_kind='cell length',
-                                                      facet_type='direction',
-                                                      facet='KJI'[axis],
-                                                      indexable_element='cells',
-                                                      count=1,
-                                                      const_value=axes_lengths_kji[axis])
+                                                      discrete = False,
+                                                      uom = self.xy_units(),
+                                                      property_kind = 'cell length',
+                                                      facet_type = 'direction',
+                                                      facet = 'KJI'[axis],
+                                                      indexable_element = 'cells',
+                                                      count = 1,
+                                                      const_value = axes_lengths_kji[axis])
             if expand_const_arrays:
-                dpc.write_hdf5_for_imported_list(expand_const_arrays=True)
-            dpc.create_xml_for_imported_list_and_add_parts_to_model(expand_const_arrays=expand_const_arrays)
+                dpc.write_hdf5_for_imported_list(expand_const_arrays = True)
+            dpc.create_xml_for_imported_list_and_add_parts_to_model(expand_const_arrays = expand_const_arrays)
             if self.property_collection is None:
                 self.property_collection = dpc
             else:
                 if self.property_collection.support is None:
-                    self.property_collection.set_support(support=self)
+                    self.property_collection.set_support(support = self)
                 self.property_collection.inherit_parts_from_other_collection(dpc)
 
         return node

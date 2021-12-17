@@ -6,6 +6,7 @@ import resqpy.olio.point_inclusion as pip
 
 # 'private' function
 
+
 def _add_to_kelp_list(extent_kji, kelp_list, face_axis, ji):
     if isinstance(face_axis, bool):
         face_axis = 'J' if face_axis else 'I'
@@ -25,15 +26,16 @@ def _add_to_kelp_list(extent_kji, kelp_list, face_axis, ji):
         return  # avoid duplication
     kelp_list.append(pair)
 
+
 def establish_zone_property_kind(model):
     """Returns zone local property kind object, creating the xml and adding as part if not found in model."""
 
-    zone_pk_uuid = model.uuid(obj_type='LocalPropertyKind', title='zone')
+    zone_pk_uuid = model.uuid(obj_type = 'LocalPropertyKind', title = 'zone')
     if zone_pk_uuid is None:
-        zone_pk = rprop.PropertyKind(model, title='zone', parent_property_kind='discrete')
+        zone_pk = rprop.PropertyKind(model, title = 'zone', parent_property_kind = 'discrete')
         zone_pk.create_xml()
     else:
-        zone_pk = rprop.PropertyKind(model, uuid=zone_pk_uuid)
+        zone_pk = rprop.PropertyKind(model, uuid = zone_pk_uuid)
     return zone_pk
 
 
@@ -51,7 +53,7 @@ def grid_flavour(grid_root):
     em = rqet.load_metadata_from_xml(grid_root)
     flavour = em.get('grid_flavour')
     if flavour is None:
-        node_type = rqet.node_type(grid_root, strip_obj=True)
+        node_type = rqet.node_type(grid_root, strip_obj = True)
         if node_type == 'IjkGridRepresentation':
             if rqet.find_tag(grid_root, 'Geometry') is not None:
                 flavour = 'IjkGrid'
@@ -78,7 +80,7 @@ def is_regular_grid(grid_root):
     return grid_flavour(grid_root) == 'IjkBlockGrid'
 
 
-def any_grid(parent_model, grid_root=None, uuid=None, find_properties=True):
+def any_grid(parent_model, grid_root = None, uuid = None, find_properties = True):
     """Returns a Grid or RegularGrid or UnstructuredGrid object depending on the extra metadata in the xml."""
 
     import resqpy.unstructured as rug
@@ -89,19 +91,19 @@ def any_grid(parent_model, grid_root=None, uuid=None, find_properties=True):
     if flavour is None:
         return None
     if flavour == 'IjkGrid':
-        return resqpy.grid.Grid(parent_model, uuid=uuid, find_properties=find_properties)
+        return resqpy.grid.Grid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'IjkBlockGrid':
-        return resqpy.grid.RegularGrid(parent_model, extent_kji=None, uuid=uuid, find_properties=find_properties)
+        return resqpy.grid.RegularGrid(parent_model, extent_kji = None, uuid = uuid, find_properties = find_properties)
     if flavour == 'UnstructuredGrid':
-        return rug.UnstructuredGrid(parent_model, uuid=uuid, find_properties=find_properties)
+        return rug.UnstructuredGrid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'TetraGrid':
-        return rug.TetraGrid(parent_model, uuid=uuid, find_properties=find_properties)
+        return rug.TetraGrid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'HexaGrid':
-        return rug.HexaGrid(parent_model, uuid=uuid, find_properties=find_properties)
+        return rug.HexaGrid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'PyramidGrid':
-        return rug.PyramidGrid(parent_model, uuid=uuid, find_properties=find_properties)
+        return rug.PyramidGrid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'PrismGrid':
-        return rug.PrismGrid(parent_model, uuid=uuid, find_properties=find_properties)
+        return rug.PrismGrid(parent_model, uuid = uuid, find_properties = find_properties)
     return None
 
 
@@ -124,8 +126,8 @@ def find_cell_for_x_sect_xz(x_sect, x, z):
 
     def test_cell(p, x_sect, k0, ji0):
         poly = np.array([
-            x_sect[k0, ji0, 0, 0, 0:3:2], x_sect[k0, ji0, 0, 1, 0:3:2], x_sect[k0, ji0, 1, 1, 0:3:2],
-            x_sect[k0, ji0, 1, 0, 0:3:2]
+            x_sect[k0, ji0, 0, 0, 0:3:2], x_sect[k0, ji0, 0, 1, 0:3:2], x_sect[k0, ji0, 1, 1, 0:3:2], x_sect[k0, ji0, 1,
+                                                                                                             0, 0:3:2]
         ])
         if np.any(np.isnan(poly)):
             return False

@@ -17,14 +17,14 @@ always_write_cell_geometry_is_defined_array = False
 
 def create_grid_xml(grid,
                     ijk,
-                    ext_uuid=None,
-                    add_as_part=True,
-                    add_relationships=True,
-                    write_active=True,
-                    write_geometry=True):
+                    ext_uuid = None,
+                    add_as_part = True,
+                    add_relationships = True,
+                    write_active = True,
+                    write_geometry = True):
 
     if grid.grid_representation and not write_geometry:
-        rqet.create_metadata_xml(node=ijk, extra_metadata={'grid_flavour': grid.grid_representation})
+        rqet.create_metadata_xml(node = ijk, extra_metadata = {'grid_flavour': grid.grid_representation})
 
     ni_node = rqet.SubElement(ijk, ns['resqml2'] + 'Ni')
     ni_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
@@ -57,7 +57,7 @@ def create_grid_xml(grid,
         kgal_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         kgal_values.text = '\n'
 
-        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'GapAfterLayer', root=kgal_values)
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'GapAfterLayer', root = kgal_values)
 
     if grid.stratigraphic_column_rank_uuid is not None and grid.stratigraphic_units is not None:
         assert grid.model.type_of_uuid(
@@ -79,13 +79,13 @@ def create_grid_xml(grid,
         ui_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         ui_values.text = '\n'
 
-        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'unitIndices', root=ui_values)
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'unitIndices', root = ui_values)
 
         grid.model.create_ref_node('StratigraphicOrganization',
-                                   grid.model.title(uuid=grid.stratigraphic_column_rank_uuid),
+                                   grid.model.title(uuid = grid.stratigraphic_column_rank_uuid),
                                    grid.stratigraphic_column_rank_uuid,
-                                   content_type='StratigraphicColumnRankInterpretation',
-                                   root=strata_node)
+                                   content_type = 'StratigraphicColumnRankInterpretation',
+                                   root = strata_node)
 
     if grid.parent_window is not None:
 
@@ -94,7 +94,7 @@ def create_grid_xml(grid,
         pw_node.text = '\n'
 
         assert grid.parent_grid_uuid is not None
-        parent_grid_root = grid.model.root(uuid=grid.parent_grid_uuid)
+        parent_grid_root = grid.model.root(uuid = grid.parent_grid_uuid)
         if parent_grid_root is None:
             pg_title = 'ParentGrid'
         else:
@@ -102,8 +102,8 @@ def create_grid_xml(grid,
         grid.model.create_ref_node('ParentGrid',
                                    pg_title,
                                    grid.parent_grid_uuid,
-                                   content_type='obj_IjkGridRepresentation',
-                                   root=pw_node)
+                                   content_type = 'obj_IjkGridRepresentation',
+                                   root = pw_node)
 
         for axis in range(3):
 
@@ -154,7 +154,7 @@ def create_grid_xml(grid,
             grid.model.create_hdf5_dataset_ref(ext_uuid,
                                                grid.uuid,
                                                'KJI'[axis] + 'Regrid/ParentCountPerInterval',
-                                               root=pcpi_values)
+                                               root = pcpi_values)
 
             ccpi_node = rqet.SubElement(intervals_node, ns['resqml2'] + 'ChildCountPerInterval')
             ccpi_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
@@ -167,7 +167,7 @@ def create_grid_xml(grid,
             grid.model.create_hdf5_dataset_ref(ext_uuid,
                                                grid.uuid,
                                                'KJI'[axis] + 'Regrid/ChildCountPerInterval',
-                                               root=ccpi_values)
+                                               root = ccpi_values)
 
             if grid.is_refinement and not grid.parent_window.equal_proportions[axis]:
                 ccw_node = rqet.SubElement(intervals_node, ns['resqml2'] + 'ChildCellWeights')
@@ -181,7 +181,7 @@ def create_grid_xml(grid,
                 grid.model.create_hdf5_dataset_ref(ext_uuid,
                                                    grid.uuid,
                                                    'KJI'[axis] + 'Regrid/ChildCellWeights',
-                                                   root=ccw_values_node)
+                                                   root = ccw_values_node)
 
         # todo: handle omit and cell overlap functionality as part of parent window refining or coarsening
 
@@ -192,18 +192,18 @@ def create_grid_xml(grid,
         __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry)
 
     if (write_active and grid.active_property_uuid is not None and
-            grid.model.part(uuid=grid.active_property_uuid) is None):
+            grid.model.part(uuid = grid.active_property_uuid) is None):
         # TODO: replace following with call to rprop.write_hdf5_and_create_xml_for_active_property()
         active_collection = rprop.PropertyCollection()
-        active_collection.set_support(support=grid)
+        active_collection.set_support(support = grid)
         active_collection.create_xml(None,
                                      None,
                                      'ACTIVE',
                                      'active',
-                                     p_uuid=grid.active_property_uuid,
-                                     discrete=True,
-                                     add_min_max=False,
-                                     find_local_property_kinds=True)
+                                     p_uuid = grid.active_property_uuid,
+                                     discrete = True,
+                                     add_min_max = False,
+                                     find_local_property_kinds = True)
 
     return ijk
 
@@ -212,22 +212,20 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
     grid.model.add_part('obj_IjkGridRepresentation', grid.uuid, ijk)
     if add_relationships:
         if grid.stratigraphic_column_rank_uuid is not None and grid.stratigraphic_units is not None:
-            grid.model.create_reciprocal_relationship(
-                ijk, 'destinationObject', grid.model.root_for_uuid(grid.stratigraphic_column_rank_uuid),
-                'sourceObject')
+            grid.model.create_reciprocal_relationship(ijk, 'destinationObject',
+                                                      grid.model.root_for_uuid(grid.stratigraphic_column_rank_uuid),
+                                                      'sourceObject')
         if write_geometry:
             # create 2 way relationship between IjkGrid and Crs
             grid.model.create_reciprocal_relationship(ijk, 'destinationObject', grid.crs_root, 'sourceObject')
             # create 2 way relationship between IjkGrid and Ext
-            ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed=False)
+            ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = grid.model.root_for_part(ext_part)
-            grid.model.create_reciprocal_relationship(ijk, 'mlToExternalPartProxy', ext_node,
-                                                      'externalPartProxyToMl')
+            grid.model.create_reciprocal_relationship(ijk, 'mlToExternalPartProxy', ext_node, 'externalPartProxyToMl')
         # create relationship with parent grid
         if grid.parent_window is not None and grid.parent_grid_uuid is not None:
             grid.model.create_reciprocal_relationship(ijk, 'destinationObject',
-                                                      grid.model.root_for_uuid(grid.parent_grid_uuid),
-                                                      'sourceObject')
+                                                      grid.model.root_for_uuid(grid.parent_grid_uuid), 'sourceObject')
 
 
 def __write_geometry(ext_uuid, grid, ijk):
@@ -235,7 +233,7 @@ def __write_geometry(ext_uuid, grid, ijk):
     geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'IjkGridGeometry')
     geom.text = '\n'
     # the remainder of this function is populating the geometry node
-    grid.model.create_crs_reference(crs_uuid=grid.crs_uuid, root=geom)
+    grid.model.create_crs_reference(crs_uuid = grid.crs_uuid, root = geom)
     k_dir = rqet.SubElement(geom, ns['resqml2'] + 'KDirection')
     k_dir.set(ns['xsi'] + 'type', ns['resqml2'] + 'KDirection')
     if grid.k_direction_is_down:
@@ -254,9 +252,8 @@ def __write_geometry(ext_uuid, grid, ijk):
     coords = rqet.SubElement(points_node, ns['resqml2'] + 'Coordinates')
     coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
     coords.text = '\n'
-    grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'Points', root=coords)
-    if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(
-            cache_array=True):
+    grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'Points', root = coords)
+    if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(cache_array = True):
 
         pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
         pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanHdf5Array')
@@ -266,7 +263,7 @@ def __write_geometry(ext_uuid, grid, ijk):
         pd_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         pd_values.text = '\n'
 
-        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarGeometryIsDefined', root=pd_values)
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarGeometryIsDefined', root = pd_values)
 
     else:
 
@@ -281,8 +278,7 @@ def __write_geometry(ext_uuid, grid, ijk):
         pd_count = rqet.SubElement(pillar_def, ns['resqml2'] + 'Count')
         pd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
         pd_count.text = str((grid.extent_kji[1] + 1) * (grid.extent_kji[2] + 1))
-    if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(
-            cache_array=True):
+    if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(cache_array = True):
 
         cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
         cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanHdf5Array')
@@ -292,7 +288,7 @@ def __write_geometry(ext_uuid, grid, ijk):
         cd_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         cd_values.text = '\n'
 
-        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'CellGeometryIsDefined', root=cd_values)
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'CellGeometryIsDefined', root = cd_values)
 
     else:
 
@@ -328,7 +324,7 @@ def __write_geometry(ext_uuid, grid, ijk):
         pi_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         pi_values.text = '\n'
 
-        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarIndices', root=pi_values)
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarIndices', root = pi_values)
 
         cpscl = rqet.SubElement(scl, ns['resqml2'] + 'ColumnsPerSplitCoordinateLine')
         cpscl.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlJaggedArray')
@@ -349,7 +345,7 @@ def __write_geometry(ext_uuid, grid, ijk):
         grid.model.create_hdf5_dataset_ref(ext_uuid,
                                            grid.uuid,
                                            'ColumnsPerSplitCoordinateLine/elements',
-                                           root=el_values)
+                                           root = el_values)
 
         c_length = rqet.SubElement(cpscl, ns['resqml2'] + 'CumulativeLength')
         c_length.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
@@ -366,7 +362,7 @@ def __write_geometry(ext_uuid, grid, ijk):
         grid.model.create_hdf5_dataset_ref(ext_uuid,
                                            grid.uuid,
                                            'ColumnsPerSplitCoordinateLine/cumulativeLength',
-                                           root=cl_values)
+                                           root = cl_values)
     if grid.time_index is not None:
         assert grid.time_series_uuid is not None
 
@@ -379,7 +375,7 @@ def __write_geometry(ext_uuid, grid, ijk):
         index_node.text = str(grid.time_index)
 
         grid.model.create_ref_node('TimeSeries',
-                                   grid.model.title(uuid=grid.time_series_uuid),
+                                   grid.model.title(uuid = grid.time_series_uuid),
                                    grid.time_series_uuid,
-                                   content_type='obj_TimeSeries',
-                                   root=ti_node)
+                                   content_type = 'obj_TimeSeries',
+                                   root = ti_node)

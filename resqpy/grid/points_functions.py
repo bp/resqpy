@@ -14,16 +14,15 @@ from .defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defin
     geometry_defined_for_all_pillars
 
 
-
 def set_cached_points_from_property(grid,
-                                    points_property_uuid=None,
-                                    property_collection=None,
-                                    realization=None,
-                                    time_index=None,
-                                    set_grid_time_index=True,
-                                    set_inactive=True,
-                                    active_property_uuid=None,
-                                    active_collection=None):
+                                    points_property_uuid = None,
+                                    property_collection = None,
+                                    realization = None,
+                                    time_index = None,
+                                    set_grid_time_index = True,
+                                    set_inactive = True,
+                                    active_property_uuid = None,
+                                    active_collection = None):
     """Modifies the cached points (geometry), setting the values from a points property.
 
     arguments:
@@ -68,10 +67,10 @@ def set_cached_points_from_property(grid,
     if points_property_uuid is None:
         if property_collection is None:
             property_collection = grid.extract_property_collection()
-        part = property_collection.singleton(points=True,
-                                             indexable='nodes',
-                                             realization=realization,
-                                             time_index=time_index)
+        part = property_collection.singleton(points = True,
+                                             indexable = 'nodes',
+                                             realization = realization,
+                                             time_index = time_index)
         assert part is not None, 'failed to identify points property to use for grid geometry'
         points_property_uuid = property_collection.uuid_for_part(part)
     elif set_inactive:
@@ -82,10 +81,10 @@ def set_cached_points_from_property(grid,
     grid.cache_all_geometry_arrays()  # the split pillar information must not vary
 
     # check for compatibility and overwrite cached points for grid
-    points = rprop.Property(grid.model, uuid=points_property_uuid)
+    points = rprop.Property(grid.model, uuid = points_property_uuid)
     assert points is not None and points.is_points() and points.indexable_element() == 'nodes'
     assert points.uom() == grid.xy_units() and grid.z_units() == grid.xy_units()
-    points_array = points.array_ref(masked=False)
+    points_array = points.array_ref(masked = False)
     assert points_array is not None
     assert points_array.shape == grid.points_cached.shape
     grid.points_cached = points_array
@@ -102,8 +101,8 @@ def set_cached_points_from_property(grid,
     # invalidate anything cached that is derived from geometry
     grid.geometry_defined_for_all_pillars_cached = None
     grid.geometry_defined_for_all_cells_cached = None
-    for attr in ('array_unsplit_points', 'array_corner_points', 'array_centre_point', 'array_thickness',
-                 'array_volume', 'array_half_cell_t', 'array_k_transmissibility', 'array_j_transmissibility',
+    for attr in ('array_unsplit_points', 'array_corner_points', 'array_centre_point', 'array_thickness', 'array_volume',
+                 'array_half_cell_t', 'array_k_transmissibility', 'array_j_transmissibility',
                  'array_i_transmissibility', 'fgcs', 'array_fgcs_transmissibility', 'pgcs',
                  'array_pgcs_transmissibility', 'kgcs', 'array_kgcs_transmissibility'):
         if hasattr(grid, attr):
@@ -114,14 +113,14 @@ def set_cached_points_from_property(grid,
             if active_collection is None:
                 active_collection = property_collection
                 assert active_collection is not None
-            active_part = active_collection.singleton(property_kind='active',
-                                                      indexable='cells',
-                                                      continuous=False,
-                                                      realization=realization,
-                                                      time_index=time_index)
+            active_part = active_collection.singleton(property_kind = 'active',
+                                                      indexable = 'cells',
+                                                      continuous = False,
+                                                      realization = realization,
+                                                      time_index = time_index)
             assert active_part is not None, 'failed to identify active property to use for grid inactive mask'
             active_property_uuid = active_collection.uuid_for_part(active_part)
-        active = rprop.Property(grid.model, uuid=active_property_uuid)
+        active = rprop.Property(grid.model, uuid = active_property_uuid)
         assert active is not None
         active_array = active.array_ref()
         assert active_array.shape == tuple(grid.extent_kji)
@@ -130,7 +129,7 @@ def set_cached_points_from_property(grid,
         grid.active_property_uuid = active_property_uuid
 
 
-def point_raw(grid, index=None, points_root=None, cache_array=True):
+def point_raw(grid, index = None, points_root = None, cache_array = True):
     """Returns element from points data, indexed as in the hdf5 file; can optionally be used to cache points data.
 
     arguments:
@@ -151,23 +150,23 @@ def point_raw(grid, index=None, points_root=None, cache_array=True):
     """
 
     # NB: shape of index depends on whether grid has split pillars
-    if index is not None and not geometry_defined_for_all_pillars(grid, cache_array=cache_array):
+    if index is not None and not geometry_defined_for_all_pillars(grid, cache_array = cache_array):
         if len(index) == 3:
             ji = tuple(index[1:])
         else:
             ji = tuple(divmod(index[1], grid.ni))
-        if ji[0] < grid.nj and not pillar_geometry_is_defined(grid, ji, cache_array=cache_array):
+        if ji[0] < grid.nj and not pillar_geometry_is_defined(grid, ji, cache_array = cache_array):
             return None
     if grid.points_cached is not None:
         if index is None:
             return grid.points_cached
         return grid.points_cached[tuple(index)]
-    p_root = grid.resolve_geometry_child('Points', child_node=points_root)
+    p_root = grid.resolve_geometry_child('Points', child_node = points_root)
     if p_root is None:
         log.debug('point_raw() returning None as geometry not present')
         return None  # geometry not present
     assert rqet.node_type(p_root) == 'Point3dHdf5Array'
-    h5_key_pair = grid.model.h5_uuid_and_path_for_node(p_root, tag='Coordinates')
+    h5_key_pair = grid.model.h5_uuid_and_path_for_node(p_root, tag = 'Coordinates')
     if h5_key_pair is None:
         return None
     if grid.has_split_coordinate_lines:
@@ -176,11 +175,11 @@ def point_raw(grid, index=None, points_root=None, cache_array=True):
         required_shape = (grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3)
     try:
         value = grid.model.h5_array_element(h5_key_pair,
-                                            index=index,
-                                            cache_array=cache_array,
-                                            object=grid,
-                                            array_attribute='points_cached',
-                                            required_shape=required_shape)
+                                            index = index,
+                                            cache_array = cache_array,
+                                            object = grid,
+                                            array_attribute = 'points_cached',
+                                            required_shape = required_shape)
     except Exception:
         log.error('hdf5 points failure for index: ' + str(index))
         raise
@@ -189,11 +188,7 @@ def point_raw(grid, index=None, points_root=None, cache_array=True):
     return value
 
 
-def point(grid,
-          cell_kji0=None,
-          corner_index=np.zeros(3, dtype='int'),
-          points_root=None,
-          cache_array=True):
+def point(grid, cell_kji0 = None, corner_index = np.zeros(3, dtype = 'int'), points_root = None, cache_array = True):
     """Return a cell corner point xyz; can optionally be used to cache points data.
 
     arguments:
@@ -211,31 +206,31 @@ def point(grid,
     """
 
     if cache_array and grid.points_cached is None:
-        grid.point_raw(points_root=points_root, cache_array=True)
+        grid.point_raw(points_root = points_root, cache_array = True)
     if cell_kji0 is None:
         return None
     if grid.k_raw_index_array is None:
         grid.extract_k_gaps()
     if not geometry_defined_for_all_cells(grid):
-        if not cell_geometry_is_defined(grid, cell_kji0=cell_kji0, cache_array=cache_array):
+        if not cell_geometry_is_defined(grid, cell_kji0 = cell_kji0, cache_array = cache_array):
             return None
-    p_root = grid.resolve_geometry_child('Points', child_node=points_root)
+    p_root = grid.resolve_geometry_child('Points', child_node = points_root)
     #      if p_root is None: return None  # geometry not present
-    index = np.zeros(3, dtype=int)
+    index = np.zeros(3, dtype = int)
     index[:] = cell_kji0
     index[0] = grid.k_raw_index_array[index[0]]  # adjust for k gaps
     if grid.has_split_coordinate_lines:
         grid.create_column_pillar_mapping()
         pillar_index = grid.pillars_for_column[index[1], index[2], corner_index[1], corner_index[2]]
-        return grid.point_raw(index=(index[0] + corner_index[0], pillar_index),
-                              points_root=p_root,
-                              cache_array=cache_array)
+        return grid.point_raw(index = (index[0] + corner_index[0], pillar_index),
+                              points_root = p_root,
+                              cache_array = cache_array)
     else:
         index[:] += corner_index
-        return grid.point_raw(index=index, points_root=p_root, cache_array=cache_array)
+        return grid.point_raw(index = index, points_root = p_root, cache_array = cache_array)
 
 
-def points_ref(grid, masked=True):
+def points_ref(grid, masked = True):
     """Returns an in-memory numpy array containing the xyz data for points used in the grid geometry.
 
     argument:
@@ -257,7 +252,7 @@ def points_ref(grid, masked=True):
     """
 
     if grid.points_cached is None:
-        grid.point_raw(cache_array=True)
+        grid.point_raw(cache_array = True)
         if grid.points_cached is None:
             return None
     if not masked:
@@ -278,7 +273,7 @@ def uncache_points(grid):
         grid.points_cached = None
 
 
-def unsplit_points_ref(grid, cache_array=False, masked=False):
+def unsplit_points_ref(grid, cache_array = False, masked = False):
     """Returns a copy of the points array that has split pillars merged back into an unsplit configuration.
 
     arguments:
@@ -298,7 +293,7 @@ def unsplit_points_ref(grid, cache_array=False, masked=False):
 
     if hasattr(grid, 'array_unsplit_points'):
         return grid.array_unsplit_points
-    points = grid.points_ref(masked=masked)
+    points = grid.points_ref(masked = masked)
     if not grid.has_split_coordinate_lines:
         if cache_array:
             grid.array_unsplit_points = points.copy()
@@ -316,8 +311,8 @@ def unsplit_points_ref(grid, cache_array=False, masked=False):
     pfc_10 = grid.pillars_for_column[:-1, 1:, 1, 0]
     pfc_01 = grid.pillars_for_column[1:, :-1, 0, 1]
     pfc_00 = grid.pillars_for_column[1:, 1:, 0, 0]
-    result[:, 1:-1, 1:-1, :] = 0.25 * (points[:, pfc_11, :] + points[:, pfc_10, :] + points[:, pfc_01, :] +
-                                       points[:, pfc_00, :])
+    result[:, 1:-1,
+           1:-1, :] = 0.25 * (points[:, pfc_11, :] + points[:, pfc_10, :] + points[:, pfc_01, :] + points[:, pfc_00, :])
     # edges
     # todo: use numpy array operations instead of for loops (see lines above for example code)
     for j in range(1, grid.nj):
@@ -341,7 +336,7 @@ def unsplit_points_ref(grid, cache_array=False, masked=False):
     return result
 
 
-def horizon_points(grid, ref_k0=0, heal_faults=False, kp=0):
+def horizon_points(grid, ref_k0 = 0, heal_faults = False, kp = 0):
     """Returns reference to a points layer array of shape ((nj + 1), (ni + 1), 3) based on primary pillars.
 
     arguments:
@@ -379,14 +374,14 @@ def horizon_points(grid, ref_k0=0, heal_faults=False, kp=0):
             points = grid.unsplit_points_ref()  # expensive operation: would be better to cache the unsplit points
             return points[ref_k0, :, :, :].reshape((pe_j, pe_i, 3))
         else:
-            points = grid.points_ref(masked=False)
+            points = grid.points_ref(masked = False)
             return points[ref_k0, :pe_j * pe_i, :].reshape((pe_j, pe_i, 3))
     # unfaulted grid
-    points = grid.points_ref(masked=False)
+    points = grid.points_ref(masked = False)
     return points[ref_k0, :, :, :].reshape((pe_j, pe_i, 3))
 
 
-def split_horizon_points(grid, ref_k0=0, masked=False, kp=0):
+def split_horizon_points(grid, ref_k0 = 0, masked = False, kp = 0):
     """Returns reference to a corner points for a horizon, of shape (nj, ni, 2, 2, 3).
 
     arguments:
@@ -410,7 +405,7 @@ def split_horizon_points(grid, ref_k0=0, masked=False, kp=0):
     if grid.k_gaps:
         ref_k0 = grid.k_raw_index_array[ref_k0]
     ref_k0 += kp
-    points = grid.points_ref(masked=masked)
+    points = grid.points_ref(masked = masked)
     hp = np.empty((grid.nj, grid.ni, 2, 2, 3))
     if grid.has_split_coordinate_lines:
         assert points.ndim == 3
@@ -432,7 +427,7 @@ def split_horizon_points(grid, ref_k0=0, masked=False, kp=0):
     return hp
 
 
-def split_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked=False):
+def split_x_section_points(grid, axis, ref_slice0 = 0, plus_face = False, masked = False):
     """Returns an array of points representing cell corners from an I or J interface slice for a faulted grid.
 
     arguments:
@@ -454,7 +449,7 @@ def split_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked=Fal
     assert axis.upper() in ['I', 'J']
     assert not grid.k_gaps, 'split_x_section_points() method is for grids without k gaps; use split_gap_x_section_points()'
 
-    points = grid.points_ref(masked=masked)
+    points = grid.points_ref(masked = masked)
     cpm = grid.create_column_pillar_mapping()
 
     ij_p = 1 if plus_face else 0
@@ -465,7 +460,7 @@ def split_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked=Fal
         return points[:, cpm[ref_slice0, :, ij_p, :], :]
 
 
-def split_gap_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked=False):
+def split_gap_x_section_points(grid, axis, ref_slice0 = 0, plus_face = False, masked = False):
     """Return array of points representing cell corners from an I or J interface slice for a faulted grid.
 
     arguments:
@@ -487,9 +482,9 @@ def split_gap_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked
     assert axis.upper() in ['I', 'J']
 
     if grid.has_split_coordinate_lines:
-        points = grid.points_ref(masked=masked)
+        points = grid.points_ref(masked = masked)
     else:
-        points = grid.points_ref(masked=masked).reshape((grid.nk_plus_k_gaps, (grid.nj + 1) * (grid.ni + 1), 3))
+        points = grid.points_ref(masked = masked).reshape((grid.nk_plus_k_gaps, (grid.nj + 1) * (grid.ni + 1), 3))
     cpm = grid.create_column_pillar_mapping()
 
     ij_p = 1 if plus_face else 0
@@ -504,13 +499,13 @@ def split_gap_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked
             top = top_points[:, cpm[ref_slice0, :, ij_p, :], :]
             base = base_points[:, cpm[ref_slice0, :, ij_p, :], :]
     else:
-        p = grid.split_x_section_points(axis, ref_slice0=ref_slice0, plus_face=plus_face, masked=masked)
+        p = grid.split_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
         top = p[:-1]
         base = p[1:]
-    return np.stack((top, base), axis=2)
+    return np.stack((top, base), axis = 2)
 
 
-def unsplit_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked=False):
+def unsplit_x_section_points(grid, axis, ref_slice0 = 0, plus_face = False, masked = False):
     """Returns a 2D (+1 for xyz) array of points representing cell corners from an I or J interface slice.
 
     arguments:
@@ -537,7 +532,7 @@ def unsplit_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked=F
     if plus_face:
         ref_slice0 += 1
 
-    points = grid.points_ref(masked=masked)
+    points = grid.points_ref(masked = masked)
 
     if axis.upper() == 'I':
         return points[:, :, ref_slice0, :]
@@ -547,11 +542,11 @@ def unsplit_x_section_points(grid, axis, ref_slice0=0, plus_face=False, masked=F
 
 def x_section_corner_points(grid,
                             axis,
-                            ref_slice0=0,
-                            plus_face=False,
-                            masked=False,
-                            rotate=False,
-                            azimuth=None):
+                            ref_slice0 = 0,
+                            plus_face = False,
+                            masked = False,
+                            rotate = False,
+                            azimuth = None):
     """Returns a fully expanded array of points representing cell corners from an I or J interface slice.
 
     arguments:
@@ -580,24 +575,21 @@ def x_section_corner_points(grid,
     nj_or_ni = grid.nj if axis.upper() == 'I' else grid.ni
 
     if grid.k_gaps:
-        x_sect = grid.split_gap_x_section_points(axis,
-                                                 ref_slice0=ref_slice0,
-                                                 plus_face=plus_face,
-                                                 masked=masked)
+        x_sect = grid.split_gap_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
     else:
         if grid.has_split_coordinate_lines:
             no_k_gap_xs = grid.split_x_section_points(axis,
-                                                      ref_slice0=ref_slice0,
-                                                      plus_face=plus_face,
-                                                      masked=masked)
+                                                      ref_slice0 = ref_slice0,
+                                                      plus_face = plus_face,
+                                                      masked = masked)
             x_sect = np.empty((grid.nk, nj_or_ni, 2, 2, 3))
             x_sect[:, :, 0, :, :] = no_k_gap_xs[:-1, :, :, :]
             x_sect[:, :, 1, :, :] = no_k_gap_xs[1:, :, :, :]
         else:
             simple_xs = grid.unsplit_x_section_points(axis,
-                                                      ref_slice0=ref_slice0,
-                                                      plus_face=plus_face,
-                                                      masked=masked)
+                                                      ref_slice0 = ref_slice0,
+                                                      plus_face = plus_face,
+                                                      masked = masked)
             x_sect = np.empty((grid.nk, nj_or_ni, 2, 2, 3))
             x_sect[:, :, 0, 0, :] = simple_xs[:-1, :-1, :]
             x_sect[:, :, 1, 0, :] = simple_xs[1:, :-1, :]
@@ -606,7 +598,7 @@ def x_section_corner_points(grid,
 
     if rotate:
         if azimuth is None:
-            direction = vec.points_direction_vector(x_sect, axis=1)
+            direction = vec.points_direction_vector(x_sect, axis = 1)
         else:
             direction = vec.unit_vector_from_azimuth(azimuth)
         x_sect = vec.rotate_xyz_array_around_z_axis(x_sect, direction)
@@ -616,7 +608,7 @@ def x_section_corner_points(grid,
     return x_sect
 
 
-def pixel_map_for_split_horizon_points(grid, horizon_points, origin, width, height, dx, dy=None):
+def pixel_map_for_split_horizon_points(grid, horizon_points, origin, width, height, dx, dy = None):
     """Makes a mapping from pixels to cell j, i indices, based on split horizon points for a single horizon.
 
     args:
@@ -642,7 +634,7 @@ def pixel_map_for_split_horizon_points(grid, horizon_points, origin, width, heig
 
     #     north_east = np.array(origin) + np.array((width * dx, height * dy))
 
-    p_map = np.full((height, width, 2), -1, dtype=int)
+    p_map = np.full((height, width, 2), -1, dtype = int)
 
     # switch from logical corner ordering to polygon ordering
     poly_points = horizon_points[..., :2].copy()
@@ -651,16 +643,16 @@ def pixel_map_for_split_horizon_points(grid, horizon_points, origin, width, heig
     poly_points = poly_points.reshape(horizon_points.shape[0], horizon_points.shape[1], 4, 2)
 
     poly_box = np.empty((2, 2))
-    patch_p_origin = np.empty((2,), dtype=int)  # NB. ordering is (ncol, nrow)
+    patch_p_origin = np.empty((2,), dtype = int)  # NB. ordering is (ncol, nrow)
     patch_origin = np.empty((2,))
-    patch_extent = np.empty((2,), dtype=int)  # NB. ordering is (ncol, nrow)
+    patch_extent = np.empty((2,), dtype = int)  # NB. ordering is (ncol, nrow)
 
     for j in range(poly_points.shape[0]):
         for i in range(poly_points.shape[1]):
             if np.any(np.isnan(poly_points[j, i])):
                 continue
-            poly_box[0] = np.min(poly_points[j, i], axis=0) - half_d
-            poly_box[1] = np.max(poly_points[j, i], axis=0) + half_d
+            poly_box[0] = np.min(poly_points[j, i], axis = 0) - half_d
+            poly_box[1] = np.max(poly_points[j, i], axis = 0) + half_d
             patch_p_origin[:] = (poly_box[0] - origin) / (dx, dy)
             if patch_p_origin[0] < 0 or patch_p_origin[1] < 0:
                 continue
@@ -669,10 +661,10 @@ def pixel_map_for_split_horizon_points(grid, horizon_points, origin, width, heig
                 continue
             patch_origin = origin + d * patch_p_origin + half_d
             scan_mask = pip.scan(patch_origin, patch_extent[0], patch_extent[1], dx, dy, poly_points[j, i])
-            patch_mask = np.stack((scan_mask, scan_mask), axis=-1)
+            patch_mask = np.stack((scan_mask, scan_mask), axis = -1)
             old_patch = p_map[patch_p_origin[1]:patch_p_origin[1] + patch_extent[1],
-                        patch_p_origin[0]:patch_p_origin[0] + patch_extent[0], :].copy()
-            new_patch = np.empty(old_patch.shape, dtype=int)
+                              patch_p_origin[0]:patch_p_origin[0] + patch_extent[0], :].copy()
+            new_patch = np.empty(old_patch.shape, dtype = int)
             new_patch[:, :] = (j, i)
             p_map[patch_p_origin[1]:patch_p_origin[1] + patch_extent[1],
             patch_p_origin[0]:patch_p_origin[0] + patch_extent[0], :] = \
@@ -687,7 +679,7 @@ def coordinate_line_end_points(grid):
        numpy float array of shape (nj + 1, ni + 1, 2, 3)
     """
 
-    points = grid.points_ref(masked=False).reshape((grid.nk + 1, -1, 3))
+    points = grid.points_ref(masked = False).reshape((grid.nk + 1, -1, 3))
     primary_pillar_count = (grid.nj + 1) * (grid.ni + 1)
     result = np.empty((grid.nj + 1, grid.ni + 1, 2, 3))
     result[:, :, 0, :] = points[0, :primary_pillar_count, :].reshape((grid.nj + 1, grid.ni + 1, 3))
@@ -695,7 +687,7 @@ def coordinate_line_end_points(grid):
     return result
 
 
-def z_corner_point_depths(grid, order='cellular'):
+def z_corner_point_depths(grid, order = 'cellular'):
     """Returns the z (depth) values of each corner of each cell.
 
     arguments:
@@ -720,17 +712,13 @@ def z_corner_point_depths(grid, order='cellular'):
             for j in range(grid.nj):
                 for i in range(grid.ni):
                     z_cp[:, j, i, 0, 0, 0] = points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 0, 0], 2]
-                    z_cp[:, j, i, 1, 0, 0] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 0],
-                                                    2]
+                    z_cp[:, j, i, 1, 0, 0] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 0], 2]
                     z_cp[:, j, i, 0, 1, 0] = points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 1, 0], 2]
-                    z_cp[:, j, i, 1, 1, 0] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 0],
-                                                    2]
+                    z_cp[:, j, i, 1, 1, 0] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 0], 2]
                     z_cp[:, j, i, 0, 0, 1] = points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 0, 1], 2]
-                    z_cp[:, j, i, 1, 0, 1] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 1],
-                                                    2]
+                    z_cp[:, j, i, 1, 0, 1] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 1], 2]
                     z_cp[:, j, i, 0, 1, 1] = points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 1, 1], 2]
-                    z_cp[:, j, i, 1, 1, 1] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 1],
-                                                    2]
+                    z_cp[:, j, i, 1, 1, 1] = points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 1], 2]
         else:
             for j in range(grid.nj):
                 for i in range(grid.ni):
@@ -763,11 +751,11 @@ def z_corner_point_depths(grid, order='cellular'):
             z_cp[:, :, :, 1, 1, 1] = points[1:, 1:, 1:, 2]
 
     if order == 'linear':
-        return np.transpose(z_cp, axes=(0, 3, 1, 4, 2, 5))
+        return np.transpose(z_cp, axes = (0, 3, 1, 4, 2, 5))
     return z_cp
 
 
-def corner_points(grid, cell_kji0=None, points_root=None, cache_resqml_array=True, cache_cp_array=False):
+def corner_points(grid, cell_kji0 = None, points_root = None, cache_resqml_array = True, cache_cp_array = False):
     """Returns a numpy array of corner points for a single cell or the whole grid.
 
     notes:
@@ -787,9 +775,9 @@ def corner_points(grid, cell_kji0=None, points_root=None, cache_resqml_array=Tru
     def one_cell_cp(grid, cell_kji0, points_root, cache_array):
         cp = np.full((2, 2, 2, 3), np.NaN)
         if not grid.geometry_defined_for_all_cells():
-            if not grid.cell_geometry_is_defined(cell_kji0, cache_array=cache_array):
+            if not grid.cell_geometry_is_defined(cell_kji0, cache_array = cache_array):
                 return cp
-        corner_index = np.zeros(3, dtype='int')
+        corner_index = np.zeros(3, dtype = 'int')
         for kp in range(2):
             corner_index[0] = kp
             for jp in range(2):
@@ -797,9 +785,9 @@ def corner_points(grid, cell_kji0=None, points_root=None, cache_resqml_array=Tru
                 for ip in range(2):
                     corner_index[2] = ip
                     one_point = grid.point(cell_kji0,
-                                           corner_index=corner_index,
-                                           points_root=points_root,
-                                           cache_array=cache_array)
+                                           corner_index = corner_index,
+                                           points_root = points_root,
+                                           cache_array = cache_array)
                     if one_point is not None:
                         cp[kp, jp, ip] = one_point
         return cp
@@ -810,10 +798,10 @@ def corner_points(grid, cell_kji0=None, points_root=None, cache_resqml_array=Tru
         if cell_kji0 is None:
             return grid.array_corner_points
         return grid.array_corner_points[tuple(cell_kji0)]
-    points_root = grid.resolve_geometry_child('Points', child_node=points_root)
+    points_root = grid.resolve_geometry_child('Points', child_node = points_root)
     #      if points_root is None: return None  # geometry not present
     if cache_resqml_array:
-        grid.point_raw(points_root=points_root, cache_array=True)
+        grid.point_raw(points_root = points_root, cache_array = True)
     if cache_cp_array:
         grid.array_corner_points = np.zeros((grid.nk, grid.nj, grid.ni, 2, 2, 2, 3))
         points = grid.points_ref()
@@ -826,29 +814,21 @@ def corner_points(grid, cell_kji0=None, points_root=None, cache_resqml_array=Tru
                 for j in range(grid.nj):
                     for i in range(grid.ni):
                         grid.array_corner_points[:, j, i, 0, 0, 0, :] = points[grid.k_raw_index_array,
-                                                                        grid.pillars_for_column[j, i, 0,
-                                                                                                0], :]
+                                                                               grid.pillars_for_column[j, i, 0, 0], :]
                         grid.array_corner_points[:, j, i, 1, 0, 0, :] = points[grid.k_raw_index_array + 1,
-                                                                        grid.pillars_for_column[j, i, 0,
-                                                                                                0], :]
+                                                                               grid.pillars_for_column[j, i, 0, 0], :]
                         grid.array_corner_points[:, j, i, 0, 1, 0, :] = points[grid.k_raw_index_array,
-                                                                        grid.pillars_for_column[j, i, 1,
-                                                                                                0], :]
+                                                                               grid.pillars_for_column[j, i, 1, 0], :]
                         grid.array_corner_points[:, j, i, 1, 1, 0, :] = points[grid.k_raw_index_array + 1,
-                                                                        grid.pillars_for_column[j, i, 1,
-                                                                                                0], :]
+                                                                               grid.pillars_for_column[j, i, 1, 0], :]
                         grid.array_corner_points[:, j, i, 0, 0, 1, :] = points[grid.k_raw_index_array,
-                                                                        grid.pillars_for_column[j, i, 0,
-                                                                                                1], :]
+                                                                               grid.pillars_for_column[j, i, 0, 1], :]
                         grid.array_corner_points[:, j, i, 1, 0, 1, :] = points[grid.k_raw_index_array + 1,
-                                                                        grid.pillars_for_column[j, i, 0,
-                                                                                                1], :]
+                                                                               grid.pillars_for_column[j, i, 0, 1], :]
                         grid.array_corner_points[:, j, i, 0, 1, 1, :] = points[grid.k_raw_index_array,
-                                                                        grid.pillars_for_column[j, i, 1,
-                                                                                                1], :]
+                                                                               grid.pillars_for_column[j, i, 1, 1], :]
                         grid.array_corner_points[:, j, i, 1, 1, 1, :] = points[grid.k_raw_index_array + 1,
-                                                                        grid.pillars_for_column[j, i, 1,
-                                                                                                1], :]
+                                                                               grid.pillars_for_column[j, i, 1, 1], :]
             else:
                 for j in range(grid.nj):
                     for i in range(grid.ni):
@@ -890,11 +870,11 @@ def corner_points(grid, cell_kji0=None, points_root=None, cache_resqml_array=Tru
     if cell_kji0 is None:
         return grid.array_corner_points
     if not geometry_defined_for_all_cells(grid):
-        if not cell_geometry_is_defined(grid, cell_kji0, cache_array=cache_resqml_array):
+        if not cell_geometry_is_defined(grid, cell_kji0, cache_array = cache_resqml_array):
             return None
     if hasattr(grid, 'array_corner_points'):
         return grid.array_corner_points[tuple(cell_kji0)]
-    cp = one_cell_cp(grid, cell_kji0, points_root=points_root, cache_array=cache_resqml_array)
+    cp = one_cell_cp(grid, cell_kji0, points_root = points_root, cache_array = cache_resqml_array)
     return cp
 
 
@@ -907,7 +887,7 @@ def invalidate_corner_points(grid):
         delattr(grid, 'array_corner_points')
 
 
-def centre_point(grid, cell_kji0=None, cache_centre_array=False):
+def centre_point(grid, cell_kji0 = None, cache_centre_array = False):
     """Returns centre point of a cell or array of centre points of all cells.
 
     Optionally cache centre points for all cells.
@@ -939,10 +919,10 @@ def centre_point(grid, cell_kji0=None, cache_centre_array=False):
     if cache_centre_array:
         # todo: turn off nan warnings
         grid.array_centre_point = np.empty((grid.nk, grid.nj, grid.ni, 3))
-        points = grid.points_ref(masked=False)  # todo: think about masking
+        points = grid.points_ref(masked = False)  # todo: think about masking
         if hasattr(grid, 'array_corner_points'):
             grid.array_centre_point = 0.125 * np.sum(grid.array_corner_points,
-                                                     axis=(3, 4, 5))  # mean of eight corner points for each cell
+                                                     axis = (3, 4, 5))  # mean of eight corner points for each cell
         elif grid.has_split_coordinate_lines:
             # todo: replace j,i for loops with numpy broadcasting
             grid.create_column_pillar_mapping()
@@ -950,35 +930,33 @@ def centre_point(grid, cell_kji0=None, cache_centre_array=False):
                 for j in range(grid.nj):
                     for i in range(grid.ni):
                         grid.array_centre_point[:, j, i, :] = 0.125 * (
-                                points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 0, 0], :] +
-                                points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 0], :] +
-                                points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 1, 0], :] +
-                                points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 0], :] +
-                                points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 0, 1], :] +
-                                points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 1], :] +
-                                points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 1, 1], :] +
-                                points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 1], :])
+                            points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 0, 0], :] +
+                            points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 0], :] +
+                            points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 1, 0], :] +
+                            points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 0], :] +
+                            points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 0, 1], :] +
+                            points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 0, 1], :] +
+                            points[grid.k_raw_index_array, grid.pillars_for_column[j, i, 1, 1], :] +
+                            points[grid.k_raw_index_array + 1, grid.pillars_for_column[j, i, 1, 1], :])
             else:
                 for j in range(grid.nj):
                     for i in range(grid.ni):
-                        grid.array_centre_point[:, j, i, :] = 0.125 * (
-                                points[:-1, grid.pillars_for_column[j, i, 0, 0], :] +
-                                points[1:, grid.pillars_for_column[j, i, 0, 0], :] +
-                                points[:-1, grid.pillars_for_column[j, i, 1, 0], :] +
-                                points[1:, grid.pillars_for_column[j, i, 1, 0], :] +
-                                points[:-1, grid.pillars_for_column[j, i, 0, 1], :] +
-                                points[1:, grid.pillars_for_column[j, i, 0, 1], :] +
-                                points[:-1, grid.pillars_for_column[j, i, 1, 1], :] +
-                                points[1:, grid.pillars_for_column[j, i, 1, 1], :])
+                        grid.array_centre_point[:, j,
+                                                i, :] = 0.125 * (points[:-1, grid.pillars_for_column[j, i, 0, 0], :] +
+                                                                 points[1:, grid.pillars_for_column[j, i, 0, 0], :] +
+                                                                 points[:-1, grid.pillars_for_column[j, i, 1, 0], :] +
+                                                                 points[1:, grid.pillars_for_column[j, i, 1, 0], :] +
+                                                                 points[:-1, grid.pillars_for_column[j, i, 0, 1], :] +
+                                                                 points[1:, grid.pillars_for_column[j, i, 0, 1], :] +
+                                                                 points[:-1, grid.pillars_for_column[j, i, 1, 1], :] +
+                                                                 points[1:, grid.pillars_for_column[j, i, 1, 1], :])
         else:
             if grid.k_gaps:
                 grid.array_centre_point[:, :, :, :] = 0.125 * (
-                        points[grid.k_raw_index_array, :-1, :-1, :] + points[grid.k_raw_index_array, :-1, 1:, :] +
-                        points[grid.k_raw_index_array, 1:, :-1, :] + points[grid.k_raw_index_array, 1:, 1:, :] +
-                        points[grid.k_raw_index_array + 1, :-1, :-1, :] +
-                        points[grid.k_raw_index_array + 1, :-1, 1:, :] +
-                        points[grid.k_raw_index_array + 1, 1:, :-1, :] + points[grid.k_raw_index_array + 1, 1:, 1:,
-                                                                         :])
+                    points[grid.k_raw_index_array, :-1, :-1, :] + points[grid.k_raw_index_array, :-1, 1:, :] +
+                    points[grid.k_raw_index_array, 1:, :-1, :] + points[grid.k_raw_index_array, 1:, 1:, :] +
+                    points[grid.k_raw_index_array + 1, :-1, :-1, :] + points[grid.k_raw_index_array + 1, :-1, 1:, :] +
+                    points[grid.k_raw_index_array + 1, 1:, :-1, :] + points[grid.k_raw_index_array + 1, 1:, 1:, :])
             else:
                 grid.array_centre_point[:, :, :, :] = 0.125 * (points[:-1, :-1, :-1, :] + points[:-1, :-1, 1:, :] +
                                                                points[:-1, 1:, :-1, :] + points[:-1, 1:, 1:, :] +
@@ -988,7 +966,7 @@ def centre_point(grid, cell_kji0=None, cache_centre_array=False):
             return grid.array_centre_point
         return grid.array_centre_point[cell_kji0[0], cell_kji0[1],
                                        cell_kji0[2]]  # could check for nan here and return None
-    cp = grid.corner_points(cell_kji0=cell_kji0, cache_cp_array=False)
+    cp = grid.corner_points(cell_kji0 = cell_kji0, cache_cp_array = False)
     if cp is None:
         return None
     centre = np.zeros(3)
@@ -1014,11 +992,11 @@ def centre_point_list(grid, cell_kji0s):
     assert cell_kji0s.ndim == 2 and cell_kji0s.shape[1] == 3
     centres_list = np.empty(cell_kji0s.shape)
     for cell in range(len(cell_kji0s)):
-        centres_list[cell] = grid.centre_point(cell_kji0=cell_kji0s[cell], cache_centre_array=True)
+        centres_list[cell] = grid.centre_point(cell_kji0 = cell_kji0s[cell], cache_centre_array = True)
     return centres_list
 
 
-def point_areally(grid, tolerance=0.001):
+def point_areally(grid, tolerance = 0.001):
     """Returns array indicating which cells are reduced to a point in both I & J axes.
 
         Returns:
@@ -1028,7 +1006,7 @@ def point_areally(grid, tolerance=0.001):
            Any NaN point values will yield True for a cell
         """
 
-    points = grid.points_ref(masked=False)
+    points = grid.points_ref(masked = False)
     # todo: turn off NaN warning for numpy > ?
     if grid.has_split_coordinate_lines:
         pillar_for_col = grid.create_column_pillar_mapping()
@@ -1036,20 +1014,20 @@ def point_areally(grid, tolerance=0.001):
         i_pair_vectors = points[:, pillar_for_col[:, :, :, 1], :] - points[:, pillar_for_col[:, :, :, 0], :]
         j_pair_nans = np.isnan(j_pair_vectors)
         i_pair_nans = np.isnan(i_pair_vectors)
-        any_nans = np.any(np.logical_or(j_pair_nans, i_pair_nans), axis=(3, 4))
-        j_pair_extant = np.any(np.abs(j_pair_vectors) > tolerance, axis=-1)
-        i_pair_extant = np.any(np.abs(i_pair_vectors) > tolerance, axis=-1)
-        any_extant = np.any(np.logical_or(j_pair_extant, i_pair_extant), axis=3)
+        any_nans = np.any(np.logical_or(j_pair_nans, i_pair_nans), axis = (3, 4))
+        j_pair_extant = np.any(np.abs(j_pair_vectors) > tolerance, axis = -1)
+        i_pair_extant = np.any(np.abs(i_pair_vectors) > tolerance, axis = -1)
+        any_extant = np.any(np.logical_or(j_pair_extant, i_pair_extant), axis = 3)
     else:
         j_vectors = points[:, 1:, :, :] - points[:, :-1, :, :]
         i_vectors = points[:, :, 1:, :] - points[:, :, :-1, :]
-        j_nans = np.any(np.isnan(j_vectors), axis=-1)
-        i_nans = np.any(np.isnan(i_vectors), axis=-1)
+        j_nans = np.any(np.isnan(j_vectors), axis = -1)
+        i_nans = np.any(np.isnan(i_vectors), axis = -1)
         j_pair_nans = np.logical_or(j_nans[:, :, :-1], j_nans[:, :, 1:])
         i_pair_nans = np.logical_or(i_nans[:, :-1, :], i_nans[:, 1:, :])
         any_nans = np.logical_or(j_pair_nans, i_pair_nans)
-        j_extant = np.any(np.abs(j_vectors) > tolerance, axis=-1)
-        i_extant = np.any(np.abs(i_vectors) > tolerance, axis=-1)
+        j_extant = np.any(np.abs(j_vectors) > tolerance, axis = -1)
+        i_extant = np.any(np.abs(i_vectors) > tolerance, axis = -1)
         j_pair_extant = np.logical_or(j_extant[:, :, :-1], j_extant[:, :, 1:])
         i_pair_extant = np.logical_or(i_extant[:, :-1, :], i_extant[:, 1:, :])
         any_extant = np.logical_or(j_pair_extant, i_pair_extant)
@@ -1062,9 +1040,9 @@ def point_areally(grid, tolerance=0.001):
 def interpolated_point(grid,
                        cell_kji0,
                        interpolation_fraction,
-                       points_root=None,
-                       cache_resqml_array=True,
-                       cache_cp_array=False):
+                       points_root = None,
+                       cache_resqml_array = True,
+                       cache_cp_array = False):
     """Returns xyz point interpolated from corners of cell.
 
     Depends on 3 interpolation fractions in range 0 to 1.
@@ -1076,9 +1054,9 @@ def interpolated_point(grid,
         fp[axis] = max(min(interpolation_fraction[axis], 1.0), 0.0)
         fm[axis] = 1.0 - fp[axis]
     cp = grid.corner_points(cell_kji0,
-                            points_root=points_root,
-                            cache_resqml_array=cache_resqml_array,
-                            cache_cp_array=cache_cp_array)
+                            points_root = points_root,
+                            cache_resqml_array = cache_resqml_array,
+                            cache_cp_array = cache_cp_array)
     c00 = (cp[0, 0, 0] * fm[0] + cp[1, 0, 0] * fp[0])
     c01 = (cp[0, 0, 1] * fm[0] + cp[1, 0, 1] * fp[0])
     c10 = (cp[0, 1, 0] * fm[0] + cp[1, 1, 0] * fp[0])
@@ -1092,9 +1070,9 @@ def interpolated_point(grid,
 def interpolated_points(grid,
                         cell_kji0,
                         interpolation_fractions,
-                        points_root=None,
-                        cache_resqml_array=True,
-                        cache_cp_array=False):
+                        points_root = None,
+                        cache_resqml_array = True,
+                        cache_cp_array = False):
     """Returns xyz points interpolated from corners of cell.
 
     Depending on 3 interpolation fraction numpy vectors, each value in range 0 to 1.
@@ -1124,9 +1102,9 @@ def interpolated_points(grid,
         fm.append(1.0 - fp[axis])
 
     cp = grid.corner_points(cell_kji0,
-                            points_root=points_root,
-                            cache_resqml_array=cache_resqml_array,
-                            cache_cp_array=cache_cp_array)
+                            points_root = points_root,
+                            cache_resqml_array = cache_resqml_array,
+                            cache_cp_array = cache_cp_array)
 
     c00 = (np.outer(fm[2], cp[0, 0, 0]) + np.outer(fp[2], cp[0, 0, 1]))
     c01 = (np.outer(fm[2], cp[0, 1, 0]) + np.outer(fp[2], cp[0, 1, 1]))

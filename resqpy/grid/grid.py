@@ -65,13 +65,13 @@ class Grid(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 uuid=None,
-                 grid_root=None,
-                 find_properties=True,
-                 geometry_required=True,
-                 title=None,
-                 originator=None,
-                 extra_metadata={}):
+                 uuid = None,
+                 grid_root = None,
+                 find_properties = True,
+                 geometry_required = True,
+                 title = None,
+                 originator = None,
+                 extra_metadata = {}):
         """Create a Grid object and optionally populate from xml tree.
 
         arguments:
@@ -134,12 +134,12 @@ class Grid(BaseResqpy):
         self.time_index = None  #: optional time index for dynamic geometry
         self.time_series_uuid = None  #: optional time series for dynamic geometry
 
-        super().__init__(model=parent_model,
-                         uuid=uuid,
-                         title=title,
-                         originator=originator,
-                         extra_metadata=extra_metadata,
-                         root_node=grid_root)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata,
+                         root_node = grid_root)
 
         if not self.title:
             self.title = 'ROOT'
@@ -190,7 +190,7 @@ class Grid(BaseResqpy):
         """Alias for root."""
         return self.root
 
-    def set_modified(self, update_xml=False, update_hdf5=False):
+    def set_modified(self, update_xml = False, update_hdf5 = False):
         """Assigns a new uuid to this grid; also calls set_modified() for parent model.
 
         arguments:
@@ -226,14 +226,14 @@ class Grid(BaseResqpy):
         if update_hdf5:
             hdf5_uuid_list = self.model.h5_uuid_list(self.root)
             for ext_uuid in hdf5_uuid_list:
-                hdf5_file = self.model.h5_access(ext_uuid, mode='r+')
+                hdf5_file = self.model.h5_access(ext_uuid, mode = 'r+')
                 rwh5.change_uuid(hdf5_file, old_uuid, self.uuid)
         if update_xml and update_hdf5:
             self.model.change_uuid_in_hdf5_references(self.root, old_uuid, self.uuid)
         self.model.set_modified()
         return self.uuid
 
-    def cell_count(self, active_only=False, non_pinched_out_only=False, geometry_defined_only=False):
+    def cell_count(self, active_only = False, non_pinched_out_only = False, geometry_defined_only = False):
         """Returns number of cells in grid; optionally limited by active, non-pinched-out, or having geometry.
 
         arguments:
@@ -251,7 +251,7 @@ class Grid(BaseResqpy):
         if not (active_only or non_pinched_out_only or geometry_defined_only):
             return np.prod(self.extent_kji)
         if non_pinched_out_only:
-            self.pinched_out(cache_pinchout_array=True)
+            self.pinched_out(cache_pinchout_array = True)
             return self.pinchout.size - np.count_nonzero(self.pinchout)
         if active_only:
             if self.all_inactive:
@@ -261,7 +261,7 @@ class Grid(BaseResqpy):
             else:
                 geometry_defined_only = True
         if geometry_defined_only:
-            if geometry_defined_for_all_cells(self, cache_array=True):
+            if geometry_defined_for_all_cells(self, cache_array = True):
                 return np.prod(self.extent_kji)
             return np.count_nonzero(self.array_cell_geometry_is_defined)
         return None
@@ -302,9 +302,9 @@ class Grid(BaseResqpy):
 
         k0s, ji0s = divmod(c0s, self.nj * self.ni)
         j0s, i0s = divmod(ji0s, self.ni)
-        return np.stack((k0s, j0s, i0s), axis=-1)
+        return np.stack((k0s, j0s, i0s), axis = -1)
 
-    def resolve_geometry_child(self, tag, child_node=None):
+    def resolve_geometry_child(self, tag, child_node = None):
         """If xml child node is None, looks for tag amongst children of geometry root.
 
         arguments:
@@ -330,7 +330,7 @@ class Grid(BaseResqpy):
            this method does not modify the grid_is_righthanded indicator
         """
 
-        p = self.points_ref(masked=False)
+        p = self.points_ref(masked = False)
         self.k_direction_is_down = True  # arbitrary default
         if p is not None:
             diff = np.nanmean(p[-1] - p[0])
@@ -343,7 +343,7 @@ class Grid(BaseResqpy):
         if self.k_gap_after_array is None:
             self.k_raw_index_array = None
             return
-        self.k_raw_index_array = np.empty((self.nk,), dtype=int)
+        self.k_raw_index_array = np.empty((self.nk,), dtype = int)
         gap_count = 0
         for k in range(self.nk):
             self.k_raw_index_array[k] = k + gap_count
@@ -373,7 +373,7 @@ class Grid(BaseResqpy):
             self.parent_window = parent_window
             self.is_refinement = self_is_refinement
 
-    def actual_pillar_shape(self, patch_metadata=False, tolerance=0.001):
+    def actual_pillar_shape(self, patch_metadata = False, tolerance = 0.001):
         """Returns actual shape of pillars.
 
         arguments:
@@ -389,7 +389,7 @@ class Grid(BaseResqpy):
            preserved unless the create_xml() method is called, followed at some point with model.store_epc()
         """
 
-        pillar_shape = gf.actual_pillar_shape(self.points_ref(masked=False), tolerance=tolerance)
+        pillar_shape = gf.actual_pillar_shape(self.points_ref(masked = False), tolerance = tolerance)
         if patch_metadata:
             self.pillar_shape = pillar_shape
         return pillar_shape
@@ -420,9 +420,9 @@ class Grid(BaseResqpy):
         """
 
         # todo: recheck the description of split pillar arrays given in the doc string
-        cell_geometry_is_defined(self, cache_array=True)
-        pillar_geometry_is_defined(self, cache_array=True)
-        self.point(cache_array=True)
+        cell_geometry_is_defined(self, cache_array = True)
+        pillar_geometry_is_defined(self, cache_array = True)
+        self.point(cache_array = True)
         if self.has_split_coordinate_lines:
             split_root = None
             if not hasattr(self, 'split_pillar_indices_cached'):
@@ -431,11 +431,11 @@ class Grid(BaseResqpy):
                 pillar_indices_root = rqet.find_tag(split_root, 'PillarIndices')
                 h5_key_pair = self.model.h5_uuid_and_path_for_node(pillar_indices_root)
                 self.model.h5_array_element(h5_key_pair,
-                                            index=None,
-                                            cache_array=True,
-                                            object=self,
-                                            array_attribute='split_pillar_indices_cached',
-                                            dtype='int')
+                                            index = None,
+                                            cache_array = True,
+                                            object = self,
+                                            array_attribute = 'split_pillar_indices_cached',
+                                            dtype = 'int')
             if not hasattr(self, 'cols_for_split_pillars'):
                 if split_root is None:
                     split_root = self.resolve_geometry_child('SplitCoordinateLines')
@@ -443,19 +443,19 @@ class Grid(BaseResqpy):
                 cpscl_elements_root = rqet.find_tag(cpscl_root, 'Elements')
                 h5_key_pair = self.model.h5_uuid_and_path_for_node(cpscl_elements_root)
                 self.model.h5_array_element(h5_key_pair,
-                                            index=None,
-                                            cache_array=True,
-                                            object=self,
-                                            array_attribute='cols_for_split_pillars',
-                                            dtype='int')
+                                            index = None,
+                                            cache_array = True,
+                                            object = self,
+                                            array_attribute = 'cols_for_split_pillars',
+                                            dtype = 'int')
                 cpscl_cum_length_root = rqet.find_tag(cpscl_root, 'CumulativeLength')
                 h5_key_pair = self.model.h5_uuid_and_path_for_node(cpscl_cum_length_root)
                 self.model.h5_array_element(h5_key_pair,
-                                            index=None,
-                                            cache_array=True,
-                                            object=self,
-                                            array_attribute='cols_for_split_pillars_cl',
-                                            dtype='int')
+                                            index = None,
+                                            cache_array = True,
+                                            object = self,
+                                            array_attribute = 'cols_for_split_pillars_cl',
+                                            dtype = 'int')
 
     def column_is_inactive(self, col_ji0):
         """Returns True if all the cells in the specified column are inactive.
@@ -498,14 +498,14 @@ class Grid(BaseResqpy):
 
         self.cache_all_geometry_arrays()
 
-        self.pillars_for_column = np.empty((self.nj, self.ni, 2, 2), dtype=int)
+        self.pillars_for_column = np.empty((self.nj, self.ni, 2, 2), dtype = int)
         ni_plus_1 = self.ni + 1
 
         for j in range(self.nj):
-            self.pillars_for_column[j, :, 0, 0] = np.arange(j * ni_plus_1, (j + 1) * ni_plus_1 - 1, dtype=int)
-            self.pillars_for_column[j, :, 0, 1] = np.arange(j * ni_plus_1 + 1, (j + 1) * ni_plus_1, dtype=int)
-            self.pillars_for_column[j, :, 1, 0] = np.arange((j + 1) * ni_plus_1, (j + 2) * ni_plus_1 - 1, dtype=int)
-            self.pillars_for_column[j, :, 1, 1] = np.arange((j + 1) * ni_plus_1 + 1, (j + 2) * ni_plus_1, dtype=int)
+            self.pillars_for_column[j, :, 0, 0] = np.arange(j * ni_plus_1, (j + 1) * ni_plus_1 - 1, dtype = int)
+            self.pillars_for_column[j, :, 0, 1] = np.arange(j * ni_plus_1 + 1, (j + 1) * ni_plus_1, dtype = int)
+            self.pillars_for_column[j, :, 1, 0] = np.arange((j + 1) * ni_plus_1, (j + 2) * ni_plus_1 - 1, dtype = int)
+            self.pillars_for_column[j, :, 1, 1] = np.arange((j + 1) * ni_plus_1 + 1, (j + 2) * ni_plus_1, dtype = int)
 
         if self.has_split_coordinate_lines:
             unsplit_pillar_count = (self.nj + 1) * ni_plus_1
@@ -528,7 +528,7 @@ class Grid(BaseResqpy):
 
         return self.pillars_for_column
 
-    def pillar_foursome(self, ji0, none_if_unsplit=False):
+    def pillar_foursome(self, ji0, none_if_unsplit = False):
         """Returns an int array of the natural pillar indices applicable to each column around primary.
 
         arguments:
@@ -548,7 +548,7 @@ class Grid(BaseResqpy):
         self.cache_all_geometry_arrays()
 
         primary = (self.ni + 1) * j0 + i0
-        foursome = np.full((2, 2), primary, dtype=int)  # axes are: jp, ip
+        foursome = np.full((2, 2), primary, dtype = int)  # axes are: jp, ip
         if not self.has_split_coordinate_lines:
             return None if none_if_unsplit else foursome
         extras = np.where(self.split_pillar_indices_cached == primary)[0]
@@ -587,7 +587,7 @@ class Grid(BaseResqpy):
         """
 
         log.debug('deriving cell edge vectors at top and base (for checking)')
-        self.point(cache_array=True)
+        self.point(cache_array = True)
         good = True
         if self.has_split_coordinate_lines:
             # build top and base I & J cell edge vectors
@@ -601,17 +601,17 @@ class Grid(BaseResqpy):
                 for i in range(self.ni):
                     for jip in range(2):  # serves as either jp or ip
                         top_j_edge_vectors_p[j, i, jip, :] = (
-                                self.points_cached[0, self.pillars_for_column[j, i, 1, jip], :2] -
-                                self.points_cached[0, self.pillars_for_column[j, i, 0, jip], :2])
+                            self.points_cached[0, self.pillars_for_column[j, i, 1, jip], :2] -
+                            self.points_cached[0, self.pillars_for_column[j, i, 0, jip], :2])
                         base_j_edge_vectors_p[j, i, jip, :] = (
-                                self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, 1, jip], :2] -
-                                self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, 0, jip], :2])
+                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, 1, jip], :2] -
+                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, 0, jip], :2])
                         top_i_edge_vectors_p[j, jip,
-                        i, :] = (self.points_cached[0, self.pillars_for_column[j, i, jip, 1], :2] -
-                                 self.points_cached[0, self.pillars_for_column[j, i, jip, 0], :2])
+                                             i, :] = (self.points_cached[0, self.pillars_for_column[j, i, jip, 1], :2] -
+                                                      self.points_cached[0, self.pillars_for_column[j, i, jip, 0], :2])
                         base_i_edge_vectors_p[j, jip, i, :] = (
-                                self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, jip, 1], :2] -
-                                self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, jip, 0], :2])
+                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, jip, 1], :2] -
+                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, jip, 0], :2])
             # reshape to allow common checking code with unsplit grid vectors (below)
             top_j_edge_vectors = top_j_edge_vectors_p.reshape((self.nj, 2 * self.ni, 2))
             top_i_edge_vectors = top_i_edge_vectors_p.reshape((2 * self.nj, self.ni, 2))
@@ -628,28 +628,28 @@ class Grid(BaseResqpy):
                 (self.nj + 1, self.ni, 2))
         log.debug('checking relative direction of top and base edges')
         # check direction of top edges against corresponding base edges, tolerate upto 90 degree difference
-        dot_j = np.sum(top_j_edge_vectors * base_j_edge_vectors, axis=2)
-        dot_i = np.sum(top_i_edge_vectors * base_i_edge_vectors, axis=2)
+        dot_j = np.sum(top_j_edge_vectors * base_j_edge_vectors, axis = 2)
+        dot_i = np.sum(top_i_edge_vectors * base_i_edge_vectors, axis = 2)
         if not np.all(dot_j >= 0.0) and np.all(dot_i >= 0.0):
             log.warning('one or more columns of cell edges flip direction: this grid is probably unusable')
             good = False
         log.debug('checking relative direction of edges in neighbouring cells at top of grid (and base)')
         # check direction of similar edges on neighbouring cells, tolerate upto 90 degree difference
-        dot_jp = np.sum(top_j_edge_vectors[1:, :, :] * top_j_edge_vectors[:-1, :, :], axis=2)
-        dot_ip = np.sum(top_i_edge_vectors[1:, :, :] * top_i_edge_vectors[:-1, :, :], axis=2)
+        dot_jp = np.sum(top_j_edge_vectors[1:, :, :] * top_j_edge_vectors[:-1, :, :], axis = 2)
+        dot_ip = np.sum(top_i_edge_vectors[1:, :, :] * top_i_edge_vectors[:-1, :, :], axis = 2)
         if not np.all(dot_jp >= 0.0) and np.all(dot_ip >= 0.0):
             log.warning(
                 'top cell edges for neighbouring cells flip direction somewhere: this grid is probably unusable')
             good = False
-        dot_jp = np.sum(base_j_edge_vectors[1:, :, :] * base_j_edge_vectors[:-1, :, :], axis=2)
-        dot_ip = np.sum(base_i_edge_vectors[1:, :, :] * base_i_edge_vectors[:-1, :, :], axis=2)
+        dot_jp = np.sum(base_j_edge_vectors[1:, :, :] * base_j_edge_vectors[:-1, :, :], axis = 2)
+        dot_ip = np.sum(base_i_edge_vectors[1:, :, :] * base_i_edge_vectors[:-1, :, :], axis = 2)
         if not np.all(dot_jp >= 0.0) and np.all(dot_ip >= 0.0):
             log.warning(
                 'base cell edges for neighbouring cells flip direction somewhere: this grid is probably unusable')
             good = False
         return good
 
-    def xyz_box(self, points_root=None, lazy=True, local=False):
+    def xyz_box(self, points_root = None, lazy = True, local = False):
         """Returns the minimum and maximum xyz for the grid geometry.
 
         arguments:
@@ -676,23 +676,23 @@ class Grid(BaseResqpy):
                 for kp in [0, 1]:
                     for jp in [0, 1]:
                         for ip in [0, 1]:
-                            eight_corners[kp, jp, ip] = self.point(cell_kji0=[
+                            eight_corners[kp, jp, ip] = self.point(cell_kji0 = [
                                 kp * (self.extent_kji[0] - 1), jp * (self.extent_kji[1] - 1),
                                 ip * (self.extent_kji[2] - 1)
                             ],
-                                corner_index=[kp, jp, ip],
-                                points_root=points_root,
-                                cache_array=False)
-                self.xyz_box_cached[0, :] = np.nanmin(eight_corners, axis=(0, 1, 2))
-                self.xyz_box_cached[1, :] = np.nanmax(eight_corners, axis=(0, 1, 2))
+                                                                   corner_index = [kp, jp, ip],
+                                                                   points_root = points_root,
+                                                                   cache_array = False)
+                self.xyz_box_cached[0, :] = np.nanmin(eight_corners, axis = (0, 1, 2))
+                self.xyz_box_cached[1, :] = np.nanmax(eight_corners, axis = (0, 1, 2))
             else:
                 ps = self.points_ref()
                 if self.has_split_coordinate_lines:
-                    self.xyz_box_cached[0, :] = np.nanmin(ps, axis=(0, 1))
-                    self.xyz_box_cached[1, :] = np.nanmax(ps, axis=(0, 1))
+                    self.xyz_box_cached[0, :] = np.nanmin(ps, axis = (0, 1))
+                    self.xyz_box_cached[1, :] = np.nanmax(ps, axis = (0, 1))
                 else:
-                    self.xyz_box_cached[0, :] = np.nanmin(ps, axis=(0, 1, 2))
-                    self.xyz_box_cached[1, :] = np.nanmax(ps, axis=(0, 1, 2))
+                    self.xyz_box_cached[0, :] = np.nanmin(ps, axis = (0, 1, 2))
+                    self.xyz_box_cached[1, :] = np.nanmax(ps, axis = (0, 1, 2))
             self.xyz_box_cached_thoroughly = not lazy
         if local:
             return self.xyz_box_cached
@@ -700,7 +700,7 @@ class Grid(BaseResqpy):
         self.local_to_global_crs(global_xyz_box, self.crs_root)
         return global_xyz_box
 
-    def xyz_box_centre(self, points_root=None, lazy=False, local=False):
+    def xyz_box_centre(self, points_root = None, lazy = False, local = False):
         """Returns the (x,y,z) point (as 3 element numpy) at the centre of the xyz box for the grid.
 
         arguments:
@@ -718,9 +718,9 @@ class Grid(BaseResqpy):
            the centre point returned is simply the midpoint of the x, y & z ranges of the grid
         """
 
-        return np.nanmean(self.xyz_box(points_root=points_root, lazy=lazy, local=local), axis=0)
+        return np.nanmean(self.xyz_box(points_root = points_root, lazy = lazy, local = local), axis = 0)
 
-    def pixel_maps(self, origin, width, height, dx, dy=None, k0=None, vertical_ref='top'):
+    def pixel_maps(self, origin, width, height, dx, dy = None, k0 = None, vertical_ref = 'top'):
         """Makes a mapping from pixels to cell j, i indices, based on split horizon points for a single horizon.
 
         args:
@@ -751,18 +751,18 @@ class Grid(BaseResqpy):
 
         kp = 0 if vertical_ref == 'top' else 1
         if k0 is not None:
-            hp = self.split_horizon_points(ref_k0=k0, masked=False, kp=kp)
-            p_map = self.pixel_map_for_split_horizon_points(hp, origin, width, height, dx, dy=dy)
+            hp = self.split_horizon_points(ref_k0 = k0, masked = False, kp = kp)
+            p_map = self.pixel_map_for_split_horizon_points(hp, origin, width, height, dx, dy = dy)
         else:
             _, _, raw_k = self.extract_k_gaps()
-            hp = self.split_horizons_points(masked=False)
-            p_map = np.empty((self.nk, height, width, 2), dtype=int)
+            hp = self.split_horizons_points(masked = False)
+            p_map = np.empty((self.nk, height, width, 2), dtype = int)
             for k0 in range(self.nk):
                 rk0 = raw_k[k0] + kp
-                p_map[k0] = self.pixel_map_for_split_horizon_points(hp[rk0], origin, width, height, dx, dy=dy)
+                p_map[k0] = self.pixel_map_for_split_horizon_points(hp[rk0], origin, width, height, dx, dy = dy)
         return p_map
 
-    def split_horizons_points(self, min_k0=None, max_k0=None, masked=False):
+    def split_horizons_points(self, min_k0 = None, max_k0 = None, masked = False):
         """Returns reference to a corner points layer of shape (nh, nj, ni, 2, 2, 3) where nh is number of horizons.
 
         arguments:
@@ -792,7 +792,7 @@ class Grid(BaseResqpy):
         else:
             assert max_k0 >= min_k0 and max_k0 <= self.nk_plus_k_gaps
         end_k0 = max_k0 + 1
-        points = self.points_ref(masked=False)
+        points = self.points_ref(masked = False)
         hp = np.empty((end_k0 - min_k0, self.nj, self.ni, 2, 2, 3))
         if self.has_split_coordinate_lines:
             self.create_column_pillar_mapping()
@@ -809,7 +809,7 @@ class Grid(BaseResqpy):
             hp[:, :, :, 1, 1, :] = points[min_k0:end_k0, 1:, 1:, :]
         return hp
 
-    def pillar_distances_sqr(self, xy, ref_k0=0, kp=0, horizon_points=None):
+    def pillar_distances_sqr(self, xy, ref_k0 = 0, kp = 0, horizon_points = None):
         """Returns array of the square of the distances of primary pillars in x,y plane to point xy.
 
         arguments:
@@ -823,35 +823,35 @@ class Grid(BaseResqpy):
         pe_j = self.extent_kji[1] + 1
         pe_i = self.extent_kji[2] + 1
         if horizon_points is None:
-            horizon_points = self.horizon_points(ref_k0=ref_k0, kp=kp)
+            horizon_points = self.horizon_points(ref_k0 = ref_k0, kp = kp)
         pillar_xy = horizon_points[:, :, 0:2]
         dxy = pillar_xy - xy
         dxy2 = dxy * dxy
         return (dxy2[:, :, 0] + dxy2[:, :, 1]).reshape((pe_j, pe_i))
 
-    def nearest_pillar(self, xy, ref_k0=0, kp=0):
+    def nearest_pillar(self, xy, ref_k0 = 0, kp = 0):
         """Returns the (j0, i0) indices of the primary pillar with point closest in x,y plane to point xy."""
 
         # note: currently works with unmasked data and using primary pillars only
         pe_i = self.extent_kji[2] + 1
-        sum_dxy2 = self.pillar_distances_sqr(xy, ref_k0=ref_k0, kp=kp)
+        sum_dxy2 = self.pillar_distances_sqr(xy, ref_k0 = ref_k0, kp = kp)
         ji = np.nanargmin(sum_dxy2)
         j, i = divmod(ji, pe_i)
         return (j, i)
 
-    def nearest_rod(self, xyz, projection, axis, ref_slice0=0, plus_face=False):
+    def nearest_rod(self, xyz, projection, axis, ref_slice0 = 0, plus_face = False):
         """Returns the (k0, j0) or (k0 ,i0) indices of the closest point(s) to xyz(s); projection is 'xy', 'xz' or 'yz'.
 
         note:
            currently only for unsplit grids
         """
 
-        x_sect = self.unsplit_x_section_points(axis, ref_slice0=ref_slice0, plus_face=plus_face)
+        x_sect = self.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
         if type(xyz) is np.ndarray and xyz.ndim > 1:
             assert xyz.shape[-1] == 3
             result_shape = list(xyz.shape)
             result_shape[-1] = 2
-            nearest = np.empty(tuple(result_shape), dtype=int).reshape((-1, 2))
+            nearest = np.empty(tuple(result_shape), dtype = int).reshape((-1, 2))
             for i, p in enumerate(xyz.reshape((-1, 3))):
                 nearest[i] = vec.nearest_point_projected(p, x_sect, projection)
             return nearest.reshape(tuple(result_shape))
@@ -859,12 +859,12 @@ class Grid(BaseResqpy):
             return vec.nearest_point_projected(xyz, x_sect, projection)
 
     def thickness(self,
-                  cell_kji0=None,
-                  points_root=None,
-                  cache_resqml_array=True,
-                  cache_cp_array=False,
-                  cache_thickness_array=True,
-                  property_collection=None):
+                  cell_kji0 = None,
+                  points_root = None,
+                  cache_resqml_array = True,
+                  cache_cp_array = False,
+                  cache_thickness_array = True,
+                  property_collection = None):
         """Returns vertical (z) thickness of cell and/or caches thicknesses for all cells.
 
         arguments:
@@ -899,17 +899,17 @@ class Grid(BaseResqpy):
         def load_from_property(collection):
             if collection is None:
                 return None
-            parts = collection.selective_parts_list(property_kind='thickness',
-                                                    facet_type='netgross',
-                                                    facet='gross')
+            parts = collection.selective_parts_list(property_kind = 'thickness',
+                                                    facet_type = 'netgross',
+                                                    facet = 'gross')
             if len(parts) == 1:
                 return collection.cached_part_array_ref(parts[0])
-            parts = collection.selective_parts_list(property_kind='thickness')
+            parts = collection.selective_parts_list(property_kind = 'thickness')
             if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
                 return collection.cached_part_array_ref(parts[0])
-            parts = collection.selective_parts_list(property_kind='cell length',
-                                                    facet_type='direction',
-                                                    facet='K')
+            parts = collection.selective_parts_list(property_kind = 'cell length',
+                                                    facet_type = 'direction',
+                                                    facet = 'K')
             if len(parts) == 1:
                 return collection.cached_part_array_ref(parts[0])
             return None
@@ -935,20 +935,20 @@ class Grid(BaseResqpy):
                 return self.array_thickness
             return self.array_thickness[tuple(cell_kji0)]  # could check for nan here and return None
 
-        points_root = self.resolve_geometry_child('Points', child_node=points_root)
+        points_root = self.resolve_geometry_child('Points', child_node = points_root)
         if cache_thickness_array:
             if cache_cp_array:
-                self.corner_points(points_root=points_root, cache_cp_array=True)
+                self.corner_points(points_root = points_root, cache_cp_array = True)
             if hasattr(self, 'array_corner_points'):
                 self.array_thickness = np.abs(
                     np.mean(self.array_corner_points[:, :, :, 1, :, :, 2] -
                             self.array_corner_points[:, :, :, 0, :, :, 2],
-                            axis=(3, 4)))
+                            axis = (3, 4)))
                 if cell_kji0 is None:
                     return self.array_thickness
                 return self.array_thickness[tuple(cell_kji0)]  # could check for nan here and return None
             self.array_thickness = np.empty(tuple(self.extent_kji))
-            points = self.point_raw(cache_array=True)  # cache points regardless
+            points = self.point_raw(cache_array = True)  # cache points regardless
             if points is None:
                 return None  # geometry not present
             if self.k_gaps:
@@ -968,22 +968,22 @@ class Grid(BaseResqpy):
                 return self.array_thickness
             return self.array_thickness[tuple(cell_kji0)]  # could check for nan here and return None
 
-        cp = self.corner_points(cell_kji0=cell_kji0,
-                                points_root=points_root,
-                                cache_resqml_array=cache_resqml_array,
-                                cache_cp_array=cache_cp_array)
+        cp = self.corner_points(cell_kji0 = cell_kji0,
+                                points_root = points_root,
+                                cache_resqml_array = cache_resqml_array,
+                                cache_cp_array = cache_cp_array)
         if cp is None:
             return None
         return abs(np.mean(cp[1, :, :, 2]) - np.mean(cp[0, :, :, 2]))
 
     def volume(self,
-               cell_kji0=None,
-               points_root=None,
-               cache_resqml_array=True,
-               cache_cp_array=False,
-               cache_centre_array=False,
-               cache_volume_array=True,
-               property_collection=None):
+               cell_kji0 = None,
+               points_root = None,
+               cache_resqml_array = True,
+               cache_cp_array = False,
+               cache_centre_array = False,
+               cache_volume_array = True,
+               property_collection = None):
         """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
 
         arguments:
@@ -1019,12 +1019,12 @@ class Grid(BaseResqpy):
         def load_from_property(collection):
             if collection is None:
                 return None
-            parts = collection.selective_parts_list(property_kind='rock volume',
-                                                    facet_type='netgross',
-                                                    facet='gross')
+            parts = collection.selective_parts_list(property_kind = 'rock volume',
+                                                    facet_type = 'netgross',
+                                                    facet = 'gross')
             if len(parts) == 1:
                 return collection.cached_part_array_ref(parts[0])
-            parts = collection.selective_parts_list(property_kind='rock volume')
+            parts = collection.selective_parts_list(property_kind = 'rock volume')
             if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
                 return collection.cached_part_array_ref(parts[0])
             return None
@@ -1053,38 +1053,38 @@ class Grid(BaseResqpy):
 
         off_hand = self.off_handed()
 
-        points_root = self.resolve_geometry_child('Points', child_node=points_root)
+        points_root = self.resolve_geometry_child('Points', child_node = points_root)
         if points_root is None:
             return None  # geometry not present
         centre_array = None
         if cache_volume_array or cell_kji0 is None:
-            self.corner_points(points_root=points_root, cache_cp_array=True)
+            self.corner_points(points_root = points_root, cache_cp_array = True)
             if cache_centre_array:
-                self.centre_point(cache_centre_array=True)
+                self.centre_point(cache_centre_array = True)
                 centre_array = self.array_centre_point
-            vol_array = vol.tetra_volumes(self.array_corner_points, centres=centre_array, off_hand=off_hand)
+            vol_array = vol.tetra_volumes(self.array_corner_points, centres = centre_array, off_hand = off_hand)
             if cache_volume_array:
                 self.array_volume = vol_array
             if cell_kji0 is None:
                 return vol_array
             return vol_array[tuple(cell_kji0)]  # could check for nan here and return None
 
-        cp = self.corner_points(cell_kji0=cell_kji0,
-                                points_root=points_root,
-                                cache_resqml_array=cache_resqml_array,
-                                cache_cp_array=cache_cp_array)
+        cp = self.corner_points(cell_kji0 = cell_kji0,
+                                points_root = points_root,
+                                cache_resqml_array = cache_resqml_array,
+                                cache_cp_array = cache_cp_array)
         if cp is None:
             return None
-        return vol.tetra_cell_volume(cp, off_hand=off_hand)
+        return vol.tetra_cell_volume(cp, off_hand = off_hand)
 
     def pinched_out(self,
-                    cell_kji0=None,
-                    tolerance=0.001,
-                    points_root=None,
-                    cache_resqml_array=True,
-                    cache_cp_array=False,
-                    cache_thickness_array=False,
-                    cache_pinchout_array=None):
+                    cell_kji0 = None,
+                    tolerance = 0.001,
+                    points_root = None,
+                    cache_resqml_array = True,
+                    cache_cp_array = False,
+                    cache_thickness_array = False,
+                    cache_pinchout_array = None):
         """Returns boolean or boolean array indicating whether cell is pinched out.
         
         Pinched out means cell has a thickness less than tolerance.
@@ -1104,15 +1104,15 @@ class Grid(BaseResqpy):
             return self.pinchout[tuple(cell_kji0)]
 
         if points_root is None:
-            points_root = self.resolve_geometry_child('Points', child_node=points_root)
+            points_root = self.resolve_geometry_child('Points', child_node = points_root)
         #         if points_root is None: return None  # geometry not present
 
         thick = self.thickness(
             cell_kji0,
-            points_root=points_root,
-            cache_resqml_array=cache_resqml_array,
-            cache_cp_array=cache_cp_array,  # deprecated
-            cache_thickness_array=cache_thickness_array or cache_pinchout_array)
+            points_root = points_root,
+            cache_resqml_array = cache_resqml_array,
+            cache_cp_array = cache_cp_array,  # deprecated
+            cache_thickness_array = cache_thickness_array or cache_pinchout_array)
         if cache_pinchout_array:
             self.pinchout = np.where(np.isnan(self.array_thickness), True,
                                      np.logical_not(self.array_thickness > tolerance))
@@ -1123,7 +1123,7 @@ class Grid(BaseResqpy):
             return thick <= tolerance
         return None
 
-    def half_cell_transmissibility(self, use_property=True, realization=None, tolerance=1.0e-6):
+    def half_cell_transmissibility(self, use_property = True, realization = None, tolerance = 1.0e-6):
         """Returns (and caches if realization is None) half cell transmissibilities for this grid.
 
         arguments:
@@ -1156,18 +1156,18 @@ class Grid(BaseResqpy):
 
         if use_property:
             pc = self.property_collection
-            half_t_resqml = pc.single_array_ref(property_kind='transmissibility',
-                                                realization=realization,
-                                                continuous=True,
-                                                count=1,
-                                                indexable='faces per cell')
+            half_t_resqml = pc.single_array_ref(property_kind = 'transmissibility',
+                                                realization = realization,
+                                                continuous = True,
+                                                count = 1,
+                                                indexable = 'faces per cell')
             if half_t_resqml:
                 assert half_t_resqml.shape == (self.nk, self.nj, self.ni, 6)
                 half_t = pc.combobulate(half_t_resqml)
 
         if half_t is None:
             # note: properties must be identifiable in property_collection
-            half_t = rqtr.half_cell_t(self, realization=realization)
+            half_t = rqtr.half_cell_t(self, realization = realization)
 
         if realization is None:
             self.array_half_cell_t = half_t
@@ -1175,12 +1175,12 @@ class Grid(BaseResqpy):
         return half_t
 
     def fault_connection_set(self,
-                             skip_inactive=True,
-                             compute_transmissibility=False,
-                             add_to_model=False,
-                             realization=None,
-                             inherit_features_from=None,
-                             title='fault juxtaposition set'):
+                             skip_inactive = True,
+                             compute_transmissibility = False,
+                             add_to_model = False,
+                             realization = None,
+                             inherit_features_from = None,
+                             title = 'fault juxtaposition set'):
         """Returns (and caches) a GridConnectionSet representing juxtaposition across faces with split pillars.
 
         arguments:
@@ -1204,7 +1204,7 @@ class Grid(BaseResqpy):
         """
 
         if not hasattr(self, 'fgcs') or self.fgcs_skip_inactive != skip_inactive:
-            self.fgcs, self.fgcs_fractional_area = rqtr.fault_connection_set(self, skip_inactive=skip_inactive)
+            self.fgcs, self.fgcs_fractional_area = rqtr.fault_connection_set(self, skip_inactive = skip_inactive)
             self.fgcs_skip_inactive = skip_inactive
 
         if self.fgcs is None:
@@ -1221,32 +1221,32 @@ class Grid(BaseResqpy):
             self.fgcs.inherit_features(inherit_features_from)
 
         if add_to_model:
-            if self.model.uuid(uuid=self.fgcs.uuid) is None:
+            if self.model.uuid(uuid = self.fgcs.uuid) is None:
                 self.fgcs.write_hdf5()
-                self.fgcs.create_xml(title=title)
+                self.fgcs.create_xml(title = title)
             if new_tr:
                 tr_pc = rprop.PropertyCollection()
-                tr_pc.set_support(support=self.fgcs)
+                tr_pc.set_support(support = self.fgcs)
                 tr_pc.add_cached_array_to_imported_list(
                     self.array_fgcs_transmissibility,
                     'computed for faces with split pillars',
                     'fault transmissibility',
-                    discrete=False,
-                    uom='m3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
-                    property_kind='transmissibility',
-                    realization=realization,
-                    indexable_element='faces',
-                    count=1)
+                    discrete = False,
+                    uom = 'm3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
+                    property_kind = 'transmissibility',
+                    realization = realization,
+                    indexable_element = 'faces',
+                    count = 1)
                 tr_pc.write_hdf5_for_imported_list()
                 tr_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
         return self.fgcs, tr
 
     def pinchout_connection_set(self,
-                                skip_inactive=True,
-                                compute_transmissibility=False,
-                                add_to_model=False,
-                                realization=None):
+                                skip_inactive = True,
+                                compute_transmissibility = False,
+                                add_to_model = False,
+                                realization = None):
         """Returns (and caches) a GridConnectionSet representing juxtaposition across pinched out cells.
 
         arguments:
@@ -1267,7 +1267,7 @@ class Grid(BaseResqpy):
         """
 
         if not hasattr(self, 'pgcs') or self.pgcs_skip_inactive != skip_inactive:
-            self.pgcs = rqf.pinchout_connection_set(self, skip_inactive=skip_inactive)
+            self.pgcs = rqf.pinchout_connection_set(self, skip_inactive = skip_inactive)
             self.pgcs_skip_inactive = skip_inactive
 
         if self.pgcs is None:
@@ -1281,33 +1281,33 @@ class Grid(BaseResqpy):
         tr = self.array_pgcs_transmissibility if hasattr(self, 'array_pgcs_transmissibility') else None
 
         if add_to_model:
-            if self.model.uuid(uuid=self.pgcs.uuid) is None:
+            if self.model.uuid(uuid = self.pgcs.uuid) is None:
                 self.pgcs.write_hdf5()
                 self.pgcs.create_xml()
             if new_tr:
                 tr_pc = rprop.PropertyCollection()
-                tr_pc.set_support(support=self.pgcs)
+                tr_pc.set_support(support = self.pgcs)
                 tr_pc.add_cached_array_to_imported_list(
                     tr,
                     'computed for faces across pinchouts',
                     'pinchout transmissibility',
-                    discrete=False,
-                    uom='m3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
-                    property_kind='transmissibility',
-                    realization=realization,
-                    indexable_element='faces',
-                    count=1)
+                    discrete = False,
+                    uom = 'm3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
+                    property_kind = 'transmissibility',
+                    realization = realization,
+                    indexable_element = 'faces',
+                    count = 1)
                 tr_pc.write_hdf5_for_imported_list()
                 tr_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
         return self.pgcs, tr
 
     def k_gap_connection_set(self,
-                             skip_inactive=True,
-                             compute_transmissibility=False,
-                             add_to_model=False,
-                             realization=None,
-                             tolerance=0.001):
+                             skip_inactive = True,
+                             compute_transmissibility = False,
+                             add_to_model = False,
+                             realization = None,
+                             tolerance = 0.001):
         """Returns (and caches) a GridConnectionSet representing juxtaposition across zero thickness K gaps.
 
         arguments:
@@ -1333,7 +1333,7 @@ class Grid(BaseResqpy):
         """
 
         if not hasattr(self, 'kgcs') or self.kgcs_skip_inactive != skip_inactive:
-            self.kgcs = rqf.k_gap_connection_set(self, skip_inactive=skip_inactive, tolerance=tolerance)
+            self.kgcs = rqf.k_gap_connection_set(self, skip_inactive = skip_inactive, tolerance = tolerance)
             self.kgcs_skip_inactive = skip_inactive
 
         if self.kgcs is None:
@@ -1347,28 +1347,28 @@ class Grid(BaseResqpy):
         tr = self.array_kgcs_transmissibility if hasattr(self, 'array_kgcs_transmissibility') else None
 
         if add_to_model:
-            if self.model.uuid(uuid=self.kgcs.uuid) is None:
+            if self.model.uuid(uuid = self.kgcs.uuid) is None:
                 self.kgcs.write_hdf5()
                 self.kgcs.create_xml()
             if new_tr:
                 tr_pc = rprop.PropertyCollection()
-                tr_pc.set_support(support=self.kgcs)
+                tr_pc.set_support(support = self.kgcs)
                 tr_pc.add_cached_array_to_imported_list(
                     tr,
                     'computed for faces across zero thickness K gaps',
                     'K gap transmissibility',
-                    discrete=False,
-                    uom='m3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
-                    property_kind='transmissibility',
-                    realization=realization,
-                    indexable_element='faces',
-                    count=1)
+                    discrete = False,
+                    uom = 'm3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
+                    property_kind = 'transmissibility',
+                    realization = realization,
+                    indexable_element = 'faces',
+                    count = 1)
                 tr_pc.write_hdf5_for_imported_list()
                 tr_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
         return self.kgcs, tr
 
-    def cell_inactive(self, cell_kji0, pv_array=None, pv_tol=0.01):
+    def cell_inactive(self, cell_kji0, pv_array = None, pv_tol = 0.01):
         """Returns True if the cell is inactive."""
 
         if self.inactive is not None:
@@ -1379,16 +1379,16 @@ class Grid(BaseResqpy):
         if pv_array is not None:  # fabricate an inactive mask from pore volume data
             self.inactive = not (pv_array > pv_tol)  # NaN in pv array will end up inactive
             return self.inactive[tuple(cell_kji0)]
-        return (not cell_geometry_is_defined(self, cell_kji0=cell_kji0)) or self.pinched_out(cell_kji0,
-                                                                                             cache_pinchout_array=True)
+        return (not cell_geometry_is_defined(self, cell_kji0 = cell_kji0)) or self.pinched_out(
+            cell_kji0, cache_pinchout_array = True)
 
-    def bounding_box(self, cell_kji0, points_root=None, cache_cp_array=False):
+    def bounding_box(self, cell_kji0, points_root = None, cache_cp_array = False):
         """Returns the xyz box which envelopes the specified cell, as a numpy array of shape (2, 3)."""
 
         result = np.zeros((2, 3))
-        cp = self.corner_points(cell_kji0, points_root=points_root, cache_cp_array=cache_cp_array)
-        result[0] = np.min(cp, axis=(0, 1, 2))
-        result[1] = np.max(cp, axis=(0, 1, 2))
+        cp = self.corner_points(cell_kji0, points_root = points_root, cache_cp_array = cache_cp_array)
+        result[0] = np.min(cp, axis = (0, 1, 2))
+        result[1] = np.max(cp, axis = (0, 1, 2))
         return result
 
     def composite_bounding_box(self, bounding_box_list):
@@ -1400,24 +1400,24 @@ class Grid(BaseResqpy):
             result[1] = np.maximum(result[1], box[1])
         return result
 
-    def interface_vector(self, cell_kji0, axis, points_root=None, cache_resqml_array=True, cache_cp_array=False):
+    def interface_vector(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns an xyz vector between centres of an opposite pair of faces of the cell (or vectors for all cells)."""
 
         face_0_centre = self.face_centre(cell_kji0,
                                          axis,
                                          0,
-                                         points_root=points_root,
-                                         cache_resqml_array=cache_resqml_array,
-                                         cache_cp_array=cache_cp_array)
+                                         points_root = points_root,
+                                         cache_resqml_array = cache_resqml_array,
+                                         cache_cp_array = cache_cp_array)
         face_1_centre = self.face_centre(cell_kji0,
                                          axis,
                                          1,
-                                         points_root=points_root,
-                                         cache_resqml_array=cache_resqml_array,
-                                         cache_cp_array=cache_cp_array)
+                                         points_root = points_root,
+                                         cache_resqml_array = cache_resqml_array,
+                                         cache_cp_array = cache_cp_array)
         return face_1_centre - face_0_centre
 
-    def interface_length(self, cell_kji0, axis, points_root=None, cache_resqml_array=True, cache_cp_array=False):
+    def interface_length(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns the length between centres of an opposite pair of faces of the cell.
 
         note:
@@ -1428,23 +1428,23 @@ class Grid(BaseResqpy):
         return vec.naive_length(
             self.interface_vector(cell_kji0,
                                   axis,
-                                  points_root=points_root,
-                                  cache_resqml_array=cache_resqml_array,
-                                  cache_cp_array=cache_cp_array))
+                                  points_root = points_root,
+                                  cache_resqml_array = cache_resqml_array,
+                                  cache_cp_array = cache_cp_array))
 
-    def interface_vectors_kji(self, cell_kji0, points_root=None, cache_resqml_array=True, cache_cp_array=False):
+    def interface_vectors_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns 3 interface centre point difference vectors for axes k, j, i."""
 
         result = np.zeros((3, 3))
         for axis in range(3):
             result[axis] = self.interface_vector(cell_kji0,
                                                  axis,
-                                                 points_root=points_root,
-                                                 cache_resqml_array=cache_resqml_array,
-                                                 cache_cp_array=cache_cp_array)
+                                                 points_root = points_root,
+                                                 cache_resqml_array = cache_resqml_array,
+                                                 cache_cp_array = cache_cp_array)
         return result
 
-    def interface_lengths_kji(self, cell_kji0, points_root=None, cache_resqml_array=True, cache_cp_array=False):
+    def interface_lengths_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns 3 interface centre point separation lengths for axes k, j, i.
 
         note:
@@ -1454,17 +1454,17 @@ class Grid(BaseResqpy):
         for axis in range(3):
             result[axis] = self.interface_length(cell_kji0,
                                                  axis,
-                                                 points_root=points_root,
-                                                 cache_resqml_array=cache_resqml_array,
-                                                 cache_cp_array=cache_cp_array)
+                                                 points_root = points_root,
+                                                 cache_resqml_array = cache_resqml_array,
+                                                 cache_cp_array = cache_cp_array)
         return result
 
     def local_to_global_crs(self,
                             a,
-                            crs_root=None,
-                            global_xy_units=None,
-                            global_z_units=None,
-                            global_z_increasing_downward=None):
+                            crs_root = None,
+                            global_xy_units = None,
+                            global_z_units = None,
+                            global_z_increasing_downward = None):
         """Converts array of points in situ from local coordinate system to global one."""
 
         # todo: replace with crs module calls
@@ -1513,10 +1513,10 @@ class Grid(BaseResqpy):
 
     def global_to_local_crs(self,
                             a,
-                            crs_root=None,
-                            global_xy_units=None,
-                            global_z_units=None,
-                            global_z_increasing_downward=None):
+                            crs_root = None,
+                            global_xy_units = None,
+                            global_z_units = None,
+                            global_z_increasing_downward = None):
         """Converts array of points in situ from global coordinate system to established local one."""
 
         # todo: replace with crs module calls
@@ -1553,13 +1553,13 @@ class Grid(BaseResqpy):
                 flat_a[:, 2] = negated_z
 
     def write_hdf5_from_caches(self,
-                               file=None,
-                               mode='a',
-                               geometry=True,
-                               imported_properties=None,
-                               write_active=None,
-                               stratigraphy=True,
-                               expand_const_arrays=False):
+                               file = None,
+                               mode = 'a',
+                               geometry = True,
+                               imported_properties = None,
+                               write_active = None,
+                               stratigraphy = True,
+                               expand_const_arrays = False):
         """Create or append to an hdf5 file.
         
         Writes datasets for the grid geometry (and parent grid mapping) and properties from cached arrays.
@@ -1568,27 +1568,21 @@ class Grid(BaseResqpy):
         # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
         # xml is not created here for property objects
 
-        write_hdf5_from_caches(self,
-                               file,
-                               mode,
-                               geometry,
-                               imported_properties,
-                               write_active,
-                               stratigraphy,
+        write_hdf5_from_caches(self, file, mode, geometry, imported_properties, write_active, stratigraphy,
                                expand_const_arrays)
 
-    def write_hdf5(self, expand_const_arrays=False):
+    def write_hdf5(self, expand_const_arrays = False):
         """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches().
 
         :meta common:
         """
 
-        self.write_hdf5_from_caches(mode='a',
-                                    geometry=True,
-                                    imported_properties=None,
-                                    write_active=True,
-                                    stratigraphy=True,
-                                    expand_const_arrays=expand_const_arrays)
+        self.write_hdf5_from_caches(mode = 'a',
+                                    geometry = True,
+                                    imported_properties = None,
+                                    write_active = True,
+                                    stratigraphy = True,
+                                    expand_const_arrays = expand_const_arrays)
 
     def off_handed(self):
         """Returns False if IJK and xyz have same handedness, True if they differ."""
@@ -1600,32 +1594,32 @@ class Grid(BaseResqpy):
 
     def write_nexus_corp(self,
                          file_name,
-                         local_coords=False,
-                         global_xy_units=None,
-                         global_z_units=None,
-                         global_z_increasing_downward=True,
-                         write_nx_ny_nz=False,
-                         write_units_keyword=False,
-                         write_rh_keyword_if_needed=False,
-                         write_corp_keyword=False,
-                         use_binary=False,
-                         binary_only=False,
-                         nan_substitute_value=None):
+                         local_coords = False,
+                         global_xy_units = None,
+                         global_z_units = None,
+                         global_z_increasing_downward = True,
+                         write_nx_ny_nz = False,
+                         write_units_keyword = False,
+                         write_rh_keyword_if_needed = False,
+                         write_corp_keyword = False,
+                         use_binary = False,
+                         binary_only = False,
+                         nan_substitute_value = None):
         """Write grid geometry to file in Nexus CORP ordering."""
 
         write_nexus_corp(self,
                          file_name,
-                         local_coords=False,
-                         global_xy_units=None,
-                         global_z_units=None,
-                         global_z_increasing_downward=True,
-                         write_nx_ny_nz=False,
-                         write_units_keyword=False,
-                         write_rh_keyword_if_needed=False,
-                         write_corp_keyword=False,
-                         use_binary=False,
-                         binary_only=False,
-                         nan_substitute_value=None)
+                         local_coords = False,
+                         global_xy_units = None,
+                         global_z_units = None,
+                         global_z_increasing_downward = True,
+                         write_nx_ny_nz = False,
+                         write_units_keyword = False,
+                         write_rh_keyword_if_needed = False,
+                         write_corp_keyword = False,
+                         use_binary = False,
+                         binary_only = False,
+                         nan_substitute_value = None)
 
     def xy_units(self):
         """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid.
@@ -1649,7 +1643,7 @@ class Grid(BaseResqpy):
             return None
         return rqet.find_tag(crs_root, 'VerticalUom').text
 
-    def poly_line_for_cell(self, cell_kji0, vertical_ref='top'):
+    def poly_line_for_cell(self, cell_kji0, vertical_ref = 'top'):
         """Returns a numpy array of shape (4, 3) being the 4 corners.
         
         Corners are in order J-I-, J-I+, J+I+, J+I-; from the top or base face.
@@ -1661,7 +1655,7 @@ class Grid(BaseResqpy):
         else:
             raise ValueError('vertical reference not catered for: ' + vertical_ref)
         poly = np.empty((4, 3))
-        cp = self.corner_points(cell_kji0=cell_kji0)
+        cp = self.corner_points(cell_kji0 = cell_kji0)
         if cp is None:
             return None
         poly[0] = cp[kp, 0, 0]
@@ -1670,7 +1664,7 @@ class Grid(BaseResqpy):
         poly[3] = cp[kp, 1, 0]
         return poly
 
-    def find_cell_for_point_xy(self, x, y, k0=0, vertical_ref='top', local_coords=True):
+    def find_cell_for_point_xy(self, x, y, k0 = 0, vertical_ref = 'top', local_coords = True):
         """Searches in 2D for a cell containing point x,y in layer k0; return (j0, i0) or (None, None)."""
 
         # find minimum of manhatten distances from xy to each corner point
@@ -1682,49 +1676,49 @@ class Grid(BaseResqpy):
             return (None, None)
         a[0, 2] = 0.0  # discard z
         kp = 1 if vertical_ref == 'base' else 0
-        (pillar_j0, pillar_i0) = self.nearest_pillar(a[0, :2], ref_k0=k0, kp=kp)
+        (pillar_j0, pillar_i0) = self.nearest_pillar(a[0, :2], ref_k0 = k0, kp = kp)
         if pillar_j0 > 0 and pillar_i0 > 0:
             cell_kji0 = np.array((k0, pillar_j0 - 1, pillar_i0 - 1))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref=vertical_ref)
+            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
             if poly is not None and pip.pip_cn(a[0, :2], poly):
                 return (cell_kji0[1], cell_kji0[2])
         if pillar_j0 > 0 and pillar_i0 < self.ni:
             cell_kji0 = np.array((k0, pillar_j0 - 1, pillar_i0))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref=vertical_ref)
+            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
             if poly is not None and pip.pip_cn(a[0, :2], poly):
                 return (cell_kji0[1], cell_kji0[2])
         if pillar_j0 < self.nj and pillar_i0 > 0:
             cell_kji0 = np.array((k0, pillar_j0, pillar_i0 - 1))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref=vertical_ref)
+            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
             if poly is not None and pip.pip_cn(a[0, :2], poly):
                 return (cell_kji0[1], cell_kji0[2])
         if pillar_j0 < self.nj and pillar_i0 < self.ni:
             cell_kji0 = np.array((k0, pillar_j0, pillar_i0))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref=vertical_ref)
+            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
             if poly is not None and pip.pip_cn(a[0, :2], poly):
                 return (cell_kji0[1], cell_kji0[2])
         return (None, None)
 
-    def skin(self, use_single_layer_tactics=False):
+    def skin(self, use_single_layer_tactics = False):
         """Returns a GridSkin composite surface object reoresenting the outer surface of the grid."""
 
         import resqpy.grid_surface as rqgs
 
         # could cache 2 versions (with and without single layer tactics)
         if self.grid_skin is None or self.grid_skin.use_single_layer_tactics != use_single_layer_tactics:
-            self.grid_skin = rqgs.GridSkin(self, use_single_layer_tactics=use_single_layer_tactics)
+            self.grid_skin = rqgs.GridSkin(self, use_single_layer_tactics = use_single_layer_tactics)
         return self.grid_skin
 
     def create_xml(self,
-                   ext_uuid=None,
-                   add_as_part=True,
-                   add_relationships=True,
-                   set_as_grid_root=True,
-                   title=None,
-                   originator=None,
-                   write_active=True,
-                   write_geometry=True,
-                   extra_metadata={}):
+                   ext_uuid = None,
+                   add_as_part = True,
+                   add_relationships = True,
+                   set_as_grid_root = True,
+                   title = None,
+                   originator = None,
+                   write_active = True,
+                   write_geometry = True,
+                   extra_metadata = {}):
         """Creates an IJK grid node from a grid object and optionally adds as child of root and/or to parts forest.
 
             arguments:
@@ -1766,34 +1760,37 @@ class Grid(BaseResqpy):
         if not self.title:
             self.title = 'ROOT'
 
-        ijk = super().create_xml(add_as_part=False, originator=originator, extra_metadata=extra_metadata)
+        ijk = super().create_xml(add_as_part = False, originator = originator, extra_metadata = extra_metadata)
 
         return create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry)
 
-    def x_section_points(self, axis, ref_slice0=0, plus_face=False, masked=False):
+    def x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
         """Deprecated: please use `unsplit_x_section_points` instead."""
         warnings.warn('Deprecated: please use `unsplit_x_section_points` instead.', DeprecationWarning)
 
-        return unsplit_x_section_points(self, axis, ref_slice0=ref_slice0, plus_face=plus_face, masked=masked)
+        return unsplit_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
     # The implementations of the below functions have been moved to separate modules.
 
-    def cell_geometry_is_defined(self, cell_kji0=None, cell_geometry_is_defined_root=None, cache_array=True):
-        return cell_geometry_is_defined(self, cell_kji0=cell_kji0,
-                                        cell_geometry_is_defined_root=cell_geometry_is_defined_root,
-                                        cache_array=cache_array)
+    def cell_geometry_is_defined(self, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
+        return cell_geometry_is_defined(self,
+                                        cell_kji0 = cell_kji0,
+                                        cell_geometry_is_defined_root = cell_geometry_is_defined_root,
+                                        cache_array = cache_array)
 
-    def pillar_geometry_is_defined(self, pillar_ji0=None, pillar_geometry_is_defined_root=None, cache_array=True):
-        return pillar_geometry_is_defined(self, pillar_ji0=pillar_ji0,
-                                          pillar_geometry_is_defined_root=pillar_geometry_is_defined_root,
-                                          cache_array=cache_array)
+    def pillar_geometry_is_defined(self, pillar_ji0 = None, pillar_geometry_is_defined_root = None, cache_array = True):
+        return pillar_geometry_is_defined(self,
+                                          pillar_ji0 = pillar_ji0,
+                                          pillar_geometry_is_defined_root = pillar_geometry_is_defined_root,
+                                          cache_array = cache_array)
 
-    def geometry_defined_for_all_cells(self, cache_array=True):
-        return geometry_defined_for_all_cells(self, cache_array=cache_array)
+    def geometry_defined_for_all_cells(self, cache_array = True):
+        return geometry_defined_for_all_cells(self, cache_array = cache_array)
 
-    def geometry_defined_for_all_pillars(self, cache_array=True, pillar_geometry_is_defined_root=None):
-        return geometry_defined_for_all_pillars(self, cache_array=cache_array,
-                                                pillar_geometry_is_defined_root=pillar_geometry_is_defined_root)
+    def geometry_defined_for_all_pillars(self, cache_array = True, pillar_geometry_is_defined_root = None):
+        return geometry_defined_for_all_pillars(self,
+                                                cache_array = cache_array,
+                                                pillar_geometry_is_defined_root = pillar_geometry_is_defined_root)
 
     def cell_geometry_is_defined_ref(self):
         return cell_geometry_is_defined_ref(self)
@@ -1802,34 +1799,37 @@ class Grid(BaseResqpy):
         return pillar_geometry_is_defined_ref(self)
 
     def set_geometry_is_defined(self,
-                                treat_as_nan=None,
-                                treat_dots_as_nan=False,
-                                complete_partial_pillars=False,
-                                nullify_partial_pillars=False,
-                                complete_all=False):
+                                treat_as_nan = None,
+                                treat_dots_as_nan = False,
+                                complete_partial_pillars = False,
+                                nullify_partial_pillars = False,
+                                complete_all = False):
         return set_geometry_is_defined(self,
-                                       treat_as_nan=treat_as_nan,
-                                       treat_dots_as_nan=treat_dots_as_nan,
-                                       complete_partial_pillars=complete_partial_pillars,
-                                       nullify_partial_pillars=nullify_partial_pillars,
-                                       complete_all=complete_all)
+                                       treat_as_nan = treat_as_nan,
+                                       treat_dots_as_nan = treat_dots_as_nan,
+                                       complete_partial_pillars = complete_partial_pillars,
+                                       nullify_partial_pillars = nullify_partial_pillars,
+                                       complete_all = complete_all)
 
-    def find_faults(self, set_face_sets=False, create_organizing_objects_where_needed=False):
-        return find_faults(self, set_face_sets=set_face_sets,
-                           create_organizing_objects_where_needed=create_organizing_objects_where_needed)
+    def find_faults(self, set_face_sets = False, create_organizing_objects_where_needed = False):
+        return find_faults(self,
+                           set_face_sets = set_face_sets,
+                           create_organizing_objects_where_needed = create_organizing_objects_where_needed)
 
     def fault_throws(self):
         return fault_throws(self)
 
-    def fault_throws_per_edge_per_column(self, mode='maximum', simple_z=False, axis_polarity_mode=True):
-        return fault_throws_per_edge_per_column(self, mode=mode, simple_z=simple_z,
-                                                axis_polarity_mode=axis_polarity_mode)
+    def fault_throws_per_edge_per_column(self, mode = 'maximum', simple_z = False, axis_polarity_mode = True):
+        return fault_throws_per_edge_per_column(self,
+                                                mode = mode,
+                                                simple_z = simple_z,
+                                                axis_polarity_mode = axis_polarity_mode)
 
     def extract_parent(self):
         """Loads fine:coarse mapping information between this grid and parent, if any, returning parent grid uuid."""
         return extract_grid_parent(self)
 
-    def transmissibility(self, tolerance=1.0e-6, use_tr_properties=True, realization=None, modifier_mode=None):
+    def transmissibility(self, tolerance = 1.0e-6, use_tr_properties = True, realization = None, modifier_mode = None):
         return transmissibility(self, tolerance, use_tr_properties, realization, modifier_mode)
 
     def extract_extent_kji(self):
@@ -1868,8 +1868,8 @@ class Grid(BaseResqpy):
     def extract_property_collection(self):
         return extract_property_collection(self)
 
-    def extract_inactive_mask(self, check_pinchout=False):
-        return extract_inactive_mask(self, check_pinchout=check_pinchout)
+    def extract_inactive_mask(self, check_pinchout = False):
+        return extract_inactive_mask(self, check_pinchout = check_pinchout)
 
     def is_split_column_face(self, j0, i0, axis, polarity):
         return is_split_column_face(self, j0, i0, axis, polarity)
@@ -1880,9 +1880,11 @@ class Grid(BaseResqpy):
     def clear_face_sets(self):
         return clear_face_sets(self)
 
-    def set_face_set_gcs_list_from_dict(self, face_set_dict=None, create_organizing_objects_where_needed=False):
-        return set_face_set_gcs_list_from_dict(self, face_set_dict=face_set_dict,
-                                               create_organizing_objects_where_needed=create_organizing_objects_where_needed)
+    def set_face_set_gcs_list_from_dict(self, face_set_dict = None, create_organizing_objects_where_needed = False):
+        return set_face_set_gcs_list_from_dict(
+            self,
+            face_set_dict = face_set_dict,
+            create_organizing_objects_where_needed = create_organizing_objects_where_needed)
 
     def make_face_set_from_dataframe(self, df):
         return make_face_set_from_dataframe(self, df)
@@ -1890,156 +1892,162 @@ class Grid(BaseResqpy):
     def make_face_sets_from_pillar_lists(self,
                                          pillar_list_list,
                                          face_set_id,
-                                         axis='K',
-                                         ref_slice0=0,
-                                         plus_face=False,
-                                         projection='xy'):
+                                         axis = 'K',
+                                         ref_slice0 = 0,
+                                         plus_face = False,
+                                         projection = 'xy'):
         return make_face_sets_from_pillar_lists(self,
                                                 pillar_list_list,
                                                 face_set_id,
-                                                axis=axis,
-                                                ref_slice0=ref_slice0,
-                                                plus_face=plus_face,
-                                                projection=projection)
+                                                axis = axis,
+                                                ref_slice0 = ref_slice0,
+                                                plus_face = plus_face,
+                                                projection = projection)
 
     def face_centre(self,
                     cell_kji0,
                     axis,
                     zero_or_one,
-                    points_root=None,
-                    cache_resqml_array=True,
-                    cache_cp_array=False):
+                    points_root = None,
+                    cache_resqml_array = True,
+                    cache_cp_array = False):
         return face_centre(self,
                            cell_kji0,
                            axis,
                            zero_or_one,
-                           points_root=points_root,
-                           cache_resqml_array=cache_resqml_array,
-                           cache_cp_array=cache_cp_array)
+                           points_root = points_root,
+                           cache_resqml_array = cache_resqml_array,
+                           cache_cp_array = cache_cp_array)
 
-    def face_centres_kji_01(self, cell_kji0, points_root=None, cache_resqml_array=True, cache_cp_array=False):
-        return face_centres_kji_01(self, cell_kji0, points_root=points_root, cache_resqml_array=cache_resqml_array,
-                                   cache_cp_array=cache_cp_array)
+    def face_centres_kji_01(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        return face_centres_kji_01(self,
+                                   cell_kji0,
+                                   points_root = points_root,
+                                   cache_resqml_array = cache_resqml_array,
+                                   cache_cp_array = cache_cp_array)
 
     def set_cached_points_from_property(self,
-                                        points_property_uuid=None,
-                                        property_collection=None,
-                                        realization=None,
-                                        time_index=None,
-                                        set_grid_time_index=True,
-                                        set_inactive=True,
-                                        active_property_uuid=None,
-                                        active_collection=None):
+                                        points_property_uuid = None,
+                                        property_collection = None,
+                                        realization = None,
+                                        time_index = None,
+                                        set_grid_time_index = True,
+                                        set_inactive = True,
+                                        active_property_uuid = None,
+                                        active_collection = None):
         return set_cached_points_from_property(self,
-                                               points_property_uuid=points_property_uuid,
-                                               property_collection=property_collection,
-                                               realization=realization,
-                                               time_index=time_index,
-                                               set_grid_time_index=set_grid_time_index,
-                                               set_inactive=set_inactive,
-                                               active_property_uuid=active_property_uuid,
-                                               active_collection=active_collection)
+                                               points_property_uuid = points_property_uuid,
+                                               property_collection = property_collection,
+                                               realization = realization,
+                                               time_index = time_index,
+                                               set_grid_time_index = set_grid_time_index,
+                                               set_inactive = set_inactive,
+                                               active_property_uuid = active_property_uuid,
+                                               active_collection = active_collection)
 
-    def point_raw(self, index=None, points_root=None, cache_array=True):
-        return point_raw(self, index=index, points_root=points_root, cache_array=cache_array)
+    def point_raw(self, index = None, points_root = None, cache_array = True):
+        return point_raw(self, index = index, points_root = points_root, cache_array = cache_array)
 
     def point(self,
-              cell_kji0=None,
-              corner_index=np.zeros(3, dtype='int'),
-              points_root=None,
-              cache_array=True):
+              cell_kji0 = None,
+              corner_index = np.zeros(3, dtype = 'int'),
+              points_root = None,
+              cache_array = True):
         return point(self,
-                     cell_kji0=cell_kji0,
-                     corner_index=corner_index,
-                     points_root=points_root,
-                     cache_array=cache_array)
+                     cell_kji0 = cell_kji0,
+                     corner_index = corner_index,
+                     points_root = points_root,
+                     cache_array = cache_array)
 
-    def points_ref(self, masked=True):
-        return points_ref(self, masked=masked)
+    def points_ref(self, masked = True):
+        return points_ref(self, masked = masked)
 
     def uncache_points(self):
         return uncache_points(self)
 
-    def unsplit_points_ref(self, cache_array=False, masked=False):
-        return unsplit_points_ref(self, cache_array=cache_array, masked=masked)
+    def unsplit_points_ref(self, cache_array = False, masked = False):
+        return unsplit_points_ref(self, cache_array = cache_array, masked = masked)
 
-    def horizon_points(self, ref_k0=0, heal_faults=False, kp=0):
-        return horizon_points(self, ref_k0=ref_k0, heal_faults=heal_faults, kp=kp)
+    def horizon_points(self, ref_k0 = 0, heal_faults = False, kp = 0):
+        return horizon_points(self, ref_k0 = ref_k0, heal_faults = heal_faults, kp = kp)
 
-    def split_horizon_points(self, ref_k0=0, masked=False, kp=0):
-        return split_horizon_points(self, ref_k0=ref_k0, masked=masked, kp=kp)
+    def split_horizon_points(self, ref_k0 = 0, masked = False, kp = 0):
+        return split_horizon_points(self, ref_k0 = ref_k0, masked = masked, kp = kp)
 
-    def split_x_section_points(self, axis, ref_slice0=0, plus_face=False, masked=False):
-        return split_x_section_points(self, axis, ref_slice0=ref_slice0, plus_face=plus_face, masked=masked)
+    def split_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
+        return split_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
-    def split_gap_x_section_points(self, axis, ref_slice0=0, plus_face=False, masked=False):
-        return split_gap_x_section_points(self, axis, ref_slice0=ref_slice0, plus_face=plus_face, masked=masked)
+    def split_gap_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
+        return split_gap_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
-    def unsplit_x_section_points(self, axis, ref_slice0=0, plus_face=False, masked=False):
-        return unsplit_x_section_points(self, axis, ref_slice0=ref_slice0, plus_face=plus_face, masked=masked)
+    def unsplit_x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
+        return unsplit_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
 
     def x_section_corner_points(self,
                                 axis,
-                                ref_slice0=0,
-                                plus_face=False,
-                                masked=False,
-                                rotate=False,
-                                azimuth=None):
+                                ref_slice0 = 0,
+                                plus_face = False,
+                                masked = False,
+                                rotate = False,
+                                azimuth = None):
         return x_section_corner_points(self,
                                        axis,
-                                       ref_slice0=ref_slice0,
-                                       plus_face=plus_face,
-                                       masked=masked,
-                                       rotate=rotate,
-                                       azimuth=azimuth)
+                                       ref_slice0 = ref_slice0,
+                                       plus_face = plus_face,
+                                       masked = masked,
+                                       rotate = rotate,
+                                       azimuth = azimuth)
 
-    def pixel_map_for_split_horizon_points(self, horizon_points, origin, width, height, dx, dy=None):
-        return pixel_map_for_split_horizon_points(self, horizon_points, origin, width, height, dx, dy=dy)
+    def pixel_map_for_split_horizon_points(self, horizon_points, origin, width, height, dx, dy = None):
+        return pixel_map_for_split_horizon_points(self, horizon_points, origin, width, height, dx, dy = dy)
 
     def coordinate_line_end_points(self):
         return coordinate_line_end_points(self)
 
-    def z_corner_point_depths(self, order='cellular'):
-        return z_corner_point_depths(self, order=order)
+    def z_corner_point_depths(self, order = 'cellular'):
+        return z_corner_point_depths(self, order = order)
 
-    def corner_points(self, cell_kji0=None, points_root=None, cache_resqml_array=True, cache_cp_array=False):
-        return corner_points(self, cell_kji0=cell_kji0, points_root=points_root, cache_resqml_array=cache_resqml_array,
-                             cache_cp_array=cache_cp_array)
+    def corner_points(self, cell_kji0 = None, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        return corner_points(self,
+                             cell_kji0 = cell_kji0,
+                             points_root = points_root,
+                             cache_resqml_array = cache_resqml_array,
+                             cache_cp_array = cache_cp_array)
 
     def invalidate_corner_points(self):
         return invalidate_corner_points(self)
 
-    def centre_point(self, cell_kji0=None, cache_centre_array=False):
-        return centre_point(self, cell_kji0=cell_kji0, cache_centre_array=cache_centre_array)
+    def centre_point(self, cell_kji0 = None, cache_centre_array = False):
+        return centre_point(self, cell_kji0 = cell_kji0, cache_centre_array = cache_centre_array)
 
     def centre_point_list(self, cell_kji0s):
         return centre_point_list(self, cell_kji0s)
 
-    def point_areally(self, tolerance=0.001):
-        return point_areally(self, tolerance=tolerance)
+    def point_areally(self, tolerance = 0.001):
+        return point_areally(self, tolerance = tolerance)
 
     def interpolated_point(self,
                            cell_kji0,
                            interpolation_fraction,
-                           points_root=None,
-                           cache_resqml_array=True,
-                           cache_cp_array=False):
+                           points_root = None,
+                           cache_resqml_array = True,
+                           cache_cp_array = False):
         return interpolated_point(self,
                                   cell_kji0,
                                   interpolation_fraction,
-                                  points_root=points_root,
-                                  cache_resqml_array=cache_resqml_array,
-                                  cache_cp_array=cache_cp_array)
+                                  points_root = points_root,
+                                  cache_resqml_array = cache_resqml_array,
+                                  cache_cp_array = cache_cp_array)
 
     def interpolated_points(self,
                             cell_kji0,
                             interpolation_fractions,
-                            points_root=None,
-                            cache_resqml_array=True,
-                            cache_cp_array=False):
+                            points_root = None,
+                            cache_resqml_array = True,
+                            cache_cp_array = False):
         return interpolated_points(self,
                                    cell_kji0,
                                    interpolation_fractions,
-                                   points_root=points_root,
-                                   cache_resqml_array=cache_resqml_array,
-                                   cache_cp_array=cache_cp_array)
+                                   points_root = points_root,
+                                   cache_resqml_array = cache_resqml_array,
+                                   cache_cp_array = cache_cp_array)

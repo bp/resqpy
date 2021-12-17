@@ -16,7 +16,7 @@ always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
 
 
-def transmissibility(grid, tolerance=1.0e-6, use_tr_properties=True, realization=None, modifier_mode=None):
+def transmissibility(grid, tolerance = 1.0e-6, use_tr_properties = True, realization = None, modifier_mode = None):
     """Returns transmissibilities for standard (IJK neighbouring) connections within this grid.
 
     arguments:
@@ -80,39 +80,39 @@ def transmissibility(grid, tolerance=1.0e-6, use_tr_properties=True, realization
         pc = grid.extract_property_collection()
 
         if k_tr is None:
-            k_tr = pc.single_array_ref(property_kind='transmissibility',
-                                       realization=realization,
-                                       continuous=True,
-                                       count=1,
-                                       indexable='faces',
-                                       facet_type='direction',
-                                       facet='K')
+            k_tr = pc.single_array_ref(property_kind = 'transmissibility',
+                                       realization = realization,
+                                       continuous = True,
+                                       count = 1,
+                                       indexable = 'faces',
+                                       facet_type = 'direction',
+                                       facet = 'K')
             if k_tr is not None:
                 assert k_tr.shape == (grid.nk + 1, grid.nj, grid.ni)
                 if realization is None:
                     grid.array_k_transmissibility = k_tr
 
         if j_tr is None:
-            j_tr = pc.single_array_ref(property_kind='transmissibility',
-                                       realization=realization,
-                                       continuous=True,
-                                       count=1,
-                                       indexable='faces',
-                                       facet_type='direction',
-                                       facet='J')
+            j_tr = pc.single_array_ref(property_kind = 'transmissibility',
+                                       realization = realization,
+                                       continuous = True,
+                                       count = 1,
+                                       indexable = 'faces',
+                                       facet_type = 'direction',
+                                       facet = 'J')
             if j_tr is not None:
                 assert j_tr.shape == (grid.nk, grid.nj + 1, grid.ni)
                 if realization is None:
                     grid.array_j_transmissibility = j_tr
 
         if i_tr is None:
-            i_tr = pc.single_array_ref(property_kind='transmissibility',
-                                       realization=realization,
-                                       continuous=True,
-                                       count=1,
-                                       indexable='faces',
-                                       facet_type='direction',
-                                       facet='I')
+            i_tr = pc.single_array_ref(property_kind = 'transmissibility',
+                                       realization = realization,
+                                       continuous = True,
+                                       count = 1,
+                                       indexable = 'faces',
+                                       facet_type = 'direction',
+                                       facet = 'I')
             if i_tr is not None:
                 assert i_tr.shape == (grid.nk, grid.nj, grid.ni + 1)
                 if realization is None:
@@ -120,7 +120,7 @@ def transmissibility(grid, tolerance=1.0e-6, use_tr_properties=True, realization
 
     if k_tr is None or j_tr is None or i_tr is None:
 
-        half_t = grid.half_cell_transmissibility(use_property=use_tr_properties, realization=realization)
+        half_t = grid.half_cell_transmissibility(use_property = use_tr_properties, realization = realization)
 
         if modifier_mode == 'faces per cell multiplier':
             half_t, pc = __faces_per_cell_multiplier(grid, half_t, pc, realization)
@@ -130,7 +130,7 @@ def transmissibility(grid, tolerance=1.0e-6, use_tr_properties=True, realization
         else:
             split_column_edges_j, split_column_edges_i = None, None
 
-        np.seterr(divide='ignore')
+        np.seterr(divide = 'ignore')
 
         if k_tr is None:
             k_tr = __set_k_transmissibility(grid, half_t, k_tr, modifier_mode, pc, realization, tolerance)
@@ -143,21 +143,20 @@ def transmissibility(grid, tolerance=1.0e-6, use_tr_properties=True, realization
             i_tr = __set_i_transmissibility(grid, half_t, i_tr, modifier_mode, pc, realization, split_column_edges_i,
                                             tolerance)
 
-        np.seterr(divide='warn')
+        np.seterr(divide = 'warn')
 
     return k_tr, j_tr, i_tr
 
 
 def __faces_per_cell_multiplier(grid, half_t, pc, realization):
     pc = grid.extract_property_collection()
-    half_t_mult = pc.single_array_ref(property_kind='transmissibility multiplier',
-                                      realization=realization,
-                                      continuous=True,
-                                      count=1,
-                                      indexable='faces per cell')
+    half_t_mult = pc.single_array_ref(property_kind = 'transmissibility multiplier',
+                                      realization = realization,
+                                      continuous = True,
+                                      count = 1,
+                                      indexable = 'faces per cell')
     if half_t_mult is None:
-        log.warning(
-            'no faces per cell transmissibility multiplier found when calculating transmissibilities')
+        log.warning('no faces per cell transmissibility multiplier found when calculating transmissibilities')
     else:
         log.debug('applying faces per cell transmissibility multipliers')
         half_t = np.where(np.isnan(half_t_mult), half_t, half_t * half_t_mult)
@@ -174,17 +173,15 @@ def __set_i_transmissibility(grid, half_t, i_tr, modifier_mode, pc, realization,
         internal_zero_mask[:, split_column_edges_i] = True
     tr_mult = None
     if modifier_mode == 'faces multiplier':
-        tr_mult = pc.single_array_ref(property_kind='transmissibility multiplier',
-                                      realization=realization,
-                                      facet_type='direction',
-                                      facet='I',
-                                      continuous=True,
-                                      count=1,
-                                      indexable='faces')
+        tr_mult = pc.single_array_ref(property_kind = 'transmissibility multiplier',
+                                      realization = realization,
+                                      facet_type = 'direction',
+                                      facet = 'I',
+                                      continuous = True,
+                                      count = 1,
+                                      indexable = 'faces')
         if tr_mult is None:
-            log.warning(
-                'no I direction faces transmissibility multiplier found when calculating transmissibilities'
-            )
+            log.warning('no I direction faces transmissibility multiplier found when calculating transmissibilities')
         else:
             assert tr_mult.shape == (grid.nk, grid.nj, grid.ni + 1)
             internal_zero_mask = np.logical_or(internal_zero_mask, np.isnan(tr_mult[:, :, 1:-1]))
@@ -192,20 +189,19 @@ def __set_i_transmissibility(grid, half_t, i_tr, modifier_mode, pc, realization,
         tr_mult = 1.0
     tr_abs_r = 0.0
     if modifier_mode == 'absolute':
-        tr_abs = pc.single_array_ref(property_kind='fault transmissibility',
-                                     realization=realization,
-                                     facet_type='direction',
-                                     facet='I',
-                                     continuous=True,
-                                     count=1,
-                                     indexable='faces')
+        tr_abs = pc.single_array_ref(property_kind = 'fault transmissibility',
+                                     realization = realization,
+                                     facet_type = 'direction',
+                                     facet = 'I',
+                                     continuous = True,
+                                     count = 1,
+                                     indexable = 'faces')
         if tr_abs is not None:
             log.debug('applying absolute I face transmissibility modification')
             assert tr_abs.shape == (grid.nk, grid.nj, grid.ni + 1)
             internal_zero_mask = np.logical_or(internal_zero_mask, tr_abs[:, :, 1:-1] <= 0.0)
             tr_abs_r = np.where(np.logical_or(np.isinf(tr_abs), np.isnan(tr_abs)), 0.0, 1.0 / tr_abs)
-    i_tr[:, :, 1:-1] = np.where(internal_zero_mask, 0.0,
-                                tr_mult / ((1.0 / slice_a) + tr_abs_r + (1.0 / slice_b)))
+    i_tr[:, :, 1:-1] = np.where(internal_zero_mask, 0.0, tr_mult / ((1.0 / slice_a) + tr_abs_r + (1.0 / slice_b)))
     return i_tr
 
 
@@ -219,17 +215,15 @@ def __set_j_transmissibility(grid, half_t, j_tr, modifier_mode, pc, realization,
         internal_zero_mask[:, split_column_edges_j] = True
     tr_mult = None
     if modifier_mode == 'faces multiplier':
-        tr_mult = pc.single_array_ref(property_kind='transmissibility multiplier',
-                                      realization=realization,
-                                      facet_type='direction',
-                                      facet='J',
-                                      continuous=True,
-                                      count=1,
-                                      indexable='faces')
+        tr_mult = pc.single_array_ref(property_kind = 'transmissibility multiplier',
+                                      realization = realization,
+                                      facet_type = 'direction',
+                                      facet = 'J',
+                                      continuous = True,
+                                      count = 1,
+                                      indexable = 'faces')
         if tr_mult is None:
-            log.warning(
-                'no J direction faces transmissibility multiplier found when calculating transmissibilities'
-            )
+            log.warning('no J direction faces transmissibility multiplier found when calculating transmissibilities')
         else:
             assert tr_mult.shape == (grid.nk, grid.nj + 1, grid.ni)
             internal_zero_mask = np.logical_or(internal_zero_mask, np.isnan(tr_mult[:, 1:-1, :]))
@@ -237,20 +231,19 @@ def __set_j_transmissibility(grid, half_t, j_tr, modifier_mode, pc, realization,
         tr_mult = 1.0
     tr_abs_r = 0.0
     if modifier_mode == 'absolute':
-        tr_abs = pc.single_array_ref(property_kind='fault transmissibility',
-                                     realization=realization,
-                                     facet_type='direction',
-                                     facet='J',
-                                     continuous=True,
-                                     count=1,
-                                     indexable='faces')
+        tr_abs = pc.single_array_ref(property_kind = 'fault transmissibility',
+                                     realization = realization,
+                                     facet_type = 'direction',
+                                     facet = 'J',
+                                     continuous = True,
+                                     count = 1,
+                                     indexable = 'faces')
         if tr_abs is not None:
             log.debug('applying absolute J face transmissibility modification')
             assert tr_abs.shape == (grid.nk, grid.nj + 1, grid.ni)
             internal_zero_mask = np.logical_or(internal_zero_mask, tr_abs[:, 1:-1, :] <= 0.0)
             tr_abs_r = np.where(np.logical_or(np.isinf(tr_abs), np.isnan(tr_abs)), 0.0, 1.0 / tr_abs)
-    j_tr[:, 1:-1, :] = np.where(internal_zero_mask, 0.0,
-                                tr_mult / ((1.0 / slice_a) + tr_abs_r + (1.0 / slice_b)))
+    j_tr[:, 1:-1, :] = np.where(internal_zero_mask, 0.0, tr_mult / ((1.0 / slice_a) + tr_abs_r + (1.0 / slice_b)))
     if realization is None:
         grid.array_j_transmissibility = j_tr
     return j_tr
@@ -266,13 +259,13 @@ def __set_k_transmissibility(grid, half_t, k_tr, modifier_mode, pc, realization,
         internal_zero_mask[grid.k_gap_after_array, :, :] = True
     tr_mult = None
     if modifier_mode == 'faces multiplier':
-        tr_mult = pc.single_array_ref(property_kind='transmissibility multiplier',
-                                      realization=realization,
-                                      facet_type='direction',
-                                      facet='K',
-                                      continuous=True,
-                                      count=1,
-                                      indexable='faces')
+        tr_mult = pc.single_array_ref(property_kind = 'transmissibility multiplier',
+                                      realization = realization,
+                                      facet_type = 'direction',
+                                      facet = 'K',
+                                      continuous = True,
+                                      count = 1,
+                                      indexable = 'faces')
         if tr_mult is not None:
             assert tr_mult.shape == (grid.nk + 1, grid.nj, grid.ni)
             internal_zero_mask = np.logical_or(internal_zero_mask, np.isnan(tr_mult[1:-1, :, :]))
@@ -280,34 +273,33 @@ def __set_k_transmissibility(grid, half_t, k_tr, modifier_mode, pc, realization,
         tr_mult = 1.0
     tr_abs_r = 0.0
     if modifier_mode == 'absolute':
-        tr_abs = pc.single_array_ref(property_kind='mat transmissibility',
-                                     realization=realization,
-                                     facet_type='direction',
-                                     facet='K',
-                                     continuous=True,
-                                     count=1,
-                                     indexable='faces')
+        tr_abs = pc.single_array_ref(property_kind = 'mat transmissibility',
+                                     realization = realization,
+                                     facet_type = 'direction',
+                                     facet = 'K',
+                                     continuous = True,
+                                     count = 1,
+                                     indexable = 'faces')
         if tr_abs is None:
-            tr_abs = pc.single_array_ref(property_kind='mat transmissibility',
-                                         realization=realization,
-                                         continuous=True,
-                                         count=1,
-                                         indexable='faces')
+            tr_abs = pc.single_array_ref(property_kind = 'mat transmissibility',
+                                         realization = realization,
+                                         continuous = True,
+                                         count = 1,
+                                         indexable = 'faces')
         if tr_abs is None:
-            tr_abs = pc.single_array_ref(property_kind='fault transmissibility',
-                                         realization=realization,
-                                         facet_type='direction',
-                                         facet='K',
-                                         continuous=True,
-                                         count=1,
-                                         indexable='faces')
+            tr_abs = pc.single_array_ref(property_kind = 'fault transmissibility',
+                                         realization = realization,
+                                         facet_type = 'direction',
+                                         facet = 'K',
+                                         continuous = True,
+                                         count = 1,
+                                         indexable = 'faces')
         if tr_abs is not None:
             log.debug('applying absolute K face transmissibility modification')
             assert tr_abs.shape == (grid.nk + 1, grid.nj, grid.ni)
             internal_zero_mask = np.logical_or(internal_zero_mask, tr_abs[1:-1, :, :] <= 0.0)
             tr_abs_r = np.where(np.logical_or(np.isinf(tr_abs), np.isnan(tr_abs)), 0.0, 1.0 / tr_abs)
-    k_tr[1:-1, :, :] = np.where(internal_zero_mask, 0.0,
-                                tr_mult / ((1.0 / slice_a) + tr_abs_r + (1.0 / slice_b)))
+    k_tr[1:-1, :, :] = np.where(internal_zero_mask, 0.0, tr_mult / ((1.0 / slice_a) + tr_abs_r + (1.0 / slice_b)))
     if realization is None:
         grid.array_k_transmissibility = k_tr
     return k_tr
