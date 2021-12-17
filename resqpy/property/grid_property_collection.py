@@ -810,23 +810,28 @@ def _coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, 
     for k in range(coarsening.coarse_extent_kji[0]):
         for j in range(coarsening.coarse_extent_kji[1]):
             for i in range(coarsening.coarse_extent_kji[2]):
-                cell_box = coarsening.fine_box_for_coarse(
-                    (k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
-                a_coarsened[k, j, i] = np.nansum(
-                    a[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
-                      cell_box[0, 2]:cell_box[1, 2] + 1] *
-                    fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
-                                cell_box[0, 2]:cell_box[1, 2] + 1])
-                if coarse_weight is None:
-                    weight = np.nansum(fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
-                                                   cell_box[0, 2]:cell_box[1, 2] + 1])
-                    if np.isnan(weight) or weight == 0.0:
-                        a_coarsened[k, j, i] = zero_weight_result
-                    else:
-                        a_coarsened[k, j, i] /= weight
+                a_coarsened = _coarsening_weighted_mean_singlecell(a_coarsened, a, coarsening, k, j, i, fine_weight,
+                                                                   coarse_weight, zero_weight_result)
     if coarse_weight is not None:
         mask = np.logical_or(np.isnan(coarse_weight), coarse_weight == 0.0)
         a_coarsened = np.where(mask, zero_weight_result, a_coarsened / coarse_weight)
+    return a_coarsened
+
+
+def _coarsening_weighted_mean_singlecell(a_coarsened, a, coarsening, k, j, i, fine_weight, coarse_weight,
+                                         zero_weight_result):
+    cell_box = coarsening.fine_box_for_coarse((k, j, i))  # local box within lgc space of fine cells, for 1 coarse cell
+    a_coarsened[k, j, i] = np.nansum(
+        a[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1, cell_box[0, 2]:cell_box[1, 2] + 1] *
+        fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
+                    cell_box[0, 2]:cell_box[1, 2] + 1])
+    if coarse_weight is None:
+        weight = np.nansum(fine_weight[cell_box[0, 0]:cell_box[1, 0] + 1, cell_box[0, 1]:cell_box[1, 1] + 1,
+                                       cell_box[0, 2]:cell_box[1, 2] + 1])
+        if np.isnan(weight) or weight == 0.0:
+            a_coarsened[k, j, i] = zero_weight_result
+        else:
+            a_coarsened[k, j, i] /= weight
     return a_coarsened
 
 
@@ -869,6 +874,41 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
     assert collection.support is not None and tuple(collection.support.extent_kji) == tuple(
         coarsening.coarse_extent_kji)
 
+    source_rv, source_ntg, source_poro, source_sat, source_perm = _extend_imported_get_fine_collections(
+        other, realization)
+
+    fine_rv_array, coarse_rv_array = _extend_imported_coarsen_rock_volume(source_rv, other, box, collection,
+                                                                          realization, uncache_other_arrays, coarsening,
+                                                                          copy_all_realizations)
+
+    fine_ntg_array, coarse_ntg_array = _extend_imported_coarsen_ntg(source_ntg, other, box, collection, realization,
+                                                                    uncache_other_arrays, coarsening,
+                                                                    copy_all_realizations, fine_rv_array,
+                                                                    coarse_rv_array)
+
+    fine_nrv_array, coarse_nrv_array = _extend_imported_nrv_arrays(fine_ntg_array, coarse_ntg_array, fine_rv_array,
+                                                                   coarse_rv_array)
+
+    fine_poro_array, coarse_poro_array = _extend_imported_coarsen_poro(source_poro, other, box, collection, realization,
+                                                                       uncache_other_arrays, coarsening,
+                                                                       copy_all_realizations, fine_nrv_array,
+                                                                       coarse_nrv_array)
+
+    _extend_imported_coarsen_sat(source_sat, other, box, collection, realization, uncache_other_arrays, coarsening,
+                                 copy_all_realizations, fine_nrv_array, coarse_nrv_array, fine_poro_array,
+                                 coarse_poro_array)
+
+    _extend_imported_coarsen_perm(source_perm, other, box, collection, realization, uncache_other_arrays, coarsening,
+                                  copy_all_realizations, fine_nrv_array, coarse_nrv_array)
+
+    _extend_imported_coarsen_lengths(other, box, collection, realization, uncache_other_arrays, coarsening,
+                                     copy_all_realizations)
+
+    _extend_imported_coarsen_other(other, box, collection, realization, uncache_other_arrays, coarsening,
+                                   copy_all_realizations, fine_rv_array, coarse_rv_array)
+
+
+def _extend_imported_get_fine_collections(other, realization):
     # look for properties by kind, process in order: rock volume, net to gross ratio, porosity, permeability, saturation
     source_rv = selective_version_of_collection(other, realization = realization, property_kind = 'rock volume')
     source_ntg = selective_version_of_collection(other, realization = realization, property_kind = 'net to gross ratio')
@@ -877,6 +917,11 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
     source_perm = selective_version_of_collection(other, realization = realization, property_kind = 'permeability rock')
     # todo: add kh and some other property kinds
 
+    return source_rv, source_ntg, source_poro, source_sat, source_perm
+
+
+def _extend_imported_coarsen_rock_volume(source_rv, other, box, collection, realization, uncache_other_arrays,
+                                         coarsening, copy_all_realizations):
     # bulk rock volume
     fine_rv_array = coarse_rv_array = None
     if source_rv.number_of_parts() == 0:
@@ -895,6 +940,12 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
             coarse_rv_array = _coarsening_sum(coarsening, fine_rv_array)
             _add_to_imported(collection, coarse_rv_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
+    return fine_rv_array, coarse_rv_array
+
+
+def _extend_imported_coarsen_ntg(source_ntg, other, box, collection, realization, uncache_other_arrays, coarsening,
+                                 copy_all_realizations, fine_rv_array, coarse_rv_array):
+
     # net to gross ratio
     # note that coarsened ntg values may exceed one when reference bulk rock volumes are from grid geometries
     fine_ntg_array = coarse_ntg_array = None
@@ -909,13 +960,21 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
                                                      zero_weight_result = 0.0)
         _add_to_imported(collection, coarse_ntg_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
+    return fine_ntg_array, coarse_ntg_array
+
+
+def _extend_imported_nrv_arrays(fine_ntg_array, coarse_ntg_array, fine_rv_array, coarse_rv_array):
     if fine_ntg_array is None:
         fine_nrv_array = fine_rv_array
         coarse_nrv_array = coarse_rv_array
     else:
         fine_nrv_array = fine_rv_array * fine_ntg_array
         coarse_nrv_array = coarse_rv_array * coarse_ntg_array
+    return fine_nrv_array, coarse_nrv_array
 
+
+def _extend_imported_coarsen_poro(source_poro, other, box, collection, realization, uncache_other_arrays, coarsening,
+                                  copy_all_realizations, fine_nrv_array, coarse_nrv_array):
     fine_poro_array = coarse_poro_array = None
     for (part, info) in source_poro.dict.items():
         if not copy_all_realizations and info[0] != realization:
@@ -928,6 +987,12 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
                                                       zero_weight_result = 0.0)
         _add_to_imported(collection, coarse_poro_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
+    return fine_poro_array, coarse_poro_array
+
+
+def _extend_imported_coarsen_sat(source_sat, other, box, collection, realization, uncache_other_arrays, coarsening,
+                                 copy_all_realizations, fine_nrv_array, coarse_nrv_array, fine_poro_array,
+                                 coarse_poro_array):
     # saturations
     fine_sat_array = coarse_sat_array = None
     fine_sat_weight = fine_nrv_array
@@ -946,6 +1011,9 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
                                                      zero_weight_result = 0.0)
         _add_to_imported(collection, coarse_sat_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
+
+def _extend_imported_coarsen_perm(source_perm, other, box, collection, realization, uncache_other_arrays, coarsening,
+                                  copy_all_realizations, fine_nrv_array, coarse_nrv_array):
     # permeabilities
     # todo: use more harmonic, arithmetic mean instead of just bulk rock volume weighted; consider ntg
     for (part, info) in source_perm.dict.items():
@@ -959,6 +1027,9 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
                                                       zero_weight_result = 0.0)
         _add_to_imported(collection, coarse_perm_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
+
+def _extend_imported_coarsen_lengths(other, box, collection, realization, uncache_other_arrays, coarsening,
+                                     copy_all_realizations):
     # cell lengths
     source_cell_lengths = selective_version_of_collection(other,
                                                           realization = realization,
@@ -972,6 +1043,9 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
         coarse_cl_array = _coarsening_sum(coarsening, fine_cl_array, axis = axis)
         _add_to_imported(collection, coarse_cl_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
+
+def _extend_imported_coarsen_other(other, box, collection, realization, uncache_other_arrays, coarsening,
+                                   copy_all_realizations, fine_rv_array, coarse_rv_array):
     # TODO: all other supported property kinds requiring special treatment
     # default behaviour is bulk volume weighted mean for continuous data, first cell in box for discrete
     handled_kinds = ('rock volume', 'net to gross ratio', 'porosity', 'saturation', 'permeability rock',
