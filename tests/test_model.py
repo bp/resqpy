@@ -461,27 +461,19 @@ def test_root_for_time_series(example_model_with_prop_ts_rels):
 def test_grid_list(example_model_and_crs):
     model, crs = example_model_and_crs
     # create some grid objects
-    grid_a = grr.RegularGrid(model, extent_kji = (2, 2, 2), crs_uuid = crs.uuid, title = 'GRID A')
-    grid_a.write_hdf5()
-    grid_a.create_xml(write_active = False, add_cell_length_properties = False)
-    grid_b = grr.RegularGrid(model, extent_kji = (3, 3, 3), crs_uuid = crs.uuid, title = 'GRID B')
-    grid_b.write_hdf5()
-    grid_b.create_xml(write_active = False, add_cell_length_properties = False)
-    grid_c = grr.RegularGrid(model, extent_kji = (4, 4, 4), crs_uuid = crs.uuid, title = 'GRID C')
-    grid_c.write_hdf5()
-    grid_c.create_xml(write_active = False, add_cell_length_properties = False)
+    grid_a, grid_b, grid_c = add_grids(model, crs, False)
     # access a grid part
     grid_1 = model.grid(title = 'GRID C')
     assert grid_1 is not None
-    assert grid_1 == grid_c, 'grid comparison based on uuids failed'
+    assert bu.matching_uuids(grid_1.uuid, grid_c.uuid)
     assert len(model.parts(obj_type = 'IjkGridRepresentation')) == 3
     # check that the call to grid() has added the returned grid to the cache list
     assert len(model.grid_list_uuid_list()) == len(model.grid_list) == 1
-    assert model.grid_list[0] == grid_c, 'grid comparison based on uuids failed'
+    assert bu.matching_uuids(model.grid_list[0].uuid, grid_c.uuid)
     assert model.grid_list[0] is grid_1
     # access another grid by uuid and check that it is added to cached list
     grid_2 = model.grid(uuid = grid_a.uuid)
-    assert grid_2 == grid_a
+    assert bu.matching_uuids(grid_2.uuid, grid_a.uuid)
     assert len(model.grid_list_uuid_list()) == len(model.grid_list) == 2
     # add all 3 grids to the grid cache list, checking for duplicates
     model.add_grid(grid_a, check_for_duplicates = True)
@@ -491,8 +483,61 @@ def test_grid_list(example_model_and_crs):
     assert len(model.grid_list_uuid_list()) == 3
     # check use of cached grids
     grid_3a = model.grid_for_uuid_from_grid_list(grid_b.uuid)
-    assert grid_3a == grid_b, 'grid comparison based on uuids failed'
+    assert bu.matching_uuids(grid_3a.uuid, grid_b.uuid)
     assert grid_3a is grid_b
     grid_3b = model.grid_for_uuid_from_grid_list(grid_b.uuid)
     assert grid_3a is grid_3b
     assert tuple(grid_3a.extent_kji) == (3, 3, 3)
+
+
+def test_catalogue_functions(example_model_and_crs):
+    model, crs = example_model_and_crs
+    # temp override of above
+    model = rq.new_model('/users/andy/bifröst/bc/catalogue.epc')
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    # create some grid objects with some boring properties
+    add_grids(model, crs, True)
+    model.store_epc()  # temp
+    # test parts() method with various options
+    all_parts = model.parts()
+    assert isinstance(all_parts, list)
+    assert len(all_parts) >= 13
+    assert all([isinstance(p, str) for p in all_parts])
+    grid_parts = model.parts(obj_type = 'IjkGridRepresentation')
+    assert len(grid_parts) == 3
+    assert all([(model.type_of_part(p, strip_obj = True) == 'IjkGridRepresentation') for p in grid_parts])
+    grid_b_part = model.part(parts_list = grid_parts, title = 'b', title_mode = 'ends')
+    assert grid_b_part is not None
+    assert model.citation_title_for_part(grid_b_part).endswith('B')
+    no_grid_b_part = model.part(parts_list = grid_parts, title = 'b', title_mode = 'ends', title_case_sensitive = True)
+    assert no_grid_b_part is None
+    grid_b_rels_uuids = model.uuids(related_uuid = model.uuid_for_part(grid_b_part))
+    assert grid_b_rels_uuids is not None and len(grid_b_rels_uuids) >= 4
+    assert uuid_in_list(crs.uuid, grid_b_rels_uuids)
+    grid_b_props_titles = model.titles(obj_type = 'ContinuousProperty',
+                                       parts_list = [model.part_for_uuid(uuid) for uuid in grid_b_rels_uuids],
+                                       sort_by = 'title')
+    assert len(grid_b_props_titles) == 3
+    assert all([a < b for (a, b) in zip(grid_b_props_titles[:-1], grid_b_props_titles[1:])])
+
+
+
+def add_grids(model, crs, add_lengths):
+    grid_a = grr.RegularGrid(model, extent_kji = (2, 2, 2), crs_uuid = crs.uuid, title = 'GRID A', set_points_cached = True)
+    grid_a.write_hdf5()
+    grid_a.create_xml(write_active = False, add_cell_length_properties = add_lengths, write_geometry = True)
+    grid_b = grr.RegularGrid(model, extent_kji = (3, 3, 3), crs_uuid = crs.uuid, title = 'GRID B', set_points_cached = True)
+    grid_b.write_hdf5()
+    grid_b.create_xml(write_active = False, add_cell_length_properties = add_lengths, write_geometry = True)
+    grid_c = grr.RegularGrid(model, extent_kji = (4, 4, 4), crs_uuid = crs.uuid, title = 'GRID C', set_points_cached = True)
+    grid_c.write_hdf5()
+    grid_c.create_xml(write_active = False, add_cell_length_properties = add_lengths, write_geometry = True)
+    return (grid_a, grid_b, grid_c)
+
+
+def uuid_in_list(uuid, uuid_list):
+    for u in uuid_list:
+        if bu.matching_uuids(u, uuid):
+            return True
+    return False
