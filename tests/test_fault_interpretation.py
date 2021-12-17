@@ -1,6 +1,6 @@
 import pytest
 
-import uuid
+import resqpy.olio.uuid as uuid
 import resqpy.organize as rqo
 from resqpy.model import Model
 
@@ -54,7 +54,7 @@ def test_is_equivalent_is_other(tmp_model):
 def test_is_equivalent_is_sameUUIDs(tmp_model):
 
     # Arrange
-    object_uuid = uuid.uuid4()
+    object_uuid = uuid.new_uuid()
     fault_interp = rqo.FaultInterpretation(
         tmp_model,
         title = 'test_fault_interpretation',
@@ -78,14 +78,14 @@ def test_is_equivalent_is_tectonic_boundary_one_none(tmp_model):
     # Arrange
     fault_interp = rqo.FaultInterpretation(
         tmp_model,
-        title = 'test_fault_interpretation',
+        title = 'tectonic_boundary_test',
     )
     fault_interp.tectonic_boundary_feature = 'something'
 
     # Act
     other = rqo.FaultInterpretation(
         tmp_model,
-        title = 'test_fault_interpretation_other',
+        title = 'tectonic_boundary_test',
     )
     other.tectonic_boundary_feature = None
     result = fault_interp.is_equivalent(other = other)
