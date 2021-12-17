@@ -964,8 +964,7 @@ def _extend_imported_coarsen_ntg(source_ntg, other, box, collection, realization
 
 
 def _extend_imported_nrv_arrays(fine_ntg_array, coarse_ntg_array, fine_rv_array, coarse_rv_array):
-    """Note: these arrays are generated only in memory for coarsening calculations for other properties. These are not added to the property collection
-    """
+    """Note: these arrays are generated only in memory for coarsening calculations for other properties. These are not added to the property collection"""
     if fine_ntg_array is None:
         fine_nrv_array = fine_rv_array
         coarse_nrv_array = coarse_rv_array
