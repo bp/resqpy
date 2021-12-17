@@ -251,49 +251,61 @@ def make_face_sets_from_pillar_lists(grid,
             while np.any(here != ji_1):
                 previous = here.copy()  # debug
                 if abs_dj >= abs_di:
-                    j = here[0]
-                    if j != ji_1[0]:
-                        jp = j + j_sign
-                        _add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1], (min(j, jp), here[1] - 1))
-                        here[0] = jp
-                        full_pillar_list.append(tuple(here))
-                    if di != 0:
-                        divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(here)], xy_0, xy_1)
-                        side_step[:] = here
-                        side_step[1] += i_sign
-                        if side_step[1] >= 0 and side_step[1] <= grid.extent_kji[kelp_axes_int[1]]:
-                            stepped_divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(side_step)], xy_0,
-                                                                               xy_1)
-                            if stepped_divergence < divergence:
-                                here[:] = side_step
-                                _add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0],
-                                                  (here[0] - 1, min(here[1], here[1] - i_sign)))
-                                full_pillar_list.append(tuple(here))
+                    __j_greater_than_i(di, full_pillar_list, grid, here, i_kelp_list, i_sign, j_kelp_list, j_sign, ji_1,
+                                       kelp_axes, kelp_axes_int, pillar_xy, side_step, xy_0, xy_1)
                 else:
-                    i = here[1]
-                    if i != ji_1[1]:
-                        ip = i + i_sign
-                        _add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0], (here[0] - 1, min(i, ip)))
-                        here[1] = ip
-                        full_pillar_list.append(tuple(here))
-                    if dj != 0:
-                        divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(here)], xy_0, xy_1)
-                        side_step[:] = here
-                        side_step[0] += j_sign
-                        if side_step[0] >= 0 and side_step[0] <= grid.extent_kji[kelp_axes_int[0]]:
-                            stepped_divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(side_step)], xy_0,
-                                                                               xy_1)
-                            if stepped_divergence < divergence:
-                                here[:] = side_step
-                                _add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1],
-                                                  (min(here[0], here[0] - j_sign), here[1] - 1))
-                                full_pillar_list.append(tuple(here))
+                    __i_greater_than_j(dj, full_pillar_list, grid, here, i_kelp_list, i_sign, j_kelp_list, j_sign, ji_1,
+                                       kelp_axes, kelp_axes_int, pillar_xy, side_step, xy_0, xy_1)
                 assert np.any(here != previous), 'failed to move'
         grid.face_set_dict[face_set_id + id_suffix] = (j_kelp_list, i_kelp_list, axis)
         local_face_set_dict[face_set_id + id_suffix] = (j_kelp_list, i_kelp_list, axis)
         full_pillar_list_dict[face_set_id + id_suffix] = full_pillar_list.copy()
 
     return local_face_set_dict, full_pillar_list_dict
+
+
+def __i_greater_than_j(dj, full_pillar_list, grid, here, i_kelp_list, i_sign, j_kelp_list, j_sign, ji_1, kelp_axes,
+                       kelp_axes_int, pillar_xy, side_step, xy_0, xy_1):
+    i = here[1]
+    if i != ji_1[1]:
+        ip = i + i_sign
+        _add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0], (here[0] - 1, min(i, ip)))
+        here[1] = ip
+        full_pillar_list.append(tuple(here))
+    if dj != 0:
+        divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(here)], xy_0, xy_1)
+        side_step[:] = here
+        side_step[0] += j_sign
+        if side_step[0] >= 0 and side_step[0] <= grid.extent_kji[kelp_axes_int[0]]:
+            stepped_divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(side_step)], xy_0,
+                                                               xy_1)
+            if stepped_divergence < divergence:
+                here[:] = side_step
+                _add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1],
+                                  (min(here[0], here[0] - j_sign), here[1] - 1))
+                full_pillar_list.append(tuple(here))
+
+
+def __j_greater_than_i(di, full_pillar_list, grid, here, i_kelp_list, i_sign, j_kelp_list, j_sign, ji_1, kelp_axes,
+                       kelp_axes_int, pillar_xy, side_step, xy_0, xy_1):
+    j = here[0]
+    if j != ji_1[0]:
+        jp = j + j_sign
+        _add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1], (min(j, jp), here[1] - 1))
+        here[0] = jp
+        full_pillar_list.append(tuple(here))
+    if di != 0:
+        divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(here)], xy_0, xy_1)
+        side_step[:] = here
+        side_step[1] += i_sign
+        if side_step[1] >= 0 and side_step[1] <= grid.extent_kji[kelp_axes_int[1]]:
+            stepped_divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(side_step)], xy_0,
+                                                               xy_1)
+            if stepped_divergence < divergence:
+                here[:] = side_step
+                _add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0],
+                                  (here[0] - 1, min(here[1], here[1] - i_sign)))
+                full_pillar_list.append(tuple(here))
 
 
 def face_centre(grid,

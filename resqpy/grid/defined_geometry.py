@@ -258,217 +258,6 @@ def set_geometry_is_defined(grid,
        although the method modifies the cached (attribute) copies of various arrays, they are not written to hdf5 here
     """
 
-    def infill_partial_pillar(grid, pillar_index):
-        points = grid.points_ref(masked=False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
-        nan_mask = np.isnan(points[:, pillar_index, 0])
-        first_k = 0
-        while first_k < grid.nk_plus_k_gaps + 1 and nan_mask[first_k]:
-            first_k += 1
-        assert first_k < grid.nk_plus_k_gaps + 1
-        if first_k > 0:
-            points[:first_k, pillar_index] = points[first_k, pillar_index]
-        last_k = grid.nk_plus_k_gaps
-        while nan_mask[last_k]:
-            last_k -= 1
-        if last_k < grid.nk_plus_k_gaps:
-            points[last_k + 1:, pillar_index] = points[last_k, pillar_index]
-        while True:
-            while first_k < last_k and not nan_mask[first_k]:
-                first_k += 1
-            if first_k >= last_k:
-                break
-            scan_k = first_k + 1
-            while nan_mask[scan_k]:
-                scan_k += 1
-            points[first_k - 1: scan_k, pillar_index] = \
-                np.linspace(points[first_k - 1, pillar_index], points[scan_k, pillar_index],
-                            num=scan_k - first_k + 1, endpoint=False)
-            first_k = scan_k
-
-    def create_surround_masks(top_nan_mask):
-        assert top_nan_mask.ndim == 2
-        nj1, ni1 = top_nan_mask.shape  # nj + 1, ni + 1
-        surround_mask = np.zeros(top_nan_mask.shape, dtype=bool)
-        coastal_mask = np.zeros(top_nan_mask.shape, dtype=bool)
-        for j in range(nj1):
-            i = 0
-            while i < ni1 and top_nan_mask[j, i]:
-                coastal_mask[j, i] = True
-                i += 1
-            if i < ni1:
-                i = ni1 - 1
-                while top_nan_mask[j, i]:
-                    coastal_mask[j, i] = True
-                    i -= 1
-            else:
-                surround_mask[j] = True
-                coastal_mask[j] = False
-        for i in range(ni1):
-            j = 0
-            while j < nj1 and top_nan_mask[j, i]:
-                coastal_mask[j, i] = True
-                j += 1
-            if j < nj1:
-                j = nj1 - 1
-                while top_nan_mask[j, i]:
-                    coastal_mask[j, i] = True
-                    j -= 1
-            else:
-                surround_mask[:, i] = True
-                coastal_mask[:, i] = False
-        return surround_mask, coastal_mask
-
-    def fill_holes(grid, holes_mask):
-        log.debug(f'filling {np.count_nonzero(holes_mask)} pillars for holes')
-        points = grid.points_ref(masked=False).reshape(grid.nk_plus_k_gaps + 1, -1, 3)
-        ni_plus_1 = grid.ni + 1
-        mask_01 = np.empty(holes_mask.shape, dtype=int)
-        while np.any(holes_mask):
-            flat_holes_mask = holes_mask.flatten()
-            mask_01[:] = np.where(holes_mask, 0, 1)
-            modified = False
-            # fix isolated NaN pillars with 4 neighbours
-            neighbours = np.zeros(holes_mask.shape, dtype=int)
-            neighbours[:-1, :] += mask_01[1:, :]
-            neighbours[1:, :] += mask_01[:-1, :]
-            neighbours[:, :-1] += mask_01[:, 1:]
-            neighbours[:, 1:] += mask_01[:, :-1]
-            foursomes = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 4))[0]
-            if len(foursomes) > 0:
-                interpolated = 0.25 * (points[:, foursomes - 1, :] + points[:, foursomes + 1, :] +
-                                       points[:, foursomes - ni_plus_1, :] + points[:, foursomes + ni_plus_1, :])
-                points[:, foursomes, :] = interpolated
-                flat_holes_mask[foursomes] = False
-                modified = True
-            # fix NaN pillars with defined opposing neighbours in -J and +J
-            neighbours[:] = 0
-            neighbours[:-1, :] += mask_01[1:, :]
-            neighbours[1:, :] += mask_01[:-1, :]
-            twosomes = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
-            if len(twosomes) > 0:
-                interpolated = 0.5 * (points[:, twosomes - ni_plus_1, :] + points[:, twosomes + ni_plus_1, :])
-                points[:, twosomes, :] = interpolated
-                flat_holes_mask[twosomes] = False
-                modified = True
-            # fix NaN pillars with defined opposing neighbours in -I and +I
-            neighbours[:] = 0
-            neighbours[:, :-1] += mask_01[:, 1:]
-            neighbours[:, 1:] += mask_01[:, :-1]
-            twosomes = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
-            if len(twosomes) > 0:
-                interpolated = 0.5 * (points[:, twosomes - 1, :] + points[:, twosomes + 1, :])
-                points[:, twosomes, :] = interpolated
-                flat_holes_mask[twosomes] = False
-                modified = True
-            # fix NaN pillars with defined cornering neighbours in J- and I-
-            neighbours[:] = 0
-            neighbours[1:, :] += mask_01[:-1, :]
-            neighbours[:, 1:] += mask_01[:, :-1]
-            corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
-            neighbours[1:, 1:] += mask_01[:-1, :-1]
-            pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
-            if len(corners) > 0:
-                interpolated = 0.5 * (points[:, corners - ni_plus_1, :] + points[:, corners - 1, :])
-                points[:, corners, :] = interpolated
-                pushed = 2.0 * points[:, pushable, :] - points[:, pushable - ni_plus_1 - 1, :]
-                points[:, pushable, :] = pushed
-                flat_holes_mask[corners] = False
-                modified = True
-            # fix NaN pillars with defined cornering neighbours in J- and I+
-            neighbours[:] = 0
-            neighbours[1:, :] += mask_01[:-1, :]
-            neighbours[:, :-1] += mask_01[:, 1:]
-            corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
-            neighbours[1:, :-1] += mask_01[:-1, 1:]
-            pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
-            if len(corners) > 0:
-                interpolated = 0.5 * (points[:, corners - ni_plus_1, :] + points[:, corners + 1, :])
-                points[:, corners, :] = interpolated
-                pushed = 2.0 * points[:, pushable, :] - points[:, pushable - ni_plus_1 + 1, :]
-                points[:, pushable, :] = pushed
-                flat_holes_mask[corners] = False
-                modified = True
-            # fix NaN pillars with defined cornering neighbours in J+ and I-
-            neighbours[:] = 0
-            neighbours[:-1, :] += mask_01[1:, :]
-            neighbours[:, 1:] += mask_01[:, :-1]
-            corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
-            neighbours[:-1, 1:] += mask_01[1:, :-1]
-            pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
-            if len(corners) > 0:
-                interpolated = 0.5 * (points[:, corners + ni_plus_1, :] + points[:, corners - 1, :])
-                points[:, corners, :] = interpolated
-                pushed = 2.0 * points[:, pushable, :] - points[:, pushable + ni_plus_1 - 1, :]
-                points[:, pushable, :] = pushed
-                flat_holes_mask[corners] = False
-                modified = True
-            # fix NaN pillars with defined cornering neighbours in J+ and I+
-            neighbours[:] = 0
-            neighbours[:-1, :] += mask_01[1:, :]
-            neighbours[:, :-1] += mask_01[:, 1:]
-            corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
-            neighbours[:-1, :-1] += mask_01[1:, 1:]
-            pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
-            if len(corners) > 0:
-                interpolated = 0.5 * (points[:, corners + ni_plus_1, :] + points[:, corners + 1, :])
-                points[:, corners, :] = interpolated
-                pushed = 2.0 * points[:, pushable, :] - points[:, pushable + ni_plus_1 + 1, :]
-                points[:, pushable, :] = pushed
-                flat_holes_mask[corners] = False
-                modified = True
-            holes_mask = flat_holes_mask.reshape((grid.nj + 1, ni_plus_1))
-            if not modified:
-                log.warning('failed to fill all holes in grid geometry')
-                break
-
-    def fill_surround(grid, surround_mask):
-        # note: only fills x,y; based on bottom layer of points; assumes surround mask is a regularly shaped frame of columns
-        log.debug(f'filling {np.count_nonzero(surround_mask)} pillars for surround')
-        points = grid.points_ref(masked=False)
-        points_view = points[-1, :, :2].reshape((-1, 2))[:(grid.nj + 1) * (grid.ni + 1), :].reshape(
-            (grid.nj + 1, grid.ni + 1, 2))
-        modified = False
-        if grid.nj > 1:
-            j_xy_vector = np.nanmean(points_view[1:, :] - points_view[:-1, :])
-            j = 0
-            while j < grid.nj and np.all(surround_mask[j, :]):
-                j += 1
-            assert j < grid.nj
-            while j > 0:
-                points_view[j - 1, :] = points_view[j, :] - j_xy_vector
-                modified = True
-                j -= 1
-            j = grid.nj - 1
-            while j >= 0 and np.all(surround_mask[j, :]):
-                j -= 1
-            assert j >= 0
-            while j < grid.nj - 1:
-                points_view[j + 1, :] = points_view[j, :] + j_xy_vector
-                modified = True
-                j += 1
-        if grid.ni > 1:
-            i_xy_vector = np.nanmean(points_view[:, 1:] - points_view[:, :-1])
-            i = 0
-            while i < grid.ni and np.all(surround_mask[:, i]):
-                i += 1
-            assert i < grid.ni
-            while i > 0:
-                points_view[:, i - 1] = points_view[:, i] - i_xy_vector
-                modified = True
-                i -= 1
-            i = grid.ni - 1
-            while i >= 0 and np.all(surround_mask[:, i]):
-                i -= 1
-            assert i >= 0
-            while i < grid.ni - 1:
-                points_view[:, i + 1] = points_view[:, i] + i_xy_vector
-                modified = True
-                i += 1
-        if modified:
-            points.reshape((grid.nk_plus_k_gaps + 1, -1, 3))[:-1, :(grid.nj + 1) * (grid.ni + 1), :2][:,
-            surround_mask.flatten(), :] = \
-                points_view[surround_mask, :].reshape((1, -1, 2))
-
     assert not (complete_partial_pillars and nullify_partial_pillars)
     if complete_all and not nullify_partial_pillars:
         complete_partial_pillars = True
@@ -500,24 +289,7 @@ def set_geometry_is_defined(grid,
         return
 
     if some_areal_dots:
-        # inject NaNs into the pillars around any cell that has zero length in I and J
-        if grid.k_gaps:
-            dot_mask = np.zeros((grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1), dtype=bool)
-            dot_mask[grid.k_raw_index_array, :-1, :-1] = areal_dots
-            dot_mask[grid.k_raw_index_array + 1, :-1, :-1] = np.logical_or(
-                dot_mask[grid.k_raw_index_array + 1, :-1, :-1], areal_dots)
-        else:
-            dot_mask = np.zeros((grid.nk + 1, grid.nj + 1, grid.ni + 1), dtype=bool)
-            dot_mask[:-1, :-1, :-1] = areal_dots
-            dot_mask[1:, :-1, :-1] = np.logical_or(dot_mask[:-1, :-1, :-1], areal_dots)
-        dot_mask[:, 1:, :-1] = np.logical_or(dot_mask[:, :-1, :-1], dot_mask[:, 1:, :-1])
-        dot_mask[:, :, 1:] = np.logical_or(dot_mask[:, :, :-1], dot_mask[:, :, 1:])
-        if grid.has_split_coordinate_lines:
-            # only set points in primary pillars to NaN; todo: more thorough to consider split pillars too
-            primaries = (grid.nj + 1) * (grid.ni + 1)
-            nan_mask[:, :primaries] = np.logical_or(nan_mask[:, :primaries], dot_mask.reshape((-1, primaries)))
-        else:
-            nan_mask = np.where(dot_mask, np.NaN, nan_mask)
+        nan_mask = __handle_areal_dots(areal_dots, grid, nan_mask)
 
     assert not np.all(nan_mask), 'grid does not have any geometry defined'
 
@@ -571,32 +343,11 @@ def set_geometry_is_defined(grid,
         if np.any(partial_pillar_mask):
             log.warning('completing geometry for partially defined pillars')
             for pillar_index in np.where(partial_pillar_mask)[0]:
-                infill_partial_pillar(grid, pillar_index)
+                __infill_partial_pillar(grid, pillar_index)
             cells_update_needed = True
 
     if complete_all:
-        # note: each pillar is either fully defined or fully undefined at this point
-        top_nan_mask = np.isnan(points[0, ..., 0].flatten()[:(grid.nj + 1) * (grid.ni + 1)].reshape(
-            (grid.nj + 1, grid.ni + 1)))
-        surround_mask, coastal_mask = create_surround_masks(top_nan_mask)
-        holes_mask = np.logical_and(top_nan_mask, np.logical_not(surround_mask))
-        if np.any(holes_mask):
-            fill_holes(grid, holes_mask)
-        if np.any(surround_mask):
-            fill_surround(grid, surround_mask)
-        # set z values for coastal and surround to max z for grid
-        surround_mask = np.logical_or(surround_mask, coastal_mask).flatten()
-        if np.any(surround_mask):
-            points.reshape(grid.nk_plus_k_gaps + 1, -1, 3)[:, :(grid.nj + 1) * (grid.ni + 1)][:, surround_mask,
-            2] = surround_z
-        grid.geometry_defined_for_all_pillars_cached = True
-        if hasattr(grid, 'array_pillar_geometry_is_defined'):
-            del grid.array_pillar_geometry_is_defined
-        cells_update_needed = False
-        assert not np.any(np.isnan(points))
-        grid.geometry_defined_for_all_cells_cached = True
-        if hasattr(grid, 'array_cell_geometry_is_defined'):
-            del grid.array_cell_geometry_is_defined
+        cells_update_needed = __complete_all_pillars(cells_update_needed, grid, points, surround_z)
 
     if cells_update_needed:
         # note: each pillar is either fully defined or fully undefined at this point
@@ -613,3 +364,263 @@ def set_geometry_is_defined(grid,
             grid.geometry_defined_for_all_cells_cached = np.all(grid.array_cell_geometry_is_defined)
             if grid.geometry_defined_for_all_cells_cached:
                 del grid.array_cell_geometry_is_defined
+
+
+def __complete_all_pillars(cells_update_needed, grid, points, surround_z):
+    # note: each pillar is either fully defined or fully undefined at this point
+    top_nan_mask = np.isnan(points[0, ..., 0].flatten()[:(grid.nj + 1) * (grid.ni + 1)].reshape(
+        (grid.nj + 1, grid.ni + 1)))
+    surround_mask, coastal_mask = __create_surround_masks(top_nan_mask)
+    holes_mask = np.logical_and(top_nan_mask, np.logical_not(surround_mask))
+    if np.any(holes_mask):
+        __fill_holes(grid, holes_mask)
+    if np.any(surround_mask):
+        __fill_surround(grid, surround_mask)
+    # set z values for coastal and surround to max z for grid
+    surround_mask = np.logical_or(surround_mask, coastal_mask).flatten()
+    if np.any(surround_mask):
+        points.reshape(grid.nk_plus_k_gaps + 1, -1, 3)[:, :(grid.nj + 1) * (grid.ni + 1)][:, surround_mask,
+        2] = surround_z
+    grid.geometry_defined_for_all_pillars_cached = True
+    if hasattr(grid, 'array_pillar_geometry_is_defined'):
+        del grid.array_pillar_geometry_is_defined
+    cells_update_needed = False
+    assert not np.any(np.isnan(points))
+    grid.geometry_defined_for_all_cells_cached = True
+    if hasattr(grid, 'array_cell_geometry_is_defined'):
+        del grid.array_cell_geometry_is_defined
+    return cells_update_needed
+
+
+def __handle_areal_dots(areal_dots, grid, nan_mask):
+    # inject NaNs into the pillars around any cell that has zero length in I and J
+    if grid.k_gaps:
+        dot_mask = np.zeros((grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1), dtype=bool)
+        dot_mask[grid.k_raw_index_array, :-1, :-1] = areal_dots
+        dot_mask[grid.k_raw_index_array + 1, :-1, :-1] = np.logical_or(
+            dot_mask[grid.k_raw_index_array + 1, :-1, :-1], areal_dots)
+    else:
+        dot_mask = np.zeros((grid.nk + 1, grid.nj + 1, grid.ni + 1), dtype=bool)
+        dot_mask[:-1, :-1, :-1] = areal_dots
+        dot_mask[1:, :-1, :-1] = np.logical_or(dot_mask[:-1, :-1, :-1], areal_dots)
+    dot_mask[:, 1:, :-1] = np.logical_or(dot_mask[:, :-1, :-1], dot_mask[:, 1:, :-1])
+    dot_mask[:, :, 1:] = np.logical_or(dot_mask[:, :, :-1], dot_mask[:, :, 1:])
+    if grid.has_split_coordinate_lines:
+        # only set points in primary pillars to NaN; todo: more thorough to consider split pillars too
+        primaries = (grid.nj + 1) * (grid.ni + 1)
+        nan_mask[:, :primaries] = np.logical_or(nan_mask[:, :primaries], dot_mask.reshape((-1, primaries)))
+    else:
+        nan_mask = np.where(dot_mask, np.NaN, nan_mask)
+    return nan_mask
+
+
+def __infill_partial_pillar(grid, pillar_index):
+    points = grid.points_ref(masked=False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
+    nan_mask = np.isnan(points[:, pillar_index, 0])
+    first_k = 0
+    while first_k < grid.nk_plus_k_gaps + 1 and nan_mask[first_k]:
+        first_k += 1
+    assert first_k < grid.nk_plus_k_gaps + 1
+    if first_k > 0:
+        points[:first_k, pillar_index] = points[first_k, pillar_index]
+    last_k = grid.nk_plus_k_gaps
+    while nan_mask[last_k]:
+        last_k -= 1
+    if last_k < grid.nk_plus_k_gaps:
+        points[last_k + 1:, pillar_index] = points[last_k, pillar_index]
+    while True:
+        while first_k < last_k and not nan_mask[first_k]:
+            first_k += 1
+        if first_k >= last_k:
+            break
+        scan_k = first_k + 1
+        while nan_mask[scan_k]:
+            scan_k += 1
+        points[first_k - 1: scan_k, pillar_index] = \
+            np.linspace(points[first_k - 1, pillar_index], points[scan_k, pillar_index],
+                        num=scan_k - first_k + 1, endpoint=False)
+        first_k = scan_k
+
+def __create_surround_masks(top_nan_mask):
+    assert top_nan_mask.ndim == 2
+    nj1, ni1 = top_nan_mask.shape  # nj + 1, ni + 1
+    surround_mask = np.zeros(top_nan_mask.shape, dtype=bool)
+    coastal_mask = np.zeros(top_nan_mask.shape, dtype=bool)
+    for j in range(nj1):
+        i = 0
+        while i < ni1 and top_nan_mask[j, i]:
+            coastal_mask[j, i] = True
+            i += 1
+        if i < ni1:
+            i = ni1 - 1
+            while top_nan_mask[j, i]:
+                coastal_mask[j, i] = True
+                i -= 1
+        else:
+            surround_mask[j] = True
+            coastal_mask[j] = False
+    for i in range(ni1):
+        j = 0
+        while j < nj1 and top_nan_mask[j, i]:
+            coastal_mask[j, i] = True
+            j += 1
+        if j < nj1:
+            j = nj1 - 1
+            while top_nan_mask[j, i]:
+                coastal_mask[j, i] = True
+                j -= 1
+        else:
+            surround_mask[:, i] = True
+            coastal_mask[:, i] = False
+    return surround_mask, coastal_mask
+
+def __fill_holes(grid, holes_mask):
+    log.debug(f'filling {np.count_nonzero(holes_mask)} pillars for holes')
+    points = grid.points_ref(masked=False).reshape(grid.nk_plus_k_gaps + 1, -1, 3)
+    ni_plus_1 = grid.ni + 1
+    mask_01 = np.empty(holes_mask.shape, dtype=int)
+    while np.any(holes_mask):
+        flat_holes_mask = holes_mask.flatten()
+        mask_01[:] = np.where(holes_mask, 0, 1)
+        modified = False
+        # fix isolated NaN pillars with 4 neighbours
+        neighbours = np.zeros(holes_mask.shape, dtype=int)
+        neighbours[:-1, :] += mask_01[1:, :]
+        neighbours[1:, :] += mask_01[:-1, :]
+        neighbours[:, :-1] += mask_01[:, 1:]
+        neighbours[:, 1:] += mask_01[:, :-1]
+        foursomes = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 4))[0]
+        if len(foursomes) > 0:
+            interpolated = 0.25 * (points[:, foursomes - 1, :] + points[:, foursomes + 1, :] +
+                                   points[:, foursomes - ni_plus_1, :] + points[:, foursomes + ni_plus_1, :])
+            points[:, foursomes, :] = interpolated
+            flat_holes_mask[foursomes] = False
+            modified = True
+        # fix NaN pillars with defined opposing neighbours in -J and +J
+        neighbours[:] = 0
+        neighbours[:-1, :] += mask_01[1:, :]
+        neighbours[1:, :] += mask_01[:-1, :]
+        twosomes = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
+        if len(twosomes) > 0:
+            interpolated = 0.5 * (points[:, twosomes - ni_plus_1, :] + points[:, twosomes + ni_plus_1, :])
+            points[:, twosomes, :] = interpolated
+            flat_holes_mask[twosomes] = False
+            modified = True
+        # fix NaN pillars with defined opposing neighbours in -I and +I
+        neighbours[:] = 0
+        neighbours[:, :-1] += mask_01[:, 1:]
+        neighbours[:, 1:] += mask_01[:, :-1]
+        twosomes = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
+        if len(twosomes) > 0:
+            interpolated = 0.5 * (points[:, twosomes - 1, :] + points[:, twosomes + 1, :])
+            points[:, twosomes, :] = interpolated
+            flat_holes_mask[twosomes] = False
+            modified = True
+        # fix NaN pillars with defined cornering neighbours in J- and I-
+        neighbours[:] = 0
+        neighbours[1:, :] += mask_01[:-1, :]
+        neighbours[:, 1:] += mask_01[:, :-1]
+        corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
+        neighbours[1:, 1:] += mask_01[:-1, :-1]
+        pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
+        if len(corners) > 0:
+            interpolated = 0.5 * (points[:, corners - ni_plus_1, :] + points[:, corners - 1, :])
+            points[:, corners, :] = interpolated
+            pushed = 2.0 * points[:, pushable, :] - points[:, pushable - ni_plus_1 - 1, :]
+            points[:, pushable, :] = pushed
+            flat_holes_mask[corners] = False
+            modified = True
+        # fix NaN pillars with defined cornering neighbours in J- and I+
+        neighbours[:] = 0
+        neighbours[1:, :] += mask_01[:-1, :]
+        neighbours[:, :-1] += mask_01[:, 1:]
+        corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
+        neighbours[1:, :-1] += mask_01[:-1, 1:]
+        pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
+        if len(corners) > 0:
+            interpolated = 0.5 * (points[:, corners - ni_plus_1, :] + points[:, corners + 1, :])
+            points[:, corners, :] = interpolated
+            pushed = 2.0 * points[:, pushable, :] - points[:, pushable - ni_plus_1 + 1, :]
+            points[:, pushable, :] = pushed
+            flat_holes_mask[corners] = False
+            modified = True
+        # fix NaN pillars with defined cornering neighbours in J+ and I-
+        neighbours[:] = 0
+        neighbours[:-1, :] += mask_01[1:, :]
+        neighbours[:, 1:] += mask_01[:, :-1]
+        corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
+        neighbours[:-1, 1:] += mask_01[1:, :-1]
+        pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
+        if len(corners) > 0:
+            interpolated = 0.5 * (points[:, corners + ni_plus_1, :] + points[:, corners - 1, :])
+            points[:, corners, :] = interpolated
+            pushed = 2.0 * points[:, pushable, :] - points[:, pushable + ni_plus_1 - 1, :]
+            points[:, pushable, :] = pushed
+            flat_holes_mask[corners] = False
+            modified = True
+        # fix NaN pillars with defined cornering neighbours in J+ and I+
+        neighbours[:] = 0
+        neighbours[:-1, :] += mask_01[1:, :]
+        neighbours[:, :-1] += mask_01[:, 1:]
+        corners = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 2))[0]
+        neighbours[:-1, :-1] += mask_01[1:, 1:]
+        pushable = np.where(np.logical_and(flat_holes_mask, neighbours.flatten() == 3))[0]
+        if len(corners) > 0:
+            interpolated = 0.5 * (points[:, corners + ni_plus_1, :] + points[:, corners + 1, :])
+            points[:, corners, :] = interpolated
+            pushed = 2.0 * points[:, pushable, :] - points[:, pushable + ni_plus_1 + 1, :]
+            points[:, pushable, :] = pushed
+            flat_holes_mask[corners] = False
+            modified = True
+        holes_mask = flat_holes_mask.reshape((grid.nj + 1, ni_plus_1))
+        if not modified:
+            log.warning('failed to fill all holes in grid geometry')
+            break
+
+def __fill_surround(grid, surround_mask):
+    # note: only fills x,y; based on bottom layer of points; assumes surround mask is a regularly shaped frame of columns
+    log.debug(f'filling {np.count_nonzero(surround_mask)} pillars for surround')
+    points = grid.points_ref(masked=False)
+    points_view = points[-1, :, :2].reshape((-1, 2))[:(grid.nj + 1) * (grid.ni + 1), :].reshape(
+        (grid.nj + 1, grid.ni + 1, 2))
+    modified = False
+    if grid.nj > 1:
+        j_xy_vector = np.nanmean(points_view[1:, :] - points_view[:-1, :])
+        j = 0
+        while j < grid.nj and np.all(surround_mask[j, :]):
+            j += 1
+        assert j < grid.nj
+        while j > 0:
+            points_view[j - 1, :] = points_view[j, :] - j_xy_vector
+            modified = True
+            j -= 1
+        j = grid.nj - 1
+        while j >= 0 and np.all(surround_mask[j, :]):
+            j -= 1
+        assert j >= 0
+        while j < grid.nj - 1:
+            points_view[j + 1, :] = points_view[j, :] + j_xy_vector
+            modified = True
+            j += 1
+    if grid.ni > 1:
+        i_xy_vector = np.nanmean(points_view[:, 1:] - points_view[:, :-1])
+        i = 0
+        while i < grid.ni and np.all(surround_mask[:, i]):
+            i += 1
+        assert i < grid.ni
+        while i > 0:
+            points_view[:, i - 1] = points_view[:, i] - i_xy_vector
+            modified = True
+            i -= 1
+        i = grid.ni - 1
+        while i >= 0 and np.all(surround_mask[:, i]):
+            i -= 1
+        assert i >= 0
+        while i < grid.ni - 1:
+            points_view[:, i + 1] = points_view[:, i] + i_xy_vector
+            modified = True
+            i += 1
+    if modified:
+        points.reshape((grid.nk_plus_k_gaps + 1, -1, 3))[:-1, :(grid.nj + 1) * (grid.ni + 1), :2][:,
+        surround_mask.flatten(), :] = \
+            points_view[surround_mask, :].reshape((1, -1, 2))

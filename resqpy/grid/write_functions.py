@@ -1,7 +1,15 @@
+import logging
+
 import numpy as np
 
+log = logging.getLogger(__name__)
+
+import resqpy.olio.grid_functions as gf
 import resqpy.olio.write_hdf5 as rwh5
+import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
+import resqpy.olio.trademark as tm
+import resqpy.olio.write_data as wd
 
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
@@ -36,66 +44,7 @@ def write_hdf5_from_caches(grid,
         h5_reg.register_dataset(grid.uuid, 'unitIndices', grid.stratigraphic_units, dtype='uint32')
 
     if geometry:
-        if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(
-                cache_array=True):
-            if not hasattr(grid,
-                           'array_pillar_geometry_is_defined') or grid.array_pillar_geometry_is_defined is None:
-                grid.array_pillar_geometry_is_defined = np.full((grid.nj + 1, grid.ni + 1), True, dtype=bool)
-            h5_reg.register_dataset(grid.uuid,
-                                    'PillarGeometryIsDefined',
-                                    grid.array_pillar_geometry_is_defined,
-                                    dtype='uint8')
-        if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(
-                cache_array=True):
-            if not hasattr(grid, 'array_cell_geometry_is_defined') or grid.array_cell_geometry_is_defined is None:
-                grid.array_cell_geometry_is_defined = np.full((grid.nk, grid.nj, grid.ni), True, dtype=bool)
-            h5_reg.register_dataset(grid.uuid,
-                                    'CellGeometryIsDefined',
-                                    grid.array_cell_geometry_is_defined,
-                                    dtype='uint8')
-        # todo: PillarGeometryIsDefined ?
-        h5_reg.register_dataset(grid.uuid, 'Points', grid.points_cached)
-        if grid.has_split_coordinate_lines:
-            h5_reg.register_dataset(grid.uuid, 'PillarIndices', grid.split_pillar_indices_cached, dtype='uint32')
-            h5_reg.register_dataset(grid.uuid,
-                                    'ColumnsPerSplitCoordinateLine/elements',
-                                    grid.cols_for_split_pillars,
-                                    dtype='uint32')
-            h5_reg.register_dataset(grid.uuid,
-                                    'ColumnsPerSplitCoordinateLine/cumulativeLength',
-                                    grid.cols_for_split_pillars_cl,
-                                    dtype='uint32')
-        if grid.k_gaps:
-            assert grid.k_gap_after_array is not None
-            h5_reg.register_dataset(grid.uuid, 'GapAfterLayer', grid.k_gap_after_array, dtype='uint8')
-        if grid.parent_window is not None:
-            for axis in range(3):
-                if grid.parent_window.fine_extent_kji[axis] == grid.parent_window.coarse_extent_kji[axis]:
-                    continue  # one-to-noe mapping
-                # reconstruct hdf5 arrays from FineCoarse object and register for write
-                if grid.parent_window.constant_ratios[axis] is not None:
-                    if grid.is_refinement:
-                        pcpi = np.array([grid.parent_window.coarse_extent_kji[axis]],
-                                        dtype=int)  # ParentCountPerInterval
-                        ccpi = np.array([grid.parent_window.fine_extent_kji[axis]],
-                                        dtype=int)  # ChildCountPerInterval
-                    else:
-                        pcpi = np.array([grid.parent_window.fine_extent_kji[axis]], dtype=int)
-                        ccpi = np.array([grid.parent_window.coarse_extent_kji[axis]], dtype=int)
-                else:
-                    if grid.is_refinement:
-                        interval_count = grid.parent_window.coarse_extent_kji[axis]
-                        pcpi = np.ones(interval_count, dtype=int)
-                        ccpi = np.array(grid.parent_window.vector_ratios[axis], dtype=int)
-                    else:
-                        interval_count = grid.parent_window.fine_extent_kji[axis]
-                        pcpi = np.array(grid.parent_window.vector_ratios[axis], dtype=int)
-                        ccpi = np.ones(interval_count, dtype=int)
-                h5_reg.register_dataset(grid.uuid, 'KJI'[axis] + 'Regrid/ParentCountPerInterval', pcpi)
-                h5_reg.register_dataset(grid.uuid, 'KJI'[axis] + 'Regrid/ChildCountPerInterval', ccpi)
-                if grid.is_refinement and not grid.parent_window.equal_proportions[axis]:
-                    child_cell_weights = np.concatenate(grid.parent_window.vector_proportions[axis])
-                    h5_reg.register_dataset(grid.uuid, 'KJI'[axis] + 'Regrid/ChildCellWeights', child_cell_weights)
+        __write_geometry(grid, h5_reg)
 
     if write_active and grid.inactive is not None:
         if imported_properties is None:
@@ -128,6 +77,70 @@ def write_hdf5_from_caches(grid,
             if entry[10] == 'active':
                 grid.active_property_uuid = entry[0]
     h5_reg.write(file, mode=mode)
+
+
+def __write_geometry(grid, h5_reg):
+    if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(
+            cache_array=True):
+        if not hasattr(grid,
+                       'array_pillar_geometry_is_defined') or grid.array_pillar_geometry_is_defined is None:
+            grid.array_pillar_geometry_is_defined = np.full((grid.nj + 1, grid.ni + 1), True, dtype=bool)
+        h5_reg.register_dataset(grid.uuid,
+                                'PillarGeometryIsDefined',
+                                grid.array_pillar_geometry_is_defined,
+                                dtype='uint8')
+    if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(
+            cache_array=True):
+        if not hasattr(grid, 'array_cell_geometry_is_defined') or grid.array_cell_geometry_is_defined is None:
+            grid.array_cell_geometry_is_defined = np.full((grid.nk, grid.nj, grid.ni), True, dtype=bool)
+        h5_reg.register_dataset(grid.uuid,
+                                'CellGeometryIsDefined',
+                                grid.array_cell_geometry_is_defined,
+                                dtype='uint8')
+    # todo: PillarGeometryIsDefined ?
+    h5_reg.register_dataset(grid.uuid, 'Points', grid.points_cached)
+    if grid.has_split_coordinate_lines:
+        h5_reg.register_dataset(grid.uuid, 'PillarIndices', grid.split_pillar_indices_cached, dtype='uint32')
+        h5_reg.register_dataset(grid.uuid,
+                                'ColumnsPerSplitCoordinateLine/elements',
+                                grid.cols_for_split_pillars,
+                                dtype='uint32')
+        h5_reg.register_dataset(grid.uuid,
+                                'ColumnsPerSplitCoordinateLine/cumulativeLength',
+                                grid.cols_for_split_pillars_cl,
+                                dtype='uint32')
+    if grid.k_gaps:
+        assert grid.k_gap_after_array is not None
+        h5_reg.register_dataset(grid.uuid, 'GapAfterLayer', grid.k_gap_after_array, dtype='uint8')
+    if grid.parent_window is not None:
+        for axis in range(3):
+            if grid.parent_window.fine_extent_kji[axis] == grid.parent_window.coarse_extent_kji[axis]:
+                continue  # one-to-noe mapping
+            # reconstruct hdf5 arrays from FineCoarse object and register for write
+            if grid.parent_window.constant_ratios[axis] is not None:
+                if grid.is_refinement:
+                    pcpi = np.array([grid.parent_window.coarse_extent_kji[axis]],
+                                    dtype=int)  # ParentCountPerInterval
+                    ccpi = np.array([grid.parent_window.fine_extent_kji[axis]],
+                                    dtype=int)  # ChildCountPerInterval
+                else:
+                    pcpi = np.array([grid.parent_window.fine_extent_kji[axis]], dtype=int)
+                    ccpi = np.array([grid.parent_window.coarse_extent_kji[axis]], dtype=int)
+            else:
+                if grid.is_refinement:
+                    interval_count = grid.parent_window.coarse_extent_kji[axis]
+                    pcpi = np.ones(interval_count, dtype=int)
+                    ccpi = np.array(grid.parent_window.vector_ratios[axis], dtype=int)
+                else:
+                    interval_count = grid.parent_window.fine_extent_kji[axis]
+                    pcpi = np.array(grid.parent_window.vector_ratios[axis], dtype=int)
+                    ccpi = np.ones(interval_count, dtype=int)
+            h5_reg.register_dataset(grid.uuid, 'KJI'[axis] + 'Regrid/ParentCountPerInterval', pcpi)
+            h5_reg.register_dataset(grid.uuid, 'KJI'[axis] + 'Regrid/ChildCountPerInterval', ccpi)
+            if grid.is_refinement and not grid.parent_window.equal_proportions[axis]:
+                child_cell_weights = np.concatenate(grid.parent_window.vector_proportions[axis])
+                h5_reg.register_dataset(grid.uuid, 'KJI'[axis] + 'Regrid/ChildCellWeights', child_cell_weights)
+
 
 def write_nexus_corp(self,
                      file_name,

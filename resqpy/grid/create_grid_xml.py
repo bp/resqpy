@@ -186,191 +186,10 @@ def create_grid_xml(grid,
         # todo: handle omit and cell overlap functionality as part of parent window refining or coarsening
 
     if write_geometry:
-
-        geom = rqet.SubElement(ijk, ns['resqml2'] + 'Geometry')
-        geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'IjkGridGeometry')
-        geom.text = '\n'
-
-        # the remainder of this function is populating the geometry node
-        grid.model.create_crs_reference(crs_uuid=grid.crs_uuid, root=geom)
-
-        k_dir = rqet.SubElement(geom, ns['resqml2'] + 'KDirection')
-        k_dir.set(ns['xsi'] + 'type', ns['resqml2'] + 'KDirection')
-        if grid.k_direction_is_down:
-            k_dir.text = 'down'
-        else:
-            k_dir.text = 'up'
-
-        handed = rqet.SubElement(geom, ns['resqml2'] + 'GridIsRighthanded')
-        handed.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-        handed.text = str(grid.grid_is_right_handed).lower()
-
-        p_shape = rqet.SubElement(geom, ns['resqml2'] + 'PillarShape')
-        p_shape.set(ns['xsi'] + 'type', ns['resqml2'] + 'PillarShape')
-        p_shape.text = grid.pillar_shape
-
-        points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
-        points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
-        points_node.text = '\n'
-
-        coords = rqet.SubElement(points_node, ns['resqml2'] + 'Coordinates')
-        coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-        coords.text = '\n'
-
-        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'Points', root=coords)
-
-        if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(
-                cache_array=True):
-
-            pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
-            pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanHdf5Array')
-            pillar_def.text = '\n'
-
-            pd_values = rqet.SubElement(pillar_def, ns['resqml2'] + 'Values')
-            pd_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-            pd_values.text = '\n'
-
-            grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarGeometryIsDefined', root=pd_values)
-
-        else:
-
-            pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
-            pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
-            pillar_def.text = '\n'
-
-            pd_value = rqet.SubElement(pillar_def, ns['resqml2'] + 'Value')
-            pd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-            pd_value.text = 'true'
-
-            pd_count = rqet.SubElement(pillar_def, ns['resqml2'] + 'Count')
-            pd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-            pd_count.text = str((grid.extent_kji[1] + 1) * (grid.extent_kji[2] + 1))
-
-        if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(
-                cache_array=True):
-
-            cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
-            cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanHdf5Array')
-            cell_def.text = '\n'
-
-            cd_values = rqet.SubElement(cell_def, ns['resqml2'] + 'Values')
-            cd_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-            cd_values.text = '\n'
-
-            grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'CellGeometryIsDefined', root=cd_values)
-
-        else:
-
-            cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
-            cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
-            cell_def.text = '\n'
-
-            cd_value = rqet.SubElement(cell_def, ns['resqml2'] + 'Value')
-            cd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-            cd_value.text = 'true'
-
-            cd_count = rqet.SubElement(cell_def, ns['resqml2'] + 'Count')
-            cd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-            cd_count.text = str(grid.nk * grid.nj * grid.ni)
-
-        if grid.has_split_coordinate_lines:
-            scl = rqet.SubElement(geom, ns['resqml2'] + 'SplitCoordinateLines')
-            scl.set(ns['xsi'] + 'type', ns['resqml2'] + 'ColumnLayerSplitCoordinateLines')
-            scl.text = '\n'
-
-            scl_count = rqet.SubElement(scl, ns['resqml2'] + 'Count')
-            scl_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-            scl_count.text = str(grid.split_pillars_count)
-
-            pi_node = rqet.SubElement(scl, ns['resqml2'] + 'PillarIndices')
-            pi_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
-            pi_node.text = '\n'
-
-            pi_null = rqet.SubElement(pi_node, ns['resqml2'] + 'NullValue')
-            pi_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-            pi_null.text = str((grid.extent_kji[1] + 1) * (grid.extent_kji[2] + 1))
-
-            pi_values = rqet.SubElement(pi_node, ns['resqml2'] + 'Values')
-            pi_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-            pi_values.text = '\n'
-
-            grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarIndices', root=pi_values)
-
-            cpscl = rqet.SubElement(scl, ns['resqml2'] + 'ColumnsPerSplitCoordinateLine')
-            cpscl.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlJaggedArray')
-            cpscl.text = '\n'
-
-            elements = rqet.SubElement(cpscl, ns['resqml2'] + 'Elements')
-            elements.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
-            elements.text = '\n'
-
-            el_null = rqet.SubElement(elements, ns['resqml2'] + 'NullValue')
-            el_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-            el_null.text = str(grid.extent_kji[1] * grid.extent_kji[2])
-
-            el_values = rqet.SubElement(elements, ns['resqml2'] + 'Values')
-            el_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-            el_values.text = '\n'
-
-            grid.model.create_hdf5_dataset_ref(ext_uuid,
-                                               grid.uuid,
-                                               'ColumnsPerSplitCoordinateLine/elements',
-                                               root=el_values)
-
-            c_length = rqet.SubElement(cpscl, ns['resqml2'] + 'CumulativeLength')
-            c_length.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
-            c_length.text = '\n'
-
-            cl_null = rqet.SubElement(c_length, ns['resqml2'] + 'NullValue')
-            cl_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-            cl_null.text = '0'
-
-            cl_values = rqet.SubElement(c_length, ns['resqml2'] + 'Values')
-            cl_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-            cl_values.text = '\n'
-
-            grid.model.create_hdf5_dataset_ref(ext_uuid,
-                                               grid.uuid,
-                                               'ColumnsPerSplitCoordinateLine/cumulativeLength',
-                                               root=cl_values)
-
-        if grid.time_index is not None:
-            assert grid.time_series_uuid is not None
-
-            ti_node = rqet.SubElement(geom, ns['resqml2'] + 'TimeIndex')
-            ti_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'TimeIndex')
-            ti_node.text = '\n'
-
-            index_node = rqet.SubElement(ti_node, ns['resqml2'] + 'Index')
-            index_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
-            index_node.text = str(grid.time_index)
-
-            grid.model.create_ref_node('TimeSeries',
-                                       grid.model.title(uuid=grid.time_series_uuid),
-                                       grid.time_series_uuid,
-                                       content_type='obj_TimeSeries',
-                                       root=ti_node)
+        __write_geometry(ext_uuid, grid, ijk)
 
     if add_as_part:
-        grid.model.add_part('obj_IjkGridRepresentation', grid.uuid, ijk)
-        if add_relationships:
-            if grid.stratigraphic_column_rank_uuid is not None and grid.stratigraphic_units is not None:
-                grid.model.create_reciprocal_relationship(
-                    ijk, 'destinationObject', grid.model.root_for_uuid(grid.stratigraphic_column_rank_uuid),
-                    'sourceObject')
-            if write_geometry:
-                # create 2 way relationship between IjkGrid and Crs
-                grid.model.create_reciprocal_relationship(ijk, 'destinationObject', grid.crs_root, 'sourceObject')
-                # create 2 way relationship between IjkGrid and Ext
-                ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed=False)
-                ext_node = grid.model.root_for_part(ext_part)
-                grid.model.create_reciprocal_relationship(ijk, 'mlToExternalPartProxy', ext_node,
-                                                          'externalPartProxyToMl')
-            # create relationship with parent grid
-            if grid.parent_window is not None and grid.parent_grid_uuid is not None:
-                grid.model.create_reciprocal_relationship(ijk, 'destinationObject',
-                                                          grid.model.root_for_uuid(grid.parent_grid_uuid),
-                                                          'sourceObject')
+        __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry)
 
     if (write_active and grid.active_property_uuid is not None and
             grid.model.part(uuid=grid.active_property_uuid) is None):
@@ -387,3 +206,180 @@ def create_grid_xml(grid,
                                      find_local_property_kinds=True)
 
     return ijk
+
+
+def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
+    grid.model.add_part('obj_IjkGridRepresentation', grid.uuid, ijk)
+    if add_relationships:
+        if grid.stratigraphic_column_rank_uuid is not None and grid.stratigraphic_units is not None:
+            grid.model.create_reciprocal_relationship(
+                ijk, 'destinationObject', grid.model.root_for_uuid(grid.stratigraphic_column_rank_uuid),
+                'sourceObject')
+        if write_geometry:
+            # create 2 way relationship between IjkGrid and Crs
+            grid.model.create_reciprocal_relationship(ijk, 'destinationObject', grid.crs_root, 'sourceObject')
+            # create 2 way relationship between IjkGrid and Ext
+            ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed=False)
+            ext_node = grid.model.root_for_part(ext_part)
+            grid.model.create_reciprocal_relationship(ijk, 'mlToExternalPartProxy', ext_node,
+                                                      'externalPartProxyToMl')
+        # create relationship with parent grid
+        if grid.parent_window is not None and grid.parent_grid_uuid is not None:
+            grid.model.create_reciprocal_relationship(ijk, 'destinationObject',
+                                                      grid.model.root_for_uuid(grid.parent_grid_uuid),
+                                                      'sourceObject')
+
+
+def __write_geometry(ext_uuid, grid, ijk):
+    geom = rqet.SubElement(ijk, ns['resqml2'] + 'Geometry')
+    geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'IjkGridGeometry')
+    geom.text = '\n'
+    # the remainder of this function is populating the geometry node
+    grid.model.create_crs_reference(crs_uuid=grid.crs_uuid, root=geom)
+    k_dir = rqet.SubElement(geom, ns['resqml2'] + 'KDirection')
+    k_dir.set(ns['xsi'] + 'type', ns['resqml2'] + 'KDirection')
+    if grid.k_direction_is_down:
+        k_dir.text = 'down'
+    else:
+        k_dir.text = 'up'
+    handed = rqet.SubElement(geom, ns['resqml2'] + 'GridIsRighthanded')
+    handed.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+    handed.text = str(grid.grid_is_right_handed).lower()
+    p_shape = rqet.SubElement(geom, ns['resqml2'] + 'PillarShape')
+    p_shape.set(ns['xsi'] + 'type', ns['resqml2'] + 'PillarShape')
+    p_shape.text = grid.pillar_shape
+    points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
+    points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
+    points_node.text = '\n'
+    coords = rqet.SubElement(points_node, ns['resqml2'] + 'Coordinates')
+    coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+    coords.text = '\n'
+    grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'Points', root=coords)
+    if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(
+            cache_array=True):
+
+        pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
+        pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanHdf5Array')
+        pillar_def.text = '\n'
+
+        pd_values = rqet.SubElement(pillar_def, ns['resqml2'] + 'Values')
+        pd_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+        pd_values.text = '\n'
+
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarGeometryIsDefined', root=pd_values)
+
+    else:
+
+        pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
+        pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
+        pillar_def.text = '\n'
+
+        pd_value = rqet.SubElement(pillar_def, ns['resqml2'] + 'Value')
+        pd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+        pd_value.text = 'true'
+
+        pd_count = rqet.SubElement(pillar_def, ns['resqml2'] + 'Count')
+        pd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+        pd_count.text = str((grid.extent_kji[1] + 1) * (grid.extent_kji[2] + 1))
+    if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(
+            cache_array=True):
+
+        cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
+        cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanHdf5Array')
+        cell_def.text = '\n'
+
+        cd_values = rqet.SubElement(cell_def, ns['resqml2'] + 'Values')
+        cd_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+        cd_values.text = '\n'
+
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'CellGeometryIsDefined', root=cd_values)
+
+    else:
+
+        cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
+        cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
+        cell_def.text = '\n'
+
+        cd_value = rqet.SubElement(cell_def, ns['resqml2'] + 'Value')
+        cd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+        cd_value.text = 'true'
+
+        cd_count = rqet.SubElement(cell_def, ns['resqml2'] + 'Count')
+        cd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+        cd_count.text = str(grid.nk * grid.nj * grid.ni)
+    if grid.has_split_coordinate_lines:
+        scl = rqet.SubElement(geom, ns['resqml2'] + 'SplitCoordinateLines')
+        scl.set(ns['xsi'] + 'type', ns['resqml2'] + 'ColumnLayerSplitCoordinateLines')
+        scl.text = '\n'
+
+        scl_count = rqet.SubElement(scl, ns['resqml2'] + 'Count')
+        scl_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+        scl_count.text = str(grid.split_pillars_count)
+
+        pi_node = rqet.SubElement(scl, ns['resqml2'] + 'PillarIndices')
+        pi_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
+        pi_node.text = '\n'
+
+        pi_null = rqet.SubElement(pi_node, ns['resqml2'] + 'NullValue')
+        pi_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+        pi_null.text = str((grid.extent_kji[1] + 1) * (grid.extent_kji[2] + 1))
+
+        pi_values = rqet.SubElement(pi_node, ns['resqml2'] + 'Values')
+        pi_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+        pi_values.text = '\n'
+
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'PillarIndices', root=pi_values)
+
+        cpscl = rqet.SubElement(scl, ns['resqml2'] + 'ColumnsPerSplitCoordinateLine')
+        cpscl.set(ns['xsi'] + 'type', ns['resqml2'] + 'ResqmlJaggedArray')
+        cpscl.text = '\n'
+
+        elements = rqet.SubElement(cpscl, ns['resqml2'] + 'Elements')
+        elements.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
+        elements.text = '\n'
+
+        el_null = rqet.SubElement(elements, ns['resqml2'] + 'NullValue')
+        el_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+        el_null.text = str(grid.extent_kji[1] * grid.extent_kji[2])
+
+        el_values = rqet.SubElement(elements, ns['resqml2'] + 'Values')
+        el_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+        el_values.text = '\n'
+
+        grid.model.create_hdf5_dataset_ref(ext_uuid,
+                                           grid.uuid,
+                                           'ColumnsPerSplitCoordinateLine/elements',
+                                           root=el_values)
+
+        c_length = rqet.SubElement(cpscl, ns['resqml2'] + 'CumulativeLength')
+        c_length.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
+        c_length.text = '\n'
+
+        cl_null = rqet.SubElement(c_length, ns['resqml2'] + 'NullValue')
+        cl_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+        cl_null.text = '0'
+
+        cl_values = rqet.SubElement(c_length, ns['resqml2'] + 'Values')
+        cl_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+        cl_values.text = '\n'
+
+        grid.model.create_hdf5_dataset_ref(ext_uuid,
+                                           grid.uuid,
+                                           'ColumnsPerSplitCoordinateLine/cumulativeLength',
+                                           root=cl_values)
+    if grid.time_index is not None:
+        assert grid.time_series_uuid is not None
+
+        ti_node = rqet.SubElement(geom, ns['resqml2'] + 'TimeIndex')
+        ti_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'TimeIndex')
+        ti_node.text = '\n'
+
+        index_node = rqet.SubElement(ti_node, ns['resqml2'] + 'Index')
+        index_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
+        index_node.text = str(grid.time_index)
+
+        grid.model.create_ref_node('TimeSeries',
+                                   grid.model.title(uuid=grid.time_series_uuid),
+                                   grid.time_series_uuid,
+                                   content_type='obj_TimeSeries',
+                                   root=ti_node)

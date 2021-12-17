@@ -12,7 +12,6 @@ from .defined_geometry import cell_geometry_is_defined_ref
 log = logging.getLogger(__name__)
 
 
-
 def extract_grid_parent(grid):
     if grid.extent_kji is None:
         grid.extract_extent_kji()
@@ -43,90 +42,9 @@ def extract_grid_parent(grid):
     refining_flag = None  # gets set True if local grid is a refinement, False if a coarsening
     parent_box = np.zeros((2, 3), dtype=int)
     for axis in range(3):
-        regrid_node = rqet.find_tag(pw_node, 'KJI'[axis] + 'Regrid')
-        assert regrid_node is not None
-        pii = rqet.find_tag_int(regrid_node, 'InitialIndexOnParentGrid')
-        assert pii is not None and 0 <= pii < parent_grid_extent_kji[axis]
-        parent_initials.append(pii)
-        parent_box[0, axis] = pii
-        intervals_node = rqet.find_tag(regrid_node, 'Intervals')
-        if intervals_node is None:  # implicit one-to-one mapping
-            intervals_count_list.append(1)
-            parent_count_list_list.append(np.array(grid.extent_kji[axis], dtype=int))
-            parent_box[1, axis] = parent_box[0, axis] + grid.extent_kji[axis] - 1
-            assert parent_box[1, axis] < parent_grid_extent_kji[axis]
-            child_count_list_list.append(np.array(grid.extent_kji[axis], dtype=int))
-            child_weight_list_list.append(None)
-        else:
-            intervals_info = IntervalsInfo()
-            intervals_count = rqet.find_tag_int(intervals_node, 'IntervalCount')
-            assert intervals_count is not None and intervals_count > 0
-            pcpi_node = rqet.find_tag(intervals_node, 'ParentCountPerInterval')
-            assert pcpi_node is not None
-            h5_key_pair = grid.model.h5_uuid_and_path_for_node(pcpi_node)
-            assert h5_key_pair is not None
-            grid.model.h5_array_element(h5_key_pair,
-                                        index=None,
-                                        cache_array=True,
-                                        object=intervals_info,
-                                        array_attribute='parent_count_per_interval',
-                                        dtype='int')
-            assert hasattr(intervals_info, 'parent_count_per_interval')
-            assert intervals_info.parent_count_per_interval.ndim == 1 and intervals_info.parent_count_per_interval.size == intervals_count
-            parent_box[1, axis] = parent_box[0, axis] + np.sum(intervals_info.parent_count_per_interval) - 1
-            assert parent_box[1, axis] < parent_grid_extent_kji[axis]
-            ccpi_node = rqet.find_tag(intervals_node, 'ChildCountPerInterval')
-            assert ccpi_node is not None
-            h5_key_pair = grid.model.h5_uuid_and_path_for_node(ccpi_node)
-            assert h5_key_pair is not None
-            grid.model.h5_array_element(h5_key_pair,
-                                        index=None,
-                                        cache_array=True,
-                                        object=intervals_info,
-                                        array_attribute='child_count_per_interval',
-                                        dtype='int')
-            assert hasattr(intervals_info, 'child_count_per_interval')
-            assert intervals_info.child_count_per_interval.ndim == 1 and intervals_info.child_count_per_interval.size == intervals_count
-            assert np.sum(intervals_info.child_count_per_interval) == grid.extent_kji[
-                axis]  # assumes both local and parent grids are IjkGrids
-            for interval in range(intervals_count):
-                if intervals_info.child_count_per_interval[interval] == intervals_info.parent_count_per_interval[
-                    interval]:
-                    continue  # one-to-one
-                if refining_flag is None:
-                    refining_flag = (intervals_info.child_count_per_interval[interval] >
-                                     intervals_info.parent_count_per_interval[interval])
-                assert refining_flag == (intervals_info.child_count_per_interval[interval] >
-                                         intervals_info.parent_count_per_interval[interval]), \
-                    'mixture of refining and coarsening in one local grid – allowed by RESQML but not handled by this code'
-                if refining_flag:
-                    assert intervals_info.child_count_per_interval[interval] % intervals_info.parent_count_per_interval[
-                        interval] == 0, \
-                        'within a single refinement interval, fine and coarse cell boundaries are not obviously aligned'
-                else:
-                    assert intervals_info.parent_count_per_interval[interval] % intervals_info.child_count_per_interval[
-                        interval] == 0, \
-                        'within a single coarsening interval, fine and coarse cell boundaries are not obviously aligned'
-            ccw_node = rqet.find_tag(intervals_node, 'ChildCellWeights')
-            if ccw_node is None:
-                intervals_info.child_cell_weights = None
-            else:
-                h5_key_pair = grid.model.h5_uuid_and_path_for_node(ccw_node)
-                assert h5_key_pair is not None
-                grid.model.h5_array_element(h5_key_pair,
-                                            index=None,
-                                            cache_array=True,
-                                            object=intervals_info,
-                                            array_attribute='child_cell_weights',
-                                            dtype='float')
-                assert hasattr(intervals_info, 'child_cell_weights')
-                assert intervals_info.child_cell_weights.ndim == 1 and intervals_info.child_cell_weights.size == \
-                       grid.extent_kji[
-                           axis]
-            intervals_count_list.append(intervals_count)
-            parent_count_list_list.append(intervals_info.parent_count_per_interval)
-            child_count_list_list.append(intervals_info.child_count_per_interval)
-            child_weight_list_list.append(intervals_info.child_cell_weights)
+        refining_flag = __process_axis(axis, child_count_list_list, child_weight_list_list, grid,
+                                       intervals_count_list, parent_box, parent_count_list_list,
+                                       parent_grid_extent_kji, parent_initials, pw_node, refining_flag)
     cell_overlap_node = rqet.find_tag(pw_node, 'CellOverlap')
     if cell_overlap_node is not None:
         log.warning('ignoring cell overlap information in grid relationship')
@@ -141,66 +59,168 @@ def extract_grid_parent(grid):
     grid.is_refinement = refining_flag
 
     if refining_flag:  # local grid is a refinement
-        grid.parent_window = fc.FineCoarse(grid.extent_kji,
-                                           parent_box[1] - parent_box[0] + 1,
-                                           within_coarse_box=parent_box)
-        for axis in range(3):
-            if intervals_count_list[axis] == 1:
-                grid.parent_window.set_constant_ratio(axis)
-                constant_ratio = grid.extent_kji[axis] // (parent_box[1, axis] - parent_box[0, axis] + 1)
-                ratio_vector = None
-            else:
-                constant_ratio = None
-                ratio_vector = child_count_list_list[axis] // parent_count_list_list[axis]
-                grid.parent_window.set_ratio_vector(axis, ratio_vector)
-            if child_weight_list_list[axis] is None:
-                grid.parent_window.set_equal_proportions(axis)
-            else:
-                proportions_list = []
-                place = 0
-                for coarse_slice in range(parent_box[1, axis] - parent_box[0, axis] + 1):
-                    if ratio_vector is None:
-                        proportions_list.append(np.array(child_weight_list_list[axis][place:place +
-                                                                                            constant_ratio]))
-                        place += constant_ratio
-                    else:
-                        proportions_list.append(
-                            np.array(child_weight_list_list[axis][place:place + ratio_vector[coarse_slice]]))
-                        place += ratio_vector[coarse_slice]
-                grid.parent_window.set_proportions_list_of_vectors(axis, proportions_list)
+        __extract_refined_parent(child_count_list_list, child_weight_list_list, grid, intervals_count_list, parent_box,
+                                 parent_count_list_list)
 
     else:  # local grid is a coarsening
-        grid.parent_window = fc.FineCoarse(parent_box[1] - parent_box[0] + 1,
-                                           grid.extent_kji,
-                                           within_fine_box=parent_box)
-        for axis in range(3):
-            if intervals_count_list[axis] == 1:
-                grid.parent_window.set_constant_ratio(axis)
-                constant_ratio = (parent_box[1, axis] - parent_box[0, axis] + 1) // grid.extent_kji[axis]
-                ratio_vector = None
-            else:
-                constant_ratio = None
-                ratio_vector = parent_count_list_list[axis] // child_count_list_list[axis]
-                grid.parent_window.set_ratio_vector(axis, ratio_vector)
-            if child_weight_list_list[axis] is None:
-                grid.parent_window.set_equal_proportions(axis)
-            else:
-                proportions_list = []
-                place = 0
-                for coarse_slice in range(grid.extent_kji[axis]):
-                    if ratio_vector is None:
-                        proportions_list.append(np.array(child_weight_list_list[axis][place:place +
-                                                                                            constant_ratio]))
-                        place += constant_ratio
-                    else:
-                        proportions_list.append(
-                            np.array(child_weight_list_list[axis][place:place + ratio_vector[coarse_slice]]))
-                        place += ratio_vector[coarse_slice]
-                grid.parent_window.set_proportions_list_of_vectors(axis, proportions_list)
+        __extract_coarsening_parent(child_count_list_list, child_weight_list_list, grid, intervals_count_list,
+                                    parent_box, parent_count_list_list)
 
     grid.parent_window.assert_valid()
 
     return grid.parent_grid_uuid
+
+
+def __extract_coarsening_parent(child_count_list_list, child_weight_list_list, grid, intervals_count_list, parent_box,
+                                parent_count_list_list):
+    grid.parent_window = fc.FineCoarse(parent_box[1] - parent_box[0] + 1,
+                                       grid.extent_kji,
+                                       within_fine_box=parent_box)
+    for axis in range(3):
+        if intervals_count_list[axis] == 1:
+            grid.parent_window.set_constant_ratio(axis)
+            constant_ratio = (parent_box[1, axis] - parent_box[0, axis] + 1) // grid.extent_kji[axis]
+            ratio_vector = None
+        else:
+            constant_ratio = None
+            ratio_vector = parent_count_list_list[axis] // child_count_list_list[axis]
+            grid.parent_window.set_ratio_vector(axis, ratio_vector)
+        if child_weight_list_list[axis] is None:
+            grid.parent_window.set_equal_proportions(axis)
+        else:
+            proportions_list = []
+            place = 0
+            for coarse_slice in range(grid.extent_kji[axis]):
+                if ratio_vector is None:
+                    proportions_list.append(np.array(child_weight_list_list[axis][place:place +
+                                                                                        constant_ratio]))
+                    place += constant_ratio
+                else:
+                    proportions_list.append(
+                        np.array(child_weight_list_list[axis][place:place + ratio_vector[coarse_slice]]))
+                    place += ratio_vector[coarse_slice]
+            grid.parent_window.set_proportions_list_of_vectors(axis, proportions_list)
+
+
+def __extract_refined_parent(child_count_list_list, child_weight_list_list, grid, intervals_count_list, parent_box,
+                             parent_count_list_list):
+    grid.parent_window = fc.FineCoarse(grid.extent_kji,
+                                       parent_box[1] - parent_box[0] + 1,
+                                       within_coarse_box=parent_box)
+    for axis in range(3):
+        if intervals_count_list[axis] == 1:
+            grid.parent_window.set_constant_ratio(axis)
+            constant_ratio = grid.extent_kji[axis] // (parent_box[1, axis] - parent_box[0, axis] + 1)
+            ratio_vector = None
+        else:
+            constant_ratio = None
+            ratio_vector = child_count_list_list[axis] // parent_count_list_list[axis]
+            grid.parent_window.set_ratio_vector(axis, ratio_vector)
+        if child_weight_list_list[axis] is None:
+            grid.parent_window.set_equal_proportions(axis)
+        else:
+            proportions_list = []
+            place = 0
+            for coarse_slice in range(parent_box[1, axis] - parent_box[0, axis] + 1):
+                if ratio_vector is None:
+                    proportions_list.append(np.array(child_weight_list_list[axis][place:place +
+                                                                                        constant_ratio]))
+                    place += constant_ratio
+                else:
+                    proportions_list.append(
+                        np.array(child_weight_list_list[axis][place:place + ratio_vector[coarse_slice]]))
+                    place += ratio_vector[coarse_slice]
+            grid.parent_window.set_proportions_list_of_vectors(axis, proportions_list)
+
+
+def __process_axis(axis, child_count_list_list, child_weight_list_list, grid, intervals_count_list, parent_box,
+                   parent_count_list_list, parent_grid_extent_kji, parent_initials, pw_node, refining_flag):
+    regrid_node = rqet.find_tag(pw_node, 'KJI'[axis] + 'Regrid')
+    assert regrid_node is not None
+    pii = rqet.find_tag_int(regrid_node, 'InitialIndexOnParentGrid')
+    assert pii is not None and 0 <= pii < parent_grid_extent_kji[axis]
+    parent_initials.append(pii)
+    parent_box[0, axis] = pii
+    intervals_node = rqet.find_tag(regrid_node, 'Intervals')
+    if intervals_node is None:  # implicit one-to-one mapping
+        intervals_count_list.append(1)
+        parent_count_list_list.append(np.array(grid.extent_kji[axis], dtype=int))
+        parent_box[1, axis] = parent_box[0, axis] + grid.extent_kji[axis] - 1
+        assert parent_box[1, axis] < parent_grid_extent_kji[axis]
+        child_count_list_list.append(np.array(grid.extent_kji[axis], dtype=int))
+        child_weight_list_list.append(None)
+    else:
+        intervals_info = IntervalsInfo()
+        intervals_count = rqet.find_tag_int(intervals_node, 'IntervalCount')
+        assert intervals_count is not None and intervals_count > 0
+        pcpi_node = rqet.find_tag(intervals_node, 'ParentCountPerInterval')
+        assert pcpi_node is not None
+        h5_key_pair = grid.model.h5_uuid_and_path_for_node(pcpi_node)
+        assert h5_key_pair is not None
+        grid.model.h5_array_element(h5_key_pair,
+                                    index=None,
+                                    cache_array=True,
+                                    object=intervals_info,
+                                    array_attribute='parent_count_per_interval',
+                                    dtype='int')
+        assert hasattr(intervals_info, 'parent_count_per_interval')
+        assert intervals_info.parent_count_per_interval.ndim == 1 and intervals_info.parent_count_per_interval.size == intervals_count
+        parent_box[1, axis] = parent_box[0, axis] + np.sum(intervals_info.parent_count_per_interval) - 1
+        assert parent_box[1, axis] < parent_grid_extent_kji[axis]
+        ccpi_node = rqet.find_tag(intervals_node, 'ChildCountPerInterval')
+        assert ccpi_node is not None
+        h5_key_pair = grid.model.h5_uuid_and_path_for_node(ccpi_node)
+        assert h5_key_pair is not None
+        grid.model.h5_array_element(h5_key_pair,
+                                    index=None,
+                                    cache_array=True,
+                                    object=intervals_info,
+                                    array_attribute='child_count_per_interval',
+                                    dtype='int')
+        assert hasattr(intervals_info, 'child_count_per_interval')
+        assert intervals_info.child_count_per_interval.ndim == 1 and intervals_info.child_count_per_interval.size == intervals_count
+        assert np.sum(intervals_info.child_count_per_interval) == grid.extent_kji[
+            axis]  # assumes both local and parent grids are IjkGrids
+        for interval in range(intervals_count):
+            if intervals_info.child_count_per_interval[interval] == intervals_info.parent_count_per_interval[
+                interval]:
+                continue  # one-to-one
+            if refining_flag is None:
+                refining_flag = (intervals_info.child_count_per_interval[interval] >
+                                 intervals_info.parent_count_per_interval[interval])
+            assert refining_flag == (intervals_info.child_count_per_interval[interval] >
+                                     intervals_info.parent_count_per_interval[interval]), \
+                'mixture of refining and coarsening in one local grid – allowed by RESQML but not handled by this code'
+            if refining_flag:
+                assert intervals_info.child_count_per_interval[interval] % intervals_info.parent_count_per_interval[
+                    interval] == 0, \
+                    'within a single refinement interval, fine and coarse cell boundaries are not obviously aligned'
+            else:
+                assert intervals_info.parent_count_per_interval[interval] % intervals_info.child_count_per_interval[
+                    interval] == 0, \
+                    'within a single coarsening interval, fine and coarse cell boundaries are not obviously aligned'
+        ccw_node = rqet.find_tag(intervals_node, 'ChildCellWeights')
+        if ccw_node is None:
+            intervals_info.child_cell_weights = None
+        else:
+            h5_key_pair = grid.model.h5_uuid_and_path_for_node(ccw_node)
+            assert h5_key_pair is not None
+            grid.model.h5_array_element(h5_key_pair,
+                                        index=None,
+                                        cache_array=True,
+                                        object=intervals_info,
+                                        array_attribute='child_cell_weights',
+                                        dtype='float')
+            assert hasattr(intervals_info, 'child_cell_weights')
+            assert intervals_info.child_cell_weights.ndim == 1 and intervals_info.child_cell_weights.size == \
+                   grid.extent_kji[
+                       axis]
+        intervals_count_list.append(intervals_count)
+        parent_count_list_list.append(intervals_info.parent_count_per_interval)
+        child_count_list_list.append(intervals_info.child_count_per_interval)
+        child_weight_list_list.append(intervals_info.child_cell_weights)
+    return refining_flag
+
 
 def extract_extent_kji(grid):
     """Returns the grid extent; for IJK grids this is a 3 integer numpy array, order is Nk, Nj, Ni.
@@ -218,6 +238,7 @@ def extract_extent_kji(grid):
     grid.extent_kji[1] = int(rqet.find_tag(grid.root, 'Nj').text)
     grid.extent_kji[2] = int(rqet.find_tag(grid.root, 'Ni').text)
     return grid.extent_kji
+
 
 def extract_grid_is_right_handed(grid):
     """Returns boolean indicating whether grid IJK axes are right handed, as stored in xml.
@@ -241,6 +262,7 @@ def extract_grid_is_right_handed(grid):
     grid.grid_is_right_handed = (rh_node.text.lower() == 'true')
     return grid.grid_is_right_handed
 
+
 def extract_k_direction_is_down(grid):
     """Returns boolean indicating whether increasing K indices are generally for deeper cells, as stored in xml.
 
@@ -263,6 +285,7 @@ def extract_k_direction_is_down(grid):
     grid.k_direction_is_down = (k_dir_node.text.lower() == 'down')
     return grid.k_direction_is_down
 
+
 def extract_geometry_time_index(grid):
     """Returns integer time index, or None, for the grid geometry, as stored in xml for dynamic geometries.
 
@@ -281,6 +304,7 @@ def extract_geometry_time_index(grid):
     grid.time_series_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(ti_node, ['TimeSeries', 'UUID']))
     return grid.time_index
 
+
 def extract_crs_uuid(grid):
     """Returns uuid for coordinate reference system, as stored in geometry xml tree.
 
@@ -295,6 +319,7 @@ def extract_crs_uuid(grid):
     if uuid_str:
         grid.crs_uuid = bu.uuid_from_string(uuid_str)
     return grid.crs_uuid
+
 
 def extract_crs_root(grid):
     """Returns root in parent model xml parts forest of coordinate reference system used by this grid geomwtry.
@@ -316,6 +341,7 @@ def extract_crs_root(grid):
     grid.crs_root = grid.model.root(uuid=crs_uuid)
     return grid.crs_root
 
+
 def extract_pillar_shape(grid):
     """Returns string indicating whether whether pillars are curved, straight, or vertical as stored in xml.
 
@@ -334,6 +360,7 @@ def extract_pillar_shape(grid):
         return None
     grid.pillar_shape = ps_node.text
     return grid.pillar_shape
+
 
 def extract_has_split_coordinate_lines(grid):
     """Returns boolean indicating whether grid geometry has any split coordinate lines (split pillars, ie. faults).
@@ -356,6 +383,7 @@ def extract_has_split_coordinate_lines(grid):
     if split_node is not None:
         grid.split_pillars_count = int(rqet.find_tag(split_node, 'Count').text.strip())
     return grid.has_split_coordinate_lines
+
 
 def extract_k_gaps(grid):
     """Returns information about gaps (voids) between layers in the grid.
@@ -397,26 +425,28 @@ def extract_k_gaps(grid):
         grid.k_raw_index_array = np.arange(grid.nk, dtype=int)
     return grid.k_gaps, grid.k_gap_after_array, grid.k_raw_index_array
 
-def extract_stratigraphy(grid):
-        """Loads stratigraphic information from xml."""
 
-        grid.stratigraphic_column_rank_uuid = None
-        grid.stratigraphic_units = None
-        strata_node = rqet.find_tag(grid.root, 'IntervalStratigraphicUnits')
-        if strata_node is None:
-            return
-        grid.stratigraphic_column_rank_uuid = \
-            bu.uuid_from_string(rqet.find_nested_tags_text(strata_node, ['StratigraphicOrganization', 'UUID']))
-        assert grid.stratigraphic_column_rank_uuid is not None
-        unit_indices_node = rqet.find_tag(strata_node, 'UnitIndices')
-        h5_key_pair = grid.model.h5_uuid_and_path_for_node(unit_indices_node)
-        grid.model.h5_array_element(h5_key_pair,
-                                    index=None,
-                                    cache_array=True,
-                                    object=grid,
-                                    array_attribute='stratigraphic_units',
-                                    dtype='int')
-        assert len(grid.stratigraphic_units) == grid.nk_plus_k_gaps
+def extract_stratigraphy(grid):
+    """Loads stratigraphic information from xml."""
+
+    grid.stratigraphic_column_rank_uuid = None
+    grid.stratigraphic_units = None
+    strata_node = rqet.find_tag(grid.root, 'IntervalStratigraphicUnits')
+    if strata_node is None:
+        return
+    grid.stratigraphic_column_rank_uuid = \
+        bu.uuid_from_string(rqet.find_nested_tags_text(strata_node, ['StratigraphicOrganization', 'UUID']))
+    assert grid.stratigraphic_column_rank_uuid is not None
+    unit_indices_node = rqet.find_tag(strata_node, 'UnitIndices')
+    h5_key_pair = grid.model.h5_uuid_and_path_for_node(unit_indices_node)
+    grid.model.h5_array_element(h5_key_pair,
+                                index=None,
+                                cache_array=True,
+                                object=grid,
+                                array_attribute='stratigraphic_units',
+                                dtype='int')
+    assert len(grid.stratigraphic_units) == grid.nk_plus_k_gaps
+
 
 def extract_children(grid):
     """Looks for LGRs related to this grid and sets the local_grid_uuid_list attribute."""
@@ -435,6 +465,7 @@ def extract_children(grid):
                 grid.local_grid_uuid_list.append(parent_uuid)
     return grid.local_grid_uuid_list
 
+
 def extract_property_collection(grid):
     """Load grid property collection object holding lists of all properties in model that relate to this grid.
 
@@ -451,6 +482,7 @@ def extract_property_collection(grid):
         return grid.property_collection
     grid.property_collection = rprop.GridPropertyCollection(grid=grid)
     return grid.property_collection
+
 
 def extract_inactive_mask(grid, check_pinchout=False):
     """Returns boolean numpy array indicating which cells are inactive, if (in)active property found in this grid.
