@@ -493,7 +493,7 @@ def test_grid_list(example_model_and_crs):
 def test_catalogue_functions(example_model_and_crs):
     model, crs = example_model_and_crs
     # create some grid objects with some boring properties
-    add_grids(model, crs, True)
+    grid_a, grid_b, grid_c = add_grids(model, crs, True)
     # test parts() method with various options
     all_parts = model.parts()
     assert isinstance(all_parts, list)
@@ -515,6 +515,12 @@ def test_catalogue_functions(example_model_and_crs):
                                        sort_by = 'title')
     assert len(grid_b_props_titles) == 3
     assert all([a < b for (a, b) in zip(grid_b_props_titles[:-1], grid_b_props_titles[1:])])
+    set_extra_metadata(grid_b, 'em_test', 'chai')
+    grid_b.create_xml()
+    set_extra_metadata(grid_c, 'em_test', 'oolong')
+    grid_c.create_xml()
+    assert model.root(extra = {'em_test': 'espresso'}) is None
+    assert bu.matching_uuids(grid_c.uuid, model.uuid(extra = {'em_test': 'oolong'}))
 
 
 def add_grids(model, crs, add_lengths):
@@ -540,6 +546,12 @@ def add_grids(model, crs, add_lengths):
     grid_c.write_hdf5()
     grid_c.create_xml(write_active = False, add_cell_length_properties = add_lengths, write_geometry = True)
     return (grid_a, grid_b, grid_c)
+
+
+def set_extra_metadata(obj, key, value):
+    if not hasattr(obj, 'extra_metadata') or obj.extra_metadata is None:
+        obj.extra_metadata = {}
+    obj.extra_metadata[key] = value
 
 
 def uuid_in_list(uuid, uuid_list):
