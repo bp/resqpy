@@ -456,6 +456,8 @@ def test_root_for_time_series(example_model_with_prop_ts_rels):
     ts_root = model.root_for_time_series()
     assert ts_root is not None
     assert rqet.node_type(ts_root, strip_obj = True) == 'TimeSeries'
+    assert model.resolve_time_series_root(ts_root) is ts_root
+    assert model.resolve_time_series_root(None) is ts_root
 
 
 def test_grid_list(example_model_and_crs):
