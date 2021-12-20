@@ -110,7 +110,7 @@ def test_is_equivalent_non_equivalent_tectonic_boundary(tmp_model):
 
     other = rqo.FaultInterpretation(
         tmp_model,
-        title = 'test_fault_interpretation_other',
+        title = 'test_fault_interpretation',
     )
     other.tectonic_boundary_feature = tect_boundary_other
     result = fault_interp.is_equivalent(other = other)
@@ -132,7 +132,7 @@ def test_is_equivalent_throw_math_is_close(tmp_model):
 
     other = rqo.FaultInterpretation(
         tmp_model,
-        title = 'test_fault_interpretation_other',
+        title = 'test_fault_interpretation',
     )
     other.maximum_throw = 1.002
 
