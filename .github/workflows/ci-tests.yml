@@ -69,7 +69,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install -e ".[tests]"
-
+      
+      - name: Debug git info
+        run: git describe --tags --always
+        
       - name: Run pytest
         run: |
           pytest --cov=resqpy --junitxml=pytest.xml
