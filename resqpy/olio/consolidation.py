@@ -5,7 +5,6 @@ version = '18th June 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('consolidation.py version ' + version)
 
 import resqpy.crs as rqc
 import resqpy.olio.uuid as bu

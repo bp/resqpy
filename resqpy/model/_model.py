@@ -1,11 +1,10 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '1st December 2021'
+version = '15th December 2021'
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('model.py version ' + version)
 
 import h5py
 import os
@@ -17,6 +16,8 @@ import resqpy.model._forestry as m_f
 import resqpy.model._grids as m_g
 import resqpy.model._hdf5 as m_h
 import resqpy.model._xml as m_x
+
+log.debug('resqpy Model class version: ' + version + '; xml citation format: ' + m_x.citation_format)
 
 
 class Model():

@@ -1734,3 +1734,373 @@ def test_slice_for_box(example_model_with_properties):
 
     # Assert
     assert_array_almost_equal(expected, myslice)
+
+
+def test_coarsening_length(example_fine_coarse_model):
+    # Arrange
+    model, coarse, fine, fc = example_fine_coarse_model
+    # Remove existing length parts
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
+    for part in coarse_pc.parts():
+        if coarse_pc.citation_title_for_part(part) in ['DX', 'DY', 'DZ']:
+            coarse_pc.remove_part_from_dict(part)
+    # Check on number of properties
+    numc = len(coarse_pc.parts())
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
+    numf = len(fine_pc.parts())
+
+    # Act
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc, coarsening = fc)
+    coarse_pc.write_hdf5_for_imported_list()
+    coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    assert len(coarse_pc.parts()) == numc + numf
+    all_tens = np.full(shape = (3, 5, 5), fill_value = 10, dtype = 'float')
+    for length in ['DX', 'DY', 'DZ']:
+        dpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == length][0]
+        array = coarse_pc.cached_part_array_ref(dpart)
+        assert_array_almost_equal(array, all_tens)
+
+
+def test_coarsening_volume(example_fine_coarse_model):
+    # Arrange
+    model, coarse, fine, fc = example_fine_coarse_model
+
+    # Set up property collections
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
+    numc = len(coarse_pc.parts())
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
+
+    # Add a volume to the fine collection
+    inarray = np.full(shape = (6, 10, 10), fill_value = 125)  # fine grid dimensions are 5x5x5 so gross volume of 125
+    fine_pc.add_cached_array_to_imported_list(cached_array = inarray,
+                                              source_info = '',
+                                              keyword = 'brv',
+                                              discrete = False,
+                                              uom = 'm3/m3',
+                                              property_kind = 'rock volume',
+                                              facet_type = 'netgross',
+                                              facet = 'gross')
+    fine_pc.write_hdf5_for_imported_list()
+    fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
+    numf = len(fine_pc.parts())
+
+    # Act
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc, coarsening = fc)
+    coarse_pc.write_hdf5_for_imported_list()
+    coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    assert len(coarse_pc.parts()) == numc + numf
+    all_thousand = np.full(shape = (3, 5, 5),
+                           fill_value = 1000)  # we have coarsened by 2 in all 3 directions, so expected vol of 1000
+    vpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'brv'][0]
+    array = coarse_pc.cached_part_array_ref(vpart)
+    assert_array_almost_equal(array, all_thousand)
+
+
+# Array set up for coarsening tests
+porarray = np.full(shape = (6, 10, 10), fill_value = 0.3)
+porarray[0, :, :] = 0
+porarray[5, :, :] = 0
+
+expected_por = np.full(shape = (3, 5, 5), fill_value = 0.3)
+expected_por[0, :, :] = 0.15
+expected_por[2, :, :] = 0.15
+
+ntgarray = np.full(shape = (6, 10, 10), fill_value = 0.5)
+ntgarray[:, :, 0] = 0
+ntgarray[:, :, 9] = 0
+
+expected_ntg = np.full(shape = (3, 5, 5), fill_value = 0.5)
+expected_ntg[:, :, 0] = 0.25
+expected_ntg[:, :, 4] = 0.25
+
+satarray = np.full(shape = (6, 10, 10), fill_value = 0.7)
+satarray[:, 0, :] = 1
+satarray[:, 9, :] = 1
+
+expected_sat = np.full(shape = (3, 5, 5), fill_value = 0.7)
+expected_sat[:, 0, :] = 0.85
+expected_sat[:, 4, :] = 0.85
+
+karray = np.full(shape = (6, 10, 10), fill_value = 1000)
+karray[:, 0, :] = 100
+karray[:, 9, :] = 10
+
+expected_k = np.full(shape = (3, 5, 5), fill_value = 1000)  # simple weighted mean for now
+expected_k[:, 0, :] = 550
+expected_k[:, 4, :] = 505
+
+single_disc = np.array([[1, 2], [3, 4]])  # Creating a 6x10x10 array with each 'box' of 8 cells numbered 1-8
+single_layer = np.tile(np.tile(single_disc, 5).T, 5).T
+discarray = np.array([single_layer, single_layer + 4, single_layer, single_layer + 4, single_layer, single_layer + 4])
+
+expected_disc = np.ones(shape = (3, 5, 5))  # for discrete array result is the value of first cell
+
+
+@pytest.mark.parametrize('inarray,keyword,discrete,kind,facettype,facet,outarray',
+                         [(porarray, 'por', False, 'porosity', None, None, expected_por),
+                          (ntgarray, 'NTG', False, 'net to gross ratio', None, None, expected_ntg),
+                          (porarray, 'por', False, 'porosity', None, None, expected_por),
+                          (satarray, 'sw', False, 'saturation', None, None, expected_sat),
+                          (karray, 'kx', False, 'permeability rock', 'direction', 'I', expected_k),
+                          (discarray, 'zone', True, 'discrete', None, None, expected_disc)])
+def test_coarsening_reservoir_properties(example_fine_coarse_model, inarray, keyword, discrete, kind, facettype, facet,
+                                         outarray):
+    # Arrange
+    model, coarse, fine, fc = example_fine_coarse_model
+
+    # Set up property collections
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
+    numc = len(coarse_pc.parts())
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
+
+    fine_pc.add_cached_array_to_imported_list(cached_array = inarray,
+                                              source_info = '',
+                                              keyword = keyword,
+                                              discrete = discrete,
+                                              property_kind = kind,
+                                              facet_type = facettype,
+                                              facet = facet)
+
+    fine_pc.write_hdf5_for_imported_list()
+    fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
+    numf = len(fine_pc.parts())
+
+    # Act
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc, coarsening = fc)
+    coarse_pc.write_hdf5_for_imported_list()
+    coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    assert len(coarse_pc.parts()) == numc + numf
+
+    newpart = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == keyword][0]
+    result = coarse_pc.cached_part_array_ref(newpart)
+
+    assert_array_almost_equal(outarray, result)
+
+
+def test_coarsening_realization(example_fine_coarse_model):
+    # Arrange
+    model, coarse, fine, fc = example_fine_coarse_model
+
+    # Set up property collections
+    coarse_pc = rqp.GridPropertyCollection(grid = coarse)
+    numc = len(coarse_pc.parts())
+    fine_pc = rqp.GridPropertyCollection(grid = fine)
+
+    ntg1 = np.ones(shape = (6, 10, 10))
+    ntg2 = np.zeros(shape = (6, 10, 10))
+
+    fine_pc.add_cached_array_to_imported_list(cached_array = ntg1,
+                                              source_info = '',
+                                              keyword = 'ntg',
+                                              discrete = False,
+                                              property_kind = 'net to gross ratio',
+                                              realization = 1)
+
+    fine_pc.add_cached_array_to_imported_list(cached_array = ntg2,
+                                              source_info = '',
+                                              keyword = 'ntg',
+                                              discrete = False,
+                                              property_kind = 'net to gross ratio',
+                                              realization = 2)
+    fine_pc.write_hdf5_for_imported_list()
+    fine_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    coarse_pc.extend_imported_list_copying_properties_from_other_grid_collection(other = fine_pc,
+                                                                                 coarsening = fc,
+                                                                                 realization = 1)
+    coarse_pc.write_hdf5_for_imported_list()
+    coarse_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    assert len(coarse_pc.parts()) == numc + 1
+
+    newparts = [part for part in coarse_pc.parts() if coarse_pc.citation_title_for_part(part) == 'ntg']
+    assert len(newparts) == 1
+    result = coarse_pc.cached_part_array_ref(newparts[0])
+
+    assert_array_almost_equal(np.ones(shape = (3, 5, 5)), result)
+
+
+def test_import_ab_properties(example_model_with_properties, test_data_path):
+    # Arrange
+    model = example_model_with_properties
+    pc = rqp.GridPropertyCollection(grid = model.grid())
+    init_num = len(pc.parts())
+    ab_facies = os.path.join(test_data_path, 'facies.ib')
+    ab_ntg = os.path.join(test_data_path, 'ntg_355.db')
+
+    # Act
+    pc.import_ab_property_to_cache(ab_facies, keyword = 'ab_facies', discrete = True, property_kind = 'discrete')
+
+    pc.import_ab_property_to_cache(ab_ntg, keyword = 'ab_ntg', discrete = False, property_kind = 'net to gross ratio')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    assert len(pc.parts()) == init_num + 2
+    # Check NTG array
+    ntg = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_ntg'][0]
+    ntg_array = pc.cached_part_array_ref(ntg)
+    assert pc.continuous_for_part(ntg)
+    assert pc.property_kind_for_part(ntg) == 'net to gross ratio'
+    assert np.min(ntg_array) > 0.4
+    assert np.max(ntg_array) < 0.7
+    assert np.allclose(np.mean(ntg_array), 0.550265)
+
+    # Check facies array
+    facies = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_facies'][0]
+    facies_array = pc.cached_part_array_ref(facies)
+    assert not pc.continuous_for_part(facies)
+    assert pc.property_kind_for_part(facies) == 'discrete'
+    assert np.min(facies_array) == 0
+    assert np.max(facies_array) == 5
+    assert np.sum(facies_array) == 170
+
+
+def test_facet_array_ref(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+
+    pc = model.grid().property_collection
+    existing = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'SW'][0]
+    pc.remove_part_from_dict(existing)
+
+    swarray = np.full(shape = (3, 5, 5), fill_value = 0.1)
+    sgarray = np.full(shape = (3, 5, 5), fill_value = 0.2)
+    soarray = np.full(shape = (3, 5, 5), fill_value = 0.7)
+    for name, facet, array in zip(['sw', 'sg', 'so'], ['water', 'gas', 'oil'], [swarray, sgarray, soarray]):
+        pc.add_cached_array_to_imported_list(cached_array = array,
+                                             source_info = '',
+                                             keyword = name,
+                                             property_kind = 'saturation',
+                                             facet_type = 'what',
+                                             facet = facet)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Act
+    satpc = rqp.PropertyCollection()
+    satpc.set_support(support = model.grid())
+    satpc.inherit_parts_selectively_from_other_collection(pc, property_kind = 'saturation')
+
+    # Assert
+    assert len(satpc.parts()) == 3  # added 3 parts
+    farray = satpc.facets_array_ref()
+    assert farray.shape == (3, 3, 5, 5)
+    names = [satpc.citation_title_for_part(part) for part in satpc.parts()]
+    assert names == ['sw', 'sg', 'so']
+    assert_array_almost_equal(farray[:, 0, 0, 0], np.array([0.2, 0.7, 0.1]))  # facets will be sorted so gas, oil, water
+
+
+def test_copy_imported_from_other(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+
+    pc = model.grid().property_collection
+
+    array = np.full(shape = (3, 5, 5), fill_value = 0.1)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'testimport',
+                                         property_kind = 'porosity')
+    old_list = pc.imported_list
+
+    # Act
+    newpc = rqp.PropertyCollection()
+    newpc.set_support(support = model.grid())
+    newpc.inherit_imported_list_from_other_collection(pc)
+
+    assert newpc.imported_list == old_list
+
+
+def test_remove_cached_from_imported_list(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.full(shape = (3, 5, 5), fill_value = 0.1)
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = '',
+                                         keyword = 'testimport',
+                                         property_kind = 'porosity')
+    assert pc.imported_list != []
+    array_name = pc.imported_list[0][3]
+    assert hasattr(pc, array_name)
+    # Act
+    pc.remove_cached_imported_arrays()
+    # Assert
+    assert not hasattr(pc, array_name)
+
+
+def test_mesh_support(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    # create some random depths
+    z = (np.random.random(3 * 3) * 20.0 + 1000.0).reshape((3, 3))
+    # Create some properties
+    cell_prop = np.full(shape = (2, 2), fill_value = 2)
+    cell_prop[:, 0] = 1
+    node_prop = np.full(shape = (3, 3), fill_value = 10)
+    node_prop[:, 0] = 0
+
+    # make a regular mesh representation
+    mesh = rqs.Mesh(model,
+                    crs_uuid = crs.uuid,
+                    mesh_flavour = 'reg&z',
+                    ni = 3,
+                    nj = 3,
+                    origin = (0, 0, 0),
+                    dxyz_dij = np.array([[50.0, 0.0, 0.0], [0.0, 50.0, 0.0]]),
+                    z_values = z,
+                    title = 'random mesh',
+                    originator = 'Emma')
+    assert mesh is not None
+    mesh.write_hdf5()
+    mesh.create_xml()
+
+    # Act - make a property collection and set the support to be the mesh
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = mesh)
+
+    # Assert
+    assert pc.support is not None
+    assert isinstance(pc.support, rqs.Mesh)
+    assert pc.support == mesh
+    assert pc.support_uuid == mesh.uuid
+
+    # Act - add different indexable element properties to collection
+    pc.add_cached_array_to_imported_list(cell_prop,
+                                         source_info = 'cellarray',
+                                         keyword = 'TESTcell',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         indexable_element = 'cells')
+    pc.add_cached_array_to_imported_list(node_prop,
+                                         source_info = 'nodearray',
+                                         keyword = 'TESTnode',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         indexable_element = 'nodes')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # Assert
+    for part in pc.parts():
+        if pc.citation_title_for_part(part) == 'TESTnode':
+            assert pc.indexable_for_part(part) == 'nodes'
+            shape, _ = pc.shape_and_type_of_part(part)
+            assert shape == (3, 3)
+            array = pc.cached_part_array_ref(part)
+            assert_array_almost_equal(array, node_prop)
+        else:
+            assert pc.indexable_for_part(part) == 'cells'
+            shape, _ = pc.shape_and_type_of_part(part)
+            assert shape == (2, 2)
+            array = pc.cached_part_array_ref(part)
+            assert_array_almost_equal(array, cell_prop)

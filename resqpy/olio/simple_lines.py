@@ -7,7 +7,6 @@ version = '19th January 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('simple_lines.py version ' + version)
 
 import numpy as np
 

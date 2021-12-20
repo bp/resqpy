@@ -320,3 +320,33 @@ def test_add_surfaces(example_model_and_crs, test_data_path, surfaces, format, r
 
     if interp_and_feat:
         assert len(model.parts_list_of_type('obj_HorizonInterpretation')) == len(surfaces)
+
+
+def test_add_ab_properties(example_model_with_properties, test_data_path):
+    # Arrange
+    model = example_model_with_properties
+    ab_facies = os.path.join(test_data_path, 'facies.ib')
+    ab_ntg = os.path.join(test_data_path, 'ntg_355.db')
+
+    ab_list = [(ab_facies, 'facies_ab', 'discrete', None, None, None, None, None, True, None),
+               (ab_ntg, 'ntg_ab', 'net to gross ratio', None, None, None, None, None, False, None)]
+
+    rqi.add_ab_properties(model.epc_file, ab_property_list = ab_list)
+
+    reload = rq.Model(model.epc_file)
+    pc = reload.grid().property_collection
+
+    property_names = [pc.citation_title_for_part(part) for part in pc.parts()]
+    assert 'facies_ab' in property_names
+    assert 'ntg_ab' in property_names
+    for part in pc.parts():
+        if pc.citation_title_for_part(part) == 'facies_ab':
+            assert not pc.continuous_for_part(part)
+            farray = pc.cached_part_array_ref(part)
+            assert np.min(farray) == 0
+            assert np.max(farray) == 5
+        elif pc.citation_title_for_part(part) == 'ntg_ab':
+            assert pc.continuous_for_part(part)
+            ntgarray = pc.cached_part_array_ref(part)
+            assert np.min(ntgarray) > 0.4
+            assert np.max(ntgarray) < 0.7

@@ -8,7 +8,6 @@ version = '18th November 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_md_datum.py version ' + version)
 
 import warnings
 

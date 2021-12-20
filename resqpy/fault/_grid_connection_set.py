@@ -7,7 +7,6 @@ version = '20th October 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_grid_connection_set.py version ' + version)
 
 import math as maths
 import numpy as np

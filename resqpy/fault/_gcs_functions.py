@@ -7,7 +7,6 @@ version = '20th October 2021'
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('fault.py version ' + version)
 
 import os
 import numpy as np
