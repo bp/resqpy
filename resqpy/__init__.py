@@ -25,9 +25,19 @@
     olio
 """
 
-try:
-    # Version dynamically extracted from git tags when package is built
-    from .version import version as __version__  # type: ignore
+import logging
 
+# Dynamically get true resqpy version
+try:
+    # Prod setup: Look for resqpy/version.py
+    # This file is created by setuptools_scm when package is pip-installed
+    from .version import version as __version__  # type: ignore
 except ImportError:
+    # Dev setup: Dynamically get version from local git history
+    from setuptools_scm import get_version
+    __version__ = get_version()
+except Exception:
     __version__ = "0.0.0-version-not-available"
+
+log = logging.getLogger(__name__)
+log.info(f"Imported resqpy version {__version__}")
