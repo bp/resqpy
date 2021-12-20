@@ -523,6 +523,30 @@ def test_catalogue_functions(example_model_and_crs):
     assert bu.matching_uuids(grid_c.uuid, model.uuid(extra = {'em_test': 'oolong'}))
 
 
+def test_supporting_representation_change(example_model_and_crs):
+    model, crs = example_model_and_crs
+    # create some grid objects with some boring properties
+    grid_ap, grid_bp, grid_cp = add_grids(model, crs, True)
+    # create some more grid objects without those properties
+    grid_anp, grid_bnp, grid_cnp = add_grids(model, crs, True)
+    assert len(model.parts_list_of_type('obj_IjkGridRepresentation')) == 6
+    pc = grid_bp.property_collection
+    assert pc.number_of_parts() > 0
+    bnp_count = grid_bnp.property_collection.number_of_parts()
+    prop_part = pc.parts()[-1]
+    sr_uuid = model.supporting_representation_for_part(prop_part)
+    assert bu.matching_uuids(sr_uuid, grid_bp.uuid)
+    assert model.change_uuid_in_supporting_representation_reference(model.root(uuid = pc.uuid_for_part(prop_part)),
+                                                                    old_uuid = sr_uuid,
+                                                                    new_uuid = grid_bnp.uuid)
+    sr_uuid = model.supporting_representation_for_part(prop_part)
+    assert not bu.matching_uuids(sr_uuid, grid_bp.uuid)
+    assert bu.matching_uuids(sr_uuid, grid_bnp.uuid)
+    grid_bnp.property_collection = None
+    grid_bnp.extract_property_collection()
+    assert grid_bnp.property_collection.number_of_parts() == bnp_count + 1
+
+
 def add_grids(model, crs, add_lengths):
     grid_a = grr.RegularGrid(model,
                              extent_kji = (2, 2, 2),
