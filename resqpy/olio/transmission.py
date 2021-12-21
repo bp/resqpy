@@ -1021,7 +1021,7 @@ def fault_connection_set(grid, skip_inactive = False):
                                        pbml_top,
                                        pbml_bot,
                                        tol = tol)
-                log.debug(f'K {km} {fa_m}  <->  {fa_p} {kp}')
+                # log.debug(f'K {km} {fa_m}  <->  {fa_p} {kp}')
                 fa_m = min(max(fa_m, 0.0), 1.0)
                 fa_p = min(max(fa_p, 0.0), 1.0)
                 juxta_list.append((km, kp, fa_m, fa_p))
@@ -1065,7 +1065,7 @@ def fault_connection_set(grid, skip_inactive = False):
     j_ji = np.stack(np.where(col_j_split)).T  # ji0 columns where +J face is split; shape (nc, 2)
     warning_count = 0
     for (j, i) in j_ji:
-        log.debug(f'J, I  {j}, {i}')
+        # log.debug(f'J, I  {j}, {i}')
         pam = pfc[j, i, 1, 0]  # pillar index for -I edge of J face, for col on -J side of fault
         pap = pfc[j + 1, i, 0, 0]  # pillar index for -I edge of J face, for col on +J side of fault
         pbm = pfc[j, i, 1, 1]  # pillar index for +I edge of J face, for col on -J side of fault

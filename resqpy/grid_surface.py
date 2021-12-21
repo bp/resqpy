@@ -874,8 +874,8 @@ def find_first_intersection_of_trajectory_with_cell_surface(trajectory,
             tri = meet.intersects_indices(intersects)[0]
             xyz = intersects[tri]
             _, axis, polarity = cell_surface.cell_axis_and_polarity_from_triangle_index(tri)
-            log.debug('intersection xyz: ' + str(xyz) + '; tri: ' + str(tri) + '; axis: ' + str(axis) + '; polarity: ' +
-                      str(polarity))
+            # log.debug('intersection xyz: ' + str(xyz) + '; tri: ' + str(tri) + '; axis: ' + str(axis) + '; polarity: ' +
+            #           str(polarity))
             break
         knot += 1
 
@@ -1602,8 +1602,8 @@ def populate_blocked_well_from_trajectory(blocked_well,
 
         (entry_shared, kji0, entry_axis, entry_polarity, entry_knot, entry_fraction, entry_xyz) = next_cell_info
 
-        log.debug('next cell entry x,y,z: ' + str(entry_xyz) + '; knot: ' + str(entry_knot) + '; cell kji0: ' +
-                  str(kji0) + '; face: ' + 'KJI'[entry_axis] + '-+'[entry_polarity])
+        # log.debug('next cell entry x,y,z: ' + str(entry_xyz) + '; knot: ' + str(entry_knot) + '; cell kji0: ' +
+        #           str(kji0) + '; face: ' + 'KJI'[entry_axis] + '-+'[entry_polarity])
 
         if not entry_shared:
             log.debug('adding unblocked interval')
@@ -1616,11 +1616,11 @@ def populate_blocked_well_from_trajectory(blocked_well,
         exit_xyz, exit_knot, exit_axis, exit_polarity = find_first_intersection_of_trajectory_with_cell_surface(
             trajectory, grid, kji0, entry_knot, start_xyz = entry_xyz, nudge = 0.01, quad_triangles = True)
 
-        if exit_xyz is None:
-            log.debug('no exit')
-        else:
-            log.debug('cell exit x,y,z: ' + str(exit_xyz) + '; knot: ' + str(exit_knot) + '; face: ' +
-                      'KJI'[exit_axis] + '-+'[exit_polarity])
+        # if exit_xyz is None:
+        #     log.debug('no exit')
+        # else:
+        #     log.debug('cell exit x,y,z: ' + str(exit_xyz) + '; knot: ' + str(exit_knot) + '; face: ' +
+        #               'KJI'[exit_axis] + '-+'[exit_polarity])
 
         if exit_xyz is None:
 
@@ -1799,7 +1799,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
             face_pairs_list.append(((entry_axis, entry_polarity), (exit_axis, exit_polarity)))
 
             previous_kji0 = kji0
-            log.debug(f'previous kji0 set to {previous_kji0}')
+            # log.debug(f'previous kji0 set to {previous_kji0}')
             next_cell_info = find_next_cell(grid,
                                             kji0,
                                             exit_axis,

@@ -278,6 +278,12 @@ def test_s_bend_fn(tmp_path, epc = None):
     faulted_grid.write_hdf5_from_caches()
     faulted_grid.create_xml()
 
+    # create some grid connection sets
+    f_gcs, _ = faulted_grid.fault_connection_set(add_to_model = True)
+    assert f_gcs is not None and f_gcs.count > 0
+    p_gcs, _ = faulted_grid.pinchout_connection_set(add_to_model = True)
+    assert p_gcs is not None and p_gcs.count > 0
+
     # block wells against faulted grid
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(trajectory)))
@@ -388,6 +394,11 @@ def test_s_bend_fn(tmp_path, epc = None):
     assert len(k_gap_grid.k_raw_index_array) == k_gap_grid.nk
     assert len(k_gap_grid.k_gap_after_array) == k_gap_grid.nk - 1
     assert k_gap_grid.pinched_out((1, 0, 2))
+
+    # check gcs iterator
+    gcs_list = list(model.iter_grid_connection_sets())
+    assert len(gcs_list) == 2
+    assert not bu.matching_uuids(gcs_list[0].uuid, gcs_list[1].uuid)
 
     # clean up
     model.h5_release()
