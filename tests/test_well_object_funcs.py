@@ -8,7 +8,7 @@ import resqpy.well
 from resqpy.grid import RegularGrid
 
 
-def test_add_wells_from_ascii_file(example_model_and_crs, caplog):
+def test_add_wells_from_ascii_file(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
