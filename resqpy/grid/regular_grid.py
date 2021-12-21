@@ -12,7 +12,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.property as rprop
 from .grid import Grid
-from .grid_functions import is_regular_grid
+from .grid_types import is_regular_grid
 
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False

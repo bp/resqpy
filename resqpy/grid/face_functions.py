@@ -8,7 +8,6 @@ import pandas as pd
 
 import resqpy.fault as rqf
 import resqpy.olio.vector_utilities as vec
-from .grid_functions import _add_to_kelp_list
 
 
 def is_split_column_face(grid, j0, i0, axis, polarity):
@@ -156,9 +155,9 @@ def make_face_set_from_dataframe(grid, df):
             for j in range(box_kji0[0, 1], box_kji0[1, 1] + 1):
                 for i in range(box_kji0[0, 2], box_kji0[1, 2] + 1):
                     if axis == 1:
-                        _add_to_kelp_list(grid.extent_kji, j_kelp_list, True, (j, i))
+                        __add_to_kelp_list(grid.extent_kji, j_kelp_list, True, (j, i))
                     elif axis == 2:
-                        _add_to_kelp_list(grid.extent_kji, i_kelp_list, False, (j, i))
+                        __add_to_kelp_list(grid.extent_kji, i_kelp_list, False, (j, i))
         grid.face_set_dict[fs_name] = (j_kelp_list, i_kelp_list, 'K')
         count += 1
     log.info(str(count) + ' face sets extracted from dataframe')
@@ -271,7 +270,7 @@ def __i_greater_than_j(dj, full_pillar_list, grid, here, i_kelp_list, i_sign, j_
     i = here[1]
     if i != ji_1[1]:
         ip = i + i_sign
-        _add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0], (here[0] - 1, min(i, ip)))
+        __add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0], (here[0] - 1, min(i, ip)))
         here[1] = ip
         full_pillar_list.append(tuple(here))
     if dj != 0:
@@ -282,8 +281,8 @@ def __i_greater_than_j(dj, full_pillar_list, grid, here, i_kelp_list, i_sign, j_
             stepped_divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(side_step)], xy_0, xy_1)
             if stepped_divergence < divergence:
                 here[:] = side_step
-                _add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1],
-                                  (min(here[0], here[0] - j_sign), here[1] - 1))
+                __add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1],
+                                   (min(here[0], here[0] - j_sign), here[1] - 1))
                 full_pillar_list.append(tuple(here))
 
 
@@ -292,7 +291,7 @@ def __j_greater_than_i(di, full_pillar_list, grid, here, i_kelp_list, i_sign, j_
     j = here[0]
     if j != ji_1[0]:
         jp = j + j_sign
-        _add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1], (min(j, jp), here[1] - 1))
+        __add_to_kelp_list(grid.extent_kji, i_kelp_list, kelp_axes[1], (min(j, jp), here[1] - 1))
         here[0] = jp
         full_pillar_list.append(tuple(here))
     if di != 0:
@@ -303,8 +302,8 @@ def __j_greater_than_i(di, full_pillar_list, grid, here, i_kelp_list, i_sign, j_
             stepped_divergence = vec.point_distance_to_line_2d(pillar_xy[tuple(side_step)], xy_0, xy_1)
             if stepped_divergence < divergence:
                 here[:] = side_step
-                _add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0],
-                                  (here[0] - 1, min(here[1], here[1] - i_sign)))
+                __add_to_kelp_list(grid.extent_kji, j_kelp_list, kelp_axes[0],
+                                   (here[0] - 1, min(here[1], here[1] - i_sign)))
                 full_pillar_list.append(tuple(here))
 
 
@@ -352,3 +351,23 @@ def face_centres_kji_01(grid, cell_kji0, points_root = None, cache_resqml_array 
                                                          cache_resqml_array = cache_resqml_array,
                                                          cache_cp_array = cache_cp_array)
     return result
+
+
+def __add_to_kelp_list(extent_kji, kelp_list, face_axis, ji):
+    if isinstance(face_axis, bool):
+        face_axis = 'J' if face_axis else 'I'
+    # ignore external faces
+    if face_axis == 'J':
+        if ji[0] < 0 or ji[0] >= extent_kji[1] - 1:
+            return
+    elif face_axis == 'I':
+        if ji[1] < 0 or ji[1] >= extent_kji[2] - 1:
+            return
+    else:  # ji is actually kj or ki
+        assert face_axis == 'K'
+        if ji[0] < 0 or ji[0] >= extent_kji[0] - 1:
+            return
+    pair = ji
+    if pair in kelp_list:
+        return  # avoid duplication
+    kelp_list.append(pair)

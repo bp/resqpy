@@ -3,6 +3,7 @@
 import numpy as np
 
 import resqpy.grid as grr
+import resqpy.property.property_kind as pk
 import resqpy.model as rq
 
 from resqpy.derived_model._add_one_grid_property_array import add_one_grid_property_array
@@ -83,7 +84,7 @@ def add_zone_by_layer_property(epc_file,
 
     if use_local_property_kind:
         property_kind = 'zone'
-        zone_pk = grr.establish_zone_property_kind(model)
+        zone_pk = pk.establish_zone_property_kind(model)
         local_property_kind_uuid = zone_pk.uuid
         model.store_epc(only_if_modified = True)
     else:

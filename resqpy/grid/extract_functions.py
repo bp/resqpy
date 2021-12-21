@@ -10,6 +10,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
 from .intervals_info import IntervalsInfo
 from .defined_geometry import cell_geometry_is_defined_ref
+from ..olio import xml_et as rqet
 
 log = logging.getLogger(__name__)
 
@@ -547,3 +548,9 @@ def extract_inactive_mask(grid, check_pinchout = False):
 
     grid.all_inactive = np.all(grid.inactive)
     return grid.inactive
+
+
+def extent_kji_from_root(root_node):
+    """Returns kji extent as stored in xml."""
+
+    return (rqet.find_tag_int(root_node, 'Nk'), rqet.find_tag_int(root_node, 'Nj'), rqet.find_tag_int(root_node, 'Ni'))

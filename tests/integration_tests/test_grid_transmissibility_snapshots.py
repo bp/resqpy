@@ -1,6 +1,6 @@
 import os
 from inspect import getsourcefile
-from numpy import loadtxt, savetxt
+import numpy as np
 
 import resqpy.model as rq
 
@@ -8,14 +8,14 @@ import resqpy.model as rq
 def write_snapshot(data, title):
     # Method to write out a new snapshot of data if one is needed
     reshaped_array = data.reshape(data.shape[0], -1)
-    savetxt(f'C:\\Test\\{title}.txt', reshaped_array)
+    np.savetxt(f'C:\\Test\\{title}.txt', reshaped_array)
 
 
 def check_load_snapshot(data, filename):
     # Compare the actual data against the stored expected array
-    loaded_array = loadtxt(filename)
+    loaded_array = np.loadtxt(filename)
     expected_array = loaded_array.reshape(loaded_array.shape[0], loaded_array.shape[1] // data.shape[2], data.shape[2])
-    assert (data == expected_array).all()
+    np.testing.assert_array_almost_equal(data, expected_array)
 
 
 def test_check_transmisibility_output(test_data_path):

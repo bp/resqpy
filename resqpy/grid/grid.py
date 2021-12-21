@@ -31,8 +31,9 @@ from .extract_functions import extract_grid_parent, extract_extent_kji, extract_
     extract_k_direction_is_down, extract_geometry_time_index, extract_crs_uuid, extract_crs_root, extract_k_gaps, \
     extract_pillar_shape, extract_has_split_coordinate_lines, extract_children, extract_stratigraphy, \
     extract_inactive_mask, extract_property_collection
-from .create_grid_xml import create_grid_xml
-from .write_functions import write_hdf5_from_caches, write_nexus_corp
+
+from .write_hdf5_from_caches import _write_hdf5_from_caches
+from .write_nexus_corp import write_nexus_corp
 from .defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defined, geometry_defined_for_all_cells, \
     set_geometry_is_defined, geometry_defined_for_all_pillars, cell_geometry_is_defined_ref, \
     pillar_geometry_is_defined_ref
@@ -45,6 +46,8 @@ from .points_functions import point_areally, point, points_ref, point_raw, unspl
     unsplit_x_section_points, uncache_points, horizon_points, split_horizon_points, \
     pixel_map_for_split_horizon_points, centre_point_list, interpolated_point, split_gap_x_section_points, \
     centre_point, z_corner_point_depths, coordinate_line_end_points, set_cached_points_from_property
+
+from ._create_grid_xml import _create_grid_xml
 
 import warnings
 
@@ -1568,8 +1571,8 @@ class Grid(BaseResqpy):
         # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
         # xml is not created here for property objects
 
-        write_hdf5_from_caches(self, file, mode, geometry, imported_properties, write_active, stratigraphy,
-                               expand_const_arrays)
+        _write_hdf5_from_caches(self, file, mode, geometry, imported_properties, write_active, stratigraphy,
+                                expand_const_arrays)
 
     def write_hdf5(self, expand_const_arrays = False):
         """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches().
@@ -1762,7 +1765,7 @@ class Grid(BaseResqpy):
 
         ijk = super().create_xml(add_as_part = False, originator = originator, extra_metadata = extra_metadata)
 
-        return create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry)
+        return _create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry)
 
     def x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
         """Deprecated: please use `unsplit_x_section_points` instead."""

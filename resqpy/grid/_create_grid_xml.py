@@ -12,14 +12,14 @@ always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
 
 
-def create_grid_xml(grid,
-                    ijk,
-                    ext_uuid = None,
-                    add_as_part = True,
-                    add_relationships = True,
-                    write_active = True,
-                    write_geometry = True):
-    """Function that creates an xml file containing grid information"""
+def _create_grid_xml(grid,
+                     ijk,
+                     ext_uuid = None,
+                     add_as_part = True,
+                     add_relationships = True,
+                     write_active = True,
+                     write_geometry = True):
+    """Function that returns an xml representation containing grid information"""
 
     if grid.grid_representation and not write_geometry:
         rqet.create_metadata_xml(node = ijk, extra_metadata = {'grid_flavour': grid.grid_representation})
@@ -184,7 +184,7 @@ def create_grid_xml(grid,
         # todo: handle omit and cell overlap functionality as part of parent window refining or coarsening
 
     if write_geometry:
-        __write_geometry(ext_uuid, grid, ijk)
+        __add_geometry_xml(ext_uuid, grid, ijk)
 
     if add_as_part:
         __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry)
@@ -226,7 +226,7 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
                                                       grid.model.root_for_uuid(grid.parent_grid_uuid), 'sourceObject')
 
 
-def __write_geometry(ext_uuid, grid, ijk):
+def __add_geometry_xml(ext_uuid, grid, ijk):
     geom = rqet.SubElement(ijk, ns['resqml2'] + 'Geometry')
     geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'IjkGridGeometry')
     geom.text = '\n'

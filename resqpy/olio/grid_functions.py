@@ -5,6 +5,7 @@ version = '29th April 2021'
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
+import resqpy.olio.point_inclusion as pip
 
 log = logging.getLogger(__name__)
 
@@ -586,3 +587,81 @@ def left_right_foursome(full_pillar_list, p_index):
 
 
 ##########################################################################################
+
+
+def find_cell_for_x_sect_xz(x_sect, x, z):
+    """Returns the (k0, j0) or (k0, i0) indices of the cell containing point x,z in the cross section.
+
+    arguments:
+       x_sect (numpy float array of shape (nk, nj or ni, 2, 2, 2 or 3): the cross section x,z or x,y,z data
+       x (float) x-coordinate of point of interest in the cross section space
+       z (float): y-coordinate of  point of interest in the cross section space
+
+    note:
+       the x_sect data is in the form returned by x_section_corner_points() or split_gap_x_section_points();
+       the 2nd of the returned pair is either a J index or I index, whichever was not the axis specified
+       when generating the x_sect data; returns (None, None) if point inclusion not detected; if xyz data is
+       provided, the y values are ignored; note that the point of interest x,z coordinates are in the space of
+       x_sect, so if rotation has occurred, the x value is no longer an easting and is typically picked off a
+       cross section plot
+    """
+
+    def test_cell(p, x_sect, k0, ji0):
+        poly = np.array([
+            x_sect[k0, ji0, 0, 0, 0:3:2], x_sect[k0, ji0, 0, 1, 0:3:2], x_sect[k0, ji0, 1, 1, 0:3:2], x_sect[k0, ji0, 1,
+                                                                                                             0, 0:3:2]
+        ])
+        if np.any(np.isnan(poly)):
+            return False
+        return pip.pip_cn(p, poly)
+
+    assert x_sect.ndim == 5 and x_sect.shape[2] == 2 and x_sect.shape[3] == 2 and 2 <= x_sect.shape[4] <= 3
+    n_k = x_sect.shape[0]
+    n_j_or_i = x_sect.shape[1]
+    tolerance = 1.0e-3
+
+    if x_sect.shape[4] == 3:
+        diffs = x_sect[:, :, :, :, 0:3:2].copy()  # x,z points only
+    else:
+        diffs = x_sect.copy()
+    diffs -= np.array((x, z))
+    diffs = np.sum(diffs * diffs, axis = -1)  # square of distance of each point from given x,z
+    flat_index = np.nanargmin(diffs)
+    min_dist_sqr = diffs.flatten()[flat_index]
+    cell_flat_k0_ji0, flat_k_ji_p = divmod(flat_index, 4)
+    found_k0, found_ji0 = divmod(cell_flat_k0_ji0, n_j_or_i)
+    found_kp, found_jip = divmod(flat_k_ji_p, 2)
+
+    found = test_cell((x, z), x_sect, found_k0, found_ji0)
+    if found:
+        return found_k0, found_ji0
+    # check cells below whilst still close to point
+    while found_k0 < n_k - 1:
+        found_k0 += 1
+        if np.nanmin(diffs[found_k0, found_ji0]) > min_dist_sqr + tolerance:
+            break
+        found = test_cell((x, z), x_sect, found_k0, found_ji0)
+        if found:
+            return found_k0, found_ji0
+
+    # try neighbouring column (in case of fault or point exactly on face)
+    ji_neighbour = 1 if found_jip == 1 else -1
+    found_ji0 += ji_neighbour
+    if 0 <= found_ji0 < n_j_or_i:
+        col_diffs = diffs[:, found_ji0]
+        flat_index = np.nanargmin(col_diffs)
+        if col_diffs.flatten()[flat_index] <= min_dist_sqr + tolerance:
+            found_k0 = flat_index // 4
+            found = test_cell((x, z), x_sect, found_k0, found_ji0)
+            if found:
+                return found_k0, found_ji0
+            # check cells below whilst still close to point
+            while found_k0 < n_k - 1:
+                found_k0 += 1
+                if np.nanmin(diffs[found_k0, found_ji0]) > min_dist_sqr + tolerance:
+                    break
+                found = test_cell((x, z), x_sect, found_k0, found_ji0)
+                if found:
+                    return found_k0, found_ji0
+
+    return None, None
