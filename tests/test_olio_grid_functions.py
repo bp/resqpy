@@ -7,6 +7,7 @@ import resqpy.model as rq
 import resqpy.grid as grr
 from resqpy.lines import Polyline
 from resqpy.derived_model import add_faults
+from resqpy.olio.random_seed import seed
 
 
 def test_infill_block_geometry():
@@ -119,13 +120,14 @@ def test_resequence_nexus_corp():
 def test_random_cell(tmp_path):
 
     # --------- Arrange----------
+    seed(1923877)
     epc = os.path.join(tmp_path, 'grid.epc')
     model = rq.new_model(epc)
 
     # create a basic block grid
     dxyz = (10.0, 10.0, 100.0)
     grid = grr.RegularGrid(model,
-                           extent_kji = (3, 2, 2),
+                           extent_kji = (4, 2, 2),
                            title = 'grid_1',
                            origin = (0.0, 10.0, 1000.0),
                            dxyz = dxyz,
@@ -133,46 +135,40 @@ def test_random_cell(tmp_path):
 
     grid_points = grid.points_ref(masked = False)
 
-    # pinch out cells in the k == 1 layer
-    for j in range(3):
-        for i in range(3):
-            grid_points[2][j][i][-1] = 1100.
+    # pinch out cells in the k == 2 layer
+    grid_points[3] = grid_points[2]
+
+    # collapse cell kji0 == 0,0,0 in the j direction
+    grid_points[0:2, 1, 0:2, 1] = 10.  # same as origin y value
+
+    # store grid
     grid.write_hdf5()
     grid.create_xml(add_cell_length_properties = True)
     grid_uuid = grid.uuid
     model.store_epc()
-
-    # collapse cellkji0 == 0,0,0 in the j direction # TODO: figure out why this does not work!
-    for k in [0, 1]:
-        for i in [0, 1]:
-            grid_points[k][1][i][1] = 10.  # same as origin y value
 
     # check that the grid can be read
     model = rq.Model(epc)
     grid_reloaded = grr.any_grid(model, uuid = grid_uuid)
     corner_points = grid_reloaded.corner_points()
 
-    # reshape corner get the extent of the new grid
-    corner_points_reshaped = corner_points.reshape(1, 1, 12, 2, 2, 2, 3)
-    new_extent = determine_corp_extent(corner_points = corner_points_reshaped)
-
     # --------- Act----------
     # call random_cell function 50 times
     trial_number = 0
     while trial_number < 50:
-        (k, j, i) = random_cell(corner_points = corner_points)
+        (k, j, i) = random_cell(corner_points = corner_points, border = 0.0)
         # --------- Assert----------
-        assert 0 <= k < 3
+        assert 0 <= k < 4
         assert 0 <= j < 2
         assert 0 <= i < 2
         # check that none of the k,j,i combinations that correspond to pinched cells are chosen by the random_cell function
-        assert (k, j, i) not in [(1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1)]
-        # TODO: figure out why is cell kji0 == (0, 0, 0) still returned?
-        # print(k, j, i)
+        assert (k, j, i) not in [(0, 0, 0), (2, 0, 0), (2, 0, 1), (2, 1, 0), (2, 1, 1)]
         trial_number += 1
-    np.testing.assert_almost_equal(new_extent,
-                                   np.array([3, 2, 2
-                                            ]))  #TODO: confirm this makes sense if an entire k==1 layer is pinched out
+
+    # reshape corner get the extent of the new grid
+    corner_points_reshaped = corner_points.reshape(1, 1, 16, 2, 2, 2, 3)
+    new_extent = determine_corp_extent(corner_points = corner_points_reshaped)
+    assert np.all(new_extent == np.array([4, 2, 2], dtype = int))
 
 
 def test_triangles_for_cell_faces():
@@ -294,10 +290,12 @@ def test_determine_corp_extent(tmp_path):
 def test_translate_corp(x_shift, y_shift, expected_result):
 
     # --------- Arrange----------
-    corner_points = np.array([[[[[[[0.001, 0.001, 0.001], [10.001, 0.001, 0.001]],
-                                  [[0.001, -10.001, 0.001], [10.001, -10.001, 0.001]]],
-                                 [[[0.001, 0.001, 10.001], [10.001, 0.001, 10.001]],
+    # yapf: disable
+    corner_points = np.array([[[[[[[0.001,   0.001,  0.001], [10.001,   0.001,  0.001]],
+                                  [[0.001, -10.001,  0.001], [10.001, -10.001,  0.001]]],
+                                 [[[0.001,   0.001, 10.001], [10.001,   0.001, 10.001]],
                                   [[0.001, -10.001, 10.001], [10.001, -10.001, 10.001]]]]]]])
+    # yapf: enable
 
     # --------- Act----------
     translate_corp(corner_points = corner_points, x_shift = x_shift, y_shift = y_shift, preserve_digits = -3)

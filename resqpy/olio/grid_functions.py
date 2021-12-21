@@ -230,7 +230,7 @@ def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
                                     c += 1
                         corner_points[k, j, i] = xyz.reshape((2, 2, 2, 3))
                     else:
-                        xyz = corner_points[k, j, i].reshape((3, 8)).copy
+                        xyz = corner_points[k, j, i].reshape((3, 8)).copy()
                         c = 0
                         for kp in range(2):
                             for jp in range(2):
@@ -327,6 +327,7 @@ def determine_corp_extent(corner_points, tolerance = 0.003):
     confirmation = 3  # number of identical results needed for each of NI and NJ
     max_failures = 100  # maximum number of failed random cells for each of NI and NJ
     min_cell_length = 10.0 * tolerance
+    border = 0.0 if corner_points.shape[2] < 1000 else 0.25
 
     cell_count = corner_points.shape[2]
     prime_factorization = factors.factorize(cell_count)
@@ -338,21 +339,22 @@ def determine_corp_extent(corner_points, tolerance = 0.003):
     redundancy = confirmation
     remaining_attempts = max_failures
     while redundancy:
-        kji_cell = random_cell(corner_points, tolerance = min_cell_length)
+        kji_cell = random_cell(corner_points, border = border, tolerance = min_cell_length)
         found = False
-        for e in possible_extents:
-            candidate = kji_cell[2] + e
-            if candidate >= cell_count:
-                continue
-            if neighbours(corner_points, (0, 0, kji_cell[2], 0, 1, 0), (0, 0, kji_cell[2], 0, 1, 1),
-                          (0, 0, candidate, 0, 0, 0), (0, 0, candidate, 0, 0, 1), tolerance):
-                if ni is not None and ni != e:
-                    log.error('inconsistent NI values of {} and {} determined from corner points'.format(ni, e))
-                    return None
-                found = True
-                ni = e
-                redundancy -= 1
-                break
+        if kji_cell is not None:
+            for e in possible_extents:
+                candidate = kji_cell[2] + e
+                if candidate >= cell_count:
+                    continue
+                if neighbours(corner_points, (0, 0, kji_cell[2], 0, 1, 0), (0, 0, kji_cell[2], 0, 1, 1),
+                              (0, 0, candidate, 0, 0, 0), (0, 0, candidate, 0, 0, 1), tolerance):
+                    if ni is not None and ni != e:
+                        log.error('inconsistent NI values of {} and {} determined from corner points'.format(ni, e))
+                        return None
+                    found = True
+                    ni = e
+                    redundancy -= 1
+                    break
         if not found:
             remaining_attempts -= 1
             if remaining_attempts <= 0:
@@ -561,28 +563,22 @@ def left_right_foursome(full_pillar_list, p_index):
     exit = tuple(next - here)
     # yapf: disable
     entry_tuples_list = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-    exit_tuples_list = [[(-1, 0), (0, 1), (1, 0)], [(-1, 0), (0, -1), (1, 0)], [(0, -1), (1, 0), (0, 1)],
+    exit_tuples_list = [[(-1, 0), (0, 1),  (1, 0)],
+                        [(-1, 0), (0, -1), (1, 0)],
+                        [(0, -1), (1, 0),  (0, 1)],
                         [(0, -1), (-1, 0), (0, 1)]]
-    result_arrays_list = [[
-        np.array([[False, True], [True, True]], dtype = bool),
-        np.array([[False, False], [True, True]], dtype = bool),
-        np.array([[False, False], [True, False]], dtype = bool)
-    ],
-                          [
-                              np.array([[False, True], [False, False]], dtype = bool),
-                              np.array([[True, True], [False, False]], dtype = bool),
-                              np.array([[True, True], [True, False]], dtype = bool)
-                          ],
-                          [
-                              np.array([[True, False], [False, False]], dtype = bool),
-                              np.array([[True, False], [True, False]], dtype = bool),
-                              np.array([[True, False], [True, True]], dtype = bool)
-                          ],
-                          [
-                              np.array([[True, True], [False, True]], dtype = bool),
-                              np.array([[False, True], [False, True]], dtype = bool),
-                              np.array([[False, False], [False, True]], dtype = bool)
-                          ]]
+    result_arrays_list = [[np.array([[False, True],  [True,  True]],  dtype = bool),
+                           np.array([[False, False], [True,  True]],  dtype = bool),
+                           np.array([[False, False], [True,  False]], dtype = bool)],
+                          [np.array([[False, True],  [False, False]], dtype = bool),
+                           np.array([[True,  True],  [False, False]], dtype = bool),
+                           np.array([[True,  True],  [True,  False]], dtype = bool)],
+                          [np.array([[True,  False], [False, False]], dtype = bool),
+                           np.array([[True,  False], [True,  False]], dtype = bool),
+                           np.array([[True,  False], [True,  True]],  dtype = bool)],
+                          [np.array([[True,  True],  [False, True]],  dtype = bool),
+                           np.array([[False, True],  [False, True]],  dtype = bool),
+                           np.array([[False, False], [False, True]],  dtype = bool)]]
     # yapf: enable
     try:
         list_index = entry_tuples_list.index(entry)
