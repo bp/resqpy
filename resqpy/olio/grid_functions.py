@@ -230,13 +230,11 @@ def resequence_nexus_corp(corner_points, eight_mode = False, undo = False):
                                     c += 1
                         corner_points[k, j, i] = xyz.reshape((2, 2, 2, 3))
                     else:
-                        xyz = corner_points[k, j, i].reshape((3, 8)).copy()
-                        print(xyz)
+                        xyz = corner_points[k, j, i].reshape((3, 8)).copy
                         c = 0
                         for kp in range(2):
                             for jp in range(2):
                                 for ip in range(2):
-                                    print(corner_points[k, j, i, kp, jp, ip, :])
                                     corner_points[k, j, i, kp, jp, ip, :] = xyz[:, c]
                                     c += 1
     else:  # reversible, so not dependent on undo argument
@@ -503,7 +501,6 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
     from_top = pp - pp[0]
     xy_drift = np.abs(from_top[:, :, 0]) + np.abs(
         from_top[:, :, 1])  # use Manhattan distance as cheap proxy for true distance
-    print(xy_drift)
     if np.max(xy_drift) <= tolerance:
         return 'vertical'
     if np.max(xy_drift[-1]) <= tolerance:
@@ -562,6 +559,7 @@ def left_right_foursome(full_pillar_list, p_index):
     next = np.array(full_pillar_list[p_index + 1], dtype = int)
     entry = tuple(here - previous)
     exit = tuple(next - here)
+    # yapf: disable
     entry_tuples_list = [(0, 1), (0, -1), (1, 0), (-1, 0)]
     exit_tuples_list = [[(-1, 0), (0, 1), (1, 0)], [(-1, 0), (0, -1), (1, 0)], [(0, -1), (1, 0), (0, 1)],
                         [(0, -1), (-1, 0), (0, 1)]]
@@ -585,7 +583,7 @@ def left_right_foursome(full_pillar_list, p_index):
                               np.array([[False, True], [False, True]], dtype = bool),
                               np.array([[False, False], [False, True]], dtype = bool)
                           ]]
-
+    # yapf: enable
     try:
         list_index = entry_tuples_list.index(entry)
     except ValueError:
