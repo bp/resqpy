@@ -2037,6 +2037,7 @@ def test_remove_cached_from_imported_list(example_model_with_properties):
     # Assert
     assert not hasattr(pc, array_name)
 
+
 def test_mesh_support(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs

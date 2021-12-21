@@ -10,7 +10,6 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
 from .intervals_info import IntervalsInfo
 from .defined_geometry import cell_geometry_is_defined_ref
-from ..olio import xml_et as rqet
 
 log = logging.getLogger(__name__)
 

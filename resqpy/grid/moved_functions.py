@@ -1,4 +1,4 @@
-"""Submodule containing some general grid functions."""
+"""Submodule containing some general grid functions that have now been moved. This file will be deleted in a later release."""
 
 import warnings
 

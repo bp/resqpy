@@ -1,3 +1,5 @@
+"""functions to handle different grid types"""
+
 import resqpy
 from resqpy.olio import xml_et as rqet
 

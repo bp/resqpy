@@ -1,3 +1,5 @@
+"""A function for writing out a Nexus CORP file using supplied grid geometry"""
+
 import logging
 
 import numpy as np
@@ -10,7 +12,7 @@ import resqpy.olio.trademark as tm
 import resqpy.olio.write_data as wd
 
 
-def write_nexus_corp(self,
+def write_nexus_corp(grid,
                      file_name,
                      local_coords = False,
                      global_xy_units = None,
@@ -27,28 +29,28 @@ def write_nexus_corp(self,
 
     log.info('caching Nexus corner points')
     tm.log_nexus_tm('info')
-    self.corner_points(cache_cp_array = True)
+    grid.corner_points(cache_cp_array = True)
     log.debug('duplicating Nexus corner points')
-    cp = self.array_corner_points.copy()
+    cp = grid.array_corner_points.copy()
     log.debug('resequencing duplicated Nexus corner points')
     gf.resequence_nexus_corp(cp, eight_mode = False, undo = True)
     corp_extent = np.zeros(3, dtype = 'int')
-    corp_extent[0] = self.cell_count()  # total number of cells in grid
+    corp_extent[0] = grid.cell_count()  # total number of cells in grid
     corp_extent[1] = 8  # 8 corners of cell: k -/+; j -/+; i -/+
     corp_extent[2] = 3  # x, y, z
-    ijk_right_handed = self.extract_grid_is_right_handed()
+    ijk_right_handed = grid.extract_grid_is_right_handed()
     if ijk_right_handed is None:
         log.warning('ijk handedness not known')
     elif not ijk_right_handed:
         log.warning('ijk axes are left handed; inverted (fake) xyz handedness required')
-    crs_root = self.extract_crs_root()
+    crs_root = grid.extract_crs_root()
     if not local_coords:
         if not global_z_increasing_downward:
             log.warning('global z is not increasing with depth as expected by Nexus')
             tm.log_nexus_tm('warning')
         if crs_root is not None:  # todo: otherwise raise exception?
             log.info('converting corner points from local to global reference system')
-            self.local_to_global_crs(cp,
+            grid.local_to_global_crs(cp,
                                      crs_root,
                                      global_xy_units = global_xy_units,
                                      global_z_units = global_z_units,
@@ -81,15 +83,15 @@ def write_nexus_corp(self,
                 header.write('! global units unknown or mixed\n\n')
         if write_nx_ny_nz:
             header.write('NX      NY      NZ\n')
-            header.write('{0:<7d} {1:<7d} {2:<7d}\n\n'.format(self.extent_kji[2], self.extent_kji[1],
-                                                              self.extent_kji[0]))
+            header.write('{0:<7d} {1:<7d} {2:<7d}\n\n'.format(grid.extent_kji[2], grid.extent_kji[1],
+                                                              grid.extent_kji[0]))
         if write_rh_keyword_if_needed:
             if ijk_right_handed is None or crs_root is None:
                 log.warning('unable to determine whether RIGHTHANDED keyword is needed')
             else:
                 xy_axes = rqet.find_tag(crs_root, 'ProjectedAxisOrder').text
                 if local_coords:
-                    z_inc_down = self.z_inc_down()
+                    z_inc_down = grid.z_inc_down()
                     if not z_inc_down:
                         log.warning('local z is not increasing with depth as expected by Nexus')
                         tm.log_nexus_tm('warning')
