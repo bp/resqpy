@@ -585,12 +585,10 @@ def left_right_foursome(full_pillar_list, p_index):
     except ValueError:
         log.debug(f'entry pair: {entry}')
         raise Exception('code failure whilst taking entry sides from dubious full pillar list')
-    try:
-        result_array_index = exit_tuples_list[list_index].index(exit)
-        result_array = result_arrays_list[list_index][result_array_index]
-        return result_array
-    except ValueError:
-        raise Exception('code failure whilst taking exit sides from dubious full pillar list')
+<<<<<<< HEAD
+
+
+##########################################################################################
 
 
 def find_cell_for_x_sect_xz(x_sect, x, z):
@@ -669,3 +667,11 @@ def find_cell_for_x_sect_xz(x_sect, x, z):
                     return found_k0, found_ji0
 
     return None, None
+=======
+    try:
+        result_array_index = exit_tuples_list[list_index].index(exit)
+        result_array = result_arrays_list[list_index][result_array_index]
+        return result_array
+    except ValueError:
+        raise Exception('code failure whilst taking exit sides from dubious full pillar list')
+>>>>>>> origin/master
