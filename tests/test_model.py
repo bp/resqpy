@@ -503,15 +503,34 @@ def test_catalogue_functions(example_model_and_crs):
     assert all([isinstance(p, str) for p in all_parts])
     grid_parts = model.parts(obj_type = 'IjkGridRepresentation')
     assert len(grid_parts) == 3
+    pcbt = model.parts_count_by_type('obj_IjkGridRepresentation')
+    assert isinstance(pcbt, list) and len(pcbt) == 1 and pcbt[0] == ('IjkGridRepresentation', 3)
+    oldest_grid_part = model.part(obj_type = 'IjkGridRepresentation', multiple_handling = 'oldest')
+    assert oldest_grid_part is not None and isinstance(oldest_grid_part, str)
+    none_part = model.part(obj_type = 'IjkGridRepresentation', multiple_handling = 'none')
+    assert none_part is None
     assert all([(model.type_of_part(p, strip_obj = True) == 'IjkGridRepresentation') for p in grid_parts])
     grid_b_part = model.part(parts_list = grid_parts, title = 'b', title_mode = 'ends')
     assert grid_b_part is not None
     assert model.citation_title_for_part(grid_b_part).endswith('B')
     no_grid_b_part = model.part(parts_list = grid_parts, title = 'b', title_mode = 'ends', title_case_sensitive = True)
     assert no_grid_b_part is None
-    grid_b_rels_uuids = model.uuids(related_uuid = model.uuid_for_part(grid_b_part))
+    grid_b_rels_uuids = model.uuids(related_uuid = model.uuid_for_part(grid_b_part), sort_by = 'uuid')
     assert grid_b_rels_uuids is not None and len(grid_b_rels_uuids) >= 4
     assert uuid_in_list(crs.uuid, grid_b_rels_uuids)
+    grid_b_rels_crs_part = model.parts_list_related_to_uuid_of_type(model.uuid_for_part(grid_b_part),
+                                                                    'obj_LocalDepth3dCrs')
+    assert isinstance(grid_b_rels_crs_part, list) and len(grid_b_rels_crs_part) == 1
+    assert grid_b_rels_crs_part[0] == crs.part
+    grid_b_rels_uuids_ints = [bu.uuid_as_int(u) for u in grid_b_rels_uuids]
+    assert all(a < b for a, b in zip(grid_b_rels_uuids_ints[:-1], grid_b_rels_uuids_ints[1:]))
+    singleton_list = model.parts_list_of_type('obj_IjkGridRepresentation', uuid = model.uuid_for_part(grid_b_part))
+    assert isinstance(singleton_list, list) and len(singleton_list) == 1
+    assert singleton_list[0] == grid_b_part
+    empty_list = model.parts_list_of_type('obj_IjkGridRepresentation', uuid = crs.uuid)
+    assert isinstance(empty_list, list) and len(empty_list) == 0
+    empty_list = model.parts_list_of_type('obj_IjkGridRepresentation', uuid = bu.new_uuid())
+    assert isinstance(empty_list, list) and len(empty_list) == 0
     grid_b_props_titles = model.titles(obj_type = 'ContinuousProperty',
                                        parts_list = [model.part_for_uuid(uuid) for uuid in grid_b_rels_uuids],
                                        sort_by = 'title')
@@ -523,6 +542,14 @@ def test_catalogue_functions(example_model_and_crs):
     grid_c.create_xml()
     assert model.root(extra = {'em_test': 'espresso'}) is None
     assert bu.matching_uuids(grid_c.uuid, model.uuid(extra = {'em_test': 'oolong'}))
+    obj_parts = model.list_of_parts()
+    all_parts = model.list_of_parts(only_objects = False)
+    assert len(all_parts) > len(obj_parts)
+    assert all([p in all_parts for p in obj_parts])
+    assert not all([p in obj_parts for p in all_parts])
+    # check exception is raised when multiple parts match criteria
+    with pytest.raises(ValueError) as excinfo:
+        part = model.part(obj_type = 'IjkGridRepresentation')
 
 
 def test_supporting_representation_change(example_model_and_crs):
