@@ -610,70 +610,6 @@ def x_section_corner_points(grid,
     return x_sect
 
 
-def pixel_map_for_split_horizon_points(grid, horizon_points, origin, width, height, dx, dy = None):
-    """Makes a mapping from pixels to cell j, i indices, based on split horizon points for a single horizon.
-
-    args:
-       horizon_points (numpy array of shape (nj, ni, 2, 2, 2+)): corner point x,y,z values for cell
-          corners (j, i, jp, ip); as returned by split_horizon_points()
-       origin (float pair): x, y of south west corner of area covered by pixel rectangle, in local crs
-       width (int): the width of the pixel rectangle (number of pixels)
-       height (int): the height of the pixel rectangle (number of pixels)
-       dx (float): the size (west to east) of a pixel, in locel crs
-       dx (float, optional): the size (south to north) of a pixel, in locel crs; defaults to dx
-
-    returns:
-       numpy int array of shape (height, width, 2), being the j, i indices of cells that the pixel centres lie within;
-       values of -1 are used as null (ie. pixel not within any cell)
-    """
-
-    if dy is None:
-        dy = dx
-    half_dx = 0.5 * dx
-    half_dy = 0.5 * dy
-    d = np.array((dx, dy))
-    half_d = np.array((half_dx, half_dy))
-
-    #     north_east = np.array(origin) + np.array((width * dx, height * dy))
-
-    p_map = np.full((height, width, 2), -1, dtype = int)
-
-    # switch from logical corner ordering to polygon ordering
-    poly_points = horizon_points[..., :2].copy()
-    poly_points[:, :, 1, 1] = horizon_points[:, :, 1, 0, :2]
-    poly_points[:, :, 1, 0] = horizon_points[:, :, 1, 1, :2]
-    poly_points = poly_points.reshape(horizon_points.shape[0], horizon_points.shape[1], 4, 2)
-
-    poly_box = np.empty((2, 2))
-    patch_p_origin = np.empty((2,), dtype = int)  # NB. ordering is (ncol, nrow)
-    patch_origin = np.empty((2,))
-    patch_extent = np.empty((2,), dtype = int)  # NB. ordering is (ncol, nrow)
-
-    for j in range(poly_points.shape[0]):
-        for i in range(poly_points.shape[1]):
-            if np.any(np.isnan(poly_points[j, i])):
-                continue
-            poly_box[0] = np.min(poly_points[j, i], axis = 0) - half_d
-            poly_box[1] = np.max(poly_points[j, i], axis = 0) + half_d
-            patch_p_origin[:] = (poly_box[0] - origin) / (dx, dy)
-            if patch_p_origin[0] < 0 or patch_p_origin[1] < 0:
-                continue
-            patch_extent[:] = np.ceil((poly_box[1] - poly_box[0]) / (dx, dy))
-            if patch_p_origin[0] + patch_extent[0] > width or patch_p_origin[1] + patch_extent[1] > height:
-                continue
-            patch_origin = origin + d * patch_p_origin + half_d
-            scan_mask = pip.scan(patch_origin, patch_extent[0], patch_extent[1], dx, dy, poly_points[j, i])
-            patch_mask = np.stack((scan_mask, scan_mask), axis = -1)
-            old_patch = p_map[patch_p_origin[1]:patch_p_origin[1] + patch_extent[1],
-                              patch_p_origin[0]:patch_p_origin[0] + patch_extent[0], :].copy()
-            new_patch = np.empty(old_patch.shape, dtype = int)
-            new_patch[:, :] = (j, i)
-            p_map[patch_p_origin[1]:patch_p_origin[1] + patch_extent[1],
-            patch_p_origin[0]:patch_p_origin[0] + patch_extent[0], :] = \
-                np.where(patch_mask, new_patch, old_patch)
-    return p_map
-
-
 def coordinate_line_end_points(grid):
     """Returns xyz of top and bottom of each primary pillar.
 
@@ -1117,3 +1053,39 @@ def interpolated_points(grid,
     c = (np.multiply.outer(fm[0], c0) + np.multiply.outer(fp[0], c1))
 
     return c
+
+
+def find_cell_for_point_xy(grid, x, y, k0 = 0, vertical_ref = 'top', local_coords = True):
+    """Searches in 2D for a cell containing point x,y in layer k0; return (j0, i0) or (None, None)."""
+
+    # find minimum of manhatten distances from xy to each corner point
+    # then check the four cells around that corner point
+    a = np.array([[x, y, 0.0]])  # extra axis needed to keep global_to_local_crs happy
+    if not local_coords:
+        grid.global_to_local_crs(a)
+    if a is None:
+        return (None, None)
+    a[0, 2] = 0.0  # discard z
+    kp = 1 if vertical_ref == 'base' else 0
+    (pillar_j0, pillar_i0) = grid.nearest_pillar(a[0, :2], ref_k0 = k0, kp = kp)
+    if pillar_j0 > 0 and pillar_i0 > 0:
+        cell_kji0 = np.array((k0, pillar_j0 - 1, pillar_i0 - 1))
+        poly = grid.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
+        if poly is not None and pip.pip_cn(a[0, :2], poly):
+            return (cell_kji0[1], cell_kji0[2])
+    if pillar_j0 > 0 and pillar_i0 < grid.ni:
+        cell_kji0 = np.array((k0, pillar_j0 - 1, pillar_i0))
+        poly = grid.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
+        if poly is not None and pip.pip_cn(a[0, :2], poly):
+            return (cell_kji0[1], cell_kji0[2])
+    if pillar_j0 < grid.nj and pillar_i0 > 0:
+        cell_kji0 = np.array((k0, pillar_j0, pillar_i0 - 1))
+        poly = grid.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
+        if poly is not None and pip.pip_cn(a[0, :2], poly):
+            return (cell_kji0[1], cell_kji0[2])
+    if pillar_j0 < grid.nj and pillar_i0 < grid.ni:
+        cell_kji0 = np.array((k0, pillar_j0, pillar_i0))
+        poly = grid.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
+        if poly is not None and pip.pip_cn(a[0, :2], poly):
+            return (cell_kji0[1], cell_kji0[2])
+    return (None, None)

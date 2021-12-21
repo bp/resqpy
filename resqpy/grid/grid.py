@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '20th October 2021'
+version = '21st December 2021'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -14,23 +14,16 @@ log.debug('grid.py version ' + version)
 
 import numpy as np
 
-import resqpy.fault as rqf
 import resqpy.olio.grid_functions as gf
-import resqpy.olio.point_inclusion as pip
-import resqpy.olio.transmission as rqtr
 import resqpy.olio.uuid as bu
-import resqpy.olio.vector_utilities as vec
-import resqpy.olio.volume as vol
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.property as rprop
-import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
-from .transmissibility import transmissibility
+from .transmissibility import transmissibility, half_cell_transmissibility
 from .extract_functions import extract_grid_parent, extract_extent_kji, extract_grid_is_right_handed, \
     extract_k_direction_is_down, extract_geometry_time_index, extract_crs_uuid, extract_crs_root, extract_k_gaps, \
     extract_pillar_shape, extract_has_split_coordinate_lines, extract_children, extract_stratigraphy, \
-    extract_inactive_mask, extract_property_collection
+    extract_inactive_mask, extract_property_collection, set_k_direction_from_points
 
 from .write_hdf5_from_caches import _write_hdf5_from_caches
 from .write_nexus_corp import write_nexus_corp
@@ -44,10 +37,19 @@ from .face_functions import clear_face_sets, make_face_sets_from_pillar_lists, m
 from .points_functions import point_areally, point, points_ref, point_raw, unsplit_points_ref, corner_points, \
     invalidate_corner_points, interpolated_points, x_section_corner_points, split_x_section_points, \
     unsplit_x_section_points, uncache_points, horizon_points, split_horizon_points, \
-    pixel_map_for_split_horizon_points, centre_point_list, interpolated_point, split_gap_x_section_points, \
-    centre_point, z_corner_point_depths, coordinate_line_end_points, set_cached_points_from_property
+    centre_point_list, interpolated_point, split_gap_x_section_points, \
+    centre_point, z_corner_point_depths, coordinate_line_end_points, set_cached_points_from_property, \
+    find_cell_for_point_xy
 
 from ._create_grid_xml import _create_grid_xml
+
+from .pillars import create_column_pillar_mapping, pillar_foursome, pillar_distances_sqr, nearest_pillar, nearest_rod
+from .cell_properties import thickness, volume, pinched_out, cell_inactive, interface_length, interface_vector, \
+    interface_lengths_kji, interface_vectors_kji, poly_line_for_cell
+from .connection_sets import fault_connection_set, pinchout_connection_set, k_gap_connection_set
+from .xyz import xyz_box, xyz_box_centre, bounding_box, composite_bounding_box, z_inc_down, \
+    check_top_and_base_cell_edge_directions, local_to_global_crs, global_to_local_crs
+from .pixel_maps import pixel_maps, pixel_map_for_split_horizon_points
 
 import warnings
 
@@ -326,21 +328,6 @@ class Grid(BaseResqpy):
             return child_node
         return rqet.find_tag(self.geometry_root, tag)
 
-    def set_k_direction_from_points(self):
-        """Sets the K direction indicator based on z direction and mean z values for top and base.
-
-        note:
-           this method does not modify the grid_is_righthanded indicator
-        """
-
-        p = self.points_ref(masked = False)
-        self.k_direction_is_down = True  # arbitrary default
-        if p is not None:
-            diff = np.nanmean(p[-1] - p[0])
-            if not np.isnan(diff):
-                self.k_direction_is_down = ((diff >= 0.0) == self.z_inc_down())
-        return self.k_direction_is_down
-
     def _set_k_raw_index_array(self):
         """Sets the layering raw index array based on the k gap after boolean array."""
         if self.k_gap_after_array is None:
@@ -475,296 +462,6 @@ class Grid(BaseResqpy):
             return False  # no inactive mask indicates all cells are active
         return np.all(self.inactive[:, col_ji0[0], col_ji0[1]])
 
-    def create_column_pillar_mapping(self):
-        """Creates an array attribute holding set of 4 pillar indices for each I, J column of cells.
-
-        returns:
-           numpy integer array of shape (nj, ni, 2, 2) where the last two indices are jp, ip;
-           the array contains the pillar index for each of the 4 corners of each column of cells
-
-        notes:
-           the array is also cached as an attribute of the grid object: self.pillars_for_column
-           for grids with split coordinates lines (faults), this array allows for fast access to
-           the correct pillar data for the corner of a column of cells;
-           here and elsewhere, ip & jp (& kp) refer to a 0 or 1 index which determines the side
-           of a cell, ip & jp together select one of the four corners of a column;
-           the pillar index is a single integer, which is used as the second index into the points
-           array for a grid geometry with split pillars;
-           for unsplit grid geometries, such a pillar index must be converted back into a j', i'
-           pair of indices (or the points array must be reshaped to combine the two indices into one)
-
-        :meta common:
-        """
-
-        if hasattr(self, 'pillars_for_column') and self.pillars_for_column is not None:
-            return self.pillars_for_column
-
-        self.cache_all_geometry_arrays()
-
-        self.pillars_for_column = np.empty((self.nj, self.ni, 2, 2), dtype = int)
-        ni_plus_1 = self.ni + 1
-
-        for j in range(self.nj):
-            self.pillars_for_column[j, :, 0, 0] = np.arange(j * ni_plus_1, (j + 1) * ni_plus_1 - 1, dtype = int)
-            self.pillars_for_column[j, :, 0, 1] = np.arange(j * ni_plus_1 + 1, (j + 1) * ni_plus_1, dtype = int)
-            self.pillars_for_column[j, :, 1, 0] = np.arange((j + 1) * ni_plus_1, (j + 2) * ni_plus_1 - 1, dtype = int)
-            self.pillars_for_column[j, :, 1, 1] = np.arange((j + 1) * ni_plus_1 + 1, (j + 2) * ni_plus_1, dtype = int)
-
-        if self.has_split_coordinate_lines:
-            unsplit_pillar_count = (self.nj + 1) * ni_plus_1
-            extras_count = len(self.split_pillar_indices_cached)
-            for extra_index in range(extras_count):
-                primary = self.split_pillar_indices_cached[extra_index]
-                primary_ji0 = divmod(primary, self.ni + 1)
-                extra_pillar_index = unsplit_pillar_count + extra_index
-                if extra_index == 0:
-                    start = 0
-                else:
-                    start = self.cols_for_split_pillars_cl[extra_index - 1]
-                for cpscl_index in range(start, self.cols_for_split_pillars_cl[extra_index]):
-                    col = self.cols_for_split_pillars[cpscl_index]
-                    j, i = divmod(col, self.ni)
-                    jp = primary_ji0[0] - j
-                    ip = primary_ji0[1] - i
-                    assert (jp == 0 or jp == 1) and (ip == 0 or ip == 1)
-                    self.pillars_for_column[j, i, jp, ip] = extra_pillar_index
-
-        return self.pillars_for_column
-
-    def pillar_foursome(self, ji0, none_if_unsplit = False):
-        """Returns an int array of the natural pillar indices applicable to each column around primary.
-
-        arguments:
-           ji0 (pair of ints): the pillar indices (j0, i0) of the primary pillar of interest
-           none_if_unsplit (boolean, default False): if True and the primary pillar is unsplit, None is returned; if False,
-              a foursome is returned full of the natural index of the primary pillar
-
-        returns:
-           numpy int array of shape (2, 2) being the natural pillar indices (second axis index in raw points array)
-           applicable to each of the four columns around the primary pillar; axes of foursome are (jp, ip); if the
-           primary pillar is unsplit, None is returned if none_if_unsplit is set to True, otherwise the foursome as
-           usual
-        """
-
-        j0, i0 = ji0
-
-        self.cache_all_geometry_arrays()
-
-        primary = (self.ni + 1) * j0 + i0
-        foursome = np.full((2, 2), primary, dtype = int)  # axes are: jp, ip
-        if not self.has_split_coordinate_lines:
-            return None if none_if_unsplit else foursome
-        extras = np.where(self.split_pillar_indices_cached == primary)[0]
-        if len(extras) == 0:
-            return None if none_if_unsplit else foursome
-
-        primary_count = (self.nj + 1) * (self.ni + 1)
-        assert len(self.cols_for_split_pillars) == self.cols_for_split_pillars_cl[-1]
-        for cpscl_index in extras:
-            if cpscl_index == 0:
-                start_index = 0
-            else:
-                start_index = self.cols_for_split_pillars_cl[cpscl_index - 1]
-            for csp_index in range(start_index, self.cols_for_split_pillars_cl[cpscl_index]):
-                natural_col = self.cols_for_split_pillars[csp_index]
-                col_j0_e, col_i0_e = divmod(natural_col, self.ni)
-                col_j0_e -= (j0 - 1)
-                col_i0_e -= (i0 - 1)
-                assert col_j0_e in [0, 1] and col_i0_e in [0, 1]
-                foursome[col_j0_e, col_i0_e] = primary_count + cpscl_index
-
-        return foursome
-
-    def check_top_and_base_cell_edge_directions(self):
-        """Check grid top face I & J edge vectors (in x,y) against basal equivalents.
-        
-        Max 90 degree angle tolerated.
-
-        returns:
-            boolean: True if all checks pass; False if one or more checks fail
-
-        notes:
-           similarly checks cell edge directions in neighbouring cells in top (and separately in base)
-           currently requires geometry to be defined for all pillars
-           logs a warning if a check is not passed
-        """
-
-        log.debug('deriving cell edge vectors at top and base (for checking)')
-        self.point(cache_array = True)
-        good = True
-        if self.has_split_coordinate_lines:
-            # build top and base I & J cell edge vectors
-            self.create_column_pillar_mapping()  # pillar indices for 4 columns around interior pillars
-            top_j_edge_vectors_p = np.zeros((self.nj, self.ni, 2, 2))  # third axis is ip
-            top_i_edge_vectors_p = np.zeros((self.nj, 2, self.ni, 2))  # second axis is jp
-            base_j_edge_vectors_p = np.zeros((self.nj, self.ni, 2, 2))  # third axis is ip
-            base_i_edge_vectors_p = np.zeros((self.nj, 2, self.ni, 2))  # second axis is jp
-            # todo: rework as numpy operations across nj & ni
-            for j in range(self.nj):
-                for i in range(self.ni):
-                    for jip in range(2):  # serves as either jp or ip
-                        top_j_edge_vectors_p[j, i, jip, :] = (
-                            self.points_cached[0, self.pillars_for_column[j, i, 1, jip], :2] -
-                            self.points_cached[0, self.pillars_for_column[j, i, 0, jip], :2])
-                        base_j_edge_vectors_p[j, i, jip, :] = (
-                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, 1, jip], :2] -
-                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, 0, jip], :2])
-                        top_i_edge_vectors_p[j, jip,
-                                             i, :] = (self.points_cached[0, self.pillars_for_column[j, i, jip, 1], :2] -
-                                                      self.points_cached[0, self.pillars_for_column[j, i, jip, 0], :2])
-                        base_i_edge_vectors_p[j, jip, i, :] = (
-                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, jip, 1], :2] -
-                            self.points_cached[self.nk_plus_k_gaps, self.pillars_for_column[j, i, jip, 0], :2])
-            # reshape to allow common checking code with unsplit grid vectors (below)
-            top_j_edge_vectors = top_j_edge_vectors_p.reshape((self.nj, 2 * self.ni, 2))
-            top_i_edge_vectors = top_i_edge_vectors_p.reshape((2 * self.nj, self.ni, 2))
-            base_j_edge_vectors = base_j_edge_vectors_p.reshape((self.nj, 2 * self.ni, 2))
-            base_i_edge_vectors = base_i_edge_vectors_p.reshape((2 * self.nj, self.ni, 2))
-        else:
-            top_j_edge_vectors = (self.points_cached[0, 1:, :, :2] - self.points_cached[0, :-1, :, :2]).reshape(
-                (self.nj, self.ni + 1, 2))
-            top_i_edge_vectors = (self.points_cached[0, :, 1:, :2] - self.points_cached[0, :, :-1, :2]).reshape(
-                (self.nj + 1, self.ni, 2))
-            base_j_edge_vectors = (self.points_cached[-1, 1:, :, :2] - self.points_cached[-1, :-1, :, :2]).reshape(
-                (self.nj, self.ni + 1, 2))
-            base_i_edge_vectors = (self.points_cached[-1, :, 1:, :2] - self.points_cached[-1, :, :-1, :2]).reshape(
-                (self.nj + 1, self.ni, 2))
-        log.debug('checking relative direction of top and base edges')
-        # check direction of top edges against corresponding base edges, tolerate upto 90 degree difference
-        dot_j = np.sum(top_j_edge_vectors * base_j_edge_vectors, axis = 2)
-        dot_i = np.sum(top_i_edge_vectors * base_i_edge_vectors, axis = 2)
-        if not np.all(dot_j >= 0.0) and np.all(dot_i >= 0.0):
-            log.warning('one or more columns of cell edges flip direction: this grid is probably unusable')
-            good = False
-        log.debug('checking relative direction of edges in neighbouring cells at top of grid (and base)')
-        # check direction of similar edges on neighbouring cells, tolerate upto 90 degree difference
-        dot_jp = np.sum(top_j_edge_vectors[1:, :, :] * top_j_edge_vectors[:-1, :, :], axis = 2)
-        dot_ip = np.sum(top_i_edge_vectors[1:, :, :] * top_i_edge_vectors[:-1, :, :], axis = 2)
-        if not np.all(dot_jp >= 0.0) and np.all(dot_ip >= 0.0):
-            log.warning(
-                'top cell edges for neighbouring cells flip direction somewhere: this grid is probably unusable')
-            good = False
-        dot_jp = np.sum(base_j_edge_vectors[1:, :, :] * base_j_edge_vectors[:-1, :, :], axis = 2)
-        dot_ip = np.sum(base_i_edge_vectors[1:, :, :] * base_i_edge_vectors[:-1, :, :], axis = 2)
-        if not np.all(dot_jp >= 0.0) and np.all(dot_ip >= 0.0):
-            log.warning(
-                'base cell edges for neighbouring cells flip direction somewhere: this grid is probably unusable')
-            good = False
-        return good
-
-    def xyz_box(self, points_root = None, lazy = True, local = False):
-        """Returns the minimum and maximum xyz for the grid geometry.
-
-        arguments:
-           points_root (optional): if not None, the xml root node for the points data (speed optimization)
-           lazy (boolean, default True): if True, only the 8 outermost logical corners of the grid are used
-              to determine the ranges of xyz; if False, all the points in the entire grid are scanned to
-              determine the xyz ranges in an exhaustive manner
-           local (boolean, default False): if True, the xyz ranges that are returned are in the local
-              coordinate space, otherwise the global (crs parent) coordinate space
-
-        returns:
-           numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
-
-        note:
-           if the lazy argument is True, the results are likely to under-report the ranges, especially for z
-
-        :meta common:
-        """
-
-        if self.xyz_box_cached is None or (not lazy and not self.xyz_box_cached_thoroughly):
-            self.xyz_box_cached = np.zeros((2, 3))
-            if lazy:
-                eight_corners = np.zeros((2, 2, 2, 3))
-                for kp in [0, 1]:
-                    for jp in [0, 1]:
-                        for ip in [0, 1]:
-                            eight_corners[kp, jp, ip] = self.point(cell_kji0 = [
-                                kp * (self.extent_kji[0] - 1), jp * (self.extent_kji[1] - 1),
-                                ip * (self.extent_kji[2] - 1)
-                            ],
-                                                                   corner_index = [kp, jp, ip],
-                                                                   points_root = points_root,
-                                                                   cache_array = False)
-                self.xyz_box_cached[0, :] = np.nanmin(eight_corners, axis = (0, 1, 2))
-                self.xyz_box_cached[1, :] = np.nanmax(eight_corners, axis = (0, 1, 2))
-            else:
-                ps = self.points_ref()
-                if self.has_split_coordinate_lines:
-                    self.xyz_box_cached[0, :] = np.nanmin(ps, axis = (0, 1))
-                    self.xyz_box_cached[1, :] = np.nanmax(ps, axis = (0, 1))
-                else:
-                    self.xyz_box_cached[0, :] = np.nanmin(ps, axis = (0, 1, 2))
-                    self.xyz_box_cached[1, :] = np.nanmax(ps, axis = (0, 1, 2))
-            self.xyz_box_cached_thoroughly = not lazy
-        if local:
-            return self.xyz_box_cached
-        global_xyz_box = self.xyz_box_cached.copy()
-        self.local_to_global_crs(global_xyz_box, self.crs_root)
-        return global_xyz_box
-
-    def xyz_box_centre(self, points_root = None, lazy = False, local = False):
-        """Returns the (x,y,z) point (as 3 element numpy) at the centre of the xyz box for the grid.
-
-        arguments:
-           points_root (optional): if not None, the xml root node for the points data (speed optimization)
-           lazy (boolean, default True): if True, only the 8 outermost logical corners of the grid are used
-              to determine the ranges of xyz and hence the centre; if False, all the points in the entire
-              grid are scanned to determine the xyz ranges in an exhaustive manner
-           local (boolean, default False): if True, the xyz values that are returned are in the local
-              coordinate space, otherwise the global (crs parent) coordinate space
-
-        returns:
-           numpy array of float of shape (3,) being the x, y, z coordinates of the centre of the grid
-
-        note:
-           the centre point returned is simply the midpoint of the x, y & z ranges of the grid
-        """
-
-        return np.nanmean(self.xyz_box(points_root = points_root, lazy = lazy, local = local), axis = 0)
-
-    def pixel_maps(self, origin, width, height, dx, dy = None, k0 = None, vertical_ref = 'top'):
-        """Makes a mapping from pixels to cell j, i indices, based on split horizon points for a single horizon.
-
-        args:
-           origin (float pair): x, y of south west corner of area covered by pixel rectangle, in local crs
-           width (int): the width of the pixel rectangle (number of pixels)
-           height (int): the height of the pixel rectangle (number of pixels)
-           dx (float): the size (west to east) of a pixel, in locel crs
-           dy (float, optional): the size (south to north) of a pixel, in locel crs; defaults to dx
-           k0 (int, default None): if present, the single layer to create a 2D pixel map for; if None, a 3D map
-              is created with one layer per layer of the grid
-           vertical_ref (string, default 'top'): 'top' or 'base'
-
-        returns:
-           numpy int array of shape (height, width, 2), or (nk, height, width, 2), being the j, i indices of cells
-           that the pixel centres lie within; values of -1 are used as null (ie. pixel not within any cell)
-        """
-
-        if len(origin) == 3:
-            origin = tuple(origin[0:2])
-        assert len(origin) == 2
-        assert width > 0 and height > 0
-        if dy is None:
-            dy = dx
-        assert dx > 0.0 and dy > 0.0
-        if k0 is not None:
-            assert 0 <= k0 < self.nk
-        assert vertical_ref in ['top', 'base']
-
-        kp = 0 if vertical_ref == 'top' else 1
-        if k0 is not None:
-            hp = self.split_horizon_points(ref_k0 = k0, masked = False, kp = kp)
-            p_map = self.pixel_map_for_split_horizon_points(hp, origin, width, height, dx, dy = dy)
-        else:
-            _, _, raw_k = self.extract_k_gaps()
-            hp = self.split_horizons_points(masked = False)
-            p_map = np.empty((self.nk, height, width, 2), dtype = int)
-            for k0 in range(self.nk):
-                rk0 = raw_k[k0] + kp
-                p_map[k0] = self.pixel_map_for_split_horizon_points(hp[rk0], origin, width, height, dx, dy = dy)
-        return p_map
-
     def split_horizons_points(self, min_k0 = None, max_k0 = None, masked = False):
         """Returns reference to a corner points layer of shape (nh, nj, ni, 2, 2, 3) where nh is number of horizons.
 
@@ -811,749 +508,6 @@ class Grid(BaseResqpy):
             hp[:, :, :, 0, 1, :] = points[min_k0:end_k0, :-1, 1:, :]
             hp[:, :, :, 1, 1, :] = points[min_k0:end_k0, 1:, 1:, :]
         return hp
-
-    def pillar_distances_sqr(self, xy, ref_k0 = 0, kp = 0, horizon_points = None):
-        """Returns array of the square of the distances of primary pillars in x,y plane to point xy.
-
-        arguments:
-           xy (float pair): the xy coordinate to compute the pillar distances to
-           ref_k0 (int, default 0): the horizon layer number to use
-           horizon_points (numpy array, optional): if present, should be array as returned by
-              horizon_points() method; pass for efficiency in case of multiple calls
-        """
-
-        # note: currently works with unmasked data and using primary pillars only
-        pe_j = self.extent_kji[1] + 1
-        pe_i = self.extent_kji[2] + 1
-        if horizon_points is None:
-            horizon_points = self.horizon_points(ref_k0 = ref_k0, kp = kp)
-        pillar_xy = horizon_points[:, :, 0:2]
-        dxy = pillar_xy - xy
-        dxy2 = dxy * dxy
-        return (dxy2[:, :, 0] + dxy2[:, :, 1]).reshape((pe_j, pe_i))
-
-    def nearest_pillar(self, xy, ref_k0 = 0, kp = 0):
-        """Returns the (j0, i0) indices of the primary pillar with point closest in x,y plane to point xy."""
-
-        # note: currently works with unmasked data and using primary pillars only
-        pe_i = self.extent_kji[2] + 1
-        sum_dxy2 = self.pillar_distances_sqr(xy, ref_k0 = ref_k0, kp = kp)
-        ji = np.nanargmin(sum_dxy2)
-        j, i = divmod(ji, pe_i)
-        return (j, i)
-
-    def nearest_rod(self, xyz, projection, axis, ref_slice0 = 0, plus_face = False):
-        """Returns the (k0, j0) or (k0 ,i0) indices of the closest point(s) to xyz(s); projection is 'xy', 'xz' or 'yz'.
-
-        note:
-           currently only for unsplit grids
-        """
-
-        x_sect = self.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
-        if type(xyz) is np.ndarray and xyz.ndim > 1:
-            assert xyz.shape[-1] == 3
-            result_shape = list(xyz.shape)
-            result_shape[-1] = 2
-            nearest = np.empty(tuple(result_shape), dtype = int).reshape((-1, 2))
-            for i, p in enumerate(xyz.reshape((-1, 3))):
-                nearest[i] = vec.nearest_point_projected(p, x_sect, projection)
-            return nearest.reshape(tuple(result_shape))
-        else:
-            return vec.nearest_point_projected(xyz, x_sect, projection)
-
-    def thickness(self,
-                  cell_kji0 = None,
-                  points_root = None,
-                  cache_resqml_array = True,
-                  cache_cp_array = False,
-                  cache_thickness_array = True,
-                  property_collection = None):
-        """Returns vertical (z) thickness of cell and/or caches thicknesses for all cells.
-
-        arguments:
-           cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
-                                 thickness is required; zero based indexing
-           cache_resqml_array (boolean, default True): If True, the raw points array from the hdf5 file
-                                 is cached in memory, but only if it is needed to generate the thickness
-           cache_cp_array (boolean, default True): If True, an array of corner points is generated and
-                                 added as an attribute of the grid, with attribute name corner_points, but only
-                                 if it is needed in order to generate the thickness
-           cache_thickness_array (boolean, default False): if True, thicknesses are generated for all cells in
-                                 the grid and added as an attribute named array_thickness
-           property_collection (property:GridPropertyCollection, optional): If not None, this collection
-                                 is probed for a suitable thickness or cell length property which is used
-                                 preferentially to calculating thickness; if no suitable property is found,
-                                 the calculation is made as if the collection were None
-
-        returns:
-           float, being the thickness of cell identified by cell_kji0; or numpy float array if cell_kji0 is None
-
-        notes:
-           the function can be used to find the thickness of a single cell, or cache thickness for all cells, or both;
-           if property_collection is not None, a suitable thickness or cell length property will be used if present;
-           if calculated, thickness is defined as z difference between centre points of top and base faces (TVT);
-           at present, assumes K increases with same polarity as z; if not, negative thickness will be calculated;
-           units of result are implicitly those of z coordinates in grid's coordinate reference system, or units of
-           measure of property array if the result is based on a suitable property
-
-        :meta common:
-        """
-
-        def load_from_property(collection):
-            if collection is None:
-                return None
-            parts = collection.selective_parts_list(property_kind = 'thickness',
-                                                    facet_type = 'netgross',
-                                                    facet = 'gross')
-            if len(parts) == 1:
-                return collection.cached_part_array_ref(parts[0])
-            parts = collection.selective_parts_list(property_kind = 'thickness')
-            if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
-                return collection.cached_part_array_ref(parts[0])
-            parts = collection.selective_parts_list(property_kind = 'cell length',
-                                                    facet_type = 'direction',
-                                                    facet = 'K')
-            if len(parts) == 1:
-                return collection.cached_part_array_ref(parts[0])
-            return None
-
-        # note: this function optionally looks for a suitable thickness property, otherwise calculates from geometry
-        # note: for some geometries, thickness might need to be defined as length of vector between -k & +k face centres (TST)
-        # todo: give more control over source of data through optional args; offer TST or TVT option
-        # todo: if cp array is not already cached, compute directly from points without generating cp
-        # todo: cache uom
-        assert cache_thickness_array or (cell_kji0 is not None)
-
-        if hasattr(self, 'array_thickness'):
-            if cell_kji0 is None:
-                return self.array_thickness
-            return self.array_thickness[tuple(cell_kji0)]  # could check for nan here and return None
-
-        thick = load_from_property(property_collection)
-        if thick is not None:
-            log.debug('thickness array loaded from property')
-            if cache_thickness_array:
-                self.array_thickness = thick.copy()
-            if cell_kji0 is None:
-                return self.array_thickness
-            return self.array_thickness[tuple(cell_kji0)]  # could check for nan here and return None
-
-        points_root = self.resolve_geometry_child('Points', child_node = points_root)
-        if cache_thickness_array:
-            if cache_cp_array:
-                self.corner_points(points_root = points_root, cache_cp_array = True)
-            if hasattr(self, 'array_corner_points'):
-                self.array_thickness = np.abs(
-                    np.mean(self.array_corner_points[:, :, :, 1, :, :, 2] -
-                            self.array_corner_points[:, :, :, 0, :, :, 2],
-                            axis = (3, 4)))
-                if cell_kji0 is None:
-                    return self.array_thickness
-                return self.array_thickness[tuple(cell_kji0)]  # could check for nan here and return None
-            self.array_thickness = np.empty(tuple(self.extent_kji))
-            points = self.point_raw(cache_array = True)  # cache points regardless
-            if points is None:
-                return None  # geometry not present
-            if self.k_gaps:
-                pillar_thickness = points[self.k_raw_index_array + 1, ..., 2] - points[self.k_raw_index_array, ..., 2]
-            else:
-                pillar_thickness = points[1:, ..., 2] - points[:-1, ..., 2]
-            if self.has_split_coordinate_lines:
-                pillar_for_col = self.create_column_pillar_mapping()
-                self.array_thickness = np.abs(
-                    0.25 *
-                    (pillar_thickness[:, pillar_for_col[:, :, 0, 0]] + pillar_thickness[:, pillar_for_col[:, :, 0, 1]] +
-                     pillar_thickness[:, pillar_for_col[:, :, 1, 0]] + pillar_thickness[:, pillar_for_col[:, :, 1, 1]]))
-            else:
-                self.array_thickness = np.abs(0.25 * (pillar_thickness[:, :-1, :-1] + pillar_thickness[:, :-1, 1:] +
-                                                      pillar_thickness[:, 1:, :-1] + pillar_thickness[:, 1:, 1:]))
-            if cell_kji0 is None:
-                return self.array_thickness
-            return self.array_thickness[tuple(cell_kji0)]  # could check for nan here and return None
-
-        cp = self.corner_points(cell_kji0 = cell_kji0,
-                                points_root = points_root,
-                                cache_resqml_array = cache_resqml_array,
-                                cache_cp_array = cache_cp_array)
-        if cp is None:
-            return None
-        return abs(np.mean(cp[1, :, :, 2]) - np.mean(cp[0, :, :, 2]))
-
-    def volume(self,
-               cell_kji0 = None,
-               points_root = None,
-               cache_resqml_array = True,
-               cache_cp_array = False,
-               cache_centre_array = False,
-               cache_volume_array = True,
-               property_collection = None):
-        """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
-
-        arguments:
-           cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
-                                 volume is required; zero based indexing
-           cache_resqml_array (boolean, default True): If True, the raw points array from the hdf5 file
-                                 is cached in memory, but only if it is needed to generate the volume
-           cache_cp_array (boolean, default False): If True, an array of corner points is generated and
-                                 added as an attribute of the grid, with attribute name corner_points, but only
-                                 if it is needed in order to generate the volume
-           cache_volume_array (boolean, default False): if True, volumes are generated for all cells in
-                                 the grid and added as an attribute named array_volume
-           property_collection (property:GridPropertyCollection, optional): If not None, this collection
-                                 is probed for a suitable volume property which is used preferentially
-                                 to calculating volume; if no suitable property is found,
-                                 the calculation is made as if the collection were None
-
-        returns:
-           float, being the volume of cell identified by cell_kji0;
-           or numpy float array of shape (nk, nj, ni) if cell_kji0 is None
-
-        notes:
-           the function can be used to find the volume of a single cell, or cache volumes for all cells, or both;
-           if property_collection is not None, a suitable volume property will be used if present;
-           if calculated, volume is computed using 6 tetras each with a non-planar bilinear base face;
-           at present, grid's coordinate reference system must use same units in z as xy (projected);
-           units of result are implicitly those of coordinates in grid's coordinate reference system, or units of
-           measure of property array if the result is based on a suitable property
-
-        :meta common:
-        """
-
-        def load_from_property(collection):
-            if collection is None:
-                return None
-            parts = collection.selective_parts_list(property_kind = 'rock volume',
-                                                    facet_type = 'netgross',
-                                                    facet = 'gross')
-            if len(parts) == 1:
-                return collection.cached_part_array_ref(parts[0])
-            parts = collection.selective_parts_list(property_kind = 'rock volume')
-            if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
-                return collection.cached_part_array_ref(parts[0])
-            return None
-
-        # note: this function optionally looks for a suitable volume property, otherwise calculates from geometry
-        # todo: modify z units if needed, to match xy units
-        # todo: give control over source with optional arguments
-        # todo: cache uom
-        assert (cache_volume_array is not None) or (cell_kji0 is not None)
-
-        if hasattr(self, 'array_volume'):
-            if cell_kji0 is None:
-                return self.array_volume
-            return self.array_volume[tuple(cell_kji0)]  # could check for nan here and return None
-
-        vol_array = load_from_property(property_collection)
-        if vol_array is not None:
-            if cache_volume_array:
-                self.array_volume = vol_array.copy()
-            if cell_kji0 is None:
-                return vol_array
-            return vol_array[tuple(cell_kji0)]  # could check for nan here and return None
-
-        cache_cp_array = cache_cp_array or cell_kji0 is None
-        cache_volume_array = cache_volume_array or cell_kji0 is None
-
-        off_hand = self.off_handed()
-
-        points_root = self.resolve_geometry_child('Points', child_node = points_root)
-        if points_root is None:
-            return None  # geometry not present
-        centre_array = None
-        if cache_volume_array or cell_kji0 is None:
-            self.corner_points(points_root = points_root, cache_cp_array = True)
-            if cache_centre_array:
-                self.centre_point(cache_centre_array = True)
-                centre_array = self.array_centre_point
-            vol_array = vol.tetra_volumes(self.array_corner_points, centres = centre_array, off_hand = off_hand)
-            if cache_volume_array:
-                self.array_volume = vol_array
-            if cell_kji0 is None:
-                return vol_array
-            return vol_array[tuple(cell_kji0)]  # could check for nan here and return None
-
-        cp = self.corner_points(cell_kji0 = cell_kji0,
-                                points_root = points_root,
-                                cache_resqml_array = cache_resqml_array,
-                                cache_cp_array = cache_cp_array)
-        if cp is None:
-            return None
-        return vol.tetra_cell_volume(cp, off_hand = off_hand)
-
-    def pinched_out(self,
-                    cell_kji0 = None,
-                    tolerance = 0.001,
-                    points_root = None,
-                    cache_resqml_array = True,
-                    cache_cp_array = False,
-                    cache_thickness_array = False,
-                    cache_pinchout_array = None):
-        """Returns boolean or boolean array indicating whether cell is pinched out.
-        
-        Pinched out means cell has a thickness less than tolerance.
-
-        :meta common:
-        """
-
-        # note: this function returns a derived object rather than a native resqml object
-        # note: returns True for cells without geometry
-        # todo: check behaviour in response to NaNs and undefined geometry
-        if cache_pinchout_array is None:
-            cache_pinchout_array = (cell_kji0 is None)
-
-        if self.pinchout is not None:
-            if cell_kji0 is None:
-                return self.pinchout
-            return self.pinchout[tuple(cell_kji0)]
-
-        if points_root is None:
-            points_root = self.resolve_geometry_child('Points', child_node = points_root)
-        #         if points_root is None: return None  # geometry not present
-
-        thick = self.thickness(
-            cell_kji0,
-            points_root = points_root,
-            cache_resqml_array = cache_resqml_array,
-            cache_cp_array = cache_cp_array,  # deprecated
-            cache_thickness_array = cache_thickness_array or cache_pinchout_array)
-        if cache_pinchout_array:
-            self.pinchout = np.where(np.isnan(self.array_thickness), True,
-                                     np.logical_not(self.array_thickness > tolerance))
-            if cell_kji0 is None:
-                return self.pinchout
-            return self.pinchout[tuple(cell_kji0)]
-        if thick is not None:
-            return thick <= tolerance
-        return None
-
-    def half_cell_transmissibility(self, use_property = True, realization = None, tolerance = 1.0e-6):
-        """Returns (and caches if realization is None) half cell transmissibilities for this grid.
-
-        arguments:
-           use_property (boolean, default True): if True, the grid's property collection is inspected for
-              a possible half cell transmissibility array and if found, it is used instead of calculation
-           realization (int, optional) if present, only a property with this realization number will be used
-           tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
-              will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
-              units are implicitly those of the grid's crs length units
-
-        returns:
-           numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
-              face polarity: - (0) and + (1); units will depend on the length units of the coordinate reference
-              system for the grid; the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m
-              and ft respectively
-
-        notes:
-           the returned array is in the logical resqpy arrangement; it must be discombobulated before being
-           added as a property; this method does not write to hdf5, nor create a new property or xml;
-           if realization is None, a grid attribute cached array will be used; tolerance will only be
-           used if the half cell transmissibilities are actually computed
-        """
-
-        # todo: allow passing of property uuids for ntg, k_k, j, i
-
-        if realization is None and hasattr(self, 'array_half_cell_t'):
-            return self.array_half_cell_t
-
-        half_t = None
-
-        if use_property:
-            pc = self.property_collection
-            half_t_resqml = pc.single_array_ref(property_kind = 'transmissibility',
-                                                realization = realization,
-                                                continuous = True,
-                                                count = 1,
-                                                indexable = 'faces per cell')
-            if half_t_resqml:
-                assert half_t_resqml.shape == (self.nk, self.nj, self.ni, 6)
-                half_t = pc.combobulate(half_t_resqml)
-
-        if half_t is None:
-            # note: properties must be identifiable in property_collection
-            half_t = rqtr.half_cell_t(self, realization = realization)
-
-        if realization is None:
-            self.array_half_cell_t = half_t
-
-        return half_t
-
-    def fault_connection_set(self,
-                             skip_inactive = True,
-                             compute_transmissibility = False,
-                             add_to_model = False,
-                             realization = None,
-                             inherit_features_from = None,
-                             title = 'fault juxtaposition set'):
-        """Returns (and caches) a GridConnectionSet representing juxtaposition across faces with split pillars.
-
-        arguments:
-           skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
-              be omitted from the results
-           compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
-              for the cell face pairs (unless already existing as a cached attribute of the grid)
-           add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
-              if compute_transmissibilty is True then the transmissibility property is also added
-           realization (int, optional): if present, is used as the realization number when adding transmissibility
-              property to model; ignored if compute_transmissibility is False
-           inherit_features_from (GridConnectionSet, optional): if present, the features (named faults) are
-              inherited from this grid connection set based on a match of either cell face in a juxtaposed pair
-           title (string, default 'fault juxtaposition set'): the citation title to use if adding to model
-
-        returns:
-           GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
-           number of cell face pairs in the grid connection set, which contains entries for all juxtaposed faces
-           with a split pillar as an edge; if the grid does not have split pillars (ie. is unfaulted) or there
-           are no qualifying connections, (None, None) is returned
-        """
-
-        if not hasattr(self, 'fgcs') or self.fgcs_skip_inactive != skip_inactive:
-            self.fgcs, self.fgcs_fractional_area = rqtr.fault_connection_set(self, skip_inactive = skip_inactive)
-            self.fgcs_skip_inactive = skip_inactive
-
-        if self.fgcs is None:
-            return None, None
-
-        new_tr = False
-        if compute_transmissibility and not hasattr(self, 'array_fgcs_transmissibility'):
-            self.array_fgcs_transmissibility = self.fgcs.tr_property_array(self.fgcs_fractional_area)
-            new_tr = True
-
-        tr = self.array_fgcs_transmissibility if hasattr(self, 'array_fgcs_transmissibility') else None
-
-        if inherit_features_from is not None:
-            self.fgcs.inherit_features(inherit_features_from)
-
-        if add_to_model:
-            if self.model.uuid(uuid = self.fgcs.uuid) is None:
-                self.fgcs.write_hdf5()
-                self.fgcs.create_xml(title = title)
-            if new_tr:
-                tr_pc = rprop.PropertyCollection()
-                tr_pc.set_support(support = self.fgcs)
-                tr_pc.add_cached_array_to_imported_list(
-                    self.array_fgcs_transmissibility,
-                    'computed for faces with split pillars',
-                    'fault transmissibility',
-                    discrete = False,
-                    uom = 'm3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
-                    property_kind = 'transmissibility',
-                    realization = realization,
-                    indexable_element = 'faces',
-                    count = 1)
-                tr_pc.write_hdf5_for_imported_list()
-                tr_pc.create_xml_for_imported_list_and_add_parts_to_model()
-
-        return self.fgcs, tr
-
-    def pinchout_connection_set(self,
-                                skip_inactive = True,
-                                compute_transmissibility = False,
-                                add_to_model = False,
-                                realization = None):
-        """Returns (and caches) a GridConnectionSet representing juxtaposition across pinched out cells.
-
-        arguments:
-           skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
-              be omitted from the results
-           compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
-              for the cell face pairs (unless already existing as a cached attribute of the grid)
-           add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
-              if compute_transmissibilty is True then the transmissibility property is also added
-           realization (int, optional): if present, is used as the realization number when adding transmissibility
-              property to model; ignored if compute_transmissibility is False
-
-        returns:
-           GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
-           number of cell face pairs in the grid connection set, which contains entries for all juxtaposed K faces
-           separated logically by pinched out (zero thickness) cells; if there are no pinchouts (or no qualifying
-           connections) then (None, None) will be returned
-        """
-
-        if not hasattr(self, 'pgcs') or self.pgcs_skip_inactive != skip_inactive:
-            self.pgcs = rqf.pinchout_connection_set(self, skip_inactive = skip_inactive)
-            self.pgcs_skip_inactive = skip_inactive
-
-        if self.pgcs is None:
-            return None, None
-
-        new_tr = False
-        if compute_transmissibility and not hasattr(self, 'array_pgcs_transmissibility'):
-            self.array_pgcs_transmissibility = self.pgcs.tr_property_array()
-            new_tr = True
-
-        tr = self.array_pgcs_transmissibility if hasattr(self, 'array_pgcs_transmissibility') else None
-
-        if add_to_model:
-            if self.model.uuid(uuid = self.pgcs.uuid) is None:
-                self.pgcs.write_hdf5()
-                self.pgcs.create_xml()
-            if new_tr:
-                tr_pc = rprop.PropertyCollection()
-                tr_pc.set_support(support = self.pgcs)
-                tr_pc.add_cached_array_to_imported_list(
-                    tr,
-                    'computed for faces across pinchouts',
-                    'pinchout transmissibility',
-                    discrete = False,
-                    uom = 'm3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
-                    property_kind = 'transmissibility',
-                    realization = realization,
-                    indexable_element = 'faces',
-                    count = 1)
-                tr_pc.write_hdf5_for_imported_list()
-                tr_pc.create_xml_for_imported_list_and_add_parts_to_model()
-
-        return self.pgcs, tr
-
-    def k_gap_connection_set(self,
-                             skip_inactive = True,
-                             compute_transmissibility = False,
-                             add_to_model = False,
-                             realization = None,
-                             tolerance = 0.001):
-        """Returns (and caches) a GridConnectionSet representing juxtaposition across zero thickness K gaps.
-
-        arguments:
-           skip_inactive (boolean, default True): if True, then cell face pairs involving an inactive cell will
-              be omitted from the results
-           compute_transmissibilities (boolean, default False): if True, then transmissibilities will be computed
-              for the cell face pairs (unless already existing as a cached attribute of the grid)
-           add_to_model (boolean, default False): if True, the connection set is written to hdf5 and xml is created;
-              if compute_transmissibilty is True then the transmissibility property is also added
-           realization (int, optional): if present, is used as the realization number when adding transmissibility
-              property to model; ignored if compute_transmissibility is False
-           tolerance (float, default 0.001): the maximum K gap thickness that will be 'bridged' by a connection;
-              units are implicitly those of the z units in the grid's coordinate reference system
-
-        returns:
-           GridConnectionSet, numpy float array of shape (count,) transmissibilities (or None), where count is the
-           number of cell face pairs in the grid connection set, which contains entries for all juxtaposed K faces
-           separated logically by pinched out (zero thickness) cells; if there are no pinchouts (or no qualifying
-           connections) then (None, None) will be returned
-
-        note:
-           if cached values are found they are returned regardless of the specified tolerance
-        """
-
-        if not hasattr(self, 'kgcs') or self.kgcs_skip_inactive != skip_inactive:
-            self.kgcs = rqf.k_gap_connection_set(self, skip_inactive = skip_inactive, tolerance = tolerance)
-            self.kgcs_skip_inactive = skip_inactive
-
-        if self.kgcs is None:
-            return None, None
-
-        new_tr = False
-        if compute_transmissibility and not hasattr(self, 'array_kgcs_transmissibility'):
-            self.array_kgcs_transmissibility = self.kgcs.tr_property_array()
-            new_tr = True
-
-        tr = self.array_kgcs_transmissibility if hasattr(self, 'array_kgcs_transmissibility') else None
-
-        if add_to_model:
-            if self.model.uuid(uuid = self.kgcs.uuid) is None:
-                self.kgcs.write_hdf5()
-                self.kgcs.create_xml()
-            if new_tr:
-                tr_pc = rprop.PropertyCollection()
-                tr_pc.set_support(support = self.kgcs)
-                tr_pc.add_cached_array_to_imported_list(
-                    tr,
-                    'computed for faces across zero thickness K gaps',
-                    'K gap transmissibility',
-                    discrete = False,
-                    uom = 'm3.cP/(kPa.d)' if self.xy_units() == 'm' else 'bbl.cP/(psi.d)',
-                    property_kind = 'transmissibility',
-                    realization = realization,
-                    indexable_element = 'faces',
-                    count = 1)
-                tr_pc.write_hdf5_for_imported_list()
-                tr_pc.create_xml_for_imported_list_and_add_parts_to_model()
-
-        return self.kgcs, tr
-
-    def cell_inactive(self, cell_kji0, pv_array = None, pv_tol = 0.01):
-        """Returns True if the cell is inactive."""
-
-        if self.inactive is not None:
-            return self.inactive[tuple(cell_kji0)]
-        self.extract_inactive_mask()
-        if self.inactive is not None:
-            return self.inactive[tuple(cell_kji0)]
-        if pv_array is not None:  # fabricate an inactive mask from pore volume data
-            self.inactive = not (pv_array > pv_tol)  # NaN in pv array will end up inactive
-            return self.inactive[tuple(cell_kji0)]
-        return (not cell_geometry_is_defined(self, cell_kji0 = cell_kji0)) or self.pinched_out(
-            cell_kji0, cache_pinchout_array = True)
-
-    def bounding_box(self, cell_kji0, points_root = None, cache_cp_array = False):
-        """Returns the xyz box which envelopes the specified cell, as a numpy array of shape (2, 3)."""
-
-        result = np.zeros((2, 3))
-        cp = self.corner_points(cell_kji0, points_root = points_root, cache_cp_array = cache_cp_array)
-        result[0] = np.min(cp, axis = (0, 1, 2))
-        result[1] = np.max(cp, axis = (0, 1, 2))
-        return result
-
-    def composite_bounding_box(self, bounding_box_list):
-        """Returns the xyz box which envelopes all the boxes in the list, as a numpy array of shape (2, 3)."""
-
-        result = bounding_box_list[0]
-        for box in bounding_box_list[1:]:
-            result[0] = np.minimum(result[0], box[0])
-            result[1] = np.maximum(result[1], box[1])
-        return result
-
-    def interface_vector(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-        """Returns an xyz vector between centres of an opposite pair of faces of the cell (or vectors for all cells)."""
-
-        face_0_centre = self.face_centre(cell_kji0,
-                                         axis,
-                                         0,
-                                         points_root = points_root,
-                                         cache_resqml_array = cache_resqml_array,
-                                         cache_cp_array = cache_cp_array)
-        face_1_centre = self.face_centre(cell_kji0,
-                                         axis,
-                                         1,
-                                         points_root = points_root,
-                                         cache_resqml_array = cache_resqml_array,
-                                         cache_cp_array = cache_cp_array)
-        return face_1_centre - face_0_centre
-
-    def interface_length(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-        """Returns the length between centres of an opposite pair of faces of the cell.
-
-        note:
-           assumes that x,y and z units are the same
-        """
-
-        assert cell_kji0 is not None
-        return vec.naive_length(
-            self.interface_vector(cell_kji0,
-                                  axis,
-                                  points_root = points_root,
-                                  cache_resqml_array = cache_resqml_array,
-                                  cache_cp_array = cache_cp_array))
-
-    def interface_vectors_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-        """Returns 3 interface centre point difference vectors for axes k, j, i."""
-
-        result = np.zeros((3, 3))
-        for axis in range(3):
-            result[axis] = self.interface_vector(cell_kji0,
-                                                 axis,
-                                                 points_root = points_root,
-                                                 cache_resqml_array = cache_resqml_array,
-                                                 cache_cp_array = cache_cp_array)
-        return result
-
-    def interface_lengths_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-        """Returns 3 interface centre point separation lengths for axes k, j, i.
-
-        note:
-           assumes that x,y and z units are the same
-        """
-        result = np.zeros(3)
-        for axis in range(3):
-            result[axis] = self.interface_length(cell_kji0,
-                                                 axis,
-                                                 points_root = points_root,
-                                                 cache_resqml_array = cache_resqml_array,
-                                                 cache_cp_array = cache_cp_array)
-        return result
-
-    def local_to_global_crs(self,
-                            a,
-                            crs_root = None,
-                            global_xy_units = None,
-                            global_z_units = None,
-                            global_z_increasing_downward = None):
-        """Converts array of points in situ from local coordinate system to global one."""
-
-        # todo: replace with crs module calls
-
-        if crs_root is None:
-            crs_root = self.crs_root
-            if crs_root is None:
-                return
-        flat_a = a.reshape((-1, 3))  # flattened view of array a as vector of (x, y, z) points, in situ
-        x_offset = float(rqet.find_tag(crs_root, 'XOffset').text)
-        y_offset = float(rqet.find_tag(crs_root, 'YOffset').text)
-        z_offset = float(rqet.find_tag(crs_root, 'ZOffset').text)
-        areal_rotation = float(rqet.find_tag(crs_root, 'ArealRotation').text)
-        assert (areal_rotation == 0.0)
-        # todo: check resqml definition for order of rotation and translation
-        # todo: apply rotation
-        if global_z_increasing_downward is not None:  # note: here negation is made in local crs; if z_offset is not zero, this might not be what is intended
-            crs_z_increasing_downward_text = rqet.find_tag(crs_root, 'ZIncreasingDownward').text
-            if crs_z_increasing_downward_text in ['true', 'false']:  # todo: otherwise could raise exception
-                crs_z_increasing_downward = (crs_z_increasing_downward_text == 'true')
-                if global_z_increasing_downward != crs_z_increasing_downward:
-                    negated_z = np.negative(flat_a[:, 2])
-                    flat_a[:, 2] = negated_z
-        flat_a[:, 0] += x_offset
-        flat_a[:, 1] += y_offset
-        if z_offset != 0.0:
-            flat_a[:, 2] += z_offset
-        if global_xy_units is not None:
-            crs_xy_units_text = rqet.find_tag(crs_root, 'ProjectedUom').text
-            if crs_xy_units_text in ['ft', 'm']:  # todo: else raise exception
-                bwam.convert_lengths(flat_a[:, 0], crs_xy_units_text, global_xy_units)  # x
-                bwam.convert_lengths(flat_a[:, 1], crs_xy_units_text, global_xy_units)  # y
-        if global_z_units is not None:
-            crs_z_units_text = rqet.find_tag(crs_root, 'VerticalUom').text
-            if crs_z_units_text in ['ft', 'm']:  # todo: else raise exception
-                bwam.convert_lengths(flat_a[:, 2], crs_z_units_text, global_z_units)  # z
-
-    def z_inc_down(self):
-        """Return True if z increases downwards in the coordinate reference system used by the grid geometry
-
-        :meta common:
-        """
-
-        assert self.crs_root is not None
-        return rqet.find_tag_bool(self.crs_root, 'ZIncreasingDownward')
-
-    def global_to_local_crs(self,
-                            a,
-                            crs_root = None,
-                            global_xy_units = None,
-                            global_z_units = None,
-                            global_z_increasing_downward = None):
-        """Converts array of points in situ from global coordinate system to established local one."""
-
-        # todo: replace with crs module calls
-
-        if crs_root is None:
-            crs_root = self.crs_root
-            if crs_root is None:
-                return
-        flat_a = a.reshape((-1, 3))  # flattened view of array a as vector of (x, y, z) points, in situ
-        x_offset = float(rqet.find_tag(crs_root, 'XOffset').text)
-        y_offset = float(rqet.find_tag(crs_root, 'YOffset').text)
-        z_offset = float(rqet.find_tag(crs_root, 'ZOffset').text)
-        areal_rotation = float(rqet.find_tag(crs_root, 'ArealRotation').text)
-        assert (areal_rotation == 0.0)
-        # todo: check resqml definition for order of rotation and translation and apply rotation if not zero
-        if global_xy_units is not None:
-            crs_xy_units_text = rqet.find_tag(crs_root, 'ProjectedUom').text
-            if crs_xy_units_text in ['ft', 'm']:  # todo: else raise exception
-                bwam.convert_lengths(flat_a[:, 0], global_xy_units, crs_xy_units_text)  # x
-                bwam.convert_lengths(flat_a[:, 1], global_xy_units, crs_xy_units_text)  # y
-        if global_z_units is not None:
-            crs_z_units_text = rqet.find_tag(crs_root, 'VerticalUom').text
-            if crs_z_units_text in ['ft', 'm']:  # todo: else raise exception
-                bwam.convert_lengths(flat_a[:, 2], global_z_units, crs_z_units_text)  # z
-        flat_a[:, 0] -= x_offset
-        flat_a[:, 1] -= y_offset
-        if z_offset != 0.0:
-            flat_a[:, 2] -= z_offset
-        if global_z_increasing_downward is not None:  # note: here negation is made in local crs; if z_offset is not zero, this might not be what is intended
-            crs_z_increasing_downward = self.z_inc_down()
-            assert crs_z_increasing_downward is not None
-            if global_z_increasing_downward != crs_z_increasing_downward:
-                negated_z = np.negative(flat_a[:, 2])
-                flat_a[:, 2] = negated_z
 
     def write_hdf5_from_caches(self,
                                file = None,
@@ -1645,62 +599,6 @@ class Grid(BaseResqpy):
         if crs_root is None:
             return None
         return rqet.find_tag(crs_root, 'VerticalUom').text
-
-    def poly_line_for_cell(self, cell_kji0, vertical_ref = 'top'):
-        """Returns a numpy array of shape (4, 3) being the 4 corners.
-        
-        Corners are in order J-I-, J-I+, J+I+, J+I-; from the top or base face.
-        """
-        if vertical_ref == 'top':
-            kp = 0
-        elif vertical_ref == 'base':
-            kp = 1
-        else:
-            raise ValueError('vertical reference not catered for: ' + vertical_ref)
-        poly = np.empty((4, 3))
-        cp = self.corner_points(cell_kji0 = cell_kji0)
-        if cp is None:
-            return None
-        poly[0] = cp[kp, 0, 0]
-        poly[1] = cp[kp, 0, 1]
-        poly[2] = cp[kp, 1, 1]
-        poly[3] = cp[kp, 1, 0]
-        return poly
-
-    def find_cell_for_point_xy(self, x, y, k0 = 0, vertical_ref = 'top', local_coords = True):
-        """Searches in 2D for a cell containing point x,y in layer k0; return (j0, i0) or (None, None)."""
-
-        # find minimum of manhatten distances from xy to each corner point
-        # then check the four cells around that corner point
-        a = np.array([[x, y, 0.0]])  # extra axis needed to keep global_to_local_crs happy
-        if not local_coords:
-            self.global_to_local_crs(a)
-        if a is None:
-            return (None, None)
-        a[0, 2] = 0.0  # discard z
-        kp = 1 if vertical_ref == 'base' else 0
-        (pillar_j0, pillar_i0) = self.nearest_pillar(a[0, :2], ref_k0 = k0, kp = kp)
-        if pillar_j0 > 0 and pillar_i0 > 0:
-            cell_kji0 = np.array((k0, pillar_j0 - 1, pillar_i0 - 1))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
-            if poly is not None and pip.pip_cn(a[0, :2], poly):
-                return (cell_kji0[1], cell_kji0[2])
-        if pillar_j0 > 0 and pillar_i0 < self.ni:
-            cell_kji0 = np.array((k0, pillar_j0 - 1, pillar_i0))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
-            if poly is not None and pip.pip_cn(a[0, :2], poly):
-                return (cell_kji0[1], cell_kji0[2])
-        if pillar_j0 < self.nj and pillar_i0 > 0:
-            cell_kji0 = np.array((k0, pillar_j0, pillar_i0 - 1))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
-            if poly is not None and pip.pip_cn(a[0, :2], poly):
-                return (cell_kji0[1], cell_kji0[2])
-        if pillar_j0 < self.nj and pillar_i0 < self.ni:
-            cell_kji0 = np.array((k0, pillar_j0, pillar_i0))
-            poly = self.poly_line_for_cell(cell_kji0, vertical_ref = vertical_ref)
-            if poly is not None and pip.pip_cn(a[0, :2], poly):
-                return (cell_kji0[1], cell_kji0[2])
-        return (None, None)
 
     def skin(self, use_single_layer_tactics = False):
         """Returns a GridSkin composite surface object reoresenting the outer surface of the grid."""
@@ -2108,3 +1006,230 @@ class Grid(BaseResqpy):
                                    points_root = points_root,
                                    cache_resqml_array = cache_resqml_array,
                                    cache_cp_array = cache_cp_array)
+
+    def set_k_direction_from_points(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return set_k_direction_from_points(self)
+
+    def find_cell_for_point_xy(self, x, y, k0 = 0, vertical_ref = 'top', local_coords = True):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return find_cell_for_point_xy(self, x, y, k0, vertical_ref = vertical_ref, local_coords = local_coords)
+
+    def half_cell_transmissibility(grid, use_property = True, realization = None, tolerance = 1.0e-6):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return half_cell_transmissibility(grid,
+                                          use_property = use_property,
+                                          realization = realization,
+                                          tolerance = tolerance)
+
+    def create_column_pillar_mapping(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return create_column_pillar_mapping(self)
+
+    def pillar_foursome(self, ji0, none_if_unsplit = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return pillar_foursome(self, ji0, none_if_unsplit = none_if_unsplit)
+
+    def pillar_distances_sqr(self, xy, ref_k0 = 0, kp = 0, horizon_points = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return pillar_distances_sqr(self, xy, ref_k0 = ref_k0, kp = ref_k0, horizon_points = horizon_points)
+
+    def nearest_pillar(self, xy, ref_k0 = 0, kp = 0):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return nearest_pillar(self, xy, ref_k0 = ref_k0, kp = kp)
+
+    def nearest_rod(self, xyz, projection, axis, ref_slice0 = 0, plus_face = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return nearest_rod(self, xyz, projection, axis, ref_slice0 = ref_slice0, plus_face = plus_face)
+
+    def poly_line_for_cell(self, cell_kji0, vertical_ref = 'top'):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return poly_line_for_cell(self, cell_kji0, vertical_ref = vertical_ref)
+
+    def interface_lengths_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return interface_lengths_kji(self,
+                                     cell_kji0,
+                                     points_root = points_root,
+                                     cache_resqml_array = cache_resqml_array,
+                                     cache_cp_array = cache_cp_array)
+
+    def interface_vectors_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return interface_vectors_kji(self,
+                                     cell_kji0,
+                                     points_root = points_root,
+                                     cache_resqml_array = cache_resqml_array,
+                                     cache_cp_array = cache_cp_array)
+
+    def interface_length(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return interface_length(self,
+                                cell_kji0,
+                                axis,
+                                points_root = points_root,
+                                cache_resqml_array = cache_resqml_array,
+                                cache_cp_array = cache_cp_array)
+
+    def interface_vector(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return interface_vector(self,
+                                cell_kji0,
+                                axis,
+                                points_root = points_root,
+                                cache_resqml_array = cache_resqml_array,
+                                cache_cp_array = cache_cp_array)
+
+    def cell_inactive(self, cell_kji0, pv_array = None, pv_tol = 0.01):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return cell_inactive(self, cell_kji0, pv_array = pv_array, pv_tol = pv_tol)
+
+    def pinched_out(self,
+                    cell_kji0 = None,
+                    tolerance = 0.001,
+                    points_root = None,
+                    cache_resqml_array = True,
+                    cache_cp_array = False,
+                    cache_thickness_array = False,
+                    cache_pinchout_array = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return pinched_out(self,
+                           cell_kji0 = cell_kji0,
+                           tolerance = tolerance,
+                           points_root = points_root,
+                           cache_resqml_array = cache_resqml_array,
+                           cache_cp_array = cache_cp_array,
+                           cache_thickness_array = cache_thickness_array,
+                           cache_pinchout_array = cache_pinchout_array)
+
+    def volume(self,
+               cell_kji0 = None,
+               points_root = None,
+               cache_resqml_array = True,
+               cache_cp_array = False,
+               cache_centre_array = False,
+               cache_volume_array = True,
+               property_collection = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return volume(self,
+                      cell_kji0 = cell_kji0,
+                      points_root = points_root,
+                      cache_resqml_array = cache_resqml_array,
+                      cache_cp_array = cache_cp_array,
+                      cache_centre_array = cache_centre_array,
+                      cache_volume_array = cache_volume_array,
+                      property_collection = property_collection)
+
+    def thickness(self,
+                  cell_kji0 = None,
+                  points_root = None,
+                  cache_resqml_array = True,
+                  cache_cp_array = False,
+                  cache_thickness_array = True,
+                  property_collection = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return thickness(self,
+                         cell_kji0 = cell_kji0,
+                         points_root = points_root,
+                         cache_resqml_array = cache_resqml_array,
+                         cache_cp_array = cache_cp_array,
+                         cache_thickness_array = cache_thickness_array,
+                         property_collection = property_collection)
+
+    def fault_connection_set(self,
+                             skip_inactive = True,
+                             compute_transmissibility = False,
+                             add_to_model = False,
+                             realization = None,
+                             inherit_features_from = None,
+                             title = 'fault juxtaposition set'):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return fault_connection_set(self,
+                                    skip_inactive = skip_inactive,
+                                    compute_transmissibility = compute_transmissibility,
+                                    add_to_model = add_to_model,
+                                    realization = realization,
+                                    inherit_features_from = inherit_features_from,
+                                    title = title)
+
+    def pinchout_connection_set(self,
+                                skip_inactive = True,
+                                compute_transmissibility = False,
+                                add_to_model = False,
+                                realization = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return pinchout_connection_set(self,
+                                       skip_inactive = skip_inactive,
+                                       compute_transmissibility = compute_transmissibility,
+                                       add_to_model = add_to_model,
+                                       realization = realization)
+
+    def k_gap_connection_set(self,
+                             skip_inactive = True,
+                             compute_transmissibility = False,
+                             add_to_model = False,
+                             realization = None,
+                             tolerance = 0.001):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return k_gap_connection_set(self,
+                                    skip_inactive = skip_inactive,
+                                    compute_transmissibility = compute_transmissibility,
+                                    add_to_model = add_to_model,
+                                    realization = realization,
+                                    tolerance = tolerance)
+
+    def check_top_and_base_cell_edge_directions(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return check_top_and_base_cell_edge_directions(self)
+
+    def global_to_local_crs(self,
+                            a,
+                            crs_root = None,
+                            global_xy_units = None,
+                            global_z_units = None,
+                            global_z_increasing_downward = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return global_to_local_crs(self,
+                                   a,
+                                   crs_root = crs_root,
+                                   global_xy_units = global_xy_units,
+                                   global_z_units = global_z_units,
+                                   global_z_increasing_downward = global_z_increasing_downward)
+
+    def z_inc_down(self):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return z_inc_down(self)
+
+    def local_to_global_crs(self,
+                            a,
+                            crs_root = None,
+                            global_xy_units = None,
+                            global_z_units = None,
+                            global_z_increasing_downward = None):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return local_to_global_crs(self,
+                                   a,
+                                   crs_root = crs_root,
+                                   global_xy_units = global_xy_units,
+                                   global_z_units = global_z_units,
+                                   global_z_increasing_downward = global_z_increasing_downward)
+
+    def composite_bounding_box(self, bounding_box_list):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return composite_bounding_box(self, bounding_box_list)
+
+    def bounding_box(self, cell_kji0, points_root = None, cache_cp_array = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return bounding_box(self, cell_kji0, points_root = points_root, cache_cp_array = cache_cp_array)
+
+    def xyz_box_centre(self, points_root = None, lazy = False, local = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return xyz_box_centre(self, points_root = points_root, lazy = lazy, local = local)
+
+    def xyz_box(self, points_root = None, lazy = True, local = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return xyz_box(self, points_root = points_root, lazy = lazy, local = local)
+
+    def pixel_maps(self, origin, width, height, dx, dy = None, k0 = None, vertical_ref = 'top'):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return pixel_maps(self, origin, width, height, dx, dy = dy, k0 = k0, vertical_ref = vertical_ref)

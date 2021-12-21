@@ -553,3 +553,19 @@ def extent_kji_from_root(root_node):
     """Returns kji extent as stored in xml."""
 
     return (rqet.find_tag_int(root_node, 'Nk'), rqet.find_tag_int(root_node, 'Nj'), rqet.find_tag_int(root_node, 'Ni'))
+
+
+def set_k_direction_from_points(grid):
+    """Sets the K direction indicator based on z direction and mean z values for top and base.
+
+    note:
+       this method does not modify the grid_is_righthanded indicator
+    """
+
+    p = grid.points_ref(masked = False)
+    grid.k_direction_is_down = True  # arbitrary default
+    if p is not None:
+        diff = np.nanmean(p[-1] - p[0])
+        if not np.isnan(diff):
+            grid.k_direction_is_down = ((diff >= 0.0) == grid.z_inc_down())
+    return grid.k_direction_is_down

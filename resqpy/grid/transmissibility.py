@@ -8,6 +8,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+import resqpy.olio.transmission as rqtr
 
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
@@ -300,3 +301,55 @@ def __set_k_transmissibility(grid, half_t, k_tr, modifier_mode, pc, realization,
     if realization is None:
         grid.array_k_transmissibility = k_tr
     return k_tr
+
+
+def half_cell_transmissibility(grid, use_property = True, realization = None, tolerance = 1.0e-6):
+    """Returns (and caches if realization is None) half cell transmissibilities for this grid.
+
+    arguments:
+       use_property (boolean, default True): if True, the grid's property collection is inspected for
+          a possible half cell transmissibility array and if found, it is used instead of calculation
+       realization (int, optional) if present, only a property with this realization number will be used
+       tolerance (float, default 1.0e-6): minimum half axis length below which the transmissibility
+          will be deemed uncomputable (for the axis in question); NaN values will be returned (not Inf);
+          units are implicitly those of the grid's crs length units
+
+    returns:
+       numpy float array of shape (nk, nj, ni, 3, 2) where the 3 covers K,J,I and the 2 covers the
+          face polarity: - (0) and + (1); units will depend on the length units of the coordinate reference
+          system for the grid; the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m
+          and ft respectively
+
+    notes:
+       the returned array is in the logical resqpy arrangement; it must be discombobulated before being
+       added as a property; this method does not write to hdf5, nor create a new property or xml;
+       if realization is None, a grid attribute cached array will be used; tolerance will only be
+       used if the half cell transmissibilities are actually computed
+    """
+
+    # todo: allow passing of property uuids for ntg, k_k, j, i
+
+    if realization is None and hasattr(grid, 'array_half_cell_t'):
+        return grid.array_half_cell_t
+
+    half_t = None
+
+    if use_property:
+        pc = grid.property_collection
+        half_t_resqml = pc.single_array_ref(property_kind = 'transmissibility',
+                                            realization = realization,
+                                            continuous = True,
+                                            count = 1,
+                                            indexable = 'faces per cell')
+        if half_t_resqml:
+            assert half_t_resqml.shape == (grid.nk, grid.nj, grid.ni, 6)
+            half_t = pc.combobulate(half_t_resqml)
+
+    if half_t is None:
+        # note: properties must be identifiable in property_collection
+        half_t = rqtr.half_cell_t(grid, realization = realization)
+
+    if realization is None:
+        grid.array_half_cell_t = half_t
+
+    return half_t
