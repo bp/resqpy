@@ -810,8 +810,8 @@ def _coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, 
     for k in range(coarsening.coarse_extent_kji[0]):
         for j in range(coarsening.coarse_extent_kji[1]):
             for i in range(coarsening.coarse_extent_kji[2]):
-                a_coarsened = _coarsening_weighted_mean_singlecell(a_coarsened, a, coarsening, k, j, i, fine_weight,
-                                                                   coarse_weight, zero_weight_result)
+                _coarsening_weighted_mean_singlecell(a_coarsened, a, coarsening, k, j, i, fine_weight, coarse_weight,
+                                                     zero_weight_result)
     if coarse_weight is not None:
         mask = np.logical_or(np.isnan(coarse_weight), coarse_weight == 0.0)
         a_coarsened = np.where(mask, zero_weight_result, a_coarsened / coarse_weight)
@@ -832,7 +832,6 @@ def _coarsening_weighted_mean_singlecell(a_coarsened, a, coarsening, k, j, i, fi
             a_coarsened[k, j, i] = zero_weight_result
         else:
             a_coarsened[k, j, i] /= weight
-    return a_coarsened
 
 
 def _add_to_imported(collection, a, title, info, null_value = None, const_value = None):
