@@ -12,27 +12,27 @@ import resqpy.olio.write_data as wd
 
 def write_nexus_corp(self,
                      file_name,
-                     local_coords=False,
-                     global_xy_units=None,
-                     global_z_units=None,
-                     global_z_increasing_downward=True,
-                     write_nx_ny_nz=False,
-                     write_units_keyword=False,
-                     write_rh_keyword_if_needed=False,
-                     write_corp_keyword=False,
-                     use_binary=False,
-                     binary_only=False,
-                     nan_substitute_value=None):
+                     local_coords = False,
+                     global_xy_units = None,
+                     global_z_units = None,
+                     global_z_increasing_downward = True,
+                     write_nx_ny_nz = False,
+                     write_units_keyword = False,
+                     write_rh_keyword_if_needed = False,
+                     write_corp_keyword = False,
+                     use_binary = False,
+                     binary_only = False,
+                     nan_substitute_value = None):
     """Write grid geometry to file in Nexus CORP ordering."""
 
     log.info('caching Nexus corner points')
     tm.log_nexus_tm('info')
-    self.corner_points(cache_cp_array=True)
+    self.corner_points(cache_cp_array = True)
     log.debug('duplicating Nexus corner points')
     cp = self.array_corner_points.copy()
     log.debug('resequencing duplicated Nexus corner points')
-    gf.resequence_nexus_corp(cp, eight_mode=False, undo=True)
-    corp_extent = np.zeros(3, dtype='int')
+    gf.resequence_nexus_corp(cp, eight_mode = False, undo = True)
+    corp_extent = np.zeros(3, dtype = 'int')
     corp_extent[0] = self.cell_count()  # total number of cells in grid
     corp_extent[1] = 8  # 8 corners of cell: k -/+; j -/+; i -/+
     corp_extent[2] = 3  # x, y, z
@@ -50,9 +50,9 @@ def write_nexus_corp(self,
             log.info('converting corner points from local to global reference system')
             self.local_to_global_crs(cp,
                                      crs_root,
-                                     global_xy_units=global_xy_units,
-                                     global_z_units=global_z_units,
-                                     global_z_increasing_downward=global_z_increasing_downward)
+                                     global_xy_units = global_xy_units,
+                                     global_z_units = global_z_units,
+                                     global_z_increasing_downward = global_z_increasing_downward)
     log.info('writing simulator corner point file ' + file_name)
     with open(file_name, 'w') as header:
         header.write('! Nexus corner point data written by resqml_grid module\n')
@@ -109,12 +109,12 @@ def write_nexus_corp(self,
     wd.write_array_to_ascii_file(file_name,
                                  corp_extent,
                                  cp.reshape(tuple(corp_extent)),
-                                 target_simulator='nexus',
-                                 keyword=keyword,
-                                 columns=3,
-                                 blank_line_after_i_block=False,
-                                 blank_line_after_j_block=True,
-                                 append=True,
-                                 use_binary=use_binary,
-                                 binary_only=binary_only,
-                                 nan_substitute_value=nan_substitute_value)
+                                 target_simulator = 'nexus',
+                                 keyword = keyword,
+                                 columns = 3,
+                                 blank_line_after_i_block = False,
+                                 blank_line_after_j_block = True,
+                                 append = True,
+                                 use_binary = use_binary,
+                                 binary_only = binary_only,
+                                 nan_substitute_value = nan_substitute_value)

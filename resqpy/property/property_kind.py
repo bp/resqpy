@@ -22,27 +22,27 @@ class PropertyKind(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node=None,
-                 uuid=None,
-                 title=None,
-                 is_abstract=False,
-                 example_uom=None,
-                 naming_system='urn:resqml:bp.com:resqpy',
-                 parent_property_kind='continuous',
-                 extra_metadata=None,
-                 originator=None):
+                 root_node = None,
+                 uuid = None,
+                 title = None,
+                 is_abstract = False,
+                 example_uom = None,
+                 naming_system = 'urn:resqml:bp.com:resqpy',
+                 parent_property_kind = 'continuous',
+                 extra_metadata = None,
+                 originator = None):
         """Initialise a new bespoke property kind."""
 
         self.is_abstract = is_abstract
         self.naming_system = naming_system
         self.example_uom = example_uom
         self.parent_kind = parent_property_kind
-        super().__init__(model=parent_model,
-                         uuid=uuid,
-                         title=title,
-                         originator=originator,
-                         extra_metadata=extra_metadata,
-                         root_node=root_node)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata,
+                         root_node = root_node)
 
     def _load_from_xml(self):
         root_node = self.root
@@ -55,7 +55,7 @@ class PropertyKind(BaseResqpy):
         assert ppk_kind_node is not None, 'only standard property kinds supported as parent kind'
         self.parent_kind = ppk_kind_node.text
 
-    def is_equivalent(self, other_pk, check_extra_metadata=True):
+    def is_equivalent(self, other_pk, check_extra_metadata = True):
         """Returns True if this property kind is essentially the same as the other; False otherwise."""
 
         if other_pk is None:
@@ -74,13 +74,13 @@ class PropertyKind(BaseResqpy):
                 return False
         return True
 
-    def create_xml(self, add_as_part=True, originator=None, reuse=True):
+    def create_xml(self, add_as_part = True, originator = None, reuse = True):
         """Create xml for this bespoke property kind."""
 
         if reuse and self.try_reuse():
             return self.root  # check for reusable (equivalent) object
 
-        pk = super().create_xml(add_as_part=False, originator=originator)
+        pk = super().create_xml(add_as_part = False, originator = originator)
 
         ns_node = rqet.SubElement(pk, ns['resqml2'] + 'NamingSystem')
         ns_node.set(ns['xsi'] + 'type', ns['xsd'] + 'anyURI')
@@ -123,9 +123,9 @@ def create_transmisibility_multiplier_property_kind(model):
        property kind uuid
     """
     log.debug("Making a new property kind 'Transmissibility multiplier'")
-    tmult_kind = PropertyKind(parent_model=model,
-                              title='transmissibility multiplier',
-                              parent_property_kind='continuous')
+    tmult_kind = PropertyKind(parent_model = model,
+                              title = 'transmissibility multiplier',
+                              parent_property_kind = 'continuous')
     tmult_kind.create_xml()
     tmult_kind_uuid = tmult_kind.uuid
     model.store_epc()
@@ -135,10 +135,10 @@ def create_transmisibility_multiplier_property_kind(model):
 def establish_zone_property_kind(model):
     """Returns zone local property kind object, creating the xml and adding as part if not found in model."""
 
-    zone_pk_uuid = model.uuid(obj_type='LocalPropertyKind', title='zone')
+    zone_pk_uuid = model.uuid(obj_type = 'LocalPropertyKind', title = 'zone')
     if zone_pk_uuid is None:
-        zone_pk = rprop.PropertyKind(model, title='zone', parent_property_kind='discrete')
+        zone_pk = rprop.PropertyKind(model, title = 'zone', parent_property_kind = 'discrete')
         zone_pk.create_xml()
     else:
-        zone_pk = rprop.PropertyKind(model, uuid=zone_pk_uuid)
+        zone_pk = rprop.PropertyKind(model, uuid = zone_pk_uuid)
     return zone_pk

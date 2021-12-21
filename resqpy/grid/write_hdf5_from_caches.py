@@ -133,5 +133,3 @@ def __write_geometry(grid, h5_reg):
             if grid.is_refinement and not grid.parent_window.equal_proportions[axis]:
                 child_cell_weights = np.concatenate(grid.parent_window.vector_proportions[axis])
                 h5_reg.register_dataset(grid.uuid, 'KJI'[axis] + 'Regrid/ChildCellWeights', child_cell_weights)
-
-
