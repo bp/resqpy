@@ -16,8 +16,9 @@ import resqpy.model._forestry as m_f
 import resqpy.model._grids as m_g
 import resqpy.model._hdf5 as m_h
 import resqpy.model._xml as m_x
+from resqpy import __version__
 
-log.debug('resqpy Model class version: ' + version + '; xml citation format: ' + m_x.citation_format)
+log.debug('resqpy Model class version: ' + __version__ + '; xml citation format: ' + m_x.citation_format)
 
 
 class Model():

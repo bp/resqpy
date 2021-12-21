@@ -1,9 +1,5 @@
 """_xml.py: functions to support xml creation methods in the Model class."""
 
-# following should be kept in line with major.minor tag values in repository
-citation_format = 'bp:resqpy:1.6'
-use_version_string = False
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -18,6 +14,11 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.xml_namespaces import namespace as ns_url
+from resqpy import __version__
+
+# following should be kept in line with major.minor tag values in repository
+citation_format = f'bp:resqpy:v{__version__}'
+use_version_string = False
 
 
 def _create_tree_if_none(model):
