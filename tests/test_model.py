@@ -10,6 +10,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
+import resqpy.time_series as rqts
 import resqpy.well as rqw
 
 
@@ -452,12 +453,30 @@ def test_one_epc_using_multiple_hdf5(tmp_path, example_model_with_prop_ts_rels):
 
 
 def test_root_for_time_series(example_model_with_prop_ts_rels):
+    # test when model has only one time series
     model = example_model_with_prop_ts_rels
     ts_root = model.root_for_time_series()
     assert ts_root is not None
     assert rqet.node_type(ts_root, strip_obj = True) == 'TimeSeries'
     assert model.resolve_time_series_root(ts_root) is ts_root
     assert model.resolve_time_series_root(None) is ts_root
+    # test when model has multiple time series
+    model = rq.Model(model.epc_file)
+    assert model is not None
+    oldest_ts_uuid = model.uuid(obj_type = 'TimeSeries')
+    assert oldest_ts_uuid is not None
+    for first_timestamp in ['2022-01-01Z', '2023-01-01Z', '2024-01-01Z']:
+        ts = rqts.TimeSeries(parent_model = model, first_timestamp = '2000-01-01Z')
+        for _ in range(3):
+            ts.extend_by_days(90)
+        ts.create_xml()
+        newest_ts_uuid = ts.uuid
+    # check that oldest series by creation date is returned by default
+    ts_root = model.root_for_time_series()
+    assert ts_root is model.root(uuid = oldest_ts_uuid)
+    # check that correct time series root is returned when uuid given
+    ts_root = model.root_for_time_series(uuid = newest_ts_uuid)
+    assert ts_root is not None and ts_root is model.root(uuid = newest_ts_uuid)
 
 
 def test_grid_list(example_model_and_crs):
