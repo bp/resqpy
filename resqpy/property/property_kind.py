@@ -12,6 +12,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
+import resqpy.property as rprop
 
 
 class PropertyKind(BaseResqpy):
@@ -129,3 +130,15 @@ def create_transmisibility_multiplier_property_kind(model):
     tmult_kind_uuid = tmult_kind.uuid
     model.store_epc()
     return tmult_kind_uuid
+
+
+def establish_zone_property_kind(model):
+    """Returns zone local property kind object, creating the xml and adding as part if not found in model."""
+
+    zone_pk_uuid = model.uuid(obj_type = 'LocalPropertyKind', title = 'zone')
+    if zone_pk_uuid is None:
+        zone_pk = rprop.PropertyKind(model, title = 'zone', parent_property_kind = 'discrete')
+        zone_pk.create_xml()
+    else:
+        zone_pk = rprop.PropertyKind(model, uuid = zone_pk_uuid)
+    return zone_pk
