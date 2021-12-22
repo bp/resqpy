@@ -631,8 +631,10 @@ def test_without_full_load(example_model_with_prop_ts_rels):
     assert model is not None
     assert len(model.parts_forest) >= len(uuid_list)
     # check that xml for parts has not been loaded but part names and uuids are catalogued
-    assert np.all(
-        [part is not None and uuid is not None and tree is None for (part, uuid, tree) in model.parts_forest.values()])
+    assert np.all([
+        p_type is not None and uuid is not None and tree is None
+        for (p_type, uuid, tree) in model.parts_forest.values()
+    ])
     # see if parts are searchable
     cp_parts = model.parts(obj_type = 'ContinuousProperty')
     assert cp_parts is not None and len(cp_parts) > 1
@@ -642,6 +644,39 @@ def test_without_full_load(example_model_with_prop_ts_rels):
     crs_root = model.root(obj_type = 'LocalDepth3dCrs')
     assert crs_root is not None
     assert rqet.find_tag(crs_root, 'VerticalUom') is not None
+
+
+def test_forestry(example_model_with_prop_ts_rels):
+    model = example_model_with_prop_ts_rels
+    full_parts_list = model.parts()
+    dp_parts_list = model.parts(obj_type = 'DiscreteProperty')
+    assert len(dp_parts_list) > 1
+    # remove an individual part
+    model.remove_part(dp_parts_list[0])
+    # corrupt some forest dictionary entries and test tidy up
+    for part in dp_parts_list[1:]:
+        model.parts_forest[part] = (None, None, None)
+    model.tidy_up_forests()
+    assert len(model.parts()) + len(dp_parts_list) == len(full_parts_list)
+    assert all(p not in model.parts() for p in dp_parts_list)
+    # test patch_root_for_part()
+    crs_uuid = model.uuid(obj_type = 'LocalDepth3dCrs')
+    crs_part = model.part_for_uuid(crs_uuid)
+    assert crs_uuid is not None and crs_part is not None
+    crs = rqc.Crs(model, uuid = crs_uuid)
+    assert crs is not None
+    crs.title = 'relativity'
+    crs.originator = 'einstein'
+    new_crs_node = crs.create_xml(add_as_part = False, reuse = False)
+    rqet.find_tag(new_crs_node, 'VerticalUom').text = 'ft[US]'
+    model.patch_root_for_part(crs_part, new_crs_node)
+    assert rqet.find_tag_text(model.root(uuid = crs_uuid), 'VerticalUom') == 'ft[US]'
+    assert model.citation_title_for_part(crs_part) == 'relativity'
+    assert model.title(uuid = crs_uuid) == 'relativity'
+    assert rqet.find_nested_tags_text(model.root(uuid = crs_uuid), ['Citation', 'Originator']) == 'einstein'
+    # rough test of low level fell_part()
+    model.fell_part(crs_part)
+    assert len(model.parts()) + len(dp_parts_list) + 1 == len(full_parts_list)
 
 
 def test_copy_from(example_model_with_prop_ts_rels):
