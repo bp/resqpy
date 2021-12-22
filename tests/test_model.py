@@ -689,6 +689,24 @@ def test_copy_from(example_model_with_prop_ts_rels):
     assert model.parts(sort_by = 'oldest') == parts_list
 
 
+def test_h5_array_element(example_model_with_properties):
+    model = example_model_with_properties
+    zone_root = model.root(obj_type = 'DiscreteProperty', title = 'Zone')
+    assert zone_root is not None
+    key_pair = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(zone_root, ['PatchOfValues', 'Values']))
+    assert key_pair is not None and all([x is not None for x in key_pair])
+    # check full array is expected size and shape
+    shape, dtype = model.h5_array_shape_and_type(key_pair)
+    assert shape == (3, 5, 5)
+    assert str(dtype)[0] == 'i'
+    # test single element access
+    zone = model.h5_array_element(key_pair, index = (1, 2, 2), dtype = int)
+    assert zone == 2
+    # test single element access with required shape
+    zone = model.h5_array_element(key_pair, index = (1, 7), dtype = int, required_shape = (3, 25))
+    assert zone == 2
+
+
 def add_grids(model, crs, add_lengths):
     grid_a = grr.RegularGrid(model,
                              extent_kji = (2, 2, 2),
