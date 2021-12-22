@@ -450,6 +450,11 @@ def test_one_epc_using_multiple_hdf5(tmp_path, example_model_with_prop_ts_rels):
     k_1 = jitter_pc.single_array_ref(realization = 1)
     assert k_0 is not None and k_1 is not None
     assert np.mean(k_1) >= 4.0 + np.mean(k_0)
+    # check that hdf5 ext parts have distinct uuids
+    ext_uuids = [model.h5_uuid_list(model.root(uuid = model.uuid_for_part(p))) for p in jitter_pc.parts()]
+    assert len(ext_uuids) == 2 and np.all(ul is not None and len(ul) == 1 for ul in ext_uuids)
+    assert ext_uuids[0][0] is not None and ext_uuids[1][0] is not None
+    assert not bu.matching_uuids(ext_uuids[0][0], ext_uuids[1][0])
 
 
 def test_root_for_time_series(example_model_with_prop_ts_rels):
