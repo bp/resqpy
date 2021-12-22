@@ -1895,7 +1895,7 @@ class Model():
     def iter_grid_connection_sets(self):
         """Yields grid connection set objects, one for each gcs in this model."""
 
-        for gcs in m_c._iter_grid_connection_sets(self):
+        for gcs in list(m_c._iter_grid_connection_sets(self)):
             yield gcs
 
     def iter_wellbore_interpretations(self):
