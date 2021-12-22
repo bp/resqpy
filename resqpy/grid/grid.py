@@ -39,7 +39,7 @@ from .points_functions import point_areally, point, points_ref, point_raw, unspl
     unsplit_x_section_points, uncache_points, horizon_points, split_horizon_points, \
     centre_point_list, interpolated_point, split_gap_x_section_points, \
     centre_point, z_corner_point_depths, coordinate_line_end_points, set_cached_points_from_property, \
-    find_cell_for_point_xy
+    find_cell_for_point_xy, split_horizons_points
 
 from ._create_grid_xml import _create_grid_xml
 
@@ -461,53 +461,6 @@ class Grid(BaseResqpy):
         if self.inactive is None:
             return False  # no inactive mask indicates all cells are active
         return np.all(self.inactive[:, col_ji0[0], col_ji0[1]])
-
-    def split_horizons_points(self, min_k0 = None, max_k0 = None, masked = False):
-        """Returns reference to a corner points layer of shape (nh, nj, ni, 2, 2, 3) where nh is number of horizons.
-
-        arguments:
-           min_k0 (integer): the lowest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to zero
-           max_k0 (integer): the highest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to nk + k_gaps
-           masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
-              if False, a simple (unmasked) numpy array is returned
-
-        returns:
-           numpy array of shape (nh, nj, ni, 2, 2, 3) where nh = max_k0 - min_k0 + 1, being corner point x,y,z values
-           for horizon corners (h, j, i, jp, ip) where h is the horizon (layer interface) index in the range
-           0 .. max_k0 - min_k0
-
-        notes:
-           data for horizon max_k0 is included in the result (unlike with python ranges);
-           in the case of a grid with k gaps, the horizons points returned will follow the k indexing of the points data
-           and calling code will need to keep track of the min_k0 offset when using k_raw_index_array to select a slice
-           of the horizons points array
-        """
-
-        if min_k0 is None:
-            min_k0 = 0
-        else:
-            assert min_k0 >= 0 and min_k0 <= self.nk_plus_k_gaps
-        if max_k0 is None:
-            max_k0 = self.nk_plus_k_gaps
-        else:
-            assert max_k0 >= min_k0 and max_k0 <= self.nk_plus_k_gaps
-        end_k0 = max_k0 + 1
-        points = self.points_ref(masked = False)
-        hp = np.empty((end_k0 - min_k0, self.nj, self.ni, 2, 2, 3))
-        if self.has_split_coordinate_lines:
-            self.create_column_pillar_mapping()
-            for j in range(self.nj):
-                for i in range(self.ni):
-                    hp[:, j, i, 0, 0, :] = points[min_k0:end_k0, self.pillars_for_column[j, i, 0, 0], :]
-                    hp[:, j, i, 1, 0, :] = points[min_k0:end_k0, self.pillars_for_column[j, i, 1, 0], :]
-                    hp[:, j, i, 0, 1, :] = points[min_k0:end_k0, self.pillars_for_column[j, i, 0, 1], :]
-                    hp[:, j, i, 1, 1, :] = points[min_k0:end_k0, self.pillars_for_column[j, i, 1, 1], :]
-        else:
-            hp[:, :, :, 0, 0, :] = points[min_k0:end_k0, :-1, :-1, :]
-            hp[:, :, :, 1, 0, :] = points[min_k0:end_k0, 1:, :-1, :]
-            hp[:, :, :, 0, 1, :] = points[min_k0:end_k0, :-1, 1:, :]
-            hp[:, :, :, 1, 1, :] = points[min_k0:end_k0, 1:, 1:, :]
-        return hp
 
     def write_hdf5_from_caches(self,
                                file = None,
@@ -1233,3 +1186,7 @@ class Grid(BaseResqpy):
     def pixel_maps(self, origin, width, height, dx, dy = None, k0 = None, vertical_ref = 'top'):
         """This method has now been moved to a new function elsewhere in the Grid module"""
         return pixel_maps(self, origin, width, height, dx, dy = dy, k0 = k0, vertical_ref = vertical_ref)
+
+    def split_horizons_points(self, min_k0 = None, max_k0 = None, masked = False):
+        """This method has now been moved to a new function elsewhere in the Grid module"""
+        return split_horizons_points(self, min_k0 = min_k0, max_k0 = max_k0, masked = masked)

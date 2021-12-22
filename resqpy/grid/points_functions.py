@@ -2,6 +2,8 @@
 
 import logging
 
+from ..olio import point_inclusion as pip
+
 log = logging.getLogger(__name__)
 
 import numpy as np
@@ -1089,3 +1091,129 @@ def find_cell_for_point_xy(grid, x, y, k0 = 0, vertical_ref = 'top', local_coord
         if poly is not None and pip.pip_cn(a[0, :2], poly):
             return (cell_kji0[1], cell_kji0[2])
     return (None, None)
+
+
+def find_cell_for_x_sect_xz(x_sect, x, z):
+    """Returns the (k0, j0) or (k0, i0) indices of the cell containing point x,z in the cross section.
+
+    arguments:
+       x_sect (numpy float array of shape (nk, nj or ni, 2, 2, 2 or 3): the cross section x,z or x,y,z data
+       x (float) x-coordinate of point of interest in the cross section space
+       z (float): y-coordinate of  point of interest in the cross section space
+
+    note:
+       the x_sect data is in the form returned by x_section_corner_points() or split_gap_x_section_points();
+       the 2nd of the returned pair is either a J index or I index, whichever was not the axis specified
+       when generating the x_sect data; returns (None, None) if point inclusion not detected; if xyz data is
+       provided, the y values are ignored; note that the point of interest x,z coordinates are in the space of
+       x_sect, so if rotation has occurred, the x value is no longer an easting and is typically picked off a
+       cross section plot
+    """
+
+    def test_cell(p, x_sect, k0, ji0):
+        poly = np.array([
+            x_sect[k0, ji0, 0, 0, 0:3:2], x_sect[k0, ji0, 0, 1, 0:3:2], x_sect[k0, ji0, 1, 1, 0:3:2], x_sect[k0, ji0, 1,
+                                                                                                             0, 0:3:2]
+        ])
+        if np.any(np.isnan(poly)):
+            return False
+        return pip.pip_cn(p, poly)
+
+    assert x_sect.ndim == 5 and x_sect.shape[2] == 2 and x_sect.shape[3] == 2 and 2 <= x_sect.shape[4] <= 3
+    n_k = x_sect.shape[0]
+    n_j_or_i = x_sect.shape[1]
+    tolerance = 1.0e-3
+
+    if x_sect.shape[4] == 3:
+        diffs = x_sect[:, :, :, :, 0:3:2].copy()  # x,z points only
+    else:
+        diffs = x_sect.copy()
+    diffs -= np.array((x, z))
+    diffs = np.sum(diffs * diffs, axis = -1)  # square of distance of each point from given x,z
+    flat_index = np.nanargmin(diffs)
+    min_dist_sqr = diffs.flatten()[flat_index]
+    cell_flat_k0_ji0, flat_k_ji_p = divmod(flat_index, 4)
+    found_k0, found_ji0 = divmod(cell_flat_k0_ji0, n_j_or_i)
+    found_kp, found_jip = divmod(flat_k_ji_p, 2)
+
+    found = test_cell((x, z), x_sect, found_k0, found_ji0)
+    if found:
+        return found_k0, found_ji0
+    # check cells below whilst still close to point
+    while found_k0 < n_k - 1:
+        found_k0 += 1
+        if np.nanmin(diffs[found_k0, found_ji0]) > min_dist_sqr + tolerance:
+            break
+        found = test_cell((x, z), x_sect, found_k0, found_ji0)
+        if found:
+            return found_k0, found_ji0
+
+    # try neighbouring column (in case of fault or point exactly on face)
+    ji_neighbour = 1 if found_jip == 1 else -1
+    found_ji0 += ji_neighbour
+    if 0 <= found_ji0 < n_j_or_i:
+        col_diffs = diffs[:, found_ji0]
+        flat_index = np.nanargmin(col_diffs)
+        if col_diffs.flatten()[flat_index] <= min_dist_sqr + tolerance:
+            found_k0 = flat_index // 4
+            found = test_cell((x, z), x_sect, found_k0, found_ji0)
+            if found:
+                return found_k0, found_ji0
+            # check cells below whilst still close to point
+            while found_k0 < n_k - 1:
+                found_k0 += 1
+                if np.nanmin(diffs[found_k0, found_ji0]) > min_dist_sqr + tolerance:
+                    break
+                found = test_cell((x, z), x_sect, found_k0, found_ji0)
+                if found:
+                    return found_k0, found_ji0
+
+    return None, None
+
+
+def split_horizons_points(grid, min_k0 = None, max_k0 = None, masked = False):
+    """Returns reference to a corner points layer of shape (nh, nj, ni, 2, 2, 3) where nh is number of horizons.
+
+    arguments:
+       min_k0 (integer): the lowest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to zero
+       max_k0 (integer): the highest horizon layer number to be included, in the range 0 to nk + k_gaps; defaults to nk + k_gaps
+       masked (boolean, default False): if True, a masked array is returned with NaN points masked out;
+          if False, a simple (unmasked) numpy array is returned
+
+    returns:
+       numpy array of shape (nh, nj, ni, 2, 2, 3) where nh = max_k0 - min_k0 + 1, being corner point x,y,z values
+       for horizon corners (h, j, i, jp, ip) where h is the horizon (layer interface) index in the range
+       0 .. max_k0 - min_k0
+
+    notes:
+       data for horizon max_k0 is included in the result (unlike with python ranges);
+       in the case of a grid with k gaps, the horizons points returned will follow the k indexing of the points data
+       and calling code will need to keep track of the min_k0 offset when using k_raw_index_array to select a slice
+       of the horizons points array
+    """
+
+    if min_k0 is None:
+        min_k0 = 0
+    else:
+        assert min_k0 >= 0 and min_k0 <= grid.nk_plus_k_gaps
+    if max_k0 is None:
+        max_k0 = grid.nk_plus_k_gaps
+    else:
+        assert max_k0 >= min_k0 and max_k0 <= grid.nk_plus_k_gaps
+    end_k0 = max_k0 + 1
+    points = grid.points_ref(masked = False)
+    hp = np.empty((end_k0 - min_k0, grid.nj, grid.ni, 2, 2, 3))
+    if grid.has_split_coordinate_lines:
+        grid.create_column_pillar_mapping()
+        for j in range(grid.nj):
+            for i in range(grid.ni):
+                hp[:, j, i, 0, 0, :] = points[min_k0:end_k0, grid.pillars_for_column[j, i, 0, 0], :]
+                hp[:, j, i, 1, 0, :] = points[min_k0:end_k0, grid.pillars_for_column[j, i, 1, 0], :]
+                hp[:, j, i, 0, 1, :] = points[min_k0:end_k0, grid.pillars_for_column[j, i, 0, 1], :]
+                hp[:, j, i, 1, 1, :] = points[min_k0:end_k0, grid.pillars_for_column[j, i, 1, 1], :]
+    else:
+        hp[:, :, :, 0, 0, :] = points[min_k0:end_k0, :-1, :-1, :]
+        hp[:, :, :, 1, 0, :] = points[min_k0:end_k0, 1:, :-1, :]
+        hp[:, :, :, 0, 1, :] = points[min_k0:end_k0, :-1, 1:, :]
+        hp[:, :, :, 1, 1, :] = points[min_k0:end_k0, 1:, 1:, :]
+    return hp

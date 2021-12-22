@@ -1,7 +1,7 @@
 """The Grid Module"""
 
 __all__ = [
-    'grid', 'transmissibility', 'RegularGrid', 'extract_grid_parent', 'establish_zone_property_kind',
+    'Grid', 'transmissibility', 'RegularGrid', 'extract_grid_parent', 'establish_zone_property_kind',
     'find_cell_for_x_sect_xz', 'grid_flavour', 'is_regular_grid', 'any_grid'
 ]
 

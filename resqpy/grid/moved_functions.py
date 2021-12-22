@@ -2,7 +2,7 @@
 
 import warnings
 
-import resqpy.olio.grid_functions as gf
+import resqpy.grid.points_functions as pf
 import resqpy.property.property_kind as pk
 
 
@@ -31,7 +31,7 @@ def find_cell_for_x_sect_xz(x_sect, x, z):
        x_sect, so if rotation has occurred, the x value is no longer an easting and is typically picked off a
        cross section plot
     """
-    warnings.warn('This function has been moved to olio/grid_functions. Please update your code to the new location.',
+    warnings.warn('This function has been moved to grid/points_functions. Please update your code to the new location.',
                   DeprecationWarning)
 
-    return gf.find_cell_for_x_sect_xz(x_sect, x, z)
+    return pf.find_cell_for_x_sect_xz(x_sect, x, z)
