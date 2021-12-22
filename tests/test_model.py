@@ -625,12 +625,15 @@ def test_without_full_load(example_model_with_prop_ts_rels):
     model = rq.Model(epc_file = epc, full_load = False, create_basics = False, create_hdf5_ext = False)
     assert model is not None
     assert len(model.parts_forest) >= len(uuid_list)
-    # check that xml for parts has not been loaded
-    assert np.all([tree is None for (_, _, tree) in model.parts_forest.values()])
+    # check that xml for parts has not been loaded but part names and uuids are catalogued
+    assert np.all(
+        [part is not None and uuid is not None and tree is None for (part, uuid, tree) in model.parts_forest.values()])
     # see if parts are searchable
     cp_parts = model.parts(obj_type = 'ContinuousProperty')
     assert cp_parts is not None and len(cp_parts) > 1
     # see if xml is loaded on demand
+    cp_tree = model.tree_for_part(cp_parts[0])
+    assert cp_tree is not None
     crs_root = model.root(obj_type = 'LocalDepth3dCrs')
     assert crs_root is not None
     assert rqet.find_tag(crs_root, 'VerticalUom') is not None
