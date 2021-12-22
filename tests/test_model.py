@@ -616,6 +616,26 @@ def test_supporting_representation_change(example_model_and_crs):
     assert grid_bnp.property_collection.number_of_parts() == bnp_count + 1
 
 
+def test_without_full_load(example_model_with_prop_ts_rels):
+    epc = example_model_with_prop_ts_rels.epc_file
+    uuid_list = example_model_with_prop_ts_rels.uuids()
+    assert len(uuid_list) > 0
+    del example_model_with_prop_ts_rels
+    # open model with minimum loading of xml
+    model = rq.Model(epc_file = epc, full_load = False, create_basics = False, create_hdf5_ext = False)
+    assert model is not None
+    assert len(model.parts_forest) >= len(uuid_list)
+    # check that xml for parts has not been loaded
+    assert np.all([tree is None for (_, _, tree) in model.parts_forest.values()])
+    # see if parts are searchable
+    cp_parts = model.parts(obj_type = 'ContinuousProperty')
+    assert cp_parts is not None and len(cp_parts) > 1
+    # see if xml is loaded on demand
+    crs_root = model.root(obj_type = 'LocalDepth3dCrs')
+    assert crs_root is not None
+    assert rqet.find_tag(crs_root, 'VerticalUom') is not None
+
+
 def add_grids(model, crs, add_lengths):
     grid_a = grr.RegularGrid(model,
                              extent_kji = (2, 2, 2),
