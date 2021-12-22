@@ -2,8 +2,6 @@
 
 import logging
 
-from ..olio import point_inclusion as pip
-
 log = logging.getLogger(__name__)
 
 import numpy as np

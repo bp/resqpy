@@ -590,5 +590,3 @@ def left_right_foursome(full_pillar_list, p_index):
         return result_array
     except ValueError:
         raise Exception('code failure whilst taking exit sides from dubious full pillar list')
-
-
