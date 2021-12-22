@@ -644,6 +644,16 @@ def test_without_full_load(example_model_with_prop_ts_rels):
     assert rqet.find_tag(crs_root, 'VerticalUom') is not None
 
 
+def test_copy_from(example_model_with_prop_ts_rels):
+    original_epc = example_model_with_prop_ts_rels.epc_file
+    copied_epc = original_epc[:-4] + '_copy.epc'
+    parts_list = example_model_with_prop_ts_rels.parts(sort_by = 'oldest')
+    assert len(parts_list) > 0
+    del example_model_with_prop_ts_rels
+    model = rq.Model(copied_epc, copy_from = original_epc)
+    assert model.parts(sort_by = 'oldest') == parts_list
+
+
 def add_grids(model, crs, add_lengths):
     grid_a = grr.RegularGrid(model,
                              extent_kji = (2, 2, 2),
