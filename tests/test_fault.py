@@ -10,6 +10,7 @@ import resqpy.fault as rqf
 import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq
+import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
@@ -330,6 +331,7 @@ def test_feature_inheritance(tmp_path):
                                               title = 'juxtaposed')
     assert juxta_gcs is not None
     assert tr is not None
+    assert tr.ndim == 1 and len(tr) == juxta_gcs.count
 
     # check that features have been inherited correctly
     assert juxta_gcs.number_of_features() == 2
@@ -346,6 +348,45 @@ def test_feature_inheritance(tmp_path):
             assert fip.shape == (2, 2)
             assert np.all(fip[:, 0] == axis)
             assert np.all(fip[0, 1] == 1 - fip[1, 1])
+
+    # check that transmissibility property has been created okay
+    tr_uuid = model.uuid(obj_type = 'ContinuousProperty', related_uuid = juxta_gcs.uuid)
+    assert tr_uuid is not None
+    trp = rqp.Property(model, uuid = tr_uuid)
+    assert trp is not None
+    assert trp.is_continuous()
+    assert trp.property_kind() == 'transmissibility'
+    assert_array_almost_equal(tr, trp.array_ref())
+
+
+def test_two_grid_gcs(tmp_path):
+
+    epc = make_epc_with_abutting_grids(tmp_path)
+
+    # re-open the model and establish the abutting grid connection set
+    model = rq.Model(epc)
+    gcs_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation')
+    assert gcs_uuid is not None
+    gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+    assert gcs is not None
+    gcs.cache_arrays()
+
+    # check that attributes have been preserved
+    assert gcs.number_of_grids() == 2
+    assert len(gcs.grid_list) == 2
+    assert not bu.matching_uuids(gcs.grid_list[0].uuid, gcs.grid_list[1].uuid)
+    assert gcs.count == 6
+    assert gcs.grid_index_pairs.shape == (6, 2)
+    assert np.all(gcs.grid_index_pairs[:, 0] == 0)
+    assert np.all(gcs.grid_index_pairs[:, 1] == 1)
+    assert gcs.face_index_pairs.shape == (6, 2)
+    assert np.all(gcs.face_index_pairs[:, 0] == gcs.face_index_map[1, 1])  # J+
+    assert np.all(gcs.face_index_pairs[:, 1] == gcs.face_index_map[1, 0])  # J-
+    assert tuple(gcs.face_index_inverse_map[gcs.face_index_pairs[0, 0]]) == (1, 1)
+    assert tuple(gcs.face_index_inverse_map[gcs.face_index_pairs[0, 1]]) == (1, 0)
+    assert gcs.cell_index_pairs.shape == (6, 2)
+    assert np.all(gcs.cell_index_pairs >= 0)
+    assert np.all(gcs.cell_index_pairs < 60)
 
 
 def make_epc_with_gcs(tmp_path):
@@ -414,5 +455,45 @@ def make_epc_with_gcs(tmp_path):
                                                  facet = 'IJK',
                                                  title = 'permeability')
     assert perm_uuid is not None
+
+    return epc
+
+
+def make_epc_with_abutting_grids(tmp_path):
+
+    epc = os.path.join(tmp_path, 'abutting_grids.epc')
+    model = rq.new_model(epc)
+
+    # create a grid
+    g0 = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0))
+    g0.create_xml()
+
+    g1 = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0), origin = (100.0, 400.0, 20.0))
+    g1.create_xml()
+
+    # create an empty grid connection set
+    gcs = rqf.GridConnectionSet(model, title = 'abut')
+
+    # populate the grid connection set at low level due to lack of multi-grid methods
+    gcs.grid_list = [g0, g1]
+    gcs.count = 6
+    gcs.grid_index_pairs = np.zeros((6, 2), dtype = int)
+    gcs.grid_index_pairs[:, 1] = 1
+    gcs.face_index_pairs = np.empty((6, 2), dtype = int)
+    gcs.face_index_pairs[:, 0] = gcs.face_index_map[1, 1]  # J+
+    gcs.face_index_pairs[:, 1] = gcs.face_index_map[1, 0]  # J-
+    gcs.cell_index_pairs = np.empty((6, 2), dtype = int)
+    cell = 0
+    for k in range(3):
+        for i in range(2):
+            gcs.cell_index_pairs[cell, 0] = g0.natural_cell_index((k + 2, 3, i + 1))
+            gcs.cell_index_pairs[cell, 1] = g1.natural_cell_index((k, 0, i))
+            cell += 1
+    # leave optional feature list & indices as None
+
+    # save the grid connection set
+    gcs.write_hdf5()
+    gcs.create_xml()
+    model.store_epc()
 
     return epc
