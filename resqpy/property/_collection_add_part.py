@@ -245,6 +245,7 @@ def _add_part_to_dict_get_count_and_indexable(xml_node):
 
 
 def _add_part_to_dict_get_property_kind(xml_node, citation_title):
+    perm_synonyms = ['permeability rock', 'rock permeability']
     (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
     prop_kind_node = rqet.find_tag(xml_node, 'PropertyKind')
     assert (prop_kind_node is not None)
@@ -262,8 +263,9 @@ def _add_part_to_dict_get_property_kind(xml_node, citation_title):
     if (p_kind_from_keyword and p_kind_from_keyword != property_kind and
         (p_kind_from_keyword not in ['cell length', 'length', 'thickness'] or
          property_kind not in ['cell length', 'length', 'thickness'])):
-        log.warning(
-            f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
+        if property_kind not in perm_synonyms or p_kind_from_keyword not in perm_synonyms:
+            log.warning(
+                f'property kind {property_kind} not the expected {p_kind_from_keyword} for keyword {citation_title}')
     return property_kind, property_kind_uuid, lpk_node
 
 

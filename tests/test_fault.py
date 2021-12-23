@@ -5,9 +5,12 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_array_almost_equal
 
+import resqpy.derived_model as rqdm
 import resqpy.fault as rqf
 import resqpy.grid as grr
+import resqpy.lines as rql
 import resqpy.model as rq
+import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
@@ -30,9 +33,9 @@ def test_add_connection_set_and_tmults(example_model_with_properties, test_data_
 
     reload_model = rq.Model(epc_file = model.epc_file)
 
-    faults = reload_model.parts_list_of_type(('obj_FaultInterpretation'))
-    assert len(faults) == len(
-        expected_mult.keys()), f'Expected a {len(expected_mult.keys())} faults, found {len(faults)}'
+    faults = reload_model.parts_list_of_type('obj_FaultInterpretation')
+    assert len(faults) == len(expected_mult.keys()),  \
+        f'Expected a {len(expected_mult.keys())} faults, found {len(faults)}'
     for fault in faults:
         metadata = rqet.load_metadata_from_xml(reload_model.root_for_part(fault))
         title = reload_model.citation_title_for_part(fault)
@@ -240,6 +243,154 @@ def test_pinchout_and_k_gap_gcs(tmp_path):
 
 def test_two_fault_gcs(tmp_path):
 
+    epc = make_epc_with_gcs(tmp_path)
+
+    # re-open the model and check the gcs
+    model = rq.Model(epc)
+    gcs_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation')
+    assert gcs_uuid is not None
+    gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+    assert gcs is not None
+    assert gcs.number_of_features() == 2
+    feature_names = gcs.list_of_feature_names()
+    assert len(feature_names) == 2
+    assert 'F1' in feature_names and 'F2' in feature_names
+    fault_names = gcs.list_of_fault_names()
+    assert fault_names == feature_names
+    for fi in (0, 1):
+        assert gcs.feature_name_for_feature_index(fi) in ('F1', 'F2')
+    assert gcs.feature_name_for_feature_index(0) != gcs.feature_name_for_feature_index(1)
+    fi, f_uuid = gcs.feature_index_and_uuid_for_fault_name('F1')
+    assert fi is not None and fi in (0, 1)
+    assert f_uuid is not None
+    assert gcs.fault_name_for_feature_index(fi) == 'F1'
+    assert gcs.feature_index_for_cell_face((1, 1, 1), 0, 1) is None
+    fi_a = gcs.feature_index_for_cell_face((1, 1, 1), 2, 1)
+    assert fi_a in (0, 1)
+    fi_b = gcs.feature_index_for_cell_face((1, 1, 1), 1, 1)
+    assert fi_b in (0, 1)
+    assert fi_a != fi_b
+    gcs.rework_face_pairs()
+
+
+def test_feature_inheritance(tmp_path):
+
+    epc = make_epc_with_gcs(tmp_path)
+
+    # introduce a split version of the grid
+    model = rq.Model(epc)
+    simple_gcs_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation')
+    assert simple_gcs_uuid is not None
+    crs_uuid = model.uuid(obj_type = 'LocalDepth3dCrs')
+    assert crs_uuid is not None
+    line_a = rql.Polyline(model,
+                          set_bool = False,
+                          set_crs = crs_uuid,
+                          title = 'line a',
+                          set_coord = np.array([[200.0, -50.0, 0.0], [200.0, 450.0, 0.0]]))
+    line_b = rql.Polyline(model,
+                          set_bool = False,
+                          set_crs = crs_uuid,
+                          title = 'line b',
+                          set_coord = np.array([[-50.0, 200.0, 0.0], [350.0, 200.0, 0.0]]))
+    fault_lines = rql.PolylineSet(model, polylines = [line_a, line_b], title = 'fault lines')
+    assert fault_lines is not None
+    fault_lines.write_hdf5()
+    fault_lines.create_xml()
+    model.store_epc()
+    model.h5_release()
+
+    i_grid = rqdm.add_faults(epc,
+                             polylines = fault_lines,
+                             source_grid = None,
+                             inherit_properties = True,
+                             new_grid_title = 'interim',
+                             create_gcs = False)
+    assert i_grid is not None
+
+    # increase the throw on the faults
+    rqdm.global_fault_throw_scaling(epc,
+                                    source_grid = i_grid,
+                                    scaling_factor = 10.0,
+                                    cell_range = 1,
+                                    inherit_properties = True,
+                                    new_grid_title = 'faulted')
+
+    # re-open the model and load the faulted grid
+    model = rq.Model(epc)
+    grid = model.grid(title = 'faulted')
+    assert grid is not None
+
+    # establish the original simple gcs (even though it relates to a different grid?)
+    simple_gcs = rqf.GridConnectionSet(model, uuid = simple_gcs_uuid)
+
+    # derive a grid connection set from fault juxtaposition, inheriting features from simple gcs
+    juxta_gcs, tr = grid.fault_connection_set(compute_transmissibility = True,
+                                              add_to_model = True,
+                                              inherit_features_from = simple_gcs,
+                                              title = 'juxtaposed')
+    assert juxta_gcs is not None
+    assert tr is not None
+    assert tr.ndim == 1 and len(tr) == juxta_gcs.count
+
+    # check that features have been inherited correctly
+    assert juxta_gcs.number_of_features() == 2
+    feature_names = juxta_gcs.list_of_feature_names()
+    for fi in range(2):
+        if 'F1' in feature_names[fi]:
+            axis = 2
+        else:
+            assert 'F2' in feature_names[fi]
+            axis = 1
+        cfp_lists = juxta_gcs.list_of_cell_face_pairs_for_feature_index(fi)
+        assert len(cfp_lists) == 2 and len(cfp_lists[0]) == len(cfp_lists[1]) and len(cfp_lists[1]) > 0
+        for fip in cfp_lists[1]:
+            assert fip.shape == (2, 2)
+            assert np.all(fip[:, 0] == axis)
+            assert np.all(fip[0, 1] == 1 - fip[1, 1])
+
+    # check that transmissibility property has been created okay
+    tr_uuid = model.uuid(obj_type = 'ContinuousProperty', related_uuid = juxta_gcs.uuid)
+    assert tr_uuid is not None
+    trp = rqp.Property(model, uuid = tr_uuid)
+    assert trp is not None
+    assert trp.is_continuous()
+    assert trp.property_kind() == 'transmissibility'
+    assert_array_almost_equal(tr, trp.array_ref())
+
+
+def test_two_grid_gcs(tmp_path):
+
+    epc = make_epc_with_abutting_grids(tmp_path)
+
+    # re-open the model and establish the abutting grid connection set
+    model = rq.Model(epc)
+    gcs_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation')
+    assert gcs_uuid is not None
+    gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+    assert gcs is not None
+    gcs.cache_arrays()
+
+    # check that attributes have been preserved
+    assert gcs.number_of_grids() == 2
+    assert len(gcs.grid_list) == 2
+    assert not bu.matching_uuids(gcs.grid_list[0].uuid, gcs.grid_list[1].uuid)
+    assert gcs.count == 6
+    assert gcs.grid_index_pairs.shape == (6, 2)
+    assert np.all(gcs.grid_index_pairs[:, 0] == 0)
+    assert np.all(gcs.grid_index_pairs[:, 1] == 1)
+    assert gcs.face_index_pairs.shape == (6, 2)
+    assert np.all(gcs.face_index_pairs[:, 0] == gcs.face_index_map[1, 1])  # J+
+    assert np.all(gcs.face_index_pairs[:, 1] == gcs.face_index_map[1, 0])  # J-
+    assert tuple(gcs.face_index_inverse_map[gcs.face_index_pairs[0, 0]]) == (1, 1)
+    assert tuple(gcs.face_index_inverse_map[gcs.face_index_pairs[0, 1]]) == (1, 0)
+    assert gcs.cell_index_pairs.shape == (6, 2)
+    assert np.all(gcs.cell_index_pairs >= 0)
+    assert np.all(gcs.cell_index_pairs < 60)
+
+
+def make_epc_with_gcs(tmp_path):
+
     epc = os.path.join(tmp_path, 'two_fault.epc')
     model = rq.new_model(epc)
 
@@ -287,30 +438,62 @@ def test_two_fault_gcs(tmp_path):
     # save the grid connection set
     gcs.write_hdf5()
     gcs.create_xml(title = 'two fault gcs')
-    gcs_uuid = gcs.uuid
     model.store_epc()
 
-    # re-open the model and check the gcs
-    model = rq.Model(epc)
-    gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
-    assert gcs is not None
-    assert gcs.number_of_features() == 2
-    feature_names = gcs.list_of_feature_names()
-    assert len(feature_names) == 2
-    assert 'F1' in feature_names and 'F2' in feature_names
-    fault_names = gcs.list_of_fault_names()
-    assert fault_names == feature_names
-    for fi in (0, 1):
-        assert gcs.feature_name_for_feature_index(fi) in ('F1', 'F2')
-    assert gcs.feature_name_for_feature_index(0) != gcs.feature_name_for_feature_index(1)
-    fi, f_uuid = gcs.feature_index_and_uuid_for_fault_name('F1')
-    assert fi is not None and fi in (0, 1)
-    assert f_uuid is not None
-    assert gcs.fault_name_for_feature_index(fi) == 'F1'
-    assert gcs.feature_index_for_cell_face((1, 1, 1), 0, 1) is None
-    fi_a = gcs.feature_index_for_cell_face((1, 1, 1), 2, 1)
-    assert fi_a in (0, 1)
-    fi_b = gcs.feature_index_for_cell_face((1, 1, 1), 1, 1)
-    assert fi_b in (0, 1)
-    assert fi_a != fi_b
-    gcs.rework_face_pairs()
+    # add some basic grid properties
+    porosity_uuid = rqdm.add_one_grid_property_array(epc,
+                                                     np.full(g.extent_kji, 0.27),
+                                                     property_kind = 'porosity',
+                                                     title = 'porosity',
+                                                     uom = 'm3/m3')
+    assert porosity_uuid is not None
+    perm_uuid = rqdm.add_one_grid_property_array(epc,
+                                                 np.full(g.extent_kji, 152.0),
+                                                 property_kind = 'rock permeability',
+                                                 uom = 'mD',
+                                                 facet_type = 'direction',
+                                                 facet = 'IJK',
+                                                 title = 'permeability')
+    assert perm_uuid is not None
+
+    return epc
+
+
+def make_epc_with_abutting_grids(tmp_path):
+
+    epc = os.path.join(tmp_path, 'abutting_grids.epc')
+    model = rq.new_model(epc)
+
+    # create a grid
+    g0 = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0))
+    g0.create_xml()
+
+    g1 = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0), origin = (100.0, 400.0, 20.0))
+    g1.create_xml()
+
+    # create an empty grid connection set
+    gcs = rqf.GridConnectionSet(model, title = 'abut')
+
+    # populate the grid connection set at low level due to lack of multi-grid methods
+    gcs.grid_list = [g0, g1]
+    gcs.count = 6
+    gcs.grid_index_pairs = np.zeros((6, 2), dtype = int)
+    gcs.grid_index_pairs[:, 1] = 1
+    gcs.face_index_pairs = np.empty((6, 2), dtype = int)
+    gcs.face_index_pairs[:, 0] = gcs.face_index_map[1, 1]  # J+
+    gcs.face_index_pairs[:, 1] = gcs.face_index_map[1, 0]  # J-
+    gcs.cell_index_pairs = np.empty((6, 2), dtype = int)
+    cell = 0
+    for k in range(3):
+        for i in range(2):
+            gcs.cell_index_pairs[cell, 0] = g0.natural_cell_index((k + 2, 3, i + 1))
+            gcs.cell_index_pairs[cell, 1] = g1.natural_cell_index((k, 0, i))
+            cell += 1
+    # leave optional feature list & indices as None
+
+    # save the grid connection set
+    gcs.write_hdf5()
+    gcs.create_xml()
+    model.store_epc()
+
+    return epc
