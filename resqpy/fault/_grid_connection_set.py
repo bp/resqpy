@@ -1617,7 +1617,7 @@ class GridConnectionSet(BaseResqpy):
             return fis(paired, v, 0, len(paired))
 
         assert len(self.grid_list) == 1 and len(featured.grid_list) == 1
-        assert bu.matching_uuids(self.grid_list[0].uuid, featured.grid_list[0].uuid)
+        assert tuple(self.grid_list[0].extent_kji) == tuple(featured.grid_list[0].extent_kji)
 
         # build combined feature list and mapping of feature indices
         featured.cache_arrays()
@@ -1632,7 +1632,7 @@ class GridConnectionSet(BaseResqpy):
                 featured_index_map.append(len(self.feature_list))
                 self.feature_list.append(featured_triplet)
                 feature_uuid_list.append(featured_uuid)
-                self.model.copy_part_from_other_model(featured, featured.model.part(uuid = featured_uuid))
+                self.model.copy_part_from_other_model(featured.model, featured.model.part(uuid = featured_uuid))
 
         # convert cell index, face index to a single integer to facilitate sorting and comparison
         cell_face_index_self = self.compact_indices()

@@ -34,8 +34,11 @@ try:
     from .version import version as __version__  # type: ignore
 except ImportError:
     # Dev setup: Dynamically get version from local git history
-    from setuptools_scm import get_version
-    __version__ = get_version()
+    try:
+        from setuptools_scm import get_version
+        __version__ = get_version()
+    except Exception:
+        __version__ = "0.0.0-version-not-available"
 except Exception:
     __version__ = "0.0.0-version-not-available"
 
