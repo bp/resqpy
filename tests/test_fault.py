@@ -274,9 +274,6 @@ def test_two_fault_gcs(tmp_path):
 
 def test_feature_inheritance(tmp_path):
 
-    # TODO: remove temporary override of tmp_path
-    tmp_path = '/users/andy/bifröst/bc'
-
     epc = make_epc_with_gcs(tmp_path)
 
     # introduce a split version of the grid
@@ -294,7 +291,7 @@ def test_feature_inheritance(tmp_path):
                           set_bool = False,
                           set_crs = crs_uuid,
                           title = 'line b',
-                          set_coord = np.array([[-50.0, 300.0, 0.0], [350.0, 300.0, 0.0]]))
+                          set_coord = np.array([[-50.0, 200.0, 0.0], [350.0, 200.0, 0.0]]))
     fault_lines = rql.PolylineSet(model, polylines = [line_a, line_b], title = 'fault lines')
     assert fault_lines is not None
     fault_lines.write_hdf5()
@@ -327,13 +324,28 @@ def test_feature_inheritance(tmp_path):
     simple_gcs = rqf.GridConnectionSet(model, uuid = simple_gcs_uuid)
 
     # derive a grid connection set from fault juxtaposition, inheriting features from simple gcs
-    juxta_gcs = grid.fault_connection_set(compute_transmissibility = True,
-                                          add_to_model = True,
-                                          inherit_features_from = simple_gcs,
-                                          title = 'juxtaposed')
+    juxta_gcs, tr = grid.fault_connection_set(compute_transmissibility = True,
+                                              add_to_model = True,
+                                              inherit_features_from = simple_gcs,
+                                              title = 'juxtaposed')
     assert juxta_gcs is not None
+    assert tr is not None
 
-    # TODO: check that features have been inherited correctly
+    # check that features have been inherited correctly
+    assert juxta_gcs.number_of_features() == 2
+    feature_names = juxta_gcs.list_of_feature_names()
+    for fi in range(2):
+        if 'F1' in feature_names[fi]:
+            axis = 2
+        else:
+            assert 'F2' in feature_names[fi]
+            axis = 1
+        cfp_lists = juxta_gcs.list_of_cell_face_pairs_for_feature_index(fi)
+        assert len(cfp_lists) == 2 and len(cfp_lists[0]) == len(cfp_lists[1]) and len(cfp_lists[1]) > 0
+        for fip in cfp_lists[1]:
+            assert fip.shape == (2, 2)
+            assert np.all(fip[:, 0] == axis)
+            assert np.all(fip[0, 1] == 1 - fip[1, 1])
 
 
 def make_epc_with_gcs(tmp_path):
@@ -400,7 +412,7 @@ def make_epc_with_gcs(tmp_path):
                                                  uom = 'mD',
                                                  facet_type = 'direction',
                                                  facet = 'IJK',
-                                                 title = 'isotropic permeability')
+                                                 title = 'permeability')
     assert perm_uuid is not None
 
     return epc

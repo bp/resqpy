@@ -53,6 +53,7 @@ def fault_connection_set(grid,
 
     if inherit_features_from is not None:
         grid.fgcs.inherit_features(inherit_features_from)
+        grid.fgcs.clean_feature_list()
 
     if add_to_model:
         if grid.model.uuid(uuid = grid.fgcs.uuid) is None:
