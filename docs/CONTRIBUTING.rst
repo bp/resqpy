@@ -269,8 +269,9 @@ The version number is made available to users as an attribute of the module:
 
 .. code:: python
 
-   import resqpy
-   print(resqpy.__version__)
+   >>> import resqpy
+   >>> print(resqpy.__version__)
+   '1.6.1'
 
 When working with a development version of the code that does not correspond to
 a tagged release, the version number will look a little different, for example
