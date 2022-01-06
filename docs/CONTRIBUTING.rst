@@ -279,9 +279,9 @@ a tagged release, the version number will look a little different, for example
 
 This can be interpreted as:
 
-* ``1.6.2`` : this is the *next* expected release. The previous release would be ``1.6.1``.
-* ``dev301`` : 301 commits since the previous release.
-* ``+gddfbf6c`` : `+g`` prefix followed by current commit ID ``dfbf6c``.
+* ``1.6.2`` : is the *next* expected release. The previous release would be ``1.6.1``.
+* ``dev301`` : 301 commits added since the previous release.
+* ``+gddfbf6c`` : a ``+g`` prefix followed by current commit ID: ``dfbf6c``.
 
 How the version is generated
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
