@@ -22,7 +22,6 @@ def test_all_imports():
     return
 
 
-@pytest.mark.skip("Disabling until the build tools have been fixed.")
 def test_version():
     # This is dynamically created when package is built
     # If this fails when running tests locally, ensure you have installed the dev dependencies specified in setup.cfg
