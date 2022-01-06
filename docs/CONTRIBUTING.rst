@@ -262,6 +262,38 @@ Following [semantic versioning](https://semver.org/), increment the:
 * ``MINOR`` version when you add functionality in a backwards compatible manner, and
 * ``PATCH`` version when you make backwards compatible bug fixes.
 
+Interpreting version numbers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The version number is made available to users as an attribute of the module:
+
+.. code:: python
+
+   >>> import resqpy
+   >>> print(resqpy.__version__)
+   '1.6.1'
+
+When working with a development version of the code that does not correspond to
+a tagged release, the version number will look a little different, for example
+``1.6.2.dev301+gddfbf6c``.
+
+This can be interpreted as:
+
+* ``1.6.2`` : is the *next* expected release. The previous release would be ``1.6.1``.
+* ``dev301`` : 301 commits added since the previous release.
+* ``+gddfbf6c`` : a ``+g`` prefix followed by current commit ID: ``dfbf6c``.
+
+How the version is retreived
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The git history defines the version, and consequently the version number cannot
+be written in a file that is itself under source control.
+
+The package `setuptools_scm <https://github.com/pypa/setuptools_scm>`_ is used to
+extract the version number from the git history:
+
+* In a prod setup, the version is hard-coded in a file ``resqpy/version.py``.
+* In a development setup, the local git history is analysed.
 
 Get in touch
 ------------
