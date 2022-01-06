@@ -283,17 +283,17 @@ This can be interpreted as:
 * ``dev301`` : 301 commits added since the previous release.
 * ``+gddfbf6c`` : a ``+g`` prefix followed by current commit ID: ``dfbf6c``.
 
-How the version is generated
+How the version is retreived
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The git history is what defines the version number, and consequently the version
-cannot be written in a file that is itself under source control.
+The git history defines the version, and consequently the version number cannot
+be written in a file that is itself under source control.
 
 The package `setuptools_scm <https://github.com/pypa/setuptools_scm>`_ is used to
 extract the version number from the git history:
 
-* In a development setup, the local git is used.
-* In a built release, the version is hard-coded into a file ``resqpy/version.py``.
+* In a prod setup, the version is hard-coded in a file ``resqpy/version.py``.
+* In a development setup, the local git history is analysed.
 
 Get in touch
 ------------
