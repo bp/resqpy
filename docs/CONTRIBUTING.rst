@@ -66,6 +66,10 @@ Development environment setup
 
    .. code-block:: bash
 
+      # Get pinned versions of 3rd party libs for repeatable setup
+      pip install -r requirements.txt
+
+      # Intall resqpy lib in editable mode (adds local clone to pythonpath)
       pip install --editable .[tests,docs]
 
    Be sure to execute the above command from the top level of the repository.
@@ -281,7 +285,7 @@ This can be interpreted as:
 
 * ``1.6.2`` : is the *next* expected release. The previous release would be ``1.6.1``.
 * ``dev301`` : 301 commits added since the previous release.
-* ``+gddfbf6c`` : a ``+g`` prefix followed by current commit ID: ``dfbf6c``.
+* ``+gddfbf6c`` : a ``+g`` prefix followed by current commit ID: ``ddfbf6c``.
 
 How the version is retreived
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
