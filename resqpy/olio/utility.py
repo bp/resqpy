@@ -10,7 +10,7 @@ from typing import Union, List, Tuple
 def kji0_from_ijk1(index_ijk1: npt.NDArray[np.int_]) -> npt.NDArray[np.int_]:  # reverse order of indices and subtract 1
     """Returns index converted from simulator protocol to python protocol."""
     dims = index_ijk1.size
-    result = np.zeros(dims, dtype='int')
+    result = np.zeros(dims, dtype = 'int')
     for d in range(dims):
         result[d] = index_ijk1[dims - d - 1] - 1
     return result
@@ -19,16 +19,17 @@ def kji0_from_ijk1(index_ijk1: npt.NDArray[np.int_]) -> npt.NDArray[np.int_]:  #
 def ijk1_from_kji0(index_kji0: npt.NDArray[np.int_]) -> npt.NDArray[np.int_]:  # reverse order of indices and add 1
     """Returns index converted from python protocol to simulator protocol."""
     dims = index_kji0.size
-    result = np.zeros(dims, dtype='int')
+    result = np.zeros(dims, dtype = 'int')
     for d in range(dims):
         result[d] = index_kji0[dims - d - 1] + 1
     return result
 
 
-def extent_switch_ijk_kji(extent_in: npt.NDArray[np.int_]) -> npt.NDArray[np.int_]:  # reverse order of elements in extent
+def extent_switch_ijk_kji(
+        extent_in: npt.NDArray[np.int_]) -> npt.NDArray[np.int_]:  # reverse order of elements in extent
     """Returns equivalent grid extent switched either way between simulator and python protocols."""
     dims = extent_in.size
-    result = np.zeros(dims, dtype='int')
+    result = np.zeros(dims, dtype = 'int')
     for d in range(dims):
         result[d] = extent_in[dims - d - 1]
     return result
