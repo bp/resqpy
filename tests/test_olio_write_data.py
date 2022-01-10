@@ -20,7 +20,7 @@ def test_write_pure_binary_data(mocker: MockerFixture, caplog):
     wd.write_pure_binary_data('test', test_array)
 
     # Assert
-    assert f'Binary data file test created' in caplog.text
+    assert 'Binary data file test created' in caplog.text
 
 
 def test_write_array_to_ascii_file_decimals_equal_0(mocker: MockerFixture):
@@ -82,7 +82,7 @@ def test_write_array_to_ascii_file_binary(mocker: MockerFixture, caplog):
 
     # Assert
     open_mock.assert_has_calls(expected_calls)
-    assert f'Failed to write data to binary file test' not in caplog.text
+    assert 'Failed to write data to binary file test' not in caplog.text
 
 
 def test_write_array_to_ascii_file_no_headers(mocker: MockerFixture):
