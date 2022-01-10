@@ -53,7 +53,10 @@ def binary_file_extension_and_np_type_for_data_type(data_type: str) -> Tuple[str
     binary_file_ext_and_type = {
         'real': ('.db', np.dtype('f8')),
         'float': ('.db', np.dtype('f8')),
-        'int': ('.lb', np.dtype('i8'), ),
+        'int': (
+            '.lb',
+            np.dtype('i8'),
+        ),
         'integer': ('.lb', np.dtype('i8')),
         'bool': ('.bb', np.dtype('?')),
         'boolean': ('.bb', np.dtype('?'))
