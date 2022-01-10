@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 
 ab_dtype_dict = {'.db': np.float64, '.fb': np.float32, '.lb': np.int64, '.ib': np.int32, '.bb': np.int8}
 
@@ -47,7 +47,7 @@ def cp_binary_filename(file_name, nexus_ordering = True):
         return root_name + '.reseq.db'
 
 
-def binary_file_extension_and_np_type_for_data_type(data_type: str) -> Tuple[str, np.dtype]:
+def binary_file_extension_and_np_type_for_data_type(data_type: str) -> Optional[Tuple[str, np.dtype]]:
     """Returns a file extension suitable for a pure binary array (ab) file of given data type."""
 
     binary_file_ext_and_type = {
