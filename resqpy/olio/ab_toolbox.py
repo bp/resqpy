@@ -66,3 +66,4 @@ def binary_file_extension_and_np_type_for_data_type(data_type: str) -> Optional[
         return binary_file_ext_and_type.get(data_type)
     except KeyError:
         log.error(f'Unknown data_type [{data_type}] passed to binary_file_extension_and_np_type_for_data_type')
+        raise
