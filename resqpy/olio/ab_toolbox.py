@@ -9,6 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+from typing import Tuple, Optional
 
 ab_dtype_dict = {'.db': np.float64, '.fb': np.float32, '.lb': np.int64, '.ib': np.int32, '.bb': np.int8}
 
@@ -46,19 +47,23 @@ def cp_binary_filename(file_name, nexus_ordering = True):
         return root_name + '.reseq.db'
 
 
-def binary_file_extension_and_np_type_for_data_type(data_type):
+def binary_file_extension_and_np_type_for_data_type(data_type: str) -> Optional[Tuple[str, np.dtype]]:
     """Returns a file extension suitable for a pure binary array (ab) file of given data type."""
 
-    if data_type in ['real', 'float']:
-        ab_type = np.dtype('f8')  # 8 byte floating point (-double in ab_* suite)
-        extension = '.db'
-    elif data_type in ['int', 'integer']:
-        ab_type = np.dtype('i8')  # NB: 8 byte integers not currently supported by ab_* suite
-        extension = '.lb'
-    elif data_type in ['bool', 'boolean']:
-        ab_type = np.dtype('?')  # single byte boolean (-byte in ab_* suite)
-        extension = '.bb'
-    else:
-        log.error('Unknown data_type [%s] passed to load_array_from_file()', data_type)
-        assert (False)
-    return (extension, ab_type)
+    binary_file_ext_and_type = {
+        'real': ('.db', np.dtype('f8')),
+        'float': ('.db', np.dtype('f8')),
+        'int': (
+            '.lb',
+            np.dtype('i8'),
+        ),
+        'integer': ('.lb', np.dtype('i8')),
+        'bool': ('.bb', np.dtype('?')),
+        'boolean': ('.bb', np.dtype('?'))
+    }
+
+    try:
+        return binary_file_ext_and_type.get(data_type)
+    except KeyError:
+        log.error(f'Unknown data_type [{data_type}] passed to binary_file_extension_and_np_type_for_data_type')
+        raise
