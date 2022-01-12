@@ -16,13 +16,14 @@ import resqpy.model as rq
 import resqpy.olio.intersection as meet
 import resqpy.olio.vector_utilities as vec
 
+
 # _ccw_t() no longer needed: triangle vertices maintained in anti-clockwise order throughout
 # def _ccw_t(p, t):   # puts triangle vertex indices into anti-clockwise order, in situ
 #    if vec.clockwise(p[t[0]], p[t[1]], p[t[2]]) > 0.0:
 #       t[1], t[2] = t[2], t[1]
 
 
-def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = None):
+def _dt_simple(po, plot_fn=None, progress_fn=None, container_size_factor=None):
     # returns Delauney triangulation of po and list of hull point indices, using a simple algorithm
 
     def flip(ei):
@@ -90,13 +91,13 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     if n_p < 3:
         return None, None  # not enough points
     elif n_p == 3:
-        return np.array([0, 1, 2], dtype = int).reshape((1, 3)), np.array([0, 1, 2], dtype = int)
+        return np.array([0, 1, 2], dtype=int).reshape((1, 3)), np.array([0, 1, 2], dtype=int)
 
     if progress_fn is not None:
         progress_fn(0.0)
 
-    min_xy = np.min(po[:, :2], axis = 0)
-    max_xy = np.max(po[:, :2], axis = 0)
+    min_xy = np.min(po[:, :2], axis=0)
+    max_xy = np.max(po[:, :2], axis=0)
     dxy = max_xy - min_xy
     assert dxy[0] > 0.0 and dxy[1] > 0.0, 'points lie in straight line or are conincident'
     p = np.empty((n_p + 3, 2))
@@ -108,23 +109,23 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     p[-1] = (min_xy[0] + 0.5 * csf * dxy[0], max_xy[1] + 0.8 * csf * dxy[1])
 
     # triangle vertex indices
-    t = np.empty((2 * n_p + 2, 3), dtype = int)  # empty space for triangle vertex indices
+    t = np.empty((2 * n_p + 2, 3), dtype=int)  # empty space for triangle vertex indices
     t[0] = (n_p, n_p + 1, n_p + 2)  # initial set of one containing triangle
     nt = 1  # number of triangles so far populated
 
     # edges: list of indices of triangles and edge within triangle; -1 indicates no triangle using edge
-    e = np.full((3 * n_p + 6, 2, 2), fill_value = -1, dtype = int)
+    e = np.full((3 * n_p + 6, 2, 2), fill_value=-1, dtype=int)
     e[:3, 0, 0] = 0
     for edge in range(3):
         e[edge, 0, 1] = edge
     ne = 3  # number of edges so far in use
 
     # edge indices (in e) for each triangle, first axis indexed in sync with t
-    te = np.empty((2 * n_p + 2, 3), dtype = int)  # empty space for triangle edge indices
+    te = np.empty((2 * n_p + 2, 3), dtype=int)  # empty space for triangle edge indices
     te[0] = (0, 1, 2)
 
     # mask tracking which edges have been flipped
-    fm = np.zeros((3 * n_p + 6), dtype = bool)
+    fm = np.zeros((3 * n_p + 6), dtype=bool)
 
     # debug plot here
     #   if plot_fn: plot_fn(p, t[:nt])
@@ -195,11 +196,11 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
         progress_count -= 1
 
     # remove any triangles using invented container vertices
-    tri_set = t[np.where(np.all(t[:nt] < n_p, axis = 1))]
+    tri_set = t[np.where(np.all(t[:nt] < n_p, axis=1))]
     if plot_fn is not None:
         plot_fn(p, tri_set)
 
-    external_t = t[np.where(np.any(t[:nt] >= n_p, axis = 1))]
+    external_t = t[np.where(np.any(t[:nt] >= n_p, axis=1))]
     external_pi = np.unique(external_t)[:-3]  # discard 3 invented container vertices
 
     if progress_fn is not None:
@@ -208,7 +209,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     return tri_set, external_pi
 
 
-def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
+def dt(p, algorithm=None, plot_fn=None, progress_fn=None, container_size_factor=100.0, return_hull=False):
     """Returns the Delauney Triangulation of 2D point set p.
 
     arguments:
@@ -239,9 +240,9 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
 
     if algorithm == 'simple':
         t, boundary = _dt_simple(p,
-                                 plot_fn = plot_fn,
-                                 progress_fn = progress_fn,
-                                 container_size_factor = container_size_factor)
+                                 plot_fn=plot_fn,
+                                 progress_fn=progress_fn,
+                                 container_size_factor=container_size_factor)
         if return_hull:
             return t, vec.clockwise_sorted_indices(p, boundary)
         else:
@@ -518,7 +519,7 @@ def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[n
                                                   ci_for_p, out_pair_intersect_segments)
 
             #  remove circumcircle centres that are outwith area of interest
-            ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
+            ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype=int)
 
             # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
             azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
@@ -542,10 +543,10 @@ def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[n
     # create temporary polyline for hull of triangulation
     hull = rql.Polyline(
         aoi.model,
-        set_bool = True,  # polyline is closed
-        set_coord = p[b],
-        set_crs = aoi.crs_uuid,
-        title = 'triangulation hull')
+        set_bool=True,  # polyline is closed
+        set_coord=p[b],
+        set_crs=aoi.crs_uuid,
+        title='triangulation hull')
     hull_count = len(b)
 
     # check for concavities in hull
@@ -572,9 +573,9 @@ def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[n
     # 6. extended ccc for hull points
     # (5 & 6 only used during construction)
     c = np.concatenate((c, aoi.coordinates[:, :2], np.zeros(
-        (hull_count, 2), dtype = float), np.zeros(
-            (2 * o_count, 2), dtype = float), np.zeros((hull_count, 2),
-                                                       dtype = float), np.zeros((hull_count, 2), dtype = float)))
+        (hull_count, 2), dtype=float), np.zeros(
+        (2 * o_count, 2), dtype=float), np.zeros((hull_count, 2),
+                                                 dtype=float), np.zeros((hull_count, 2), dtype=float)))
     aoi_count = len(aoi.coordinates)
     ca_count = c_count + aoi_count
     cah_count = ca_count + hull_count
@@ -584,15 +585,15 @@ def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[n
 
     #  compute intersection points between hull edge normals and aoi polyline
     # also extended virtual centres for hull edges
-    extension_scaling = 1000.0 * np.sum((np.max(aoi.coordinates, axis = 0) - np.min(aoi.coordinates, axis = 0))[:2])
-    aoi_intersect_segments = np.empty((hull_count,), dtype = int)
+    extension_scaling = 1000.0 * np.sum((np.max(aoi.coordinates, axis=0) - np.min(aoi.coordinates, axis=0))[:2])
+    aoi_intersect_segments = np.empty((hull_count,), dtype=int)
     for ei in range(hull_count):
         # use segment midpoint and normal methods of hull to project out
         m = hull.segment_midpoint(ei)[:2]  # midpoint
         norm_vec = hull.segment_normal(ei)[:2]
         n = m + norm_vec  # point on normal
         # use first intersection method of aoi to intersect projected normal from triangulation hull
-        aoi_seg, aoi_x, aoi_y = aoi.first_line_intersection(m[0], m[1], n[0], n[1], half_segment = True)
+        aoi_seg, aoi_x, aoi_y = aoi.first_line_intersection(m[0], m[1], n[0], n[1], half_segment=True)
         assert aoi_seg is not None
         # inject intersection points to extension area of c and take note of aoi segment of intersection
         c[ca_count + ei] = (aoi_x, aoi_y)
@@ -607,8 +608,8 @@ def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[n
         c[cahon_count + ei] = hull.coordinates[ei, :2] + extension_scaling * vector
 
     # where cicrumcircle centres are outwith aoi, compute intersections of normals of wing edges with aoi
-    out_pair_intersect_segments = np.empty((o_count, 2), dtype = int)
-    wing_hull_segments = np.empty((o_count, 2), dtype = int)
+    out_pair_intersect_segments = np.empty((o_count, 2), dtype=int)
+    wing_hull_segments = np.empty((o_count, 2), dtype=int)
     for oi, ti in enumerate(tc_outwith_aoi):
         tpi = __shorter_sides_p_i(p[t[ti]])
         for wing in range(2):
@@ -616,14 +617,14 @@ def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[n
             m = 0.5 * (p[t[ti, tpi - 1]] + p[t[ti, tpi]])[:2]  # triangle edge midpoint
             edge_v = p[t[ti, tpi]] - p[t[ti, tpi - 1]]
             n = m + np.array((-edge_v[1], edge_v[0]))  # point on perpendicular bisector of triangle edge
-            o_seg, o_x, o_y = aoi.first_line_intersection(m[0], m[1], n[0], n[1], half_segment = True)
+            o_seg, o_x, o_y = aoi.first_line_intersection(m[0], m[1], n[0], n[1], half_segment=True)
             c[cah_count + 2 * oi + wing] = (o_x, o_y)
             out_pair_intersect_segments[oi, wing] = o_seg
             wing_hull_segments[oi, wing], _, _ = hull.first_line_intersection(m[0],
                                                                               m[1],
                                                                               n[0],
                                                                               n[1],
-                                                                              half_segment = True)
+                                                                              half_segment=True)
             tpi = (tpi + 1) % 3
 
     v = __veroni_cells(aoi_count, aoi_intersect_segments, b, c, c_count, ca_count, cah_count, caho_count, cahon_count,
@@ -632,7 +633,7 @@ def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[n
     return c[:caho_count], v
 
 
-def triangulated_polygons(p, v, centres = None):
+def triangulated_polygons(p, v, centres=None):
     """Returns triangulation of polygons using centres as extra points.
 
     arguments:
@@ -663,7 +664,7 @@ def triangulated_polygons(p, v, centres = None):
         assert len(centres) == len(v)
         assert centres.shape[1] == p.shape[1]
 
-    model = rq.Model(create_basics = True)  # temporary object for handling Polylines
+    model = rq.Model(create_basics=True)  # temporary object for handling Polylines
     crs = rqc.Crs(model)
 
     points = np.zeros((len(p) + len(v), p.shape[1]))  # polygon nodes, to be extended with centre points
@@ -672,18 +673,18 @@ def triangulated_polygons(p, v, centres = None):
         points[len(p):] = centres
 
     t_count = sum([len(x) for x in v])
-    triangles = np.empty((t_count, 3), dtype = int)
+    triangles = np.empty((t_count, 3), dtype=int)
     t_index = 0
 
     for cell, poly_vertices in enumerate(v):
-        # add polygon centre points to point array, if not already provided
+        # add polygon centre points to points array, if not already provided
         centre_i = len(p) + cell
         if centres is None:
             polygon = rql.Polyline(model,
-                                   set_coord = p[np.array(poly_vertices, dtype = int)],
-                                   set_bool = True,
-                                   set_crs = crs.uuid,
-                                   title = 'v cell')
+                                   set_coord=p[np.array(poly_vertices, dtype=int)],
+                                   set_bool=True,
+                                   set_crs=crs.uuid,
+                                   title='v cell')
             poly_centre = polygon.balanced_centre()
             points[centre_i] = poly_centre[:p.shape[1]]
         # and populate triangles for this polygon
