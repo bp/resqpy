@@ -62,84 +62,54 @@ class RelPerm(DataFrame):
         if uuid is not None:
             model_root = model.root(uuid = uuid)
             uuid_metadata_dict = rqet.load_metadata_from_xml(model_root)
-            phase_combo = uuid_metadata_dict['phase_combo']
-            low_sal = uuid_metadata_dict['low_sal']
-            table_index = uuid_metadata_dict['table_index']
+            self.phase_combo = uuid_metadata_dict['phase_combo']
+            self.low_sal = uuid_metadata_dict['low_sal']
+            self.table_index = uuid_metadata_dict['table_index']
 
-        elif df is not None:
+        else:
             # check that 'phase_combo' parameter is valid
-            processed_phase_combo = set([x.strip() for x in str(phase_combo).split('-')])
-            if processed_phase_combo not in [{'water', 'oil'}, {'gas', 'oil'}, {'gas', 'water'}, {'None'}]:
+            self.phase_combo = phase_combo
+            self.low_sal = low_sal
+            self.table_index = table_index
+
+            df.columns = [x.capitalize() for x in df.columns]
+            if 'Pc' in df.columns and df.columns[-1] != 'Pc':
+                raise ValueError('Pc', 'capillary pressure data should be in the last column of the dataframe')
+
+            processed_phase_combo_checks = {
+                ('oil', 'water'): self.__water_oil_error_check,
+                ('gas', 'oil'): self.__gas_oil_error_check,
+                ('gas', 'water'): self.__gas_water_error_check,
+                ('None',): self.__no_phase_combo_error_check
+            }
+
+            processed_phase_combo = tuple(sorted(set([x.strip() for x in str(self.phase_combo).split('-')])))
+            if processed_phase_combo not in processed_phase_combo_checks.keys():
                 raise ValueError('invalid phase_combo provided')
             # check that table_index is >= 1
-            if table_index is not None:
-                if table_index < 1:
-                    raise ValueError('table_index cannot be less than 1')
+            if table_index is not None and table_index < 1:
+                raise ValueError('table_index cannot be less than 1')
             # check that the column names and order are as expected
-            df.columns = [x.capitalize() for x in df.columns]
-            if 'Pc' in df.columns:
-                if df.columns[-1] != 'Pc':
-                    raise ValueError('Pc', 'capillary pressure data should be in the last column of the dataframe')
-            if phase_combo is not None:
-                if processed_phase_combo == {'water', 'oil'}:
-                    expected_cols = {'Sw', 'So', 'Krw', 'Kro', 'Pc'}
-                    sat_cols = {'Sw', 'So'}
-                    if df.columns[0] not in sat_cols or len(set(df.columns).intersection(sat_cols)) != 1:
-                        raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
-                    if not set(df.columns).issubset(expected_cols):
-                        raise ValueError(f'incorrect column name(s) {set(df.columns).difference(expected_cols)}')
-                elif processed_phase_combo == {'gas', 'oil'}:
-                    expected_cols = {'Sg', 'So', 'Krg', 'Kro', 'Pc'}
-                    sat_cols = {'Sg', 'So'}
-                    if df.columns[0] not in sat_cols or len(set(df.columns).intersection(sat_cols)) != 1:
-                        raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
-                    if not set(df.columns).issubset(expected_cols):
-                        raise ValueError(f'incorrect column name(s) {set(df.columns).difference(expected_cols)}')
-                elif processed_phase_combo == {'gas', 'water'}:
-                    expected_cols = {'Sg', 'Sw', 'Krg', 'Krw', 'Pc'}
-                    sat_cols = {'Sg', 'Sw'}
-                    if df.columns[0] not in sat_cols or len(set(df.columns).intersection(sat_cols)) != 1:
-                        raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
-                    if not set(df.columns).issubset(expected_cols):
-                        raise ValueError(f'incorrect column name(s) {set(df.columns).difference(expected_cols)}')
-            elif phase_combo is None:
-                if df.columns[0] not in ['Sw', 'Sg', 'So'
-                                        ] or len(set(df.columns).intersection({'Sw', 'Sg', 'So'})) != 1:
-                    raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
-                if set(df.columns).issubset({'Sw', 'So', 'Krw', 'Kro', 'Pc'}) and len(set(df.columns)) >= 3:
-                    phase_combo = 'water-oil'
-                elif set(df.columns).issubset({'Sg', 'So', 'Krg', 'Kro', 'Pc'}) and len(set(df.columns)) >= 3:
-                    phase_combo = 'gas-oil'
-                elif set(df.columns).issubset({'Sg', 'Sw', 'Krg', 'Krw', 'Pc'}) and len(set(df.columns)) >= 3:
-                    phase_combo = 'gas-water'
-                else:
-                    raise Exception('unexpected number of columns and/or column headers')
-
+            processed_phase_combo_checks.get(processed_phase_combo)(df)
             # ensure that missing capillary pressure values are stored as np.nan
-            for col in df.columns:
-                if col.capitalize() == 'Pc':
-                    df[col].replace('None', np.nan, inplace = True)
-
+            if 'Pc' in df.columns:
+                df['Pc'].replace('None', np.nan, inplace = True)
             # convert all values in the dataframe to numeric type
-            df_cols = df.columns
-            df[df_cols] = df[df_cols].apply(pd.to_numeric, errors = 'coerce')
-
+            df[df.columns] = df[df.columns].apply(pd.to_numeric, errors = 'coerce')
             # ensure that no other column besides Pc has missing values
-            cols_no_pc = [x for x in df.columns if 'pc' != x.lower()]
+            cols_no_pc = [x for x in df.columns if 'Pc' != x]
             for col in cols_no_pc:
-                if (df[col].isnull().sum() > 0) | ('None' in list(df[col])):
+                if (df[col].isnull().sum() > 0) or ('None' in list(df[col])):
                     raise Exception(f'missing values found in {col} column')
 
             # check that Sw, Kr and Pc values are monotonic and that the Sw and Kr values are within the range 0-1
             sat_col = [x for x in df.columns if x[0] == 'S'][0]
             relp_corr_col = [x for x in df.columns if x == 'Kr' + sat_col[-1]][0]
             relp_opp_col = [x for x in df.columns if (x[0:2] == 'Kr') & (x[-1] != sat_col[-1])][0]
-            if (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[
-                relp_opp_col].is_monotonic_decreasing) or \
-                (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and
-                    df[relp_opp_col].is_monotonic):
-                pass
-            else:
+            if not (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[
+                relp_opp_col].is_monotonic_decreasing) and not \
+                    (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and
+                     df[relp_opp_col].is_monotonic):
                 raise ValueError(f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic')
             if 'Pc' in df.columns:
                 if not df['Pc'].dropna().is_monotonic and not df['Pc'].dropna().is_monotonic_decreasing:
@@ -160,13 +130,44 @@ class RelPerm(DataFrame):
                          uom_lookup_uuid = uom_lookup_uuid,
                          extra_metadata = {
                              'relperm_table': 'true',
-                             'phase_combo': phase_combo,
-                             'low_sal': str(low_sal).lower(),
-                             'table_index': str(table_index)
+                             'phase_combo': self.phase_combo,
+                             'low_sal': str(self.low_sal).lower(),
+                             'table_index': str(self.table_index)
                          })
-        self.phase_combo = phase_combo
-        self.low_sal = low_sal
-        self.table_index = table_index
+
+    @staticmethod
+    def __error_check(expected_cols, sat_cols, df):
+        if df.columns[0] not in sat_cols or len(set(df.columns).intersection(sat_cols)) != 1:
+            raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
+        if not set(df.columns).issubset(expected_cols):
+            raise ValueError(f'incorrect column name(s) {set(df.columns).difference(expected_cols)}')
+
+    def __water_oil_error_check(self, df):
+        expected_cols = {'Sw', 'So', 'Krw', 'Kro', 'Pc'}
+        sat_cols = {'Sw', 'So'}
+        self.__error_check(expected_cols, sat_cols, df)
+
+    def __gas_oil_error_check(self, df):
+        expected_cols = {'Sg', 'So', 'Krg', 'Kro', 'Pc'}
+        sat_cols = {'Sg', 'So'}
+        self.__error_check(expected_cols, sat_cols, df)
+
+    def __gas_water_error_check(self, df):
+        expected_cols = {'Sg', 'Sw', 'Krg', 'Krw', 'Pc'}
+        sat_cols = {'Sg', 'Sw'}
+        self.__error_check(expected_cols, sat_cols, df)
+
+    def __no_phase_combo_error_check(self, df):
+        if df.columns[0] not in ['Sw', 'Sg', 'So'] or len(set(df.columns).intersection({'Sw', 'Sg', 'So'})) != 1:
+            raise ValueError('incorrect saturation column name and/or multiple saturation columns exist')
+        if set(df.columns).issubset({'Sw', 'So', 'Krw', 'Kro', 'Pc'}) and len(set(df.columns)) >= 3:
+            self.phase_combo = 'water-oil'
+        elif set(df.columns).issubset({'Sg', 'So', 'Krg', 'Kro', 'Pc'}) and len(set(df.columns)) >= 3:
+            self.phase_combo = 'gas-oil'
+        elif set(df.columns).issubset({'Sg', 'Sw', 'Krg', 'Krw', 'Pc'}) and len(set(df.columns)) >= 3:
+            self.phase_combo = 'gas-water'
+        else:
+            raise Exception('unexpected number of columns and/or column headers')
 
     def interpolate_point(self, saturation, kr_or_pc_col):
         """Returns a tuple of the saturation value and the corresponding interpolated rel. perm. or cap. pressure value.
