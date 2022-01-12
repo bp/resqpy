@@ -18,6 +18,7 @@ def test_write_pure_binary_data(mocker: MockerFixture, caplog):
     wd.write_pure_binary_data('test', test_array)
 
     # Assert
+    open_mock.assert_has_calls(expected_calls)
     assert 'Binary data file test created' in caplog.text
 
 
