@@ -11,11 +11,13 @@ All contributors (alphabetical order):
 * Andrew Ediriscoriya
 * Andy Beer
 * Casey Warshauer
+* Chris Flynn
 * Connor Tann
 * Duncan Hunter
 * Emma Nesbit
 * Jeremy Tillay
 * Kadija Hassanali
+* Max Maunder
 * Nathan Lane
 * Nirjhor Chakraborty
 
@@ -53,28 +55,26 @@ Development environment setup
 
 2. Set up a Python environment
 
-   It is recommended that you set up an isolated Python environment, using conda or virtualenv. 
+   The RESQPY project uses `Poetry <https://python-poetry.org/>`_ for dependency management and environment setup. Please `install Poetry <https://python-poetry.org/docs/#osx--linux--bashonwindows-install-instructions>`_ first if you have not already done so.
+   With Poetry installed, the environment can then be setup automatically with all dependencies installed using:
 
    .. code-block:: bash
 
-      conda create -n resqpy python=3.7
-      conda activate resqpy
+      poetry install
         
-   You should then make an “editable” installation of the package into your
-   local environment. This will also install required dependencies, including
-   extra packages required for running unit tests and building documentation.
+   You can then switch to the virtual environment that you have just created using:
 
    .. code-block:: bash
 
-      # Get pinned versions of 3rd party libs for repeatable setup
-      pip install -r requirements.txt
+      poetry shell
 
-      # Intall resqpy lib in editable mode (adds local clone to pythonpath)
-      pip install --editable .[tests,docs]
+   Whilst inside the virtual environment, you can run all of the unit tests to confirm that the setup was successful using the command:
 
-   Be sure to execute the above command from the top level of the repository.
-   The full stop ``.`` instructs pip to find the Python package in the current
-   working directory.
+   .. code-block:: bash
+
+      pytest
+
+   If at a later date you wish to ensure that the dependencies in your dev environment are up to date with the latest supported versions, you can again run `poetry install` and your libraries will automatically be updated.
     
 3. Make a Pull Request
 
