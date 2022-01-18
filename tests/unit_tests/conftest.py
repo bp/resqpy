@@ -87,7 +87,6 @@ def example_model_with_well(example_model_and_crs):
 
 @pytest.fixture
 def example_model_with_logs(example_model_with_well):
-
     model, well_interp, datum, traj = example_model_with_well
 
     frame = WellboreFrame(
@@ -112,7 +111,7 @@ def test_data_path(tmp_path):
 
    Use a fresh temporary directory for each test.
    """
-    master_path = (Path(__file__) / '../test_data').resolve()
+    master_path = (Path(__file__) / '../../test_data').resolve()
     data_path = Path(tmp_path) / 'test_data'
 
     assert master_path.exists()
