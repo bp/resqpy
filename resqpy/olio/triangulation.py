@@ -7,6 +7,8 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+import numpy.typing as npt
+from typing import Tuple, List
 
 import resqpy.crs as rqc
 import resqpy.lines as rql
@@ -88,7 +90,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     if n_p < 3:
         return None, None  # not enough points
     elif n_p == 3:
-        return (np.array([0, 1, 2], dtype = int).reshape((1, 3)), np.array([0, 1, 2], dtype = int))
+        return np.array([0, 1, 2], dtype = int).reshape((1, 3)), np.array([0, 1, 2], dtype = int)
 
     if progress_fn is not None:
         progress_fn(0.0)
@@ -267,7 +269,8 @@ def ccc(p1, p2, p3):
     return meet.line_line_intersect(m12[0], m12[1], o12[0], o12[1], m13[0], m13[1], o13[0], o13[1])
 
 
-def voronoi(p, t, b, aoi):
+def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[np.int_], aoi: rql.Polyline) -> \
+        Tuple[npt.NDArray[np.float_], List[List[npt.NDArray[np.int_]]]]:
     """Returns dual Voronoi diagram for a Delauney triangulation.
 
     arguments:
@@ -295,7 +298,7 @@ def voronoi(p, t, b, aoi):
     # all the triangles that make use of the point – currently understood to be always the case
     # for a Delauney triangulation
 
-    def aoi_intervening_nodes(aoi_count, c_count, seg_a, seg_c):
+    def __aoi_intervening_nodes(aoi_count, c_count, seg_a, seg_c):
         nodes = []
         seg = seg_a
         while seg != seg_c:
@@ -303,7 +306,7 @@ def voronoi(p, t, b, aoi):
             nodes.append(c_count + seg)
         return nodes
 
-    def shorter_sides_p_i(p3):
+    def __shorter_sides_p_i(p3):
         max_length = -1.0
         max_i = None
         for i in range(3):
@@ -313,12 +316,12 @@ def voronoi(p, t, b, aoi):
                 max_i = i
         return max_i
 
-    def azi_between(a, c, t):
+    def __azi_between(a, c, t):
         if c < a:
             c += 360.0
         return (a <= t <= c) or (a <= t + 360.0 <= c)
 
-    def seg_for_ci(ci):  # returns hull segment for a boundary index
+    def __seg_for_ci(ci):  # returns hull segment for a boundary index
         nonlocal ca_count, cah_count, caho_count, cahon_count, wing_hull_segments
         if ci < ca_count:
             return None
@@ -332,8 +335,202 @@ def voronoi(p, t, b, aoi):
         # else virtual centre for hull point; arbitrarily pick clockwise segment
         return ci - cahon_count
 
+    def __intervening_aoi_indices(aoi_count, aoi_intersect_segments, c_count, ca_count, cah_count, ci_for_p,
+                                  out_pair_intersect_segments):
+        # build list of intervening aoi boundary point indices and append to list
+        aoi_nodes = []
+        r = [0] if len(ci_for_p) == 2 else range(len(ci_for_p))
+        just_done_pair = False
+        for cii in r:
+            cip = ci_for_p[cii]
+            ci = ci_for_p[(cii + 1) % len(ci_for_p)]
+            if cip >= c_count and ci >= c_count and not just_done_pair:
+                # identify aoi segments
+                if cip < cah_count:
+                    aoi_seg_a = aoi_intersect_segments[cip - ca_count]
+                else:
+                    aoi_seg_a = out_pair_intersect_segments[divmod(cip - cah_count, 2)]
+                if ci < cah_count:
+                    aoi_seg_c = aoi_intersect_segments[ci - ca_count]
+                else:
+                    aoi_seg_c = out_pair_intersect_segments[divmod(ci - cah_count, 2)]
+                aoi_nodes += __aoi_intervening_nodes(aoi_count, c_count, aoi_seg_a, aoi_seg_c)
+                just_done_pair = True
+            else:
+                just_done_pair = False
+        return aoi_nodes
+
+    def __ci_non_hull(b_i, c, c_count, ci_for_p, p, p_i):
+        trimmed_ci = []
+        cii = 0
+        finish_at = len(ci_for_p)
+        while cii < finish_at:
+            if ci_for_p[cii] < c_count:
+                trimmed_ci.append(ci_for_p[cii])
+                cii += 1
+                continue
+            start_cii = cii
+            cii_seg = __seg_for_ci(ci_for_p[cii])
+            while cii == 0 and ci_for_p[start_cii - 1] >= c_count and __seg_for_ci(ci_for_p[start_cii - 1]) == cii_seg:
+                start_cii -= 1
+            start_cii = start_cii % len(ci_for_p)
+            end_cii = cii + 1
+            while end_cii < len(ci_for_p) and ci_for_p[end_cii] >= c_count and __seg_for_ci(
+                    ci_for_p[end_cii]) == cii_seg:
+                end_cii += 1
+            end_cii -= 1  # unpythonesque: end element included in scan
+            if end_cii == start_cii:
+                trimmed_ci.append(ci_for_p[cii])
+                cii += 1
+                continue
+            if end_cii < start_cii:
+                finish_at = start_cii
+            if end_cii == (start_cii + 1) % len(ci_for_p):
+                trimmed_ci.append(ci_for_p[start_cii])
+                trimmed_ci.append(ci_for_p[end_cii])
+                cii = end_cii + 1
+                continue
+            start_azi = vec.azimuth(c[ci_for_p[start_cii]] - p[p_i, :2])
+            end_azi = vec.azimuth(c[ci_for_p[end_cii]] - p[p_i, :2])
+            scan_cii = start_cii
+            while True:
+                if scan_cii == start_cii:
+                    trimmed_ci.append(ci_for_p[scan_cii])
+                elif scan_cii == end_cii:
+                    trimmed_ci.append(ci_for_p[scan_cii])
+                    break
+                else:
+                    # if point is around a hull corner from previous, then include (?)
+                    next_cii = (scan_cii + 1) % len(ci_for_p)
+                    if b_i is None and __seg_for_ci(ci_for_p[scan_cii]) != __seg_for_ci(ci_for_p[next_cii]):
+                        trimmed_ci.append(ci_for_p[scan_cii])
+                        trimmed_ci.append(ci_for_p[next_cii])
+                        scan_cii = next_cii
+                    elif b_i is None and __seg_for_ci(trimmed_ci[-1]) != __seg_for_ci(ci_for_p[scan_cii]):
+                        trimmed_ci.append(ci_for_p[scan_cii])
+                    else:
+                        azi = vec.azimuth(c[ci_for_p[scan_cii]] - p[p_i, :2])
+                        if __azi_between(start_azi, end_azi, azi):
+                            trimmed_ci.append(ci_for_p[scan_cii])
+                if scan_cii == end_cii:
+                    break
+                scan_cii = (scan_cii + 1) % len(ci_for_p)
+            cii = end_cii + 1
+        return trimmed_ci
+
+    def __closest_to_seed(c, c_count, ci_for_p, hull_node_azi, p, p_i):
+        best_a_i = None
+        best_c_i = None
+        best_a_azi = -181.0
+        best_c_azi = 181.0
+        for cii, val in enumerate(ci_for_p):
+            if val < c_count:
+                continue
+            azi = vec.azimuth(c[val] - p[p_i, :2]) - hull_node_azi
+            if azi > 180.0:
+                azi -= 360.0
+            elif azi < -180.0:
+                azi += 360.0
+            if 0.0 > azi > best_a_azi:
+                best_a_azi = azi
+                best_a_i = cii
+            elif 0.0 <= azi < best_c_azi:
+                best_c_azi = azi
+                best_c_i = cii
+        assert best_a_i is not None and best_c_i is not None
+        trimmed_ci = []
+        for cii, val in enumerate(ci_for_p):
+            if val < c_count or cii == best_a_i or cii == best_c_i:
+                trimmed_ci.append(val)
+        return trimmed_ci
+
+    def __ci_replace(c_count, ca_count, cah_count, caho_count, cahon_count, ci_for_p, p, p_i, t, tc_outwith_aoi):
+        # where circumcirle (or virtual) centre is outwith aoi, replace with a point on aoi boundary
+        # virtual centres related to hull points (not hull edges) can be discarded
+        trimmed_ci = []
+        for ci in ci_for_p:
+            if ci < c_count:  # genuine triangle
+                if ci in tc_outwith_aoi:  # replace with one or two wing normal intersection points
+                    oi = tc_outwith_aoi.index(ci)
+                    wing_i = cah_count + 2 * oi
+                    shorter_t_i = __shorter_sides_p_i(p[t[ci]])
+                    if t[ci, shorter_t_i] == p_i:
+                        trimmed_ci += [wing_i, wing_i + 1]
+                    elif t[ci, shorter_t_i - 1] == p_i:
+                        trimmed_ci.append(wing_i)
+                    else:
+                        trimmed_ci.append(wing_i + 1)
+                else:
+                    trimmed_ci.append(ci)
+            elif ci < cahon_count:
+                # extended virtual centre for a hull edge (discard hull point virtual centres)
+                # replace with index for intersection point on aoi boundary
+                trimmed_ci.append(ca_count + ci - caho_count)
+        return trimmed_ci
+
+    def __veroni_cells(aoi_count, aoi_intersect_segments, b, c, c_count, ca_count, cah_count, caho_count, cahon_count,
+                       hull_count, out_pair_intersect_segments, p, t, tc_outwith_aoi):
+        # list of voronoi cells (each a numpy list of node indices into c extended with aoi points etc)
+        v = []
+        # for each seed point build the voronoi cell
+        for p_i in range(len(p)):
+
+            # find triangles making use of that point
+            ci_for_p = list(np.where(t == p_i)[0])
+
+            # if seed point is on hull boundary, introduce three extended virtual centres
+            b_i = None
+            if p_i in b:
+                b_i = np.where(b == p_i)[0][0]  # index into hull coordinates
+                p_b_i = (b_i - 1) % hull_count  # predecessor, ie. anti-clockwise boundary point
+                ci_for_p += [caho_count + p_b_i, cahon_count + b_i, caho_count + b_i]
+
+            # find azimuths of vectors from seed point to circumcircle centres (and virtual centres)
+            azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
+            # if this is a hull seed point, make a note of azimuth to virtual centre
+            hull_node_azi = None if b_i is None else azi[-2]
+            # sort triangle indices for seed point into clockwise order of circumcircle (and virtual) centres
+            ci_for_p = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
+
+            ci_for_p = __ci_replace(c_count, ca_count, cah_count, caho_count, cahon_count, ci_for_p, p, p_i, t,
+                                    tc_outwith_aoi)
+
+            # if this is a hull seed point, classify aoi boundary points into anti-clockwise or clockwise, and find
+            # closest to seed
+            if b_i is not None:
+                ci_for_p = __closest_to_seed(c, c_count, ci_for_p, hull_node_azi, p, p_i)
+
+            # for sequences on aoi boundary, just keep those between the first and last (?)
+
+            #      elif any([ci < c_count for ci in ci_for_p]):
+            else:
+                ci_for_p = __ci_non_hull(b_i, c, c_count, ci_for_p, p, p_i)
+
+            # reverse points if needed for pair of aoi points only
+            assert len(ci_for_p) >= 2
+            if len(ci_for_p) == 2:
+                seg_0 = __seg_for_ci(ci_for_p[0])
+                seg_1 = __seg_for_ci(ci_for_p[1])
+                if seg_0 is not None and seg_1 is not None and seg_0 == (seg_1 + 1) % hull_count:
+                    ci_for_p.reverse()
+
+            ci_for_p += __intervening_aoi_indices(aoi_count, aoi_intersect_segments, c_count, ca_count, cah_count,
+                                                  ci_for_p, out_pair_intersect_segments)
+
+            #  remove circumcircle centres that are outwith area of interest
+            ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
+
+            # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
+            azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
+
+            # re-sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
+            ordered_ci = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
+
+            v.append(ordered_ci)
+        return v
+
     # log.debug(f'\n\nVoronoi: nt: {len(p)}; nt: {len(t)}; hull: {len(b)}; aoi: {len(aoi.coordinates)}')
-# todo: allow aoi to be None in which case create an aoi as hull with border
+    # todo: allow aoi to be None in which case create an aoi as hull with border
 
     assert p.ndim == 2 and p.shape[0] > 2 and p.shape[1] >= 2
     assert t.ndim == 2 and t.shape[1] == 3
@@ -385,11 +582,11 @@ def voronoi(p, t, b, aoi):
     cahon_count = caho_count + hull_count
     assert cahon_count + hull_count == len(c)
 
-    # compute intersection points between hull edge normals and aoi polyline
+    #  compute intersection points between hull edge normals and aoi polyline
     # also extended virtual centres for hull edges
     extension_scaling = 1000.0 * np.sum((np.max(aoi.coordinates, axis = 0) - np.min(aoi.coordinates, axis = 0))[:2])
     aoi_intersect_segments = np.empty((hull_count,), dtype = int)
-    for ei in range(len(b)):
+    for ei in range(hull_count):
         # use segment midpoint and normal methods of hull to project out
         m = hull.segment_midpoint(ei)[:2]  # midpoint
         norm_vec = hull.segment_normal(ei)[:2]
@@ -404,8 +601,8 @@ def voronoi(p, t, b, aoi):
         c[caho_count + ei] = c[ca_count + ei] + extension_scaling * norm_vec
 
     # compute extended virtual centres for hull nodes
-    for ei in range(len(b)):
-        pei = (ei - 1) % len(b)
+    for ei in range(hull_count):
+        pei = (ei - 1) % hull_count
         vector = vec.unit_vector(hull.segment_normal(pei)[:2] + hull.segment_normal(ei)[:2])
         c[cahon_count + ei] = hull.coordinates[ei, :2] + extension_scaling * vector
 
@@ -413,7 +610,7 @@ def voronoi(p, t, b, aoi):
     out_pair_intersect_segments = np.empty((o_count, 2), dtype = int)
     wing_hull_segments = np.empty((o_count, 2), dtype = int)
     for oi, ti in enumerate(tc_outwith_aoi):
-        tpi = shorter_sides_p_i(p[t[ti]])
+        tpi = __shorter_sides_p_i(p[t[ti]])
         for wing in range(2):
             # note: triangle nodes are anticlockwise
             m = 0.5 * (p[t[ti, tpi - 1]] + p[t[ti, tpi]])[:2]  # triangle edge midpoint
@@ -429,187 +626,8 @@ def voronoi(p, t, b, aoi):
                                                                               half_segment = True)
             tpi = (tpi + 1) % 3
 
-    # list of voronoi cells (each a numpy list of node indices into c extended with aoi points etc)
-    v = []
-
-    # for each seed point build the voronoi cell
-    for p_i in range(len(p)):
-
-        # find triangles making use of that point
-        ci_for_p = list(np.where(t == p_i)[0])
-
-        # if seed point is on hull boundary, introduce three extended virtual centres
-        b_i = None
-        if (p_i in b):
-            b_i = np.where(b == p_i)[0][0]  # index into hull coordinates
-            p_b_i = (b_i - 1) % hull_count  # predecessor, ie. anti-clockwise boundary point
-            ci_for_p += [caho_count + p_b_i, cahon_count + b_i, caho_count + b_i]
-
-        # find azimuths of vectors from seed point to circumcircle centres (and virtual centres)
-        azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
-        # if this is a hull seed point, make a note of azimuth to virtual centre
-        hull_node_azi = None if b_i is None else azi[-2]
-        # sort triangle indices for seed point into clockwise order of circumcircle (and virtual) centres
-        ci_for_p = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
-
-        # where circumcirle (or virtual) centre is outwith aoi, replace with a point on aoi boundary
-        # virtual centres related to hull points (not hull edges) can be discarded
-        trimmed_ci = []
-        for ci in ci_for_p:
-            if ci < c_count:  # genuine triangle
-                if ci in tc_outwith_aoi:  # replace with one or two wing normal intersection points
-                    oi = tc_outwith_aoi.index(ci)
-                    wing_i = cah_count + 2 * oi
-                    shorter_t_i = shorter_sides_p_i(p[t[ci]])
-                    if t[ci, shorter_t_i] == p_i:
-                        trimmed_ci += [wing_i, wing_i + 1]
-                    elif t[ci, shorter_t_i - 1] == p_i:
-                        trimmed_ci.append(wing_i)
-                    else:
-                        trimmed_ci.append(wing_i + 1)
-                else:
-                    trimmed_ci.append(ci)
-            elif ci < cahon_count:
-                # extended virtual centre for a hull edge (discard hull point virtual centres)
-                # replace with index for intersection point on aoi boundary
-                trimmed_ci.append(ca_count + ci - caho_count)
-        ci_for_p = trimmed_ci
-
-        # if this is a hull seed point, classify aoi boundary points into anti- or clockwise, and find closest to seed
-        if b_i is not None:
-            best_a_i = None
-            best_c_i = None
-            best_a_azi = -181.0
-            best_c_azi = 181.0
-            for cii in range(len(ci_for_p)):
-                if ci_for_p[cii] < c_count:
-                    continue
-                azi = vec.azimuth(c[ci_for_p[cii]] - p[p_i, :2]) - hull_node_azi
-                if azi > 180.0:
-                    azi -= 360.0
-                elif azi < -180.0:
-                    azi += 360.0
-                if azi < 0.0:
-                    if azi > best_a_azi:
-                        best_a_azi = azi
-                        best_a_i = cii
-                else:
-                    if azi < best_c_azi:
-                        best_c_azi = azi
-                        best_c_i = cii
-            assert best_a_i is not None and best_c_i is not None
-            trimmed_ci = []
-            for cii in range(len(ci_for_p)):
-                if ci_for_p[cii] < c_count or cii == best_a_i or cii == best_c_i:
-                    trimmed_ci.append(ci_for_p[cii])
-            ci_for_p = trimmed_ci
-
-        # for sequences on aoi boundary, just keep those between the first and last (?)
-
-
-#      elif any([ci < c_count for ci in ci_for_p]):
-        else:
-            trimmed_ci = []
-            cii = 0
-            finish_at = len(ci_for_p)
-            while True:
-                if cii >= finish_at:
-                    break
-                if ci_for_p[cii] < c_count:
-                    trimmed_ci.append(ci_for_p[cii])
-                    cii += 1
-                    continue
-                start_cii = cii
-                cii_seg = seg_for_ci(ci_for_p[cii])
-                while cii == 0 and ci_for_p[start_cii - 1] >= c_count and seg_for_ci(
-                        ci_for_p[start_cii - 1]) == cii_seg:
-                    start_cii -= 1
-                start_cii = start_cii % len(ci_for_p)
-                end_cii = cii + 1
-                while end_cii < len(ci_for_p) and ci_for_p[end_cii] >= c_count and seg_for_ci(
-                        ci_for_p[end_cii]) == cii_seg:
-                    end_cii += 1
-                end_cii -= 1  # unpythonesque: end element included in scan
-                if end_cii == start_cii:
-                    trimmed_ci.append(ci_for_p[cii])
-                    cii += 1
-                    continue
-                if end_cii < start_cii:
-                    finish_at = start_cii
-                if end_cii == (start_cii + 1) % len(ci_for_p):
-                    trimmed_ci.append(ci_for_p[start_cii])
-                    trimmed_ci.append(ci_for_p[end_cii])
-                    cii = end_cii + 1
-                    continue
-                start_azi = vec.azimuth(c[ci_for_p[start_cii]] - p[p_i, :2])
-                end_azi = vec.azimuth(c[ci_for_p[end_cii]] - p[p_i, :2])
-                scan_cii = start_cii
-                while True:
-                    if scan_cii == start_cii:
-                        trimmed_ci.append(ci_for_p[scan_cii])
-                    elif scan_cii == end_cii:
-                        trimmed_ci.append(ci_for_p[scan_cii])
-                        break
-                    else:
-                        # if point is around a hull corner from previous, then include (?)
-                        next_cii = (scan_cii + 1) % len(ci_for_p)
-                        if b_i is None and seg_for_ci(ci_for_p[scan_cii]) != seg_for_ci(ci_for_p[next_cii]):
-                            trimmed_ci.append(ci_for_p[scan_cii])
-                            trimmed_ci.append(ci_for_p[next_cii])
-                            scan_cii = next_cii
-                        elif b_i is None and seg_for_ci(trimmed_ci[-1]) != seg_for_ci(ci_for_p[scan_cii]):
-                            trimmed_ci.append(ci_for_p[scan_cii])
-                        else:
-                            azi = vec.azimuth(c[ci_for_p[scan_cii]] - p[p_i, :2])
-                            if azi_between(start_azi, end_azi, azi):
-                                trimmed_ci.append(ci_for_p[scan_cii])
-                    if scan_cii == end_cii:
-                        break
-                    scan_cii = (scan_cii + 1) % len(ci_for_p)
-                cii = end_cii + 1
-            ci_for_p = trimmed_ci
-
-        # reverse points if needed for pair of aoi points only
-        assert len(ci_for_p) >= 2
-        if len(ci_for_p) == 2:
-            seg_0 = seg_for_ci(ci_for_p[0])
-            seg_1 = seg_for_ci(ci_for_p[1])
-            if seg_0 is not None and seg_1 is not None and seg_0 == (seg_1 + 1) % hull_count:
-                ci_for_p.reverse()
-
-        # build list of intervening aoi boundary point indices and append to list
-        aoi_nodes = []
-        r = [0] if len(ci_for_p) == 2 else range(len(ci_for_p))
-        just_done_pair = False
-        for cii in r:
-            cip = ci_for_p[cii]
-            ci = ci_for_p[(cii + 1) % len(ci_for_p)]
-            if cip >= c_count and ci >= c_count and not just_done_pair:
-                # identify aoi segments
-                if cip < cah_count:
-                    aoi_seg_a = aoi_intersect_segments[cip - ca_count]
-                else:
-                    aoi_seg_a = out_pair_intersect_segments[divmod(cip - cah_count, 2)]
-                if ci < cah_count:
-                    aoi_seg_c = aoi_intersect_segments[ci - ca_count]
-                else:
-                    aoi_seg_c = out_pair_intersect_segments[divmod(ci - cah_count, 2)]
-                aoi_nodes += aoi_intervening_nodes(aoi_count, c_count, aoi_seg_a, aoi_seg_c)
-                just_done_pair = True
-            else:
-                just_done_pair = False
-        ci_for_p += aoi_nodes
-
-        # remove circumcircle centres that are outwith area of interest
-        ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
-
-        # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
-        azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
-
-        # re-sort triangle indices for seed point into clockwise order of circumcircle centres and boundary points
-        ordered_ci = [ti for (_, ti) in sorted(zip(azi, ci_for_p))]
-
-        v.append(ordered_ci)
+    v = __veroni_cells(aoi_count, aoi_intersect_segments, b, c, c_count, ca_count, cah_count, caho_count, cahon_count,
+                       hull_count, out_pair_intersect_segments, p, t, tc_outwith_aoi)
 
     return c[:caho_count], v
 

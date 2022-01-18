@@ -147,3 +147,104 @@ def test_relperm(tmp_path):
         'relperm_table': 'true',
         'table_index': '1'
     }
+
+
+def test_relperm_df_none_uuid_none(tmp_path):
+    # Arrange
+    test_model = rq.new_model(os.path.join(tmp_path, 'test'))
+
+    # Act & Assert
+    with pytest.raises(ValueError) as e:
+        RelPerm(test_model)
+    assert "either a uuid or a dataframe must be provided" in str(e.value)
+
+
+def test_relperm_invalid_phase_combo(tmp_path):
+    # Arrange
+    test_model = rq.new_model(os.path.join(tmp_path, 'test'))
+    np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan], [0.12, 0.065, 0.689, np.nan],
+                      [0.25, 0.205, 0.35, np.nan], [0.45, 0.55, 0.019, np.nan], [0.74, 1.0, 0.0, 0.000001]])
+    df_cols = ['Sw', 'Krw', 'Kro', 'Pc']
+    test_df = pd.DataFrame(np_df, columns = df_cols)
+    test_phase_combo = 'wateroil'
+
+    # Act & Assert
+    with pytest.raises(ValueError) as e:
+        RelPerm(test_model, df = test_df, phase_combo = test_phase_combo)
+    assert "invalid phase_combo provided" in str(e.value)
+
+
+def test_relperm_table_index_equal_0(tmp_path):
+    # Arrange
+    test_model = rq.new_model(os.path.join(tmp_path, 'test'))
+    np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan], [0.12, 0.065, 0.689, np.nan],
+                      [0.25, 0.205, 0.35, np.nan], [0.45, 0.55, 0.019, np.nan], [0.74, 1.0, 0.0, 0.000001]])
+    df_cols = ['Sw', 'Krw', 'Kro', 'Pc']
+    test_df = pd.DataFrame(np_df, columns = df_cols)
+    test_table_index = 0
+
+    # Act & Assert
+    with pytest.raises(ValueError) as e:
+        RelPerm(test_model, df = test_df, table_index = test_table_index)
+    assert "table_index cannot be less than 1" in str(e.value)
+
+
+@pytest.mark.parametrize("test_phase_combo", ['gas-water', 'water-gas'])
+def test_relperm_gas_water_phase_combo_invalid_first_column(tmp_path, test_phase_combo):
+    # Arrange
+    test_model = rq.new_model(os.path.join(tmp_path, 'test'))
+    np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan], [0.12, 0.065, 0.689, np.nan],
+                      [0.25, 0.205, 0.35, np.nan], [0.45, 0.55, 0.019, np.nan], [0.74, 1.0, 0.0, 0.000001]])
+    df_cols = ['So', 'Krw', 'Kro', 'Pc']
+    test_df = pd.DataFrame(np_df, columns = df_cols)
+
+    # Act & Assert
+    with pytest.raises(ValueError) as e:
+        RelPerm(test_model, df = test_df, phase_combo = test_phase_combo)
+    assert "incorrect saturation column name and/or multiple saturation columns exist" in str(e.value)
+
+
+@pytest.mark.parametrize("test_phase_combo", ['gas-water', 'water-gas'])
+def test_relperm_gas_water_phase_combo_invalid_columns(tmp_path, test_phase_combo):
+    # Arrange
+    test_model = rq.new_model(os.path.join(tmp_path, 'test'))
+    np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan], [0.12, 0.065, 0.689, np.nan],
+                      [0.25, 0.205, 0.35, np.nan], [0.45, 0.55, 0.019, np.nan], [0.74, 1.0, 0.0, 0.000001]])
+    df_cols = ['Sg', 'Krw', 'Kro', 'Pc']
+    test_df = pd.DataFrame(np_df, columns = df_cols)
+
+    # Act & Assert
+    with pytest.raises(ValueError) as e:
+        RelPerm(test_model, df = test_df, phase_combo = test_phase_combo)
+    assert "incorrect column name(s) {'Kro'}" in str(e.value)
+
+
+def test_relperm_no_phase_combo_invalid_first_column(tmp_path):
+    # Arrange
+    test_model = rq.new_model(os.path.join(tmp_path, 'test'))
+    np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan], [0.12, 0.065, 0.689, np.nan],
+                      [0.25, 0.205, 0.35, np.nan], [0.45, 0.55, 0.019, np.nan], [0.74, 1.0, 0.0, 0.000001]])
+    df_cols = ['Sn', 'Krw', 'Kro', 'Pc']
+    test_df = pd.DataFrame(np_df, columns = df_cols)
+
+    # Act & Assert
+    with pytest.raises(ValueError) as e:
+        RelPerm(test_model, df = test_df)
+    assert "incorrect saturation column name and/or multiple saturation columns exist" in str(e.value)
+
+
+@pytest.mark.parametrize("test_cols,test_phase_combo", [(['Sw', 'Krw', 'Kro', 'Pc'], 'water-oil'),
+                                                        (['Sg', 'Krg', 'Kro', 'Pc'], 'gas-oil'),
+                                                        (['Sw', 'Krw', 'Krg', 'Pc'], 'gas-water')])
+def test_relperm_no_phase_combo(tmp_path, test_cols, test_phase_combo):
+    # Arrange
+    test_model = rq.new_model(os.path.join(tmp_path, 'test'))
+    np_df = np.array([[0.0, 0.0, 1.0, 0], [0.04, 0.015, 0.87, np.nan], [0.12, 0.065, 0.689, np.nan],
+                      [0.25, 0.205, 0.35, np.nan], [0.45, 0.55, 0.019, np.nan], [0.74, 1.0, 0.0, 0.000001]])
+    test_df = pd.DataFrame(np_df, columns = test_cols)
+
+    # Act
+    relperm = RelPerm(test_model, df = test_df)
+
+    # Assert
+    assert relperm.phase_combo == test_phase_combo

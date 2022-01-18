@@ -121,7 +121,7 @@ def write_array_to_ascii_file(file_name,
             # could abort at this point, or raise
 
     if use_binary:
-        (extension, _) = abt.binary_file_extension_and_np_type_for_data_type(data_type)
+        extension, _ = abt.binary_file_extension_and_np_type_for_data_type(data_type)
         binary_file_name = file_name + extension
         if append and (keyword is not None):
             key = keyword.split()[0].lower()
@@ -136,7 +136,7 @@ def write_array_to_ascii_file(file_name,
                 ap.tofile(binary_file_out)
             log.info('Binary data file %s created', binary_file_name)
         except Exception:
-            log.warn('Failed to write data to binary file %s', binary_file_name)
+            log.warning('Failed to write data to binary file %s', binary_file_name)
             # todo: could delete the binary file in case a corrupt file is left for use next time
 
 

@@ -1,0 +1,17 @@
+numpy==1.20.3
+pandas==1.2.4
+h5py==3.2.1
+lxml==4.6.3
+lasio==0.29
+pytest==6.2.4
+pytest-cov==2.12.1
+pytest-mock==3.6.1
+flake8==3.9.2
+flake8-docstrings==1.6.0
+mypy==0.910
+yapf==0.31.0
+setuptools-scm==6.3.2
+packaging==20.9
+Sphinx==3.5.4
+sphinx-rtd-theme==0.5.2
+autoclasstoc==1.2.0 
