@@ -108,9 +108,6 @@ defines conventions such as variable naming and capitalisation. A consistent
 style makes it much easier for other developers to read and understand your
 code.
 
-Note the existing code base differs from PEP8 in using 3 spaces for indentation
-rather than the usual 4.
-
 See `Static analysis`_ for how to check your code for conformance to PEP8 style.
 
 Tests
