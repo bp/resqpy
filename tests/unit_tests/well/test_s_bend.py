@@ -22,7 +22,7 @@ import resqpy.rq_import as rqi
 import resqpy.well as rqw
 
 
-def test_s_bend_fn(tmp_path, epc=None):
+def test_s_bend_fn(tmp_path, epc = None):
     if epc is None:
         # use pytest temporary directory fixture
         # https://docs.pytest.org/en/stable/tmpdir.html
@@ -91,7 +91,7 @@ def test_s_bend_fn(tmp_path, epc=None):
     for j in range(nj + 1):
         points[:, j, :, 1] = dy_dj * float(j)
 
-    model = rq.Model(epc_file=epc, new_epc=True, create_basics=True, create_hdf5_ext=True)
+    model = rq.Model(epc_file = epc, new_epc = True, create_basics = True, create_hdf5_ext = True)
 
     grid = grr.Grid(model)
 
@@ -101,7 +101,7 @@ def test_s_bend_fn(tmp_path, epc=None):
         model.crs_root = crs_node
 
     grid.grid_representation = 'IjkGrid'
-    grid.extent_kji = np.array((nk, nj, ni), dtype='int')
+    grid.extent_kji = np.array((nk, nj, ni), dtype = 'int')
     grid.nk, grid.nj, grid.ni = nk, nj, ni
     grid.k_direction_is_down = True  # dominant layer direction, or paleo-direction
     grid.pillar_shape = 'straight'
@@ -124,7 +124,7 @@ def test_s_bend_fn(tmp_path, epc=None):
     def df_trajectory(x, y, z):
         N = len(x)
         assert len(y) == N and len(z) == N
-        df = pd.DataFrame(columns=['MD', 'X', 'Y', 'Z'])
+        df = pd.DataFrame(columns = ['MD', 'X', 'Y', 'Z'])
         md = np.zeros(N)
         for n in range(N - 1):
             md[n + 1] = md[n] + vec.naive_length((x[n + 1] - x[n], y[n + 1] - y[n], z[n + 1] - z[n]))
@@ -139,17 +139,17 @@ def test_s_bend_fn(tmp_path, epc=None):
     y = np.array([0.0, dy_dj * 0.5, dy_dj * float(nj) / 2.0, dy_dj * (float(nj) - 0.5), dy_dj * float(nj)])
     z = np.array([
         0.0, top_depth - total_thickness, top_depth + 2.0 * outer_radius - total_thickness / 2.0,
-             top_depth + 3.0 * outer_radius - total_thickness, top_depth + 4.0 * outer_radius
+        top_depth + 3.0 * outer_radius - total_thickness, top_depth + 4.0 * outer_radius
     ])
 
     df = df_trajectory(x, y, z)
 
-    datum = rqw.MdDatum(model, crs_uuid=crs.uuid, location=(x[0], y[0], z[0]))
+    datum = rqw.MdDatum(model, crs_uuid = crs.uuid, location = (x[0], y[0], z[0]))
     datum.create_xml()
 
-    trajectory = rqw.Trajectory(model, md_datum=datum, data_frame=df, length_uom='m', well_name='ANGLED_WELL')
+    trajectory = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
 
-    rqc.Crs(model, uuid=rqet.uuid_for_part_root(trajectory.crs_root)).uuid == crs.uuid
+    rqc.Crs(model, uuid = rqet.uuid_for_part_root(trajectory.crs_root)).uuid == crs.uuid
 
     trajectory.write_hdf5()
     trajectory.create_xml()
@@ -162,12 +162,12 @@ def test_s_bend_fn(tmp_path, epc=None):
     y = np.array([0.0, dy_dj * float(nj) * 0.59, dy_dj * 0.67, dy_dj * 0.5])
     z = np.array([
         0.0, top_depth - total_thickness, top_depth + 4.0 * outer_radius - 1.7 * total_thickness,
-             top_depth + 4.0 * outer_radius - 1.7 * total_thickness
+        top_depth + 4.0 * outer_radius - 1.7 * total_thickness
     ])
 
     df = df_trajectory(x, y, z)
 
-    traj_2 = rqw.Trajectory(model, md_datum=datum, data_frame=df, length_uom='m', well_name='HORST_WELL')
+    traj_2 = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'HORST_WELL')
     traj_2.write_hdf5()
     traj_2.create_xml()
     traj_2.control_points
@@ -178,7 +178,7 @@ def test_s_bend_fn(tmp_path, epc=None):
 
     df = df_trajectory(x, y, z)
 
-    traj_3 = rqw.Trajectory(model, md_datum=datum, data_frame=df, length_uom='m', well_name='VERTICAL_WELL')
+    traj_3 = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'VERTICAL_WELL')
     traj_3.write_hdf5()
     traj_3.create_xml()
     traj_3.control_points
@@ -189,11 +189,11 @@ def test_s_bend_fn(tmp_path, epc=None):
     nd_x = n_y / 3.0
     x = np.array([
         0.0, n_x, n_x, n_x + nd_x, n_x + 2.0 * nd_x, n_x + 3.0 * nd_x, n_x + 4.0 * nd_x, n_x + 5.0 * nd_x,
-                       n_x + 6.0 * nd_x, n_x + 7.0 * nd_x, n_x + 8.0 * nd_x, n_x + 8.0 * nd_x
+        n_x + 6.0 * nd_x, n_x + 7.0 * nd_x, n_x + 8.0 * nd_x, n_x + 8.0 * nd_x
     ])
     y = np.array([
         0.0, o_y, o_y + n_y, o_y + 2.0 * n_y, o_y + 3.0 * n_y, o_y + 4.0 * n_y, o_y + 5.0 * n_y, o_y + 6.0 * n_y,
-                  o_y + 7.0 * n_y, o_y + 8.0 * n_y, o_y + 9.0 * n_y, o_y + 10.0 * n_y
+        o_y + 7.0 * n_y, o_y + 8.0 * n_y, o_y + 9.0 * n_y, o_y + 10.0 * n_y
     ])
     n_z1 = top_depth + total_thickness * 0.82
     n_z2 = top_depth - total_thickness * 0.17
@@ -201,7 +201,7 @@ def test_s_bend_fn(tmp_path, epc=None):
 
     df = df_trajectory(x, y, z)
 
-    traj_4 = rqw.Trajectory(model, md_datum=datum, data_frame=df, length_uom='m', well_name='NESSIE_WELL')
+    traj_4 = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'NESSIE_WELL')
     traj_4.write_hdf5()
     traj_4.create_xml()
     traj_4.control_points
@@ -209,7 +209,7 @@ def test_s_bend_fn(tmp_path, epc=None):
     # block wells against grid geometry
 
     log.info('unfaulted grid blocking of well ' + str(rqw.well_name(trajectory)))
-    bw = rqw.BlockedWell(model, grid=grid, trajectory=trajectory)
+    bw = rqw.BlockedWell(model, grid = grid, trajectory = trajectory)
     bw.write_hdf5()
     bw.create_xml()
     assert bw.cell_count == 19
@@ -220,7 +220,7 @@ def test_s_bend_fn(tmp_path, epc=None):
             [108, 708, 709, 1909, 1959, 2559, 2673, 2073, 2123, 923, 924, 974, 374, 587, 588, 1188, 2388, 2389, 2989]))
 
     log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_2)))
-    bw_2 = rqw.BlockedWell(model, grid=grid, trajectory=traj_2)
+    bw_2 = rqw.BlockedWell(model, grid = grid, trajectory = traj_2)
     bw_2.write_hdf5()
     bw_2.create_xml()
     assert bw_2.cell_count == 33
@@ -233,7 +233,7 @@ def test_s_bend_fn(tmp_path, epc=None):
         ]))
 
     log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_3)))
-    bw_3 = rqw.BlockedWell(model, grid=grid, trajectory=traj_3)
+    bw_3 = rqw.BlockedWell(model, grid = grid, trajectory = traj_3)
     bw_3.write_hdf5()
     bw_3.create_xml()
     assert bw_3.cell_count == 18
@@ -243,7 +243,7 @@ def test_s_bend_fn(tmp_path, epc=None):
         np.array([300, 900, 2100, 2700, 2729, 2129, 2130, 930, 931, 331, 332, 339, 340, 940, 941, 2141, 2142, 2742]))
 
     log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_4)))
-    bw_4 = rqw.BlockedWell(model, grid=grid, trajectory=traj_4)
+    bw_4 = rqw.BlockedWell(model, grid = grid, trajectory = traj_4)
     bw_4.write_hdf5()
     bw_4.create_xml()
     assert bw_4.cell_count == 26
@@ -257,7 +257,7 @@ def test_s_bend_fn(tmp_path, epc=None):
 
     # derive a faulted version of the grid
 
-    cp = grid.corner_points(cache_cp_array=True).copy()
+    cp = grid.corner_points(cache_cp_array = True).copy()
 
     # IK plane faults
     cp[:, 3:, :, :, :, :, :] += (flat_dx_di * 0.7, 0.0, layer_thickness * 1.3)
@@ -291,25 +291,25 @@ def test_s_bend_fn(tmp_path, epc=None):
     faulted_grid = rqi.grid_from_cp(model,
                                     cp,
                                     crs.uuid,
-                                    max_z_void=0.01,
-                                    split_pillars=True,
-                                    split_tolerance=0.01,
-                                    ijk_handedness='right' if grid.grid_is_right_handed else 'left',
-                                    known_to_be_straight=True)
+                                    max_z_void = 0.01,
+                                    split_pillars = True,
+                                    split_tolerance = 0.01,
+                                    ijk_handedness = 'right' if grid.grid_is_right_handed else 'left',
+                                    known_to_be_straight = True)
 
     faulted_grid.write_hdf5_from_caches()
     faulted_grid.create_xml()
 
     # create some grid connection sets
-    f_gcs, _ = faulted_grid.fault_connection_set(add_to_model=True)
+    f_gcs, _ = faulted_grid.fault_connection_set(add_to_model = True)
     assert f_gcs is not None and f_gcs.count > 0
-    p_gcs, _ = faulted_grid.pinchout_connection_set(add_to_model=True)
+    p_gcs, _ = faulted_grid.pinchout_connection_set(add_to_model = True)
     assert p_gcs is not None and p_gcs.count > 0
 
     # block wells against faulted grid
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(trajectory)))
-    fbw = rqw.BlockedWell(model, grid=faulted_grid, trajectory=trajectory)
+    fbw = rqw.BlockedWell(model, grid = faulted_grid, trajectory = trajectory)
     fbw.write_hdf5()
     fbw.create_xml()
     assert fbw.cell_count == 32
@@ -322,7 +322,7 @@ def test_s_bend_fn(tmp_path, epc=None):
         ]))
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_2)))
-    fbw_2 = rqw.BlockedWell(model, grid=faulted_grid, trajectory=traj_2)
+    fbw_2 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_2)
     fbw_2.write_hdf5()
     fbw_2.create_xml()
     assert fbw_2.cell_count == 26
@@ -335,7 +335,7 @@ def test_s_bend_fn(tmp_path, epc=None):
         ]))
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_3)))
-    fbw_3 = rqw.BlockedWell(model, grid=faulted_grid, trajectory=traj_3)
+    fbw_3 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_3)
     fbw_3.write_hdf5()
     fbw_3.create_xml()
     assert fbw_3.cell_count == 14
@@ -344,7 +344,7 @@ def test_s_bend_fn(tmp_path, epc=None):
         fbw_3.cell_indices, np.array([2730, 2731, 2131, 2132, 2133, 933, 934, 937, 938, 2138, 2139, 2140, 2740, 2741]))
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_4)))
-    fbw_4 = rqw.BlockedWell(model, grid=faulted_grid, trajectory=traj_4)
+    fbw_4 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_4)
     fbw_4.write_hdf5()
     fbw_4.create_xml()
     assert fbw_4.cell_count == 16
@@ -358,19 +358,19 @@ def test_s_bend_fn(tmp_path, epc=None):
     k_gap_grid = rqi.grid_from_cp(model,
                                   cp,
                                   crs.uuid,
-                                  max_z_void=0.01,
-                                  split_pillars=True,
-                                  split_tolerance=0.01,
-                                  ijk_handedness='right' if grid.grid_is_right_handed else 'left',
-                                  known_to_be_straight=True)
+                                  max_z_void = 0.01,
+                                  split_pillars = True,
+                                  split_tolerance = 0.01,
+                                  ijk_handedness = 'right' if grid.grid_is_right_handed else 'left',
+                                  known_to_be_straight = True)
 
     # convert second layer to a K gap
     k_gap_grid.nk -= 1
     k_gap_grid.extent_kji[0] = k_gap_grid.nk
     k_gap_grid.k_gaps = 1
-    k_gap_grid.k_gap_after_array = np.zeros(k_gap_grid.nk - 1, dtype=bool)
+    k_gap_grid.k_gap_after_array = np.zeros(k_gap_grid.nk - 1, dtype = bool)
     k_gap_grid.k_gap_after_array[0] = True
-    k_gap_grid.k_raw_index_array = np.zeros(k_gap_grid.nk, dtype=int)
+    k_gap_grid.k_raw_index_array = np.zeros(k_gap_grid.nk, dtype = int)
     for k in range(1, k_gap_grid.nk):
         k_gap_grid.k_raw_index_array[k] = k + 1
 
@@ -389,13 +389,13 @@ def test_s_bend_fn(tmp_path, epc=None):
     # reload k gap grid object to ensure it is properly initialised
 
     k_gap_grid = None
-    k_gap_grid = grr.Grid(model, uuid=k_gap_grid_uuid)
+    k_gap_grid = grr.Grid(model, uuid = k_gap_grid_uuid)
 
     # block wells against faulted grid with k gap
 
     log.info('k gap grid blocking of well ' + str(rqw.well_name(trajectory)))
     try:
-        gbw = rqw.BlockedWell(model, grid=k_gap_grid, trajectory=trajectory)
+        gbw = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = trajectory)
         gbw.write_hdf5()
         gbw.create_xml()
         assert gbw.cell_count == 24
@@ -404,7 +404,7 @@ def test_s_bend_fn(tmp_path, epc=None):
 
     log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_2)))
     try:
-        gbw_2 = rqw.BlockedWell(model, grid=k_gap_grid, trajectory=traj_2)
+        gbw_2 = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = traj_2)
         gbw_2.write_hdf5()
         gbw_2.create_xml()
         assert gbw_2.cell_count == 20
@@ -413,7 +413,7 @@ def test_s_bend_fn(tmp_path, epc=None):
 
     log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_3)))
     try:
-        gbw_3 = rqw.BlockedWell(model, grid=k_gap_grid, trajectory=traj_3)
+        gbw_3 = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = traj_3)
         gbw_3.write_hdf5()
         gbw_3.create_xml()
         assert gbw_3.cell_count == 10
@@ -422,7 +422,7 @@ def test_s_bend_fn(tmp_path, epc=None):
 
     log.info('k gap grid blocking of well ' + str(rqw.well_name(traj_4)))
     try:
-        gbw_4 = rqw.BlockedWell(model, grid=k_gap_grid, trajectory=traj_4)
+        gbw_4 = rqw.BlockedWell(model, grid = k_gap_grid, trajectory = traj_4)
         gbw_4.write_hdf5()
         gbw_4.create_xml()
         assert gbw_4.cell_count == 10

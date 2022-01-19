@@ -25,7 +25,7 @@ import resqpy.well as rqw
 class GridSkin:
     """Class of object consisting of outer skin of grid (not a RESQML class in its own right)."""
 
-    def __init__(self, grid, quad_triangles=True, use_single_layer_tactics=True):
+    def __init__(self, grid, quad_triangles = True, use_single_layer_tactics = True):
         """Returns a composite surface object consisting of outer skin of grid."""
 
         if grid.k_gaps:
@@ -43,51 +43,51 @@ class GridSkin:
         self.fault_i_face_cols_ji0 = None  # split internal I faces
         self.polygon = None  # not yet in use
 
-        k_gap_surf_list = self._make_k_gap_surfaces(quad_triangles=quad_triangles)
+        k_gap_surf_list = self._make_k_gap_surfaces(quad_triangles = quad_triangles)
 
         if self.has_split_coordinate_lines:
 
             top_surf = generate_torn_surface_for_layer_interface(grid,
-                                                                 k0=0,
-                                                                 ref_k_faces='top',
-                                                                 quad_triangles=quad_triangles)
+                                                                 k0 = 0,
+                                                                 ref_k_faces = 'top',
+                                                                 quad_triangles = quad_triangles)
             base_surf = generate_torn_surface_for_layer_interface(grid,
-                                                                  k0=grid.nk - 1,
-                                                                  ref_k_faces='base',
-                                                                  quad_triangles=quad_triangles)
+                                                                  k0 = grid.nk - 1,
+                                                                  ref_k_faces = 'base',
+                                                                  quad_triangles = quad_triangles)
             j_minus_surf = generate_torn_surface_for_x_section(grid,
                                                                'J',
-                                                               ref_slice0=0,
-                                                               plus_face=False,
-                                                               quad_triangles=quad_triangles,
-                                                               as_single_layer=use_single_layer_tactics)
+                                                               ref_slice0 = 0,
+                                                               plus_face = False,
+                                                               quad_triangles = quad_triangles,
+                                                               as_single_layer = use_single_layer_tactics)
             j_plus_surf = generate_torn_surface_for_x_section(grid,
                                                               'J',
-                                                              ref_slice0=self.grid.nj - 1,
-                                                              plus_face=True,
-                                                              quad_triangles=quad_triangles,
-                                                              as_single_layer=use_single_layer_tactics)
+                                                              ref_slice0 = self.grid.nj - 1,
+                                                              plus_face = True,
+                                                              quad_triangles = quad_triangles,
+                                                              as_single_layer = use_single_layer_tactics)
             i_minus_surf = generate_torn_surface_for_x_section(grid,
                                                                'I',
-                                                               ref_slice0=0,
-                                                               plus_face=False,
-                                                               quad_triangles=quad_triangles,
-                                                               as_single_layer=use_single_layer_tactics)
+                                                               ref_slice0 = 0,
+                                                               plus_face = False,
+                                                               quad_triangles = quad_triangles,
+                                                               as_single_layer = use_single_layer_tactics)
             i_plus_surf = generate_torn_surface_for_x_section(grid,
                                                               'I',
-                                                              ref_slice0=self.grid.ni - 1,
-                                                              plus_face=True,
-                                                              quad_triangles=quad_triangles,
-                                                              as_single_layer=use_single_layer_tactics)
+                                                              ref_slice0 = self.grid.ni - 1,
+                                                              plus_face = True,
+                                                              quad_triangles = quad_triangles,
+                                                              as_single_layer = use_single_layer_tactics)
 
             # fault face processing
             j_column_faces, i_column_faces = grid.split_column_faces()
             col_j0, col_i0 = np.where(j_column_faces)
             self.fault_j_face_cols_ji0 = np.stack((col_j0, col_i0),
-                                                  axis=-1)  # fault is on plus j face of these columns
+                                                  axis = -1)  # fault is on plus j face of these columns
             col_j0, col_i0 = np.where(i_column_faces)
             self.fault_i_face_cols_ji0 = np.stack((col_j0, col_i0),
-                                                  axis=-1)  # fault is on plus i face of these columns
+                                                  axis = -1)  # fault is on plus i face of these columns
 
             j_minus_fault_surf = j_plus_fault_surf = None
             j_minus_fault_surf_list = []
@@ -100,14 +100,14 @@ class GridSkin:
                                                               col_ji0,
                                                               1,
                                                               1,
-                                                              quad_triangles=quad_triangles,
-                                                              as_single_layer=True)
+                                                              quad_triangles = quad_triangles,
+                                                              as_single_layer = True)
                 j_plus_fault_surf_list.append(surf)
                 _, surf = create_column_face_mesh_and_surface(grid, (col_ji0[0] + 1, col_ji0[1]),
                                                               1,
                                                               0,
-                                                              quad_triangles=quad_triangles,
-                                                              as_single_layer=True)
+                                                              quad_triangles = quad_triangles,
+                                                              as_single_layer = True)
                 j_minus_fault_surf_list.append(surf)
             if len(j_minus_fault_surf_list) > 0:
                 j_minus_fault_surf = rqs.CombinedSurface(j_minus_fault_surf_list, grid.crs_uuid)
@@ -123,14 +123,14 @@ class GridSkin:
                                                               col_ji0,
                                                               2,
                                                               1,
-                                                              quad_triangles=quad_triangles,
-                                                              as_single_layer=True)
+                                                              quad_triangles = quad_triangles,
+                                                              as_single_layer = True)
                 i_plus_fault_surf_list.append(surf)
                 _, surf = create_column_face_mesh_and_surface(grid, (col_ji0[0], col_ji0[1] + 1),
                                                               2,
                                                               0,
-                                                              quad_triangles=quad_triangles,
-                                                              as_single_layer=True)
+                                                              quad_triangles = quad_triangles,
+                                                              as_single_layer = True)
                 i_minus_fault_surf_list.append(surf)
             if len(i_minus_fault_surf_list) > 0:
                 i_minus_fault_surf = rqs.CombinedSurface(i_minus_fault_surf_list, grid.crs_uuid)
@@ -147,37 +147,37 @@ class GridSkin:
         else:
 
             top_surf = generate_untorn_surface_for_layer_interface(grid,
-                                                                   k0=0,
-                                                                   ref_k_faces='top',
-                                                                   quad_triangles=quad_triangles)
+                                                                   k0 = 0,
+                                                                   ref_k_faces = 'top',
+                                                                   quad_triangles = quad_triangles)
             base_surf = generate_untorn_surface_for_layer_interface(grid,
-                                                                    k0=grid.nk - 1,
-                                                                    ref_k_faces='base',
-                                                                    quad_triangles=quad_triangles)
+                                                                    k0 = grid.nk - 1,
+                                                                    ref_k_faces = 'base',
+                                                                    quad_triangles = quad_triangles)
             j_minus_surf = generate_untorn_surface_for_x_section(grid,
                                                                  'J',
-                                                                 ref_slice0=0,
-                                                                 plus_face=False,
-                                                                 quad_triangles=quad_triangles,
-                                                                 as_single_layer=use_single_layer_tactics)
+                                                                 ref_slice0 = 0,
+                                                                 plus_face = False,
+                                                                 quad_triangles = quad_triangles,
+                                                                 as_single_layer = use_single_layer_tactics)
             j_plus_surf = generate_untorn_surface_for_x_section(grid,
                                                                 'J',
-                                                                ref_slice0=self.grid.nj - 1,
-                                                                plus_face=True,
-                                                                quad_triangles=quad_triangles,
-                                                                as_single_layer=use_single_layer_tactics)
+                                                                ref_slice0 = self.grid.nj - 1,
+                                                                plus_face = True,
+                                                                quad_triangles = quad_triangles,
+                                                                as_single_layer = use_single_layer_tactics)
             i_minus_surf = generate_untorn_surface_for_x_section(grid,
                                                                  'I',
-                                                                 ref_slice0=0,
-                                                                 plus_face=False,
-                                                                 quad_triangles=quad_triangles,
-                                                                 as_single_layer=use_single_layer_tactics)
+                                                                 ref_slice0 = 0,
+                                                                 plus_face = False,
+                                                                 quad_triangles = quad_triangles,
+                                                                 as_single_layer = use_single_layer_tactics)
             i_plus_surf = generate_untorn_surface_for_x_section(grid,
                                                                 'I',
-                                                                ref_slice0=self.grid.ni - 1,
-                                                                plus_face=True,
-                                                                quad_triangles=quad_triangles,
-                                                                as_single_layer=use_single_layer_tactics)
+                                                                ref_slice0 = self.grid.ni - 1,
+                                                                plus_face = True,
+                                                                quad_triangles = quad_triangles,
+                                                                as_single_layer = use_single_layer_tactics)
 
             surf_list = [top_surf, base_surf, j_minus_surf, j_plus_surf, i_minus_surf, i_plus_surf]
             for k_gap_surf in k_gap_surf_list:
@@ -187,10 +187,10 @@ class GridSkin:
 
     def find_first_intersection_of_trajectory(self,
                                               trajectory,
-                                              start=0,
-                                              start_xyz=None,
-                                              nudge=None,
-                                              exclude_kji0=None):
+                                              start = 0,
+                                              start_xyz = None,
+                                              nudge = None,
+                                              exclude_kji0 = None):
         """Returns the first intersection of the trajectory with the torn skin.
 
         Returns the x,y,z and K,J,I and axis, polarity & segment.
@@ -226,9 +226,9 @@ class GridSkin:
         else:
             xyz_1, segment_1, tri_index_1 = find_first_intersection_of_trajectory_with_surface(trajectory,
                                                                                                self.skin,
-                                                                                               start=start,
-                                                                                               start_xyz=start_xyz,
-                                                                                               nudge=nudge)
+                                                                                               start = start,
+                                                                                               start_xyz = start_xyz,
+                                                                                               nudge = nudge)
             xyz_2 = segment_2 = tri_index_2 = None
         if xyz_1 is None:
             return None, None, None, None, None
@@ -265,8 +265,8 @@ class GridSkin:
                                                                                         kji0[1:],
                                                                                         axis,
                                                                                         polarity,
-                                                                                        start_xyz=xyz,
-                                                                                        nudge=-1.0)
+                                                                                        start_xyz = xyz,
+                                                                                        nudge = -1.0)
                     if xyz is None:
                         log.error('unexpected failure to identify skin column face penetration point')
                         return None, None, None, None, None
@@ -291,7 +291,7 @@ class GridSkin:
                 assert self.skin.is_combined_list[surf_index]
                 fault_surf_list = self.skin.surface_list[surf_index]
                 col_surf_index, _ = fault_surf_list.surface_index_for_triangle_index(surf_tri_index)
-                col_ji0 = np.empty((2,), dtype=int)
+                col_ji0 = np.empty((2,), dtype = int)
                 surf_index -= 6 + 2 * self.k_gaps
                 if surf_index in [0, 1]:  # J-/+ fault face
                     col_ji0[:] = self.fault_j_face_cols_ji0[col_surf_index]
@@ -307,8 +307,8 @@ class GridSkin:
                                                                                       col_ji0,
                                                                                       axis,
                                                                                       polarity,
-                                                                                      start_xyz=xyz,
-                                                                                      nudge=-1.0)
+                                                                                      start_xyz = xyz,
+                                                                                      nudge = -1.0)
                 if xyz_f is None:
                     if self.k_gaps:
                         log.debug('failed to identify fault penetration point; assumed to be in k gap; nudging forward')
@@ -316,10 +316,10 @@ class GridSkin:
                             nudge = 0.0
                         nudge += 0.1
                         return self.find_first_intersection_of_trajectory(trajectory,
-                                                                          start=segment,
-                                                                          start_xyz=xyz,
-                                                                          nudge=nudge,
-                                                                          exclude_kji0=exclude_kji0)
+                                                                          start = segment,
+                                                                          start_xyz = xyz,
+                                                                          nudge = nudge,
+                                                                          exclude_kji0 = exclude_kji0)
                     log.error('unexpected failure to identify fault penetration point')
                     return None, None, None, None, None
                 xyz = xyz_f
@@ -330,7 +330,7 @@ class GridSkin:
 
         return None, None, None, None, None
 
-    def _make_k_gap_surfaces(self, quad_triangles=True):
+    def _make_k_gap_surfaces(self, quad_triangles = True):
         """Returns a list of newly created surfaces representing top and base of each k gap."""
 
         k_gap_surf_list = [
@@ -341,22 +341,22 @@ class GridSkin:
                 if self.grid.k_gap_after_array[k0]:
                     if self.has_split_coordinate_lines:
                         gap_top_surf = generate_torn_surface_for_layer_interface(self.grid,
-                                                                                 k0=k0,
-                                                                                 ref_k_faces='base',
-                                                                                 quad_triangles=quad_triangles)
+                                                                                 k0 = k0,
+                                                                                 ref_k_faces = 'base',
+                                                                                 quad_triangles = quad_triangles)
                         gap_base_surf = generate_torn_surface_for_layer_interface(self.grid,
-                                                                                  k0=k0 + 1,
-                                                                                  ref_k_faces='top',
-                                                                                  quad_triangles=quad_triangles)
+                                                                                  k0 = k0 + 1,
+                                                                                  ref_k_faces = 'top',
+                                                                                  quad_triangles = quad_triangles)
                     else:
                         gap_top_surf = generate_untorn_surface_for_layer_interface(self.grid,
-                                                                                   k0=k0,
-                                                                                   ref_k_faces='base',
-                                                                                   quad_triangles=quad_triangles)
+                                                                                   k0 = k0,
+                                                                                   ref_k_faces = 'base',
+                                                                                   quad_triangles = quad_triangles)
                         gap_base_surf = generate_untorn_surface_for_layer_interface(self.grid,
-                                                                                    k0=k0 + 1,
-                                                                                    ref_k_faces='top',
-                                                                                    quad_triangles=quad_triangles)
+                                                                                    k0 = k0 + 1,
+                                                                                    ref_k_faces = 'top',
+                                                                                    quad_triangles = quad_triangles)
                     k_gap_surf_list.append(gap_top_surf)
                     k_gap_surf_list.append(gap_base_surf)
                     self.k_gap_after_layer_list.append(k0)
@@ -366,10 +366,10 @@ class GridSkin:
 
 
 def generate_untorn_surface_for_layer_interface(grid,
-                                                k0=0,
-                                                ref_k_faces='top',
-                                                quad_triangles=True,
-                                                border=None):
+                                                k0 = 0,
+                                                ref_k_faces = 'top',
+                                                quad_triangles = True,
+                                                border = None):
     """Returns a Surface object generated from the grid layer interface points after any faults are 'healed'.
 
     arguments:
@@ -394,9 +394,9 @@ def generate_untorn_surface_for_layer_interface(grid,
 
     surf = rqs.Surface(grid.model)
     kp = 1 if ref_k_faces == 'base' else 0
-    mesh = grid.horizon_points(ref_k0=k0, heal_faults=True, kp=kp)
+    mesh = grid.horizon_points(ref_k0 = k0, heal_faults = True, kp = kp)
     if border is None or border <= 0.0:
-        surf.set_from_irregular_mesh(mesh, quad_triangles=quad_triangles)
+        surf.set_from_irregular_mesh(mesh, quad_triangles = quad_triangles)
     else:
         #      origin = np.mean(mesh, axis = (0, 1))
         skirted_mesh = np.empty((mesh.shape[0] + 2, mesh.shape[1] + 2, 3))
@@ -404,27 +404,27 @@ def generate_untorn_surface_for_layer_interface(grid,
         # fill border values (other than corners)
         for j in range(1, mesh.shape[0] + 1):
             skirted_mesh[j,
-            0, :] = skirted_mesh[j, 1] + border * vec.unit_vector(skirted_mesh[j, 1] - skirted_mesh[j, 2])
+                         0, :] = skirted_mesh[j, 1] + border * vec.unit_vector(skirted_mesh[j, 1] - skirted_mesh[j, 2])
             skirted_mesh[j,
-            -1, :] = skirted_mesh[j,
-                                  -2] + border * vec.unit_vector(skirted_mesh[j, -2] - skirted_mesh[j, -3])
+                         -1, :] = skirted_mesh[j,
+                                               -2] + border * vec.unit_vector(skirted_mesh[j, -2] - skirted_mesh[j, -3])
         for i in range(1, mesh.shape[1] + 1):
             skirted_mesh[0,
-            i, :] = skirted_mesh[1, i] + border * vec.unit_vector(skirted_mesh[1, i] - skirted_mesh[2, i])
+                         i, :] = skirted_mesh[1, i] + border * vec.unit_vector(skirted_mesh[1, i] - skirted_mesh[2, i])
             skirted_mesh[-1,
-            i, :] = skirted_mesh[-2,
-                                 i] + border * vec.unit_vector(skirted_mesh[-2, i] - skirted_mesh[-3, i])
+                         i, :] = skirted_mesh[-2,
+                                              i] + border * vec.unit_vector(skirted_mesh[-2, i] - skirted_mesh[-3, i])
         # fill in corner values
         skirted_mesh[0, 0, :] = skirted_mesh[0, 1] + skirted_mesh[1, 0] - skirted_mesh[1, 1]
         skirted_mesh[0, -1, :] = skirted_mesh[0, -2] + skirted_mesh[1, -1] - skirted_mesh[1, -2]
         skirted_mesh[-1, 0, :] = skirted_mesh[-1, 1] + skirted_mesh[-2, 0] - skirted_mesh[-2, 1]
         skirted_mesh[-1, -1, :] = skirted_mesh[-1, -2] + skirted_mesh[-2, -1] - skirted_mesh[-2, -2]
-        surf.set_from_irregular_mesh(skirted_mesh, quad_triangles=quad_triangles)
+        surf.set_from_irregular_mesh(skirted_mesh, quad_triangles = quad_triangles)
 
     return surf
 
 
-def generate_torn_surface_for_layer_interface(grid, k0=0, ref_k_faces='top', quad_triangles=True):
+def generate_torn_surface_for_layer_interface(grid, k0 = 0, ref_k_faces = 'top', quad_triangles = True):
     """Returns a Surface object generated from the grid layer interface points.
 
     arguments:
@@ -450,18 +450,18 @@ def generate_torn_surface_for_layer_interface(grid, k0=0, ref_k_faces='top', qua
 
     surf = rqs.Surface(grid.model)
     kp = 1 if ref_k_faces == 'base' else 0
-    mesh = grid.split_horizon_points(ref_k0=k0, kp=kp)
-    surf.set_from_torn_mesh(mesh, quad_triangles=quad_triangles)
+    mesh = grid.split_horizon_points(ref_k0 = k0, kp = kp)
+    surf.set_from_torn_mesh(mesh, quad_triangles = quad_triangles)
 
     return surf
 
 
 def generate_torn_surface_for_x_section(grid,
                                         axis,
-                                        ref_slice0=0,
-                                        plus_face=False,
-                                        quad_triangles=True,
-                                        as_single_layer=False):
+                                        ref_slice0 = 0,
+                                        plus_face = False,
+                                        quad_triangles = True,
+                                        as_single_layer = False):
     """Returns a Surface object generated from the grid cross section points.
 
     arguments:
@@ -489,7 +489,7 @@ def generate_torn_surface_for_x_section(grid,
     assert axis.upper() in ['I', 'J']
 
     if grid.k_gaps is None or grid.k_gaps == 0:
-        x_sect_points = grid.split_x_section_points(axis, ref_slice0=ref_slice0, plus_face=plus_face)
+        x_sect_points = grid.split_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
         if as_single_layer:
             shape = np.array(x_sect_points.shape)
             shape[0] = 1
@@ -498,22 +498,22 @@ def generate_torn_surface_for_x_section(grid,
         else:
             x_sect_top = x_sect_points[:-1]
             x_sect_base = x_sect_points[1:]
-        x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis=2)
+        x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis = 2)
     else:
-        x_sect_mesh = grid.split_gap_x_section_points(axis, ref_slice0=ref_slice0, plus_face=plus_face)
+        x_sect_mesh = grid.split_gap_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
 
     surf = rqs.Surface(grid.model)
-    surf.set_from_torn_mesh(x_sect_mesh, quad_triangles=quad_triangles)
+    surf.set_from_torn_mesh(x_sect_mesh, quad_triangles = quad_triangles)
 
     return surf
 
 
 def generate_untorn_surface_for_x_section(grid,
                                           axis,
-                                          ref_slice0=0,
-                                          plus_face=False,
-                                          quad_triangles=True,
-                                          as_single_layer=False):
+                                          ref_slice0 = 0,
+                                          plus_face = False,
+                                          quad_triangles = True,
+                                          as_single_layer = False):
     """Returns a Surface object generated from the grid cross section points for an unfaulted grid.
 
     arguments:
@@ -540,20 +540,20 @@ def generate_untorn_surface_for_x_section(grid,
 
     assert axis.upper() in ['I', 'J']
 
-    x_sect_points = grid.unsplit_x_section_points(axis, ref_slice0=ref_slice0, plus_face=plus_face)
+    x_sect_points = grid.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)
     if as_single_layer:
         shape = np.array(x_sect_points.shape)
         shape[0] = 1
         x_sect_top = x_sect_points[0]
         x_sect_base = x_sect_points[-1]
-        x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis=0)
+        x_sect_mesh = np.stack((x_sect_top, x_sect_base), axis = 0)
     else:
         x_sect_mesh = x_sect_points
 
     log.debug(f'x_sect_mesh.shape: {x_sect_mesh.shape}; grid.extent_kji: {grid.extent_kji}')
 
     surf = rqs.Surface(grid.model)
-    surf.set_from_irregular_mesh(x_sect_mesh, quad_triangles=quad_triangles)
+    surf.set_from_irregular_mesh(x_sect_mesh, quad_triangles = quad_triangles)
 
     return surf
 
@@ -603,10 +603,10 @@ def find_intersections_of_trajectory_with_surface(trajectory, surface):
 
 def find_intersections_of_trajectory_with_layer_interface(trajectory,
                                                           grid,
-                                                          k0=0,
-                                                          ref_k_faces='top',
-                                                          heal_faults=True,
-                                                          quad_triangles=True):
+                                                          k0 = 0,
+                                                          ref_k_faces = 'top',
+                                                          heal_faults = True,
+                                                          quad_triangles = True):
     """Returns an array of column indices and an array of xyz of intersections of well trajectory with layer interface.
 
     arguments:
@@ -643,14 +643,14 @@ def find_intersections_of_trajectory_with_layer_interface(trajectory,
     log.debug('generating surface for layer: ' + str(k0) + ' ' + ref_k_faces)
     if grid.has_split_coordinate_lines and not heal_faults:
         surface = generate_torn_surface_for_layer_interface(grid,
-                                                            k0=k0,
-                                                            ref_k_faces=ref_k_faces,
-                                                            quad_triangles=quad_triangles)
+                                                            k0 = k0,
+                                                            ref_k_faces = ref_k_faces,
+                                                            quad_triangles = quad_triangles)
     else:
         surface = generate_untorn_surface_for_layer_interface(grid,
-                                                              k0=k0,
-                                                              ref_k_faces=ref_k_faces,
-                                                              quad_triangles=quad_triangles)
+                                                              k0 = k0,
+                                                              ref_k_faces = ref_k_faces,
+                                                              quad_triangles = quad_triangles)
 
     tri_intersect_list = find_intersections_of_trajectory_with_surface(trajectory_list, surface)
 
@@ -662,7 +662,7 @@ def find_intersections_of_trajectory_with_layer_interface(trajectory,
             j_list, i_list = surface.column_from_triangle_index(
                 triangle_indices)  # todo: check this is valid for torn surfaces
             assert j_list is not None, 'failed to derive column indices from triangle indices'
-            cols = np.stack((j_list, i_list), axis=-1)
+            cols = np.stack((j_list, i_list), axis = -1)
             results_list.append((cols, intersect_points))
 
     if isinstance(trajectory, list):
@@ -672,10 +672,10 @@ def find_intersections_of_trajectory_with_layer_interface(trajectory,
 
 def find_first_intersection_of_trajectory_with_surface(trajectory,
                                                        surface,
-                                                       start=0,
-                                                       start_xyz=None,
-                                                       nudge=None,
-                                                       return_second=False):
+                                                       start = 0,
+                                                       start_xyz = None,
+                                                       nudge = None,
+                                                       return_second = False):
     """Returns xyz and other info of the first intersection of well trajectory with layer interface.
 
     arguments:
@@ -730,7 +730,7 @@ def find_first_intersection_of_trajectory_with_surface(trajectory,
             line_p = start_xyz
         start_xyz = None
         line_v = trajectory.control_points[knot + 1] - line_p
-        intersects = meet.line_triangles_intersects(line_p, line_v, triangles, line_segment=True)
+        intersects = meet.line_triangles_intersects(line_p, line_v, triangles, line_segment = True)
         if not np.all(np.isnan(intersects)):
             intersects_indices = meet.intersects_indices(intersects)
             tri = intersects_indices[0]
@@ -766,11 +766,11 @@ def find_first_intersection_of_trajectory_with_surface(trajectory,
 
 def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
                                                                grid,
-                                                               k0=0,
-                                                               ref_k_faces='top',
-                                                               start=0,
-                                                               heal_faults=False,
-                                                               quad_triangles=True):
+                                                               k0 = 0,
+                                                               ref_k_faces = 'top',
+                                                               start = 0,
+                                                               heal_faults = False,
+                                                               quad_triangles = True):
     """Returns info about the first intersection of well trajectory(s) with layer interface.
 
     arguments:
@@ -809,21 +809,21 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
     #   log.debug('generating surface for layer: ' + str(k0) + ' ' + ref_k_faces)
     if grid.has_split_coordinate_lines and not heal_faults:
         surface = generate_torn_surface_for_layer_interface(grid,
-                                                            k0=k0,
-                                                            ref_k_faces=ref_k_faces,
-                                                            quad_triangles=quad_triangles)
+                                                            k0 = k0,
+                                                            ref_k_faces = ref_k_faces,
+                                                            quad_triangles = quad_triangles)
     else:
         surface = generate_untorn_surface_for_layer_interface(grid,
-                                                              k0=k0,
-                                                              ref_k_faces=ref_k_faces,
-                                                              quad_triangles=quad_triangles)
+                                                              k0 = k0,
+                                                              ref_k_faces = ref_k_faces,
+                                                              quad_triangles = quad_triangles)
 
     #   log.debug('finding intersections of wellbore trajectory(ies) with layer: ' + str(k0) + ' ' + ref_k_faces)
     results_list = []
     segment_list = []
     col_list = []
     for traj in trajectory_list:
-        xyz, knot, tri = find_first_intersection_of_trajectory_with_surface(traj, surface, start=start)
+        xyz, knot, tri = find_first_intersection_of_trajectory_with_surface(traj, surface, start = start)
         col = surface.column_from_triangle_index(tri)  # j, i pair returned
         results_list.append(xyz)
         segment_list.append(knot)
@@ -838,14 +838,14 @@ def find_first_intersection_of_trajectory_with_cell_surface(trajectory,
                                                             grid,
                                                             kji0,
                                                             start_knot,
-                                                            start_xyz=None,
-                                                            nudge=0.001,
-                                                            quad_triangles=True):
+                                                            start_xyz = None,
+                                                            nudge = 0.001,
+                                                            quad_triangles = True):
     """Return first intersection with cell's surface found along a trajectory."""
 
     cp = grid.corner_points(kji0)
     cell_surface = rqs.Surface(grid.model)
-    cell_surface.set_to_single_cell_faces_from_corner_points(cp, quad_triangles=quad_triangles)
+    cell_surface.set_to_single_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
     t, p = cell_surface.triangles_and_points()
     triangles = p[t]
     knot = start_knot
@@ -868,7 +868,7 @@ def find_first_intersection_of_trajectory_with_cell_surface(trajectory,
             line_p = trajectory.control_points[knot]
         line_v = trajectory.control_points[knot + 1] - line_p
         #      log.debug('kji0: ' + str(kji0) + '; knot: ' + str(knot) + '; line p: ' + str(line_p) + '; v: ' + str(line_v))
-        intersects = meet.line_triangles_intersects(line_p, line_v, triangles, line_segment=True)
+        intersects = meet.line_triangles_intersects(line_p, line_v, triangles, line_segment = True)
         if not np.all(np.isnan(intersects)):
             # if more than one intersect, could find one closest to line_p; should not be needed when starting inside cell
             tri = meet.intersects_indices(intersects)[0]
@@ -884,24 +884,24 @@ def find_first_intersection_of_trajectory_with_cell_surface(trajectory,
     return xyz, knot, axis, polarity
 
 
-def point_is_within_cell(xyz, grid, kji0, cell_surface=None, false_on_pinchout=True):
+def point_is_within_cell(xyz, grid, kji0, cell_surface = None, false_on_pinchout = True):
     """Returns True if point xyz is within cell kji0, but not on its surface."""
 
-    if false_on_pinchout and grid.pinched_out(kji0, cache_pinchout_array=False):
+    if false_on_pinchout and grid.pinched_out(kji0, cache_pinchout_array = False):
         return False
     if cell_surface is None:
         cp = grid.corner_points(kji0)
         cell_surface = rqs.Surface(grid.model)
-        cell_surface.set_to_single_cell_faces_from_corner_points(cp, quad_triangles=True)
+        cell_surface.set_to_single_cell_faces_from_corner_points(cp, quad_triangles = True)
     t, p = cell_surface.triangles_and_points()
     triangles = p[t]
     centre = grid.centre_point(kji0)
     line_v = centre - xyz
-    intersects = meet.line_triangles_intersects(xyz, line_v, triangles, line_segment=True)
+    intersects = meet.line_triangles_intersects(xyz, line_v, triangles, line_segment = True)
     return np.all(np.isnan(intersects))
 
 
-def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_triangles=True, as_single_layer=False):
+def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_triangles = True, as_single_layer = False):
     """Creates a Mesh and corresponding Surface representing a column face.
 
     arguments:
@@ -925,9 +925,9 @@ def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_tria
     else:  # I face
         pillar_index_pair = col_pm[:, polarity]
     if grid.k_gaps:
-        points = grid.points_ref(masked=False).reshape(grid.nk_plus_k_gaps + 1, -1, 3)
+        points = grid.points_ref(masked = False).reshape(grid.nk_plus_k_gaps + 1, -1, 3)
     else:
-        points = grid.points_ref(masked=False).reshape(grid.nk + 1, -1, 3)
+        points = grid.points_ref(masked = False).reshape(grid.nk + 1, -1, 3)
     # note, here col_face_xyz is indexed by (j or i, k, xyz) whereas elsewhere (k, j or i, xyz) would be more typical
     # this protocol needs to align with re-use of Surface.column_for_triangle_index() method for layer identification
 
@@ -939,7 +939,7 @@ def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_tria
         mesh[0, :, 1, 0, :] = points[grid.k_raw_index_array, pillar_index_pair[1], :]
         mesh[0, :, 0, 1, :] = points[grid.k_raw_index_array + 1, pillar_index_pair[0], :]
         mesh[0, :, 1, 1, :] = points[grid.k_raw_index_array + 1, pillar_index_pair[1], :]
-        col_face_surface.set_from_torn_mesh(mesh, quad_triangles=quad_triangles)
+        col_face_surface.set_from_torn_mesh(mesh, quad_triangles = quad_triangles)
 
     else:
         if as_single_layer:
@@ -952,10 +952,10 @@ def create_column_face_mesh_and_surface(grid, col_ji0, axis, polarity, quad_tria
             col_face_xyz = np.empty((2, grid.nk + 1, 3))
             col_face_xyz[0] = points[:, pillar_index_pair[0]]
             col_face_xyz[1] = points[:, pillar_index_pair[1]]
-        col_face_mesh = rqs.Mesh(grid.model, xyz_values=col_face_xyz, crs_uuid=grid.crs_uuid)
+        col_face_mesh = rqs.Mesh(grid.model, xyz_values = col_face_xyz, crs_uuid = grid.crs_uuid)
         title = 'column face for j0,i0: ' + str(col_ji0[0]) + ',' + str(
             col_ji0[1]) + ' face ' + 'KJI'[axis] + '-+'[polarity]
-        col_face_surface = rqs.Surface(grid.model, mesh=col_face_mesh, quad_triangles=quad_triangles, title=title)
+        col_face_surface = rqs.Surface(grid.model, mesh = col_face_mesh, quad_triangles = quad_triangles, title = title)
 
     return col_face_mesh, col_face_surface
 
@@ -966,9 +966,9 @@ def find_intersection_of_trajectory_interval_with_column_face(trajectory,
                                                               col_ji0,
                                                               axis,
                                                               polarity,
-                                                              start_xyz=None,
-                                                              nudge=None,
-                                                              quad_triangles=True):
+                                                              start_xyz = None,
+                                                              nudge = None,
+                                                              quad_triangles = True):
     """Searches for intersection of a single trajectory segment with an I or J column face.
 
     returns:
@@ -984,7 +984,7 @@ def find_intersection_of_trajectory_interval_with_column_face(trajectory,
                                                               col_ji0,
                                                               axis,
                                                               polarity,
-                                                              quad_triangles=quad_triangles)
+                                                              quad_triangles = quad_triangles)
     t, p = col_face_surface.triangles_and_points()
     triangles = p[t]
     log.debug(f"intersecting trajectory segment with column face ji0 {col_ji0} face {'KJI'[axis]}{'-+'[polarity]}")
@@ -995,7 +995,7 @@ def find_intersection_of_trajectory_interval_with_column_face(trajectory,
     else:
         line_p = trajectory.control_points[start_knot]
     line_v = trajectory.control_points[start_knot + 1] - line_p
-    intersects = meet.line_triangles_intersects(line_p, line_v, triangles, line_segment=True)
+    intersects = meet.line_triangles_intersects(line_p, line_v, triangles, line_segment = True)
     if np.all(np.isnan(intersects)):
         return None, None
     tri = meet.intersects_indices(intersects)[0]  # todo: if more than one, find one closest to line_p
@@ -1004,7 +1004,7 @@ def find_intersection_of_trajectory_interval_with_column_face(trajectory,
     return xyz, k0
 
 
-def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None):
+def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
     if progress_fn is not None:
@@ -1018,12 +1018,12 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
         k_vectors = u - v
         combo = np.stack((v, u))
         k_vector_boxes = np.empty((grid.nk - 1, grid.nj, grid.ni, 2, 3))
-        k_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis=0)
-        k_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis=0)
+        k_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
+        k_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
         column_k_vector_boxes = np.empty((grid.nj, grid.ni, 2, 3))
-        column_k_vector_boxes[:, :, 0, :] = np.amin(k_vector_boxes[:, :, :, 0, :], axis=0)
-        column_k_vector_boxes[:, :, 1, :] = np.amax(k_vector_boxes[:, :, :, 1, :], axis=0)
-        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype=bool)
+        column_k_vector_boxes[:, :, 0, :] = np.amin(k_vector_boxes[:, :, :, 0, :], axis = 0)
+        column_k_vector_boxes[:, :, 1, :] = np.amax(k_vector_boxes[:, :, :, 1, :], axis = 0)
+        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
     else:
         k_vectors = None
         k_vector_boxes = None
@@ -1035,12 +1035,12 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
         j_vectors = u - v
         combo = np.stack((v, u))
         j_vector_boxes = np.empty((grid.nk, grid.nj - 1, grid.ni, 2, 3))
-        j_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis=0)
-        j_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis=0)
+        j_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
+        j_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
         column_j_vector_boxes = np.empty((grid.nj - 1, grid.ni, 2, 3))
-        column_j_vector_boxes[:, :, 0, :] = np.amin(j_vector_boxes[:, :, :, 0, :], axis=0)
-        column_j_vector_boxes[:, :, 1, :] = np.amax(j_vector_boxes[:, :, :, 1, :], axis=0)
-        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype=bool)
+        column_j_vector_boxes[:, :, 0, :] = np.amin(j_vector_boxes[:, :, :, 0, :], axis = 0)
+        column_j_vector_boxes[:, :, 1, :] = np.amax(j_vector_boxes[:, :, :, 1, :], axis = 0)
+        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
     else:
         j_vectors = None
         j_vector_boxes = None
@@ -1053,12 +1053,12 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
         i_vectors = u - v
         combo = np.stack((v, u))
         i_vector_boxes = np.empty((grid.nk, grid.nj, grid.ni - 1, 2, 3))
-        i_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis=0)
-        i_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis=0)
+        i_vector_boxes[:, :, :, 0, :] = np.amin(combo, axis = 0)
+        i_vector_boxes[:, :, :, 1, :] = np.amax(combo, axis = 0)
         column_i_vector_boxes = np.empty((grid.nj, grid.ni - 1, 2, 3))
-        column_i_vector_boxes[:, :, 0, :] = np.amin(i_vector_boxes[:, :, :, 0, :], axis=0)
-        column_i_vector_boxes[:, :, 1, :] = np.amax(i_vector_boxes[:, :, :, 1, :], axis=0)
-        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype=bool)
+        column_i_vector_boxes[:, :, 0, :] = np.amin(i_vector_boxes[:, :, :, 0, :], axis = 0)
+        column_i_vector_boxes[:, :, 1, :] = np.amax(i_vector_boxes[:, :, :, 1, :], axis = 0)
+        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
     else:
         i_vectors = None
         i_vector_boxes = None
@@ -1070,10 +1070,10 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
     triangles = p[t]
     assert triangles.size > 0, 'no triangles in surface'
     triangle_boxes = np.empty((triangles.shape[0], 2, 3))
-    triangle_boxes[:, 0, :] = np.amin(triangles, axis=1)
-    triangle_boxes[:, 1, :] = np.amax(triangles, axis=1)
+    triangle_boxes[:, 0, :] = np.amin(triangles, axis = 1)
+    triangle_boxes[:, 1, :] = np.amax(triangles, axis = 1)
 
-    grid_box = grid.xyz_box(lazy=False)
+    grid_box = grid.xyz_box(lazy = False)
 
     # log.debug('looking for cell faces for each triangle')
     batch_size = 1000
@@ -1084,8 +1084,8 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
     while ti_base < triangle_count:
         ti_end = min(ti_base + batch_size, triangle_count)
         batch_box = np.empty((2, 3))
-        batch_box[0, :] = np.amin(triangle_boxes[ti_base:ti_end, 0, :], axis=0)
-        batch_box[1, :] = np.amax(triangle_boxes[ti_base:ti_end, 1, :], axis=0)
+        batch_box[0, :] = np.amin(triangle_boxes[ti_base:ti_end, 0, :], axis = 0)
+        batch_box[1, :] = np.amax(triangle_boxes[ti_base:ti_end, 1, :], axis = 0)
         if bx.boxes_overlap(grid_box, batch_box):
             for j in range(grid.nj):
                 if progress_fn is not None:
@@ -1095,7 +1095,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
                         full_intersects = meet.line_set_triangles_intersects(centre_points[:-1, j, i],
                                                                              k_vectors[:, j, i],
                                                                              triangles[ti_base:ti_end],
-                                                                             line_segment=True)
+                                                                             line_segment = True)
                         distilled_intersects, _, _ = meet.distilled_intersects(full_intersects)
                         k_faces[distilled_intersects, j, i] = True
                     if j < grid.nj - 1 and column_j_vector_boxes is not None and bx.boxes_overlap(
@@ -1103,7 +1103,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
                         full_intersects = meet.line_set_triangles_intersects(centre_points[:, j, i],
                                                                              j_vectors[:, j, i],
                                                                              triangles[ti_base:ti_end],
-                                                                             line_segment=True)
+                                                                             line_segment = True)
                         distilled_intersects, _, _ = meet.distilled_intersects(full_intersects)
                         j_faces[distilled_intersects, j, i] = True
                     if i < grid.ni - 1 and column_i_vector_boxes is not None and bx.boxes_overlap(
@@ -1111,7 +1111,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
                         full_intersects = meet.line_set_triangles_intersects(centre_points[:, j, i],
                                                                              i_vectors[:, j, i],
                                                                              triangles[ti_base:ti_end],
-                                                                             line_segment=True)
+                                                                             line_segment = True)
                         distilled_intersects, _, _ = meet.distilled_intersects(full_intersects)
                         i_faces[distilled_intersects, j, i] = True
         ti_base = ti_end
@@ -1125,12 +1125,12 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
     #                      '; J: ' + str(np.count_nonzero(j_faces)) +
     #                      '; I: ' + str(np.count_nonzero(i_faces)))
     gcs = rqf.GridConnectionSet(grid.model,
-                                grid=grid,
-                                k_faces=k_faces,
-                                j_faces=j_faces,
-                                i_faces=i_faces,
-                                feature_name=name,
-                                create_organizing_objects_where_needed=True)
+                                grid = grid,
+                                k_faces = k_faces,
+                                j_faces = j_faces,
+                                i_faces = i_faces,
+                                feature_name = name,
+                                create_organizing_objects_where_needed = True)
 
     if progress_fn is not None:
         progress_fn(1.0)
@@ -1138,7 +1138,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=None
     return gcs
 
 
-def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn=None):
+def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
     assert isinstance(grid, grr.RegularGrid)
@@ -1156,15 +1156,15 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn=Non
 
     # K direction (xy projection)
     if grid.nk > 1:
-        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype=bool)
+        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
         k_centres = centres[0, :, :].reshape((-1, 3))
-        k_hits = vec.points_in_triangles(p, t, k_centres, projection='xy', edged=True).reshape(
+        k_hits = vec.points_in_triangles(p, t, k_centres, projection = 'xy', edged = True).reshape(
             (t_count, grid.nj, grid.ni))
-        for k_t, k_j, k_i in np.stack(np.where(k_hits), axis=-1):
+        for k_t, k_j, k_i in np.stack(np.where(k_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[0, k_j, k_i],
                                                centres[-1, k_j, k_i] - centres[0, k_j, k_i],
                                                p[t[k_t]],
-                                               line_segment=True)
+                                               line_segment = True)
             if xyz is None:
                 continue
             k_face = int((xyz[2] - centres[0, k_j, k_i, 2]) / grid_dxyz[2])
@@ -1175,15 +1175,15 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn=Non
 
     # J direction (xz projection)
     if grid.nj > 1:
-        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype=bool)
+        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
         j_centres = centres[:, 0, :].reshape((-1, 3))
-        j_hits = vec.points_in_triangles(p, t, j_centres, projection='xz', edged=True).reshape(
+        j_hits = vec.points_in_triangles(p, t, j_centres, projection = 'xz', edged = True).reshape(
             (t_count, grid.nk, grid.ni))
-        for j_t, j_k, j_i in np.stack(np.where(j_hits), axis=-1):
+        for j_t, j_k, j_i in np.stack(np.where(j_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[j_k, 0, j_i],
                                                centres[j_k, -1, j_i] - centres[j_k, 0, j_i],
                                                p[t[j_t]],
-                                               line_segment=True)
+                                               line_segment = True)
             if xyz is None:
                 continue
             j_face = int((xyz[1] - centres[j_k, 0, j_i, 1]) / grid_dxyz[1])
@@ -1194,15 +1194,15 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn=Non
 
     # I direction (yz projection)
     if grid.ni > 1:
-        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype=bool)
+        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
         i_centres = centres[:, :, 0].reshape((-1, 3))
-        i_hits = vec.points_in_triangles(p, t, i_centres, projection='yz', edged=True).reshape(
+        i_hits = vec.points_in_triangles(p, t, i_centres, projection = 'yz', edged = True).reshape(
             (t_count, grid.nk, grid.nj))
-        for i_t, i_k, i_j in np.stack(np.where(i_hits), axis=-1):
+        for i_t, i_k, i_j in np.stack(np.where(i_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[i_k, i_j, 0],
                                                centres[i_k, i_j, -1] - centres[i_k, i_j, 0],
                                                p[t[i_t]],
-                                               line_segment=True)
+                                               line_segment = True)
             if xyz is None:
                 continue
             i_face = int((xyz[0] - centres[i_k, i_j, 0, 0]) / grid_dxyz[0])
@@ -1212,12 +1212,12 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn=Non
         i_faces = None
 
     gcs = rqf.GridConnectionSet(grid.model,
-                                grid=grid,
-                                k_faces=k_faces,
-                                j_faces=j_faces,
-                                i_faces=i_faces,
-                                feature_name=name,
-                                create_organizing_objects_where_needed=True)
+                                grid = grid,
+                                k_faces = k_faces,
+                                j_faces = j_faces,
+                                i_faces = i_faces,
+                                feature_name = name,
+                                create_organizing_objects_where_needed = True)
 
     if progress_fn is not None:
         progress_fn(1.0)
@@ -1225,7 +1225,7 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn=Non
     return gcs
 
 
-def find_faces_to_represent_surface(grid, surface, name, mode='auto', progress_fn=None):
+def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
     log.debug('finding cell faces for surface')
@@ -1235,20 +1235,20 @@ def find_faces_to_represent_surface(grid, surface, name, mode='auto', progress_f
         else:
             mode = 'staffa'
     if mode == 'staffa':
-        return find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn=progress_fn)
+        return find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = progress_fn)
     elif mode == 'regular':
-        return find_faces_to_represent_surface_regular(grid, surface, name, progress_fn=progress_fn)
+        return find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = progress_fn)
     log.critical('unrecognised mode: ' + str(mode))
     return None
 
 
 def generate_surface_for_blocked_well_cells(blocked_well,
-                                            combined=True,
-                                            active_only=False,
-                                            min_k0=0,
-                                            max_k0=None,
-                                            depth_limit=None,
-                                            quad_triangles=True):
+                                            combined = True,
+                                            active_only = False,
+                                            min_k0 = 0,
+                                            max_k0 = None,
+                                            depth_limit = None,
+                                            quad_triangles = True):
     """Returns a surface or list of surfaces representing the faces of the cells visited by the well."""
 
     assert blocked_well is not None and type(blocked_well) is rqw.BlockedWell
@@ -1278,7 +1278,7 @@ def generate_surface_for_blocked_well_cells(blocked_well,
             cell_p += 1
         else:
             cs = rqs.Surface(blocked_well.model)
-            cs.set_to_single_cell_faces_from_corner_points(cp, quad_triangles=quad_triangles)
+            cs.set_to_single_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
             surface_list.append(cs)
 
     if cell_p == 0 and len(surface_list) == 0:
@@ -1292,7 +1292,7 @@ def generate_surface_for_blocked_well_cells(blocked_well,
     return surface_list
 
 
-def trajectory_grid_overlap(trajectory, grid, lazy=False):
+def trajectory_grid_overlap(trajectory, grid, lazy = False):
     """Returns True if there is some overlap of the xyz boxes for the trajectory and grid, False otherwise.
 
     notes:
@@ -1301,23 +1301,23 @@ def trajectory_grid_overlap(trajectory, grid, lazy=False):
     """
 
     traj_box = np.empty((2, 3))
-    traj_box[0] = np.amin(trajectory.control_points, axis=0)
-    traj_box[1] = np.amax(trajectory.control_points, axis=0)
-    grid_box = grid.xyz_box(lazy=lazy, local=True)
+    traj_box[0] = np.amin(trajectory.control_points, axis = 0)
+    traj_box[1] = np.amax(trajectory.control_points, axis = 0)
+    grid_box = grid.xyz_box(lazy = lazy, local = True)
     if not bu.matching_uuids(trajectory.crs_uuid, grid.crs_uuid):
-        t_crs = rqc.Crs(trajectory.model, uuid=trajectory.crs_uuid)
-        g_crs = rqc.Crs(grid.model, uuid=grid.crs_uuid)
+        t_crs = rqc.Crs(trajectory.model, uuid = trajectory.crs_uuid)
+        g_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
         t_crs.convert_array_to(g_crs, traj_box)
     return bx.boxes_overlap(traj_box, grid_box)
 
 
 def populate_blocked_well_from_trajectory(blocked_well,
                                           grid,
-                                          active_only=False,
-                                          quad_triangles=True,
-                                          lazy=False,
-                                          use_single_layer_tactics=True,
-                                          check_for_reentry=True):
+                                          active_only = False,
+                                          quad_triangles = True,
+                                          lazy = False,
+                                          use_single_layer_tactics = True,
+                                          check_for_reentry = True):
     """Populate an empty blocked well object based on the intersection of its trajectory with a grid.
 
     arguments:
@@ -1362,14 +1362,14 @@ def populate_blocked_well_from_trajectory(blocked_well,
         use_single_layer_tactics = False
         log.debug('skin single layer tactics disabled')
 
-    grid_crs = rqc.Crs(grid.model, uuid=grid.crs_uuid)
+    grid_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
     trajectory = __trajectory_init(blocked_well, grid, grid_crs)
     traj_xyz = trajectory.control_points
 
     if not trajectory_grid_overlap(trajectory, grid):
         log.error(f'no overlap of trajectory with grid for trajectory uuid: {trajectory.uuid}')
         return None
-    grid_box = grid.xyz_box(lazy=False)
+    grid_box = grid.xyz_box(lazy = False)
     if grid_crs.z_inc_down:
         z_sign = 1.0
         grid_top_z = grid_box[0, 2]
@@ -1396,23 +1396,23 @@ def populate_blocked_well_from_trajectory(blocked_well,
         xyz, entry_knot, col_ji0 = find_first_intersection_of_trajectory_with_layer_interface(
             trajectory,
             grid,
-            k0=0,
-            ref_k_faces='top',
-            start=knot,
-            heal_faults=False,
-            quad_triangles=quad_triangles)
+            k0 = 0,
+            ref_k_faces = 'top',
+            start = knot,
+            heal_faults = False,
+            quad_triangles = quad_triangles)
         log.debug(f'top intersection x,y,z: {xyz}; knot: {entry_knot}; col j0,i0: {col_ji0[0]}, {col_ji0[1]}')
         if xyz is None:
             log.error('failed to find intersection of trajectory with top surface of grid')
             return None
-        cell_kji0 = np.array((0, col_ji0[0], col_ji0[1]), dtype=int)
+        cell_kji0 = np.array((0, col_ji0[0], col_ji0[1]), dtype = int)
         axis = 0
         polarity = 0
 
     else:  # not lazy
         # note: xyz and entry_fraction might be slightly off when penetrating a skewed fault plane – deemed immaterial
         # for real cases
-        skin = grid.skin(use_single_layer_tactics=use_single_layer_tactics)
+        skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
         xyz, cell_kji0, axis, polarity, entry_knot = skin.find_first_intersection_of_trajectory(trajectory)
         if xyz is None:
             log.error('failed to find intersection of trajectory with outer skin of grid')
@@ -1420,15 +1420,24 @@ def populate_blocked_well_from_trajectory(blocked_well,
         else:
             log.debug(f"skin intersection x,y,z: {xyz}; knot: {entry_knot}; cell kji0: {cell_kji0}; face: "
                       f"{'KJI'[axis]}{'-+'[polarity]}")
-            cell_kji0 = np.array(cell_kji0, dtype=int)
+            cell_kji0 = np.array(cell_kji0, dtype = int)
 
     previous_kji0 = cell_kji0.copy()
     previous_kji0[axis] += polarity * 2 - 1  # note: previous may legitimately be 'beyond' edge of grid
     entry_fraction = __segment_fraction(traj_xyz, entry_knot, xyz)
     log.debug(f'initial previous kji0: {previous_kji0}')
-    next_cell_info = __find_next_cell(grid, previous_kji0, axis, 1 - polarity, trajectory, entry_knot, entry_fraction,
-                                      xyz, check_for_reentry, treat_skin_as_fault=use_single_layer_tactics, lazy=lazy,
-                                      use_single_layer_tactics=use_single_layer_tactics)
+    next_cell_info = __find_next_cell(grid,
+                                      previous_kji0,
+                                      axis,
+                                      1 - polarity,
+                                      trajectory,
+                                      entry_knot,
+                                      entry_fraction,
+                                      xyz,
+                                      check_for_reentry,
+                                      treat_skin_as_fault = use_single_layer_tactics,
+                                      lazy = lazy,
+                                      use_single_layer_tactics = use_single_layer_tactics)
     log.debug(f'initial next cell info: {next_cell_info}')
     node_mds_list = [__back_calculated_md(trajectory, entry_knot, entry_fraction)]
     node_count = 1
@@ -1436,8 +1445,8 @@ def populate_blocked_well_from_trajectory(blocked_well,
     cell_count = 0
     cell_indices_list = []
     face_pairs_list = []
-    kissed = np.zeros(grid.extent_kji, dtype=bool)
-    sample_test = np.zeros(grid.extent_kji, dtype=bool)
+    kissed = np.zeros(grid.extent_kji, dtype = bool)
+    sample_test = np.zeros(grid.extent_kji, dtype = bool)
 
     while next_cell_info is not None:
         entry_shared, kji0, entry_axis, entry_polarity, entry_knot, entry_fraction, entry_xyz = next_cell_info
@@ -1454,7 +1463,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
             sample_test[:] = False
 
         exit_xyz, exit_knot, exit_axis, exit_polarity = find_first_intersection_of_trajectory_with_cell_surface(
-            trajectory, grid, kji0, entry_knot, start_xyz=entry_xyz, nudge=0.01, quad_triangles=True)
+            trajectory, grid, kji0, entry_knot, start_xyz = entry_xyz, nudge = 0.01, quad_triangles = True)
 
         #  if exit_xyz is None:
         #      log.debug('no exit')
@@ -1476,8 +1485,8 @@ def populate_blocked_well_from_trajectory(blocked_well,
                 break
             else:
                 next_cell_info = __forward_nudge(axis, entry_axis, entry_knot, entry_polarity, entry_xyz, grid, kissed,
-                                                 kji0, previous_kji0, sample_test, traj_xyz,
-                                                 trajectory, use_single_layer_tactics)
+                                                 kji0, previous_kji0, sample_test, traj_xyz, trajectory,
+                                                 use_single_layer_tactics)
             if next_cell_info is None:
                 log.warning('well blocking got stuck – cells probably omitted at tail of well')
         #      if exit_xyz is not None:  # usual well-behaved case or non-standard due to kiss
@@ -1494,10 +1503,18 @@ def populate_blocked_well_from_trajectory(blocked_well,
 
             previous_kji0 = kji0
             # log.debug(f'previous kji0 set to {previous_kji0}')
-            next_cell_info = __find_next_cell(grid, kji0, exit_axis, exit_polarity, trajectory, exit_knot,
+            next_cell_info = __find_next_cell(grid,
+                                              kji0,
+                                              exit_axis,
+                                              exit_polarity,
+                                              trajectory,
+                                              exit_knot,
                                               exit_fraction,
-                                              exit_xyz, check_for_reentry, treat_skin_as_fault=use_single_layer_tactics,
-                                              lazy=lazy, use_single_layer_tactics=use_single_layer_tactics)
+                                              exit_xyz,
+                                              check_for_reentry,
+                                              treat_skin_as_fault = use_single_layer_tactics,
+                                              lazy = lazy,
+                                              use_single_layer_tactics = use_single_layer_tactics)
             kissed[:] = False
             sample_test[:] = False
 
@@ -1514,9 +1531,9 @@ def populate_blocked_well_from_trajectory(blocked_well,
 
     blocked_well.node_mds = np.array(node_mds_list)
     blocked_well.node_count = node_count
-    blocked_well.grid_indices = np.array(grid_indices_list, dtype=int)
-    blocked_well.cell_indices = np.array(cell_indices_list, dtype=int)
-    blocked_well.face_pair_indices = np.array(face_pairs_list, dtype=int)
+    blocked_well.grid_indices = np.array(grid_indices_list, dtype = int)
+    blocked_well.cell_indices = np.array(cell_indices_list, dtype = int)
+    blocked_well.face_pair_indices = np.array(face_pairs_list, dtype = int)
     blocked_well.cell_count = cell_count
     blocked_well.grid_list = [grid]
 
@@ -1527,19 +1544,20 @@ def populate_blocked_well_from_trajectory(blocked_well,
     return blocked_well
 
 
-def __find_next_cell(grid,
-                     previous_kji0,
-                     axis,
-                     polarity,
-                     trajectory,
-                     segment,
-                     seg_fraction,
-                     xyz,
-                     check_for_reentry,
-                     treat_skin_as_fault=False,
-                     lazy=False,
-                     use_single_layer_tactics=True,
-                     ):
+def __find_next_cell(
+    grid,
+    previous_kji0,
+    axis,
+    polarity,
+    trajectory,
+    segment,
+    seg_fraction,
+    xyz,
+    check_for_reentry,
+    treat_skin_as_fault = False,
+    lazy = False,
+    use_single_layer_tactics = True,
+):
     # returns for next cell entry: (shared transit point bool, kji0, axis, polarity, segment, seg_fraction, xyz)
     # or single None if no next cell identified (end of trajectory beyond edge of grid)
     # take care of: edges of model; pinchouts; faults, (k gaps), exact edge or corner crossings
@@ -1547,20 +1565,20 @@ def __find_next_cell(grid,
     # note: for convenience, previous_kji0 may lie just outside the extent of the grid
     # note: polarity is relative to previous cell, so its complement applies to the next cell
     #      log.debug('finding next cell with previous kji0: ' + str(previous_kji0) + '; exit: ' + 'kji'[axis] + '-+'[polarity])
-    kji0 = np.array(previous_kji0, dtype=int)
+    kji0 = np.array(previous_kji0, dtype = int)
     polarity_sign = 2 * polarity - 1
     kji0[axis] += polarity_sign
     # if gone beyond external skin of model, return None
     if np.any(kji0 < 0) or np.any(kji0 >= grid.extent_kji) or (grid.k_gaps and axis == 0 and (
-            (polarity == 1 and previous_kji0[0] >= 0 and grid.k_gap_after_array[previous_kji0[0]]) or
-            (polarity == 0 and kji0[0] < grid.nk - 1 and grid.k_gap_after_array[kji0[0]]))):
+        (polarity == 1 and previous_kji0[0] >= 0 and grid.k_gap_after_array[previous_kji0[0]]) or
+        (polarity == 0 and kji0[0] < grid.nk - 1 and grid.k_gap_after_array[kji0[0]]))):
         if check_for_reentry and not lazy:
-            skin = grid.skin(use_single_layer_tactics=use_single_layer_tactics)
+            skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
             # nudge in following will be problematic if gap has zero (or tiny) thickness at this location
             xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(trajectory,
-                                                                                                   start=segment,
-                                                                                                   start_xyz=xyz,
-                                                                                                   nudge=+0.05)
+                                                                                                   start = segment,
+                                                                                                   start_xyz = xyz,
+                                                                                                   nudge = +0.05)
             if xyz_r is None:
                 log.debug('no skin re-entry found after exit through skin')
                 return None
@@ -1577,7 +1595,7 @@ def __find_next_cell(grid,
         if not faulted and treat_skin_as_fault:
             faulted = (kji0[axis] == 0 and polarity == 1) or (kji0[axis] == grid.extent_kji[axis] - 1 and polarity == 0)
     # handle the simplest case of a well behaved k neighbour or unsplit j or i neighbour
-    if not grid.pinched_out(cell_kji0=kji0, cache_pinchout_array=True) and not faulted:
+    if not grid.pinched_out(cell_kji0 = kji0, cache_pinchout_array = True) and not faulted:
         return True, kji0, axis, 1 - polarity, segment, seg_fraction, xyz
     if faulted:
         return __faulted(trajectory, grid, segment, kji0, axis, polarity, xyz, lazy, use_single_layer_tactics,
@@ -1585,20 +1603,22 @@ def __find_next_cell(grid,
     else:
         # skip pinched out cells
         pinchout_skip_sign = -1 if axis == 0 and polarity == 0 else 1
-        while grid.pinched_out(cell_kji0=kji0, cache_pinchout_array=True):
+        while grid.pinched_out(cell_kji0 = kji0, cache_pinchout_array = True):
             kji0[0] += pinchout_skip_sign
             if not (np.all(kji0 >= 0) and np.all(kji0 < grid.extent_kji)) or (grid.k_gaps and axis == 0 and (
-                    (polarity == 0 and grid.k_gap_after_array[kji0[0]]) or
-                    (polarity == 1 and grid.k_gap_after_array[kji0[0] - 1]))):
+                (polarity == 0 and grid.k_gap_after_array[kji0[0]]) or
+                (polarity == 1 and grid.k_gap_after_array[kji0[0] - 1]))):
                 log.debug(
                     f"trajectory reached edge of model {'or k gap ' if grid.k_gaps and axis == 0 else ''}at exit from cell kji0: {previous_kji0}"
                 )
                 if lazy:
                     return None
-                skin = grid.skin(use_single_layer_tactics=use_single_layer_tactics)
+                skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
                 # nudge in following will be problematic if gap has zero (or tiny) thickness at this location
-                xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(
-                    trajectory, start=segment, start_xyz=xyz, nudge=+0.01)
+                xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(trajectory,
+                                                                                                       start = segment,
+                                                                                                       start_xyz = xyz,
+                                                                                                       nudge = +0.01)
                 if xyz_r is None:
                     return None  # no re-entry found after exit through skin
                 seg_fraction = __segment_fraction(trajectory.control_points, segment, xyz_r)
@@ -1614,42 +1634,43 @@ def __faulted(trajectory, grid, segment, kji0, axis, polarity, xyz, lazy, use_si
                                                                           kji0[1:],
                                                                           axis,
                                                                           1 - polarity,
-                                                                          start_xyz=xyz,
-                                                                          nudge=-0.1,
-                                                                          quad_triangles=True)
+                                                                          start_xyz = xyz,
+                                                                          nudge = -0.1,
+                                                                          quad_triangles = True)
     if xyz_f is not None and k0 is not None:
         kji0[0] = k0
         seg_fraction = __segment_fraction(trajectory.control_points, segment, xyz_f)
-        return vec.isclose(xyz, xyz_f, tolerance=0.001), kji0, axis, 1 - polarity, segment, seg_fraction, xyz_f
+        return vec.isclose(xyz, xyz_f, tolerance = 0.001), kji0, axis, 1 - polarity, segment, seg_fraction, xyz_f
     log.debug('failed to find entry point in column face after crossing fault; checking entire cross section')
     x_sect_surf = generate_torn_surface_for_x_section(grid,
                                                       'KJI'[axis],
-                                                      ref_slice0=kji0[axis],
-                                                      plus_face=(polarity == 0),
-                                                      quad_triangles=True,
-                                                      as_single_layer=False)
+                                                      ref_slice0 = kji0[axis],
+                                                      plus_face = (polarity == 0),
+                                                      quad_triangles = True,
+                                                      as_single_layer = False)
     xyz_f, segment_f, tri_index_f = find_first_intersection_of_trajectory_with_surface(trajectory,
                                                                                        x_sect_surf,
-                                                                                       start=segment,
-                                                                                       start_xyz=xyz,
-                                                                                       nudge=-0.1)
+                                                                                       start = segment,
+                                                                                       start_xyz = xyz,
+                                                                                       nudge = -0.1)
     if xyz_f is not None:
         # back out cell info from triangle index; note 'column_from...' is actually x_section cell face
         k0, j_or_i0 = x_sect_surf.column_from_triangle_index(tri_index_f)
         kji0[0] = k0
         kji0[3 - axis] = j_or_i0
         seg_fraction = __segment_fraction(trajectory.control_points, segment_f, xyz_f)
-        return vec.isclose(xyz, xyz_f, tolerance=0.001), kji0, axis, 1 - polarity, segment_f, seg_fraction, xyz_f
-    log.debug(
-        "failed to find entry point in cross section after crossing fault"
-        f"{'' if lazy else '; checking for skin re-entry'}"
-    )
+        return vec.isclose(xyz, xyz_f, tolerance = 0.001), kji0, axis, 1 - polarity, segment_f, seg_fraction, xyz_f
+    log.debug("failed to find entry point in cross section after crossing fault"
+              f"{'' if lazy else '; checking for skin re-entry'}")
     if lazy:
         return None
-    skin = grid.skin(use_single_layer_tactics=use_single_layer_tactics)
+    skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
     # following is problematic due to skewed fault planes
-    xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(
-        trajectory, start=segment, start_xyz=xyz, nudge=-0.1, exclude_kji0=previous_kji0)
+    xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(trajectory,
+                                                                                           start = segment,
+                                                                                           start_xyz = xyz,
+                                                                                           nudge = -0.1,
+                                                                                           exclude_kji0 = previous_kji0)
     if xyz_r is None:
         log.warning('no skin re-entry found after exit through fault face')
         return None
@@ -1683,7 +1704,7 @@ def __forward_nudge(axis, entry_axis, entry_knot, entry_polarity, entry_xyz, gri
     # column faces)
     axis_a = (entry_axis + 1) % 3
     axis_b = (entry_axis + 2) % 3
-    offsets_kji = np.zeros((18, 3), dtype=int)
+    offsets_kji = np.zeros((18, 3), dtype = int)
     offsets_kji[0, axis_a] = -1
     offsets_kji[1, axis_a] = 1
     offsets_kji[2, axis_b] = -1
@@ -1699,9 +1720,8 @@ def __forward_nudge(axis, entry_axis, entry_knot, entry_polarity, entry_xyz, gri
     pinchout_skip_sign = -1 if entry_axis == 0 and entry_polarity == 1 else 1
     offsets_kji[16, axis] = pinchout_skip_sign
     log.debug(f'kiss pinchout skip sign: {pinchout_skip_sign}')
-    next_cell_info = __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info,
-                                      offsets_kji, pinchout_skip_sign, traj_xyz,
-                                      trajectory)
+    next_cell_info = __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info, offsets_kji,
+                                      pinchout_skip_sign, traj_xyz, trajectory)
     if next_cell_info is not None:
         return next_cell_info
     else:
@@ -1719,8 +1739,9 @@ def __forward_nudge(axis, entry_axis, entry_knot, entry_polarity, entry_xyz, gri
         sample_test[:] = False
         log.debug(f'sample point is {sample_point}')
         for try_index in range(len(offsets_kji)):
-            try_kji0 = np.array(kji0, dtype=int) + offsets_kji[try_index]
-            while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(cell_kji0=try_kji0):
+            try_kji0 = np.array(kji0, dtype = int) + offsets_kji[try_index]
+            while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(
+                    cell_kji0 = try_kji0):
                 try_kji0[0] += pinchout_skip_sign
             if np.any(try_kji0 < 0) or np.any(try_kji0 >= grid.extent_kji):
                 continue
@@ -1764,11 +1785,12 @@ def __forward_nudge(axis, entry_axis, entry_knot, entry_polarity, entry_xyz, gri
                                                     traj_xyz, trajectory, use_single_layer_tactics)
                             else:
                                 try_entry_fraction = __segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
-                                return (vec.isclose(try_entry_xyz, entry_xyz, tolerance=0.01), try_kji0, try_entry_axis,
-                                        try_entry_polarity, try_entry_knot, try_entry_fraction, try_entry_xyz)
+                                return (vec.isclose(try_entry_xyz, entry_xyz,
+                                                    tolerance = 0.01), try_kji0, try_entry_axis, try_entry_polarity,
+                                        try_entry_knot, try_entry_fraction, try_entry_xyz)
             k_offset += 1
-        return __no_success(entry_knot, entry_xyz, grid, next_cell_info, previous_kji0,
-                            traj_xyz, trajectory, use_single_layer_tactics)
+        return __no_success(entry_knot, entry_xyz, grid, next_cell_info, previous_kji0, traj_xyz, trajectory,
+                            use_single_layer_tactics)
 
 
 def __no_success(entry_knot, entry_xyz, grid, next_cell_info, previous_kji0, traj_xyz, trajectory,
@@ -1776,7 +1798,7 @@ def __no_success(entry_knot, entry_xyz, grid, next_cell_info, previous_kji0, tra
     log.debug('no success during full column search')
     if np.any(previous_kji0 == 0) or np.any(previous_kji0 == grid.extent_kji - 1):
         log.debug('looking for skin re-entry after possible kissing exit')
-        skin = grid.skin(use_single_layer_tactics=use_single_layer_tactics)
+        skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
         try_entry_xyz, try_kji0, try_entry_axis, try_entry_polarity, try_entry_knot = \
             skin.find_first_intersection_of_trajectory(trajectory, start=entry_knot,
                                                        start_xyz=entry_xyz, nudge=+0.1)
@@ -1792,8 +1814,7 @@ def __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info, 
                      traj_xyz, trajectory):
     for try_index in range(len(offsets_kji)):
         try_kji0 = kji0 + offsets_kji[try_index]
-        while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(
-                cell_kji0=try_kji0):
+        while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(cell_kji0 = try_kji0):
             try_kji0[0] += pinchout_skip_sign
         if np.any(try_kji0 < 0) or np.any(try_kji0 >= grid.extent_kji) or kissed[tuple(try_kji0)]:
             continue
@@ -1807,7 +1828,7 @@ def __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info, 
                                                                     start_xyz=entry_xyz,
                                                                     nudge=-0.01,
                                                                     quad_triangles=True)
-        if try_entry_xyz is not None and vec.isclose(try_entry_xyz, entry_xyz, tolerance=0.02):
+        if try_entry_xyz is not None and vec.isclose(try_entry_xyz, entry_xyz, tolerance = 0.02):
             log.debug(f'try accepted for cell: {try_kji0}')
             try_entry_fraction = __segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
             # replace the next cell entry info
@@ -1820,22 +1841,22 @@ def __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info, 
 def __trajectory_init(blocked_well, grid, grid_crs):
     if bu.matching_uuids(rqet.uuid_for_part_root(blocked_well.trajectory.crs_root), grid.crs_uuid):
         trajectory = blocked_well.trajectory
-        assert grid_crs == rqc.Crs(blocked_well.model, uuid=trajectory.crs_uuid)
+        assert grid_crs == rqc.Crs(blocked_well.model, uuid = trajectory.crs_uuid)
     else:
         # create a temporary orphanage model (in memory only) to host a copy of the trajectory for crs alignment
         # NB. temporary objects, relationships left in a mess
-        model = rq.Model(create_basics=True)
+        model = rq.Model(create_basics = True)
         trajectory = rqw.Trajectory(model,
-                                    uuid=blocked_well.trajectory.uuid,
-                                    hdf5_source_model=blocked_well.trajectory.model)
+                                    uuid = blocked_well.trajectory.uuid,
+                                    hdf5_source_model = blocked_well.trajectory.model)
         assert trajectory is not None
-        traj_crs = rqc.Crs(blocked_well.model, uuid=trajectory.crs_uuid)
+        traj_crs = rqc.Crs(blocked_well.model, uuid = trajectory.crs_uuid)
         traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs
         # note: any represented interpretation object will not be present in the temporary model
     return trajectory
 
 
-def __pl(n, use_es=False):
+def __pl(n, use_es = False):
     if n == 1:
         return ''
     return 'es' if use_es else 's'
