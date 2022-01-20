@@ -24,8 +24,6 @@ def test_all_imports():
 
 def test_version():
     # This is dynamically created when package is built
-    # If this fails when running tests locally, ensure you have installed the dev dependencies specified in setup.cfg
-    # In particular, try:  pip install setuptools_scm
     version_string = resqpy.__version__
 
     # Ensure version string is a PEP-440 compliant version

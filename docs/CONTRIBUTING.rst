@@ -290,11 +290,8 @@ How the version is retreived
 The git history defines the version, and consequently the version number cannot
 be written in a file that is itself under source control.
 
-The package `setuptools_scm <https://github.com/pypa/setuptools_scm>`_ is used to
-extract the version number from the git history:
-
-* In a prod setup, the version is hard-coded in a file ``resqpy/version.py``.
-* In a development setup, the local git history is analysed.
+The Poetry plugin [poetry-dynamic-versioning](https://pypi.org/project/poetry-dynamic-versioning/) is used to
+extract the version number from the git history.
 
 Get in touch
 ------------

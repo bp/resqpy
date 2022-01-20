@@ -24,7 +24,6 @@ copyright = '2021, BP'
 author = 'BP'
 
 # Version from git tag
-# See https://github.com/pypa/setuptools_scm/#usage-from-sphinx
 try:
     from importlib import metadata
     release = metadata.version('resqpy')
