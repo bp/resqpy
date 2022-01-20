@@ -29,7 +29,6 @@ jobs:
           pip install poetry
           pip install poetry-dynamic-versioning
           poetry install
-          poetry shell
           # pip install -e ".[tests]"
 
       # Post in-line comments for any issues found
@@ -82,8 +81,7 @@ jobs:
 
       - name: Run pytest
         run: |
-          poetry shell
-          pytest --cov=resqpy --junitxml=pytest.xml
+          poetry run pytest --cov=resqpy --junitxml=pytest.xml
 
       - name: Upload pytest artifacts
         if: ${{ always() }}
