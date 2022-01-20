@@ -7,11 +7,6 @@
 requires = ["poetry>=1.0.2", "poetry-dynamic-versioning"]
 build-backend = "poetry.masonry.api"
 
-# Get version number from git tag
-# See https://github.com/pypa/setuptools_scm/
-# [tool.setuptools_scm]
-# write_to = "resqpy/version.py"
-
 [tool.poetry]
 name = "resqpy"
 version = "0.0.0" # Set at build time
@@ -34,7 +29,6 @@ pytest-mock = "3.6.1"
 flake8 = "3.9.2"
 flake8-docstrings = "1.6.0"
 yapf = "0.31.0"
-setuptools-scm = "6.3.2"
 packaging = "20.9"
 Sphinx = "3.5.4"
 sphinx-rtd-theme = "0.5.2"

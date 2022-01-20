@@ -28,10 +28,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
           pip install poetry-dynamic-versioning
-          poetry install
           pip install flake8
           pip install mypy
           pip install yapf
+          pip install toml
+          poetry install
+
           # pip install -e ".[tests]"
 
       # Post in-line comments for any issues found
