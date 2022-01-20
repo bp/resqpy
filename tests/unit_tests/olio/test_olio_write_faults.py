@@ -5,13 +5,13 @@ from pytest_mock import MockerFixture
 
 
 @pytest.mark.parametrize("test_df", [pd.DataFrame(), None])
-def test_no_data_in_faults(test_df):
+def test_no_data_in_faults(tmp_path, test_df):
     # Act & Assert
     with pytest.raises(AssertionError):
-        wf.write_faults_nexus('test', test_df)
+        wf.write_faults_nexus(f'{tmp_path}/test.txt', test_df)
 
 
-def test_writing_faults_to_file(mocker: MockerFixture):
+def test_writing_faults_to_file(tmp_path, mocker: MockerFixture):
     # Arrange
     test_df = pd.DataFrame({
         'name': ['fault1', 'fault2'],
@@ -26,7 +26,7 @@ def test_writing_faults_to_file(mocker: MockerFixture):
     open_mock = mocker.mock_open()
     mocker.patch("builtins.open", open_mock)
     expected_calls = [
-        mocker.call('test', 'w'),
+        mocker.call(f'{tmp_path}/test.txt', 'w'),
         mocker.call().__enter__(),
         mocker.call().write('\nMULT\tTX\tALL\tPLUS\tMULT\n'),
         mocker.call().write('\tGRID\tROOT\n'),
@@ -40,13 +40,13 @@ def test_writing_faults_to_file(mocker: MockerFixture):
     ]
 
     # Act
-    wf.write_faults_nexus('test', test_df)
+    wf.write_faults_nexus(f'{tmp_path}/test.txt', test_df)
 
     # Assert
     open_mock.assert_has_calls(expected_calls)
 
 
-def test_log_info(caplog):
+def test_log_info(tmp_path, caplog):
     # Arrange
     test_df = pd.DataFrame({
         'name': ['fault1', 'fault2'],
@@ -60,15 +60,15 @@ def test_log_info(caplog):
     })
 
     # Act
-    wf.write_faults_nexus('test', test_df)
+    wf.write_faults_nexus(f'{tmp_path}/test.txt', test_df)
 
     # Assert
     for record in caplog.records:
         assert record.levelname == "INFO"
-    assert 'writing FNAME data in Nexus format to file: test' in caplog.text
+    assert f'writing FNAME data in Nexus format to file: {tmp_path}/test.txt in caplog.text'
 
 
-def test_fault_name_greater_than_256_characters(caplog):
+def test_fault_name_greater_than_256_characters(tmp_path, caplog):
     # Arrange
     long_name = 'f' * 257
     test_df = pd.DataFrame({
@@ -83,7 +83,7 @@ def test_fault_name_greater_than_256_characters(caplog):
     })
 
     # Act
-    wf.write_faults_nexus('test', test_df)
+    wf.write_faults_nexus(f'{tmp_path}/test.txt', test_df)
 
     # Assert
     assert f'exported fault name longer than Nexus limit of 256 characters: {long_name}' \
