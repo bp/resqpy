@@ -30,6 +30,7 @@ jobs:
           pip install poetry-dynamic-versioning
           poetry install
           pip install flake8
+          pip install mypy
           # pip install -e ".[tests]"
 
       # Post in-line comments for any issues found
@@ -95,6 +96,7 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: pytest.xml
           fail_ci_if_error: true
 
       # - name: Publish Unit Test Results
