@@ -78,7 +78,7 @@ def write_nexus_corp(grid,
                 elif global_xy_units in ['ft', 'feet', 'foot']:
                     header.write('ENGLISH\n\n')
                 else:
-                    header.write('! globsl coordinates not recognized\n\n')
+                    header.write('! global coordinates not recognized\n\n')
             else:
                 header.write('! global units unknown or mixed\n\n')
         if write_nx_ny_nz:
