@@ -29,6 +29,7 @@ jobs:
           pip install poetry
           pip install poetry-dynamic-versioning
           poetry install
+          poetry shell
           # pip install -e ".[tests]"
 
       # Post in-line comments for any issues found
@@ -74,6 +75,8 @@ jobs:
       - name: Install resqpy
         run: |
           # python -m pip install --upgrade pip setuptools wheel
+          pip install poetry
+          pip install poetry-dynamic-versioning
           poetry build
           # pip install -e ".[tests]"
 
