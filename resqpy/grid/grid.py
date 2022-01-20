@@ -196,7 +196,7 @@ class Grid(BaseResqpy):
         return self.root
 
     def set_modified(self, update_xml = False, update_hdf5 = False):
-        """Assigns a new uuid to this grid; also calls set_modified() for parent model.
+        """Deprecated: Assigns a new uuid to this grid; also calls set_modified() for parent model.
 
         arguments:
            update_xml (boolean, default False): if True, the uuid is modified in the xml tree
@@ -217,7 +217,7 @@ class Grid(BaseResqpy):
            NB: relationships are not updated by this function, including the relationship to the
            hdf5 external part
         """
-
+        warnings.warn('Deprecated: This method is being removed', DeprecationWarning)
         old_uuid = self.uuid
         self.uuid = bu.new_uuid()
         if old_uuid is not None:

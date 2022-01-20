@@ -1,21 +1,20 @@
 # PEP 517-compliant build configuration
 
 # To build resqpy package, run:
-# >>> pip install build
-# >>> python -m build
+# >>> poetry build
 
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.0", "poetry-core>=1.0.0"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry>=1.0.2", "poetry-dynamic-versioning"]
+build-backend = "poetry.masonry.api"
 
 # Get version number from git tag
 # See https://github.com/pypa/setuptools_scm/
-[tool.setuptools_scm]
-write_to = "resqpy/version.py"
+# [tool.setuptools_scm]
+# write_to = "resqpy/version.py"
 
 [tool.poetry]
 name = "resqpy"
-version = "1.6.1"
+version = "0.0.0" # Set at build time
 description = "Python API for working with RESQML models"
 authors = ["BP"]
 license = "MIT"
@@ -41,3 +40,11 @@ Sphinx = "3.5.4"
 sphinx-rtd-theme = "0.5.2"
 mypy = "0.910"
 autoclasstoc = "1.2.0"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["resqpy/__init__.py"]

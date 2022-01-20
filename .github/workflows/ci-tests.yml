@@ -26,7 +26,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[tests]"
+          pip install poetry
+          pip install poetry-dynamic-versioning
+          poetry install
+          # pip install -e ".[tests]"
 
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
@@ -70,11 +73,13 @@ jobs:
 
       - name: Install resqpy
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -e ".[tests]"
+          # python -m pip install --upgrade pip setuptools wheel
+          poetry build
+          # pip install -e ".[tests]"
 
       - name: Run pytest
         run: |
+          poetry shell
           pytest --cov=resqpy --junitxml=pytest.xml
 
       - name: Upload pytest artifacts
