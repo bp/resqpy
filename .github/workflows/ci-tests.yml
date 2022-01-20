@@ -31,6 +31,7 @@ jobs:
           poetry install
           pip install flake8
           pip install mypy
+          pip install yapf
           # pip install -e ".[tests]"
 
       # Post in-line comments for any issues found
