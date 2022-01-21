@@ -513,14 +513,14 @@ def test_remove_part_from_dict(example_model_with_properties):
     model = example_model_with_properties
     pc = model.grid().property_collection
     assert pc is not None
-    assert len(pc.parts()) == 8
+    assert len(pc.parts()) == 9
     part = pc.parts()[0]
 
     # Act
     pc.remove_part_from_dict(part)
 
     # Assert
-    assert len(pc.parts()) == 7
+    assert len(pc.parts()) == 8
     assert part not in pc.parts()
 
 
@@ -1109,7 +1109,7 @@ def test_basic_static_property_parts_permnone(example_model_with_properties):
     ntg, por, permi, permj, permk = pc.basic_static_property_parts()
     assert permi is not None
     assert permj is None
-    assert permk is None
+    assert permk is not None
     assert pc.citation_title_for_part(permi) == 'Perm'
 
     # Arrange - Delete permi
@@ -1119,7 +1119,7 @@ def test_basic_static_property_parts_permnone(example_model_with_properties):
     ntg, por, permi, permj, permk = pc.basic_static_property_parts()
     assert permi is None
     assert permj is None
-    assert permk is None
+    assert permk is not None
 
 
 def test_basic_static_property_parts_permshared(example_model_with_properties):
@@ -1134,9 +1134,11 @@ def test_basic_static_property_parts_permshared(example_model_with_properties):
     assert permi is not None
     assert permj is not None
     assert permk is not None
-    assert permi == permj == permk
+    assert permi == permj
+    assert permi != permk
     assert pc.citation_title_for_part(permi) == 'Perm'
-    assert pc.facet_for_part(permi) == 'I'
+    assert pc.facet_for_part(permj) == 'I'
+    assert pc.facet_for_part(permk) == 'K'
 
 
 @pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
@@ -1146,9 +1148,10 @@ def test_basic_static_property_parts_perm_facet(example_model_with_properties, f
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
-    array = pc.cached_part_array_ref(part)
-    pc.remove_part_from_dict(part)
+    parts = [part for part in pc.parts() if pc.citation_title_for_part(part).lower().startswith('perm')]
+    array = pc.cached_part_array_ref(parts[0])
+    for part in parts:
+        pc.remove_part_from_dict(part)
 
     pc.add_cached_array_to_imported_list(cached_array = array,
                                          source_info = '',
@@ -1183,9 +1186,10 @@ def test_basic_static_property_parts_perm_multiple_facet(example_model_with_prop
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
-    array = pc.cached_part_array_ref(part)
-    pc.remove_part_from_dict(part)
+    parts = [part for part in pc.parts() if pc.citation_title_for_part(part).lower().startswith('perm')]
+    array = pc.cached_part_array_ref(parts[0]).copy()
+    for part in parts:
+        pc.remove_part_from_dict(part)
     for facet in facet_list:
         pc.add_cached_array_to_imported_list(cached_array = array,
                                              source_info = '',
@@ -1217,15 +1221,16 @@ def test_basic_static_property_parts_perm_multiple_name(example_model_with_prope
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
-    array = pc.cached_part_array_ref(part)
-    pc.remove_part_from_dict(part)
+    parts = [part for part in pc.parts() if pc.citation_title_for_part(part).lower().startswith('perm')]
+    array = pc.cached_part_array_ref(parts[0]).copy()
+    for part in parts:
+        pc.remove_part_from_dict(part)
     for name in name_list:
         pc.add_cached_array_to_imported_list(cached_array = array,
                                              source_info = '',
                                              keyword = name,
                                              discrete = False,
-                                             property_kind = 'permeability rock')
+                                             property_kind = 'rock permeability')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
@@ -1246,9 +1251,10 @@ def test_basic_static_property_parts_perm_repeat(example_model_with_properties, 
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
-    array = pc.cached_part_array_ref(part)
-    pc.remove_part_from_dict(part)
+    parts = [part for part in pc.parts() if pc.citation_title_for_part(part).lower().startswith('perm')]
+    array = pc.cached_part_array_ref(parts[0]).copy()
+    for part in parts:
+        pc.remove_part_from_dict(part)
     for name in name_list:
         pc.add_cached_array_to_imported_list(cached_array = array,
                                              source_info = '',
@@ -1273,6 +1279,7 @@ def test_basic_static_property_parts_perm_options(example_model_with_properties)
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
+    pc.remove_part_from_dict(pc.singleton(facet_type = 'direction', facet = 'K'))
     part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
     array = pc.cached_part_array_ref(part)
     ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
@@ -1283,7 +1290,7 @@ def test_basic_static_property_parts_perm_options(example_model_with_properties)
                                          discrete = False,
                                          facet_type = 'direction',
                                          facet = 'J',
-                                         property_kind = 'permeability rock')
+                                         property_kind = 'rock permeability')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
@@ -1310,6 +1317,7 @@ def test_basic_static_property_parts_perm_options_ntg(example_model_with_propert
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
+    pc.remove_part_from_dict(pc.singleton(facet_type = 'direction', facet = 'K'))
     part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
     array = pc.cached_part_array_ref(part)
     ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
@@ -1336,6 +1344,7 @@ def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
+    pc.remove_part_from_dict(pc.singleton(facet_type = 'direction', facet = 'K'))
     part = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'Perm'][0]
     array = pc.cached_part_array_ref(part)
     ntgpart = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'NTG'][0]
@@ -1535,7 +1544,9 @@ def test_property_kind_list(example_model_with_properties):
     element = pc.property_kind_list()
 
     # Assert
-    assert element == ['discrete', 'net to gross ratio', 'permeability rock', 'porosity', 'saturation']
+    assert element == [
+        'discrete', 'net to gross ratio', 'permeability rock', 'porosity', 'rock permeability', 'saturation'
+    ]
 
 
 def test_indexable_list(example_model_with_properties):
@@ -1571,7 +1582,7 @@ def test_facet_list(example_model_with_properties):
     element = pc.facet_list()
 
     # Assert
-    assert element == ['I']
+    assert element == ['I', 'K']
 
 
 def test_time_series_uuid_list(example_model_with_prop_ts_rels):
