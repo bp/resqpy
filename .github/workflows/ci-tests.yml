@@ -76,8 +76,6 @@ jobs:
 
       - name: Install resqpy
         run: |
-          pip install poetry
-          pip install poetry-dynamic-versioning
           poetry install
 
       - name: Run pytest

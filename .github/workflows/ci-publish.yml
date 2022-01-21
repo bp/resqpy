@@ -88,5 +88,4 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
           poetry build
-          pip install twine
-          twine upload dist/*
+          poetry publish
