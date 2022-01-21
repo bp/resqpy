@@ -56,11 +56,11 @@ def thickness(grid,
         parts = collection.selective_parts_list(property_kind = 'thickness', facet_type = 'netgross', facet = 'gross')
         if len(parts) == 1:
             return collection.cached_part_array_ref(parts[0])
-        parts = collection.selective_parts_list(property_kind = 'thickness')
-        if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
-            return collection.cached_part_array_ref(parts[0])
         parts = collection.selective_parts_list(property_kind = 'cell length', facet_type = 'direction', facet = 'K')
         if len(parts) == 1:
+            return collection.cached_part_array_ref(parts[0])
+        parts = collection.selective_parts_list(property_kind = 'thickness')
+        if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
             return collection.cached_part_array_ref(parts[0])
         return None
 
