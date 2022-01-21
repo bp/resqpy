@@ -187,7 +187,8 @@ def example_model_with_properties(tmp_path):
             'discrete', 'discrete', 'discrete', 'discrete', 'net to gross ratio', 'porosity', 'saturation',
             'rock permeability', 'permeability rock'
         ], [True, True, True, True, False, False, False, False, False],
-        [None, None, None, None, None, None, None, 'direction', 'direction'], [None, None, None, None, None, None, None, 'I', 'K']):
+        [None, None, None, None, None, None, None, 'direction', 'direction'],
+        [None, None, None, None, None, None, None, 'I', 'K']):
         collection.add_cached_array_to_imported_list(cached_array = array,
                                                      source_info = '',
                                                      keyword = name,
