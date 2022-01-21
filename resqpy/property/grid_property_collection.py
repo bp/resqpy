@@ -678,9 +678,11 @@ class GridPropertyCollection(PropertyCollection):
            for other arguments, see the docstring for the write_nexus_property() function
 
         note:
-           the generated filename consists of the citation title (with spaces replaced with underscores);
-           the facet type and facet, if present;
-           _t_ and the time_index, if the part has a time index
+           the generated filename consists of:
+              the citation title (with spaces replaced with underscores);
+              the facet type and facet, if present;
+              _t_ and the time_index, if the part has a time index
+              _r_ and the realisation number, if the part has a realisation number
         """
 
         title = self.citation_title_for_part(part).replace(' ', '_')
@@ -695,6 +697,9 @@ class GridPropertyCollection(PropertyCollection):
         time_index = self.time_index_for_part(part)
         if time_index is not None:
             fname += '_t_' + str(time_index)
+        realisation = self.realization_for_part(part)
+        if realisation is not None:
+            fname += '_r_' + str(realisation)
         # could add .dat extension
         self.write_nexus_property(part,
                                   os.path.join(directory, fname),
