@@ -219,9 +219,10 @@ class GridSkin:
         """
 
         if exclude_kji0 is not None:
-            xyz_1, segment_1, tri_index_1, xyz_2, segment_2, tri_index_2 =  \
-               find_first_intersection_of_trajectory_with_surface(trajectory, self.skin, start = start, start_xyz = start_xyz,
-                                                                  nudge = nudge, return_second = True)
+            xyz_1, segment_1, tri_index_1, xyz_2, segment_2, tri_index_2 = \
+                find_first_intersection_of_trajectory_with_surface(trajectory, self.skin, start=start,
+                                                                   start_xyz=start_xyz,
+                                                                   nudge=nudge, return_second=True)
         else:
             xyz_1, segment_1, tri_index_1 = find_first_intersection_of_trajectory_with_surface(trajectory,
                                                                                                self.skin,
@@ -817,8 +818,7 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
                                                               ref_k_faces = ref_k_faces,
                                                               quad_triangles = quad_triangles)
 
-
-#   log.debug('finding intersections of wellbore trajectory(ies) with layer: ' + str(k0) + ' ' + ref_k_faces)
+    #   log.debug('finding intersections of wellbore trajectory(ies) with layer: ' + str(k0) + ' ' + ref_k_faces)
     results_list = []
     segment_list = []
     col_list = []
@@ -1352,142 +1352,6 @@ def populate_blocked_well_from_trajectory(blocked_well,
        being introduced as an artefact between the exit point of one cell and the entry point into the abutted cell
     """
 
-    def find_next_cell(grid,
-                       previous_kji0,
-                       axis,
-                       polarity,
-                       trajectory,
-                       segment,
-                       seg_fraction,
-                       xyz,
-                       treat_skin_as_fault = False,
-                       lazy = False,
-                       use_single_layer_tactics = True):
-        # returns for next cell entry: (shared transit point bool, kji0, axis, polarity, segment, seg_fraction, xyz)
-        # or single None if no next cell identified (end of trajectory beyond edge of grid)
-        # take care of: edges of model; pinchouts; faults, (k gaps), exact edge or corner crossings
-        # note: identified cell may be active or inactive: calling code to handle that
-        # note: for convenience, previous_kji0 may lie just outside the extent of the grid
-        # note: polarity is relative to previous cell, so its complement applies to the next cell
-        #      log.debug('finding next cell with previous kji0: ' + str(previous_kji0) + '; exit: ' + 'kji'[axis] + '-+'[polarity])
-        kji0 = np.array(previous_kji0, dtype = int)
-        polarity_sign = 2 * polarity - 1
-        kji0[axis] += polarity_sign
-        # if gone beyond external skin of model, return None
-        if np.any(kji0 < 0) or np.any(kji0 >= grid.extent_kji) or (grid.k_gaps and axis == 0 and (
-            (polarity == 1 and previous_kji0[0] >= 0 and grid.k_gap_after_array[previous_kji0[0]]) or
-            (polarity == 0 and kji0[0] < grid.nk - 1 and grid.k_gap_after_array[kji0[0]]))):
-            if check_for_reentry and not lazy:
-                skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
-                # nudge in following will be problematic if gap has zero (or tiny) thickness at this location
-                xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(trajectory,
-                                                                                                       start = segment,
-                                                                                                       start_xyz = xyz,
-                                                                                                       nudge = +0.05)
-                if xyz_r is None:
-                    log.debug('no skin re-entry found after exit through skin')
-                    return None
-                log.debug(f"skin re-entry after skin exit: kji0: {cell_kji0}; face: {'KJI'[axis]}{'-+'[polarity]}")
-                seg_fraction = segment_fraction(trajectory.control_points, segment, xyz_r)
-                return (False, cell_kji0, axis, polarity, segment, seg_fraction, xyz_r)
-            else:
-                return None
-        # pre-assess split pillar (fault) situation
-        faulted = False
-        if grid.has_split_coordinate_lines and axis != 0:
-            faulted = grid.is_split_column_face(kji0[1], kji0[2], axis, 1 - polarity)
-        if not faulted and treat_skin_as_fault and axis != 0:
-            faulted = (kji0[axis] == 0 and polarity == 1) or (kji0[axis] == grid.extent_kji[axis] - 1 and polarity == 0)
-        # handle the simplest case of a well behaved k neighbour or unsplit j or i neighbour
-        if not grid.pinched_out(cell_kji0 = kji0, cache_pinchout_array = True) and not faulted:
-            return (True, kji0, axis, 1 - polarity, segment, seg_fraction, xyz)
-        if faulted:
-            # look for intersections with column face
-            xyz_f, k0 = find_intersection_of_trajectory_interval_with_column_face(trajectory,
-                                                                                  grid,
-                                                                                  segment,
-                                                                                  kji0[1:],
-                                                                                  axis,
-                                                                                  1 - polarity,
-                                                                                  start_xyz = xyz,
-                                                                                  nudge = -0.1,
-                                                                                  quad_triangles = True)
-            if xyz_f is not None and k0 is not None:
-                kji0[0] = k0
-                seg_fraction = segment_fraction(trajectory.control_points, segment, xyz_f)
-                return (vec.isclose(xyz, xyz_f,
-                                    tolerance = 0.001), kji0, axis, 1 - polarity, segment, seg_fraction, xyz_f)
-            log.debug('failed to find entry point in column face after crossing fault; checking entire cross section')
-            x_sect_surf = generate_torn_surface_for_x_section(grid,
-                                                              'KJI'[axis],
-                                                              ref_slice0 = kji0[axis],
-                                                              plus_face = (polarity == 0),
-                                                              quad_triangles = True,
-                                                              as_single_layer = False)
-            xyz_f, segment_f, tri_index_f = find_first_intersection_of_trajectory_with_surface(trajectory,
-                                                                                               x_sect_surf,
-                                                                                               start = segment,
-                                                                                               start_xyz = xyz,
-                                                                                               nudge = -0.1)
-            if xyz_f is not None:
-                # back out cell info from triangle index; note 'column_from...' is actually x_section cell face
-                k0, j_or_i0 = x_sect_surf.column_from_triangle_index(tri_index_f)
-                kji0[0] = k0
-                kji0[3 - axis] = j_or_i0
-                seg_fraction = segment_fraction(trajectory.control_points, segment_f, xyz_f)
-                return (vec.isclose(xyz, xyz_f,
-                                    tolerance = 0.001), kji0, axis, 1 - polarity, segment_f, seg_fraction, xyz_f)
-            log.debug(
-                f"failed to find entry point in cross section after crossing fault{'' if lazy else '; checking for skin re-entry'}"
-            )
-            if lazy:
-                return None
-            skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
-            # following is problematic due to skewed fault planes
-            xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(
-                trajectory, start = segment, start_xyz = xyz, nudge = -0.1, exclude_kji0 = previous_kji0)
-            if xyz_r is None:
-                log.warning('no skin re-entry found after exit through fault face')
-                return None
-            log.debug(f"skin re-entry after fault face exit: kji0: {cell_kji0}; face: {'KJI'[axis]}{'-+'[polarity]}")
-            seg_fraction = segment_fraction(trajectory.control_points, segment, xyz_r)
-            return (False, cell_kji0, axis, polarity, segment, seg_fraction, xyz_r)
-        else:
-            # skip pinched out cells
-            pinchout_skip_sign = -1 if axis == 0 and polarity == 0 else 1
-            while True:
-                if not grid.pinched_out(cell_kji0 = kji0, cache_pinchout_array = True):
-                    break
-                kji0[0] += pinchout_skip_sign
-                if not (np.all(kji0 >= 0) and np.all(kji0 < grid.extent_kji)) or (grid.k_gaps and axis == 0 and (
-                    (polarity == 0 and grid.k_gap_after_array[kji0[0]]) or
-                    (polarity == 1 and grid.k_gap_after_array[kji0[0] - 1]))):
-                    log.debug(
-                        f"trajectory reached edge of model {'or k gap ' if grid.k_gaps and axis == 0 else ''}at exit from cell kji0: {previous_kji0}"
-                    )
-                    if lazy:
-                        return None
-                    skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
-                    # nudge in following will be problematic if gap has zero (or tiny) thickness at this location
-                    xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(
-                        trajectory, start = segment, start_xyz = xyz, nudge = +0.01)
-                    if xyz_r is None:
-                        return None  # no re-entry found after exit through skin
-                    seg_fraction = segment_fraction(trajectory.control_points, segment, xyz_r)
-                    return (False, cell_kji0, axis, polarity, segment, seg_fraction, xyz_r)
-            return (True, kji0, axis, 1 - polarity, segment, seg_fraction, xyz)
-
-    def segment_fraction(trajectory_xyz, segment, xyz):
-        # returns fraction of way along segment that point xyz lies
-        segment_vector = trajectory_xyz[segment + 1] - trajectory_xyz[segment]
-        segment_length = vec.naive_length(
-            segment_vector)  # note this is length in straight line, rather than diff in mds
-        return vec.naive_length(xyz - trajectory_xyz[segment]) / segment_length
-
-    def back_calculated_md(trajectory, segment, fraction):
-        base_md = trajectory.measured_depths[segment]
-        return base_md + fraction * (trajectory.measured_depths[segment + 1] - base_md)
-
     assert isinstance(blocked_well, rqw.BlockedWell)
     assert isinstance(blocked_well.trajectory, rqw.Trajectory)
     assert grid is not None
@@ -1499,24 +1363,11 @@ def populate_blocked_well_from_trajectory(blocked_well,
         log.debug('skin single layer tactics disabled')
 
     grid_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
-    if bu.matching_uuids(rqet.uuid_for_part_root(blocked_well.trajectory.crs_root), grid.crs_uuid):
-        trajectory = blocked_well.trajectory
-    else:
-        # create a temporary orphanage model (in memory only) to host a copy of the trajectory for crs alignment
-        # NB. temporary objects, relationships left in a mess
-        model = rq.Model(create_basics = True)
-        trajectory = rqw.Trajectory(model,
-                                    blocked_well.trajectory.root_node,
-                                    hdf5_source_model = blocked_well.trajectory.model)
-        assert trajectory is not None
-        traj_crs = rqc.Crs(blocked_well.model, uuid = rqet.uuid_for_part_root(blocked_well.trajectory.crs_root))
-        traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs
-        trajectory.crs_root = model.duplicate_node(grid.crs_root)
-        # note: any represented interpretation object will not be present in the temporary model
+    trajectory = __trajectory_init(blocked_well, grid, grid_crs)
     traj_xyz = trajectory.control_points
 
     if not trajectory_grid_overlap(trajectory, grid):
-        log.error('no overlap of trajectory with grid for trajectory uuid: ' + str(trajectory.uuid))
+        log.error(f'no overlap of trajectory with grid for trajectory uuid: {trajectory.uuid}')
         return None
     grid_box = grid.xyz_box(lazy = False)
     if grid_crs.z_inc_down:
@@ -1532,16 +1383,16 @@ def populate_blocked_well_from_trajectory(blocked_well,
 
     # scan down wellbore till top of grid reached
     knot = 0
-    while knot < trajectory.knot_count - 1 and z_sign * traj_xyz[knot + 1, 2] < grid_top_z:
+    knot_count = trajectory.knot_count - 1
+    while knot < knot_count and z_sign * traj_xyz[knot + 1, 2] < grid_top_z:
         knot += 1
-    log.debug('skipped trajectory to knot: ' + str(knot))
-    if knot == trajectory.knot_count - 1:
+    log.debug(f'skipped trajectory to knot: {knot}')
+    if knot == knot_count:
         return None  # entire well is above grid
 
     if lazy:
-
-        skin = None
-        # search for intersection with top of grid: will fail if well comes in from the side (or from below!) or penetrates through fault
+        # search for intersection with top of grid: will fail if well comes in from the side (or from below!) or
+        # penetrates through fault
         xyz, entry_knot, col_ji0 = find_first_intersection_of_trajectory_with_layer_interface(
             trajectory,
             grid,
@@ -1550,8 +1401,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
             start = knot,
             heal_faults = False,
             quad_triangles = quad_triangles)
-        log.debug('top intersection x,y,z: ' + str(xyz) + '; knot: ' + str(entry_knot) + '; col j0,i0: ' +
-                  str(col_ji0[0]) + ', ' + str(col_ji0[1]))
+        log.debug(f'top intersection x,y,z: {xyz}; knot: {entry_knot}; col j0,i0: {col_ji0[0]}, {col_ji0[1]}')
         if xyz is None:
             log.error('failed to find intersection of trajectory with top surface of grid')
             return None
@@ -1560,36 +1410,36 @@ def populate_blocked_well_from_trajectory(blocked_well,
         polarity = 0
 
     else:  # not lazy
-
-        # note: xyz and entry_fraction might be slightly off when penetrating a skewed fault plane – deemed immaterial for real cases
+        # note: xyz and entry_fraction might be slightly off when penetrating a skewed fault plane – deemed immaterial
+        # for real cases
         skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
         xyz, cell_kji0, axis, polarity, entry_knot = skin.find_first_intersection_of_trajectory(trajectory)
         if xyz is None:
             log.error('failed to find intersection of trajectory with outer skin of grid')
             return None
         else:
-            log.debug('skin intersection x,y,z: ' + str(xyz) + '; knot: ' + str(entry_knot) + '; cell kji0: ' +
-                      str(cell_kji0) + '; face: ' + 'KJI'[axis] + '-+'[polarity])
+            log.debug(f"skin intersection x,y,z: {xyz}; knot: {entry_knot}; cell kji0: {cell_kji0}; face: "
+                      f"{'KJI'[axis]}{'-+'[polarity]}")
             cell_kji0 = np.array(cell_kji0, dtype = int)
 
     previous_kji0 = cell_kji0.copy()
-    shift = polarity * 2 - 1
-    previous_kji0[axis] += shift  # note: previous may legitimately be 'beyond' edge of grid
-    entry_fraction = segment_fraction(traj_xyz, entry_knot, xyz)
+    previous_kji0[axis] += polarity * 2 - 1  # note: previous may legitimately be 'beyond' edge of grid
+    entry_fraction = __segment_fraction(traj_xyz, entry_knot, xyz)
     log.debug(f'initial previous kji0: {previous_kji0}')
-    next_cell_info = find_next_cell(grid,
-                                    previous_kji0,
-                                    axis,
-                                    1 - polarity,
-                                    trajectory,
-                                    entry_knot,
-                                    entry_fraction,
-                                    xyz,
-                                    treat_skin_as_fault = use_single_layer_tactics,
-                                    lazy = lazy,
-                                    use_single_layer_tactics = use_single_layer_tactics)
+    next_cell_info = __find_next_cell(grid,
+                                      previous_kji0,
+                                      axis,
+                                      1 - polarity,
+                                      trajectory,
+                                      entry_knot,
+                                      entry_fraction,
+                                      xyz,
+                                      check_for_reentry,
+                                      treat_skin_as_fault = use_single_layer_tactics,
+                                      lazy = lazy,
+                                      use_single_layer_tactics = use_single_layer_tactics)
     log.debug(f'initial next cell info: {next_cell_info}')
-    node_mds_list = [back_calculated_md(trajectory, entry_knot, entry_fraction)]
+    node_mds_list = [__back_calculated_md(trajectory, entry_knot, entry_fraction)]
     node_count = 1
     grid_indices_list = []
     cell_count = 0
@@ -1599,15 +1449,14 @@ def populate_blocked_well_from_trajectory(blocked_well,
     sample_test = np.zeros(grid.extent_kji, dtype = bool)
 
     while next_cell_info is not None:
-
-        (entry_shared, kji0, entry_axis, entry_polarity, entry_knot, entry_fraction, entry_xyz) = next_cell_info
+        entry_shared, kji0, entry_axis, entry_polarity, entry_knot, entry_fraction, entry_xyz = next_cell_info
 
         # log.debug('next cell entry x,y,z: ' + str(entry_xyz) + '; knot: ' + str(entry_knot) + '; cell kji0: ' +
         #           str(kji0) + '; face: ' + 'KJI'[entry_axis] + '-+'[entry_polarity])
 
         if not entry_shared:
             log.debug('adding unblocked interval')
-            node_mds_list.append(back_calculated_md(trajectory, entry_knot, entry_fraction))
+            node_mds_list.append(__back_calculated_md(trajectory, entry_knot, entry_fraction))
             node_count += 1
             grid_indices_list.append(-1)
             kissed[:] = False
@@ -1616,14 +1465,13 @@ def populate_blocked_well_from_trajectory(blocked_well,
         exit_xyz, exit_knot, exit_axis, exit_polarity = find_first_intersection_of_trajectory_with_cell_surface(
             trajectory, grid, kji0, entry_knot, start_xyz = entry_xyz, nudge = 0.01, quad_triangles = True)
 
-        # if exit_xyz is None:
-        #     log.debug('no exit')
+        #  if exit_xyz is None:
+        #      log.debug('no exit')
         # else:
         #     log.debug('cell exit x,y,z: ' + str(exit_xyz) + '; knot: ' + str(exit_knot) + '; face: ' +
         #               'KJI'[exit_axis] + '-+'[exit_polarity])
 
         if exit_xyz is None:
-
             if point_is_within_cell(traj_xyz[-1], grid, kji0):
                 # well terminates within cell: add termination blocked interval (or unblocked if inactive cell)
                 log.debug(f'adding termination interval for cell {kji0}')
@@ -1635,163 +1483,18 @@ def populate_blocked_well_from_trajectory(blocked_well,
                 cell_count += 1
                 face_pairs_list.append(((entry_axis, entry_polarity), (-1, -1)))
                 break
-
             else:
-                next_cell_info = None
-                # trajectory has kissed corner or edge of cell and nudge has gone outside cell
-                # nudge forward and look for point inclusion in possible neighbours
-                log.debug(f'kiss detected at cell kji0 {kji0} ' + 'KJI'[entry_axis] + '-+'[entry_polarity])
-                kissed[tuple(kji0)] = True
-                if np.all(np.array(previous_kji0, dtype = int) >= 0) and np.all(
-                        np.array(previous_kji0, dtype = int) < grid.extent_kji):
-                    kissed[tuple(previous_kji0)] = True  # stops immediate revisit for kiss and tell tactics
-                # setup kji offsets of neighbouring cells likely to contain sample point (could check for split column faces)
-                axis_a = (entry_axis + 1) % 3
-                axis_b = (entry_axis + 2) % 3
-                offsets_kji = np.zeros((18, 3), dtype = int)
-                offsets_kji[0, axis_a] = -1
-                offsets_kji[1, axis_a] = 1
-                offsets_kji[2, axis_b] = -1
-                offsets_kji[3, axis_b] = 1
-                offsets_kji[4, axis_a] = offsets_kji[4, axis_b] = -1
-                offsets_kji[5, axis_a] = -1
-                offsets_kji[5, axis_b] = 1
-                offsets_kji[6, axis_a] = 1
-                offsets_kji[6, axis_b] = -1
-                offsets_kji[7, axis_a] = offsets_kji[7, axis_b] = 1
-                offsets_kji[8:16] = offsets_kji[:8]
-                offsets_kji[8:16, axis] = previous_kji0[axis] - kji0[axis]
-                pinchout_skip_sign = -1 if entry_axis == 0 and entry_polarity == 1 else 1
-                offsets_kji[16, axis] = pinchout_skip_sign
-                log.debug(f'kiss pinchout skip sign: {pinchout_skip_sign}')
-                for try_index in range(len(offsets_kji)):
-                    try_kji0 = kji0 + offsets_kji[try_index]
-                    while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(
-                            cell_kji0 = try_kji0):
-                        try_kji0[0] += pinchout_skip_sign
-                    if np.any(try_kji0 < 0) or np.any(try_kji0 >= grid.extent_kji) or kissed[tuple(try_kji0)]:
-                        continue
-                    # use tiny negative nudge to look for entry into try cell with current segment; check that entry point is close
-                    try_entry_xyz, try_entry_knot, try_entry_axis, try_entry_polarity = find_first_intersection_of_trajectory_with_cell_surface(
-                        trajectory,
-                        grid,
-                        try_kji0,
-                        entry_knot,
-                        start_xyz = entry_xyz,
-                        nudge = -0.01,
-                        quad_triangles = True)
-                    if try_entry_xyz is not None and vec.isclose(try_entry_xyz, entry_xyz, tolerance = 0.02):
-                        log.debug(f'try accepted for cell: {try_kji0}')
-                        try_entry_fraction = segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
-                        # replace the next cell entry info
-                        next_cell_info = (True, try_kji0, try_entry_axis, try_entry_polarity, try_entry_knot,
-                                          try_entry_fraction, try_entry_xyz)
-                        break
-                if next_cell_info is None:
-                    log.debug('kiss and tell failed to find next cell entry; switching to point in cell tactics')
-                    # take a sample point a little ahead on the trajectory
-                    remaining = traj_xyz[entry_knot + 1] - entry_xyz
-                    remaining_length = vec.naive_length(remaining)
-                    if remaining_length < 0.025:
-                        log.debug(f'not much remaining of segnemt: {remaining_length}')
-                    nudge = 0.025
-                    if remaining_length <= nudge:
-                        sample_point = entry_xyz + 0.9 * remaining
-                    else:
-                        sample_point = entry_xyz + nudge * vec.unit_vector(remaining)
-                    sample_test[:] = False
-                    log.debug(f'sample point is {sample_point}')
-                    for try_index in range(len(offsets_kji)):
-                        try_kji0 = np.array(kji0, dtype = int) + offsets_kji[try_index]
-                        while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(
-                                cell_kji0 = try_kji0):
-                            try_kji0[0] += pinchout_skip_sign
-                        if np.any(try_kji0 < 0) or np.any(try_kji0 >= grid.extent_kji):
-                            continue
-                        #                 log.debug(f'tentatively trying: {try_kji0}')
-                        sample_test[tuple(try_kji0)] = True
-                        if point_is_within_cell(sample_point, grid, try_kji0):
-                            log.debug(f'sample point is in cell {try_kji0}')
-                            try_entry_xyz, try_entry_knot, try_entry_axis, try_entry_polarity = find_first_intersection_of_trajectory_with_cell_surface(
-                                trajectory,
-                                grid,
-                                try_kji0,
-                                entry_knot,
-                                start_xyz = entry_xyz,
-                                nudge = -0.01,
-                                quad_triangles = True)
-                            if try_entry_xyz is None or try_entry_knot is None:
-                                log.warning(f'failed to find entry to favoured cell {try_kji0}')
-                            else:
-                                if np.all(try_kji0 == kji0):
-                                    log.debug(f'staying in cell {kji0} after kiss')
-                                    # TODO: sort things out to discard kiss completely
-                                try_entry_fraction = segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
-                                next_cell_info = (vec.isclose(try_entry_xyz, entry_xyz,
-                                                              tolerance = 0.01), try_kji0, try_entry_axis,
-                                                  try_entry_polarity, try_entry_knot, try_entry_fraction, try_entry_xyz)
-                            break
-                    if next_cell_info is None:
-                        log.debug('sample point not found in immediate neighbours, switching to full column search')
-                        k_offset = 0
-                        found = False
-                        while not found and k_offset <= max(kji0[0], grid.nk - kji0[0] - 1):
-                            for k_plus_minus in [1, -1]:
-                                for j_offset in [0, -1, 1]:
-                                    for i_offset in [0, -1, 1]:
-                                        try_kji0 = kji0 + np.array((k_offset * k_plus_minus, j_offset, i_offset))
-                                        if np.any(try_kji0 < 0) or np.any(
-                                                try_kji0 >= grid.extent_kji) or sample_test[tuple(try_kji0)]:
-                                            continue
-                                        sample_test[tuple(try_kji0)] = True
-                                        if point_is_within_cell(sample_point, grid, try_kji0):
-                                            found = True
-                                            log.debug(f'sample point is in cell {try_kji0}')
-                                            try_entry_xyz, try_entry_knot, try_entry_axis, try_entry_polarity =  \
-                                               find_first_intersection_of_trajectory_with_cell_surface(
-                                                  trajectory, grid, try_kji0, entry_knot, start_xyz = entry_xyz, nudge = -0.01, quad_triangles = True)
-                                            if try_entry_xyz is None or try_entry_knot is None:
-                                                log.warning(f'failed to find entry to column sampled cell {try_kji0}')
-                                            else:
-                                                try_entry_fraction = segment_fraction(
-                                                    traj_xyz, try_entry_knot, try_entry_xyz)
-                                                next_cell_info = (vec.isclose(try_entry_xyz,
-                                                                              entry_xyz,
-                                                                              tolerance = 0.01), try_kji0,
-                                                                  try_entry_axis, try_entry_polarity, try_entry_knot,
-                                                                  try_entry_fraction, try_entry_xyz)
-                                            break
-                                    if found:
-                                        break
-                                if found:
-                                    break
-                            k_offset += 1
-                    if next_cell_info is None:
-                        log.debug('no success during full column search')
-                        if np.any(previous_kji0 == 0) or np.any(previous_kji0 == grid.extent_kji - 1):
-                            log.debug('looking for skin re-entry after possible kissing exit')
-                            skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
-                            try_entry_xyz, try_kji0, try_entry_axis, try_entry_polarity, try_entry_knot =  \
-                               skin.find_first_intersection_of_trajectory(trajectory, start = entry_knot, start_xyz = entry_xyz, nudge = +0.1)
-                            if try_entry_xyz is not None:
-                                log.debug('skin re-entry found')
-                                try_entry_fraction = segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
-                                next_cell_info = (vec.isclose(try_entry_xyz, entry_xyz,
-                                                              tolerance = 0.01), try_kji0, try_entry_axis,
-                                                  try_entry_polarity, try_entry_knot, try_entry_fraction, try_entry_xyz)
-
+                next_cell_info = __forward_nudge(axis, entry_axis, entry_knot, entry_polarity, entry_xyz, grid, kissed,
+                                                 kji0, previous_kji0, sample_test, traj_xyz, trajectory,
+                                                 use_single_layer_tactics)
             if next_cell_info is None:
                 log.warning('well blocking got stuck – cells probably omitted at tail of well')
-
-
-#      if exit_xyz is not None:  # usual well-behaved case or non-standard due to kiss
+        #      if exit_xyz is not None:  # usual well-behaved case or non-standard due to kiss
         else:
-
-            exit_fraction = segment_fraction(traj_xyz, exit_knot, exit_xyz)
-
-            log.debug('adding blocked interval for cell kji0: ' + str(kji0))
+            exit_fraction = __segment_fraction(traj_xyz, exit_knot, exit_xyz)
+            log.debug(f'adding blocked interval for cell kji0: {kji0}')
             # todo: check for inactive cell and make an unblocked interval instead, if required
-            node_mds_list.append(back_calculated_md(trajectory, exit_knot, exit_fraction))
+            node_mds_list.append(__back_calculated_md(trajectory, exit_knot, exit_fraction))
             node_count += 1
             grid_indices_list.append(0)
             cell_indices_list.append(grid.natural_cell_index(kji0))
@@ -1800,17 +1503,18 @@ def populate_blocked_well_from_trajectory(blocked_well,
 
             previous_kji0 = kji0
             # log.debug(f'previous kji0 set to {previous_kji0}')
-            next_cell_info = find_next_cell(grid,
-                                            kji0,
-                                            exit_axis,
-                                            exit_polarity,
-                                            trajectory,
-                                            exit_knot,
-                                            exit_fraction,
-                                            exit_xyz,
-                                            treat_skin_as_fault = use_single_layer_tactics,
-                                            lazy = lazy,
-                                            use_single_layer_tactics = use_single_layer_tactics)
+            next_cell_info = __find_next_cell(grid,
+                                              kji0,
+                                              exit_axis,
+                                              exit_polarity,
+                                              trajectory,
+                                              exit_knot,
+                                              exit_fraction,
+                                              exit_xyz,
+                                              check_for_reentry,
+                                              treat_skin_as_fault = use_single_layer_tactics,
+                                              lazy = lazy,
+                                              use_single_layer_tactics = use_single_layer_tactics)
             kissed[:] = False
             sample_test[:] = False
 
@@ -1835,12 +1539,324 @@ def populate_blocked_well_from_trajectory(blocked_well,
 
     assert cell_count == (node_count - np.count_nonzero(blocked_well.grid_indices == -1) - 1)
 
-    log.info(str(cell_count) + ' cell' + _pl(cell_count) + ' blocked for well trajectory uuid: ' + str(trajectory.uuid))
+    log.info(f'{cell_count} cell{__pl(cell_count)} blocked for well trajectory uuid: {trajectory.uuid}')
 
     return blocked_well
 
 
-def _pl(n, use_es = False):
+def __find_next_cell(
+    grid,
+    previous_kji0,
+    axis,
+    polarity,
+    trajectory,
+    segment,
+    seg_fraction,
+    xyz,
+    check_for_reentry,
+    treat_skin_as_fault = False,
+    lazy = False,
+    use_single_layer_tactics = True,
+):
+    # returns for next cell entry: (shared transit point bool, kji0, axis, polarity, segment, seg_fraction, xyz)
+    # or single None if no next cell identified (end of trajectory beyond edge of grid)
+    # take care of: edges of model; pinchouts; faults, (k gaps), exact edge or corner crossings
+    # note: identified cell may be active or inactive: calling code to handle that
+    # note: for convenience, previous_kji0 may lie just outside the extent of the grid
+    # note: polarity is relative to previous cell, so its complement applies to the next cell
+    #      log.debug('finding next cell with previous kji0: ' + str(previous_kji0) + '; exit: ' + 'kji'[axis] + '-+'[polarity])
+    kji0 = np.array(previous_kji0, dtype = int)
+    polarity_sign = 2 * polarity - 1
+    kji0[axis] += polarity_sign
+    # if gone beyond external skin of model, return None
+    if np.any(kji0 < 0) or np.any(kji0 >= grid.extent_kji) or (grid.k_gaps and axis == 0 and (
+        (polarity == 1 and previous_kji0[0] >= 0 and grid.k_gap_after_array[previous_kji0[0]]) or
+        (polarity == 0 and kji0[0] < grid.nk - 1 and grid.k_gap_after_array[kji0[0]]))):
+        if check_for_reentry and not lazy:
+            skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
+            # nudge in following will be problematic if gap has zero (or tiny) thickness at this location
+            xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(trajectory,
+                                                                                                   start = segment,
+                                                                                                   start_xyz = xyz,
+                                                                                                   nudge = +0.05)
+            if xyz_r is None:
+                log.debug('no skin re-entry found after exit through skin')
+                return None
+            log.debug(f"skin re-entry after skin exit: kji0: {cell_kji0}; face: {'KJI'[axis]}{'-+'[polarity]}")
+            seg_fraction = __segment_fraction(trajectory.control_points, segment, xyz_r)
+            return False, cell_kji0, axis, polarity, segment, seg_fraction, xyz_r
+        else:
+            return None
+    # pre-assess split pillar (fault) situation
+    faulted = False
+    if axis != 0:
+        if grid.has_split_coordinate_lines:
+            faulted = grid.is_split_column_face(kji0[1], kji0[2], axis, 1 - polarity)
+        if not faulted and treat_skin_as_fault:
+            faulted = (kji0[axis] == 0 and polarity == 1) or (kji0[axis] == grid.extent_kji[axis] - 1 and polarity == 0)
+    # handle the simplest case of a well behaved k neighbour or unsplit j or i neighbour
+    if not grid.pinched_out(cell_kji0 = kji0, cache_pinchout_array = True) and not faulted:
+        return True, kji0, axis, 1 - polarity, segment, seg_fraction, xyz
+    if faulted:
+        return __faulted(trajectory, grid, segment, kji0, axis, polarity, xyz, lazy, use_single_layer_tactics,
+                         previous_kji0)
+    else:
+        # skip pinched out cells
+        pinchout_skip_sign = -1 if axis == 0 and polarity == 0 else 1
+        while grid.pinched_out(cell_kji0 = kji0, cache_pinchout_array = True):
+            kji0[0] += pinchout_skip_sign
+            if not (np.all(kji0 >= 0) and np.all(kji0 < grid.extent_kji)) or (grid.k_gaps and axis == 0 and (
+                (polarity == 0 and grid.k_gap_after_array[kji0[0]]) or
+                (polarity == 1 and grid.k_gap_after_array[kji0[0] - 1]))):
+                log.debug(
+                    f"trajectory reached edge of model {'or k gap ' if grid.k_gaps and axis == 0 else ''}at exit from cell kji0: {previous_kji0}"
+                )
+                if lazy:
+                    return None
+                skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
+                # nudge in following will be problematic if gap has zero (or tiny) thickness at this location
+                xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(trajectory,
+                                                                                                       start = segment,
+                                                                                                       start_xyz = xyz,
+                                                                                                       nudge = +0.01)
+                if xyz_r is None:
+                    return None  # no re-entry found after exit through skin
+                seg_fraction = __segment_fraction(trajectory.control_points, segment, xyz_r)
+                return False, cell_kji0, axis, polarity, segment, seg_fraction, xyz_r
+        return True, kji0, axis, 1 - polarity, segment, seg_fraction, xyz
+
+
+def __faulted(trajectory, grid, segment, kji0, axis, polarity, xyz, lazy, use_single_layer_tactics, previous_kji0):
+    # look for intersections with column face
+    xyz_f, k0 = find_intersection_of_trajectory_interval_with_column_face(trajectory,
+                                                                          grid,
+                                                                          segment,
+                                                                          kji0[1:],
+                                                                          axis,
+                                                                          1 - polarity,
+                                                                          start_xyz = xyz,
+                                                                          nudge = -0.1,
+                                                                          quad_triangles = True)
+    if xyz_f is not None and k0 is not None:
+        kji0[0] = k0
+        seg_fraction = __segment_fraction(trajectory.control_points, segment, xyz_f)
+        return vec.isclose(xyz, xyz_f, tolerance = 0.001), kji0, axis, 1 - polarity, segment, seg_fraction, xyz_f
+    log.debug('failed to find entry point in column face after crossing fault; checking entire cross section')
+    x_sect_surf = generate_torn_surface_for_x_section(grid,
+                                                      'KJI'[axis],
+                                                      ref_slice0 = kji0[axis],
+                                                      plus_face = (polarity == 0),
+                                                      quad_triangles = True,
+                                                      as_single_layer = False)
+    xyz_f, segment_f, tri_index_f = find_first_intersection_of_trajectory_with_surface(trajectory,
+                                                                                       x_sect_surf,
+                                                                                       start = segment,
+                                                                                       start_xyz = xyz,
+                                                                                       nudge = -0.1)
+    if xyz_f is not None:
+        # back out cell info from triangle index; note 'column_from...' is actually x_section cell face
+        k0, j_or_i0 = x_sect_surf.column_from_triangle_index(tri_index_f)
+        kji0[0] = k0
+        kji0[3 - axis] = j_or_i0
+        seg_fraction = __segment_fraction(trajectory.control_points, segment_f, xyz_f)
+        return vec.isclose(xyz, xyz_f, tolerance = 0.001), kji0, axis, 1 - polarity, segment_f, seg_fraction, xyz_f
+    log.debug("failed to find entry point in cross section after crossing fault"
+              f"{'' if lazy else '; checking for skin re-entry'}")
+    if lazy:
+        return None
+    skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
+    # following is problematic due to skewed fault planes
+    xyz_r, cell_kji0, axis, polarity, segment = skin.find_first_intersection_of_trajectory(trajectory,
+                                                                                           start = segment,
+                                                                                           start_xyz = xyz,
+                                                                                           nudge = -0.1,
+                                                                                           exclude_kji0 = previous_kji0)
+    if xyz_r is None:
+        log.warning('no skin re-entry found after exit through fault face')
+        return None
+    log.debug(f"skin re-entry after fault face exit: kji0: {cell_kji0}; face: {'KJI'[axis]}{'-+'[polarity]}")
+    seg_fraction = __segment_fraction(trajectory.control_points, segment, xyz_r)
+    return False, cell_kji0, axis, polarity, segment, seg_fraction, xyz_r
+
+
+def __segment_fraction(trajectory_xyz, segment, xyz):
+    # returns fraction of way along segment that point xyz lies
+    segment_vector = trajectory_xyz[segment + 1] - trajectory_xyz[segment]
+    segment_length = vec.naive_length(segment_vector)  # note this is length in straight line, rather than diff in mds
+    return vec.naive_length(xyz - trajectory_xyz[segment]) / segment_length
+
+
+def __back_calculated_md(trajectory, segment, fraction):
+    base_md = trajectory.measured_depths[segment]
+    return base_md + fraction * (trajectory.measured_depths[segment + 1] - base_md)
+
+
+def __forward_nudge(axis, entry_axis, entry_knot, entry_polarity, entry_xyz, grid, kissed, kji0, previous_kji0,
+                    sample_test, traj_xyz, trajectory, use_single_layer_tactics):
+    next_cell_info = None
+    # trajectory has kissed corner or edge of cell and nudge has gone outside cell
+    # nudge forward and look for point inclusion in possible neighbours
+    log.debug(f"kiss detected at cell kji0 {kji0} {'KJI'[entry_axis]}{'-+'[entry_polarity]}")
+    kissed[tuple(kji0)] = True
+    if np.all(previous_kji0 >= 0) and np.all(previous_kji0 < grid.extent_kji):
+        kissed[tuple(previous_kji0)] = True  # stops immediate revisit for kiss and tell tactics
+    # setup kji offsets of neighbouring cells likely to contain sample point (could check for split
+    # column faces)
+    axis_a = (entry_axis + 1) % 3
+    axis_b = (entry_axis + 2) % 3
+    offsets_kji = np.zeros((18, 3), dtype = int)
+    offsets_kji[0, axis_a] = -1
+    offsets_kji[1, axis_a] = 1
+    offsets_kji[2, axis_b] = -1
+    offsets_kji[3, axis_b] = 1
+    offsets_kji[4, axis_a] = offsets_kji[4, axis_b] = -1
+    offsets_kji[5, axis_a] = -1
+    offsets_kji[5, axis_b] = 1
+    offsets_kji[6, axis_a] = 1
+    offsets_kji[6, axis_b] = -1
+    offsets_kji[7, axis_a] = offsets_kji[7, axis_b] = 1
+    offsets_kji[8:16] = offsets_kji[:8]
+    offsets_kji[8:16, axis] = previous_kji0[axis] - kji0[axis]
+    pinchout_skip_sign = -1 if entry_axis == 0 and entry_polarity == 1 else 1
+    offsets_kji[16, axis] = pinchout_skip_sign
+    log.debug(f'kiss pinchout skip sign: {pinchout_skip_sign}')
+    next_cell_info = __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info, offsets_kji,
+                                      pinchout_skip_sign, traj_xyz, trajectory)
+    if next_cell_info is not None:
+        return next_cell_info
+    else:
+        log.debug('kiss and tell failed to find next cell entry; switching to point in cell tactics')
+        # take a sample point a little ahead on the trajectory
+        remaining = traj_xyz[entry_knot + 1] - entry_xyz
+        remaining_length = vec.naive_length(remaining)
+        if remaining_length < 0.025:
+            log.debug(f'not much remaining of segnemt: {remaining_length}')
+        nudge = 0.025
+        if remaining_length <= nudge:
+            sample_point = entry_xyz + 0.9 * remaining
+        else:
+            sample_point = entry_xyz + nudge * vec.unit_vector(remaining)
+        sample_test[:] = False
+        log.debug(f'sample point is {sample_point}')
+        for try_index in range(len(offsets_kji)):
+            try_kji0 = np.array(kji0, dtype = int) + offsets_kji[try_index]
+            while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(
+                    cell_kji0 = try_kji0):
+                try_kji0[0] += pinchout_skip_sign
+            if np.any(try_kji0 < 0) or np.any(try_kji0 >= grid.extent_kji):
+                continue
+            #                 log.debug(f'tentatively trying: {try_kji0}')
+            sample_test[tuple(try_kji0)] = True
+            if point_is_within_cell(sample_point, grid, try_kji0):
+                log.debug(f'sample point is in cell {try_kji0}')
+                try_entry_xyz, try_entry_knot, try_entry_axis, try_entry_polarity = \
+                    find_first_intersection_of_trajectory_with_cell_surface(trajectory, grid, try_kji0, entry_knot,
+                                                                            start_xyz=entry_xyz, nudge=-0.01,
+                                                                            quad_triangles=True)
+                if try_entry_xyz is None or try_entry_knot is None:
+                    log.warning(f'failed to find entry to favoured cell {try_kji0}')
+                else:
+                    if np.all(try_kji0 == kji0):
+                        log.debug(f'staying in cell {kji0} after kiss')
+                        # TODO: sort things out to discard kiss completely
+                    try_entry_fraction = __segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
+                    return vec.isclose(try_entry_xyz, entry_xyz, tolerance=0.01), try_kji0, try_entry_axis, \
+                           try_entry_polarity, try_entry_knot, try_entry_fraction, try_entry_xyz
+                break
+        log.debug('sample point not found in immediate neighbours, switching to full column search')
+        k_offset = 0
+        while k_offset <= max(kji0[0], grid.nk - kji0[0] - 1):
+            for k_plus_minus in [1, -1]:
+                for j_offset in [0, -1, 1]:
+                    for i_offset in [0, -1, 1]:
+                        try_kji0 = kji0 + np.array((k_offset * k_plus_minus, j_offset, i_offset))
+                        if np.any(try_kji0 < 0) or np.any(try_kji0 >= grid.extent_kji) or sample_test[tuple(try_kji0)]:
+                            continue
+                        sample_test[tuple(try_kji0)] = True
+                        if point_is_within_cell(sample_point, grid, try_kji0):
+                            log.debug(f'sample point is in cell {try_kji0}')
+                            try_entry_xyz, try_entry_knot, try_entry_axis, try_entry_polarity = \
+                                find_first_intersection_of_trajectory_with_cell_surface(
+                                    trajectory, grid, try_kji0, entry_knot, start_xyz=entry_xyz,
+                                    nudge=-0.01, quad_triangles=True)
+                            if try_entry_xyz is None or try_entry_knot is None:
+                                log.warning(f'failed to find entry to column sampled cell {try_kji0}')
+                                return __no_success(entry_knot, entry_xyz, grid, next_cell_info, previous_kji0,
+                                                    traj_xyz, trajectory, use_single_layer_tactics)
+                            else:
+                                try_entry_fraction = __segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
+                                return (vec.isclose(try_entry_xyz, entry_xyz,
+                                                    tolerance = 0.01), try_kji0, try_entry_axis, try_entry_polarity,
+                                        try_entry_knot, try_entry_fraction, try_entry_xyz)
+            k_offset += 1
+        return __no_success(entry_knot, entry_xyz, grid, next_cell_info, previous_kji0, traj_xyz, trajectory,
+                            use_single_layer_tactics)
+
+
+def __no_success(entry_knot, entry_xyz, grid, next_cell_info, previous_kji0, traj_xyz, trajectory,
+                 use_single_layer_tactics):
+    log.debug('no success during full column search')
+    if np.any(previous_kji0 == 0) or np.any(previous_kji0 == grid.extent_kji - 1):
+        log.debug('looking for skin re-entry after possible kissing exit')
+        skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
+        try_entry_xyz, try_kji0, try_entry_axis, try_entry_polarity, try_entry_knot = \
+            skin.find_first_intersection_of_trajectory(trajectory, start=entry_knot,
+                                                       start_xyz=entry_xyz, nudge=+0.1)
+        if try_entry_xyz is not None:
+            log.debug('skin re-entry found')
+            try_entry_fraction = __segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
+            next_cell_info = vec.isclose(try_entry_xyz, entry_xyz, tolerance=0.01), try_kji0, try_entry_axis, \
+                             try_entry_polarity, try_entry_knot, try_entry_fraction, try_entry_xyz
+    return next_cell_info
+
+
+def __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info, offsets_kji, pinchout_skip_sign,
+                     traj_xyz, trajectory):
+    for try_index in range(len(offsets_kji)):
+        try_kji0 = kji0 + offsets_kji[try_index]
+        while np.all(try_kji0 >= 0) and np.all(try_kji0 < grid.extent_kji) and grid.pinched_out(cell_kji0 = try_kji0):
+            try_kji0[0] += pinchout_skip_sign
+        if np.any(try_kji0 < 0) or np.any(try_kji0 >= grid.extent_kji) or kissed[tuple(try_kji0)]:
+            continue
+        # use tiny negative nudge to look for entry into try cell with current segment; check that entry
+        # point is close
+        try_entry_xyz, try_entry_knot, try_entry_axis, try_entry_polarity = \
+            find_first_intersection_of_trajectory_with_cell_surface(trajectory,
+                                                                    grid,
+                                                                    try_kji0,
+                                                                    entry_knot,
+                                                                    start_xyz=entry_xyz,
+                                                                    nudge=-0.01,
+                                                                    quad_triangles=True)
+        if try_entry_xyz is not None and vec.isclose(try_entry_xyz, entry_xyz, tolerance = 0.02):
+            log.debug(f'try accepted for cell: {try_kji0}')
+            try_entry_fraction = __segment_fraction(traj_xyz, try_entry_knot, try_entry_xyz)
+            # replace the next cell entry info
+            next_cell_info = True, try_kji0, try_entry_axis, try_entry_polarity, try_entry_knot, try_entry_fraction, \
+                             try_entry_xyz
+            break
+    return next_cell_info
+
+
+def __trajectory_init(blocked_well, grid, grid_crs):
+    if bu.matching_uuids(rqet.uuid_for_part_root(blocked_well.trajectory.crs_root), grid.crs_uuid):
+        trajectory = blocked_well.trajectory
+        assert grid_crs == rqc.Crs(blocked_well.model, uuid = trajectory.crs_uuid)
+    else:
+        # create a temporary orphanage model (in memory only) to host a copy of the trajectory for crs alignment
+        # NB. temporary objects, relationships left in a mess
+        model = rq.Model(create_basics = True)
+        trajectory = rqw.Trajectory(model,
+                                    uuid = blocked_well.trajectory.uuid,
+                                    hdf5_source_model = blocked_well.trajectory.model)
+        assert trajectory is not None
+        traj_crs = rqc.Crs(blocked_well.model, uuid = trajectory.crs_uuid)
+        traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs
+        # note: any represented interpretation object will not be present in the temporary model
+    return trajectory
+
+
+def __pl(n, use_es = False):
     if n == 1:
         return ''
     return 'es' if use_es else 's'
