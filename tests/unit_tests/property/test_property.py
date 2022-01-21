@@ -1544,7 +1544,6 @@ def test_property_kind_list(example_model_with_properties):
     element = pc.property_kind_list()
 
     # Assert
-    print(element)
     assert element == [
         'discrete', 'net to gross ratio', 'permeability rock', 'porosity', 'rock permeability', 'saturation'
     ]
