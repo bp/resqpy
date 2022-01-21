@@ -39,17 +39,17 @@ lxml = "^4.6"
 lasio = "^0.29"
 
 [tool.poetry.dev-dependencies]
-pytest = "6.2.4"
-pytest-cov = "2.12.1"
-pytest-mock = "3.6.1"
-flake8 = "3.9.2"
-flake8-docstrings = "1.6.0"
-yapf = "0.31.0"
+pytest = "^6.2"
+pytest-cov = "^2.12"
+pytest-mock = "^3.6"
+flake8 = "^3.9"
+flake8-docstrings = "^1.6"
+yapf = "^0.31"
 packaging = "20.9"
-Sphinx = "3.5.4"
-sphinx-rtd-theme = "0.5.2"
+Sphinx = "^3.5"
+sphinx-rtd-theme = "^0.5"
 mypy = "0.910"
-autoclasstoc = "1.2.0"
+autoclasstoc = "^1.2"
 
 [tool.poetry-dynamic-versioning]
 enable = true
