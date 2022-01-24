@@ -57,12 +57,12 @@ def split_column_faces(grid):
         grid.array_j_column_face_split = None
     else:
         grid.array_j_column_face_split = np.zeros((grid.nj - 1, grid.ni),
-                                                  dtype=bool)  # NB. internal faces only, index for +ve face
+                                                  dtype = bool)  # NB. internal faces only, index for +ve face
     if grid.ni == 1:
         grid.array_i_column_face_split = None
     else:
         grid.array_i_column_face_split = np.zeros((grid.nj, grid.ni - 1),
-                                                  dtype=bool)  # NB. internal faces only, index for +ve face
+                                                  dtype = bool)  # NB. internal faces only, index for +ve face
     grid.create_column_pillar_mapping()
     for spi in grid.split_pillar_indices_cached:
         j_p, i_p = divmod(spi, grid.ni + 1)
@@ -87,17 +87,17 @@ def clear_face_sets(grid):
     grid.face_set_gcs_list = []
 
 
-def set_face_set_gcs_list_from_dict(grid, face_set_dict=None, create_organizing_objects_where_needed=False):
+def set_face_set_gcs_list_from_dict(grid, face_set_dict = None, create_organizing_objects_where_needed = False):
     """Creates a grid connection set for each feature in the face set dictionary, based on kelp list pairs."""
 
     if face_set_dict is None:
         face_set_dict = grid.face_set_dict
     grid.face_set_gcs_list = []
     for feature in face_set_dict:
-        gcs = rqf.GridConnectionSet(grid.model, grid=grid)
+        gcs = rqf.GridConnectionSet(grid.model, grid = grid)
         kelp_j, kelp_i, axis = face_set_dict[feature]
         log.debug(f'creating gcs for: {feature} {axis}')
-        gcs.set_pairs_from_kelp(kelp_j, kelp_i, feature, create_organizing_objects_where_needed, axis=axis)
+        gcs.set_pairs_from_kelp(kelp_j, kelp_i, feature, create_organizing_objects_where_needed, axis = axis)
         grid.face_set_gcs_list.append(gcs)
 
 
@@ -114,7 +114,7 @@ def make_face_set_from_dataframe(grid, df):
     grid.clear_face_sets()
     names = pd.unique(df.name)
     count = 0
-    box_kji0 = np.zeros((2, 3), dtype=int)
+    box_kji0 = np.zeros((2, 3), dtype = int)
     k_warning_given = False
     for fs_name in names:
         i_kelp_list = []
@@ -166,10 +166,10 @@ def make_face_set_from_dataframe(grid, df):
 def make_face_sets_from_pillar_lists(grid,
                                      pillar_list_list,
                                      face_set_id,
-                                     axis='K',
-                                     ref_slice0=0,
-                                     plus_face=False,
-                                     projection='xy'):
+                                     axis = 'K',
+                                     ref_slice0 = 0,
+                                     plus_face = False,
+                                     projection = 'xy'):
     """Creates a curtain face set for each pillar (or rod) list.
 
     returns:
@@ -194,26 +194,26 @@ def make_face_sets_from_pillar_lists(grid,
 
     if axis.upper() == 'K':
         assert projection == 'xy'
-        pillar_xy = grid.horizon_points(ref_k0=ref_slice0, kp=1 if plus_face else 0)[:, :, 0:2]
+        pillar_xy = grid.horizon_points(ref_k0 = ref_slice0, kp = 1 if plus_face else 0)[:, :, 0:2]
         kelp_axes = 'JI'
     else:
         if projection == 'xz':
-            pillar_xy = grid.unsplit_x_section_points(axis, ref_slice0=ref_slice0,
-                                                      plus_face=plus_face)[:, :, 0:3:2]  # x,z
+            pillar_xy = grid.unsplit_x_section_points(axis, ref_slice0 = ref_slice0,
+                                                      plus_face = plus_face)[:, :, 0:3:2]  # x,z
         else:  # projection == 'yz'
-            pillar_xy = grid.unsplit_x_section_points(axis, ref_slice0=ref_slice0, plus_face=plus_face)[:, :,
-                        1:]  # y,z
+            pillar_xy = grid.unsplit_x_section_points(axis, ref_slice0 = ref_slice0, plus_face = plus_face)[:, :,
+                                                                                                            1:]  # y,z
         if axis.upper() == 'J':
             kelp_axes = 'KI'
         else:
             kelp_axes = 'KJ'
-    kelp_axes_int = np.empty((2,), dtype=int)
+    kelp_axes_int = np.empty((2,), dtype = int)
     for a in range(2):
         kelp_axes_int[a] = 'KJI'.index(kelp_axes[a])
     #     grid.clear_face_sets()  # now accumulating sets
     face_set_count = 0
-    here = np.zeros(2, dtype=int)
-    side_step = np.zeros(2, dtype=int)
+    here = np.zeros(2, dtype = int)
+    side_step = np.zeros(2, dtype = int)
     for pillar_list in pillar_list_list:
         if len(pillar_list) < 2:
             continue
@@ -311,9 +311,9 @@ def face_centre(grid,
                 cell_kji0,
                 axis,
                 zero_or_one,
-                points_root=None,
-                cache_resqml_array=True,
-                cache_cp_array=False):
+                points_root = None,
+                cache_resqml_array = True,
+                cache_cp_array = False):
     """Returns xyz location of the centre point of a face of the cell (or all cells)."""
 
     if axis not in [0, 1, 2]:
@@ -321,26 +321,26 @@ def face_centre(grid,
 
     # todo: optionally compute for all cells and cache
     cp = grid.corner_points(cell_kji0,
-                            points_root=points_root,
-                            cache_resqml_array=cache_resqml_array,
-                            cache_cp_array=cache_cp_array)
+                            points_root = points_root,
+                            cache_resqml_array = cache_resqml_array,
+                            cache_cp_array = cache_cp_array)
     if cell_kji0 is None:
         if axis == 0:
-            return 0.25 * np.sum(cp[:, :, :, zero_or_one, :, :], axis=(3, 4))
+            return 0.25 * np.sum(cp[:, :, :, zero_or_one, :, :], axis = (3, 4))
         elif axis == 1:
-            return 0.25 * np.sum(cp[:, :, :, :, zero_or_one, :], axis=(3, 4))
+            return 0.25 * np.sum(cp[:, :, :, :, zero_or_one, :], axis = (3, 4))
         else:
-            return 0.25 * np.sum(cp[:, :, :, :, :, zero_or_one], axis=(3, 4))
+            return 0.25 * np.sum(cp[:, :, :, :, :, zero_or_one], axis = (3, 4))
     else:
         if axis == 0:
-            return 0.25 * np.sum(cp[zero_or_one, :, :], axis=(0, 1))
+            return 0.25 * np.sum(cp[zero_or_one, :, :], axis = (0, 1))
         elif axis == 1:
-            return 0.25 * np.sum(cp[:, zero_or_one, :], axis=(0, 1))
+            return 0.25 * np.sum(cp[:, zero_or_one, :], axis = (0, 1))
         else:
-            return 0.25 * np.sum(cp[:, :, zero_or_one], axis=(0, 1))
+            return 0.25 * np.sum(cp[:, :, zero_or_one], axis = (0, 1))
 
 
-def face_centres_kji_01(grid, cell_kji0, points_root=None, cache_resqml_array=True, cache_cp_array=False):
+def face_centres_kji_01(grid, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
     """Returns an array of shape (3, 2, 3) being (axis, 0 or 1, xyz) of face centre points for cell."""
 
     assert cell_kji0 is not None
@@ -350,9 +350,9 @@ def face_centres_kji_01(grid, cell_kji0, points_root=None, cache_resqml_array=Tr
             result[axis, zero_or_one] = grid.face_centre(cell_kji0,
                                                          axis,
                                                          zero_or_one,
-                                                         points_root=points_root,
-                                                         cache_resqml_array=cache_resqml_array,
-                                                         cache_cp_array=cache_cp_array)
+                                                         points_root = points_root,
+                                                         cache_resqml_array = cache_resqml_array,
+                                                         cache_cp_array = cache_cp_array)
     return result
 
 
