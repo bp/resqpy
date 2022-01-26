@@ -3,13 +3,33 @@ import pytest
 from resqpy.rq_import._import_vdb_ensemble import import_vdb_ensemble
 
 
-def test_default_args(tmp_path):
+def test_txt_read():
+    filename = '/Users/max.maunder/hpc_data/test.txt'
+    with open(filename, 'r') as file:
+        data = file.read()
+
+    assert data == 'Test text file.'
+
+
+def test_bin_read():
+    myArr = bytearray([0x13, 0x00, 0x00, 0x00, 0x08, 0x00])
+    filename = '/Users/max.maunder/hpc_data/test.bin'
+    # with open(filename, 'wb') as f:
+    #     f.write(myArr)
+
+    with open(filename, 'rb') as f:
+        myArr_read = bytearray(f.read(6))
+
+    assert myArr_read == myArr
+
+
+def test_default_args():
     # Arrange
-    ensemble_dir = tmp_path
+    ensemble_dir = '/Users/max.maunder/hpc_data'
     epc_file = f'{ensemble_dir}/test.epc'
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir)
+    # import_vdb_ensemble(epc_file, ensemble_dir)
 
     # Assert
     pass
