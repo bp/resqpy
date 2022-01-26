@@ -16,8 +16,8 @@ def test_regular_grid_no_geometry(tmp_path):
     model = rq.new_model(epc)
 
     # create a basic block grid
-    grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'spaced out')
-    grid.create_xml(add_cell_length_properties = False)
+    grid = grr.RegularGrid(model, extent_kji=(4, 3, 2), title='spaced out')
+    grid.create_xml(add_cell_length_properties=False)
     grid_uuid = grid.uuid
 
     model.store_epc()
@@ -25,7 +25,7 @@ def test_regular_grid_no_geometry(tmp_path):
     # check that the grid can be read
     model = rq.Model(epc)
 
-    grid = grr.any_grid(model, uuid = grid_uuid)
+    grid = grr.any_grid(model, uuid=grid_uuid)
 
 
 def test_regular_grid_with_geometry(tmp_path):
@@ -35,8 +35,8 @@ def test_regular_grid_with_geometry(tmp_path):
 
     # create a basic block grid
     dxyz = (55.0, 65.0, 27.0)
-    grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'concrete', origin = (0.0, 0.0, 1000.0), dxyz = dxyz)
-    grid.create_xml(add_cell_length_properties = True)
+    grid = grr.RegularGrid(model, extent_kji=(4, 3, 2), title='concrete', origin=(0.0, 0.0, 1000.0), dxyz=dxyz)
+    grid.create_xml(add_cell_length_properties=True)
     grid_uuid = grid.uuid
 
     # store with constant arrays (no hdf5 data)
@@ -44,7 +44,7 @@ def test_regular_grid_with_geometry(tmp_path):
 
     # check that the grid can be read
     model = rq.Model(epc)
-    grid = grr.any_grid(model, uuid = grid_uuid)
+    grid = grr.any_grid(model, uuid=grid_uuid)
 
     # check that the cell size has been preserved
     expected_dxyz_dkji = np.zeros((3, 3))
@@ -72,7 +72,7 @@ def test_cell_count_non_pinched_out_only(basic_regular_grid):
     basic_regular_grid.pinchout = pinchout
 
     # Act
-    cell_count = basic_regular_grid.cell_count(non_pinched_out_only = True)
+    cell_count = basic_regular_grid.cell_count(non_pinched_out_only=True)
 
     # Assert
     assert cell_count == pinchout.size - pinchout.sum()
@@ -85,7 +85,7 @@ def test_cell_count_active_only(basic_regular_grid):
     basic_regular_grid.inactive = inactive
 
     # Act
-    cell_count = basic_regular_grid.cell_count(active_only = True)
+    cell_count = basic_regular_grid.cell_count(active_only=True)
 
     # Assert
     assert cell_count == inactive.size - inactive.sum()
@@ -98,7 +98,7 @@ def test_cell_count_geometry_defined_only(basic_regular_grid):
     basic_regular_grid.array_cell_geometry_is_defined = geometry_defined
 
     # Act
-    cell_count = basic_regular_grid.cell_count(geometry_defined_only = True)
+    cell_count = basic_regular_grid.cell_count(geometry_defined_only=True)
 
     # Assert
     assert cell_count == geometry_defined.sum()
@@ -113,8 +113,3 @@ def test_actual_pillar_shape(basic_regular_grid):
 
     # Assert
     assert pillar_shape == 'vertical'
-
-
-# Need to add test
-def test_write_nexus_corp():
-    pass
