@@ -29,7 +29,7 @@ def test_default_args():
     epc_file = f'{ensemble_dir}/test.epc'
 
     # Act
-    # import_vdb_ensemble(epc_file, ensemble_dir)
+    import_vdb_ensemble(epc_file, ensemble_dir)
 
     # Assert
     pass
