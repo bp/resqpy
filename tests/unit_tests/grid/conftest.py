@@ -10,6 +10,8 @@ from resqpy.grid import Grid
 import os
 import resqpy.model as rq
 
+from inspect import getsourcefile
+
 
 @pytest.fixture
 def model_test(tmp_path) -> Model:
@@ -112,7 +114,9 @@ def example_model_with_properties(tmp_path) -> Model:
 
 
 @pytest.fixture()
-def faulted_grid() -> Grid:
-    epc_file = '../../test_data/wren/wren.epc'
+def faulted_grid(test_data_path) -> Grid:
+    current_filename = os.path.split(getsourcefile(lambda: 0))[0]
+    base_folder = os.path.dirname(os.path.dirname(current_filename))
+    epc_file = base_folder + '/test_data/wren/wren.epc'
     model = Model(epc_file = epc_file)
     return model.grid(title = 'faulted grid')
