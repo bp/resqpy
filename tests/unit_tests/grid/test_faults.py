@@ -2,6 +2,7 @@ import resqpy.grid.faults as f
 import numpy as np
 
 
+# yapf: disable
 def test_find_faults(faulted_grid):
     # Arrange
     expected_i_fault_id = np.array(
