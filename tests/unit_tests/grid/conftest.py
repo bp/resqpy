@@ -4,8 +4,6 @@ import resqpy.property as rqp
 from resqpy.model import Model
 from resqpy.grid import Grid
 
-from inspect import getsourcefile
-
 import math as maths
 import os
 
