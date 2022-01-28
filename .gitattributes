@@ -1,3 +1,4 @@
 # Ensure consitent treatment of line endings
 * text=auto
 *.py text
+*.bin -diff
