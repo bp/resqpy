@@ -492,12 +492,3 @@ def s_bend_k_gap_grid(s_bend_model):
     # k_gap_grid.write_hdf5_from_caches()
     # k_gap_grid.create_xml()
     return k_gap_grid
-
-
-@pytest.fixture()
-def faulted_grid(test_data_path) -> Grid:
-    current_filename = os.path.split(getsourcefile(lambda: 0))[0]
-    base_folder = os.path.dirname(os.path.dirname(current_filename))
-    epc_file = base_folder + '/test_data/wren/wren.epc'
-    model = Model(epc_file = epc_file)
-    return model.grid(title = 'faulted grid')
