@@ -13,16 +13,26 @@ def test_half_cell_transmissibility_already_set(basic_regular_grid):
     np.testing.assert_array_almost_equal(half_cell_transmissibility, array_half_cell_t)
 
 
-# Need to complete test
-def test_half_cell_transmissibility_default(example_model_with_properties):
+def test_half_cell_transmissibility_default(example_model_with_prop_ts_rels):
     # Arrange
-    grid = example_model_with_properties.grid()
+    grid = example_model_with_prop_ts_rels.grid()
 
     # Act
-    # half_cell_transmissibility = grid.half_cell_transmissibility()
+    half_cell_transmissibility = grid.half_cell_transmissibility()
 
     # Assert
-    pass
+    assert half_cell_transmissibility.shape == (grid.nk, grid.nj, grid.ni, 3, 2)
+
+
+def test_half_cell_transmissibility_use_property_false(example_model_with_prop_ts_rels):
+    # Arrange
+    grid = example_model_with_prop_ts_rels.grid()
+
+    # Act
+    half_cell_transmissibility = grid.half_cell_transmissibility(use_property = False)
+
+    # Assert
+    assert half_cell_transmissibility.shape == (grid.nk, grid.nj, grid.ni, 3, 2)
 
 
 def test_volume(basic_regular_grid):
@@ -63,7 +73,7 @@ def test_volume_cell_kji0(basic_regular_grid):
     cell = (0, 0, 0)
 
     # Act
-    volume = basic_regular_grid.volume(cell_kji0=cell)
+    volume = basic_regular_grid.volume(cell_kji0 = cell)
 
     # Assert
     assert volume == 100000.0
@@ -79,20 +89,14 @@ def test_thickness(basic_regular_grid):
 
 def test_thickness_faulted_grid(faulted_grid):
     # Arrange
-    expected_thickness = np.array([[[20., 20., 20., 20., 20., 20., 20., 20.],
-                                    [20., 20., 20., 20., 20., 20., 20., 20.],
-                                    [20., 20., 20., 20., 20., 20., 20., 20.],
-                                    [20., 20., 20., 20., 20., 20., 20., 20.],
+    expected_thickness = np.array([[[20., 20., 20., 20., 20., 20., 20., 20.], [20., 20., 20., 20., 20., 20., 20., 20.],
+                                    [20., 20., 20., 20., 20., 20., 20., 20.], [20., 20., 20., 20., 20., 20., 20., 20.],
                                     [20., 20., 20., 20., 20., 20., 20., 20.]],
-                                   [[20., 20., 20., 20., 20., 20., 20., 20.],
-                                    [20., 20., 20., 20., 20., 20., 20., 20.],
-                                    [20., 20., 20., 20., 20., 20., 20., 20.],
-                                    [20., 20., 20., 20., 20., 20., 20., 20.],
+                                   [[20., 20., 20., 20., 20., 20., 20., 20.], [20., 20., 20., 20., 20., 20., 20., 20.],
+                                    [20., 20., 20., 20., 20., 20., 20., 20.], [20., 20., 20., 20., 20., 20., 20., 20.],
                                     [20., 20., 20., 20., 20., 20., 20., 20.]],
-                                   [[10., 10., 5., 0., 0., 5., 10., 10.],
-                                    [10., 10., 5., 0., 0., 5., 10., 10.],
-                                    [10., 10., 5., 0., 0., 5., 10., 10.],
-                                    [10., 10., 5., 0., 0., 5., 10., 10.],
+                                   [[10., 10., 5., 0., 0., 5., 10., 10.], [10., 10., 5., 0., 0., 5., 10., 10.],
+                                    [10., 10., 5., 0., 0., 5., 10., 10.], [10., 10., 5., 0., 0., 5., 10., 10.],
                                     [10., 10., 5., 0., 0., 5., 10., 10.]]])
 
     # Act
@@ -107,7 +111,7 @@ def test_thickness_cell_kji0(basic_regular_grid):
     cell = (0, 0, 0)
 
     # Act
-    thickness = basic_regular_grid.thickness(cell_kji0=cell)
+    thickness = basic_regular_grid.thickness(cell_kji0 = cell)
 
     # Assert
     assert thickness == 20.0
