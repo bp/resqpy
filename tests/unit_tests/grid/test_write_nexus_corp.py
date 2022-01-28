@@ -56,7 +56,7 @@ def test_write_nx_ny_nz_true(mocker: MockerFixture, tmp_path, basic_regular_grid
     ]
 
     # Act
-    write_nexus_corp(basic_regular_grid, file_name, write_nx_ny_nz=True)
+    write_nexus_corp(basic_regular_grid, file_name, write_nx_ny_nz = True)
 
     # Assert
     open_mock.assert_has_calls(expected_calls)
@@ -71,7 +71,7 @@ def test_write_units_keyword_true(mocker: MockerFixture, tmp_path, basic_regular
     expected_calls.insert(4, mocker.call().write('! global units unknown or mixed\n\n'))
 
     # Act
-    write_nexus_corp(basic_regular_grid, file_name, write_units_keyword=True)
+    write_nexus_corp(basic_regular_grid, file_name, write_units_keyword = True)
 
     # Assert
     open_mock.assert_has_calls(expected_calls)
@@ -86,7 +86,7 @@ def test_local_coords_true(mocker: MockerFixture, tmp_path, basic_regular_grid):
     expected_calls.insert(4, mocker.call().write('METRIC\n\n'))
 
     # Act
-    write_nexus_corp(basic_regular_grid, file_name, write_units_keyword=True, local_coords=True)
+    write_nexus_corp(basic_regular_grid, file_name, write_units_keyword = True, local_coords = True)
 
     # Assert
     open_mock.assert_has_calls(expected_calls)
@@ -101,7 +101,7 @@ def test_write_rh_keyword_if_needed_true(mocker: MockerFixture, tmp_path, basic_
     expected_calls.insert(4, mocker.call().write('RIGHTHANDED\n\n'))
 
     # Act
-    write_nexus_corp(basic_regular_grid, file_name, write_rh_keyword_if_needed=True)
+    write_nexus_corp(basic_regular_grid, file_name, write_rh_keyword_if_needed = True)
 
     # Assert
     open_mock.assert_has_calls(expected_calls)
