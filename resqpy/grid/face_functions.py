@@ -101,8 +101,7 @@ def set_face_set_gcs_list_from_dict(grid, face_set_dict = None, create_organizin
         elif len(kelp_values) == 3:
             kelp_j, kelp_i, axis = kelp_values
         else:
-            raise Exception('grid face set dictionary item messed up')
-        kelp_j, kelp_i, axis = face_set_dict[feature]
+            raise ValueError('grid face set dictionary item messed up')
         log.debug(f'creating gcs for: {feature} {axis}')
         gcs.set_pairs_from_kelp(kelp_j, kelp_i, feature, create_organizing_objects_where_needed, axis = axis)
         grid.face_set_gcs_list.append(gcs)
