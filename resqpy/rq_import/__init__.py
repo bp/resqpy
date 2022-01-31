@@ -12,3 +12,9 @@ from ._import_vdb_all_grids import import_vdb_all_grids
 from ._import_vdb_ensemble import import_vdb_ensemble
 from ._add_ab_properties import add_ab_properties
 from ._add_surfaces import add_surfaces
+
+# Set "module" attribute of all public objects to this path. Fixes issue #398
+for _name in __all__:
+    _obj = eval(_name)
+    if hasattr(_obj, "__module__"):
+        _obj.__module__ = __name__
