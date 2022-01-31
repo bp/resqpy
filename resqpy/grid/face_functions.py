@@ -316,6 +316,9 @@ def face_centre(grid,
                 cache_cp_array = False):
     """Returns xyz location of the centre point of a face of the cell (or all cells)."""
 
+    if axis not in [0, 1, 2]:
+        raise ValueError('Axis provided must be either 0, 1, or 2.')
+
     # todo: optionally compute for all cells and cache
     cp = grid.corner_points(cell_kji0,
                             points_root = points_root,
