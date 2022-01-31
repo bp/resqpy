@@ -99,7 +99,7 @@ def set_face_set_gcs_list_from_dict(grid, face_set_dict = None, create_organizin
             kelp_j, kelp_i = kelp_values
             axis = 'K'
         elif len(kelp_values) == 3:
-            kelp_j, kelp_i, axis = face_set_dict[feature]
+            kelp_j, kelp_i, axis = kelp_values
         else:
             raise Exception('grid face set dictionary item messed up')
         kelp_j, kelp_i, axis = face_set_dict[feature]
