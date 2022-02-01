@@ -95,8 +95,9 @@ def find_faults(grid, set_face_sets = False, create_organizing_objects_where_nee
     grid.fault_id_i = kelp_i.copy()  # fault_id for each internal i kelp, zero is none; extent nj, ni-1
     if set_face_sets:
         for f, (j_list, i_list) in grid.fault_dict.items():
-            grid.face_set_dict[f] = (j_list, i_list, 'K')
-        grid.set_face_set_gcs_list_from_dict(grid.fault_dict, create_organizing_objects_where_needed)
+            fault_name = f'fault_{f}'
+            grid.face_set_dict[fault_name] = (j_list, i_list, 'K')
+        grid.set_face_set_gcs_list_from_dict(grid.face_set_dict, create_organizing_objects_where_needed)
     return (grid.fault_id_j, grid.fault_id_i)
 
 

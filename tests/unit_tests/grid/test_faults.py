@@ -50,15 +50,14 @@ def test_find_faults_create_organizing_objects_where_needed_true(faulted_grid):
             model.remove_part(feature)
 
     # Act
-    # todo: need to fix issue #401
-    # j_fault_id, i_fault_id = f.find_faults(faulted_grid, set_face_sets=True,
-    #                                        create_organizing_objects_where_needed=True)
-    counts_after = model.parts_count_by_type(type_of_interest='FaultInterpretation')
+    j_fault_id, i_fault_id = f.find_faults(faulted_grid, set_face_sets=True,
+                                           create_organizing_objects_where_needed=True)
+    counts_after = model.parts_count_by_type(type_of_interest='FaultInterpretation')[0][1]
 
     # Assert
-    # assert counts_after == 2
-    # np.testing.assert_array_equal(j_fault_id, expected_j_fault_id)
-    # np.testing.assert_array_equal(i_fault_id, expected_i_fault_id)
+    assert counts_after == 2
+    np.testing.assert_array_equal(j_fault_id, expected_j_fault_id)
+    np.testing.assert_array_equal(i_fault_id, expected_i_fault_id)
 
 
 def test_fault_throws(faulted_grid):
