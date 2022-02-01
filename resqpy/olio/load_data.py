@@ -38,8 +38,8 @@ def file_exists(file_name, must_be_more_recent_than_file = None):
     existe = os.path.exists(file_name)
     if not existe:
         return False
-    if not must_be_more_recent_than_file or file_name == must_be_more_recent_than_file or  \
-       not os.path.exists(must_be_more_recent_than_file):
+    if not must_be_more_recent_than_file or file_name == must_be_more_recent_than_file or \
+            not os.path.exists(must_be_more_recent_than_file):
         return True
     return os.path.getmtime(file_name) > os.path.getmtime(must_be_more_recent_than_file)
 
@@ -476,7 +476,7 @@ def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
         try:
             with open(binary_file_name, 'rb') as binary_data_file:
                 result = np.fromfile(binary_data_file, dtype = 'bool', count = face_count).reshape(mask_extent_kji)
-                fault_mask.data = result.data
+                fault_mask = result
                 # todo: check that end of file has been reached, ie. not too much data in file
                 log.info('Fault mask data loaded from binary file %s', binary_file_name)
                 return
@@ -515,12 +515,12 @@ def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
                     assert (box_kji0[0, dir] >= 0)
                     assert (box_kji0[1, dir] < mask_extent_kji[dir])
                 # set fault_mask to True for face of every cell in box (usually just one cell, or column)
-#            for k in range(box_kji0[0, 0], box_kji0[1, 0] + 1):
-#               for j in range(box_kji0[0, 1], box_kji0[1, 1] + 1):
-#                  for i in range(box_kji0[0, 2], box_kji0[1, 2] + 1):
-#                     if not fault_mask[k,j,i]:
-#                        fault_mask[k, j, i] = True
-#                        count += 1
+                #            for k in range(box_kji0[0, 0], box_kji0[1, 0] + 1):
+                #               for j in range(box_kji0[0, 1], box_kji0[1, 1] + 1):
+                #                  for i in range(box_kji0[0, 2], box_kji0[1, 2] + 1):
+                #                     if not fault_mask[k,j,i]:
+                #                        fault_mask[k, j, i] = True
+                #                        count += 1
                 count += (box.volume_of_box(box_kji0) -
                           np.count_nonzero(fault_mask[box_kji0[0, 0]:box_kji0[1, 0] + 1, box_kji0[0, 1]:box_kji0[1, 1] +
                                                       1, box_kji0[0, 2]:box_kji0[1, 2] + 1]))

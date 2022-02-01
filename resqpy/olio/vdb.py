@@ -150,8 +150,8 @@ class Header():
         fp.seek(place)
         block = fp.read(22)
         #      log.debug(f'Header block at place {place} returned {len(block)} bytes')
-        self.previous, self.next, c, self.bytes_per_item, self.number_of_items, self.first_fragment, self.max_items =  \
-           unpack('=IIcBIII', block)
+        self.previous, self.next, c, self.bytes_per_item, self.number_of_items, self.first_fragment, self.max_items = \
+            unpack('=IIcBIII', block)
         try:
             self.item_type = c.decode()
         except Exception:
@@ -221,8 +221,9 @@ class RawData():
             self.a = np.empty((count, 2), dtype = int)
             self.a[:, :] = nda[:, :]
         else:
-            self.a = np.empty((count,), dtype = dtype)
-            self.a.data = fp.read(count * byte_size)  # todo: check C ordering; endianess etc.
+            b = fp.read(count * byte_size)
+            a = np.frombuffer(buffer = b, dtype = dtype, count = count)
+            self.a = np.frombuffer(buffer = b, dtype = dtype, count = count)
 
 
 class Data():
@@ -329,8 +330,8 @@ class KP():
         self.p_head = Header(fp, place)
         assert self.p_head.item_type == 'P', 'did not find expected Pointer header'
         assert self.p_head.bytes_per_item == 4, 'bytes per item not 4 in Pointer header'
-        assert self.p_head.number_of_items == self.k_head.number_of_items,  \
-                  'number of items in Pointer header does not match number in Key header'
+        assert self.p_head.number_of_items == self.k_head.number_of_items, \
+            'number of items in Pointer header does not match number in Key header'
         self.keywords = Data(fp, self.k_head).c
         assert self.keywords is not None and isinstance(self.keywords,
                                                         list), 'list of keywords not extracted from Key record'
