@@ -19,7 +19,7 @@ jobs:
   static-analysis:
     name: Static analysis
     runs-on: ubuntu-latest
-    needs: setup-environment
+    # needs: setup-environment
     steps:
 
       - name: Checkout code
