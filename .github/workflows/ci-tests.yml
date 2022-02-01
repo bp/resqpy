@@ -10,8 +10,8 @@ on:
 
 jobs:
 
-  static-analysis:
-    name: Static analysis
+  setup-environment:
+    name: Setup environment
     runs-on: ubuntu-latest
     steps:
 
@@ -41,9 +41,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry-dynamic-versioning
 
-      - name: Install cached dependencies
+      - name: Install missing cached dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
+
+      - name: Activate environment
+        run: source .venv/bin/activate
+
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    needs: setup-environment
+    steps:
 
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
