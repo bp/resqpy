@@ -10,9 +10,16 @@ on:
 
 jobs:
 
-  setup-environment:
-    name: Setup environment
+#  setup-environment:
+#    name: Setup environment
+#    runs-on: ubuntu-latest
+#    steps:
+
+
+  static-analysis:
+    name: Static analysis
     runs-on: ubuntu-latest
+    needs: setup-environment
     steps:
 
       - name: Checkout code
@@ -44,13 +51,6 @@ jobs:
       - name: Install missing cached dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
-
-
-  static-analysis:
-    name: Static analysis
-    runs-on: ubuntu-latest
-    needs: setup-environment
-    steps:
 
       - name: Activate environment
         run: source .venv/bin/activate
