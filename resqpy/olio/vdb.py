@@ -41,12 +41,12 @@ def coerce(a, dtype):
     """
     if dtype is None or a.dtype == dtype:
         return a
-    b = np.empty(a.shape, dtype = dtype)
+    b = np.empty(a.shape, dtype=dtype)
     b[:] = a
     return b
 
 
-def ensemble_vdb_list(run_dir, sort_list = True):
+def ensemble_vdb_list(run_dir, sort_list=True):
     """Returns a sorted list of vdb paths found in the directory tree under run_dir."""
 
     ensemble_list = []
@@ -136,7 +136,7 @@ def ensemble_vdb_list(run_dir, sort_list = True):
 
     recursive_vdb_list(run_dir)
     if sort_list:
-        sorted_list = sorted(ensemble_list, key = cmp_to_key(comparison))
+        sorted_list = sorted(ensemble_list, key=cmp_to_key(comparison))
         ensemble_list = sorted_list
     return ensemble_list
 
@@ -217,13 +217,12 @@ class RawData():
             #         c = b''
             #         for d in range(count):
             #            c += b[4*d+4:4*d+8] + b[4*d:4*d+4]
-            nda = np.ndarray((count, 2), dtype = 'int32', buffer = b)
-            self.a = np.empty((count, 2), dtype = int)
+            nda = np.ndarray((count, 2), dtype='int32', buffer=b)
+            self.a = np.empty((count, 2), dtype=int)
             self.a[:, :] = nda[:, :]
         else:
             b = fp.read(count * byte_size)
-            a = np.frombuffer(buffer = b, dtype = dtype, count = count)
-            self.a = np.frombuffer(buffer = b, dtype = dtype, count = count)
+            self.a = np.frombuffer(buffer=b, dtype=dtype, count=count)
 
 
 class Data():
@@ -317,7 +316,7 @@ class FragmentChain():
 class KP():
     """Internal class for a (Key, Pointer) record in a vdb file."""
 
-    def __init__(self, fp, place = 4):
+    def __init__(self, fp, place=4):
         """Creates a new (Key, Pointer) record object."""
 
         #      log.debug(f'KP init at place {place}')
@@ -339,7 +338,7 @@ class KP():
         assert self.pointers is not None and self.pointers.dtype == 'uint32'
         self.fp = fp
 
-    def header_place_for_key(self, key, search = False):
+    def header_place_for_key(self, key, search=False):
         """Returns file position pointer for a given key."""
 
         key = key.strip().upper()
@@ -351,7 +350,7 @@ class KP():
             sub_head_place = self.pointers[self.keywords.index(head_key)]
             try:
                 sub_kp = KP(self.fp, sub_head_place)
-                sub_place = sub_kp.header_place_for_key(key, search = True)
+                sub_place = sub_kp.header_place_for_key(key, search=True)
                 if sub_place is not None:
                     return sub_place
             except AssertionError:
@@ -360,10 +359,10 @@ class KP():
                 raise
         return None
 
-    def head_for_key(self, key, search = False):
+    def head_for_key(self, key, search=False):
         """Returns a Header record object for the given key."""
 
-        head_place = self.header_place_for_key(key, search = search)
+        head_place = self.header_place_for_key(key, search=search)
         if head_place is None:
             return None
         head = Header(self.fp, head_place)
@@ -371,15 +370,15 @@ class KP():
             return None  # invalid (non-ascii) item type character
         return head
 
-    def data_for_key(self, key, search = False):
+    def data_for_key(self, key, search=False):
         """Returns a Data object for the given key."""
 
-        head = self.head_for_key(key, search = search)
+        head = self.head_for_key(key, search=search)
         if head is None:
             return None
         return Data(self.fp, head)
 
-    def key_list(self, filter = False):
+    def key_list(self, filter=False):
         """Returns a list of keys."""
 
         #      return Data(self.fp, self.k_head).c
@@ -392,13 +391,13 @@ class KP():
                 filtered_list.append(key)
         return filtered_list
 
-    def sub_key_list(self, keyword, filter = False):
+    def sub_key_list(self, keyword, filter=False):
         """Returns a list of keys subordinate to keyword."""
 
         assert keyword in self.key_list(), 'keyword not present: ' + keyword
         sub_head_place = self.pointers[self.keywords.index(keyword)]
         sub_kp = KP(self.fp, sub_head_place)
-        return sub_kp.key_list(filter = filter)
+        return sub_kp.key_list(filter=filter)
 
 
 class VDB():
@@ -478,7 +477,7 @@ class VDB():
 
         visited = []
 
-        def print_tree(fp, place = 4, level = 0, dots = False, file_size = None):
+        def print_tree(fp, place=4, level=0, dots=False, file_size=None):
             """Recursive function for printing vdb tree."""
             try:
                 if file_size is None:
@@ -487,7 +486,7 @@ class VDB():
                 assert 0 <= int(place) < file_size, f'place {place} not within bounds of file of size {file_size}'
                 assert place not in visited, 'circular pointers in vdb file header structure'
                 visited.append(place)
-                head = Header(fp, place = place)
+                head = Header(fp, place=place)
                 if head is None:
                     raise ValueError()
                 if dots:
@@ -501,13 +500,13 @@ class VDB():
                       'items at',
                       head.bytes_per_item,
                       'bytes per item',
-                      end = '')
+                      end='')
                 if head.item_type == 'C':
                     s = RawData(fp, head.data_place, 'C', head.number_of_items, head.max_items)
                     if s is None or s.c is None:
-                        print(': ?', end = '')
+                        print(': ?', end='')
                     else:
-                        print(': "' + s.c + '"', end = '')
+                        print(': "' + s.c + '"', end='')
                 if head.first_fragment != null_uint32:
                     print(' with fragment(s)')
                 else:
@@ -524,12 +523,12 @@ class VDB():
                         elif int(p) > file_size:
                             log.warning('skipping pointer to place beyond end of file ' + str(p))
                         else:
-                            print_tree(fp, place = p, level = level + 1, dots = True, file_size = file_size)
+                            print_tree(fp, place=p, level=level + 1, dots=True, file_size=file_size)
                 if head.next != null_uint32:
                     if not 0 <= int(head.next) < file_size:
                         log.warning(f'skipping next {head.next} outwith bounds of file of size {file_size}')
                     else:
-                        print_tree(fp, place = head.next, level = level, file_size = file_size)
+                        print_tree(fp, place=head.next, level=level, file_size=file_size)
             except Exception:
                 print('?')
                 log.exception('failed in print tree for headers')
@@ -549,7 +548,7 @@ class VDB():
 
         visited = []
 
-        def print_tree(fp, place = 4, level = 0):
+        def print_tree(fp, place=4, level=0):
             try:
                 if int(place) == 0:
                     log.warning('returning due to place zero in vdb file key structure')
@@ -558,7 +557,7 @@ class VDB():
                     log.warning(f'returning at circular pointer at place {place} in vdb file key structure')
                     return
                 visited.append(place)
-                kp = KP(fp, place = place)
+                kp = KP(fp, place=place)
             except AssertionError:
                 return
             except Exception as e:
@@ -567,7 +566,7 @@ class VDB():
             key_list = kp.key_list()
             for key in key_list:
                 print((level * 3) * ' ', key)
-                print_tree(fp, kp.header_place_for_key(key, search = False), level + 1)
+                print_tree(fp, kp.header_place_for_key(key, search=False), level + 1)
 
         try:
             path = os.path.join(self.path, self.use_case, relative_path)
@@ -582,7 +581,7 @@ class VDB():
         except Exception:
             log.exception('failed to print keyword tree for relative file ' + relative_path)
 
-    def data_for_keyword(self, relative_path, keyword, search = True):
+    def data_for_keyword(self, relative_path, keyword, search=True):
         """Reads data associated with a keyword from a vdb binary file; returns a numpy array (or string)."""
 
         try:
@@ -592,13 +591,13 @@ class VDB():
                     with zfp.open(path) as fp:
                         assert fp.read(4) == b'NT32', 'first 4 characters not NT32 in file ' + path
                         kp = KP(fp)
-                        return kp.data_for_key(keyword, search = search)
+                        return kp.data_for_key(keyword, search=search)
             else:
                 assert os.path.exists(path), 'failed to find vdb file ' + str(path)
                 with open(path, 'rb') as fp:
                     assert fp.read(4) == b'NT32', 'first 4 characters not NT32 in file ' + path
                     kp = KP(fp)
-                    return kp.data_for_key(keyword, search = search)
+                    return kp.data_for_key(keyword, search=search)
         except Exception:
             log.exception('failed to read keyword data from vdb binary file: ' + path)
         return None
@@ -612,12 +611,12 @@ class VDB():
             assert len(chain_list) > 0, 'empty chained keyword list'
             head_place = 4
             while len(chain_list) > 1:
-                kp = KP(fp, place = head_place)
-                head_place = kp.header_place_for_key(chain_list[0], search = False)
+                kp = KP(fp, place=head_place)
+                head_place = kp.header_place_for_key(chain_list[0], search=False)
                 assert head_place is not None, 'failed to find chained keyword: ' + chain_list[0]
                 chain_list.pop(0)
-            kp = KP(fp, place = head_place)
-            return kp.data_for_key(chain_list[0], search = False)
+            kp = KP(fp, place=head_place)
+            return kp.data_for_key(chain_list[0], search=False)
 
         path = os.path.join(self.path, self.use_case, relative_path)
         try:
@@ -635,7 +634,7 @@ class VDB():
             log.exception('failed to read chained keyword data from vdb binary file: ' + path)
         return None
 
-    def set_extent_kji(self, extent_kji, use_case = None, grid_name = 'ROOT'):
+    def set_extent_kji(self, extent_kji, use_case=None, grid_name='ROOT'):
         """Sets extent for one use case (defaults to current use case) as alternative to processing corp data."""
 
         assert len(extent_kji) == 3, 'triple integer required for extent_kji'
@@ -654,7 +653,7 @@ class VDB():
         cells, remainder = divmod(element_count, 24)
         assert remainder == 0, 'number of numbers in corp data is not a multiple of 24'
         if a.dtype == 'float32':
-            d = np.empty((element_count,), dtype = 'float')  # double precision
+            d = np.empty((element_count,), dtype='float')  # double precision
             d[:] = a
             del a
             a = d
@@ -733,7 +732,7 @@ class VDB():
             log.exception('failed to extract root grid corp data from vdb')
         return None
 
-    def load_init_mapdata_array(self, file, keyword, dtype = None, unpack = False, grid_name = 'ROOT'):
+    def load_init_mapdata_array(self, file, keyword, dtype=None, unpack=False, grid_name='ROOT'):
         """Loads an INIT MAPDATA array from vdb; returns 3D numpy array coerced to dtype (if not None)."""
 
         try:
@@ -741,12 +740,12 @@ class VDB():
                 self.cases()
             assert self.use_case is not None, 'no case found in vdb'
             relative_path = os.path.join('INIT', 'MAPDATA', file)
-            a = self.data_for_keyword(relative_path, keyword, search = True).a
+            a = self.data_for_keyword(relative_path, keyword, search=True).a
             assert a is not None, 'failed to extract data for keyword ' + keyword + ' from vdb relative path ' + relative_path
             if unpack:
                 un = self.grid_unpack(grid_name)
                 if un is not None:
-                    null_start = np.zeros((a.size + 1,), dtype = a.dtype)  # better to use Nan for null value?
+                    null_start = np.zeros((a.size + 1,), dtype=a.dtype)  # better to use Nan for null value?
                     null_start[1:] = a
                     a = null_start[un]
             a = self.grid_shaped(grid_name, coerce(a, dtype))
@@ -755,7 +754,7 @@ class VDB():
             log.exception('failed to extract data from vdb for grid ' + str(grid_name))
         return None
 
-    def load_recurrent_mapdata_array(self, file, keyword, dtype = None, unpack = False, grid_name = 'ROOT'):
+    def load_recurrent_mapdata_array(self, file, keyword, dtype=None, unpack=False, grid_name='ROOT'):
         """Loads a RECUR MAPDATA array from vdb; returns 3D numpy array coerced to dtype (if not None)."""
 
         try:
@@ -766,7 +765,7 @@ class VDB():
                 self.cases()
             assert self.use_case is not None, 'no case found in vdb'
             relative_path = os.path.join('RECUR', 'MAPDATA', file)
-            data = self.data_for_keyword(relative_path, keyword, search = True)
+            data = self.data_for_keyword(relative_path, keyword, search=True)
             if not data:
                 return None
             a = data.a
@@ -775,7 +774,7 @@ class VDB():
             if unpack:
                 un = self.grid_unpack(grid_name)
                 if un is not None:
-                    null_start = np.zeros((a.size + 1,), dtype = a.dtype)  # better to use Nan for null value?
+                    null_start = np.zeros((a.size + 1,), dtype=a.dtype)  # better to use Nan for null value?
                     null_start[1:] = a
                     a = null_start[un]
             a = self.grid_shaped(grid_name, coerce(a, dtype))
@@ -795,11 +794,11 @@ class VDB():
         # todo: check file naming and values for LGRs
         grid_name = grid_name.upper
         # DAD data appear to be unique cell ids, in usual sequence, starting at 1, same as UID
-        return self.load_init_mapdata_array(file = 'I' + grid_name + 'DAD.bin',
-                                            keyword = 'DAD',
-                                            dtype = 'int32',
-                                            unpack = False,
-                                            grid_name = grid_name)
+        return self.load_init_mapdata_array(file='I' + grid_name + 'DAD.bin',
+                                            keyword='DAD',
+                                            dtype='int32',
+                                            unpack=False,
+                                            grid_name=grid_name)
 
     def root_kid(self):
         """Loads and returns the IROOTKID array from vdb; returns 3D numpy int32 array (can be inactive cell mask)."""
@@ -811,11 +810,11 @@ class VDB():
 
         grid_name = grid_name.upper()
         # see comments in grid_kid_inactive_mask() for KID values
-        return self.load_init_mapdata_array(file = 'I' + grid_name + 'KID.bin',
-                                            keyword = 'KID',
-                                            dtype = 'int32',
-                                            unpack = False,
-                                            grid_name = grid_name)
+        return self.load_init_mapdata_array(file='I' + grid_name + 'KID.bin',
+                                            keyword='KID',
+                                            dtype='int32',
+                                            unpack=False,
+                                            grid_name=grid_name)
 
     def root_kid_inactive_mask(self):
         """Loads the IROOTKID array and returns boolean mask of cells inactive in ROOT grid."""
@@ -834,7 +833,7 @@ class VDB():
         i = self.grid_kid(grid_name)
         if i is None:
             return None
-        b = np.empty(i.shape, dtype = 'bool')
+        b = np.empty(i.shape, dtype='bool')
         b[:] = (i != 0)
         return b
 
@@ -848,11 +847,11 @@ class VDB():
 
         grid_name = grid_name.upper()
         # UID data appear to be unique cell ids, in usual sequence, starting at 1, same as DAD
-        return self.load_init_mapdata_array(file = 'I' + grid_name + 'UID.bin',
-                                            keyword = 'UID',
-                                            dtype = 'int32',
-                                            unpack = False,
-                                            grid_name = grid_name)
+        return self.load_init_mapdata_array(file='I' + grid_name + 'UID.bin',
+                                            keyword='UID',
+                                            dtype='int32',
+                                            unpack=False,
+                                            grid_name=grid_name)
 
     def root_unpack(self):
         """Loads and returns the IROOTUNPACK array from vdb; returns 3D numpy int32 array."""
@@ -866,11 +865,11 @@ class VDB():
         if self.use_case is not None and (self.use_case, grid_name) in self.grid_packings.keys():
             return self.grid_packings[self.use_case, grid_name]
         # UNPACK data appear to be index into packed array for each cell, zero for inactive/absent
-        un = self.load_init_mapdata_array(file = 'I' + grid_name + 'UNPACK.bin',
-                                          keyword = 'UNPACK',
-                                          dtype = 'int32',
-                                          unpack = False,
-                                          grid_name = grid_name)
+        un = self.load_init_mapdata_array(file='I' + grid_name + 'UNPACK.bin',
+                                          keyword='UNPACK',
+                                          dtype='int32',
+                                          unpack=False,
+                                          grid_name=grid_name)
         if self.use_case is not None:
             self.grid_packings[self.use_case,
                                grid_name] = un  # cache unpack array for later packing & unpacking operations
@@ -897,23 +896,23 @@ class VDB():
             keyword_list.append(keyword)
         return keyword_list
 
-    def root_static_property(self, keyword, dtype = None, unpack = None):
+    def root_static_property(self, keyword, dtype=None, unpack=None):
         """Loads and returns a ROOT static property array."""
 
-        return self.grid_static_property('ROOT'.keyword, dtype = dtype, unpack = unpack)
+        return self.grid_static_property('ROOT'.keyword, dtype=dtype, unpack=unpack)
 
-    def grid_static_property(self, grid_name, keyword, dtype = None, unpack = None):
+    def grid_static_property(self, grid_name, keyword, dtype=None, unpack=None):
         """Loads and returns a static property array for named grid."""
 
         grid_name = grid_name.upper()
         keyword = keyword.strip().upper()
         if unpack is None:
             unpack = (keyword not in init_not_packed)
-        return self.load_init_mapdata_array(file = 'I' + grid_name + keyword + '.bin',
-                                            keyword = keyword,
-                                            dtype = dtype,
-                                            unpack = unpack,
-                                            grid_name = grid_name)
+        return self.load_init_mapdata_array(file='I' + grid_name + keyword + '.bin',
+                                            keyword=keyword,
+                                            dtype=dtype,
+                                            unpack=unpack,
+                                            grid_name=grid_name)
 
     def list_of_timesteps(self):
         """Returns a list of integer timesteps for which a ROOT recurrent mapdata file exists."""
@@ -947,7 +946,7 @@ class VDB():
             """Returns a list of keywords (strings) found in a recurrent file."""
             assert fp.read(4) == b'NT32', 'first 4 characters not NT32 in file ' + path
             kp = KP(fp)
-            keyword_list = kp.sub_key_list('MAPDATA', filter = True)
+            keyword_list = kp.sub_key_list('MAPDATA', filter=True)
             try:
                 keyword_list.remove('LASTMOD')
             except Exception:
@@ -981,24 +980,24 @@ class VDB():
             log.exception('failed to read keyword data from vdb binary file: ' + path)
         return None
 
-    def root_recurrent_property_for_timestep(self, keyword, timestep, dtype = None, unpack = True):
+    def root_recurrent_property_for_timestep(self, keyword, timestep, dtype=None, unpack=True):
         """Loads and returns a ROOT recurrent property array for one timestep."""
 
-        return self.grid_recurrent_property_for_timestep('ROOT', keyword, timestep, dtype = dtype, unpack = unpack)
+        return self.grid_recurrent_property_for_timestep('ROOT', keyword, timestep, dtype=dtype, unpack=unpack)
 
-    def grid_recurrent_property_for_timestep(self, grid_name, keyword, timestep, dtype = None, unpack = True):
+    def grid_recurrent_property_for_timestep(self, grid_name, keyword, timestep, dtype=None, unpack=True):
         """Loads and returns a recurrent property array for named grid for one timestep."""
 
         # todo: check file naming convention for LGRs
         grid_name = grid_name.upper()
         keyword = keyword.strip().upper()
-        return self.load_recurrent_mapdata_array(file = 'R' + grid_name + '_' + str(timestep) + '.bin',
-                                                 keyword = keyword,
-                                                 dtype = dtype,
-                                                 unpack = unpack,
-                                                 grid_name = grid_name)
+        return self.load_recurrent_mapdata_array(file='R' + grid_name + '_' + str(timestep) + '.bin',
+                                                 keyword=keyword,
+                                                 dtype=dtype,
+                                                 unpack=unpack,
+                                                 grid_name=grid_name)
 
-    def header_place_for_keyword(self, relative_path, keyword, search = True):
+    def header_place_for_keyword(self, relative_path, keyword, search=True):
         """Low level function to return file position for header relating to given keyword."""
 
         try:
@@ -1007,7 +1006,7 @@ class VDB():
             with open(path, 'rb') as fp:
                 assert fp.read(4) == b'NT32', 'first 4 characters not NT32 in file ' + path
                 kp = KP(fp)
-                return kp.header_place_for_key(keyword, search = search)
+                return kp.header_place_for_key(keyword, search=search)
         except Exception:
             log.exception('failed to read keyword data from vdb binary file: ' + path)
         return None
@@ -1040,6 +1039,6 @@ class VDB():
             zip_list = zfp.namelist()
             for name in zip_list:
                 if ((star == 0 or name.startswith(path_with_asterisk[:star])) and
-                    (no_tail or name.endswith(path_with_asterisk[star + 1:]))):
+                        (no_tail or name.endswith(path_with_asterisk[star + 1:]))):
                     match_list.append(name)
         return match_list
