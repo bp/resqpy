@@ -55,6 +55,18 @@ def test_horizon_points_k_gaps(s_bend_k_gap_grid):
     np.testing.assert_array_almost_equal(horizon_points[4, 50], np.array([57.84, 32., 181.503781]))
 
 
+def test_horizon_points_k_gaps_kp(s_bend_k_gap_grid):
+    # Act
+    horizon_points = pf.horizon_points(s_bend_k_gap_grid, ref_k0 = 3, kp = 1)
+
+    # Assert
+    # Large array so only checking a subset of points.
+    np.testing.assert_array_almost_equal(horizon_points[3, 38], np.array([-11.252623, 24., 172.912264]))
+    np.testing.assert_array_almost_equal(horizon_points[0, 26], np.array([14.3, 0., 139.048]))
+    np.testing.assert_array_almost_equal(horizon_points[12, 19], np.array([66.013451, 96., 139.912533]))
+    np.testing.assert_array_almost_equal(horizon_points[4, 50], np.array([57.84, 32., 188.703781]))
+
+
 def test_horizon_points_split_coordinate_lines(faulted_grid):
     # Arrange
     expected_horizon_points = np.array([[[1000., 2000., 3020.], [1100., 2000., 3020.], [1200., 2000., 3020.],
@@ -83,7 +95,7 @@ def test_horizon_points_split_coordinate_lines(faulted_grid):
     np.testing.assert_array_almost_equal(horizon_points, expected_horizon_points)
 
 
-def test_x_section_corner_points_default(basic_regular_grid):
+def test_x_section_corner_points_axis_I(basic_regular_grid):
     # Arrange
     expected_x_section_corner_points = np.array([[[[[0.0, 0.0, 0.0], [0.0, 50.0, 0.0]],
                                                    [[0.0, 0.0, 20.0], [0.0, 50.0, 20.0]]],
@@ -101,6 +113,22 @@ def test_x_section_corner_points_default(basic_regular_grid):
     np.testing.assert_array_almost_equal(x_section_corner_points, expected_x_section_corner_points)
 
 
+def test_x_section_corner_points_axis_J(basic_regular_grid):
+    # Arrange
+    expected_x_section_corner_points = np.array([[[[[0., 0., 0.], [100., 0., 0.]], [[0., 0., 20.], [100., 0., 20.]]],
+                                                  [[[100., 0., 0.], [200., 0., 0.]], [[100., 0., 20.], [200., 0.,
+                                                                                                        20.]]]],
+                                                 [[[[0., 0., 20.], [100., 0., 20.]], [[0., 0., 40.], [100., 0., 40.]]],
+                                                  [[[100., 0., 20.], [200., 0., 20.]], [[100., 0., 40.],
+                                                                                        [200., 0., 40.]]]]])
+
+    # Act
+    x_section_corner_points = pf.x_section_corner_points(basic_regular_grid, axis = 'J')
+
+    # Assert
+    np.testing.assert_array_almost_equal(x_section_corner_points, expected_x_section_corner_points)
+
+
 def test_x_section_corner_points_k_gaps(s_bend_k_gap_grid):
     # Act
     x_section_corner_points = pf.x_section_corner_points(s_bend_k_gap_grid, axis = 'I')
@@ -113,7 +141,7 @@ def test_x_section_corner_points_k_gaps(s_bend_k_gap_grid):
     np.testing.assert_array_almost_equal(x_section_corner_points[3, 8, 1, 0], np.array([14., 64., 131.92]))
 
 
-def test_x_section_corner_points_split_coordinate_lines(faulted_grid):
+def test_x_section_corner_points_split_coordinate_lines_axis_I(faulted_grid):
     # Arrange
     expected_x_section_corner_points = np.array([[[[[1000., 2000., 3000.], [1000., 2100., 3000.]],
                                                    [[1000., 2000., 3020.], [1000., 2100., 3020.]]],
@@ -148,6 +176,64 @@ def test_x_section_corner_points_split_coordinate_lines(faulted_grid):
 
     # Act
     x_section_corner_points = pf.x_section_corner_points(faulted_grid, axis = 'I')
+
+    # Assert
+    np.testing.assert_array_almost_equal(x_section_corner_points, expected_x_section_corner_points)
+
+
+def test_x_section_corner_points_split_coordinate_lines_axis_J(faulted_grid):
+    # Arrange
+    expected_x_section_corner_points = np.array([[[[[1000., 2000., 3000.], [1100., 2000., 3000.]],
+                                                   [[1000., 2000., 3020.], [1100., 2000., 3020.]]],
+                                                  [[[1100., 2000., 3000.], [1200., 2000., 3000.]],
+                                                   [[1100., 2000., 3020.], [1200., 2000., 3020.]]],
+                                                  [[[1200., 2000., 3000.], [1300., 2000., 3000.]],
+                                                   [[1200., 2000., 3020.], [1300., 2000., 3020.]]],
+                                                  [[[1300., 2000., 3000.], [1400., 2000., 3000.]],
+                                                   [[1300., 2000., 3020.], [1400., 2000., 3020.]]],
+                                                  [[[1400., 2000., 3000.], [1500., 2000., 3000.]],
+                                                   [[1400., 2000., 3020.], [1500., 2000., 3020.]]],
+                                                  [[[1500., 2000., 3000.], [1600., 2000., 3000.]],
+                                                   [[1500., 2000., 3020.], [1600., 2000., 3020.]]],
+                                                  [[[1600., 2000., 3000.], [1700., 2000., 3000.]],
+                                                   [[1600., 2000., 3020.], [1700., 2000., 3020.]]],
+                                                  [[[1700., 2000., 3000.], [1800., 2000., 3000.]],
+                                                   [[1700., 2000., 3020.], [1800., 2000., 3020.]]]],
+                                                 [[[[1000., 2000., 3020.], [1100., 2000., 3020.]],
+                                                   [[1000., 2000., 3040.], [1100., 2000., 3040.]]],
+                                                  [[[1100., 2000., 3020.], [1200., 2000., 3020.]],
+                                                   [[1100., 2000., 3040.], [1200., 2000., 3040.]]],
+                                                  [[[1200., 2000., 3020.], [1300., 2000., 3020.]],
+                                                   [[1200., 2000., 3040.], [1300., 2000., 3040.]]],
+                                                  [[[1300., 2000., 3020.], [1400., 2000., 3020.]],
+                                                   [[1300., 2000., 3040.], [1400., 2000., 3040.]]],
+                                                  [[[1400., 2000., 3020.], [1500., 2000., 3020.]],
+                                                   [[1400., 2000., 3040.], [1500., 2000., 3040.]]],
+                                                  [[[1500., 2000., 3020.], [1600., 2000., 3020.]],
+                                                   [[1500., 2000., 3040.], [1600., 2000., 3040.]]],
+                                                  [[[1600., 2000., 3020.], [1700., 2000., 3020.]],
+                                                   [[1600., 2000., 3040.], [1700., 2000., 3040.]]],
+                                                  [[[1700., 2000., 3020.], [1800., 2000., 3020.]],
+                                                   [[1700., 2000., 3040.], [1800., 2000., 3040.]]]],
+                                                 [[[[1000., 2000., 3040.], [1100., 2000., 3040.]],
+                                                   [[1000., 2000., 3050.], [1100., 2000., 3050.]]],
+                                                  [[[1100., 2000., 3040.], [1200., 2000., 3040.]],
+                                                   [[1100., 2000., 3050.], [1200., 2000., 3050.]]],
+                                                  [[[1200., 2000., 3040.], [1300., 2000., 3040.]],
+                                                   [[1200., 2000., 3050.], [1300., 2000., 3040.]]],
+                                                  [[[1300., 2000., 3040.], [1400., 2000., 3040.]],
+                                                   [[1300., 2000., 3040.], [1400., 2000., 3040.]]],
+                                                  [[[1400., 2000., 3040.], [1500., 2000., 3040.]],
+                                                   [[1400., 2000., 3040.], [1500., 2000., 3040.]]],
+                                                  [[[1500., 2000., 3040.], [1600., 2000., 3040.]],
+                                                   [[1500., 2000., 3040.], [1600., 2000., 3050.]]],
+                                                  [[[1600., 2000., 3040.], [1700., 2000., 3040.]],
+                                                   [[1600., 2000., 3050.], [1700., 2000., 3050.]]],
+                                                  [[[1700., 2000., 3040.], [1800., 2000., 3040.]],
+                                                   [[1700., 2000., 3050.], [1800., 2000., 3050.]]]]])
+
+    # Act
+    x_section_corner_points = pf.x_section_corner_points(faulted_grid, axis = 'J')
 
     # Assert
     np.testing.assert_array_almost_equal(x_section_corner_points, expected_x_section_corner_points)
@@ -260,6 +346,7 @@ def test_corner_points_cell_kji0(basic_regular_grid):
     expected_corner_points = np.array([[[[0.0, 0.0, 0.0], [100.0, 0.0, 0.0]], [[0.0, 50.0, 0.0], [100.0, 50.0, 0.0]]],
                                        [[[0.0, 0.0, 20.0], [100.0, 0.0, 20.0]], [[0.0, 50.0, 20.0], [100.0, 50.0,
                                                                                                      20.0]]]])
+
     # Act
     corner_points = pf.corner_points(basic_regular_grid, cell_kji0 = cell)
 
@@ -330,7 +417,6 @@ def test_centre_point_split_coordinate_lines(faulted_grid):
     np.testing.assert_array_almost_equal(centre_points[2, 3, 5], np.array([1550., 2350., 3042.5]))
 
 
-# Need to check third test case
 @pytest.mark.parametrize("interpolation_fraction, expected_interpolated_point",
                          [(np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])),
                           (np.array([0.75, 0.75, 0.75]), np.array([75.0, 37.5, 15.0])),
@@ -341,6 +427,24 @@ def test_interpolated_point(basic_regular_grid, interpolation_fraction, expected
 
     # Act
     interpolated_point = pf.interpolated_point(basic_regular_grid,
+                                               cell_kji0 = cell,
+                                               interpolation_fraction = interpolation_fraction)
+
+    # Assert
+    np.testing.assert_array_almost_equal(interpolated_point, expected_interpolated_point)
+
+
+@pytest.mark.parametrize("interpolation_fraction, expected_interpolated_point",
+                         [(np.array([0.0, 0.0, 0.0]), np.array([47., 32., 112.72])),
+                          (np.array([0.75, 0.75, 0.75]), np.array([54.5, 38., 114.52])),
+                          (np.array([0.75, 0.2, 0.1]), np.array([48., 33.6, 114.52]))])
+def test_interpolated_point_s_bend_faulted_grid(s_bend_faulted_grid, interpolation_fraction,
+                                                expected_interpolated_point):
+    # Arrange
+    cell = (4, 4, 4)
+
+    # Act
+    interpolated_point = pf.interpolated_point(s_bend_faulted_grid,
                                                cell_kji0 = cell,
                                                interpolation_fraction = interpolation_fraction)
 
