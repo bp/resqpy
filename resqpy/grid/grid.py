@@ -519,17 +519,17 @@ class Grid(BaseResqpy):
 
         write_nexus_corp(self,
                          file_name,
-                         local_coords = False,
-                         global_xy_units = None,
-                         global_z_units = None,
-                         global_z_increasing_downward = True,
-                         write_nx_ny_nz = False,
-                         write_units_keyword = False,
-                         write_rh_keyword_if_needed = False,
-                         write_corp_keyword = False,
-                         use_binary = False,
-                         binary_only = False,
-                         nan_substitute_value = None)
+                         local_coords = local_coords,
+                         global_xy_units = global_xy_units,
+                         global_z_units = global_z_units,
+                         global_z_increasing_downward = global_z_increasing_downward,
+                         write_nx_ny_nz = write_nx_ny_nz,
+                         write_units_keyword = write_units_keyword,
+                         write_rh_keyword_if_needed = write_rh_keyword_if_needed,
+                         write_corp_keyword = write_corp_keyword,
+                         use_binary = use_binary,
+                         binary_only = binary_only,
+                         nan_substitute_value = nan_substitute_value)
 
     def xy_units(self):
         """Returns the projected view (x, y) units of measure of the coordinate reference system for the grid.

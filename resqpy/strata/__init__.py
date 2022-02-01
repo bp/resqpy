@@ -1,10 +1,10 @@
 """Stratigraphy related classes and valid values."""
 
 __all__ = [
-    'valid_compositions', 'valid_implacements', 'valid_domains', 'valid_deposition_modes', 'valid_ordering_criteria',
-    'valid_contact_relationships', 'valid_contact_verbs', 'valid_contact_sides', 'valid_contact_modes',
     'BinaryContactInterpretation', 'GeologicUnitInterpretation', 'StratigraphicColumnRank', 'StratigraphicColumn',
-    'StratigraphicUnitFeature', 'StratigraphicUnitInterpretation'
+    'StratigraphicUnitFeature', 'StratigraphicUnitInterpretation', 'valid_compositions', 'valid_implacements',
+    'valid_domains', 'valid_deposition_modes', 'valid_ordering_criteria', 'valid_contact_relationships',
+    'valid_contact_verbs', 'valid_contact_sides', 'valid_contact_modes'
 ]
 
 from ._strata_common import valid_compositions, valid_implacements, valid_domains, valid_deposition_modes,  \

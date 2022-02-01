@@ -177,16 +177,18 @@ def example_model_with_properties(tmp_path):
     perm = np.array([[1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100], [1, 10, 10, 100, 100],
                      [1, 10, 10, 100, 100]])
     perm_array = np.array([perm, perm, perm], dtype = 'float')
+    perm_v_array = perm_array * 0.1
 
     collection = rqp.GridPropertyCollection()
     collection.set_grid(grid)
     for array, name, kind, discrete, facet_type, facet in zip(
-        [zone_array, vpc_array, fb_array, facies_array, ntg_array, por_array, sat_array, perm_array],
-        ['Zone', 'VPC', 'Fault block', 'Facies', 'NTG', 'POR', 'SW', 'Perm'], [
+        [zone_array, vpc_array, fb_array, facies_array, ntg_array, por_array, sat_array, perm_array, perm_v_array],
+        ['Zone', 'VPC', 'Fault block', 'Facies', 'NTG', 'POR', 'SW', 'Perm', 'PERMZ'], [
             'discrete', 'discrete', 'discrete', 'discrete', 'net to gross ratio', 'porosity', 'saturation',
-            'permeability rock'
-        ], [True, True, True, True, False, False, False, False],
-        [None, None, None, None, None, None, None, 'direction'], [None, None, None, None, None, None, None, 'I']):
+            'rock permeability', 'permeability rock'
+        ], [True, True, True, True, False, False, False, False, False],
+        [None, None, None, None, None, None, None, 'direction', 'direction'],
+        [None, None, None, None, None, None, None, 'I', 'K']):
         collection.add_cached_array_to_imported_list(cached_array = array,
                                                      source_info = '',
                                                      keyword = name,

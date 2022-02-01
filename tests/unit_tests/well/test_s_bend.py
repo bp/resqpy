@@ -23,7 +23,6 @@ import resqpy.well as rqw
 
 
 def test_s_bend_fn(tmp_path, epc = None):
-
     if epc is None:
         # use pytest temporary directory fixture
         # https://docs.pytest.org/en/stable/tmpdir.html
@@ -214,24 +213,47 @@ def test_s_bend_fn(tmp_path, epc = None):
     bw.write_hdf5()
     bw.create_xml()
     assert bw.cell_count == 19
+    assert len(bw.cell_indices) == bw.cell_count
+    np.testing.assert_array_equal(
+        bw.cell_indices,
+        np.array(
+            [108, 708, 709, 1909, 1959, 2559, 2673, 2073, 2123, 923, 924, 974, 374, 587, 588, 1188, 2388, 2389, 2989]))
 
     log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_2)))
     bw_2 = rqw.BlockedWell(model, grid = grid, trajectory = traj_2)
     bw_2.write_hdf5()
     bw_2.create_xml()
     assert bw_2.cell_count == 33
+    assert len(bw_2.cell_indices) == bw_2.cell_count
+    np.testing.assert_array_equal(
+        bw_2.cell_indices,
+        np.array([
+            306, 256, 856, 857, 2057, 2058, 2059, 2659, 2660, 2610, 2611, 2612, 2613, 2614, 2014, 2015, 2016, 1966, 766,
+            767, 167, 649, 648, 647, 646, 645, 644, 643, 642, 1842, 1841, 1840, 2440
+        ]))
 
     log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_3)))
     bw_3 = rqw.BlockedWell(model, grid = grid, trajectory = traj_3)
     bw_3.write_hdf5()
     bw_3.create_xml()
     assert bw_3.cell_count == 18
+    assert len(bw_3.cell_indices) == bw_3.cell_count
+    np.testing.assert_array_equal(
+        bw_3.cell_indices,
+        np.array([300, 900, 2100, 2700, 2729, 2129, 2130, 930, 931, 331, 332, 339, 340, 940, 941, 2141, 2142, 2742]))
 
     log.info('unfaulted grid blocking of well ' + str(rqw.well_name(traj_4)))
     bw_4 = rqw.BlockedWell(model, grid = grid, trajectory = traj_4)
     bw_4.write_hdf5()
     bw_4.create_xml()
     assert bw_4.cell_count == 26
+    assert len(bw_4.cell_indices) == bw_4.cell_count
+    np.testing.assert_array_equal(
+        bw_4.cell_indices,
+        np.array([
+            2402, 1802, 1852, 652, 52, 153, 753, 803, 2003, 2603, 2653, 2703, 2103, 903, 904, 304, 354, 454, 1054, 2254,
+            2304, 2904, 2905, 2955, 2355, 1155
+        ]))
 
     # derive a faulted version of the grid
 
@@ -291,24 +313,45 @@ def test_s_bend_fn(tmp_path, epc = None):
     fbw.write_hdf5()
     fbw.create_xml()
     assert fbw.cell_count == 32
+    assert len(fbw.cell_indices) == fbw.cell_count
+    np.testing.assert_array_equal(
+        fbw.cell_indices,
+        np.array([
+            108, 708, 709, 1909, 1956, 2556, 2673, 2674, 2724, 2124, 2174, 2775, 2175, 2225, 2226, 2276, 2277, 1077,
+            1078, 1079, 1129, 1130, 1131, 2331, 2332, 2382, 2383, 2384, 2984, 2385, 2386, 2986
+        ]))
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_2)))
     fbw_2 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_2)
     fbw_2.write_hdf5()
     fbw_2.create_xml()
     assert fbw_2.cell_count == 26
+    assert len(fbw_2.cell_indices) == fbw_2.cell_count
+    np.testing.assert_array_equal(
+        fbw_2.cell_indices,
+        np.array([
+            254, 854, 2054, 2654, 2655, 2614, 2014, 2015, 1965, 1966, 766, 767, 167, 49, 47, 1846, 45, 44, 43, 643, 642,
+            641, 1841, 1840, 2440, 2439
+        ]))
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_3)))
     fbw_3 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_3)
     fbw_3.write_hdf5()
     fbw_3.create_xml()
     assert fbw_3.cell_count == 14
+    assert len(fbw_3.cell_indices) == fbw_3.cell_count
+    np.testing.assert_array_equal(
+        fbw_3.cell_indices, np.array([2730, 2731, 2131, 2132, 2133, 933, 934, 937, 938, 2138, 2139, 2140, 2740, 2741]))
 
     log.info('faulted grid blocking of well ' + str(rqw.well_name(traj_4)))
     fbw_4 = rqw.BlockedWell(model, grid = faulted_grid, trajectory = traj_4)
     fbw_4.write_hdf5()
     fbw_4.create_xml()
     assert fbw_4.cell_count == 16
+    assert len(fbw_4.cell_indices) == fbw_4.cell_count
+    np.testing.assert_array_equal(
+        fbw_4.cell_indices,
+        np.array([2402, 1802, 1852, 652, 52, 202, 802, 2002, 852, 902, 302, 453, 503, 1103, 1153, 553]))
 
     # create a version of the faulted grid with a k gap
 
