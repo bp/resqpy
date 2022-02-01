@@ -187,7 +187,7 @@ def _create_citation(root = None, title = '', originator = None):
 
     title_node = rqet.SubElement(citation, ns['eml'] + 'Title')
     title_node.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
-    title_node.text = title
+    title_node.text = str(title)
 
     originator_node = rqet.SubElement(citation, ns['eml'] + 'Originator')
     if originator is None:
