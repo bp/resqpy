@@ -44,7 +44,7 @@ pytest-cov = "^2.12"
 pytest-mock = "^3.6"
 flake8 = "^3.9"
 flake8-docstrings = "^1.6"
-yapf = "^0.31"
+yapf = "^0.32"
 packaging = "20.9"
 Sphinx = "^3.5"
 sphinx-rtd-theme = "^0.5"
@@ -68,5 +68,6 @@ column_limit = 120
 
 [tool.yapfignore]
 ignore_patterns = [
-  "venv/**"
+  "venv/**/*",
+  "dist/**/*"
 ]
