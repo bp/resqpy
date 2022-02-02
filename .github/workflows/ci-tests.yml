@@ -53,6 +53,7 @@ jobs:
         with:
           flake8: true
           flake8_command_prefix: poetry run
+          flake8_dir: resqpy
           mypy: true
           mypy_command_prefix: poetry run
           mypy_args: resqpy
