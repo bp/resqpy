@@ -44,7 +44,7 @@ jobs:
           key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Activate environment
-        run: source $(poetry env info --path)/bin/activate
+        run: source .venv/bin/activate
 
       - name: Install dependencies
         run: |
