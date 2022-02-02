@@ -93,9 +93,15 @@ def set_face_set_gcs_list_from_dict(grid, face_set_dict = None, create_organizin
     if face_set_dict is None:
         face_set_dict = grid.face_set_dict
     grid.face_set_gcs_list = []
-    for feature in face_set_dict:
+    for feature, kelp_values in face_set_dict.items():
         gcs = rqf.GridConnectionSet(grid.model, grid = grid)
-        kelp_j, kelp_i, axis = face_set_dict[feature]
+        if len(kelp_values) == 2:
+            kelp_j, kelp_i = kelp_values
+            axis = 'K'
+        elif len(kelp_values) == 3:
+            kelp_j, kelp_i, axis = kelp_values
+        else:
+            raise ValueError('grid face set dictionary item messed up')
         log.debug(f'creating gcs for: {feature} {axis}')
         gcs.set_pairs_from_kelp(kelp_j, kelp_i, feature, create_organizing_objects_where_needed, axis = axis)
         grid.face_set_gcs_list.append(gcs)

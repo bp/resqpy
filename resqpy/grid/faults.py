@@ -25,8 +25,9 @@ def find_faults(grid, set_face_sets = False, create_organizing_objects_where_nee
     if hasattr(grid, 'fault_dict') and grid.fault_dict is not None and len(grid.fault_dict.keys()) > 0:
         if set_face_sets:
             for f, (j_list, i_list) in grid.fault_dict.items():
-                grid.face_set_dict[f] = (j_list, i_list, 'K')
-            grid.set_face_set_gcs_list_from_dict(grid.fault_dict, create_organizing_objects_where_needed)
+                fault_name = f'fault_{f}' if isinstance(f, int) else f
+                grid.face_set_dict[fault_name] = (j_list, i_list, 'K')
+            grid.set_face_set_gcs_list_from_dict(grid.face_set_dict, create_organizing_objects_where_needed)
         return None
 
     log.info('looking for faults in grid')
@@ -45,11 +46,8 @@ def find_faults(grid, set_face_sets = False, create_organizing_objects_where_nee
     # look for splits affecting j faces
     for j in range(grid.extent_kji[1] - 1):
         for i in range(grid.extent_kji[2]):
-            if i == 0 and (grid.pillars_for_column[j, i, 1, 0] != grid.pillars_for_column[j + 1, i, 0, 0] or
-                           grid.pillars_for_column[j, i, 1, 1] != grid.pillars_for_column[j + 1, i, 0, 1]):
-                last_fault_id += 1
-                kelp_j[j, i] = last_fault_id
-            elif grid.pillars_for_column[j, i, 1, 1] != grid.pillars_for_column[j + 1, i, 0, 1]:
+            if (grid.pillars_for_column[j, i, 1, 0] != grid.pillars_for_column[j + 1, i, 0, 0] or
+                    grid.pillars_for_column[j, i, 1, 1] != grid.pillars_for_column[j + 1, i, 0, 1]):
                 if i > 0 and kelp_j[j, i - 1] > 0:
                     kelp_j[j, i] = kelp_j[j, i - 1]
                 else:
@@ -59,11 +57,8 @@ def find_faults(grid, set_face_sets = False, create_organizing_objects_where_nee
     # look for splits affecting i faces
     for i in range(grid.extent_kji[2] - 1):
         for j in range(grid.extent_kji[1]):
-            if j == 0 and (grid.pillars_for_column[j, i, 0, 1] != grid.pillars_for_column[j, i + 1, 0, 0] or
-                           grid.pillars_for_column[j, i, 1, 1] != grid.pillars_for_column[j, i + 1, 1, 0]):
-                last_fault_id += 1
-                kelp_i[j, i] = last_fault_id
-            elif grid.pillars_for_column[j, i, 1, 1] != grid.pillars_for_column[j, i + 1, 1, 0]:
+            if (grid.pillars_for_column[j, i, 0, 1] != grid.pillars_for_column[j, i + 1, 0, 0] or
+                    grid.pillars_for_column[j, i, 1, 1] != grid.pillars_for_column[j, i + 1, 1, 0]):
                 if j > 0 and kelp_i[j - 1, i] > 0:
                     kelp_i[j, i] = kelp_i[j - 1, i]
                 else:
@@ -79,7 +74,7 @@ def find_faults(grid, set_face_sets = False, create_organizing_objects_where_nee
                     i_id = kelp_i[j, i] + kelp_i[j + 1, i]
                     if j_id == i_id:
                         continue
-                    #                  log.debug('merging fault id {} into {}'.format(i_id, j_id))
+                    # log.debug('merging fault id {} into {}'.format(i_id, j_id))
                     kelp_i = np.where(kelp_i == i_id, j_id, kelp_i)
                     kelp_j = np.where(kelp_j == i_id, j_id, kelp_j)
 
@@ -95,8 +90,9 @@ def find_faults(grid, set_face_sets = False, create_organizing_objects_where_nee
     grid.fault_id_i = kelp_i.copy()  # fault_id for each internal i kelp, zero is none; extent nj, ni-1
     if set_face_sets:
         for f, (j_list, i_list) in grid.fault_dict.items():
-            grid.face_set_dict[f] = (j_list, i_list, 'K')
-        grid.set_face_set_gcs_list_from_dict(grid.fault_dict, create_organizing_objects_where_needed)
+            fault_name = f'fault_{f}'
+            grid.face_set_dict[fault_name] = (j_list, i_list, 'K')
+        grid.set_face_set_gcs_list_from_dict(grid.face_set_dict, create_organizing_objects_where_needed)
     return (grid.fault_id_j, grid.fault_id_i)
 
 

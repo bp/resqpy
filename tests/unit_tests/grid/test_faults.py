@@ -11,10 +11,10 @@ def test_find_faults(faulted_grid):
          [0, 0, 0, 2, 0, 0, 0],
          [0, 0, 0, 2, 0, 0, 0],
          [0, 0, 0, 2, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0]])
+         [0, 0, 0, 2, 0, 0, 0]])
     expected_j_fault_id = np.array(
         [[0, 0, 0, 0, 0, 0, 0, 0],
-         [1, 1, 1, 1, 1, 1, 1, 0],
+         [1, 1, 1, 1, 1, 1, 1, 1],
          [0, 0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0, 0]])
 
@@ -33,10 +33,10 @@ def test_find_faults_create_organizing_objects_where_needed_true(faulted_grid):
          [0, 0, 0, 2, 0, 0, 0],
          [0, 0, 0, 2, 0, 0, 0],
          [0, 0, 0, 2, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0]])
+         [0, 0, 0, 2, 0, 0, 0]])
     expected_j_fault_id = np.array(
         [[0, 0, 0, 0, 0, 0, 0, 0],
-         [1, 1, 1, 1, 1, 1, 1, 0],
+         [1, 1, 1, 1, 1, 1, 1, 1],
          [0, 0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0, 0]])
     model = faulted_grid.model
@@ -50,15 +50,14 @@ def test_find_faults_create_organizing_objects_where_needed_true(faulted_grid):
             model.remove_part(feature)
 
     # Act
-    # todo: need to fix issue #401
-    # j_fault_id, i_fault_id = f.find_faults(faulted_grid, set_face_sets=True,
-    #                                        create_organizing_objects_where_needed=True)
-    counts_after = model.parts_count_by_type(type_of_interest='FaultInterpretation')
+    j_fault_id, i_fault_id = f.find_faults(faulted_grid, set_face_sets=True,
+                                           create_organizing_objects_where_needed=True)
+    counts_after = model.parts_count_by_type(type_of_interest='FaultInterpretation')[0][1]
 
     # Assert
-    # assert counts_after == 2
-    # np.testing.assert_array_equal(j_fault_id, expected_j_fault_id)
-    # np.testing.assert_array_equal(i_fault_id, expected_i_fault_id)
+    assert counts_after == 2
+    np.testing.assert_array_equal(j_fault_id, expected_j_fault_id)
+    np.testing.assert_array_equal(i_fault_id, expected_i_fault_id)
 
 
 def test_fault_throws(faulted_grid):
@@ -67,27 +66,27 @@ def test_fault_throws(faulted_grid):
                                         [0., 0., 0., 5.25, 0., 0., 0.],
                                         [0., 0., 0., 1.75, 0., 0., 0.],
                                         [0., 0., 0., 3.5, 0., 0., 0.],
-                                        [0., 0., 0., 0., 0., 0., 0.]],
+                                        [0., 0., 0., 1.75, 0., 0., 0.]],
                                        [[0., 0., 0., 1.75, 0., 0., 0.],
                                         [0., 0., 0., 5.25, 0., 0., 0.],
                                         [0., 0., 0., 1.75, 0., 0., 0.],
                                         [0., 0., 0., 3.5, 0., 0., 0.],
-                                        [0., 0., 0., 0., 0., 0., 0.]],
+                                        [0., 0., 0., 1.75, 0., 0., 0.]],
                                        [[0., 0., 0., -3.25, 0., 0., 0.],
                                         [0., 0., 0., 0.25, 0., 0., 0.],
                                         [0., 0., 0., -3.25, 0., 0., 0.],
                                         [0., 0., 0., -1.5, 0., 0., 0.],
-                                        [0., 0., 0., 0., 0., 0., 0.]]])
+                                        [0., 0., 0., -3.25, 0., 0., 0.]]])
     expected_j_fault_throw = np.array([[[0., 0., 0., 0., 0., 0., 0., 0.],
-                                        [-3.5, -7., -7., -7., -7., -7., -7., 0.],
+                                        [-3.5, -7., -7., -7., -7., -7., -7., -3.5],
                                         [0., 0., 0., 0., 0., 0., 0., 0.],
                                         [0., 0., 0., 0., 0., 0., 0., 0.]],
                                        [[0., 0., 0., 0., 0., 0., 0., 0.],
-                                        [-3.5, -7., -7., -7., -7., -7., -7., 0.],
+                                        [-3.5, -7., -7., -7., -7., -7., -7., -3.5],
                                         [0., 0., 0., 0., 0., 0., 0., 0.],
                                         [0., 0., 0., 0., 0., 0., 0., 0.]],
                                        [[0., 0., 0., 0., 0., 0., 0., 0.],
-                                        [-3.5, -7., -7., -7., -7., -7., -7., 0.],
+                                        [-3.5, -7., -7., -7., -7., -7., -7., -3.5],
                                         [0., 0., 0., 0., 0., 0., 0., 0.],
                                         [0., 0., 0., 0., 0., 0., 0., 0.]]])
 

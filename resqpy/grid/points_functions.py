@@ -1193,11 +1193,11 @@ def split_horizons_points(grid, min_k0 = None, max_k0 = None, masked = False):
     if min_k0 is None:
         min_k0 = 0
     else:
-        assert min_k0 >= 0 and min_k0 <= grid.nk_plus_k_gaps
+        assert 0 <= min_k0 <= grid.nk_plus_k_gaps
     if max_k0 is None:
         max_k0 = grid.nk_plus_k_gaps
     else:
-        assert max_k0 >= min_k0 and max_k0 <= grid.nk_plus_k_gaps
+        assert min_k0 <= max_k0 <= grid.nk_plus_k_gaps
     end_k0 = max_k0 + 1
     points = grid.points_ref(masked = False)
     hp = np.empty((end_k0 - min_k0, grid.nj, grid.ni, 2, 2, 3))
