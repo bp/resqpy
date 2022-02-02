@@ -137,7 +137,7 @@ def timeframe_for_time_series_uuid(model, uuid):
 
     em = rqet.load_metadata_from_xml(root)
     if em is not None:
-        timeframe = em['timeframe']
+        timeframe = em.get('timeframe')
         if timeframe:
             return timeframe
 
