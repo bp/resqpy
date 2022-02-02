@@ -4,7 +4,7 @@ import resqpy.olio.vdb as vdb
 import numpy as np
 
 
-@pytest.mark.parametrize("byte_array, expected_array", [(b" \x01\x00\x00\xae\x01\x00\x00", np.array([288, 430])),
+@pytest.mark.parametrize("byte_array, expected_array", [(b"\x20\x01\x00\x00\xae\x01\x00\x00", np.array([288, 430])),
                                                         (b"\xca\x02\x00\x00\xe8\x02\x00\x00", np.array([714, 744]))])
 def test_raw_data_class_item_type_P(mocker, tmp_path, byte_array, expected_array):
     # Arrange
