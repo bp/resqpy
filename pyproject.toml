@@ -58,3 +58,15 @@ style = "semver"
 
 [tool.poetry-dynamic-versioning.substitution]
 files = ["resqpy/__init__.py"]
+
+[tool.yapf]
+based_on_style = "google"
+indent_width = 4
+continuation_indent_width = 4
+spaces_around_default_or_named_assign = true
+column_limit = 120
+
+[tool.yapfignore]
+ignore_patterns = [
+  "venv/**"
+]
