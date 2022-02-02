@@ -69,5 +69,7 @@ column_limit = 120
 [tool.yapfignore]
 ignore_patterns = [
   "venv/**/*",
-  "dist/**/*"
+  "dist/**/*",
+  ".venv/**/*",
+  ".dist/**/*"
 ]
