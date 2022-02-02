@@ -53,13 +53,13 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: Activate environment
-        run: source .venv/bin/activate
+        run: source $(poetry env info --path)/bin/activate
 
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
       # See https://github.com/marketplace/actions/lint-action
       - name: Run linters (with annotations)
-        if: github.event.pull_request.head.repo.full_name != github.repository
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: wearerequired/lint-action@v1
         with:
           flake8: true
@@ -68,7 +68,7 @@ jobs:
 
       # Alternative step that works with forked repo
       - name: Run linters (without annotations)
-        if: github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event.pull_request.head.repo.full_name != github.repository
         run: |
           flake8 .
           mypy resqpy
