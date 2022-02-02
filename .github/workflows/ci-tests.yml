@@ -44,6 +44,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry-dynamic-versioning
 
+      - name: Activate environment
+        run: source .venv/bin/activate
+
   static-analysis:
     name: Static analysis
     runs-on: ubuntu-latest
@@ -52,6 +55,7 @@ jobs:
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
       # See https://github.com/marketplace/actions/lint-action
+
       - name: Run linters (with annotations)
         if: github.event.pull_request.head.repo.full_name == github.repository
         uses: wearerequired/lint-action@v1
