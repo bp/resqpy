@@ -10,18 +10,10 @@ on:
 
 jobs:
 
-#  setup-environment:
-#    name: Setup environment
-#    runs-on: ubuntu-latest
-#    steps:
-
-
-  static-analysis:
-    name: Static analysis
+  setup-environment:
+    name: Setup environment
     runs-on: ubuntu-latest
-    # needs: setup-environment
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -43,19 +35,20 @@ jobs:
           path: .venv
           key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Activate environment
-        run: source .venv/bin/activate
-
       - name: Install missing cached dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
 
-      - name: Install dependencies
+      - name: Install other dependencies
         run: |
-          source .venv/bin/activate
           python -m pip install --upgrade pip
           pip install poetry-dynamic-versioning
 
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    needs: setup-environment
+    steps:
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
       # See https://github.com/marketplace/actions/lint-action
@@ -66,6 +59,7 @@ jobs:
           flake8: true
           flake8_command_prefix: poetry run
           mypy: true
+          mypy_command_prefix: poetry run
           mypy_args: resqpy
 
       # Alternative step that works with forked repo
