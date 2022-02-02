@@ -36,26 +36,26 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v2
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+#      - name: Load cached venv
+#        id: cached-poetry-dependencies
+#        uses: actions/cache@v2
+#        with:
+#          path: .venv
+#          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
 #      - name: Activate environment
 #        run: source .venv/bin/activate
 
+      - name: Install missing cached dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction
+        
       - name: Install dependencies
         run: |
           source .venv/bin/activate
           python -m pip install --upgrade pip
           pip install poetry-dynamic-versioning
-          pip install flake8
-
-      - name: Install missing cached dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
+          flake8 .
 
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
