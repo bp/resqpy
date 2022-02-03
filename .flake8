@@ -1,18 +1,3 @@
-[options.package_data]
-# Include resqpy/olio/data/*.json
-* = data/*.json
-
-[tool:pytest]
-addopts = -ra
-junit_family = xunit2
-testpaths = tests/
-filterwarnings =
-    # Error on internal deprecation warnings
-    error::DeprecationWarning:.*resqpy.*
-    # Ignore warnings that are entirely from 3rd party libs outside our control
-    ignore:.*importing the ABCs from 'collections'.*:DeprecationWarning:.*pyreadline.*
-    ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning:.*pywintypes.*
-
 [flake8]
 # count = True
 # statistics = True
@@ -48,18 +33,3 @@ per-file-ignores =
     tests/*: D
     docs/*: D
     resqpy/version.py: D
-
-[mypy]
-# Ignoring missing types in 3rd party libs
-# See https://github.com/python/mypy/issues/3905
-
-[mypy-pandas.*]
-ignore_missing_imports = True
-[mypy-numpy.*]
-ignore_missing_imports = True
-[mypy-lasio.*]
-ignore_missing_imports = True
-[mypy-h5py.*]
-ignore_missing_imports = True
-[mypy-lxml.*]
-ignore_missing_imports = True
