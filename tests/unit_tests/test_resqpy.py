@@ -22,6 +22,7 @@ def test_all_imports():
     return
 
 
+@pytest.mark.buildtest
 def test_version():
     # This is dynamically created when package is built
     version_string = resqpy.__version__
