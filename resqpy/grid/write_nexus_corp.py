@@ -10,6 +10,7 @@ import resqpy.olio.grid_functions as gf
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.trademark as tm
 import resqpy.olio.write_data as wd
+import resqpy.crs as rqc
 
 
 def write_nexus_corp(grid,
@@ -43,30 +44,29 @@ def write_nexus_corp(grid,
         log.warning('ijk handedness not known')
     elif not ijk_right_handed:
         log.warning('ijk axes are left handed; inverted (fake) xyz handedness required')
-    crs_root = grid.extract_crs_root()
+    crs_uuid = grid.crs_uuid
     if not local_coords:
         if not global_z_increasing_downward:
             log.warning('global z is not increasing with depth as expected by Nexus')
             tm.log_nexus_tm('warning')
-        if crs_root is not None:  # todo: otherwise raise exception?
+        if crs_uuid is not None:  # todo: otherwise raise exception?
             log.info('converting corner points from local to global reference system')
-            grid.local_to_global_crs(cp,
-                                     crs_root,
-                                     global_xy_units = global_xy_units,
-                                     global_z_units = global_z_units,
-                                     global_z_increasing_downward = global_z_increasing_downward)
+            cp = grid.local_to_global_crs(cp,
+                                          crs_uuid = crs_uuid,
+                                          global_xy_units = global_xy_units,
+                                          global_z_units = global_z_units,
+                                          global_z_increasing_downward = global_z_increasing_downward)
     log.info('writing simulator corner point file ' + file_name)
     with open(file_name, 'w') as header:
         header.write('! Nexus corner point data written by resqml_grid module\n')
         header.write('! Nexus is a registered trademark of the Halliburton Company\n\n')
+        crs = rqc.Crs(grid.model, uuid = crs_uuid)
         if write_units_keyword:
             if local_coords:
-                if crs_root is not None:
-                    crs_xy_units_text = rqet.find_tag(crs_root, 'ProjectedUom').text
-                    crs_z_units_text = rqet.find_tag(crs_root, 'VerticalUom').text
-                    if crs_xy_units_text == 'm' and crs_z_units_text == 'm':
+                if crs_uuid is not None:
+                    if crs.xy_units == 'm' and crs.z_units == 'm':
                         header.write('METRIC\n\n')
-                    elif crs_xy_units_text == 'ft' and crs_z_units_text == 'ft':
+                    elif crs.xy_units == 'ft' and crs.z_units == 'ft':
                         header.write('ENGLISH\n\n')
                     else:
                         header.write('! local coordinates mixed (or not recognized)\n\n')
@@ -86,10 +86,9 @@ def write_nexus_corp(grid,
             header.write('{0:<7d} {1:<7d} {2:<7d}\n\n'.format(grid.extent_kji[2], grid.extent_kji[1],
                                                               grid.extent_kji[0]))
         if write_rh_keyword_if_needed:
-            if ijk_right_handed is None or crs_root is None:
+            if ijk_right_handed is None or crs_uuid is None:
                 log.warning('unable to determine whether RIGHTHANDED keyword is needed')
             else:
-                xy_axes = rqet.find_tag(crs_root, 'ProjectedAxisOrder').text
                 if local_coords:
                     z_inc_down = grid.z_inc_down()
                     if not z_inc_down:
@@ -97,7 +96,7 @@ def write_nexus_corp(grid,
                         tm.log_nexus_tm('warning')
                 else:
                     z_inc_down = global_z_increasing_downward
-                xyz_handedness = rqet.xyz_handedness(xy_axes, z_inc_down)
+                xyz_handedness = rqet.xyz_handedness(crs.axis_order, z_inc_down)
                 if xyz_handedness == 'unknown':
                     log.warning(
                         'xyz handedness is not known; unable to determine whether RIGHTHANDED keyword is needed')
