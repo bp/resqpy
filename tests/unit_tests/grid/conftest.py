@@ -4,8 +4,6 @@ import resqpy.property as rqp
 from resqpy.model import Model
 from resqpy.grid import Grid
 
-from inspect import getsourcefile
-
 import math as maths
 import os
 
@@ -20,6 +18,8 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.rq_import as rqi
 import resqpy.well as rqw
+
+from inspect import getsourcefile
 
 
 @pytest.fixture
