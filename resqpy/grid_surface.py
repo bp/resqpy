@@ -1356,7 +1356,34 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert isinstance(blocked_well.trajectory, rqw.Trajectory)
     assert grid is not None
 
-    log.debug(f'blocking well {rqw.well_name(blocked_well)} from trajectory and grid')
+    flavour = grr.grid_flavour(grid)
+    if flavour == 'IjkGrid':
+        _populate_blocked_well_from_trajectory_ijk_grid(blocked_well,
+                                                        grid,
+                                                        active_only = active_only,
+                                                        quad_triangles = quad_triangles,
+                                                        lazy = lazy,
+                                                        use_single_layer_tactics = use_single_layer_tactics,
+                                                        check_for_reentry = check_for_reentry)
+    elif flavour == 'IjkBlockGrid':
+        _populate_blocked_well_from_trajectory_regular_grid(blocked_well,
+                                                            grid,
+                                                            active_only = active_only,
+                                                            quad_triangles = quad_triangles,
+                                                            lazy = lazy,
+                                                            check_for_reentry = check_for_reentry)
+    else:
+        raise NotImplementedError(f'well blocking not implemented for grid type {flavour}')
+
+
+def _populate_blocked_well_from_trajectory_ijk_grid(blocked_well,
+                                                    grid,
+                                                    active_only = False,
+                                                    quad_triangles = True,
+                                                    lazy = False,
+                                                    use_single_layer_tactics = True,
+                                                    check_for_reentry = True):
+    """Populate an empty blocked well object based on the intersection of its trajectory with a Grid."""
 
     if grid.k_gaps:
         use_single_layer_tactics = False

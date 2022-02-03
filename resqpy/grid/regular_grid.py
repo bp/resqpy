@@ -21,7 +21,6 @@ always_write_cell_geometry_is_defined_array = False
 class RegularGrid(Grid):
     """Class for completely regular block grids aligned with xyz axes."""
 
-    # For now generate a standard unsplit pillar grid
     # todo: use RESQML lattice like geometry specification
 
     def __init__(self,
@@ -87,9 +86,10 @@ class RegularGrid(Grid):
            regular grid here;
            if root_grid, dxyz, dxyz_dkji and mesh arguments are all None then unit cube cells aligned with
            the x,y,z axes will be generated;
-           to store the geometry explicitly use the following methods: make_regular_points_cached(), write_hdf5(),
-           create_xml(..., write_geometry = True);
-           otherwise, avoid write_hdf5() and call create_xml(..., write_geometry = False)
+           to store the geometry explicitly set as_irregular_grid True and use the following methods:
+           make_regular_points_cached(), write_hdf5(), create_xml(..., write_geometry = True);
+           otherwise, avoid write_hdf5() and call create_xml(..., write_geometry = False);
+           if geometry is not stored explicitly, the uuid of the crs is stored as extra metadata
 
         :meta common:
         """
@@ -173,6 +173,8 @@ class RegularGrid(Grid):
         if set_points_cached:
             self.make_regular_points_cached()
 
+        if crs_uuid is None and extra_metadata is not None:
+            crs_uuid = bu.uuid_from_string(extra_metadata.get('crs uuid))
         if crs_uuid is None:
             crs_uuid = parent_model.crs_uuid
         if crs_uuid is None:
@@ -396,6 +398,32 @@ class RegularGrid(Grid):
             return 'vertical'
         return 'straight'
 
+    def xyz_box(grid, points_root = None, lazy = True, local = False):
+        """Returns the minimum and maximum xyz for the grid geometry.
+
+        arguments:
+           points_root (ignored): for compatibility with Grid method signature
+           lazy (ignored): for compatibility with Grid method signature
+           local (boolean, default False): if True, the xyz ranges that are returned are in the local
+              coordinate space, otherwise the global (crs parent) coordinate space
+
+        returns:
+           numpy array of float of shape (2, 3); the first axis is minimum, maximum; the second axis is x, y, z
+
+        :meta common:
+        """
+
+        if grid.xyz_box_cached is None:
+            grid.xyz_box_cached = np.zeros((2, 3))
+            # TODO: establish dxyz when not aligned with crs
+            grid.xyz_box_cached[1] = np.array(grid.extent_kji, dtype = float) * dxyz
+            grid.xyz_box_cached_thoroughly = True
+        if local:
+            return grid.xyz_box_cached
+        global_xyz_box = grid.xyz_box_cached.copy()
+        grid.local_to_global_crs(global_xyz_box, grid.crs_root)
+        return global_xyz_box
+
     def create_xml(self,
                    ext_uuid = None,
                    add_as_part = True,
@@ -420,6 +448,11 @@ class RegularGrid(Grid):
 
         :meta common:
         """
+
+        if extra_metadata is None:
+            extra_metadata = {}
+        if self.crs_uuid is not None and 'crs uuid' not in extra_metadata:
+            extra_metadata['crs uuid'] = str(self.crs_uuid)
 
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
