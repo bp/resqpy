@@ -10,11 +10,8 @@ import os
 
 # import xml element tree parse method and classes here to allow single point for switching between lxml and etree
 # alternative to lxml.etree: xml.etree.ElementTree
-from lxml.etree import (   # type: ignore
-    Element,
-    ElementTree,
-    SubElement,
-    _Element,  # noqa
+from lxml.etree import (  # type: ignore
+    Element, ElementTree, SubElement, _Element,  # noqa
     parse)
 
 import resqpy.olio.uuid as bu
@@ -69,7 +66,7 @@ def colon_prefixed(curly_prefixed):
     return pre_colon + ':' + curly_prefixed[pre_end + 1:], pre_colon
 
 
-def find_tag(root, tag_name, must_exist=False):
+def find_tag(root, tag_name, must_exist = False):
     """Finds the first child in xml node with a (prefix-stripped) tag matching given tag name."""
 
     if root is None:
@@ -82,7 +79,7 @@ def find_tag(root, tag_name, must_exist=False):
     return None
 
 
-def find_tag_text(root, tag_name, must_exist=False):
+def find_tag_text(root, tag_name, must_exist = False):
     """Finds the first child in xml node with a tag matching given tag name; returns stripped text field."""
 
     if root is None:
@@ -95,7 +92,7 @@ def find_tag_text(root, tag_name, must_exist=False):
     return None
 
 
-def find_tag_bool(root, tag_name, must_exist=False):
+def find_tag_bool(root, tag_name, must_exist = False):
     """Finds the first child in xml node with a tag matching given tag name; returns stripped text field as bool."""
 
     if root is None:
@@ -108,7 +105,7 @@ def find_tag_bool(root, tag_name, must_exist=False):
     return None
 
 
-def find_tag_int(root, tag_name, must_exist=False):
+def find_tag_int(root, tag_name, must_exist = False):
     """Finds the first child in xml node with a tag matching given tag name; returns stripped text field as int."""
 
     if root is None:
@@ -121,7 +118,7 @@ def find_tag_int(root, tag_name, must_exist=False):
     return None
 
 
-def find_tag_float(root, tag_name, must_exist=False):
+def find_tag_float(root, tag_name, must_exist = False):
     """Finds the first child in xml node with a tag matching given tag name; returns stripped text field as float."""
 
     if root is None:
@@ -147,7 +144,7 @@ def find_nested_tags(root, tag_list):
     return find_nested_tags(head, tag_list[1:])
 
 
-def find_nested_tags_cast(root, tag_list, dtype=None):
+def find_nested_tags_cast(root, tag_list, dtype = None):
     """Return value of nested tags as desired dtype.
 
     Follows a list of tags in a nested xml hierarchy, returning the stripped text of the node at the deepest level.
@@ -242,7 +239,7 @@ def list_of_descendant_tag(root, tag_name):
     return results
 
 
-def list_obj_references(root, skip_hdf5=True):
+def list_obj_references(root, skip_hdf5 = True):
     """Returns list of nodes of type DataObjectReference."""
 
     if root is None:
@@ -251,7 +248,7 @@ def list_obj_references(root, skip_hdf5=True):
     if node_type(root) == 'DataObjectReference' and not (skip_hdf5 and stripped_of_prefix(root.tag) == 'HdfProxy'):
         results.append(root)
     for child in root:
-        results += list_obj_references(child, skip_hdf5=skip_hdf5)
+        results += list_obj_references(child, skip_hdf5 = skip_hdf5)
     return results
 
 
@@ -262,7 +259,7 @@ def cut_obj_references(root, uuids_to_be_cut):
         return
     for child in root:
         if node_type(child) == 'DataObjectReference':
-            referred_uuid = bu.uuid_from_string(find_tag_text(child, 'UUID', must_exist=True))
+            referred_uuid = bu.uuid_from_string(find_tag_text(child, 'UUID', must_exist = True))
             for cut_uuid in uuids_to_be_cut:
                 if bu.matching_uuids(referred_uuid, cut_uuid):
                     root.remove(child)
@@ -296,7 +293,7 @@ def content_type(content_type_str):
     return content_type_str
 
 
-def node_type(node, is_rels=False, strip_obj=False):
+def node_type(node, is_rels = False, strip_obj = False):
     """Returns the type as held in attributes of xml node; defining authority is stripped out."""
 
     result = None
@@ -320,13 +317,13 @@ def node_type(node, is_rels=False, strip_obj=False):
 
 
 def print_xml_tree(root,
-                   level=0,
-                   max_level=None,
-                   strip_tag_refs=True,
-                   to_log=False,
-                   log_level=None,
-                   max_lines=0,
-                   line_count=0):
+                   level = 0,
+                   max_level = None,
+                   strip_tag_refs = True,
+                   to_log = False,
+                   log_level = None,
+                   max_lines = 0,
+                   line_count = 0):
     """Print an xml tree in an indented semi-readable format; return accumulated number of lines."""
 
     if root is None or (max_level is not None and level > max_level):
@@ -377,22 +374,22 @@ def print_xml_tree(root,
             message += ' ### ' + root.text.replace('\n', '\\n')
         print_fn(message)
     else:
-        print((3 * level * ' ') + tag, '#', attrib_dict, end=' ')
+        print((3 * level * ' ') + tag, '#', attrib_dict, end = ' ')
         if type_attr is not None:
-            print('##', type_attr, end=' ')
+            print('##', type_attr, end = ' ')
         if value is not None:
-            print('###', root.text.replace('\n', '\\n'), end='')
+            print('###', root.text.replace('\n', '\\n'), end = '')
         print('')
     line_count += 1
     for child in root:
         line_count = print_xml_tree(child,
-                                    level=level + 1,
-                                    max_level=max_level,
-                                    strip_tag_refs=strip_tag_refs,
-                                    to_log=to_log,
-                                    log_level=log_level,
-                                    max_lines=max_lines,
-                                    line_count=line_count)
+                                    level = level + 1,
+                                    max_level = max_level,
+                                    strip_tag_refs = strip_tag_refs,
+                                    to_log = to_log,
+                                    log_level = log_level,
+                                    max_lines = max_lines,
+                                    line_count = line_count)
         if line_count > max_lines:
             break
     return line_count
@@ -411,7 +408,7 @@ def uuid_in_part_name(part_name):
     return None
 
 
-def part_name_for_object(obj_type, uuid, prefixed=False, epc_subdir=None):
+def part_name_for_object(obj_type, uuid, prefixed = False, epc_subdir = None):
     """Returns the standard part name comprised of the object type, uuid and .xml extension."""
 
     if prefixed and (pretend_to_be_fesapi or use_fesapi_quirks) and obj_type[0] != '/':
@@ -463,16 +460,16 @@ def patch_uuid_in_part_root(root, uuid):
     return part_name_for_part_root(root)
 
 
-def part_name_for_part_root(root, is_rels=False, epc_subdir=None):
+def part_name_for_part_root(root, is_rels = False, epc_subdir = None):
     """Returns the part name given the root node for the part's xml."""
 
     if root is None:
         return None
-    obj_type = node_type(root, is_rels=is_rels)
+    obj_type = node_type(root, is_rels = is_rels)
     uuid = uuid_for_part_root(root)
     if obj_type is None or uuid is None:
         return None
-    return part_name_for_object(obj_type, uuid, epc_subdir=epc_subdir)
+    return part_name_for_object(obj_type, uuid, epc_subdir = epc_subdir)
 
 
 # the next two functions aren't really much to do with the xml element tree
@@ -528,7 +525,7 @@ def bool_from_text(text):
     return None
 
 
-def node_text(node, unknown_if_none=False):
+def node_text(node, unknown_if_none = False):
     """Returns stripped node text or 'unknown' if node is None or text is blank or newline."""
 
     if node is None or node.text is None:
@@ -646,7 +643,7 @@ def creation_date_for_node(node):
     return find_nested_tags_text(node, ['Citation', 'Creation'])
 
 
-def write_xml_node(xml_fp, root, level=0, namespace_keys=[]):
+def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     """Recursively write an xml node to an open file; return number of nodes written."""
 
     def _escaped_text(text):
@@ -739,7 +736,7 @@ def write_xml_node(xml_fp, root, level=0, namespace_keys=[]):
             else:
                 indentation = (3 * level * ' ')
             for child in root:
-                node_count += write_xml_node(xml_fp, child, level=level + 1, namespace_keys=ns_keys)
+                node_count += write_xml_node(xml_fp, child, level = level + 1, namespace_keys = ns_keys)
 
         line = indentation + '</' + tag + '>\n'
         xml_fp.write(line.encode())
@@ -749,7 +746,7 @@ def write_xml_node(xml_fp, root, level=0, namespace_keys=[]):
     return node_count
 
 
-def write_xml(xml_fp, tree, standalone=None):
+def write_xml(xml_fp, tree, standalone = None):
     """Write an xml tree to file in an indented format; gSOAP/FESAPI compatible; return number of nodes written."""
 
     #   print('-------------------------------------------------------------------------------------') # debug
