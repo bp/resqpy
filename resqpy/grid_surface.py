@@ -25,7 +25,7 @@ import resqpy.well as rqw
 class GridSkin:
     """Class of object consisting of outer skin of grid (not a RESQML class in its own right)."""
 
-    def __init__(self, grid, quad_triangles = True, use_single_layer_tactics = True):
+    def __init__(self, grid, quad_triangles = True, use_single_layer_tactics = True, is_regular = False):
         """Returns a composite surface object consisting of outer skin of grid."""
 
         if grid.k_gaps:
@@ -42,10 +42,38 @@ class GridSkin:
         self.fault_j_face_cols_ji0 = None  # split internal J faces
         self.fault_i_face_cols_ji0 = None  # split internal I faces
         self.polygon = None  # not yet in use
+        self.is_regular = is_regular  #: indicates a simplified skin for a regular aligned grid
 
         k_gap_surf_list = self._make_k_gap_surfaces(quad_triangles = quad_triangles)
 
-        if self.has_split_coordinate_lines:
+        if self.is_regular:
+
+            # build a simplified two triangle surface for each of the six skin surfaces
+            xyz_box = grid.xyz_box(local = True)
+            for axis in range(3):
+                if grid.block_dxyz_dkji[3 - axis, axis] < 0.0:
+                    xyz_box[:, axis] = (xyz_box[1, axis], xyz_box[0, axis])
+            min_x, min_y, min_z = xyz_box[0]
+            max_x, max_y, max_z = xyz_box[1]
+            top_surf = rqs.Surface(grid.model)
+            top_surf.set_to_horizontal_plane(0.0, xyz_box)
+            base_surf = rqs.Surface(grid.model)
+            base_surf.set_to_horizontal_plane(grid.nk * grid.block_dxyz_dkji[0, 2], xyz_box)
+            j_minus_surf = rqs.Surface(grid.model)
+            corners = np.array([(min_x, min_y, min_z), (max_x, min_y, min_z), (min_x, min_y, max_z), (max_x, min_y, max_z)])
+            j_minus_surf.set_to_triangle_pair(corners)
+            j_plus_surf = rqs.Surface(grid.model)
+            corners = np.array([(min_x, max_y, min_z), (max_x, max_y, min_z), (min_x, max_y, max_z), (max_x, max_y, max_z)])
+            j_plus_surf.set_to_triangle_pair(corners)
+            i_minus_surf = rqs.Surface(grid.model)
+            corners = np.array([(min_x, min_y, min_z), (min_x, max_y, min_z), (min_x, min_y, max_z), (min_x, max_y, max_z)])
+            i_minus_surf.set_to_triangle_pair(corners)
+            i_plus_surf = rqs.Surface(grid.model)
+            corners = np.array([(max_x, min_y, min_z), (max_x, max_y, min_z), (max_x, min_y, max_z), (max_x, max_y, max_z)])
+            i_plus_surf.set_to_triangle_pair(corners)
+            surf_list = [top_surf, base_surf, j_minus_surf, j_plus_surf, i_minus_surf, i_plus_surf]
+
+        elif self.has_split_coordinate_lines:
 
             top_surf = generate_torn_surface_for_layer_interface(grid,
                                                                  k0 = 0,
@@ -219,10 +247,13 @@ class GridSkin:
         """
 
         if exclude_kji0 is not None:
-            xyz_1, segment_1, tri_index_1, xyz_2, segment_2, tri_index_2 = \
-                find_first_intersection_of_trajectory_with_surface(trajectory, self.skin, start=start,
-                                                                   start_xyz=start_xyz,
-                                                                   nudge=nudge, return_second=True)
+            bundle = find_first_intersection_of_trajectory_with_surface(trajectory,
+                                                                        self.skin,
+                                                                        start = start,
+                                                                        start_xyz = start_xyz,
+                                                                        nudge = nudge,
+                                                                        return_second = True)
+            xyz_1, segment_1, tri_index_1, xyz_2, segment_2, tri_index_2 = bundle
         else:
             xyz_1, segment_1, tri_index_1 = find_first_intersection_of_trajectory_with_surface(trajectory,
                                                                                                self.skin,
@@ -237,12 +268,31 @@ class GridSkin:
         else:
             triplet_list = [(xyz_1, segment_1, tri_index_1), (xyz_2, segment_2, tri_index_2)]
 
-        for (xyz, segment, tri_index) in triplet_list:
+        for (try_xyz, segment, tri_index) in triplet_list:
+
+            xyz = try_xyz
 
             surf_index, surf_tri_index = self.skin.surface_index_for_triangle_index(tri_index)
             assert surf_index is not None
 
-            if surf_index < 6:  # grid skin
+            if self.is_regular:
+                assert 0 <= surf_index < 6
+                axis, polarity = divmod(surf_index, 2)
+                kji0 = np.zeros(3, dtype = int)
+                if polarity:
+                    kji0[axis] = self.grid.extent_kji[axis] - 1
+                if axis == 0:  # K face (top or base)
+                    kji0[1] = int(xyz[1] / self.grid.block_dxyz_dkji[1, 1])
+                    kji0[2] = int(xyz[0] / self.grid.block_dxyz_dkji[2, 0])
+                elif axis == 1:  # J face
+                    kji0[0] = int(xyz[2] / self.grid.block_dxyz_dkji[0, 2])
+                    kji0[2] = int(xyz[0] / self.grid.block_dxyz_dkji[2, 0])
+                else:  # I face
+                    kji0[0] = int(xyz[2] / self.grid.block_dxyz_dkji[0, 2])
+                    kji0[1] = int(xyz[1] / self.grid.block_dxyz_dkji[1, 1])
+                kji0 = tuple(kji0)
+
+            elif surf_index < 6:  # grid skin
                 # following returns j,i pair for K faces; k,i for J faces; or k,j for I faces
                 col = self.skin.surface_list[surf_index].column_from_triangle_index(surf_tri_index)
                 if surf_index == 0:
@@ -770,7 +820,8 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
                                                                ref_k_faces = 'top',
                                                                start = 0,
                                                                heal_faults = False,
-                                                               quad_triangles = True):
+                                                               quad_triangles = True,
+                                                               is_regular = False):
     """Returns info about the first intersection of well trajectory(s) with layer interface.
 
     arguments:
@@ -788,6 +839,7 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
        quad_triangles (boolean, optional, default True): if True, 4 triangles are used to represent each cell k face,
           which gives a unique solution with a shared node of the 4 triangles at the mean point of the 4 corners of
           the face; if False, only 2 triangles are used, which gives a non-unique solution
+       is_regular (boolean, default False): set True if grid is a RegularGrid with IJK axes aligned with xyz axes
 
     returns:
        (numpy float array of shape (3,), int, (int, int)): being the (x, y, z) intersection point, and the trajectory segment number,
@@ -806,8 +858,12 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
     else:
         trajectory_list = [trajectory]
 
-    #   log.debug('generating surface for layer: ' + str(k0) + ' ' + ref_k_faces)
-    if grid.has_split_coordinate_lines and not heal_faults:
+    # log.debug('generating surface for layer: ' + str(k0) + ' ' + ref_k_faces)
+    if is_regular:
+        interface_depth = grid.block_dxyz_dkji[0, 2] * (k0 + (1 if ref_k_faces == 'base' else 0))
+        surface = rqs.Surface(grid.model)
+        surface.set_to_horizontal_plane(interface_depth, grid.xyz_box())
+    elif grid.has_split_coordinate_lines and not heal_faults:
         surface = generate_torn_surface_for_layer_interface(grid,
                                                             k0 = k0,
                                                             ref_k_faces = ref_k_faces,
@@ -818,13 +874,19 @@ def find_first_intersection_of_trajectory_with_layer_interface(trajectory,
                                                               ref_k_faces = ref_k_faces,
                                                               quad_triangles = quad_triangles)
 
-    #   log.debug('finding intersections of wellbore trajectory(ies) with layer: ' + str(k0) + ' ' + ref_k_faces)
+    # log.debug('finding intersections of wellbore trajectory(ies) with layer: ' + str(k0) + ' ' + ref_k_faces)
     results_list = []
     segment_list = []
     col_list = []
     for traj in trajectory_list:
         xyz, knot, tri = find_first_intersection_of_trajectory_with_surface(traj, surface, start = start)
-        col = surface.column_from_triangle_index(tri)  # j, i pair returned
+        if is_regular:
+            col_j = int(xyz[1] / grid.block_dxyz_dkji[1, 1])
+            col_i = int(xyz[1] / grid.block_dxyz_dkji[2, 0])
+            assert 0 <= col_i < grid.ni and 0 <= col_j < grid.nj
+            col = (col_j, col_i)
+        else:
+            col = surface.column_from_triangle_index(tri)  # j, i pair returned
         results_list.append(xyz)
         segment_list.append(knot)
         col_list.append(col)
@@ -1073,7 +1135,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
     triangle_boxes[:, 0, :] = np.amin(triangles, axis = 1)
     triangle_boxes[:, 1, :] = np.amax(triangles, axis = 1)
 
-    grid_box = grid.xyz_box(lazy = False)
+    grid_box = grid.xyz_box(lazy = False, local = False)
 
     # log.debug('looking for cell faces for each triangle')
     batch_size = 1000
@@ -1357,33 +1419,9 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert grid is not None
 
     flavour = grr.grid_flavour(grid)
-    if flavour == 'IjkGrid':
-        _populate_blocked_well_from_trajectory_ijk_grid(blocked_well,
-                                                        grid,
-                                                        active_only = active_only,
-                                                        quad_triangles = quad_triangles,
-                                                        lazy = lazy,
-                                                        use_single_layer_tactics = use_single_layer_tactics,
-                                                        check_for_reentry = check_for_reentry)
-    elif flavour == 'IjkBlockGrid':
-        _populate_blocked_well_from_trajectory_regular_grid(blocked_well,
-                                                            grid,
-                                                            active_only = active_only,
-                                                            quad_triangles = quad_triangles,
-                                                            lazy = lazy,
-                                                            check_for_reentry = check_for_reentry)
-    else:
-        raise NotImplementedError(f'well blocking not implemented for grid type {flavour}')
-
-
-def _populate_blocked_well_from_trajectory_ijk_grid(blocked_well,
-                                                    grid,
-                                                    active_only = False,
-                                                    quad_triangles = True,
-                                                    lazy = False,
-                                                    use_single_layer_tactics = True,
-                                                    check_for_reentry = True):
-    """Populate an empty blocked well object based on the intersection of its trajectory with a Grid."""
+    if not flavour.startswith('IjkGrid'):
+        raise NotImplementedError('well blocking only implemented for IjkGridRepresentation')
+    is_regular = (flavour == 'IjkBlockGrid') and hasattr(grid, 'is_aligned') and grid.is_aligned
 
     if grid.k_gaps:
         use_single_layer_tactics = False
@@ -1396,7 +1434,7 @@ def _populate_blocked_well_from_trajectory_ijk_grid(blocked_well,
     if not trajectory_grid_overlap(trajectory, grid):
         log.error(f'no overlap of trajectory with grid for trajectory uuid: {trajectory.uuid}')
         return None
-    grid_box = grid.xyz_box(lazy = False)
+    grid_box = grid.xyz_box(lazy = False, local = False)
     if grid_crs.z_inc_down:
         z_sign = 1.0
         grid_top_z = grid_box[0, 2]
@@ -1427,7 +1465,8 @@ def _populate_blocked_well_from_trajectory_ijk_grid(blocked_well,
             ref_k_faces = 'top',
             start = knot,
             heal_faults = False,
-            quad_triangles = quad_triangles)
+            quad_triangles = quad_triangles,
+            is_regular = is_regular)
         log.debug(f'top intersection x,y,z: {xyz}; knot: {entry_knot}; col j0,i0: {col_ji0[0]}, {col_ji0[1]}')
         if xyz is None:
             log.error('failed to find intersection of trajectory with top surface of grid')
@@ -1439,7 +1478,7 @@ def _populate_blocked_well_from_trajectory_ijk_grid(blocked_well,
     else:  # not lazy
         # note: xyz and entry_fraction might be slightly off when penetrating a skewed fault plane – deemed immaterial
         # for real cases
-        skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics)
+        skin = grid.skin(use_single_layer_tactics = use_single_layer_tactics, is_regular = is_regular)
         xyz, cell_kji0, axis, polarity, entry_knot = skin.find_first_intersection_of_trajectory(trajectory)
         if xyz is None:
             log.error('failed to find intersection of trajectory with outer skin of grid')

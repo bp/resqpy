@@ -174,7 +174,7 @@ class RegularGrid(Grid):
             self.make_regular_points_cached()
 
         if crs_uuid is None and extra_metadata is not None:
-            crs_uuid = bu.uuid_from_string(extra_metadata.get('crs uuid))
+            crs_uuid = bu.uuid_from_string(extra_metadata.get('crs uuid'))
         if crs_uuid is None:
             crs_uuid = parent_model.crs_uuid
         if crs_uuid is None:
@@ -414,8 +414,9 @@ class RegularGrid(Grid):
         """
 
         if grid.xyz_box_cached is None:
+            assert grid.is_aligned  # TODO: establish dxyz when not aligned with crs
             grid.xyz_box_cached = np.zeros((2, 3))
-            # TODO: establish dxyz when not aligned with crs
+            dxyz = np.array([grid.block_dxyz_dkji[axis, 2 - axis] for axis in range(3)])
             grid.xyz_box_cached[1] = np.array(grid.extent_kji, dtype = float) * dxyz
             grid.xyz_box_cached_thoroughly = True
         if local:
