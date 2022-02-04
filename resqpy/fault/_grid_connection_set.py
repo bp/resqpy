@@ -339,11 +339,11 @@ class GridConnectionSet(BaseResqpy):
                 tbf = None
                 for tbf_part in tbf_parts_list:
                     if feature_name.lower() == self.model.title_for_part(tbf_part).split()[0].lower():
-                        tbf_root = self.model.root_for_part(tbf_part)
+                        tbf_uuid = self.model.uuid_for_part(tbf_part)
                         if feature_type == 'fault':
-                            tbf = rqo.TectonicBoundaryFeature(self.model, root_node = tbf_root)
+                            tbf = rqo.TectonicBoundaryFeature(self.model, uuid = tbf_uuid)
                         else:
-                            tbf = rqo.GeneticBoundaryFeature(self.model, kind = feature_type, root_node = tbf_root)
+                            tbf = rqo.GeneticBoundaryFeature(self.model, kind = feature_type, uuid = tbf_uuid)
                         break
                 if tbf is None:
                     if feature_type == 'fault':
