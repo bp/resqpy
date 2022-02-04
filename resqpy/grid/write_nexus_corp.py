@@ -66,7 +66,7 @@ def write_nexus_corp(grid,
                 if crs_uuid is not None:
                     if crs.xy_units == 'm' and crs.z_units == 'm':
                         header.write('METRIC\n\n')
-                    elif crs.xy_units == 'ft' and crs.z_units == 'ft':
+                    elif crs.xy_units.startswith('ft') and crs.z_units.startswith('ft'):
                         header.write('ENGLISH\n\n')
                     else:
                         header.write('! local coordinates mixed (or not recognized)\n\n')

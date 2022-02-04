@@ -83,7 +83,14 @@ def test_local_to_global_crs_metres_to_feet(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_local_to_global_crs_xyz_offset(basic_regular_grid):
+@pytest.mark.parametrize("a, a_expected",
+                         [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+                           np.array([[2.0, 3.0, -2.0], [2.0, 3.0, -2.0], [2.0, 3.0, -2.0]]) * METRES_TO_FEET),
+                          (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]]),
+                           np.array([[3.0, 3.0, 6.0], [9.0, 3.0, 3.0], [8.0, 11.0, 1.0]]) * METRES_TO_FEET),
+                          (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]]),
+                           np.array([[7.0, 9.0, 3.0], [2.0, 4.0, 6.0], [10.0, 7.0, 5.0]]) * METRES_TO_FEET)])
+def test_local_to_global_crs_xyz_offset(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 1.0
     y_offset = 2.0
@@ -106,9 +113,6 @@ def test_local_to_global_crs_xyz_offset(basic_regular_grid):
 
     global_xy_units = 'ft'
     global_z_units = 'ft'
-
-    a = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-    a_expected = np.array([[2.0, 3.0, -2.0], [2.0, 3.0, -2.0], [2.0, 3.0, -2.0]]) * METRES_TO_FEET
 
     # Act
     a_transformed = basic_regular_grid.local_to_global_crs(a,
@@ -154,7 +158,14 @@ def test_local_to_global_crs_invalid_units(basic_regular_grid):
                                                global_z_units = global_z_units)
 
 
-def test_local_to_global_crs_global_z_increasing_downward(basic_regular_grid):
+@pytest.mark.parametrize("a, a_expected",
+                         [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+                           np.array([[1.0, 1.0, -1.0], [1.0, 1.0, -1.0], [1.0, 1.0, -1.0]]) * METRES_TO_FEET),
+                          (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]]),
+                           np.array([[2.0, 1.0, -9.0], [8.0, 1.0, -6.0], [7.0, 9.0, -4.0]]) * METRES_TO_FEET),
+                          (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]]),
+                           np.array([[6.0, 7.0, -6.0], [1.0, 2.0, -9.0], [9.0, 5.0, -8.0]]) * METRES_TO_FEET)])
+def test_local_to_global_crs_global_z_increasing_downward(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -179,9 +190,6 @@ def test_local_to_global_crs_global_z_increasing_downward(basic_regular_grid):
     global_z_units = 'ft'
     global_z_increasing_downward = False
 
-    a = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-    a_expected = np.array([[1.0, 1.0, -1.0], [1.0, 1.0, -1.0], [1.0, 1.0, -1.0]]) * METRES_TO_FEET
-
     # Act
     a_transformed = basic_regular_grid.local_to_global_crs(a,
                                                            crs_uuid = crs.uuid,
@@ -193,7 +201,16 @@ def test_local_to_global_crs_global_z_increasing_downward(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_local_to_global_crs_degree_rotation(basic_regular_grid):
+@pytest.mark.parametrize(
+    "a, a_expected",
+    [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+      np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0], [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
+                [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0]])),
+     (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]
+               ]), np.array([[1.866025, -1.232051, 9.], [4.866025, -6.428203, 6.], [11.294229, -1.562178, 4.]])),
+     (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]
+               ]), np.array([[9.062178, -1.696152, 6.], [2.232051, 0.133975, 9.], [8.830127, -5.294229, 8.]]))])
+def test_local_to_global_crs_degree_rotation(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -217,11 +234,6 @@ def test_local_to_global_crs_degree_rotation(basic_regular_grid):
     global_xy_units = 'm'
     global_z_units = 'm'
 
-    a = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-    a_expected = np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
-                           [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
-                           [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0]])
-
     # Act
     a_transformed = basic_regular_grid.local_to_global_crs(a,
                                                            crs_uuid = crs.uuid,
@@ -232,7 +244,16 @@ def test_local_to_global_crs_degree_rotation(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_local_to_global_crs_radian_rotation(basic_regular_grid):
+@pytest.mark.parametrize(
+    "a, a_expected",
+    [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+      np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0], [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
+                [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0]])),
+     (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]
+               ]), np.array([[1.866025, -1.232052, 9.], [4.866023, -6.428205, 6.], [11.294228, -1.562183, 4.]])),
+     (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]
+               ]), np.array([[9.062177, -1.696156, 6.], [2.232051, 0.133974, 9.], [8.830125, -5.294233, 8.]]))])
+def test_local_to_global_crs_radian_rotation(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -256,11 +277,6 @@ def test_local_to_global_crs_radian_rotation(basic_regular_grid):
     global_xy_units = 'm'
     global_z_units = 'm'
 
-    a = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-    a_expected = np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
-                           [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
-                           [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0]])
-
     # Act
     a_transformed = basic_regular_grid.local_to_global_crs(a,
                                                            crs_uuid = crs.uuid,
@@ -271,7 +287,16 @@ def test_local_to_global_crs_radian_rotation(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_local_to_global_crs_rotation_and_global_z_increasing_downward(basic_regular_grid):
+@pytest.mark.parametrize(
+    "a, a_expected",
+    [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+      np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0], [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0],
+                [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0]])),
+     (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]
+               ]), np.array([[1.866025, -1.232051, -9.], [4.866025, -6.428203, -6.], [11.294229, -1.562178, -4.]])),
+     (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]
+               ]), np.array([[9.062178, -1.696152, -6.], [2.232051, 0.133975, -9.], [8.830127, -5.294229, -8.]]))])
+def test_local_to_global_crs_rotation_and_global_z_increasing_downward(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -296,11 +321,6 @@ def test_local_to_global_crs_rotation_and_global_z_increasing_downward(basic_reg
     global_z_units = 'm'
     global_z_increasing_downward = False
 
-    a = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-    a_expected = np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0],
-                           [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0],
-                           [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0]])
-
     # Act
     a_transformed = basic_regular_grid.local_to_global_crs(a,
                                                            crs_uuid = crs.uuid,
@@ -312,7 +332,16 @@ def test_local_to_global_crs_rotation_and_global_z_increasing_downward(basic_reg
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_local_to_global_crs_full_transformation(basic_regular_grid):
+@pytest.mark.parametrize("a, a_expected", [
+    (np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]
+              ]), np.array([[1.358968, 9.84252, 3.28084], [1.358968, 9.84252, 3.28084], [1.358968, 9.84252, 3.28084]])),
+    (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]]),
+     np.array([[3.678873, 7.522616, -22.965879], [17.598297, -6.396809, -13.12336], [33.837626, 14.482328, -6.56168]])),
+    (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]]),
+     np.array([[26.877914, 12.162424, -13.12336], [3.678873, 12.162424, -22.965879], [29.197818, 0.562903, -19.685039]
+              ]))
+])
+def test_local_to_global_crs_full_transformation(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = -1.0
     y_offset = 3.0
@@ -336,10 +365,6 @@ def test_local_to_global_crs_full_transformation(basic_regular_grid):
     global_xy_units = 'ft'
     global_z_units = 'ft'
     global_z_increasing_downward = False
-
-    a = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-    a_expected = np.array([[3.678873, 12.162424, -3.28084], [17.598297, 12.162424, -13.12336],
-                           [31.517722, 12.162424, -22.965879]])
 
     # Act
     a_transformed = basic_regular_grid.local_to_global_crs(a,
@@ -389,7 +414,14 @@ def test_global_to_local_crs_metres_to_feet(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_global_to_local_crs_xyz_offset(basic_regular_grid):
+@pytest.mark.parametrize("a_expected, a",
+                         [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+                           np.array([[2.0, 3.0, -2.0], [2.0, 3.0, -2.0], [2.0, 3.0, -2.0]]) * METRES_TO_FEET),
+                          (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]]),
+                           np.array([[3.0, 3.0, 6.0], [9.0, 3.0, 3.0], [8.0, 11.0, 1.0]]) * METRES_TO_FEET),
+                          (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]]),
+                           np.array([[7.0, 9.0, 3.0], [2.0, 4.0, 6.0], [10.0, 7.0, 5.0]]) * METRES_TO_FEET)])
+def test_global_to_local_crs_xyz_offset(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 1.0
     y_offset = 2.0
@@ -412,9 +444,6 @@ def test_global_to_local_crs_xyz_offset(basic_regular_grid):
 
     global_xy_units = 'ft'
     global_z_units = 'ft'
-
-    a = np.array([[2.0, 3.0, -2.0], [2.0, 3.0, -2.0], [2.0, 3.0, -2.0]]) * METRES_TO_FEET
-    a_expected = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
 
     # Act
     a_transformed = basic_regular_grid.global_to_local_crs(a,
@@ -460,7 +489,14 @@ def test_global_to_local_crs_invalid_units(basic_regular_grid):
                                                global_z_units = global_z_units)
 
 
-def test_global_to_local_crs_global_z_increasing_downward(basic_regular_grid):
+@pytest.mark.parametrize("a_expected, a",
+                         [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+                           np.array([[1.0, 1.0, -1.0], [1.0, 1.0, -1.0], [1.0, 1.0, -1.0]]) * METRES_TO_FEET),
+                          (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]]),
+                           np.array([[2.0, 1.0, -9.0], [8.0, 1.0, -6.0], [7.0, 9.0, -4.0]]) * METRES_TO_FEET),
+                          (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]]),
+                           np.array([[6.0, 7.0, -6.0], [1.0, 2.0, -9.0], [9.0, 5.0, -8.0]]) * METRES_TO_FEET)])
+def test_global_to_local_crs_global_z_increasing_downward(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -485,9 +521,6 @@ def test_global_to_local_crs_global_z_increasing_downward(basic_regular_grid):
     global_z_units = 'ft'
     global_z_increasing_downward = False
 
-    a = np.array([[1.0, 1.0, -1.0], [1.0, 1.0, -1.0], [1.0, 1.0, -1.0]]) * METRES_TO_FEET
-    a_expected = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-
     # Act
     a_transformed = basic_regular_grid.global_to_local_crs(a,
                                                            crs_uuid = crs.uuid,
@@ -499,7 +532,16 @@ def test_global_to_local_crs_global_z_increasing_downward(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_global_to_local_crs_degree_rotation(basic_regular_grid):
+@pytest.mark.parametrize(
+    "a_expected, a",
+    [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+      np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0], [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
+                [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0]])),
+     (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]
+               ]), np.array([[1.866025, -1.232051, 9.], [4.866025, -6.428203, 6.], [11.294229, -1.562178, 4.]])),
+     (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]
+               ]), np.array([[9.062178, -1.696152, 6.], [2.232051, 0.133975, 9.], [8.830127, -5.294229, 8.]]))])
+def test_global_to_local_crs_degree_rotation(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -537,7 +579,16 @@ def test_global_to_local_crs_degree_rotation(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_global_to_local_crs_radian_rotation(basic_regular_grid):
+@pytest.mark.parametrize(
+    "a_expected, a",
+    [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+      np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0], [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0],
+                [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, 1.0]])),
+     (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]
+               ]), np.array([[1.866025, -1.232052, 9.], [4.866023, -6.428205, 6.], [11.294228, -1.562183, 4.]])),
+     (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]
+               ]), np.array([[9.062177, -1.696156, 6.], [2.232051, 0.133974, 9.], [8.830125, -5.294233, 8.]]))])
+def test_global_to_local_crs_radian_rotation(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -575,7 +626,16 @@ def test_global_to_local_crs_radian_rotation(basic_regular_grid):
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_global_to_local_crs_rotation_and_global_z_increasing_downward(basic_regular_grid):
+@pytest.mark.parametrize(
+    "a_expected, a",
+    [(np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
+      np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0], [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0],
+                [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0]])),
+     (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]
+               ]), np.array([[1.866025, -1.232051, -9.], [4.866025, -6.428203, -6.], [11.294229, -1.562178, -4.]])),
+     (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]
+               ]), np.array([[9.062178, -1.696152, -6.], [2.232051, 0.133975, -9.], [8.830127, -5.294229, -8.]]))])
+def test_global_to_local_crs_rotation_and_global_z_increasing_downward(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = 0.0
     y_offset = 0.0
@@ -600,11 +660,6 @@ def test_global_to_local_crs_rotation_and_global_z_increasing_downward(basic_reg
     global_z_units = 'm'
     global_z_increasing_downward = False
 
-    a = np.array([[0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2,
-                   -1.0], [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0],
-                  [0.5 + np.sqrt(3) / 2, 0.5 - np.sqrt(3) / 2, -1.0]])
-    a_expected = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-
     # Act
     a_transformed = basic_regular_grid.global_to_local_crs(a,
                                                            crs_uuid = crs.uuid,
@@ -616,7 +671,16 @@ def test_global_to_local_crs_rotation_and_global_z_increasing_downward(basic_reg
     np.testing.assert_array_almost_equal(a_transformed, a_expected)
 
 
-def test_global_to_local_crs_full_transformation(basic_regular_grid):
+@pytest.mark.parametrize("a_expected, a", [
+    (np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]
+              ]), np.array([[1.358968, 9.84252, 3.28084], [1.358968, 9.84252, 3.28084], [1.358968, 9.84252, 3.28084]])),
+    (np.array([[2.0, 1.0, 9.0], [8.0, 1.0, 6.0], [7.0, 9.0, 4.0]]),
+     np.array([[3.678873, 7.522616, -22.965879], [17.598297, -6.396809, -13.12336], [33.837626, 14.482328, -6.56168]])),
+    (np.array([[6.0, 7.0, 6.0], [1.0, 2.0, 9.0], [9.0, 5.0, 8.0]]),
+     np.array([[26.877914, 12.162424, -13.12336], [3.678873, 12.162424, -22.965879], [29.197818, 0.562903, -19.685039]
+              ]))
+])
+def test_global_to_local_crs_full_transformation(basic_regular_grid, a, a_expected):
     # Arrange
     x_offset = -1.0
     y_offset = 3.0
@@ -640,10 +704,6 @@ def test_global_to_local_crs_full_transformation(basic_regular_grid):
     global_xy_units = 'ft'
     global_z_units = 'ft'
     global_z_increasing_downward = False
-
-    a = np.array([[3.678873, 12.162424, -3.28084], [17.598297, 12.162424, -13.12336],
-                  [31.517722, 12.162424, -22.965879]])
-    a_expected = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
 
     # Act
     a_transformed = basic_regular_grid.global_to_local_crs(a,
