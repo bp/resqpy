@@ -60,16 +60,20 @@ class GridSkin:
             base_surf = rqs.Surface(grid.model)
             base_surf.set_to_horizontal_plane(grid.nk * grid.block_dxyz_dkji[0, 2], xyz_box)
             j_minus_surf = rqs.Surface(grid.model)
-            corners = np.array([(min_x, min_y, min_z), (max_x, min_y, min_z), (min_x, min_y, max_z), (max_x, min_y, max_z)])
+            corners = np.array([(min_x, min_y, min_z), (max_x, min_y, min_z), (min_x, min_y, max_z),
+                                (max_x, min_y, max_z)])
             j_minus_surf.set_to_triangle_pair(corners)
             j_plus_surf = rqs.Surface(grid.model)
-            corners = np.array([(min_x, max_y, min_z), (max_x, max_y, min_z), (min_x, max_y, max_z), (max_x, max_y, max_z)])
+            corners = np.array([(min_x, max_y, min_z), (max_x, max_y, min_z), (min_x, max_y, max_z),
+                                (max_x, max_y, max_z)])
             j_plus_surf.set_to_triangle_pair(corners)
             i_minus_surf = rqs.Surface(grid.model)
-            corners = np.array([(min_x, min_y, min_z), (min_x, max_y, min_z), (min_x, min_y, max_z), (min_x, max_y, max_z)])
+            corners = np.array([(min_x, min_y, min_z), (min_x, max_y, min_z), (min_x, min_y, max_z),
+                                (min_x, max_y, max_z)])
             i_minus_surf.set_to_triangle_pair(corners)
             i_plus_surf = rqs.Surface(grid.model)
-            corners = np.array([(max_x, min_y, min_z), (max_x, max_y, min_z), (max_x, min_y, max_z), (max_x, max_y, max_z)])
+            corners = np.array([(max_x, min_y, min_z), (max_x, max_y, min_z), (max_x, min_y, max_z),
+                                (max_x, max_y, max_z)])
             i_plus_surf.set_to_triangle_pair(corners)
             surf_list = [top_surf, base_surf, j_minus_surf, j_plus_surf, i_minus_surf, i_plus_surf]
 
