@@ -1914,14 +1914,13 @@ def __trajectory_init(blocked_well, grid, grid_crs):
         trajectory = blocked_well.trajectory
         assert grid_crs == rqc.Crs(blocked_well.model, uuid = trajectory.crs_uuid)
     else:
-        # create a temporary orphanage model (in memory only) to host a copy of the trajectory for crs alignment
+        # create a local trajectory object for crs alignment of control points with grid
         # NB. temporary objects, relationships left in a mess
-        model = rq.Model(create_basics = True)
-        trajectory = rqw.Trajectory(model,
-                                    uuid = blocked_well.trajectory.uuid,
-                                    hdf5_source_model = blocked_well.trajectory.model)
+        # model = rq.Model(create_basics = True)
+        model = blocked_well.trajectory.model
+        trajectory = rqw.Trajectory(model, uuid = blocked_well.trajectory.uuid)
         assert trajectory is not None
-        traj_crs = rqc.Crs(blocked_well.model, uuid = trajectory.crs_uuid)
+        traj_crs = rqc.Crs(model, uuid = trajectory.crs_uuid)
         traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs
         # note: any represented interpretation object will not be present in the temporary model
     return trajectory

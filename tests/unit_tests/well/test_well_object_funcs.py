@@ -134,7 +134,8 @@ def test_add_logs_from_cellio_file(example_model_and_crs):
                        dxyz = (50.0, -50.0, 50.0),
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
-                       set_points_cached = True)
+                       set_points_cached = True,
+                       as_irregular_grid = True)
 
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)

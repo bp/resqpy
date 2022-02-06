@@ -428,7 +428,7 @@ def test_dataframe_from_trajectory(example_model_and_crs):
                        dxyz = (50.0, -50.0, 50.0),
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
-                       set_points_cached = True)
+                       as_irregular_grid = True)
 
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
@@ -551,7 +551,7 @@ def test_convenience_methods_xyz_and_kji0_marker(example_model_and_crs):
                        dxyz = (50.0, -50.0, 50.0),
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
-                       set_points_cached = True)
+                       as_irregular_grid = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')

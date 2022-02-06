@@ -552,7 +552,8 @@ def test_interpolated_grid(tmp_path):
                             origin = (0.0, 0.0, 1000.0),
                             extent_kji = (5, 4, 3),
                             dxyz = (100.0, 150.0, 50.0),
-                            set_points_cached = True)
+                            set_points_cached = True,
+                            as_irregular_grid = True)
     grid0.grid_representation = 'IjkGrid'  # overwrite block grid setting
     grid0.write_hdf5()
     grid0.create_xml(write_geometry = True, add_cell_length_properties = False)
@@ -561,7 +562,8 @@ def test_interpolated_grid(tmp_path):
                             origin = (15.0, 35.0, 1030.0),
                             extent_kji = (5, 4, 3),
                             dxyz = (97.0, 145.0, 47.0),
-                            set_points_cached = True)
+                            set_points_cached = True,
+                            as_irregular_grid = True)
     grid1.grid_representation = 'IjkGrid'  # overwrite block grid setting
     grid1.write_hdf5()
     grid1.create_xml(write_geometry = True, add_cell_length_properties = False)
