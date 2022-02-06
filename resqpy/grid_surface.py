@@ -1139,7 +1139,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
     triangle_boxes[:, 0, :] = np.amin(triangles, axis = 1)
     triangle_boxes[:, 1, :] = np.amax(triangles, axis = 1)
 
-    grid_box = grid.xyz_box(lazy = False, local = False)
+    grid_box = grid.xyz_box(lazy = False, local = True)
 
     # log.debug('looking for cell faces for each triangle')
     batch_size = 1000
@@ -1374,6 +1374,7 @@ def trajectory_grid_overlap(trajectory, grid, lazy = False):
         t_crs = rqc.Crs(trajectory.model, uuid = trajectory.crs_uuid)
         g_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
         t_crs.convert_array_to(g_crs, traj_box)
+    log.debug(f'overlap check: traj: {traj_box}; grid{grid_box}; overlap: {bx.boxes_overlap(traj_box, grid_box)}')
     return bx.boxes_overlap(traj_box, grid_box)
 
 
@@ -1422,7 +1423,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert isinstance(blocked_well.trajectory, rqw.Trajectory)
     assert grid is not None
 
-    flavour = grr.grid_flavour(grid)
+    flavour = grr.grid_flavour(grid.root)
     if not flavour.startswith('IjkGrid'):
         raise NotImplementedError('well blocking only implemented for IjkGridRepresentation')
     is_regular = (flavour == 'IjkBlockGrid') and hasattr(grid, 'is_aligned') and grid.is_aligned
@@ -1438,7 +1439,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     if not trajectory_grid_overlap(trajectory, grid):
         log.error(f'no overlap of trajectory with grid for trajectory uuid: {trajectory.uuid}')
         return None
-    grid_box = grid.xyz_box(lazy = False, local = False)
+    grid_box = grid.xyz_box(lazy = False, local = True).copy()
     if grid_crs.z_inc_down:
         z_sign = 1.0
         grid_top_z = grid_box[0, 2]

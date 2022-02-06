@@ -90,14 +90,16 @@ class RegularGrid(Grid):
            make_regular_points_cached(), write_hdf5(), create_xml(..., write_geometry = True);
            otherwise, avoid write_hdf5() and call create_xml(..., write_geometry = False);
            if geometry is not stored explicitly, the uuid of the crs is stored as extra metadata
+           if origin is not triple zero, a new crs will be created with the origin moved appropriately
 
         :meta common:
         """
 
         if as_irregular_grid:
             set_points_cached = True
-
-        self.is_aligned = None  #: boolean indicating alignment of IJK axes with +/- xyz respectively
+            self.is_aligned = False
+        else:
+            self.is_aligned = None  #: boolean indicating alignment of IJK axes with +/- xyz respectively
 
         if uuid is None:
             super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
@@ -164,7 +166,8 @@ class RegularGrid(Grid):
             dxyz_dkji = np.array([[0.0, 0.0, dxyz[2]], [0.0, dxyz[1], 0.0], [dxyz[0], 0.0, 0.0]])
         self.block_origin = np.array(origin).copy()
         self.block_dxyz_dkji = np.array(dxyz_dkji).copy()
-        self._set_is_aligned()
+        if self.is_aligned is None:
+            self._set_is_aligned()
         if use_vertical and dxyz_dkji[0][0] == 0.0 and dxyz_dkji[0][1] == 0.0:  # ie. no x,y change with k
             self.pillar_shape = 'vertical'
         else:
@@ -173,17 +176,28 @@ class RegularGrid(Grid):
         if set_points_cached:
             self.make_regular_points_cached()
 
-        if crs_uuid is None and extra_metadata is not None:
-            crs_uuid = bu.uuid_from_string(extra_metadata.get('crs uuid'))
+        shift_origin = np.any(origin != 0.0) and uuid is None and not as_irregular_grid
+        if crs_uuid is None and self.extra_metadata is not None:
+            crs_uuid = bu.uuid_from_string(self.extra_metadata.get('crs uuid'))
+            shift_origin = shift_origin and crs_uuid is None
         if crs_uuid is None:
             crs_uuid = parent_model.crs_uuid
         if crs_uuid is None:
-            new_crs = rqc.Crs(parent_model)
-            self.crs_root = new_crs.create_xml(reuse = True)
-            self.crs_uuid = new_crs.uuid
-        else:
-            self.crs_uuid = crs_uuid
-            self.crs_root = parent_model.root_for_uuid(crs_uuid)
+            new_crs = rqc.Crs(parent_model, x_offset = origin[0], y_offset = origin[1], z_offset = origin[2])
+            shift_origin = False
+            new_crs.create_xml(reuse = True)
+            crs_uuid = new_crs.uuid
+        if shift_origin:
+            new_crs = rqc.Crs(parent_model, uuid = crs_uuid)
+            crs_uuid = bu.new_uuid()
+            new_crs.uuid = crs_uuid
+            new_crs.x_offset += origin[0]
+            new_crs.y_offset += origin[1]
+            new_crs.z_offset += origin[2]
+            new_crs.create_xml(reuse = True)
+            crs_uuid = new_crs.uuid
+        self.crs_uuid = crs_uuid
+        self.crs_root = parent_model.root_for_uuid(crs_uuid)
 
         if self.uuid is None:
             self.uuid = bu.new_uuid()
@@ -414,10 +428,25 @@ class RegularGrid(Grid):
         """
 
         if grid.xyz_box_cached is None:
-            assert grid.is_aligned  # TODO: establish dxyz when not aligned with crs
-            grid.xyz_box_cached = np.zeros((2, 3))
-            dxyz = np.array([grid.block_dxyz_dkji[axis, 2 - axis] for axis in range(3)])
-            grid.xyz_box_cached[1] = np.array(grid.extent_kji, dtype = float) * dxyz
+            grid.xyz_box_cached = np.empty((2, 3))
+            if grid.is_aligned:
+                dxyz = np.array([grid.block_dxyz_dkji[2 - axis, axis] for axis in range(3)])
+                temp_box = np.zeros((2, 3))
+                temp_box[1] = np.array(grid.extent_kji, dtype = float) * dxyz
+                grid.xyz_box_cached[0] = np.amin(temp_box, axis = 0)
+                grid.xyz_box_cached[1] = np.amax(temp_box, axis = 0)
+            else:
+                # generate points for outer grid corners, find min & max by axis
+                grid_cp = np.zeros((2, 2, 2, 3))
+                for k in [0, 1]:
+                    lcp_k = float(k * grid.nk) * grid.block_dxyz_dkji[0]
+                    for j in [0, 1]:
+                        lcp_j = lcp_k + float(j * grid.nj) * grid.block_dxyz_dkji[1]
+                        for i in [0, 1]:
+                            grid_cp[k, j, i] = lcp_j + float(i * grid.ni) * grid.block_dxyz_dkji[2]
+                grid_cp = grid_cp.reshape((8, 3))
+                grid.xyz_box_cached[0] = np.amin(grid_cp, axis = 0)
+                grid.xyz_box_cached[1] = np.amax(grid_cp, axis = 0)
             grid.xyz_box_cached_thoroughly = True
         if local:
             return grid.xyz_box_cached
