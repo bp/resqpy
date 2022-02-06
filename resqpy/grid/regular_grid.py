@@ -164,7 +164,7 @@ class RegularGrid(Grid):
             dxyz = (1.0, 1.0, 1.0)
         if dxyz_dkji is None:
             dxyz_dkji = np.array([[0.0, 0.0, dxyz[2]], [0.0, dxyz[1], 0.0], [dxyz[0], 0.0, 0.0]])
-        self.block_origin = np.array(origin).copy()
+        self.block_origin = np.array(origin).copy() if uuid is None else np.zeros(3)
         self.block_dxyz_dkji = np.array(dxyz_dkji).copy()
         if self.is_aligned is None:
             self._set_is_aligned()
@@ -185,25 +185,33 @@ class RegularGrid(Grid):
         if crs_uuid is None:
             new_crs = rqc.Crs(parent_model, x_offset = origin[0], y_offset = origin[1], z_offset = origin[2])
             shift_origin = False
-            new_crs.create_xml(reuse = True)
+            new_crs.create_xml(reuse = False)
             crs_uuid = new_crs.uuid
         if shift_origin:
             new_crs = rqc.Crs(parent_model, uuid = crs_uuid)
-            crs_uuid = bu.new_uuid()
-            new_crs.uuid = crs_uuid
+            new_crs.uuid = bu.new_uuid()
             new_crs.x_offset += origin[0]
             new_crs.y_offset += origin[1]
             new_crs.z_offset += origin[2]
-            new_crs.create_xml(reuse = True)
+            new_crs.create_xml(reuse = False)
             crs_uuid = new_crs.uuid
         self.crs_uuid = crs_uuid
         self.crs_root = parent_model.root_for_uuid(crs_uuid)
+        assert self.crs_root is not None
 
         if self.uuid is None:
             self.uuid = bu.new_uuid()
 
-    def make_regular_points_cached(self):
-        """Set up the cached points array as an explicit representation of the regular grid geometry."""
+    def make_regular_points_cached(self, apply_origin_offset = True):
+        """Set up the cached points array as an explicit representation of the regular grid geometry.
+
+        arguments:
+           apply_origin_offset (boolean, default True): if True, this method includes the regular grid
+           origin in the calculated points data
+
+        note:
+           if apply_origin_offset is True, the related crs must not store the origin as offset data
+        """
 
         if hasattr(self, 'points_cached') and self.points_cached is not None:
             return
@@ -215,7 +223,8 @@ class RegularGrid(Grid):
             self.points_cached[:, j + 1, 0] = self.points_cached[:, j, 0] + self.block_dxyz_dkji[1]
         for i in range(self.ni):
             self.points_cached[:, :, i + 1] = self.points_cached[:, :, i] + self.block_dxyz_dkji[2]
-        self.points_cached[:, :, :] += self.block_origin
+        if apply_origin_offset:
+            self.points_cached[:, :, :] += self.block_origin
 
     def axial_lengths_kji(self):
         """Returns a triple float being lengths of primary axes (K, J, I) for each cell."""
@@ -481,7 +490,7 @@ class RegularGrid(Grid):
 
         if extra_metadata is None:
             extra_metadata = {}
-        if self.crs_uuid is not None and 'crs uuid' not in extra_metadata:
+        if self.crs_uuid is not None:
             extra_metadata['crs uuid'] = str(self.crs_uuid)
 
         if write_geometry is None:

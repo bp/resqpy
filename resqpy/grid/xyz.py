@@ -138,13 +138,11 @@ def local_to_global_crs(grid,
         flat_a[:, 2] += z_offset
     if global_xy_units is not None:
         crs_xy_units_text = rqet.find_tag(crs_root, 'ProjectedUom').text
-        if crs_xy_units_text in ['ft', 'm']:  # todo: else raise exception
-            bwam.convert_lengths(flat_a[:, 0], crs_xy_units_text, global_xy_units)  # x
-            bwam.convert_lengths(flat_a[:, 1], crs_xy_units_text, global_xy_units)  # y
+        bwam.convert_lengths(flat_a[:, 0], crs_xy_units_text, global_xy_units)  # x
+        bwam.convert_lengths(flat_a[:, 1], crs_xy_units_text, global_xy_units)  # y
     if global_z_units is not None:
         crs_z_units_text = rqet.find_tag(crs_root, 'VerticalUom').text
-        if crs_z_units_text in ['ft', 'm']:  # todo: else raise exception
-            bwam.convert_lengths(flat_a[:, 2], crs_z_units_text, global_z_units)  # z
+        bwam.convert_lengths(flat_a[:, 2], crs_z_units_text, global_z_units)  # z
 
 
 def z_inc_down(grid):
@@ -180,13 +178,11 @@ def global_to_local_crs(grid,
     # todo: check resqml definition for order of rotation and translation and apply rotation if not zero
     if global_xy_units is not None:
         crs_xy_units_text = rqet.find_tag(crs_root, 'ProjectedUom').text
-        if crs_xy_units_text in ['ft', 'm']:  # todo: else raise exception
-            bwam.convert_lengths(flat_a[:, 0], global_xy_units, crs_xy_units_text)  # x
-            bwam.convert_lengths(flat_a[:, 1], global_xy_units, crs_xy_units_text)  # y
+        bwam.convert_lengths(flat_a[:, 0], global_xy_units, crs_xy_units_text)  # x
+        bwam.convert_lengths(flat_a[:, 1], global_xy_units, crs_xy_units_text)  # y
     if global_z_units is not None:
         crs_z_units_text = rqet.find_tag(crs_root, 'VerticalUom').text
-        if crs_z_units_text in ['ft', 'm']:  # todo: else raise exception
-            bwam.convert_lengths(flat_a[:, 2], global_z_units, crs_z_units_text)  # z
+        bwam.convert_lengths(flat_a[:, 2], global_z_units, crs_z_units_text)  # z
     flat_a[:, 0] -= x_offset
     flat_a[:, 1] -= y_offset
     if z_offset != 0.0:
