@@ -478,7 +478,7 @@ class Grid(BaseResqpy):
                                stratigraphy = True,
                                expand_const_arrays = False):
         """Create or append to an hdf5 file.
-        
+
         Writes datasets for the grid geometry (and parent grid mapping) and properties from cached arrays.
         """
         # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
