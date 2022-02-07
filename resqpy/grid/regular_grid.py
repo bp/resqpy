@@ -185,7 +185,7 @@ class RegularGrid(Grid):
         if crs_uuid is None:
             new_crs = rqc.Crs(parent_model, x_offset = origin[0], y_offset = origin[1], z_offset = origin[2])
             shift_origin = False
-            new_crs.create_xml(reuse = False)
+            new_crs.create_xml(reuse = True)
             crs_uuid = new_crs.uuid
         if shift_origin:
             new_crs = rqc.Crs(parent_model, uuid = crs_uuid)
@@ -193,7 +193,7 @@ class RegularGrid(Grid):
             new_crs.x_offset += origin[0]
             new_crs.y_offset += origin[1]
             new_crs.z_offset += origin[2]
-            new_crs.create_xml(reuse = False)
+            new_crs.create_xml(reuse = True)
             crs_uuid = new_crs.uuid
         self.crs_uuid = crs_uuid
         self.crs_root = parent_model.root_for_uuid(crs_uuid)

@@ -155,7 +155,7 @@ def test_add_logs_from_cellio_file(example_model_and_crs):
         'X': [location[0], 25.0, 50, 75, 100, 100],
         'Y': [location[1], 25.0, -50, -75, -100, -100],
         'Z': zs,
-        'WELL': [well_name, well_name, well_name, well_name, well_name, well_name]
+        'WELL': [well_name] * 6
     })
 
     # Create a trajectory from dataframe
