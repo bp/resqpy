@@ -7,7 +7,7 @@ from resqpy.rq_import._import_vdb_ensemble import import_vdb_ensemble
 from resqpy.rq_import._import_nexus import import_nexus
 
 
-@pytest.mark.skip('Blocked by issue #416')
+# @pytest.mark.skip('Blocked by issue #416')
 def test_default_args(tmp_path):
     # Arrange
     ensemble_dir = '../../test_data/wren'
