@@ -2,6 +2,8 @@ import pytest
 import numpy as np
 import resqpy.model as rq
 import resqpy.property as rqp
+import resqpy.olio.xml_et as rqet
+import resqpy.crs as rqc
 import math as maths
 from resqpy.rq_import._import_vdb_ensemble import import_vdb_ensemble
 from resqpy.rq_import._import_nexus import import_nexus
@@ -33,10 +35,10 @@ def test_default_args(tmp_path):
     pc_titles = {pc.title_for_part(part) for part in pc.parts()}
     pc_realization_list = pc.realization_list()
     pk_list = pc.property_kind_list()
-    mean_pv = np.nanmean(pc.single_array_ref(realization = 1, property_kind = 'pore volume'))
+    mean_pv = np.nanmean(pc.single_array_ref(realization=1, property_kind='pore volume'))
     ts_uuid_list = pc.time_series_uuid_list()
     time_index_list = pc.time_index_list()
-    sat_pc = rqp.selective_version_of_collection(pc, property_kind = 'saturation', realization = 2)
+    sat_pc = rqp.selective_version_of_collection(pc, property_kind='saturation', realization=2)
     part = sat_pc.parts()[-1]
     sat_ft = sat_pc.facet_type_for_part(part)
     sat_facet = sat_pc.facet_for_part(part)
@@ -67,6 +69,7 @@ def test_default_args(tmp_path):
     assert sat_title == 'SW'
     assert ftl == ['what']
     assert fl == ['gas', 'oil', 'water']
+    assert grid.has_split_coordinate_lines
 
 
 def test_existing_epc_true(tmp_path):
@@ -74,10 +77,10 @@ def test_existing_epc_true(tmp_path):
     ensemble_dir = '../../test_data/wren'
     case_dir = f'{ensemble_dir}/wren2.vdb'
     epc_file = f'{tmp_path}/test.epc'
-    import_nexus(epc_file[:-4], vdb_file = case_dir, vdb_static_properties = False, vdb_recurrent_properties = False)
+    import_nexus(epc_file[:-4], vdb_file=case_dir, vdb_static_properties=False, vdb_recurrent_properties=False)
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, existing_epc = True)
+    import_vdb_ensemble(epc_file, ensemble_dir, existing_epc=True)
     model = rq.Model(epc_file)
 
     # Assert
@@ -91,13 +94,13 @@ def test_keyword_list(tmp_path):
     keyword_set = {'PVR', 'MDEP', 'KH', 'SW', 'SO', 'P'}
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, keyword_list = keyword_set)
+    import_vdb_ensemble(epc_file, ensemble_dir, keyword_list=keyword_set)
     model = rq.Model(epc_file)
     pc = model.grid().property_collection
     pc_keys = {pc.title_for_part(part) for part in pc.parts()}
 
     # Assert
-    assert set(model.titles(parts_list = pc.parts())) == keyword_set
+    assert set(model.titles(parts_list=pc.parts())) == keyword_set
 
 
 def test_property_kind_list(tmp_path):
@@ -107,7 +110,7 @@ def test_property_kind_list(tmp_path):
     property_kind_set = {'pore volume', 'permeability thickness', 'depth', 'pressure', 'saturation'}
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, property_kind_list = property_kind_set)
+    import_vdb_ensemble(epc_file, ensemble_dir, property_kind_list=property_kind_set)
     model = rq.Model(epc_file)
     pc = model.grid().property_collection
 
@@ -126,8 +129,8 @@ def test_vdb_properties(tmp_path, vdb_static_properties, vdb_recurrent_propertie
     # Act
     import_vdb_ensemble(epc_file,
                         ensemble_dir,
-                        vdb_static_properties = vdb_static_properties,
-                        vdb_recurrent_properties = vdb_recurrent_properties)
+                        vdb_static_properties=vdb_static_properties,
+                        vdb_recurrent_properties=vdb_recurrent_properties)
     model = rq.Model(epc_file)
     pc = model.grid().property_collection
 
@@ -135,63 +138,90 @@ def test_vdb_properties(tmp_path, vdb_static_properties, vdb_recurrent_propertie
     assert pc.number_of_parts() == no_parts_expected
 
 
-@pytest.mark.parametrize("timestep_selection", ['first', 'last', 'first and last', 'all'])
-def test_timestep_collection(tmp_path, timestep_selection):
+@pytest.mark.parametrize("timestep_selection, no_timesteps",
+                         [('first', 1), ('last', 1), ('first and last', 2), ('all', 4)])
+def test_timestep_selection(tmp_path, timestep_selection, no_timesteps):
     # Arrange
-    ensemble_dir = tmp_path
-    epc_file = f'{ensemble_dir}/test.epc'
+    ensemble_dir = '../../test_data/wren'
+    epc_file = f'{tmp_path}/test.epc'
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, timestep_selection = timestep_selection)
+    import_vdb_ensemble(epc_file, ensemble_dir, timestep_selection=timestep_selection, vdb_recurrent_properties=True)
+    model = rq.Model(epc_file)
+    pc = model.grid().property_collection
+    time_index_list = pc.time_index_list()
 
     # Assert
-    pass
+    assert len(time_index_list) == no_timesteps
 
 
-def test_create_property_set_per_realization_false(tmp_path):
+def test_create_property_set_per_realization_true(tmp_path):
     # Arrange
-    ensemble_dir = tmp_path
-    epc_file = f'{ensemble_dir}/test.epc'
+    ensemble_dir = '../../test_data/wren'
+    epc_file = f'{tmp_path}/test.epc'
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, create_property_set_per_realization = False)
+    import_vdb_ensemble(epc_file, ensemble_dir, create_property_set_per_realization=True)
+    model = rq.Model(epc_file)
+    grid = model.grid()
+    property_set_uuids = model.uuids(obj_type='PropertySet', title='realization', title_mode='contains')
 
     # Assert
-    pass
+    assert len(property_set_uuids) == 3
+    for uuid in property_set_uuids:
+        property_set_root = model.root_for_uuid(uuid=uuid)
+        property_set = rqp.PropertyCollection(support=grid, property_set_root=property_set_root)
+        assert property_set.number_of_parts() == 46
 
 
-def test_create_property_set_per_timestep_false(tmp_path):
+def test_create_property_set_per_timestep_true(tmp_path):
     # Arrange
-    ensemble_dir = tmp_path
-    epc_file = f'{ensemble_dir}/test.epc'
+    ensemble_dir = '../../test_data/wren'
+    epc_file = f'{tmp_path}/test.epc'
+    no_parts_expected = [36, 21, 21, 21]
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, create_property_set_per_timestep = False)
+    import_vdb_ensemble(epc_file, ensemble_dir, create_property_set_per_timestep=True)
+    model = rq.Model(epc_file)
+    grid = model.grid()
+    property_set_uuids = model.uuids(obj_type='PropertySet', title='time index', title_mode='contains')
 
     # Assert
-    pass
+    assert len(property_set_uuids) == 4
+    for uuid in property_set_uuids:
+        property_set_root = model.root_for_uuid(uuid=uuid)
+        title = rqet.citation_title_for_node(property_set_root).split()[-1]
+        property_set = rqp.PropertyCollection(support=grid, property_set_root=property_set_root)
+        assert property_set.number_of_parts() == no_parts_expected[int(title)]
 
 
-@pytest.mark.parametrize("resqml_xy_units, resqml_z_units", [('m', 'm'), ('ft', 'ft'), ('m', 'ft')])
+@pytest.mark.parametrize("resqml_xy_units, resqml_z_units", [('m', 'm'), ('ft', 'ft'), ('m', 'ft'), ('ft', 'm')])
 def test_resqml_units(tmp_path, resqml_xy_units, resqml_z_units):
     # Arrange
-    ensemble_dir = tmp_path
-    epc_file = f'{ensemble_dir}/test.epc'
+    ensemble_dir = '../../test_data/wren'
+    epc_file = f'{tmp_path}/test.epc'
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, resqml_xy_units = resqml_xy_units, resqml_z_units = resqml_z_units)
+    import_vdb_ensemble(epc_file, ensemble_dir, resqml_xy_units=resqml_xy_units, resqml_z_units=resqml_z_units)
+    model = rq.Model(epc_file)
+    crs_uuid = model.uuid(obj_type='LocalDepth3dCrs')
+    crs = rqc.Crs(model, uuid=crs_uuid)
 
+    # todo: could check grid point values are being converted
     # Assert
-    pass
+    assert crs.xy_units == resqml_xy_units
+    assert crs.z_units == resqml_z_units
 
 
 def test_split_pillars_false(tmp_path):
     # Arrange
-    ensemble_dir = tmp_path
-    epc_file = f'{ensemble_dir}/test.epc'
+    ensemble_dir = '../../test_data/wren'
+    epc_file = f'{tmp_path}/test.epc'
 
     # Act
-    import_vdb_ensemble(epc_file, ensemble_dir, split_pillars = False)
+    import_vdb_ensemble(epc_file, ensemble_dir, split_pillars=False)
+    model = rq.Model(epc_file)
+    grid = model.grid()
 
     # Assert
-    pass
+    assert not grid.has_split_coordinate_lines
