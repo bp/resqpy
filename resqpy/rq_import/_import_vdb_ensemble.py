@@ -243,13 +243,17 @@ def import_vdb_ensemble(
                 for keyword in props:
                     if keyword_list is not None and keyword not in keyword_list:
                         continue
-                    if property_kind_list is not None:
-                        prop_kind, _, _ = rp.property_kind_and_facet_from_keyword(keyword)
-                        if prop_kind not in property_kind_list and prop_kind not in ['active', 'region initialization']:
-                            continue
+                    prop_kind, facet_type, facet = rp.property_kind_and_facet_from_keyword(keyword)
+                    if property_kind_list is not None and prop_kind not in property_kind_list and prop_kind not in [
+                            'active', 'region initialization'
+                    ]:
+                        continue
                     prop_import_collection.import_vdb_static_property_to_cache(vdbase,
                                                                                keyword,
-                                                                               realization = realisation)
+                                                                               realization = realisation,
+                                                                               property_kind = prop_kind,
+                                                                               facet_type = facet_type,
+                                                                               facet = facet)
                 if decoarsen:
                     decoarsen_array = prop_import_collection.decoarsen_imported_list()
                     if decoarsen_array is not None:
@@ -294,16 +298,18 @@ def import_vdb_ensemble(
                                 continue
                             if keyword_list is not None and keyword not in keyword_list:
                                 continue
-                            if property_kind_list is not None:
-                                prop_kind, _, _ = rp.property_kind_and_facet_from_keyword(keyword)
-                                if prop_kind not in property_kind_list:
-                                    continue
+                            prop_kind, facet_type, facet = rp.property_kind_and_facet_from_keyword(keyword)
+                            if property_kind_list is not None and prop_kind not in property_kind_list:
+                                continue
                             step_import_collection.import_vdb_recurrent_property_to_cache(
                                 vdbase,
                                 r_timestep_number,
                                 keyword,
                                 time_index = tni,  # index into recur_time_series
-                                realization = realisation)
+                                realization = realisation,
+                                property_kind = prop_kind,
+                                facet_type = facet_type,
+                                facet = facet)
                     if decoarsen_array is not None:
                         step_import_collection.decoarsen_imported_list(decoarsen_array = decoarsen_array)
                     # extend hdf5 with cached arrays for this timestep
