@@ -387,8 +387,8 @@ class GridSkin:
     def _make_k_gap_surfaces(self, quad_triangles = True):
         """Returns a list of newly created surfaces representing top and base of each k gap."""
 
-        k_gap_surf_list = [
-        ]  # list of layer face surfaces, 2 per gap (top of gap, ie. base of layer above, then base of gap)
+        # list of layer face surfaces, 2 per gap (top of gap, ie. base of layer above, then base of gap)
+        k_gap_surf_list = []
         self.k_gap_after_layer_list = []
         if self.k_gaps > 0:
             for k0 in range(self.grid.nk - 1):
@@ -456,18 +456,18 @@ def generate_untorn_surface_for_layer_interface(grid,
         skirted_mesh = np.empty((mesh.shape[0] + 2, mesh.shape[1] + 2, 3))
         skirted_mesh[1:-1, 1:-1, :] = mesh
         # fill border values (other than corners)
+        # yaml: disable
         for j in range(1, mesh.shape[0] + 1):
-            skirted_mesh[j,
-                         0, :] = skirted_mesh[j, 1] + border * vec.unit_vector(skirted_mesh[j, 1] - skirted_mesh[j, 2])
-            skirted_mesh[j,
-                         -1, :] = skirted_mesh[j,
-                                               -2] + border * vec.unit_vector(skirted_mesh[j, -2] - skirted_mesh[j, -3])
+            skirted_mesh[j, 0, :] =  \
+                skirted_mesh[j, 1] + border * vec.unit_vector(skirted_mesh[j, 1] - skirted_mesh[j, 2])
+            skirted_mesh[j, -1, :] =  \
+                skirted_mesh[j, -2] + border * vec.unit_vector(skirted_mesh[j, -2] - skirted_mesh[j, -3])
         for i in range(1, mesh.shape[1] + 1):
-            skirted_mesh[0,
-                         i, :] = skirted_mesh[1, i] + border * vec.unit_vector(skirted_mesh[1, i] - skirted_mesh[2, i])
-            skirted_mesh[-1,
-                         i, :] = skirted_mesh[-2,
-                                              i] + border * vec.unit_vector(skirted_mesh[-2, i] - skirted_mesh[-3, i])
+            skirted_mesh[0, i, :] =  \
+                skirted_mesh[1, i] + border * vec.unit_vector(skirted_mesh[1, i] - skirted_mesh[2, i])
+            skirted_mesh[-1, i, :] =  \
+                skirted_mesh[-2, i] + border * vec.unit_vector(skirted_mesh[-2, i] - skirted_mesh[-3, i])
+        # yaml: enable
         # fill in corner values
         skirted_mesh[0, 0, :] = skirted_mesh[0, 1] + skirted_mesh[1, 0] - skirted_mesh[1, 1]
         skirted_mesh[0, -1, :] = skirted_mesh[0, -2] + skirted_mesh[1, -1] - skirted_mesh[1, -2]
