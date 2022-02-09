@@ -215,7 +215,7 @@ def length_unit_conversion_applicable(keyword):
     return wellspec_dict[keyword][4]
 
 
-def load_wellspecs(wellspec_file, well = None, column_list = []):
+def load_wellspecs(wellspec_file, well=None, column_list=[]):
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
     args:
@@ -260,7 +260,7 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
             line = kf.strip_trailing_comment(fp.readline()).upper()
             columns_present = line.split()
             if selecting:
-                column_map = np.full((len(column_list),), -1, dtype = int)
+                column_map = np.full((len(column_list),), -1, dtype=int)
                 for i in range(len(column_list)):
                     column = column_list[i].upper()
                     if column in columns_present:
@@ -302,7 +302,8 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                             data[col].extend([v])
                         else:
                             data[col].extend([wellspec_dtype[col](v)])
-            df = pd.DataFrame(data, columns = df_col)
+            data = {k: v for k, v in data.items() if v}
+            df = pd.DataFrame(data, columns=df_col)
             if well:
                 well_dict[well] = df
                 break  # NB. if more than one table for a well, this function returns first, Nexus uses last
