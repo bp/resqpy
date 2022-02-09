@@ -1,4 +1,4 @@
-from resqpy.grid.write_nexus_corp import write_nexus_corp
+from resqpy.grid._write_nexus_corp import write_nexus_corp
 from pytest_mock import MockerFixture
 from typing import List
 

@@ -2,7 +2,7 @@
 
 import warnings
 
-import resqpy.grid.points_functions as pf
+import resqpy.grid._points_functions as pf
 import resqpy.property.property_kind as pk
 
 

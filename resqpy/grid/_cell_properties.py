@@ -9,7 +9,7 @@ import numpy as np
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.volume as vol
 
-from .defined_geometry import cell_geometry_is_defined
+from ._defined_geometry import cell_geometry_is_defined
 
 
 def thickness(grid,

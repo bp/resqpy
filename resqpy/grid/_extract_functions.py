@@ -8,8 +8,8 @@ import resqpy.olio.fine_coarse as fc
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
-from .intervals_info import IntervalsInfo
-from .defined_geometry import cell_geometry_is_defined_ref
+from ._intervals_info import IntervalsInfo
+from ._defined_geometry import cell_geometry_is_defined_ref
 
 log = logging.getLogger(__name__)
 

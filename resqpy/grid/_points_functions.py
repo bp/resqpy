@@ -12,7 +12,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
-from .defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defined, geometry_defined_for_all_cells, \
+from ._defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defined, geometry_defined_for_all_cells, \
     geometry_defined_for_all_pillars
 
 
