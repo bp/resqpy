@@ -1,4 +1,4 @@
-"""mesh.py: surface class based on resqml standard."""
+"""_mesh.py: surface class based on resqml standard."""
 
 version = '4th November 2021'
 
@@ -20,8 +20,8 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
-from .base_surface import BaseSurface
-from .surface import Surface
+from ._base_surface import BaseSurface
+from ._surface import Surface
 
 
 class Mesh(BaseSurface):
@@ -31,23 +31,23 @@ class Mesh(BaseSurface):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
-                 uuid = None,
-                 mesh_file = None,
-                 mesh_format = None,
-                 mesh_flavour = 'explicit',
-                 xyz_values = None,
-                 nj = None,
-                 ni = None,
-                 origin = None,
-                 dxyz_dij = None,
-                 z_values = None,
-                 z_supporting_mesh_uuid = None,
-                 surface_role = 'map',
-                 crs_uuid = None,
-                 title = None,
-                 originator = None,
-                 extra_metadata = None):
+                 root_node=None,
+                 uuid=None,
+                 mesh_file=None,
+                 mesh_format=None,
+                 mesh_flavour='explicit',
+                 xyz_values=None,
+                 nj=None,
+                 ni=None,
+                 origin=None,
+                 dxyz_dij=None,
+                 z_values=None,
+                 z_supporting_mesh_uuid=None,
+                 surface_role='map',
+                 crs_uuid=None,
+                 title=None,
+                 originator=None,
+                 extra_metadata=None):
         """Initialises a Mesh object from xml, or a regular mesh from arguments.
 
         arguments:
@@ -119,12 +119,12 @@ class Mesh(BaseSurface):
         self.crs_uuid = crs_uuid
         self.represented_interpretation_root = None
 
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+        super().__init__(model=parent_model,
+                         uuid=uuid,
+                         title=title,
+                         originator=originator,
+                         extra_metadata=extra_metadata,
+                         root_node=root_node)
 
         self.crs_root = None if self.crs_uuid is None else self.model.root_for_uuid(self.crs_uuid)
 
@@ -166,7 +166,7 @@ class Mesh(BaseSurface):
         self.nj = nj
         self.ni = ni
         self.regular_origin = origin
-        self.regular_dxyz_dij = np.array(dxyz_dij, dtype = float)
+        self.regular_dxyz_dij = np.array(dxyz_dij, dtype=float)
         assert self.crs_uuid is not None, 'crs uuid missing'
         self.flavour = 'regular'
         self.full_array = None
@@ -182,7 +182,7 @@ class Mesh(BaseSurface):
         self.nj = nj
         self.ni = ni
         self.ref_uuid = z_supporting_mesh_uuid
-        self.ref_mesh = Mesh(self.model, uuid = z_supporting_mesh_uuid)
+        self.ref_mesh = Mesh(self.model, uuid=z_supporting_mesh_uuid)
         assert self.ref_mesh is not None
         assert self.ref_mesh.nj == nj and self.ref_mesh.ni == ni
         self.full_array = self.ref_mesh.full_array_ref().copy()
@@ -198,7 +198,7 @@ class Mesh(BaseSurface):
         self.nj = nj
         self.ni = ni
         self.regular_origin = origin
-        self.regular_dxyz_dij = np.array(dxyz_dij, dtype = float)
+        self.regular_dxyz_dij = np.array(dxyz_dij, dtype=float)
         assert self.crs_uuid is not None, 'crs uuid missing'
 
     def __load_from_xyz_values(self, xyz_values):
@@ -214,12 +214,12 @@ class Mesh(BaseSurface):
         # load an explicit mesh from an ascii file in RMS text or zmap format
         assert mesh_format in ['rms', 'roxar', 'zmap']  # 'roxar' is treated synonymously with 'rms'
         assert mesh_flavour in ['explicit', 'regular', 'reg&z', 'ref&z']
-        x, y, z = read_mesh(mesh_file, format = mesh_format)
+        x, y, z = read_mesh(mesh_file, format=mesh_format)
         self.flavour = mesh_flavour
         self.nj = z.shape[0]
         self.ni = z.shape[1]
         assert self.nj > 1 and self.ni > 1
-        self.full_array = np.stack((x, y, z), axis = -1)
+        self.full_array = np.stack((x, y, z), axis=-1)
         if mesh_flavour != 'explicit':
             min_x = x.flatten()[0]
             max_x = x.flatten()[-1]
@@ -227,17 +227,17 @@ class Mesh(BaseSurface):
             max_y = y.flatten()[-1]
             dxyz_dij = np.array([[(max_x - min_x) /
                                   (self.ni - 1), 0.0, 0.0], [0.0, (max_y - min_y) / (self.nj - 1), 0.0]],
-                                dtype = float)
+                                dtype=float)
             if mesh_flavour in ['regular', 'reg&z']:
                 self.regular_origin = (min_x, min_y, 0.0)
                 self.regular_dxyz_dij = dxyz_dij
             elif mesh_flavour == 'ref&z':
                 self.ref_mesh = Mesh(self.model,
-                                     ni = self.ni,
-                                     nj = self.nj,
-                                     origin = self.regular_origin,
-                                     dxyz_dij = dxyz_dij,
-                                     crs_uuid = crs_uuid)
+                                     ni=self.ni,
+                                     nj=self.nj,
+                                     origin=self.regular_origin,
+                                     dxyz_dij=dxyz_dij,
+                                     crs_uuid=crs_uuid)
                 assert self.ref_mesh is not None
                 assert self.ref_mesh.nj == nj and self.ref_mesh.ni == ni
             else:
@@ -275,7 +275,7 @@ class Mesh(BaseSurface):
 
     def __load_from_xml_explicit(self, point_node):
         self.flavour = 'explicit'
-        self.explicit_h5_key_pair = self.model.h5_uuid_and_path_for_node(point_node, tag = 'Coordinates')
+        self.explicit_h5_key_pair = self.model.h5_uuid_and_path_for_node(point_node, tag='Coordinates')
         # load full_array on demand later (see full_array_ref() method)
 
     def __load_from_xml_refz(self, support_geom_node):
@@ -283,7 +283,7 @@ class Mesh(BaseSurface):
         # assert rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray'  # only this supported for now
         self.ref_uuid = rqet.find_nested_tags_text(support_geom_node, ['SupportingRepresentation', 'UUID'])
         assert self.ref_uuid, 'missing supporting representation info in xml for z-value mesh'
-        self.ref_mesh = Mesh(self.model, uuid = self.ref_uuid)
+        self.ref_mesh = Mesh(self.model, uuid=self.ref_uuid)
         assert self.nj == self.ref_mesh.nj and self.ni == self.ref_mesh.ni  # only this supported for now
         niosr_node = rqet.find_tag(support_geom_node, 'NodeIndicesOnSupportingRepresentation')
         start_value = rqet.find_tag_int(niosr_node, 'StartValue')
@@ -356,7 +356,7 @@ class Mesh(BaseSurface):
         elif flavour == 'Point3dZValueArray':
             # note: only simple, full use of supporting mesh is handled at present
             z_ref_node = rqet.find_tag(point_node, 'ZValues')
-            self.ref_z_h5_key_pair = self.model.h5_uuid_and_path_for_node(z_ref_node, tag = 'Values')
+            self.ref_z_h5_key_pair = self.model.h5_uuid_and_path_for_node(z_ref_node, tag='Values')
             support_geom_node = rqet.find_tag(point_node, 'SupportingGeometry')
             if rqet.node_type(support_geom_node) == 'Point3dFromRepresentationLatticeArray':
                 self.__load_from_xml_refz(support_geom_node)
@@ -377,23 +377,23 @@ class Mesh(BaseSurface):
         assert self.explicit_h5_key_pair is not None, 'h5 key pair not established for mesh'
         try:
             self.model.h5_array_element(self.explicit_h5_key_pair,
-                                        cache_array = True,
-                                        object = self,
-                                        array_attribute = 'full_array',
-                                        dtype = 'float')
+                                        cache_array=True,
+                                        object=self,
+                                        array_attribute='full_array',
+                                        dtype='float')
             # todo: could extend with z values of zero if only xy present?
         except Exception:
             log.exception('hdf5 points failure for mesh')
 
     def __full_array_ref_regular(self):
         self.full_array = np.empty((self.nj, self.ni, 3))
-        x_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 0], num = self.nj)
-        y_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 1], num = self.nj)
-        z_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 2], num = self.nj)
-        x_full = np.linspace(x_i0, x_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 0], num = self.ni, axis = -1)
-        y_full = np.linspace(y_i0, y_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 1], num = self.ni, axis = -1)
-        z_full = np.linspace(z_i0, z_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 2], num = self.ni, axis = -1)
-        self.full_array = np.stack((x_full, y_full, z_full), axis = -1) + self.regular_origin
+        x_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 0], num=self.nj)
+        y_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 1], num=self.nj)
+        z_i0 = np.linspace(0.0, (self.nj - 1) * self.regular_dxyz_dij[1, 2], num=self.nj)
+        x_full = np.linspace(x_i0, x_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 0], num=self.ni, axis=-1)
+        y_full = np.linspace(y_i0, y_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 1], num=self.ni, axis=-1)
+        z_full = np.linspace(z_i0, z_i0 + (self.ni - 1) * self.regular_dxyz_dij[0, 2], num=self.ni, axis=-1)
+        self.full_array = np.stack((x_full, y_full, z_full), axis=-1) + self.regular_origin
 
         if self.flavour == 'reg&z':  # overwrite regular z values with explicitly stored z values
             self.__full_array_ref_regz()
@@ -402,10 +402,10 @@ class Mesh(BaseSurface):
         assert self.ref_z_h5_key_pair is not None, 'h5 key pair missing for mesh z values'
         try:
             self.model.h5_array_element(self.ref_z_h5_key_pair,
-                                        cache_array = True,
-                                        object = self,
-                                        array_attribute = 'temp_z',
-                                        dtype = 'float')
+                                        cache_array=True,
+                                        object=self,
+                                        array_attribute='temp_z',
+                                        dtype='float')
         except Exception:
             log.exception('hdf5 failure for mesh z values')
         self.full_array[..., 2] = self.temp_z
@@ -414,16 +414,16 @@ class Mesh(BaseSurface):
     def __full_array_ref_refz(self):
         # load array from referenced mesh and overwrite z values
         if self.ref_mesh is None:
-            self.ref_mesh = Mesh(self.model, uuid = self.ref_uuid)
+            self.ref_mesh = Mesh(self.model, uuid=self.ref_uuid)
             assert self.ref_mesh is not None, 'failed to instantiate object for referenced mesh'
         self.full_array = self.ref_mesh.full_array_ref().copy()
         assert self.ref_z_h5_key_pair is not None, 'h5 key pair missing for mesh z values'
         try:
             self.model.h5_array_element(self.ref_z_h5_key_pair,
-                                        cache_array = True,
-                                        object = self,
-                                        array_attribute = 'temp_z',
-                                        dtype = 'float')
+                                        cache_array=True,
+                                        object=self,
+                                        array_attribute='temp_z',
+                                        dtype='float')
         except Exception:
             log.exception('hdf5 failure for mesh z values')
         self.full_array[..., 2] = self.temp_z
@@ -451,12 +451,12 @@ class Mesh(BaseSurface):
 
         return self.full_array
 
-    def surface(self, quad_triangles = False):
+    def surface(self, quad_triangles=False):
         """Returns a surface object generated from this mesh."""
 
-        return Surface(self.model, mesh = self, quad_triangles = quad_triangles)
+        return Surface(self.model, mesh=self, quad_triangles=quad_triangles)
 
-    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
+    def write_hdf5(self, file_name=None, mode='a', use_xy_only=False):
         """Create or append to an hdf5 file, writing datasets for the mesh depending on flavour."""
 
         if not file_name:
@@ -477,7 +477,7 @@ class Mesh(BaseSurface):
             h5_reg.register_dataset(self.uuid, 'zvalues', a[..., 2])
         else:
             log.error('bad mesh flavour when writing hdf5 array')
-        h5_reg.write(file_name, mode = mode)
+        h5_reg.write(file_name, mode=mode)
 
     def __create_xml_regular(self, p_node):
 
@@ -550,8 +550,8 @@ class Mesh(BaseSurface):
         self.model.create_ref_node('SupportingRepresentation',
                                    rqet.find_nested_tags_text(ref_root, ['Citation', 'Title']),
                                    self.ref_uuid,
-                                   content_type = 'Grid2dRepresentation',
-                                   root = sg_node)
+                                   content_type='Grid2dRepresentation',
+                                   root=sg_node)
 
         zv_node = rqet.SubElement(p_node, ns['resqml2'] + 'ZValues')
         zv_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
@@ -561,7 +561,7 @@ class Mesh(BaseSurface):
         v_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         v_node.text = '\n'
 
-        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'zvalues', root = v_node)
+        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'zvalues', root=v_node)
 
     def __create_xml_regandz(self, p_node, ext_uuid):
 
@@ -611,7 +611,7 @@ class Mesh(BaseSurface):
         v_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         v_node.text = '\n'
 
-        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'zvalues', root = v_node)
+        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'zvalues', root=v_node)
 
     def __create_xml_explicit(self, p_node, ext_uuid, use_xy_only):
         assert ext_uuid is not None
@@ -625,7 +625,7 @@ class Mesh(BaseSurface):
         coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         coords.text = '\n'
 
-        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points', root = coords)
+        self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points', root=coords)
 
     def __create_xml_basics(self, g2d_node):
         if self.represented_interpretation_root is not None:
@@ -635,8 +635,8 @@ class Mesh(BaseSurface):
             self.model.create_ref_node('RepresentedInterpretation',
                                        rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                        interp_uuid,
-                                       content_type = self.model.type_of_part(interp_part),
-                                       root = g2d_node)
+                                       content_type=self.model.type_of_part(interp_part),
+                                       root=g2d_node)
 
         role_node = rqet.SubElement(g2d_node, ns['resqml2'] + 'SurfaceRole')
         role_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'SurfaceRole')
@@ -662,7 +662,7 @@ class Mesh(BaseSurface):
         geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
         geom.text = '\n'
 
-        self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
+        self.model.create_crs_reference(crs_uuid=self.crs_uuid, root=geom)
 
         p_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
         p_node.text = '\n'
@@ -679,20 +679,20 @@ class Mesh(BaseSurface):
             if ref_root is not None:  # used for ref&z flavour
                 self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', ref_root, 'sourceObject')
             if self.flavour == 'ref&z' or self.flavour == 'explicit' or self.flavour == 'reg&z':
-                ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
+                ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed=False)
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(g2d_node, 'mlToExternalPartProxy', ext_node,
                                                           'externalPartProxyToMl')
 
     def create_xml(self,
-                   ext_uuid = None,
-                   crs_root = None,
-                   use_xy_only = False,
-                   add_as_part = True,
-                   add_relationships = True,
-                   root = None,
-                   title = None,
-                   originator = None):
+                   ext_uuid=None,
+                   crs_root=None,
+                   use_xy_only=False,
+                   add_as_part=True,
+                   add_relationships=True,
+                   root=None,
+                   title=None,
+                   originator=None):
         """Creates a grid 2d representation xml node from this mesh object and optionally adds as part of model.
 
         arguments:
@@ -721,7 +721,7 @@ class Mesh(BaseSurface):
         if ext_uuid is None and self.flavour != 'regular':
             ext_uuid = self.model.h5_uuid()
 
-        g2d_node = super().create_xml(add_as_part = False, title = title, originator = originator)
+        g2d_node = super().create_xml(add_as_part=False, title=title, originator=originator)
 
         p_node = self.__create_xml_basics(g2d_node)
 
