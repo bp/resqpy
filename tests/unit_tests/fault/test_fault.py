@@ -17,9 +17,9 @@ import resqpy.property as rqp
 
 # yapf: disable
 @pytest.mark.parametrize('inc_list,tmult_dict,expected_mult',
-   [(['fault_1.inc'], {}, {'fault_1': 1}),
-    (['fault_1.inc'], {'fault_1': 2}, {'fault_1': 2}),
-    (['fault_1.inc', 'fault_2.inc'], {'fault_1': 2}, {'fault_1': 2, 'fault_2': 2})])
+                         [(['fault_1.inc'], {}, {'fault_1': 1}),
+                          (['fault_1.inc'], {'fault_1': 2}, {'fault_1': 2}),
+                          (['fault_1.inc', 'fault_2.inc'], {'fault_1': 2}, {'fault_1': 2, 'fault_2': 2})])
 # yapf: enable
 def test_add_connection_set_and_tmults(example_model_with_properties, test_data_path, inc_list, tmult_dict,
                                        expected_mult):
@@ -34,13 +34,13 @@ def test_add_connection_set_and_tmults(example_model_with_properties, test_data_
     reload_model = rq.Model(epc_file = model.epc_file)
 
     faults = reload_model.parts_list_of_type('obj_FaultInterpretation')
-    assert len(faults) == len(expected_mult.keys()),  \
+    assert len(faults) == len(expected_mult.keys()), \
         f'Expected a {len(expected_mult.keys())} faults, found {len(faults)}'
     for fault in faults:
         metadata = rqet.load_metadata_from_xml(reload_model.root_for_part(fault))
         title = reload_model.citation_title_for_part(fault)
         expected_str = str(float(expected_mult[title]))
-        assert metadata["Transmissibility multiplier"] == expected_str,  \
+        assert metadata["Transmissibility multiplier"] == expected_str, \
             f'Expected mult for fault {title} to be {expected_str}, found {metadata["Transmissibility multiplier"]}'
 
     # check that a transmissibility multiplier property has been created
@@ -55,7 +55,7 @@ def test_add_connection_set_and_tmults(example_model_with_properties, test_data_
     assert a is not None and a.ndim == 1
     expect = [x for x in expected_mult.values()]
     assert all([v in expect for v in a])
-    # see if a local property kind has been set up correctly
+    #  see if a local property kind has been set up correctly
     pku = pc.local_property_kind_uuid(part)
     assert pku is not None
     pk = rqp.PropertyKind(reload_model, uuid = pku)
@@ -64,7 +64,6 @@ def test_add_connection_set_and_tmults(example_model_with_properties, test_data_
 
 
 def test_gcs_property_inheritance(tmp_path):
-
     epc = os.path.join(tmp_path, 'gcs_prop_inherit.epc')
 
     model = rq.Model(epc, new_epc = True, create_basics = True, create_hdf5_ext = True)
@@ -89,7 +88,7 @@ def test_gcs_property_inheritance(tmp_path):
     # check that connection set has the right number of cell face pairs
     assert gcs.count == g.nk * ((g.nj - 1) + (g.ni - 1))
 
-    # create a transmissibility multiplier property
+    #  create a transmissibility multiplier property
     tm = np.arange(gcs.count).astype(float)
     if gcs.property_collection is None:
         gcs.property_collection = rqp.PropertyCollection()
@@ -148,7 +147,6 @@ def test_gcs_property_inheritance(tmp_path):
 
 
 def test_pinchout_and_k_gap_gcs(tmp_path):
-
     epc = os.path.join(tmp_path, 'gcs_pinchout_k_gap.epc')
     model = rq.new_model(epc)
 
@@ -242,7 +240,6 @@ def test_pinchout_and_k_gap_gcs(tmp_path):
 
 
 def test_two_fault_gcs(tmp_path):
-
     epc = make_epc_with_gcs(tmp_path)
 
     # re-open the model and check the gcs
@@ -274,7 +271,6 @@ def test_two_fault_gcs(tmp_path):
 
 
 def test_feature_inheritance(tmp_path):
-
     epc = make_epc_with_gcs(tmp_path)
 
     # introduce a split version of the grid
@@ -360,7 +356,6 @@ def test_feature_inheritance(tmp_path):
 
 
 def test_two_grid_gcs(tmp_path):
-
     epc = make_epc_with_abutting_grids(tmp_path)
 
     # re-open the model and establish the abutting grid connection set
@@ -390,7 +385,6 @@ def test_two_grid_gcs(tmp_path):
 
 
 def make_epc_with_gcs(tmp_path):
-
     epc = os.path.join(tmp_path, 'two_fault.epc')
     model = rq.new_model(epc)
 
@@ -402,31 +396,18 @@ def make_epc_with_gcs(tmp_path):
     gcs = rqf.GridConnectionSet(model, grid = g)
 
     # prepare two named faults as a dataframe
-    df = pd.DataFrame(columns = ['name', 'face', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult'])
-    df = df.append({
-        'name': 'F1',
-        'face': 'I+',
-        'i1': 1,
-        'i2': 1,
-        'j1': 0,
-        'j2': 3,
-        'k1': 0,
-        'k2': 4,
-        'mult': 0.1
-    },
-                   ignore_index = True)
-    df = df.append({
-        'name': 'F2',
-        'face': 'J-',
-        'i1': 0,
-        'i2': 2,
-        'j1': 2,
-        'j2': 2,
-        'k1': 0,
-        'k2': 4,
-        'mult': 0.05
-    },
-                   ignore_index = True)
+    data = {
+        'name': ['F1', 'F2'],
+        'face': ['I+', 'J-'],
+        'i1': [1, 0],
+        'i2': [1, 2],
+        'j1': [0, 2],
+        'j2': [3, 2],
+        'k1': [0, 0],
+        'k2': [4, 4],
+        'mult': [0.1, 0.05]
+    }
+    df = pd.DataFrame(data)
 
     # set grid connection set from dataframe
     gcs.set_pairs_from_faces_df(df,
@@ -460,7 +441,6 @@ def make_epc_with_gcs(tmp_path):
 
 
 def make_epc_with_abutting_grids(tmp_path):
-
     epc = os.path.join(tmp_path, 'abutting_grids.epc')
     model = rq.new_model(epc)
 
@@ -480,8 +460,8 @@ def make_epc_with_abutting_grids(tmp_path):
     gcs.grid_index_pairs = np.zeros((6, 2), dtype = int)
     gcs.grid_index_pairs[:, 1] = 1
     gcs.face_index_pairs = np.empty((6, 2), dtype = int)
-    gcs.face_index_pairs[:, 0] = gcs.face_index_map[1, 1]  # J+
-    gcs.face_index_pairs[:, 1] = gcs.face_index_map[1, 0]  # J-
+    gcs.face_index_pairs[:, 0] = gcs.face_index_map[1, 1]  #  J+
+    gcs.face_index_pairs[:, 1] = gcs.face_index_map[1, 0]  #  J-
     gcs.cell_index_pairs = np.empty((6, 2), dtype = int)
     cell = 0
     for k in range(3):
@@ -489,7 +469,7 @@ def make_epc_with_abutting_grids(tmp_path):
             gcs.cell_index_pairs[cell, 0] = g0.natural_cell_index((k + 2, 3, i + 1))
             gcs.cell_index_pairs[cell, 1] = g1.natural_cell_index((k, 0, i))
             cell += 1
-    # leave optional feature list & indices as None
+    #  leave optional feature list & indices as None
 
     # save the grid connection set
     gcs.write_hdf5()

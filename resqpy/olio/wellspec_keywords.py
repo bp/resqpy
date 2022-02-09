@@ -37,91 +37,93 @@ wellspec_dict: Dict[str, Tuple[int, int, int, Any, bool]] = {}  # mapping wellsp
 # NB: changing entries in this list will usually require other code change elsewhere
 # second element of tuple should be >= first element
 # yapf: disable
-wellspec_dict['IW']       = (0, wk_required,  wk_required,  None,   False)
-wellspec_dict['JW']       = (0, wk_required,  wk_required,  None,   False)
-wellspec_dict['L']        = (0, wk_required,  wk_required,  None,   False)
-wellspec_dict['GRID']     = (0, wk_preferred, wk_required,  None,   False)  # or use main grid name as default
-wellspec_dict['RADW']     = (0, wk_preferred, wk_required,  0.25,   True)   # use pagoda spec value for i.p. perf
-wellspec_dict['KHMULT']   = (0, wk_okay,      wk_okay,      1.0,    False)  # or use 'NA" as default?
-wellspec_dict['STAT']     = (0, wk_okay,      wk_okay,      'ON',   False)
-wellspec_dict['ANGLA']    = (0, wk_preferred, wk_required,  0.0,    False)
-wellspec_dict['ANGLV']    = (0, wk_preferred, wk_required,  0.0,    False)  # default for other perfs (vertical)
-wellspec_dict['LENGTH']   = (0, wk_okay,      wk_okay,      None,   True)   # derive default from cell size
-wellspec_dict['KH']       = (0, wk_okay,      wk_okay,      None,   True)   # althernative to LENGTH (one required)
-wellspec_dict['SKIN']     = (0, wk_okay,      wk_okay,      0.0,    False)
-wellspec_dict['PPERF']    = (0, wk_okay,      wk_okay,      1.0,    False)
-wellspec_dict['ANGLE']    = (0, wk_okay,      wk_okay,      360.0,  False)
-wellspec_dict['IRELPM']   = (0, wk_okay,      wk_okay,      None,   False)  # default fracture IRELPM for i.p. perf
-wellspec_dict['RADB']     = (0, wk_okay,      wk_okay,      None,   True)   # calculate from cell size & k_align, k_v
-wellspec_dict['WI']       = (0, wk_okay,      wk_okay,      None,   False)  # caluclate from radb, radw & skin
-wellspec_dict['K']        = (0, wk_preferably_not, wk_okay, None,   False)  # derive from conductivity for i.p. perf?
-wellspec_dict['LAYER']    = (0, wk_preferably_not, wk_okay, None,   False)  # use LGR i.p. layer for i.p. perf
-wellspec_dict['DEPTH']    = (0, wk_okay,      wk_okay,      '#',    True)   # # causes nexus to use cell depth
-wellspec_dict['X']        = (0, wk_okay,      wk_okay,      None,   True)   # use cell X for i.p. perf
-wellspec_dict['Y']        = (0, wk_okay,      wk_okay,      None,   True)   # use cell Y for i.p. perf
-wellspec_dict['CELL']     = (0, wk_banned,    wk_banned,    None,   False)  # CELL is for unstructured grids
-wellspec_dict['DTOP']     = (0, wk_banned,    wk_banned,    None,   True)   # not compatible with ANGLA, ANGLV
-wellspec_dict['DBOT']     = (0, wk_banned,    wk_banned,    None,   True)   # not compatible with ANGLA, ANGLV
-wellspec_dict['RADBP']    = (0, wk_preferably_not, wk_okay, None,   True)   # calculate as for RADB
-wellspec_dict['RADWP']    = (0, wk_preferably_not, wk_okay, None,   True)   # use pagoda wellbore radius
-wellspec_dict['PORTYPE']  = (0, wk_banned,    wk_banned,    None,   False)  # dual porosity: todo: need to check values
-wellspec_dict['FM']       = (0, wk_preferably_not, wk_okay, 0.0,    False)  # dual porosity: connection to fracture?
-wellspec_dict['MD']       = (0, wk_preferably_not, wk_okay, 'NA',   False)
-wellspec_dict['PARENT']   = (0, wk_preferably_not, wk_okay, 'NA',   False)
-wellspec_dict['MDCON']    = (0, wk_preferably_not, wk_okay, 'NA',   False)
-wellspec_dict['SECT']     = (0, wk_preferably_not, wk_okay, 1,      False)
-wellspec_dict['FLOWSECT'] = (0, wk_preferably_not, wk_okay, 1,      False)
-wellspec_dict['ZONE']     = (0, wk_preferably_not, wk_okay, 1,      False)
-wellspec_dict['GROUP']    = (0, wk_preferably_not, wk_okay, 1,      False)
-wellspec_dict['TEMP']     = (0, wk_preferably_not, wk_okay, 'NA',   False)
-wellspec_dict['IPTN']     = (0, wk_preferably_not, wk_okay, 1,      False)  # pattern
-wellspec_dict['D']        = (0, wk_preferably_not, wk_okay, 'NA',   False)  # non D'Arcy flow
-wellspec_dict['ND']       = (0, wk_preferably_not, wk_okay, 'NA',   False)  # non D'Arcy flow
-wellspec_dict['DZ']       = (0, wk_preferably_not, wk_okay, None,   True)   # non D'Arcy flow; use LENGTH value? or DZ
+wellspec_dict['IW'] = (0, wk_required, wk_required, None, False)
+wellspec_dict['JW'] = (0, wk_required, wk_required, None, False)
+wellspec_dict['L'] = (0, wk_required, wk_required, None, False)
+wellspec_dict['GRID'] = (0, wk_preferred, wk_required, None, False)  # or use main grid name as default
+wellspec_dict['RADW'] = (0, wk_preferred, wk_required, 0.25, True)  # use pagoda spec value for i.p. perf
+wellspec_dict['KHMULT'] = (0, wk_okay, wk_okay, 1.0, False)  # or use 'NA" as default?
+wellspec_dict['STAT'] = (0, wk_okay, wk_okay, 'ON', False)
+wellspec_dict['ANGLA'] = (0, wk_preferred, wk_required, 0.0, False)
+wellspec_dict['ANGLV'] = (0, wk_preferred, wk_required, 0.0, False)  # default for other perfs (vertical)
+wellspec_dict['LENGTH'] = (0, wk_okay, wk_okay, None, True)  # derive default from cell size
+wellspec_dict['KH'] = (0, wk_okay, wk_okay, None, True)  # althernative to LENGTH (one required)
+wellspec_dict['SKIN'] = (0, wk_okay, wk_okay, 0.0, False)
+wellspec_dict['PPERF'] = (0, wk_okay, wk_okay, 1.0, False)
+wellspec_dict['ANGLE'] = (0, wk_okay, wk_okay, 360.0, False)
+wellspec_dict['IRELPM'] = (0, wk_okay, wk_okay, None, False)  # default fracture IRELPM for i.p. perf
+wellspec_dict['RADB'] = (0, wk_okay, wk_okay, None, True)  # calculate from cell size & k_align, k_v
+wellspec_dict['WI'] = (0, wk_okay, wk_okay, None, False)  # caluclate from radb, radw & skin
+wellspec_dict['K'] = (0, wk_preferably_not, wk_okay, None, False)  # derive from conductivity for i.p. perf?
+wellspec_dict['LAYER'] = (0, wk_preferably_not, wk_okay, None, False)  # use LGR i.p. layer for i.p. perf
+wellspec_dict['DEPTH'] = (0, wk_okay, wk_okay, '#', True)  # # causes nexus to use cell depth
+wellspec_dict['X'] = (0, wk_okay, wk_okay, None, True)  # use cell X for i.p. perf
+wellspec_dict['Y'] = (0, wk_okay, wk_okay, None, True)  # use cell Y for i.p. perf
+wellspec_dict['CELL'] = (0, wk_banned, wk_banned, None, False)  # CELL is for unstructured grids
+wellspec_dict['DTOP'] = (0, wk_banned, wk_banned, None, True)  # not compatible with ANGLA, ANGLV
+wellspec_dict['DBOT'] = (0, wk_banned, wk_banned, None, True)  # not compatible with ANGLA, ANGLV
+wellspec_dict['RADBP'] = (0, wk_preferably_not, wk_okay, None, True)  # calculate as for RADB
+wellspec_dict['RADWP'] = (0, wk_preferably_not, wk_okay, None, True)  # use pagoda wellbore radius
+wellspec_dict['PORTYPE'] = (0, wk_banned, wk_banned, None, False)  # dual porosity: todo: need to check values
+wellspec_dict['FM'] = (0, wk_preferably_not, wk_okay, 0.0, False)  # dual porosity: connection to fracture?
+wellspec_dict['MD'] = (0, wk_preferably_not, wk_okay, 'NA', False)
+wellspec_dict['PARENT'] = (0, wk_preferably_not, wk_okay, 'NA', False)
+wellspec_dict['MDCON'] = (0, wk_preferably_not, wk_okay, 'NA', False)
+wellspec_dict['SECT'] = (0, wk_preferably_not, wk_okay, 1, False)
+wellspec_dict['FLOWSECT'] = (0, wk_preferably_not, wk_okay, 1, False)
+wellspec_dict['ZONE'] = (0, wk_preferably_not, wk_okay, 1, False)
+wellspec_dict['GROUP'] = (0, wk_preferably_not, wk_okay, 1, False)
+wellspec_dict['TEMP'] = (0, wk_preferably_not, wk_okay, 'NA', False)
+wellspec_dict['IPTN'] = (0, wk_preferably_not, wk_okay, 1, False)  # pattern
+wellspec_dict['D'] = (0, wk_preferably_not, wk_okay, 'NA', False)  # non D'Arcy flow
+wellspec_dict['ND'] = (0, wk_preferably_not, wk_okay, 'NA', False)  # non D'Arcy flow
+wellspec_dict['DZ'] = (0, wk_preferably_not, wk_okay, None, True)  # non D'Arcy flow; use LENGTH value? or DZ
 
-wellspec_dtype: Dict[str, Type] = { }  # mapping wellspec column key to expected data type
+wellspec_dtype: Dict[str, Type] = {}  # mapping wellspec column key to expected data type
 
-wellspec_dtype['IW']       = int
-wellspec_dtype['JW']       = int
-wellspec_dtype['L']        = int
-wellspec_dtype['GRID']     = str
-wellspec_dtype['RADW']     = float
-wellspec_dtype['KHMULT']   = float
-wellspec_dtype['STAT']     = str
-wellspec_dtype['ANGLA']    = float
-wellspec_dtype['ANGLV']    = float
-wellspec_dtype['LENGTH']   = float
-wellspec_dtype['KH']       = float
-wellspec_dtype['SKIN']     = float
-wellspec_dtype['PPERF']    = float
-wellspec_dtype['ANGLE']    = float
-wellspec_dtype['IRELPM']   = int
-wellspec_dtype['RADB']     = float
-wellspec_dtype['WI']       = float
-wellspec_dtype['K']        = float
-wellspec_dtype['LAYER']    = int
-wellspec_dtype['DEPTH']    = float   # '#' causes nexus to use cell depth
-wellspec_dtype['X']        = float   # use cell X for i.p. perf
-wellspec_dtype['Y']        = float   # use cell Y for i.p. perf
-wellspec_dtype['CELL']     = int     # CELL is for unstructured grids
-wellspec_dtype['DTOP']     = float   # not compatible with ANGLA, ANGLV
-wellspec_dtype['DBOT']     = float   # not compatible with ANGLA, ANGLV
-wellspec_dtype['RADBP']    = float   # calculate as for RADB
-wellspec_dtype['RADWP']    = float
-wellspec_dtype['PORTYPE']  = str     # dual porosity: todo: need to check type
-wellspec_dtype['FM']       = float
-wellspec_dtype['MD']       = float
-wellspec_dtype['PARENT']   = str
-wellspec_dtype['MDCON']    = float
-wellspec_dtype['SECT']     = str     # todo: need to check type
-wellspec_dtype['FLOWSECT'] = str     # todo: need to check type
-wellspec_dtype['ZONE']     = int
-wellspec_dtype['GROUP']    = str
-wellspec_dtype['TEMP']     = float
-wellspec_dtype['IPTN']     = int
-wellspec_dtype['D']        = float
-wellspec_dtype['ND']       = str
-wellspec_dtype['DZ']       = float
+wellspec_dtype['IW'] = int
+wellspec_dtype['JW'] = int
+wellspec_dtype['L'] = int
+wellspec_dtype['GRID'] = str
+wellspec_dtype['RADW'] = float
+wellspec_dtype['KHMULT'] = float
+wellspec_dtype['STAT'] = str
+wellspec_dtype['ANGLA'] = float
+wellspec_dtype['ANGLV'] = float
+wellspec_dtype['LENGTH'] = float
+wellspec_dtype['KH'] = float
+wellspec_dtype['SKIN'] = float
+wellspec_dtype['PPERF'] = float
+wellspec_dtype['ANGLE'] = float
+wellspec_dtype['IRELPM'] = int
+wellspec_dtype['RADB'] = float
+wellspec_dtype['WI'] = float
+wellspec_dtype['K'] = float
+wellspec_dtype['LAYER'] = int
+wellspec_dtype['DEPTH'] = float  # '#' causes nexus to use cell depth
+wellspec_dtype['X'] = float  # use cell X for i.p. perf
+wellspec_dtype['Y'] = float  # use cell Y for i.p. perf
+wellspec_dtype['CELL'] = int  # CELL is for unstructured grids
+wellspec_dtype['DTOP'] = float  # not compatible with ANGLA, ANGLV
+wellspec_dtype['DBOT'] = float  # not compatible with ANGLA, ANGLV
+wellspec_dtype['RADBP'] = float  # calculate as for RADB
+wellspec_dtype['RADWP'] = float
+wellspec_dtype['PORTYPE'] = str  # dual porosity: todo: need to check type
+wellspec_dtype['FM'] = float
+wellspec_dtype['MD'] = float
+wellspec_dtype['PARENT'] = str
+wellspec_dtype['MDCON'] = float
+wellspec_dtype['SECT'] = str  # todo: need to check type
+wellspec_dtype['FLOWSECT'] = str  # todo: need to check type
+wellspec_dtype['ZONE'] = int
+wellspec_dtype['GROUP'] = str
+wellspec_dtype['TEMP'] = float
+wellspec_dtype['IPTN'] = int
+wellspec_dtype['D'] = float
+wellspec_dtype['ND'] = str
+wellspec_dtype['DZ'] = float
+
+
 # yapf: enable
 
 
@@ -263,9 +265,10 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                     column = column_list[i].upper()
                     if column in columns_present:
                         column_map[i] = columns_present.index(column)
-                df = pd.DataFrame(columns = column_list)
+                df_col = column_list
             else:
-                df = pd.DataFrame(columns = columns_present)
+                df_col = columns_present
+            data = {col: [] for col in df_col}
             while True:
                 kf.skip_comments(fp)
                 if kf.blank_line(fp):
@@ -276,39 +279,35 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                 words = line.split()
                 assert len(words) >= len(
                     columns_present), f'insufficient data in line of wellspec table {well} [{line}]'
-                row_dict = {}
                 if selecting:
-                    for col_index in range(len(column_list)):
-                        column = column_list[col_index]
+                    for col_index, col in enumerate(column_list):
                         if column_map[col_index] < 0:
                             if column_list[col_index].upper() == 'GRID':
-                                row_dict[column] = 'ROOT'
+                                data[col].extend(['ROOT'])
                             else:
-                                row_dict[column] = np.NaN
+                                data[col].extend([np.NaN])
                         else:
                             v = words[column_map[col_index]]
                             if v == 'NA':
-                                row_dict[column] = np.NaN
+                                data[col].extend([np.NaN])
                             elif v == '#':
-                                row_dict[column] = v
+                                data[col].extend([v])
                             else:
-                                row_dict[column] = wellspec_dtype[column.upper()](v)
+                                data[col].extend([wellspec_dtype[col.upper()](v)])
                 else:
-                    for column, v in zip(columns_present, words[:len(columns_present)]):
+                    for col, v in zip(columns_present, words[:len(columns_present)]):
                         if v == 'NA':
-                            row_dict[column] = np.NaN
+                            data[col].extend([np.NaN])
                         elif v == '#':
-                            row_dict[column] = v
+                            data[col].extend([v])
                         else:
-                            row_dict[column] = wellspec_dtype[column](v)
-                df = df.append(row_dict, ignore_index = True)
-
+                            data[col].extend([wellspec_dtype[col](v)])
+            df = pd.DataFrame(data, columns = df_col)
             if well:
                 well_dict[well] = df
                 break  # NB. if more than one table for a well, this function returns first, Nexus uses last
             well_dict[well_name] = df
 
-
-#   log.debug(f'load-wellspecs returning:\n{well_dict}')
+    #   log.debug(f'load-wellspecs returning:\n{well_dict}')
 
     return well_dict

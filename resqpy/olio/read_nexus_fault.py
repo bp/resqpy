@@ -141,13 +141,22 @@ def load_nexus_fault_mult_table(file_name):
                         ISRECORD = False
                         chunks = []
 
-    fault_df = pd.DataFrame()
-    for i in range(0, len(dfs)):
-        dfi = dfs[i]
-        dfi['grid'] = grids[i]
-        dfi['name'] = names[i]
-        dfi['face'] = faces[i]
-        fault_df = fault_df.append(dfi, ignore_index = True)
+    data = {
+        'grid': grids,
+        'name': names,
+        'face': faces,
+        'i1': [],
+        'i2': [],
+        'j1': [],
+        'j2': [],
+        'k1': [],
+        'k2': [],
+        'mult': []
+    }
+    for df in dfs:
+        for col in df.columns:
+            data[col].extend(df[col])
+    fault_df = pd.DataFrame(data)
 
     convert_dict = {'i1': int, 'i2': int, 'j1': int, 'j2': int, 'k1': int, 'k2': int, 'mult': float}
     fault_df = fault_df.astype(convert_dict)
