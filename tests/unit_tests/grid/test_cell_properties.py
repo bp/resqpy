@@ -4,7 +4,7 @@ import pytest
 from resqpy.grid import Grid
 import resqpy.grid as grr
 from resqpy.model import Model
-import resqpy.grid.cell_properties as cp
+import resqpy.grid._cell_properties as cp
 import resqpy.property.grid_property_collection as gpc
 
 

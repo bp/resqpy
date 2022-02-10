@@ -93,6 +93,6 @@ def test_from_irap_method_failure(mocker, example_model_and_crs):
                               [[1, 1, 1]]), np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3], [2, 2, 2]]))])
 def test_concat_polyset_points(closed, coords1, coords2, expected):
     # Act
-    result = resqpy.surface.pointset.concat_polyset_points(closed, coords1, coords2)
+    result = resqpy.surface._pointset.concat_polyset_points(closed, coords1, coords2)
     # Assert
     assert_array_almost_equal(result, expected)
