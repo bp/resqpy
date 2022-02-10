@@ -232,7 +232,15 @@ class GridPropertyCollection(PropertyCollection):
                                                points = False)
         return import_array
 
-    def import_vdb_static_property_to_cache(self, vdbase, keyword, grid_name = 'ROOT', uom = None, realization = None):
+    def import_vdb_static_property_to_cache(self,
+                                            vdbase,
+                                            keyword,
+                                            grid_name = 'ROOT',
+                                            uom = None,
+                                            realization = None,
+                                            property_kind = None,
+                                            facet_type = None,
+                                            facet = None):
         """Reads a vdb static property array, caches and adds to imported list (but not collection dict).
 
         arguments:
@@ -242,6 +250,9 @@ class GridPropertyCollection(PropertyCollection):
            uom (string): The resqml unit of measure that applies to the data
            realization (optional, int): The realization number that this property belongs to; use None
               if not applicable
+           property_kind (string, optional): the RESQML property kind of the property
+           facet_type (string, optional): a RESQML facet type for the property
+           facet (string, optional): the RESQML facet value for the given facet type for the property
 
         returns:
            cached array containing the property data; the cached array is in an unpacked state
@@ -279,7 +290,10 @@ class GridPropertyCollection(PropertyCollection):
                                                uom = uom,
                                                time_index = None,
                                                null_value = None,
-                                               realization = realization)
+                                               realization = realization,
+                                               property_kind = property_kind,
+                                               facet_type = facet_type,
+                                               facet = facet)
         return import_array
 
     def import_vdb_recurrent_property_to_cache(self,
@@ -289,21 +303,27 @@ class GridPropertyCollection(PropertyCollection):
                                                grid_name = 'ROOT',
                                                time_index = None,
                                                uom = None,
-                                               realization = None):
+                                               realization = None,
+                                               property_kind = None,
+                                               facet_type = None,
+                                               facet = None):
         """Reads a vdb recurrent property array for one timestep, caches and adds to imported list.
 
         Does not add to collection dict.
 
         arguments:
            vdbase: an object of class vdb.VDB, already initialised with the path of the vdb
-           timestep (int): The Nexus timestep number at which the property array was generated; NB. this is
+           timestep (int): the Nexus timestep number at which the property array was generated; NB. this is
               not necessarily the same as a resqml time index
            keyword (string): the Nexus keyword (or equivalent) of the recurrent property to be loaded
            grid_name (string): the grid name as used in the vdb
            time_index (int, optional): if present, used as the time index, otherwise timestep is used
            uom (string): The resqml unit of measure that applies to the data
-           realization (optional, int): The realization number that this property belongs to; use None
+           realization (optional, int): the realization number that this property belongs to; use None
               if not applicable
+           property_kind (string, optional): the RESQML property kind of the property
+           facet_type (string, optional): a RESQML facet type for the property
+           facet (string, optional): the RESQML facet value for the given facet type for the property
 
         returns:
            cached array containing the property data; the cached array is in an unpacked state
@@ -334,7 +354,10 @@ class GridPropertyCollection(PropertyCollection):
                                                uom = uom,
                                                time_index = time_index,
                                                null_value = None,
-                                               realization = realization)
+                                               realization = realization,
+                                               property_kind = property_kind,
+                                               facet_type = facet_type,
+                                               facet = facet)
         return import_array
 
     def import_ab_property_to_cache(self,

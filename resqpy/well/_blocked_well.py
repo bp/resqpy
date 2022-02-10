@@ -29,7 +29,8 @@ import resqpy.weights_and_measures as bwam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from .well_utils import _pl, find_entry_and_exit, load_hdf5_array, _derive_from_wellspec_check_grid_name, _derive_from_wellspec_verify_col_list
+from .well_utils import _pl, find_entry_and_exit, load_hdf5_array, _derive_from_wellspec_check_grid_name, \
+    _derive_from_wellspec_verify_col_list
 from ._trajectory import Trajectory
 from ._md_datum import MdDatum
 
@@ -544,18 +545,20 @@ class BlockedWell(BaseResqpy):
         if well_name:
             self.well_name = well_name
         col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']  # NB: L is Layer, ie. k
-        df = pd.DataFrame(columns = col_list)
         pinch_col = grid.pinched_out(cache_cp_array = True, cache_pinchout_array = True)[:, col_ji0[0], col_ji0[1]]
         if skip_inactive and grid.inactive is not None:
             inactive_col = grid.inactive[:, col_ji0[0], col_ji0[1]]
         else:
             inactive_col = np.zeros(grid.nk, dtype = bool)
+        data = {'IW': [], 'JW': [], 'L': []}
         for k0 in range(grid.nk):
             if pinch_col[k0] or inactive_col[k0]:
                 continue
             # note: leaving ANGLA & ANGLV columns as NA will cause K face centres to be used when deriving from dataframe
-            row_dict = {'IW': col_ji0[1] + 1, 'JW': col_ji0[0] + 1, 'L': k0 + 1}
-            df = df.append(row_dict, ignore_index = True)
+            data['IW'].extend([col_ji0[1] + 1])
+            data['JW'].extend([col_ji0[0] + 1])
+            data['L'].extend([k0 + 1])
+        df = pd.DataFrame(data, columns = col_list)
 
         return self.derive_from_dataframe(df, self.well_name, grid, use_face_centres = True)
 
@@ -2036,8 +2039,7 @@ class BlockedWell(BaseResqpy):
                 angla_rad = -angla_rad  ## as angle_rad before --> typo?
                 sine_angla = -sine_angla
 
-
-#              log.debug('angla: ' + str(angla))
+        #              log.debug('angla: ' + str(angla))
 
         return angla, sine_angla, cosine_angla
 
@@ -2323,17 +2325,24 @@ class BlockedWell(BaseResqpy):
         ]
         column_values_dict = dict(zip(column_names, column_values))
 
-        for col_index in range(len(column_list)):
-            column = column_list[col_index]
+        data = df.to_dict()
+        data = {k: list(v.values()) for k, v in data.items()}
+        for col_index, col in enumerate(column_list):
             if col_index < 3:
                 if one_based:
-                    row_dict[column] = cell_kji0[2 - col_index] + 1
+                    row_dict[col] = [cell_kji0[2 - col_index] + 1]
                 else:
-                    row_dict[column] = cell_kji0[2 - col_index]
+                    row_dict[col] = [cell_kji0[2 - col_index]]
             else:
-                row_dict[column] = column_values_dict[column]
+                row_dict[col] = [column_values_dict[col]]
 
-        df = df.append(row_dict, ignore_index = True)
+        for col, vals in row_dict.items():
+            if col in data:
+                data[col].extend(vals)
+            else:
+                data[col] = vals
+        df = pd.DataFrame(data)
+
         row_ci_list.append(ci)
 
         return df
@@ -2980,7 +2989,6 @@ class BlockedWell(BaseResqpy):
                                    content_type = 'obj_WellboreTrajectoryRepresentation',
                                    root = bw_node)
         for grid in self.grid_list:
-
             grid_root = grid.root
             self.model.create_ref_node('Grid',
                                        rqet.find_nested_tags_text(grid_root, ['Citation', 'Title']),

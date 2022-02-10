@@ -45,6 +45,7 @@ class Crs(BaseResqpy):
             y_offset: float = 0.0,
             z_offset: float = 0.0,
             rotation: float = 0.0,
+            rotation_units: str = 'dega',
             xy_units: str = 'm',
             z_units: str = 'm',
             z_inc_down: bool = True,
@@ -63,7 +64,8 @@ class Crs(BaseResqpy):
                 resqpy Crs object; if present, all the remaining arguments are ignored
             x_offset, y_offset, z_offset (floats, default zero): the local origin within an implicit parent crs
             rotation (float, default zero): a projected view rotation (in the xy plane), in radians, relative to an
-                implicit parent crs
+                implicit parent crs; positive value indicates local y axis is clockwise from global y axis.
+            rotation_units (str, default 'dega'): the units applicable to rotation, usually 'dega' or 'rad'
             xy_units (str, default 'm'): the units applicable to x & y values; must be one of the RESQML length uom strings
             z_units (str, default 'm'): the units applicable to z depth values; must be one of the RESQML length uom strings
             z_inc_down (boolean, default True): if True, increasing z values indicate greater depth (ie. in direction of
@@ -102,7 +104,8 @@ class Crs(BaseResqpy):
         self.x_offset = x_offset
         self.y_offset = y_offset
         self.z_offset = z_offset
-        self.rotation = rotation  # radians
+        self.rotation = rotation
+        self.rotation_units = rotation_units
         self.axis_order = axis_order
         self.epsg_code = epsg_code
         # following are derived attributes, set below
@@ -119,6 +122,8 @@ class Crs(BaseResqpy):
 
         assert self.xy_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS xy units: {self.xy_units}'
         assert self.z_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS z units: {self.z_units}'
+        assert self.rotation_units in wam.valid_uoms(quantity='plane angle'), \
+            f'invalid CRS rotation units: {self.rotation_units}'
         if self.time_units:
             assert self.time_units in wam.valid_uoms(quantity = 'time'), f'invalid CRS time units: {self.time_units}'
         assert self.axis_order in self.valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
@@ -126,8 +131,9 @@ class Crs(BaseResqpy):
         self.rotated = (not maths.isclose(self.rotation, 0.0, abs_tol = 1e-8) and
                         not maths.isclose(self.rotation, 2.0 * maths.pi, abs_tol = 1e-8))
         if self.rotated:
-            self.rotation_matrix = vec.rotation_matrix_3d_axial(2, maths.degrees(-self.rotation))
-            self.reverse_rotation_matrix = vec.rotation_matrix_3d_axial(2, maths.degrees(self.rotation))
+            rotation_deg = wam.convert(self.rotation, self.rotation_units, 'dega', quantity = 'plane angle')
+            self.rotation_matrix = vec.rotation_matrix_3d_axial(2, -rotation_deg)
+            self.reverse_rotation_matrix = vec.rotation_matrix_3d_axial(2, rotation_deg)
             if self.is_right_handed_xy():
                 self.rotation_matrix, self.reverse_rotation_matrix = self.reverse_rotation_matrix, self.rotation_matrix
 
@@ -151,7 +157,9 @@ class Crs(BaseResqpy):
         self.x_offset = rqet.find_tag_float(root_node, 'XOffset')
         self.y_offset = rqet.find_tag_float(root_node, 'YOffset')
         self.z_offset = rqet.find_tag_float(root_node, 'ZOffset')
-        self.rotation = rqet.find_tag_float(root_node, 'ArealRotation')  # todo: extract uom attribute from this node
+        self.rotation = rqet.find_tag_float(root_node, 'ArealRotation')
+        rotation_node = rqet.find_tag(root_node, 'ArealRotation')
+        self.rotation_units = rotation_node.attrib.get('uom')
         parent_xy_crs = rqet.find_tag(root_node, 'ProjectedCrs')
         if parent_xy_crs is not None and rqet.node_type(parent_xy_crs) == 'ProjectedCrsEpsgCode':
             self.epsg_code = rqet.find_tag_text(parent_xy_crs, 'EpsgCode')  # should be an integer?
@@ -420,7 +428,7 @@ class Crs(BaseResqpy):
         zoffset.text = '{0:6.4f}'.format(self.z_offset)
 
         rotation = rqet.SubElement(crs, ns['resqml2'] + 'ArealRotation')
-        rotation.set('uom', 'rad')
+        rotation.set('uom', self.rotation_units)
         rotation.set(ns['xsi'] + 'type', ns['eml'] + 'PlaneAngleMeasure')
         rotation.text = '{0:8.6f}'.format(self.rotation)
 

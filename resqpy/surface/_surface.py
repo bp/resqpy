@@ -388,6 +388,18 @@ class Surface(BaseSurface):
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
 
+    def set_to_triangle_pair(self, corners):
+        """Populate this (empty) surface with a patch of two triangles.
+
+        arguments:
+            corners (numpy float array of shape [2, 2, 3] or [4, 3]): 4 corners in logical ordering
+        """
+
+        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch.set_to_triangle_pair(corners.reshape((4, 3)))
+        self.patch_list = [tri_patch]
+        self.uuid = bu.new_uuid()
+
     def set_to_sail(self, n, centre, radius, azimuth, delta_theta):
         """Populate this (empty) surface with a patch representing a triangle wrapped on a sphere."""
 

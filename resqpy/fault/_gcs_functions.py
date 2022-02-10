@@ -93,7 +93,9 @@ def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap conne
 
     p = grid.points_ref(masked = False)
     dead = grid.extract_inactive_mask() if skip_inactive else None
-    flip_z = (grid.k_direction_is_down != rqet.find_tag_bool(grid.crs_root, 'ZIncreasingDownward'))
+
+    grid.set_crs()
+    flip_z = (grid.k_direction_is_down != grid.crs.z_inc_down)
 
     cip_list = []  # cell index pair list
 

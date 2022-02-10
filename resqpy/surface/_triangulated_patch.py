@@ -145,6 +145,11 @@ class TriangulatedPatch:
         self.triangle_count = 1
         self.triangles = np.array([[0, 1, 2]], dtype = int)
 
+    def set_to_triangle_pair(self, corners):
+        """Populate this (empty) patch with a pair of triangles."""
+
+        self.set_from_triangles_and_points(np.array([[0, 1, 3], [0, 3, 2]], dtype = int), corners)
+
     def set_from_triangles_and_points(self, triangles, points):
         """Populate this (empty) patch from triangle node indices and points from elsewhere."""
 
