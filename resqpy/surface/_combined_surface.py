@@ -18,7 +18,7 @@ class CombinedSurface:
     Not a RESQML class in its own right.
     """
 
-    def __init__(self, surface_list, crs_uuid=None):
+    def __init__(self, surface_list, crs_uuid = None):
         """Initialise a CombinedSurface object from a list of Surface (and/or CombinedSurface) objects.
 
         arguments:

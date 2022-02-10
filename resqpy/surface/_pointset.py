@@ -27,19 +27,19 @@ class PointSet(BaseSurface):
 
     def __init__(self,
                  parent_model,
-                 point_set_root=None,
-                 uuid=None,
-                 load_hdf5=False,
-                 points_array=None,
-                 crs_uuid=None,
-                 polyset=None,
-                 polyline=None,
-                 random_point_count=None,
-                 charisma_file=None,
-                 irap_file=None,
-                 title=None,
-                 originator=None,
-                 extra_metadata=None):
+                 point_set_root = None,
+                 uuid = None,
+                 load_hdf5 = False,
+                 points_array = None,
+                 crs_uuid = None,
+                 polyset = None,
+                 polyline = None,
+                 random_point_count = None,
+                 charisma_file = None,
+                 irap_file = None,
+                 title = None,
+                 originator = None,
+                 extra_metadata = None):
         """Creates an empty Point Set object and optionally populates from xml or other source.
 
         arguments:
@@ -83,12 +83,12 @@ class PointSet(BaseSurface):
         self.full_array = None
         self.points = None  # composite points (all patches)
         self.represented_interpretation_root = None
-        super().__init__(model=parent_model,
-                         uuid=uuid,
-                         title=title,
-                         originator=originator,
-                         root_node=point_set_root,
-                         extra_metadata=extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         root_node = point_set_root,
+                         extra_metadata = extra_metadata)
 
         if self.root is not None:
             if load_hdf5:
@@ -175,7 +175,7 @@ class PointSet(BaseSurface):
         if not self.title:
             self.title = irap_file
 
-    def from_polyline(self, polyline, random_point_count=None):
+    def from_polyline(self, polyline, random_point_count = None):
         """Instantiates a pointset using points from an input polyline (PolylineRepresentation) object
 
         arguments:
@@ -207,13 +207,13 @@ class PointSet(BaseSurface):
         arguments:
             polyset (resqpy.lines.PolylineSet object): a polylineset object to generate the pointset from
         """
-        master_crs = rcrs.Crs(self.model, uuid=polyset.polys[0].crs_uuid)
+        master_crs = rcrs.Crs(self.model, uuid = polyset.polys[0].crs_uuid)
         if polyset.polys[0].isclosed and vec.isclose(polyset.polys[0].coordinates[0], polyset.polys[0].coordinates[-1]):
             poly_coords = polyset.polys[0].coordinates[:-1].copy()
         else:
             poly_coords = polyset.polys[0].coordinates.copy()
         for poly in polyset.polys[1:]:
-            curr_crs = rcrs.Crs(self.model, uuid=poly.crs_uuid)
+            curr_crs = rcrs.Crs(self.model, uuid = poly.crs_uuid)
             assert master_crs is not None
             assert poly_coords is not None
             if not curr_crs.is_equivalent(master_crs):
@@ -247,13 +247,13 @@ class PointSet(BaseSurface):
         if self.patch_array_list[patch_index] is not None:
             return self.patch_array_list[patch_index]
         h5_key_pair = (self.patch_ref_list[patch_index][0], self.patch_ref_list[patch_index][1]
-                       )  # ext uuid, path in hdf5
+                      )  # ext uuid, path in hdf5
         try:
             self.model.h5_array_element(h5_key_pair,
-                                        cache_array=True,
-                                        object=self,
-                                        array_attribute='temp_points',
-                                        dtype='float')
+                                        cache_array = True,
+                                        object = self,
+                                        array_attribute = 'temp_points',
+                                        dtype = 'float')
         except Exception:
             log.exception('hdf5 points failure for point set patch ' + str(patch_index))
         assert self.temp_points.ndim == 2 and self.temp_points.shape[
@@ -287,7 +287,7 @@ class PointSet(BaseSurface):
         full_index = 0
         for patch_index in range(self.patch_count):
             self.full_array[full_index:full_index +
-                                       self.patch_ref_list[patch_index][2]] = self.patch_array_list[patch_index]
+                            self.patch_ref_list[patch_index][2]] = self.patch_array_list[patch_index]
             full_index += self.patch_ref_list[patch_index][2]
         assert full_index == point_count, 'point count mismatch when constructing full array for point set'
         return self.full_array
@@ -309,7 +309,7 @@ class PointSet(BaseSurface):
             self.patch_count = 0
         self.patch_count += 1
 
-    def write_hdf5(self, file_name=None, mode='a'):
+    def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays.
 
         :meta common:
@@ -323,16 +323,16 @@ class PointSet(BaseSurface):
         h5_reg = rwh5.H5Register(self.model)
         for patch_index in range(self.patch_count):
             h5_reg.register_dataset(self.uuid, 'points_{}'.format(patch_index), self.patch_array_list[patch_index])
-        h5_reg.write(file_name, mode=mode)
+        h5_reg.write(file_name, mode = mode)
 
     def create_xml(self,
-                   ext_uuid=None,
-                   crs_root=None,
-                   add_as_part=True,
-                   add_relationships=True,
-                   root=None,
-                   title=None,
-                   originator=None):
+                   ext_uuid = None,
+                   crs_root = None,
+                   add_as_part = True,
+                   add_relationships = True,
+                   root = None,
+                   title = None,
+                   originator = None):
         """Creates a point set representation xml node from this point set object and optionally adds as part of model.
 
         arguments:
@@ -356,7 +356,7 @@ class PointSet(BaseSurface):
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
 
-        ps_node = super().create_xml(add_as_part=False, title=title, originator=originator)
+        ps_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
         if crs_root is None:
             if self.crs_uuid is None:
@@ -374,8 +374,8 @@ class PointSet(BaseSurface):
             self.model.create_ref_node('RepresentedInterpretation',
                                        rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                        interp_uuid,
-                                       content_type=self.model.type_of_part(interp_part),
-                                       root=ps_node)
+                                       content_type = self.model.type_of_part(interp_part),
+                                       root = ps_node)
 
         for patch_index in range(self.patch_count):
             p_node = rqet.SubElement(ps_node, ns['resqml2'] + 'NodePatch')
@@ -394,7 +394,7 @@ class PointSet(BaseSurface):
             geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
             geom.text = '\n'
 
-            self.model.create_crs_reference(crs_uuid=self.crs_uuid, root=geom)
+            self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
             points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
             points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
@@ -404,7 +404,7 @@ class PointSet(BaseSurface):
             coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
             coords.text = '\n'
 
-            self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points_{}'.format(patch_index), root=coords)
+            self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points_{}'.format(patch_index), root = coords)
 
         if root is not None:
             root.append(ps_node)
@@ -416,7 +416,7 @@ class PointSet(BaseSurface):
                 if self.represented_interpretation_root is not None:
                     self.model.create_reciprocal_relationship(ps_node, 'destinationObject',
                                                               self.represented_interpretation_root, 'sourceObject')
-                ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed=False)
+                ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(ps_node, 'mlToExternalPartProxy', ext_node,
                                                           'externalPartProxyToMl')
