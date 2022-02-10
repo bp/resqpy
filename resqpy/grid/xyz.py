@@ -8,6 +8,8 @@ import numpy as np
 
 import resqpy.olio.xml_et as rqet
 import resqpy.weights_and_measures as bwam
+import resqpy.crs as rqc
+import resqpy.olio.vector_utilities as vec
 
 
 def xyz_box(grid, points_root = None, lazy = True, local = False):
@@ -37,10 +39,9 @@ def xyz_box(grid, points_root = None, lazy = True, local = False):
             for kp in [0, 1]:
                 for jp in [0, 1]:
                     for ip in [0, 1]:
-                        cell_kji0 = [
+                        eight_corners[kp, jp, ip] = grid.point(cell_kji0 = [
                             kp * (grid.extent_kji[0] - 1), jp * (grid.extent_kji[1] - 1), ip * (grid.extent_kji[2] - 1)
-                        ]
-                        eight_corners[kp, jp, ip] = grid.point(cell_kji0 = cell_kji0,
+                        ],
                                                                corner_index = [kp, jp, ip],
                                                                points_root = points_root,
                                                                cache_array = False)
@@ -58,8 +59,7 @@ def xyz_box(grid, points_root = None, lazy = True, local = False):
     if local:
         return grid.xyz_box_cached
     global_xyz_box = grid.xyz_box_cached.copy()
-    grid.local_to_global_crs(global_xyz_box, grid.crs_root)
-    return global_xyz_box
+    return grid.local_to_global_crs(global_xyz_box, crs_uuid = grid.crs_uuid)
 
 
 def xyz_box_centre(grid, points_root = None, lazy = False, local = False):
@@ -105,44 +105,41 @@ def composite_bounding_box(grid, bounding_box_list):
 
 def local_to_global_crs(grid,
                         a,
-                        crs_root = None,
+                        crs_uuid = None,
                         global_xy_units = None,
                         global_z_units = None,
                         global_z_increasing_downward = None):
     """Converts array of points in situ from local coordinate system to global one."""
 
-    # todo: replace with crs module calls
+    if crs_uuid is None:
+        crs_uuid = grid.crs_uuid
+        if crs_uuid is None:
+            return a
 
-    if crs_root is None:
-        crs_root = grid.crs_root
-        if crs_root is None:
-            return
+    crs = rqc.Crs(grid.model, uuid = crs_uuid)
+
+    if crs.rotated:
+        a = vec.rotate_array(crs.rotation_matrix, a)
+
     flat_a = a.reshape((-1, 3))  # flattened view of array a as vector of (x, y, z) points, in situ
-    x_offset = float(rqet.find_tag(crs_root, 'XOffset').text)
-    y_offset = float(rqet.find_tag(crs_root, 'YOffset').text)
-    z_offset = float(rqet.find_tag(crs_root, 'ZOffset').text)
-    areal_rotation = float(rqet.find_tag(crs_root, 'ArealRotation').text)
-    assert (areal_rotation == 0.0)
-    # todo: check resqml definition for order of rotation and translation
-    # todo: apply rotation
-    if global_z_increasing_downward is not None:  # note: here negation is made in local crs; if z_offset is not zero, this might not be what is intended
-        crs_z_increasing_downward_text = rqet.find_tag(crs_root, 'ZIncreasingDownward').text
-        if crs_z_increasing_downward_text in ['true', 'false']:  # todo: otherwise could raise exception
-            crs_z_increasing_downward = (crs_z_increasing_downward_text == 'true')
-            if global_z_increasing_downward != crs_z_increasing_downward:
-                negated_z = np.negative(flat_a[:, 2])
-                flat_a[:, 2] = negated_z
-    flat_a[:, 0] += x_offset
-    flat_a[:, 1] += y_offset
-    if z_offset != 0.0:
-        flat_a[:, 2] += z_offset
+
+    # note: here negation is made in local crs; if z_offset is not zero, this might not be what is intended
+    if global_z_increasing_downward is not None:
+        if global_z_increasing_downward != crs.z_inc_down:
+            flat_a[:, 2] = np.negative(flat_a[:, 2])
+
+    # This code assumes x, y, z offsets are in local crs units
+    flat_a[:, 0] += crs.x_offset
+    flat_a[:, 1] += crs.y_offset
+    flat_a[:, 2] += crs.z_offset
+
     if global_xy_units is not None:
-        crs_xy_units_text = rqet.find_tag(crs_root, 'ProjectedUom').text
-        bwam.convert_lengths(flat_a[:, 0], crs_xy_units_text, global_xy_units)  # x
-        bwam.convert_lengths(flat_a[:, 1], crs_xy_units_text, global_xy_units)  # y
+        bwam.convert_lengths(flat_a[:, 0], crs.xy_units, global_xy_units)  # x
+        bwam.convert_lengths(flat_a[:, 1], crs.xy_units, global_xy_units)  # y
     if global_z_units is not None:
-        crs_z_units_text = rqet.find_tag(crs_root, 'VerticalUom').text
-        bwam.convert_lengths(flat_a[:, 2], crs_z_units_text, global_z_units)  # z
+        bwam.convert_lengths(flat_a[:, 2], crs.z_units, global_z_units)  # z
+
+    return flat_a.reshape(a.shape)
 
 
 def z_inc_down(grid):
@@ -157,42 +154,41 @@ def z_inc_down(grid):
 
 def global_to_local_crs(grid,
                         a,
-                        crs_root = None,
+                        crs_uuid = None,
                         global_xy_units = None,
                         global_z_units = None,
                         global_z_increasing_downward = None):
     """Converts array of points in situ from global coordinate system to established local one."""
 
-    # todo: replace with crs module calls
+    if crs_uuid is None:
+        crs_uuid = grid.crs_uuid
+        if crs_uuid is None:
+            return a
 
-    if crs_root is None:
-        crs_root = grid.crs_root
-        if crs_root is None:
-            return
     flat_a = a.reshape((-1, 3))  # flattened view of array a as vector of (x, y, z) points, in situ
-    x_offset = float(rqet.find_tag(crs_root, 'XOffset').text)
-    y_offset = float(rqet.find_tag(crs_root, 'YOffset').text)
-    z_offset = float(rqet.find_tag(crs_root, 'ZOffset').text)
-    areal_rotation = float(rqet.find_tag(crs_root, 'ArealRotation').text)
-    assert (areal_rotation == 0.0)
-    # todo: check resqml definition for order of rotation and translation and apply rotation if not zero
+
+    crs = rqc.Crs(grid.model, uuid = crs_uuid)
+
     if global_xy_units is not None:
-        crs_xy_units_text = rqet.find_tag(crs_root, 'ProjectedUom').text
-        bwam.convert_lengths(flat_a[:, 0], global_xy_units, crs_xy_units_text)  # x
-        bwam.convert_lengths(flat_a[:, 1], global_xy_units, crs_xy_units_text)  # y
+        bwam.convert_lengths(flat_a[:, 0], global_xy_units, crs.xy_units)  # x
+        bwam.convert_lengths(flat_a[:, 1], global_xy_units, crs.xy_units)  # y
     if global_z_units is not None:
-        crs_z_units_text = rqet.find_tag(crs_root, 'VerticalUom').text
-        bwam.convert_lengths(flat_a[:, 2], global_z_units, crs_z_units_text)  # z
-    flat_a[:, 0] -= x_offset
-    flat_a[:, 1] -= y_offset
-    if z_offset != 0.0:
-        flat_a[:, 2] -= z_offset
-    if global_z_increasing_downward is not None:  # note: here negation is made in local crs; if z_offset is not zero, this might not be what is intended
-        crs_z_increasing_downward = grid.z_inc_down()
-        assert crs_z_increasing_downward is not None
-        if global_z_increasing_downward != crs_z_increasing_downward:
-            negated_z = np.negative(flat_a[:, 2])
-            flat_a[:, 2] = negated_z
+        bwam.convert_lengths(flat_a[:, 2], global_z_units, crs.z_units)  # z
+
+    # This code assumes x, y, z offsets are in local crs units
+    flat_a[:, 0] -= crs.x_offset
+    flat_a[:, 1] -= crs.y_offset
+    flat_a[:, 2] -= crs.z_offset
+
+    # note: here negation is made in local crs; if z_offset is not zero, this might not be what is intended
+    if global_z_increasing_downward is not None:
+        if global_z_increasing_downward != crs.z_inc_down:
+            flat_a[:, 2] = np.negative(flat_a[:, 2])
+
+    if crs.rotated:
+        flat_a = vec.rotate_array(crs.reverse_rotation_matrix, flat_a)
+
+    return flat_a.reshape(a.shape)
 
 
 def check_top_and_base_cell_edge_directions(grid):

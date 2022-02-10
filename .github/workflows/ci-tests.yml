@@ -9,11 +9,13 @@ on:
   pull_request:
 
 jobs:
-
   static-analysis:
     name: Static analysis
     runs-on: ubuntu-latest
     steps:
+      # Post in-line comments for any issues found
+      # Do not run if coming from a forked repo
+      # See https://github.com/marketplace/actions/lint-action
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -23,31 +25,48 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install dependencies
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install Poetry Plugins
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[tests]"
+          pip install poetry-dynamic-versioning
 
-      # Post in-line comments for any issues found
-      # Do not run if coming from a forked repo
-      # See https://github.com/marketplace/actions/lint-action
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install missing cached dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction
+
       - name: Run linters (with annotations)
         if: github.event.pull_request.head.repo.full_name == github.repository
         uses: wearerequired/lint-action@v1
         with:
           flake8: true
+          flake8_command_prefix: poetry run
+          flake8_dir: resqpy
           mypy: true
+          mypy_command_prefix: poetry run
           mypy_args: resqpy
 
       # Alternative step that works with forked repo
       - name: Run linters (without annotations)
         if: github.event.pull_request.head.repo.full_name != github.repository
         run: |
-          flake8 .
-          mypy resqpy
+          poetry run flake8 .
+          poetry run mypy resqpy
 
       - name: Code formatting
-        run: yapf --diff -r -p .
+        run: poetry run yapf --diff -r -p .
 
   unit-tests:
     name: Unit tests (Python ${{ matrix.python-version }})
@@ -68,14 +87,31 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install resqpy
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install Poetry Plugins
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -e ".[tests]"
+          python -m pip install --upgrade pip
+          pip install poetry-dynamic-versioning
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install missing cached dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction
 
       - name: Run pytest
         run: |
-          pytest --cov=resqpy --junitxml=pytest.xml
+          poetry run pytest --cov=resqpy --junitxml=pytest.xml
 
       - name: Upload pytest artifacts
         if: ${{ always() }}
@@ -85,9 +121,10 @@ jobs:
           path: pytest.xml
 
       - name: "Upload coverage to Codecov"
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: pytest.xml
           fail_ci_if_error: true
 
       # - name: Publish Unit Test Results
