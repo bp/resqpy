@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '21st December 2021'
+version = '7th February 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -14,6 +14,7 @@ log.debug('grid.py version ' + version)
 
 import numpy as np
 
+import resqpy.grid_surface as rqgs
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
@@ -203,7 +204,7 @@ class Grid(BaseResqpy):
         return self.root
 
     def set_modified(self, update_xml = False, update_hdf5 = False):
-        """Deprecated: Assigns a new uuid to this grid; also calls set_modified() for parent model.
+        """Assigns a new uuid to this grid; also calls set_modified() for parent model.
 
         arguments:
            update_xml (boolean, default False): if True, the uuid is modified in the xml tree
@@ -224,7 +225,7 @@ class Grid(BaseResqpy):
            NB: relationships are not updated by this function, including the relationship to the
            hdf5 external part
         """
-        warnings.warn('Deprecated: This method is being removed', DeprecationWarning)
+
         old_uuid = self.uuid
         self.uuid = bu.new_uuid()
         if old_uuid is not None:
@@ -560,14 +561,14 @@ class Grid(BaseResqpy):
             return None
         return rqet.find_tag(crs_root, 'VerticalUom').text
 
-    def skin(self, use_single_layer_tactics = False):
+    def skin(self, use_single_layer_tactics = False, is_regular = False):
         """Returns a GridSkin composite surface object reoresenting the outer surface of the grid."""
-
-        import resqpy.grid_surface as rqgs
 
         # could cache 2 versions (with and without single layer tactics)
         if self.grid_skin is None or self.grid_skin.use_single_layer_tactics != use_single_layer_tactics:
-            self.grid_skin = rqgs.GridSkin(self, use_single_layer_tactics = use_single_layer_tactics)
+            self.grid_skin = rqgs.GridSkin(self,
+                                           use_single_layer_tactics = use_single_layer_tactics,
+                                           is_regular = is_regular)
         return self.grid_skin
 
     def create_xml(self,
