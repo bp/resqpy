@@ -26,7 +26,6 @@ seed(2349857)
 
 
 def test_add_single_cell_grid(tmp_path):
-
     epc = os.path.join(tmp_path, 'amoeba.epc')
 
     points = np.array([(100.0, 250.0, -3500.0), (140.0, 200.0, -3700.0), (300.0, 400.0, -3600.0),
@@ -93,7 +92,7 @@ def test_add_zone_by_layer_property(tmp_path):
                                                null_value = -1)
     assert za_uuid is not None
 
-    # add a zone by layer property based on the neat cells property
+    # add a zone by layer property based on the neat cells property
     v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
                                                 zone_by_cell_property_uuid = za_uuid,
                                                 title = 'from cells array')
@@ -115,14 +114,14 @@ def test_add_zone_by_layer_property(tmp_path):
                                                null_value = -1)
     assert za_uuid is not None
 
-    # fail to add a zone by layer property based on the messy cells property
+    #  fail to add a zone by layer property based on the messy cells property
     with pytest.raises(Exception):
         v, z2_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
                                                      zone_by_cell_property_uuid = za_uuid,
                                                      use_dominant_zone = False,
                                                      title = 'should fail')
 
-    # add a zone by layer property based on the neat cells property
+    #  add a zone by layer property based on the neat cells property
     v, z3_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
                                                  zone_by_cell_property_uuid = za_uuid,
                                                  use_dominant_zone = True,
@@ -145,7 +144,7 @@ def test_add_zone_by_layer_property(tmp_path):
     assert z_grid is not None
     assert z_grid.nk == 4
 
-    # and another zonal grid based on the dominant zone
+    #  and another zonal grid based on the dominant zone
     z3_grid = rqdm.zonal_grid(epc,
                               source_grid = grid,
                               zone_uuid = za_uuid,
@@ -156,7 +155,6 @@ def test_add_zone_by_layer_property(tmp_path):
 
 
 def test_single_layer_grid(tmp_path):
-
     epc = os.path.join(tmp_path, 'squash.epc')
 
     model = rq.new_model(epc)
@@ -197,7 +195,6 @@ def test_single_layer_grid(tmp_path):
 
 
 def test_extract_box_for_well(tmp_path):
-
     epc = os.path.join(tmp_path, 'tube.epc')
 
     model = rq.new_model(epc)
@@ -341,7 +338,6 @@ def test_extract_box(tmp_path):
 
 
 def test_add_grid_points_property(tmp_path):
-
     epc = os.path.join(tmp_path, 'bland.epc')
     new_epc = os.path.join(tmp_path, 'pointy.epc')
 
@@ -368,7 +364,7 @@ def test_add_grid_points_property(tmp_path):
     diagonal_array = np.empty(diagonals_extent)
     diagonal_array[:] = np.array(diagonal).reshape(1, 1, 1, 3)
 
-    # add to model using derived model function but save as new dataset
+    #  add to model using derived model function but save as new dataset
     rqdm.add_one_grid_property_array(epc_file = epc,
                                      a = diagonal_array,
                                      property_kind = 'length',
@@ -381,7 +377,7 @@ def test_add_grid_points_property(tmp_path):
                                      extra_metadata = {'test': 'true'},
                                      new_epc_file = new_epc)
 
-    # re-open the original model and check that the points property is not there
+    #  re-open the original model and check that the points property is not there
     model = rq.Model(epc)
     grid = model.grid()
     pc = grid.property_collection
@@ -399,7 +395,6 @@ def test_add_grid_points_property(tmp_path):
 
 
 def test_add_edges_per_column_property_array(tmp_path):
-
     # create a new model with a grid
     epc = os.path.join(tmp_path, 'edges_per_column.epc')
     model = rq.new_model(epc)
@@ -503,18 +498,16 @@ def test_add_wells_from_ascii_file(tmp_path):
     model.store_epc()
     # fabricate some test data as an ascii table
     well_file = os.path.join(tmp_path, 'well_table.txt')
-    df = pd.DataFrame(columns = ['WELL', 'MD', 'X', 'Y', 'Z'])
     well_count = 3
+    data = {'WELL': [], 'MD': [], 'X': [], 'Y': [], 'Z': []}
     for wi in range(well_count):
-        well_name = 'Hole_' + str(wi + 1)
-        wdf = pd.DataFrame(columns = ['WELL', 'MD', 'X', 'Y', 'Z'])
         row_count = 3 + wi
-        wdf['MD'] = np.linspace(0.0, 1000.0, num = row_count)
-        wdf['X'] = np.linspace(100.0 * wi, 100.0 * wi + 10.0 * row_count, num = row_count)
-        wdf['Y'] = np.linspace(500.0 * wi, 500.0 * wi - 15.0 * row_count, num = row_count)
-        wdf['Z'] = np.linspace(0.0, 1000.0 + 5.0 * row_count, num = row_count)
-        wdf['WELL'] = well_name
-        df = df.append(wdf)
+        data['WELL'].extend(['Hole_' + str(wi + 1)] * row_count)
+        data['MD'].extend(np.linspace(0.0, 1000.0, num = row_count))
+        data['X'].extend(np.linspace(100.0 * wi, 100.0 * wi + 10.0 * row_count, num = row_count))
+        data['Y'].extend(np.linspace(500.0 * wi, 500.0 * wi - 15.0 * row_count, num = row_count))
+        data['Z'].extend(np.linspace(0.0, 1000.0 + 5.0 * row_count, num = row_count))
+    df = pd.DataFrame(data)
     df.to_csv(well_file, sep = ' ', index = False)
     # call the derived model function to add the wells
     added = rqdm.add_wells_from_ascii_file(epc,
@@ -721,7 +714,6 @@ def test_interpolated_grid_using_cp(tmp_path):
 
 
 def test_refined_and_coarsened_grid(tmp_path):
-
     # create a model and a coarse grid
     epc = os.path.join(tmp_path, 'refinement.epc')
     model = rq.new_model(epc)
@@ -775,7 +767,7 @@ def test_refined_and_coarsened_grid(tmp_path):
     assert np.all(p[:, :-1, :, 1] < p[:, 1:, :, 1])
     assert np.all(p[:, :, :-1, 0] < p[:, :, 1:, 0])
 
-    # check property inheritance of cell lengths
+    #  check property inheritance of cell lengths
     pc = f_grid.extract_property_collection()
     assert pc is not None and pc.number_of_parts() >= 3
     lpc = rqp.selective_version_of_collection(pc, property_kind = 'cell length')
@@ -948,10 +940,10 @@ def test_add_faults(tmp_path):
                                      inherit_properties = True,
                                      inherit_realization = None,
                                      inherit_all_realizations = False,
-                                     new_grid_title = f'ttt_f6 scaled {i+1}',
+                                     new_grid_title = f'ttt_f6 scaled {i + 1}',
                                      new_epc_file = None)
             model = rq.Model(epc)
-            grid = model.grid(title = f'ttt_f6 scaled {i+1}')
+            grid = model.grid(title = f'ttt_f6 scaled {i + 1}')
             assert grid is not None
 
         # two intersecting straight faults
@@ -988,7 +980,6 @@ def test_add_faults(tmp_path):
 
 
 def test_add_faults_and_scaling(tmp_path):
-
     # create a model with crs
     epc = os.path.join(tmp_path, 'fault_test.epc')
     model = rq.new_model(epc)
@@ -1093,7 +1084,6 @@ def test_add_faults_and_scaling(tmp_path):
 
 
 def test_drape_to_surface(tmp_path):
-
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'drape_test.epc')
     model = rq.new_model(epc)
@@ -1156,7 +1146,6 @@ def test_drape_to_surface(tmp_path):
 
 
 def test_zonal_grid(tmp_path):
-
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'zonal_test.epc')
     model = rq.new_model(epc)
@@ -1172,7 +1161,7 @@ def test_zonal_grid(tmp_path):
     grid.create_xml(write_geometry = True, add_cell_length_properties = False)
     model.store_epc()
 
-    # create a zonal version of the grid
+    #  create a zonal version of the grid
     zone_ranges = [(0, 1, 0), (2, 4, 1), (5, 8, 2), (9, 9, 3)]
     rqdm.zonal_grid(epc, zone_layer_range_list = zone_ranges, new_grid_title = 'four zone grid')
 
@@ -1191,7 +1180,6 @@ def test_zonal_grid(tmp_path):
 
 
 def test_unsplit_grid(tmp_path):
-
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'unsplit_test.epc')
     model = rq.new_model(epc)
@@ -1227,7 +1215,6 @@ def test_unsplit_grid(tmp_path):
 
 
 def test_tilted_grid(tmp_path):
-
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'tilted_test.epc')
     model = rq.new_model(epc)
@@ -1260,7 +1247,6 @@ def test_tilted_grid(tmp_path):
 
 
 def test_local_depth_adjustment(tmp_path):
-
     # create a model and a regular grid
     epc = os.path.join(tmp_path, 'depth_adjust_test.epc')
     model = rq.new_model(epc)

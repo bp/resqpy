@@ -263,9 +263,10 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                     column = column_list[i].upper()
                     if column in columns_present:
                         column_map[i] = columns_present.index(column)
-                df = pd.DataFrame(columns = column_list)
+                df_col = column_list
             else:
-                df = pd.DataFrame(columns = columns_present)
+                df_col = columns_present
+            data = {col: [] for col in df_col}
             while True:
                 kf.skip_comments(fp)
                 if kf.blank_line(fp):
@@ -276,39 +277,36 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                 words = line.split()
                 assert len(words) >= len(
                     columns_present), f'insufficient data in line of wellspec table {well} [{line}]'
-                row_dict = {}
                 if selecting:
-                    for col_index in range(len(column_list)):
-                        column = column_list[col_index]
+                    for col_index, col in enumerate(column_list):
                         if column_map[col_index] < 0:
                             if column_list[col_index].upper() == 'GRID':
-                                row_dict[column] = 'ROOT'
+                                data[col].extend(['ROOT'])
                             else:
-                                row_dict[column] = np.NaN
+                                data[col].extend([np.NaN])
                         else:
                             v = words[column_map[col_index]]
                             if v == 'NA':
-                                row_dict[column] = np.NaN
+                                data[col].extend([np.NaN])
                             elif v == '#':
-                                row_dict[column] = v
+                                data[col].extend([v])
                             else:
-                                row_dict[column] = wellspec_dtype[column.upper()](v)
+                                data[col].extend([wellspec_dtype[col.upper()](v)])
                 else:
-                    for column, v in zip(columns_present, words[:len(columns_present)]):
+                    for col, v in zip(columns_present, words[:len(columns_present)]):
                         if v == 'NA':
-                            row_dict[column] = np.NaN
+                            data[col].extend([np.NaN])
                         elif v == '#':
-                            row_dict[column] = v
+                            data[col].extend([v])
                         else:
-                            row_dict[column] = wellspec_dtype[column](v)
-                df = df.append(row_dict, ignore_index = True)
-
+                            data[col].extend([wellspec_dtype[col](v)])
+            data = {k: v for k, v in data.items() if v}
+            df = pd.DataFrame(data, columns = df_col)
             if well:
                 well_dict[well] = df
                 break  # NB. if more than one table for a well, this function returns first, Nexus uses last
             well_dict[well_name] = df
 
-
-#   log.debug(f'load-wellspecs returning:\n{well_dict}')
+    #   log.debug(f'load-wellspecs returning:\n{well_dict}')
 
     return well_dict
