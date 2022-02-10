@@ -7,9 +7,6 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
-import numpy.typing as npt
-from typing import Tuple, List
-
 import resqpy.crs as rqc
 import resqpy.lines as rql
 import resqpy.model as rq
@@ -269,8 +266,7 @@ def ccc(p1, p2, p3):
     return meet.line_line_intersect(m12[0], m12[1], o12[0], o12[1], m13[0], m13[1], o13[0], o13[1])
 
 
-def voronoi(p: npt.NDArray[np.float_], t: npt.NDArray[np.int_], b: npt.NDArray[np.int_], aoi: rql.Polyline) -> \
-        Tuple[npt.NDArray[np.float_], List[List[npt.NDArray[np.int_]]]]:
+def voronoi(p, t, b, aoi: rql.Polyline):
     """Returns dual Voronoi diagram for a Delauney triangulation.
 
     arguments:
