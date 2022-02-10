@@ -10,11 +10,8 @@ import os
 
 # import xml element tree parse method and classes here to allow single point for switching between lxml and etree
 # alternative to lxml.etree: xml.etree.ElementTree
-from lxml.etree import (
-    Element,
-    ElementTree,
-    SubElement,
-    _Element,  # noqa
+from lxml.etree import (  # type: ignore
+    Element, ElementTree, SubElement, _Element,  # noqa
     parse)
 
 import resqpy.olio.uuid as bu
@@ -291,9 +288,8 @@ def content_type(content_type_str):
     if 'type=' in content_type_str:
         return content_type_str[content_type_str.rfind('type=') + 5:]
 
-
-#   if ':' in content_type_str:
-#      return content_type_str[content_type_str.rfind(':') + 1:]
+    #   if ':' in content_type_str:
+    #      return content_type_str[content_type_str.rfind(':') + 1:]
     return content_type_str
 
 
@@ -719,7 +715,7 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
 
         line += '/>\n'
         xml_fp.write(line.encode())
-#      print(line, end = '') # debug
+    #      print(line, end = '') # debug
 
     else:
 
@@ -745,8 +741,7 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
         line = indentation + '</' + tag + '>\n'
         xml_fp.write(line.encode())
 
-
-#      print(line, end = '') # debug
+    #      print(line, end = '') # debug
 
     return node_count
 
@@ -785,7 +780,6 @@ def create_metadata_xml(node, extra_metadata):
 
     if extra_metadata:
         for data in extra_metadata.keys():
-
             metadata = SubElement(node, cns['resqml2'] + 'ExtraMetadata')
             metadata.set(cns['xsi'] + 'type', cns['resqml2'] + 'NameValuePair')
             metadata.text = null_xml_text

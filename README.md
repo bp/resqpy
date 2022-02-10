@@ -60,5 +60,5 @@ pip install -e /path/to/repo/
 ## Contributing
 
 Contributions of all forms are welcome and encouraged! Please feel free to open
-issues on the GitHub issue tracker, or submit Pull Requests. Please read the
+issues on the GitHub issue tracker, or submit Pull Requests. Instructions with how to set up your own development environment can be found at [Development environment setup](https://github.com/bp/resqpy/blob/master/docs/CONTRIBUTING.rst#development-environment-setup). Please read the
 [Contributing Guide](docs/CONTRIBUTING.rst) before submitting patches.

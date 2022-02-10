@@ -1,0 +1,35 @@
+[flake8]
+# count = True
+# statistics = True
+show_source = True
+docstring-convention = google
+exclude =  .git, __pycache__, .ipynb_checkpoints, venv, dist, .venv
+# error code reference: https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3
+select =
+    # Logical errors
+    F,
+    # Indentation
+    E101, E112, E113, W19,
+    # Statements
+    E71, E72, E73, E74,
+    # Runtime
+    E9,
+    # Deprecation
+    W60,
+    # Docstrings (pydocstyle)
+    D
+ignore =
+    # F401: "module imported but unused". Ignoring as low-priority
+    F401,
+    # F841: "local variable is assigned to but never used". Ignoring as sometimes deliberate
+    F841,
+    # pydocstyle exceptions for Google-style docstrings
+    # See http://www.pydocstyle.org/en/latest/error_codes.html#default-conventions
+    D203, D204, D213, D215, D400, D401, D404, D406, D407, D408, D409, D413
+    # Further pydocstyle exceptions for relatively unimportant issues
+    D202, D210, D402, D405, D415, D417
+per-file-ignores =
+    # Do not check docstrings for the tests or docs directories
+    tests/*: D
+    docs/*: D
+    resqpy/version.py: D
