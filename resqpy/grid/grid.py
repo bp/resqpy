@@ -560,14 +560,16 @@ class Grid(BaseResqpy):
             return None
         return rqet.find_tag(crs_root, 'VerticalUom').text
 
-    def skin(self, use_single_layer_tactics = False):
+    def skin(self, use_single_layer_tactics = False, is_regular = False):
         """Returns a GridSkin composite surface object reoresenting the outer surface of the grid."""
 
         import resqpy.grid_surface as rqgs
 
         # could cache 2 versions (with and without single layer tactics)
         if self.grid_skin is None or self.grid_skin.use_single_layer_tactics != use_single_layer_tactics:
-            self.grid_skin = rqgs.GridSkin(self, use_single_layer_tactics = use_single_layer_tactics)
+            self.grid_skin = rqgs.GridSkin(self,
+                                           use_single_layer_tactics = use_single_layer_tactics,
+                                           is_regular = is_regular)
         return self.grid_skin
 
     def create_xml(self,
