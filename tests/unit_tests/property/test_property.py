@@ -254,6 +254,14 @@ def test_property_extra_metadata(tmp_path):
 def test_points_properties(tmp_path):
     epc = os.path.join(tmp_path, 'points_test.epc')
     model = rq.new_model(epc)
+    crs = Crs(model)
+    crs_root = crs.create_xml()
+    assert crs.root is not None
+    assert bu.matching_uuids(crs.uuid, model.uuid(obj_type = 'LocalDepth3dCrs'))
+    assert model.root_for_uuid(crs.uuid) is crs_root
+
+    model.store_epc()
+    model = rq.Model(epc)
 
     extent_kji = (2, 3, 4)
     ensemble_size = 5
@@ -383,6 +391,9 @@ def test_points_properties(tmp_path):
     # re-open the model and access the grid properties
     model = rq.Model(epc)
     grid = model.grid(title = 'unfaulted grid')
+    assert grid.crs_uuid is not None
+    assert grid.crs_root is not None
+
     pc = grid.property_collection
 
     # check that the grid as stored has all cells active
@@ -436,16 +447,19 @@ def test_points_properties(tmp_path):
     assert nc.number_of_parts() == ensemble_size * time_series_size
 
     # check that the cached points for the grid can be populated from a points property
-    grid.make_regular_points_cached()
+    grid.make_regular_points_cached(apply_origin_offset = False)
     r = ensemble_size // 2
     ti = time_series_size // 2
+    p = nc.singleton(realization = r, time_index = ti)
+    assert p is not None
+    assert nc.uom_for_part(p) == 'm'
     a = nc.single_array_ref(realization = r, time_index = ti)
     grid.set_cached_points_from_property(property_collection = nc,
                                          realization = r,
                                          time_index = ti,
                                          set_inactive = True,
                                          active_collection = grid.property_collection)
-    assert_array_almost_equal(grid.points_cached, nc.single_array_ref(realization = r, time_index = ti))
+    assert_array_almost_equal(grid.points_cached, a)
     # check that grid's time index has been set
     assert grid.time_index == ti
     assert bu.matching_uuids(grid.time_series_uuid, ts_uuid)

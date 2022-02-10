@@ -428,25 +428,27 @@ def test_dataframe_from_trajectory(example_model_and_crs):
                        dxyz = (50.0, -50.0, 50.0),
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
-                       set_points_cached = True)
+                       as_irregular_grid = True)
 
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
-    elevation = 100
+    elevation = 100.0
+
     # Create a measured depth datum
+    location = (0.0, 0.0, -elevation)
     datum = resqpy.well.MdDatum(parent_model = model,
                                 crs_uuid = crs.uuid,
-                                location = (0, 0, -elevation),
+                                location = location,
                                 md_reference = 'kelly bushing')
-    mds = np.array([100, 210, 230, 240, 250])
-    zs = mds - elevation
+    mds = np.array([0.0, 100, 210, 230, 240, 250])
+    zs = mds * 1.03 - elevation
     well_name = 'CoconutDrop'
     source_dataframe = pd.DataFrame({
         'MD': mds,
-        'X': [25, 50, 75, 100, 100],
-        'Y': [25, -50, -75, -100, -100],
+        'X': [location[0], 25.0, 50, 75, 100, 100],
+        'Y': [location[1], 25.0, -50, -75, -100, -100],
         'Z': zs,
-        'WELL': ['CoconutDrop', 'CoconutDrop', 'CoconutDrop', 'CoconutDrop', 'CoconutDrop']
+        'WELL': [well_name, well_name, well_name, well_name, well_name, well_name]
     })
 
     # Create a trajectory from dataframe
@@ -549,7 +551,7 @@ def test_convenience_methods_xyz_and_kji0_marker(example_model_and_crs):
                        dxyz = (50.0, -50.0, 50.0),
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
-                       set_points_cached = True)
+                       as_irregular_grid = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')

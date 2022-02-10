@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '21st December 2021'
+version = '7th February 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -14,11 +14,11 @@ log.debug('grid.py version ' + version)
 
 import numpy as np
 
+import resqpy.grid_surface as rqgs
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.crs as rqc
 from resqpy.olio.base import BaseResqpy
 from .transmissibility import transmissibility, half_cell_transmissibility
 from .extract_functions import extract_grid_parent, extract_extent_kji, extract_grid_is_right_handed, \
@@ -116,7 +116,6 @@ class Grid(BaseResqpy):
         self.ni = self.nj = self.nk = None  #: duplicated extent information as individual integers
         self.crs_uuid = None  #: uuid of the coordinate reference system used by the grid's geometry
         self.crs_root = None  #: xml root node for the crs used by the grid's geometry
-        self.crs = None  #: Crs object
         self.points_cached = None  #: numpy array of raw points data; loaded on demand
         # Following are only relevant to structured grid varieties
         self.grid_is_right_handed = None  #: boolean indicating ijk handedness
@@ -173,14 +172,9 @@ class Grid(BaseResqpy):
             self.pillar_shape = 'straight'
             self.has_split_coordinate_lines = False
             self.k_direction_is_down = True  # arbitrary, as 'down' is rather meaningless without a crs
-            if self.extra_metadata is not None:
-                crs_uuid = self.extra_metadata.get('crs uuid')
-                if crs_uuid is not None:
-                    self.set_crs(crs_uuid)
         else:
-            self.extract_crs_uuid()
             self.extract_crs_root()
-            self.set_crs()
+            self.extract_crs_uuid()
             self.extract_has_split_coordinate_lines()
             self.extract_grid_is_right_handed()
             pillar_geometry_is_defined(self)  # note: if there is no geometry at all, resqpy sets this True
@@ -203,7 +197,7 @@ class Grid(BaseResqpy):
         return self.root
 
     def set_modified(self, update_xml = False, update_hdf5 = False):
-        """Deprecated: Assigns a new uuid to this grid; also calls set_modified() for parent model.
+        """Assigns a new uuid to this grid; also calls set_modified() for parent model.
 
         arguments:
            update_xml (boolean, default False): if True, the uuid is modified in the xml tree
@@ -224,7 +218,7 @@ class Grid(BaseResqpy):
            NB: relationships are not updated by this function, including the relationship to the
            hdf5 external part
         """
-        warnings.warn('Deprecated: This method is being removed', DeprecationWarning)
+
         old_uuid = self.uuid
         self.uuid = bu.new_uuid()
         if old_uuid is not None:
@@ -559,14 +553,14 @@ class Grid(BaseResqpy):
             return None
         return self.crs.z_units
 
-    def skin(self, use_single_layer_tactics = False):
+    def skin(self, use_single_layer_tactics = False, is_regular = False):
         """Returns a GridSkin composite surface object reoresenting the outer surface of the grid."""
-
-        import resqpy.grid_surface as rqgs
 
         # could cache 2 versions (with and without single layer tactics)
         if self.grid_skin is None or self.grid_skin.use_single_layer_tactics != use_single_layer_tactics:
-            self.grid_skin = rqgs.GridSkin(self, use_single_layer_tactics = use_single_layer_tactics)
+            self.grid_skin = rqgs.GridSkin(self,
+                                           use_single_layer_tactics = use_single_layer_tactics,
+                                           is_regular = is_regular)
         return self.grid_skin
 
     def create_xml(self,
@@ -726,15 +720,6 @@ class Grid(BaseResqpy):
     def extract_crs_root(self):
         """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_crs_root(self)
-
-    def set_crs(self, crs_uuid = None):
-        """Establish crs attribute if not already set"""
-        if self.crs is not None:
-            return
-        if crs_uuid is None:
-            crs_uuid = self.extract_crs_uuid()
-        assert crs_uuid is not None
-        self.crs = rqc.Crs(self.model, uuid = crs_uuid)
 
     def extract_pillar_shape(self):
         """This method has now been moved to a new function elsewhere in the Grid module"""
@@ -1155,11 +1140,16 @@ class Grid(BaseResqpy):
                             crs_root = None,
                             global_xy_units = None,
                             global_z_units = None,
-                            global_z_increasing_downward = None):
+                            global_z_increasing_downward = None,
+                            crs_uuid = None):
         """This method has now been moved to a new function elsewhere in the Grid module"""
+        if crs_uuid is None:
+            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
+            crs_uuid = rqet.uuid_for_part_root(crs_root)
+            assert crs_uuid is not None
         return global_to_local_crs(self,
                                    a,
-                                   crs_root = crs_root,
+                                   crs_uuid = crs_uuid,
                                    global_xy_units = global_xy_units,
                                    global_z_units = global_z_units,
                                    global_z_increasing_downward = global_z_increasing_downward)
@@ -1168,16 +1158,22 @@ class Grid(BaseResqpy):
         """This method has now been moved to a new function elsewhere in the Grid module"""
         return z_inc_down(self)
 
-    def local_to_global_crs(self,
-                            a,
-                            crs_root = None,
-                            global_xy_units = None,
-                            global_z_units = None,
-                            global_z_increasing_downward = None):
+    def local_to_global_crs(
+            self,
+            a,
+            crs_root = None,  # DEPRECATED
+            global_xy_units = None,
+            global_z_units = None,
+            global_z_increasing_downward = None,
+            crs_uuid = None):
         """This method has now been moved to a new function elsewhere in the Grid module"""
+        if crs_uuid is None:
+            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
+            crs_uuid = rqet.uuid_for_part_root(crs_root)
+            assert crs_uuid is not None
         return local_to_global_crs(self,
                                    a,
-                                   crs_root = crs_root,
+                                   crs_uuid = crs_uuid,
                                    global_xy_units = global_xy_units,
                                    global_z_units = global_z_units,
                                    global_z_increasing_downward = global_z_increasing_downward)

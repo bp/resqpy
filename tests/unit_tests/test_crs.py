@@ -12,7 +12,6 @@ import resqpy.olio.uuid as bu
 
 
 def test_crs(tmp_path):
-
     # create some coordinate reference systems
     model = rq.new_model(os.path.join(tmp_path, 'crs_test.epc'))
     crs_default = rqc.Crs(model)
@@ -23,7 +22,7 @@ def test_crs(tmp_path):
     crs_offset = rqc.Crs(model, xy_units = 'm', z_units = 'm', x_offset = 100.0, y_offset = -100.0, z_offset = -50.0)
     assert not crs_offset.null_transform
     crs_elevation = rqc.Crs(model, z_inc_down = False)
-    crs_rotate = rqc.Crs(model, rotation = maths.pi / 2.0)
+    crs_rotate = rqc.Crs(model, rotation = maths.pi / 2.0, rotation_units = 'rad')
     crs_south = rqc.Crs(model, axis_order = 'southing westing')
     crs_time_s = rqc.Crs(model, xy_units = 'm', time_units = 's')
     crs_time_ms = rqc.Crs(model, xy_units = 'm', time_units = 'ms')
@@ -96,7 +95,7 @@ def test_crs(tmp_path):
     p_ft = crs_m.convert_to(crs_ft, np.array(p))
     assert_array_almost_equal(p, crs_m.convert_from(crs_ft, p_ft))
 
-    # test time conversion
+    #  test time conversion
     pt = (123456.0, 234567.0, 1983.0)
     pt_s = np.array(crs_time_ms.convert_to(crs_time_s, pt))
     pt_s[2] *= 1000.0  # convert from seconds back to milliseconds
