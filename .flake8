@@ -3,7 +3,7 @@
 # statistics = True
 show_source = True
 docstring-convention = google
-exclude =  .git, __pycache__, .ipynb_checkpoints, venv, dist
+exclude =  .git, __pycache__, .ipynb_checkpoints, venv, dist, .venv
 # error code reference: https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3
 select =
     # Logical errors
