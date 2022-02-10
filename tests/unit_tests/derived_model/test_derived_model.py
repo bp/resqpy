@@ -92,7 +92,7 @@ def test_add_zone_by_layer_property(tmp_path):
                                                null_value = -1)
     assert za_uuid is not None
 
-    #  add a zone by layer property based on the neat cells property
+    # add a zone by layer property based on the neat cells property
     v, z_uuid = rqdm.add_zone_by_layer_property(epc_file = epc,
                                                 zone_by_cell_property_uuid = za_uuid,
                                                 title = 'from cells array')
