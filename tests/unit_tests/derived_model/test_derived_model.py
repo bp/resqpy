@@ -165,11 +165,16 @@ def test_single_layer_grid(tmp_path):
                            origin = (1000.0, 2000.0, 3000.0),
                            dxyz = (100.0, 130.0, 25.0),
                            title = 'to be squashed',
-                           set_points_cached = True)
+                           set_points_cached = True,
+                           as_irregular_grid = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     grid_uuid = grid.uuid
     model.store_epc()
+
+    # re-open model to get fully fledged Grid object
+    model = rq.Model(epc)
+    grid = model.grid(uuid = grid_uuid)
 
     # create a single layer version of the grid
     simplified = rqdm.single_layer_grid(epc, source_grid = grid, new_grid_title = 'squashed')
@@ -193,6 +198,9 @@ def test_extract_box_for_well(tmp_path):
     epc = os.path.join(tmp_path, 'tube.epc')
 
     model = rq.new_model(epc)
+    main_crs = rqc.Crs(model)
+    main_crs.create_xml()
+    main_crs_uuid = main_crs.uuid
 
     # create a basic block grid with geometry
     grid = grr.RegularGrid(model,
@@ -200,20 +208,28 @@ def test_extract_box_for_well(tmp_path):
                            origin = (0.0, 0.0, 1000.0),
                            dxyz = (100.0, 100.0, 20.0),
                            title = 'main grid',
-                           set_points_cached = True)
+                           set_points_cached = True,
+                           as_irregular_grid = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     grid_uuid = grid.uuid
+    model.store_epc()
+
+    # re-open model to get fully fledged Grid object
+    model = rq.Model(epc)
+    grid = model.grid(uuid = grid_uuid)
 
     # create a couple of well trajectories
     cells_visited = [(0, 1, 2), (1, 1, 2), (1, 1, 3), (1, 2, 3), (1, 2, 4), (2, 2, 4)]
     traj_1 = rqw.Trajectory(model,
+                            crs_uuid = main_crs_uuid,
                             grid = grid,
                             cell_kji0_list = cells_visited,
                             length_uom = 'm',
                             spline_mode = 'linear',
                             well_name = 'well 1')
     traj_2 = rqw.Trajectory(model,
+                            crs_uuid = main_crs_uuid,
                             grid = grid,
                             cell_kji0_list = cells_visited,
                             length_uom = 'm',
@@ -430,7 +446,8 @@ def test_add_one_blocked_well_property(example_model_with_well):
                            origin = (-150.0, -150.0, 1500.0),
                            extent_kji = (5, 3, 3),
                            dxyz = (100.0, 100.0, 50.0),
-                           set_points_cached = True)
+                           set_points_cached = True,
+                           as_irregular_grid = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, add_cell_length_properties = False)
     # create a blocked well
@@ -458,6 +475,7 @@ def test_add_one_blocked_well_property(example_model_with_well):
     assert p_uuid is not None
     # re-open the model and check the wellbore property
     model = rq.Model(epc)
+    grid = model.grid()
     prop = rqp.Property(model, uuid = p_uuid)
     assert prop is not None
     assert bu.matching_uuids(model.supporting_representation_for_part(model.part(uuid = prop.uuid)), bw.uuid)
@@ -527,7 +545,8 @@ def test_interpolated_grid(tmp_path):
                             origin = (0.0, 0.0, 1000.0),
                             extent_kji = (5, 4, 3),
                             dxyz = (100.0, 150.0, 50.0),
-                            set_points_cached = True)
+                            set_points_cached = True,
+                            as_irregular_grid = True)
     grid0.grid_representation = 'IjkGrid'  # overwrite block grid setting
     grid0.write_hdf5()
     grid0.create_xml(write_geometry = True, add_cell_length_properties = False)
@@ -536,7 +555,8 @@ def test_interpolated_grid(tmp_path):
                             origin = (15.0, 35.0, 1030.0),
                             extent_kji = (5, 4, 3),
                             dxyz = (97.0, 145.0, 47.0),
-                            set_points_cached = True)
+                            set_points_cached = True,
+                            as_irregular_grid = True)
     grid1.grid_representation = 'IjkGrid'  # overwrite block grid setting
     grid1.write_hdf5()
     grid1.create_xml(write_geometry = True, add_cell_length_properties = False)

@@ -50,6 +50,7 @@ class Trajectory(BaseResqpy):
             parent_model,
             trajectory_root = None,  # deprecated
             uuid = None,
+            crs_uuid = None,
             md_datum = None,
             deviation_survey = None,
             data_frame = None,
@@ -76,6 +77,9 @@ class Trajectory(BaseResqpy):
            trajectory_root (DEPRECATED): use uuid instead; the root node of an xml tree representing the trajectory;
               if not None, the new trajectory object is initialised based on the data in the tree;
               if None, one of the other arguments is used
+           uuid (UUID, optional): if present, the Trajectory is initialised from xml for an existing RESQML object
+              and the remaining arguments are mostly ignored
+           crs_uuid (UUID, optional): the uuid of a Crs object to use when generating a new trajectory
            md_datum (MdDatum object): the datum that the depths for this trajectory are measured from;
               not used if uuid or trajectory_root is not None
            deviation_survey (DeviationSurvey object, optional): if present and uuid and trajectory_root are None
@@ -124,7 +128,7 @@ class Trajectory(BaseResqpy):
         :meta common:
         """
 
-        self.crs_uuid = None
+        self.crs_uuid = crs_uuid
         self.title = well_name
         self.start_md = None
         self.finish_md = None

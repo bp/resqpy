@@ -712,21 +712,24 @@ def add_grids(model, crs, add_lengths):
                              extent_kji = (2, 2, 2),
                              crs_uuid = crs.uuid,
                              title = 'GRID A',
-                             set_points_cached = True)
+                             set_points_cached = True,
+                             as_irregular_grid = True)
     grid_a.write_hdf5()
     grid_a.create_xml(write_active = False, add_cell_length_properties = add_lengths, write_geometry = True)
     grid_b = grr.RegularGrid(model,
                              extent_kji = (3, 3, 3),
                              crs_uuid = crs.uuid,
                              title = 'GRID B',
-                             set_points_cached = True)
+                             set_points_cached = True,
+                             as_irregular_grid = True)
     grid_b.write_hdf5()
     grid_b.create_xml(write_active = False, add_cell_length_properties = add_lengths, write_geometry = True)
     grid_c = grr.RegularGrid(model,
                              extent_kji = (4, 4, 4),
                              crs_uuid = crs.uuid,
                              title = 'GRID C',
-                             set_points_cached = True)
+                             set_points_cached = True,
+                             as_irregular_grid = True)
     grid_c.write_hdf5()
     grid_c.create_xml(write_active = False, add_cell_length_properties = add_lengths, write_geometry = True)
     return (grid_a, grid_b, grid_c)
