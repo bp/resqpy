@@ -460,7 +460,7 @@ class RegularGrid(Grid):
         if local:
             return grid.xyz_box_cached
         global_xyz_box = grid.xyz_box_cached.copy()
-        grid.local_to_global_crs(global_xyz_box, grid.crs_root)
+        grid.local_to_global_crs(global_xyz_box, crs_uuid=grid.crs_uuid)
         return global_xyz_box
 
     def create_xml(self,
