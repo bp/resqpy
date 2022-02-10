@@ -235,7 +235,7 @@ def manhatten_distance(p1, p2):
     return abs(p2[0] - p1[0]) + abs(p2[1] - p1[1]) + abs(p2[2] - p1[2])
 
 
-def manhattan_distance(p1, p2):  # alternative spelling to above
+def manhattan_distance(p1, p2):  #  alternative spelling to above
     """Returns the Manhattan distance between two points."""
     return abs(p2[0] - p1[0]) + abs(p2[1] - p1[1]) + abs(p2[2] - p1[2])
 
@@ -253,7 +253,7 @@ def degrees_difference(a, b):
 
 
 def rotation_matrix_3d_axial(axis, angle):
-    """Retuns a rotation matrix which will rotate points about axis (0, 1, or 2) by angle in degrees."""
+    """Returns a rotation matrix which will rotate points about axis (0, 1, or 2) by angle in degrees."""
 
     axis_a = (axis + 1) % 3
     axis_b = (axis_a + 1) % 3
@@ -270,7 +270,7 @@ def rotation_matrix_3d_axial(axis, angle):
 
 
 def rotation_3d_matrix(xzy_axis_angles):
-    """Retuns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
+    """Returns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
 
     matrix = np.zeros((3, 3))
     for axis in range(3):
