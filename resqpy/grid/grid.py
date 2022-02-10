@@ -19,6 +19,7 @@ import resqpy.olio.grid_functions as gf
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.crs as rqc
 from resqpy.olio.base import BaseResqpy
 from .transmissibility import transmissibility, half_cell_transmissibility
 from .extract_functions import extract_grid_parent, extract_extent_kji, extract_grid_is_right_handed, \
@@ -116,6 +117,7 @@ class Grid(BaseResqpy):
         self.ni = self.nj = self.nk = None  #: duplicated extent information as individual integers
         self.crs_uuid = None  #: uuid of the coordinate reference system used by the grid's geometry
         self.crs_root = None  #: xml root node for the crs used by the grid's geometry
+        self.crs = None  #: Crs object
         self.points_cached = None  #: numpy array of raw points data; loaded on demand
         # Following are only relevant to structured grid varieties
         self.grid_is_right_handed = None  #: boolean indicating ijk handedness
@@ -172,9 +174,14 @@ class Grid(BaseResqpy):
             self.pillar_shape = 'straight'
             self.has_split_coordinate_lines = False
             self.k_direction_is_down = True  # arbitrary, as 'down' is rather meaningless without a crs
+            if self.extra_metadata is not None:
+                crs_uuid = self.extra_metadata.get('crs uuid')
+                if crs_uuid is not None:
+                    self.set_crs(crs_uuid)
         else:
-            self.extract_crs_root()
             self.extract_crs_uuid()
+            self.extract_crs_root()
+            self.set_crs()
             self.extract_has_split_coordinate_lines()
             self.extract_grid_is_right_handed()
             pillar_geometry_is_defined(self)  # note: if there is no geometry at all, resqpy sets this True
@@ -720,6 +727,15 @@ class Grid(BaseResqpy):
     def extract_crs_root(self):
         """This method has now been moved to a new function elsewhere in the Grid module"""
         return extract_crs_root(self)
+
+    def set_crs(self, crs_uuid = None):
+        """Establish crs attribute if not already set"""
+        if self.crs is not None:
+            return
+        if crs_uuid is None:
+            crs_uuid = self.extract_crs_uuid()
+        assert crs_uuid is not None
+        self.crs = rqc.Crs(self.model, uuid = crs_uuid)
 
     def extract_pillar_shape(self):
         """This method has now been moved to a new function elsewhere in the Grid module"""
