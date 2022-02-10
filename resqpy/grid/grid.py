@@ -1154,35 +1154,46 @@ class Grid(BaseResqpy):
 
     def global_to_local_crs(self,
                             a,
-                            crs_root=None,
-                            global_xy_units=None,
-                            global_z_units=None,
-                            global_z_increasing_downward=None):
+                            crs_root = None,
+                            global_xy_units = None,
+                            global_z_units = None,
+                            global_z_increasing_downward = None,
+                            crs_uuid = None):
         """This method has now been moved to a new function elsewhere in the Grid module"""
+        if crs_uuid is None:
+            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
+            crs_uuid = rqet.uuid_for_part_root(crs_root)
+            assert crs_uuid is not None
         return global_to_local_crs(self,
                                    a,
-                                   crs_root=crs_root,
-                                   global_xy_units=global_xy_units,
-                                   global_z_units=global_z_units,
-                                   global_z_increasing_downward=global_z_increasing_downward)
+                                   crs_uuid = crs_uuid,
+                                   global_xy_units = global_xy_units,
+                                   global_z_units = global_z_units,
+                                   global_z_increasing_downward = global_z_increasing_downward)
 
     def z_inc_down(self):
         """This method has now been moved to a new function elsewhere in the Grid module"""
         return z_inc_down(self)
 
-    def local_to_global_crs(self,
-                            a,
-                            crs_root=None,
-                            global_xy_units=None,
-                            global_z_units=None,
-                            global_z_increasing_downward=None):
+    def local_to_global_crs(
+            self,
+            a,
+            crs_root = None,  # DEPRECATED
+            global_xy_units = None,
+            global_z_units = None,
+            global_z_increasing_downward = None,
+            crs_uuid = None):
         """This method has now been moved to a new function elsewhere in the Grid module"""
+        if crs_uuid is None:
+            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
+            crs_uuid = rqet.uuid_for_part_root(crs_root)
+            assert crs_uuid is not None
         return local_to_global_crs(self,
                                    a,
-                                   crs_root=crs_root,
-                                   global_xy_units=global_xy_units,
-                                   global_z_units=global_z_units,
-                                   global_z_increasing_downward=global_z_increasing_downward)
+                                   crs_uuid = crs_uuid,
+                                   global_xy_units = global_xy_units,
+                                   global_z_units = global_z_units,
+                                   global_z_increasing_downward = global_z_increasing_downward)
 
     def composite_bounding_box(self, bounding_box_list):
         """This method has now been moved to a new function elsewhere in the Grid module"""
