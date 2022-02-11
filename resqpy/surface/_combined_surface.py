@@ -1,4 +1,4 @@
-"""combined_surface.py: surface class based on resqml standard."""
+"""_combined_surface.py: surface class based on resqml standard."""
 
 version = '4th November 2021'
 

@@ -1,4 +1,4 @@
-"""surface.py: surface class based on resqml standard."""
+"""_surface.py: surface class based on resqml standard."""
 
 version = '4th November 2021'
 
@@ -17,8 +17,8 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
-from .base_surface import BaseSurface
-from .triangulated_patch import TriangulatedPatch
+from ._base_surface import BaseSurface
+from ._triangulated_patch import TriangulatedPatch
 
 
 class Surface(BaseSurface):
@@ -549,7 +549,6 @@ class Surface(BaseSurface):
         role_node.text = self.surface_role
 
         for patch in self.patch_list:
-
             p_node = rqet.SubElement(tri_rep, ns['resqml2'] + 'TrianglePatch')
             p_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'TrianglePatch')
             p_node.text = '\n'

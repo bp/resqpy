@@ -1,4 +1,4 @@
-import resqpy.grid.faults as f
+import resqpy.grid._faults as f
 import numpy as np
 from resqpy.model import Model
 

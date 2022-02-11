@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import resqpy.grid.points_functions as pf
+import resqpy.grid._points_functions as pf
 
 
 def test_uncache_points(basic_regular_grid):

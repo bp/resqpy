@@ -1,4 +1,4 @@
-"""mesh.py: surface class based on resqml standard."""
+"""_mesh.py: surface class based on resqml standard."""
 
 version = '4th November 2021'
 
@@ -20,8 +20,8 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
-from .base_surface import BaseSurface
-from .surface import Surface
+from ._base_surface import BaseSurface
+from ._surface import Surface
 
 
 class Mesh(BaseSurface):

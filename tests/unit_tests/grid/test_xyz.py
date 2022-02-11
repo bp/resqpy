@@ -1,6 +1,6 @@
 import pytest
 
-import resqpy.grid.xyz as xyz
+import resqpy.grid._xyz as xyz
 import numpy as np
 import resqpy.crs as rqc
 from resqpy.olio.exceptions import InvalidUnitError

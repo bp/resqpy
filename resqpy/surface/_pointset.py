@@ -1,4 +1,4 @@
-"""pointset.py: pointset class based on resqml standard."""
+"""_pointset.py: pointset class based on resqml standard."""
 
 version = '4th November 2021'
 
@@ -17,7 +17,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .base_surface import BaseSurface
+from ._base_surface import BaseSurface
 
 
 class PointSet(BaseSurface):

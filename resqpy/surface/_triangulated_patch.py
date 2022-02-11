@@ -1,4 +1,4 @@
-"""triangulated_patch.py: surface class based on resqml standard."""
+"""_triangulated_patch.py: surface class based on resqml standard."""
 
 version = '4th November 2021'
 
@@ -194,8 +194,7 @@ class TriangulatedPatch:
                 self.points[p] = sail_point(centre, radius, az, dip).copy()
                 az += delta_theta
 
-
-#           log.debug('p: ' + str(p) + '; dip: {0:3.1f}; az: {1:3.1f}'.format(dip, az))
+            #           log.debug('p: ' + str(p) + '; dip: {0:3.1f}; az: {1:3.1f}'.format(dip, az))
             p1 = row * (row + 1) // 2
             p2 = (row + 1) * (row + 2) // 2
             self.triangles[t] = (p1, p2, p2 + 1)

@@ -4,7 +4,7 @@ import pytest
 from resqpy.grid import Grid
 from resqpy.model import Model
 
-import resqpy.grid.face_functions as ff
+import resqpy.grid._face_functions as ff
 
 
 def test_face_centre_axis_0(basic_regular_grid: Grid):
