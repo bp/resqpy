@@ -3,7 +3,7 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '21st December 2021'
+version = '7th February 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -14,6 +14,7 @@ log.debug('_grid.py version ' + version)
 
 import numpy as np
 
+import resqpy.grid_surface as rqgs
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
@@ -560,14 +561,14 @@ class Grid(BaseResqpy):
             return None
         return rqet.find_tag(crs_root, 'VerticalUom').text
 
-    def skin(self, use_single_layer_tactics = False):
+    def skin(self, use_single_layer_tactics = False, is_regular = False):
         """Returns a GridSkin composite surface object reoresenting the outer surface of the grid."""
-
-        import resqpy.grid_surface as rqgs
 
         # could cache 2 versions (with and without single layer tactics)
         if self.grid_skin is None or self.grid_skin.use_single_layer_tactics != use_single_layer_tactics:
-            self.grid_skin = rqgs.GridSkin(self, use_single_layer_tactics = use_single_layer_tactics)
+            self.grid_skin = rqgs.GridSkin(self,
+                                           use_single_layer_tactics = use_single_layer_tactics,
+                                           is_regular = is_regular)
         return self.grid_skin
 
     def create_xml(self,
@@ -947,7 +948,7 @@ class Grid(BaseResqpy):
         return extract_crs_root(self)
 
     def set_crs(self, crs_uuid = None):
-        """Establishes crs attribute if not already set"""
+        """Establish crs attribute if not already set"""
         if self.crs is not None:
             return
         if crs_uuid is None:
@@ -1968,11 +1969,16 @@ class Grid(BaseResqpy):
                             crs_root = None,
                             global_xy_units = None,
                             global_z_units = None,
-                            global_z_increasing_downward = None):
+                            global_z_increasing_downward = None,
+                            crs_uuid = None):
         """Converts array of points in situ from global coordinate system to established local one."""
+        if crs_uuid is None:
+            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
+            crs_uuid = rqet.uuid_for_part_root(crs_root)
+            assert crs_uuid is not None
         return global_to_local_crs(self,
                                    a,
-                                   crs_root = crs_root,
+                                   crs_uuid = crs_uuid,
                                    global_xy_units = global_xy_units,
                                    global_z_units = global_z_units,
                                    global_z_increasing_downward = global_z_increasing_downward)
@@ -1984,16 +1990,22 @@ class Grid(BaseResqpy):
         """
         return z_inc_down(self)
 
-    def local_to_global_crs(self,
-                            a,
-                            crs_root = None,
-                            global_xy_units = None,
-                            global_z_units = None,
-                            global_z_increasing_downward = None):
+    def local_to_global_crs(
+            self,
+            a,
+            crs_root = None,  # DEPRECATED
+            global_xy_units = None,
+            global_z_units = None,
+            global_z_increasing_downward = None,
+            crs_uuid = None):
         """Converts array of points in situ from local coordinate system to global one."""
+        if crs_uuid is None:
+            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
+            crs_uuid = rqet.uuid_for_part_root(crs_root)
+            assert crs_uuid is not None
         return local_to_global_crs(self,
                                    a,
-                                   crs_root = crs_root,
+                                   crs_uuid = crs_uuid,
                                    global_xy_units = global_xy_units,
                                    global_z_units = global_z_units,
                                    global_z_increasing_downward = global_z_increasing_downward)
