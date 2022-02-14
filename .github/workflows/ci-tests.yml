@@ -1,6 +1,95 @@
+#---
+#
+#name: Python CI
+#
+#on:
+#  push:
+#    branches:
+#      - master
+#  pull_request:
+#
+#jobs:
+#  static-analysis:
+#    name: Static analysis
+#    runs-on: ubuntu-latest
+#    steps:
+#
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#
+#      - name: Install dependencies
+#        uses: ./.github/actions/prepare-poetry
+#        with:
+#          python-version: 3.9
+#
+#      # Post in-line comments for any issues found
+#      # Do not run if coming from a forked repo
+#      # See https://github.com/marketplace/actions/lint-action
+#      - name: Run linters (with annotations)
+#        if: github.event.pull_request.head.repo.full_name == github.repository
+#        uses: wearerequired/lint-action@v1
+#        with:
+#          flake8: true
+#          flake8_command_prefix: poetry run
+#          flake8_dir: resqpy
+#          mypy: true
+#          mypy_command_prefix: poetry run
+#          mypy_args: resqpy
+#
+#      # Alternative step that works with forked repo
+#      - name: Run linters (without annotations)
+#        if: github.event.pull_request.head.repo.full_name != github.repository
+#        run: |
+#          poetry run flake8 .
+#          poetry run mypy resqpy
+#
+#      - name: Code formatting
+#        run: poetry run yapf --diff -r -p .
+#
+#  unit-tests:
+#    name: Unit tests (Python ${{ matrix.python-version }})
+#    runs-on: ubuntu-latest
+#
+#    strategy:
+#      matrix:
+#        python-version: [3.7, 3.8, 3.9]
+#
+#    steps:
+#      - uses: actions/checkout@v2
+#
+#      - name: Install dependencies
+#        uses: ./.github/actions/prepare-poetry
+#        with:
+#          python-version: ${{ matrix.python-version }}
+#
+#      - name: Run pytest
+#        run: |
+#          poetry run pytest --cov=resqpy --junitxml=pytest.xml
+#
+#      - name: Upload pytest artifacts
+#        if: ${{ always() }}
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: Unit Test Results (Python ${{ matrix.python-version }})
+#          path: pytest.xml
+#
+#      - name: Upload coverage to Codecov
+#        uses: codecov/codecov-action@v2
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          files: pytest.xml
+#          fail_ci_if_error: true
+#
+#      # - name: Publish Unit Test Results
+#      #   if: always()
+#      #   uses: EnricoMi/publish-unit-test-result-action@v1
+#        # with:
+#        #   files: *.xml
+
+
 ---
 
-name: Python CI
+name: Publish release
 
 on:
   push:
@@ -9,79 +98,91 @@ on:
   pull_request:
 
 jobs:
-  static-analysis:
-    name: Static analysis
+  build:
+    name: Build distribution
     runs-on: ubuntu-latest
     steps:
-    
+
       - name: Checkout code
         uses: actions/checkout@v2
-       
-      - name: Install dependencies
-        uses: ./.github/actions/prepare-poetry
         with:
-          python-version: 3.9
+          fetch-depth: 0
 
-      # Post in-line comments for any issues found
-      # Do not run if coming from a forked repo
-      # See https://github.com/marketplace/actions/lint-action
-      - name: Run linters (with annotations)
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: wearerequired/lint-action@v1
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          flake8: true
-          flake8_command_prefix: poetry run
-          flake8_dir: resqpy
-          mypy: true
-          mypy_command_prefix: poetry run
-          mypy_args: resqpy
+          python-version: '3.9'
 
-      # Alternative step that works with forked repo
-      - name: Run linters (without annotations)
-        if: github.event.pull_request.head.repo.full_name != github.repository
+#      - name: Install Poetry
+#        uses: snok/install-poetry@v1
+#        with:
+#          virtualenvs-create: true
+#          virtualenvs-in-project: true
+
+      - name: Build
         run: |
-          poetry run flake8 .
-          poetry run mypy resqpy
+          python -m pip install --upgrade pip
+          pip install poetry
+          pip install poetry-dynamic-versioning
+          poetry build
 
-      - name: Code formatting
-        run: poetry run yapf --diff -r -p .
-
-  unit-tests:
-    name: Unit tests (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        python-version: [3.7, 3.8, 3.9]
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Install dependencies
-        uses: ./.github/actions/prepare-poetry
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Run pytest
-        run: |
-          poetry run pytest --cov=resqpy --junitxml=pytest.xml
-
-      - name: Upload pytest artifacts
-        if: ${{ always() }}
+      - name: Save build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: Unit Test Results (Python ${{ matrix.python-version }})
-          path: pytest.xml
+          name: dist-artifact
+          path: dist/
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: pytest.xml
-          fail_ci_if_error: true
+          python-version: '3.9'
 
-      # - name: Publish Unit Test Results
-      #   if: always()
-      #   uses: EnricoMi/publish-unit-test-result-action@v1
-        # with:
-        #   files: *.xml
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: dist-artifact
+          path: dist/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: dist/
+
+      - name: Install from build
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest-mock
+          pip install resqpy --target=dist --find-links=dist/
+
+      - name: Copy tests and example data to dist folder for testing against artifacts
+        run: |
+          cp -R tests dist/
+          cp -R example_data dist/
+
+      - name: Run tests
+        run: pytest dist/tests --buildtest
+
+  publish:
+    name: Publish to PyPI
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Get build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: dist-artifact
+          path: dist/
