@@ -167,7 +167,7 @@ jobs:
       - name: Build
         run: |
           python -m pip install --upgrade pip
-          pip install poetry-dynamic-versioning
+          # pip install poetry-dynamic-versioning
           poetry build
 
       - name: Save build artifacts
@@ -202,8 +202,10 @@ jobs:
           pip install pytest-mock
           pip install resqpy --find-links=dist
 
-      - name: Copy tests to dist folder for testing against artifacts
-        run: cp -R tests dist/
+      - name: Copy tests and example data to dist folder for testing against artifacts
+        run: |
+          cp -R tests dist/
+          cp -R example_data dist/
 
       - name: Run tests
         run: pytest dist/tests --buildtest
