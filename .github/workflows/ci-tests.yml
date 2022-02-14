@@ -169,7 +169,7 @@ jobs:
       - name: Build
         run: |
           python -m pip install --upgrade pip
-          pip install --target=/home/runner/.local/share/pypoetry/venv/bin/ poetry-dynamic-versioning
+          pip install --target=/home/runner/.local/bin/ poetry-dynamic-versioning
           poetry install
           poetry build
 
