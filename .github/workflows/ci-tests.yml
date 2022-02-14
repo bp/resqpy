@@ -196,6 +196,9 @@ jobs:
           name: dist-artifact
           path: dist/
 
+      - name: Copy tests to dist folder for testing
+        run: cp -R tests dist/
+
       - name: Install from build
         run: |
           python -m pip install --upgrade pip
@@ -203,7 +206,7 @@ jobs:
           pip install resqpy --find-links=dist
 
       - name: Run tests
-        run: pytest --buildtest
+        run: pytest dist/ --buildtest
 
   publish:
     name: Publish to PyPI
