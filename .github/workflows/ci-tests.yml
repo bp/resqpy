@@ -1,21 +1,154 @@
+#---
+#
+#name: Python CI
+#
+#on:
+#  push:
+#    branches:
+#      - master
+#  pull_request:
+#
+#jobs:
+#  static-analysis:
+#    name: Static analysis
+#    runs-on: ubuntu-latest
+#    steps:
+#      # Post in-line comments for any issues found
+#      # Do not run if coming from a forked repo
+#      # See https://github.com/marketplace/actions/lint-action
+#
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#
+#      - name: Set up Python
+#        uses: actions/setup-python@v2
+#        with:
+#          python-version: '3.9'
+#
+#      - name: Install Poetry
+#        uses: snok/install-poetry@v1
+#        with:
+#          virtualenvs-create: true
+#          virtualenvs-in-project: true
+#
+#      - name: Install Poetry Plugins
+#        run: |
+#          python -m pip install --upgrade pip
+#          pip install poetry-dynamic-versioning
+#
+#      - name: Load cached venv
+#        id: cached-poetry-dependencies
+#        uses: actions/cache@v2
+#        with:
+#          path: .venv
+#          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+#
+#      - name: Install missing cached dependencies
+#        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+#        run: poetry install --no-interaction
+#
+#      - name: Run linters (with annotations)
+#        if: github.event.pull_request.head.repo.full_name == github.repository
+#        uses: wearerequired/lint-action@v1
+#        with:
+#          flake8: true
+#          flake8_command_prefix: poetry run
+#          flake8_dir: resqpy
+#          mypy: true
+#          mypy_command_prefix: poetry run
+#          mypy_args: resqpy
+#
+#      # Alternative step that works with forked repo
+#      - name: Run linters (without annotations)
+#        if: github.event.pull_request.head.repo.full_name != github.repository
+#        run: |
+#          poetry run flake8 .
+#          poetry run mypy resqpy
+#
+#      - name: Code formatting
+#        run: poetry run yapf --diff -r -p .
+#
+#  unit-tests:
+#    name: Unit tests (Python ${{ matrix.python-version }})
+#    runs-on: ubuntu-latest
+#
+#    strategy:
+#      matrix:
+#        python-version: [3.7, 3.8, 3.9]
+#
+#    steps:
+#      - uses: actions/checkout@v2
+#        with:
+#          # Ensure tags are fetched, for creating version string
+#          fetch-depth: 0
+#
+#      - name: Set up Python ${{ matrix.python-version }}
+#        uses: actions/setup-python@v2
+#        with:
+#          python-version: ${{ matrix.python-version }}
+#
+#      - name: Install Poetry
+#        uses: snok/install-poetry@v1
+#        with:
+#          virtualenvs-create: true
+#          virtualenvs-in-project: true
+#
+#      - name: Install Poetry Plugins
+#        run: |
+#          python -m pip install --upgrade pip
+#          pip install poetry-dynamic-versioning
+#
+#      - name: Load cached venv
+#        id: cached-poetry-dependencies
+#        uses: actions/cache@v2
+#        with:
+#          path: .venv
+#          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+#
+#      - name: Install missing cached dependencies
+#        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+#        run: poetry install --no-interaction
+#
+#      - name: Run pytest
+#        run: |
+#          poetry run pytest --cov=resqpy --junitxml=pytest.xml
+#
+#      - name: Upload pytest artifacts
+#        if: ${{ always() }}
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: Unit Test Results (Python ${{ matrix.python-version }})
+#          path: pytest.xml
+#
+#      - name: "Upload coverage to Codecov"
+#        uses: codecov/codecov-action@v2
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          files: pytest.xml
+#          fail_ci_if_error: true
+#
+#      # - name: Publish Unit Test Results
+#      #   if: always()
+#      #   uses: EnricoMi/publish-unit-test-result-action@v1
+#        # with:
+#        #   files: *.xml
+
+
 ---
 
-name: Python CI
+name: Publish release
 
 on:
   push:
-    branches:
-      - master
-  pull_request:
+    tags:
+      # Run when a tag is pushed with a valid semantic version number
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  static-analysis:
-    name: Static analysis
+  build:
+    name: Build distribution
     runs-on: ubuntu-latest
     steps:
-      # Post in-line comments for any issues found
-      # Do not run if coming from a forked repo
-      # See https://github.com/marketplace/actions/lint-action
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -31,104 +164,43 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Install Poetry Plugins
+      - name: Build
         run: |
           python -m pip install --upgrade pip
           pip install poetry-dynamic-versioning
+          poetry build
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v2
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install missing cached dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction
-
-      - name: Run linters (with annotations)
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: wearerequired/lint-action@v1
-        with:
-          flake8: true
-          flake8_command_prefix: poetry run
-          flake8_dir: resqpy
-          mypy: true
-          mypy_command_prefix: poetry run
-          mypy_args: resqpy
-
-      # Alternative step that works with forked repo
-      - name: Run linters (without annotations)
-        if: github.event.pull_request.head.repo.full_name != github.repository
-        run: |
-          poetry run flake8 .
-          poetry run mypy resqpy
-
-      - name: Code formatting
-        run: poetry run yapf --diff -r -p .
-
-  unit-tests:
-    name: Unit tests (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        python-version: [3.7, 3.8, 3.9]
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          # Ensure tags are fetched, for creating version string
-          fetch-depth: 0
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Install Poetry Plugins
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry-dynamic-versioning
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v2
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install missing cached dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction
-
-      - name: Run pytest
-        run: |
-          poetry run pytest --cov=resqpy --junitxml=pytest.xml
-
-      - name: Upload pytest artifacts
-        if: ${{ always() }}
+      - name: Save build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: Unit Test Results (Python ${{ matrix.python-version }})
-          path: pytest.xml
+          name: dist-artifact
+          path: dist/
 
-      - name: "Upload coverage to Codecov"
-        uses: codecov/codecov-action@v2
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: pytest.xml
-          fail_ci_if_error: true
+          python-version: '3.9'
 
-      # - name: Publish Unit Test Results
-      #   if: always()
-      #   uses: EnricoMi/publish-unit-test-result-action@v1
-        # with:
-        #   files: *.xml
+      - name: Get build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: dist-artifact
+          path: dist/
+
+      - name: Install from build
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest-mock
+          pip install resqpy --find-links=dist
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: pytest --buildtest
