@@ -203,7 +203,7 @@ jobs:
           pip install resqpy --find-links=dist
 
       - name: Run tests
-        run: pytest dist --buildtest
+        run: pytest --buildtest
 
   publish:
     name: Publish to PyPI
