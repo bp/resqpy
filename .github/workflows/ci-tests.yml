@@ -170,7 +170,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           poetry install
-          .venv/bin/pip install poetry-dynamic-versioning
+          pip install --target=.venv/bin/ poetry-dynamic-versioning
           git describe --tags
           poetry build
 
