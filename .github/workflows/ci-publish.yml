@@ -31,7 +31,6 @@ jobs:
       - name: Build
         run: |
           python -m pip install --upgrade pip
-          pip install poetry-dynamic-versioning
           poetry build
 
       - name: Save build artifacts
@@ -51,6 +50,9 @@ jobs:
         with:
           python-version: '3.9'
 
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Get build artifacts
         uses: actions/download-artifact@v2
         with:
@@ -61,13 +63,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest-mock
-          pip install resqpy --find-links=dist
+          pip install resqpy --target=dist --find-links=dist
 
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Copy tests and example data to dist folder for testing against artifacts
+        run: |
+          cp -R tests dist/
+          cp -R example_data dist/
 
       - name: Run tests
-        run: pytest --buildtest
+        run: pytest dist/tests --buildtest
 
   publish:
     name: Publish to PyPI

@@ -9,7 +9,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "resqpy"
-version = "1.7.0" # Set at build time
+version = "0.0.0" # Set at build time
 description = "Python API for working with RESQML models"
 authors = ["BP"]
 license = "MIT"
