@@ -194,7 +194,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: dist-artifact
-          path: dist/
+          path: /dist
 
       - name: Install from build
         run: |
