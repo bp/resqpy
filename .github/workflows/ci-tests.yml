@@ -166,8 +166,12 @@ jobs:
 
       - name: Build
         run: |
+          set -x
           python -m pip install --upgrade pip
           pip install poetry-dynamic-versioning
+          pwd
+          ls
+          git status
           git describe --tags
           poetry build
 
