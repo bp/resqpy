@@ -46,6 +46,7 @@ jobs:
       - name: Code formatting
         run: poetry run yapf --diff -r -p .
 
+
   unit-tests:
     name: Unit tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
