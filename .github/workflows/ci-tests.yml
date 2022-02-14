@@ -56,9 +56,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-        with:
-          # Ensure tags are fetched, for creating version string
-          fetch-depth: 0
 
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
