@@ -202,11 +202,11 @@ jobs:
           pip install pytest-mock
           pip install resqpy --find-links=dist
 
-      - name: Copy tests to dist folder for testing
+      - name: Copy tests to dist folder for testing against artifacts
         run: cp -R tests dist/
 
       - name: Run tests
-        run: pytest dist/ --buildtest
+        run: pytest dist/tests --buildtest
 
   publish:
     name: Publish to PyPI
