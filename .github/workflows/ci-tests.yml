@@ -169,7 +169,8 @@ jobs:
       - name: Build
         run: |
           python -m pip install --upgrade pip
-          ${XDG_DATA_HOME:-~/.local/share}/pypoetry/venv/bin/pip install poetry-dynamic-versioning
+          poetry install
+          .venv/bin/pip install poetry-dynamic-versioning
           git describe --tags
           poetry build
 
