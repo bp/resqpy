@@ -194,13 +194,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: dist-artifact
-          path: /dist
+          path: dist/
 
       - name: Install from build
         run: |
           python -m pip install --upgrade pip
           pip install pytest-mock
-          pip install resqpy --target=dist --find-links=dist
+          pip install resqpy --target=dist --find-links=dist/
 
       - name: Copy tests and example data to dist folder for testing against artifacts
         run: |
