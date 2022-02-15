@@ -326,13 +326,27 @@ class RegularGrid(Grid):
 
         if cache_centre_array and (not hasattr(self, 'array_centre_point') or self.array_centre_point is None):
             centres = np.zeros((self.nk, self.nj, self.ni, 3))
-            # todo: replace for loops with linspace
-            for k in range(self.nk - 1):
-                centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
-            for j in range(self.nj - 1):
-                centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
-            for i in range(self.ni - 1):
-                centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
+            if self.is_aligned:
+                centres[:, :, :, 0] = np.linspace(0.0,
+                                                  self.block_dxyz_dkji[2, 0] * self.ni,
+                                                  num = self.ni,
+                                                  endpoint = False).reshape((1, 1, self.ni))
+                centres[:, :, :, 1] = np.linspace(0.0,
+                                                  self.block_dxyz_dkji[1, 1] * self.nj,
+                                                  num = self.nj,
+                                                  endpoint = False).reshape((1, self.nj, 1))
+                centres[:, :, :, 2] = np.linspace(0.0,
+                                                  self.block_dxyz_dkji[0, 2] * self.nk,
+                                                  num = self.nk,
+                                                  endpoint = False).reshape((self.nk, 1, 1))
+            else:
+                # todo: replace for loops with linspace
+                for k in range(self.nk - 1):
+                    centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
+                for j in range(self.nj - 1):
+                    centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
+                for i in range(self.ni - 1):
+                    centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
             centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
             self.array_centre_point = centres
 
@@ -345,6 +359,15 @@ class RegularGrid(Grid):
             return centre
 
         return self.array_centre_point
+
+    def aligned_column_centres(self):
+        """For an aligned grid, returns an array of column centres in xy, of shape (nj, ni, 2)."""
+
+        assert self.is_aligned
+        centres = np.zeros((self.nj, self.ni, 2))
+        centres[:, :, 0] = np.linspace(0.0, self.block_dxyz_dkji[2, 0] * self.ni, num = self.ni).reshape((1, self.ni))
+        centres[:, :, 1] = np.linspace(0.0, self.block_dxyz_dkji[1, 1] * self.nj, num = self.nj).reshape((self.nj, 1))
+        return centres
 
     def volume(self, cell_kji0 = None):
         """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
