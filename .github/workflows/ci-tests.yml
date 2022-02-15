@@ -13,10 +13,10 @@ jobs:
     name: Static analysis
     runs-on: ubuntu-latest
     steps:
-    
+
       - name: Checkout code
         uses: actions/checkout@v2
-       
+
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
         with:
