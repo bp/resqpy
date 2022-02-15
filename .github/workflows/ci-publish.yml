@@ -116,6 +116,10 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Build (for testing)
+        run: |
+          poetry build
+
 #      - name: Move TOML File to base directory
 #        run: |
 #          mv dist/pyproject.toml .
