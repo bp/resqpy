@@ -101,7 +101,10 @@ jobs:
           path: dist/
 
       - name: Move TOML File to base directory
-        run: cp dist/pyproject.toml .
+        run: |
+          mv dist/pyproject.toml .
+          ls
+          ls dist/
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
