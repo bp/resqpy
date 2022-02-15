@@ -109,7 +109,7 @@ jobs:
       - name: Move TOML File to base directory
         run: |
           mv dist/pyproject.toml .
-          find . -type f -exec touch {}
+          find . -type f -exec touch {} +
 
       - name: Upload to PyPI
         run: |
