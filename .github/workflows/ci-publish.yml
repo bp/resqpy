@@ -57,10 +57,6 @@ jobs:
           name: dist-artifact
           path: dist/
 
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: dist/
-
       - name: Install from build
         run: |
           python -m pip install --upgrade pip
