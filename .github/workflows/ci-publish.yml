@@ -100,6 +100,9 @@ jobs:
           name: dist-artifact
           path: dist/
 
+      - name: Move TOML File to base directory
+        run: mv dist/pyproject.toml /
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
@@ -108,4 +111,4 @@ jobs:
 
       - name: Upload to PyPI
         run: |
-          poetry publish -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --repository TestPyPI --dry-run
+          poetry publish --repository TestPyPI -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --dry-run
