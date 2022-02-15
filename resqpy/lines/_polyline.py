@@ -243,6 +243,23 @@ class Polyline(_BasePolyline):
             return pip.pip_cn(p, self.coordinates)
         return pip.pip_wn(p, self.coordinates)
 
+    def points_are_inside_xy(self, p_array):
+        """Returns bool array, True where p is inside closed polygon, in xy plane, otherwise False.
+
+        arguments:
+           p_array (numpy float array of shape (..., 2 or 3)): an array of points, each of which is
+              tested for inclusion against the closed polygon
+
+        returns:
+           numpy bool array of shape p_array.shape[:-1], set True for those points which are inside
+           the polygon
+
+        :meta common:
+        """
+
+        assert self.isclosed, 'point inclusion is not applicable to unclosed polylines'
+        return pip.pip_array_cn(p_array, self.coordinates)
+
     def segment_length(self, segment_index, in_xy = False):
         """Returns the naive length (ie.
 

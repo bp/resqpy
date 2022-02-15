@@ -102,6 +102,7 @@ class RegularGrid(Grid):
             self.is_aligned = None  #: boolean indicating alignment of IJK axes with +/- xyz respectively
 
         if uuid is None:
+            assert extent_kji is not None and len(extent_kji) == 3
             super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
             self.grid_representation = 'IjkGrid' if as_irregular_grid else 'IjkBlockGrid'
             self.extent_kji = np.array(extent_kji).copy()
