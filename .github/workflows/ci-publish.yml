@@ -120,4 +120,4 @@ jobs:
 
       - name: Upload to PyPI
         run: |
-          poetry publish --repository TestPyPI -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --dry-run
+          poetry publish --repository test-pypi -u ${{ secrets.TEST_PYPI_USERNAME }} -p ${{ secrets.TEST_PYPI_PASSWORD }}
