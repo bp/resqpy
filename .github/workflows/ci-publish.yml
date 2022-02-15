@@ -104,7 +104,6 @@ jobs:
         run: |
           mv dist/pyproject.toml .
           ls
-          ls dist/
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
