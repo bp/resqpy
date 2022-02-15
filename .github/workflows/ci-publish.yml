@@ -94,6 +94,11 @@ jobs:
         with:
           python-version: '3.9'
 
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
       - name: Get build artifacts
         uses: actions/download-artifact@v2
         with:
@@ -106,10 +111,10 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Move TOML File to base directory
-        run: |
-          mv dist/pyproject.toml .
-          find . -type f -exec touch {} +
+#      - name: Move TOML File to base directory
+#        run: |
+#          mv dist/pyproject.toml .
+#          find . -type f -exec touch {} +
 
       - name: Upload to PyPI
         run: |
