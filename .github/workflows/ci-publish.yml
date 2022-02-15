@@ -4,9 +4,9 @@ name: Publish release
 
 on:
   push:
-    tags:
-      # Run when a tag is pushed with a valid semantic version number
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - master
+  pull_request:
 
 jobs:
   build:
@@ -16,21 +16,18 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.9'
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
       - name: Build
         run: |
           python -m pip install --upgrade pip
+          pip install poetry
           pip install poetry-dynamic-versioning
           poetry build
 
@@ -60,11 +57,15 @@ jobs:
           name: dist-artifact
           path: dist/
 
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: dist/
+
       - name: Install from build
         run: |
           python -m pip install --upgrade pip
           pip install pytest-mock
-          pip install resqpy --target=dist --find-links=dist
+          pip install resqpy --target=dist --find-links=dist/
 
       - name: Copy tests and example data to dist folder for testing against artifacts
         run: |
