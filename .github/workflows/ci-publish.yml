@@ -94,11 +94,6 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          clean: false
-
       - name: Get build artifacts
         uses: actions/download-artifact@v2
         with:
@@ -110,6 +105,11 @@ jobs:
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          clean: false
 
 #      - name: Move TOML File to base directory
 #        run: |
