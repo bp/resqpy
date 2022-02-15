@@ -365,8 +365,11 @@ class RegularGrid(Grid):
 
         assert self.is_aligned
         centres = np.zeros((self.nj, self.ni, 2))
-        centres[:, :, 0] = np.linspace(0.0, self.block_dxyz_dkji[2, 0] * self.ni, num = self.ni).reshape((1, self.ni))
-        centres[:, :, 1] = np.linspace(0.0, self.block_dxyz_dkji[1, 1] * self.nj, num = self.nj).reshape((self.nj, 1))
+        centres[:, :, 0] = np.linspace(0.0, self.block_dxyz_dkji[2, 0] * self.ni, num = self.ni,
+                                       endpoint = False).reshape((1, self.ni))
+        centres[:, :, 1] = np.linspace(0.0, self.block_dxyz_dkji[1, 1] * self.nj, num = self.nj,
+                                       endpoint = False).reshape((self.nj, 1))
+        centres += self.block_origin[:2] + 0.5 * np.sum(self.block_dxyz_dkji[1:, :2], axis = 0)
         return centres
 
     def volume(self, cell_kji0 = None):
