@@ -7,16 +7,17 @@
 version: 2
 
 sphinx:
-   configuration: docs/conf.py
+  configuration: docs/conf.py
 
 # Optional additional formats
 formats:
-   - pdf
+  - pdf
 
 # Python environment
 # Equivalent to: pip install resqpy
 python:
-   version: 3.8
-   install:
-      - method: pip
-        path: .
+  version: 3.8
+  install:
+    - method: pip
+      path: .
+    - requirements: docs/requirements-extras.txt
