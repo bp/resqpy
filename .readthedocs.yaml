@@ -14,11 +14,9 @@ formats:
    - pdf
 
 # Python environment
-# Equivalent to: pip install resqpy[docs]
+# Equivalent to: pip install resqpy
 python:
    version: 3.8
    install:
       - method: pip
         path: .
-        extra_requirements:
-           - docs
