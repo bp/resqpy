@@ -2,17 +2,11 @@
 
 name: Publish release
 
-#on:
-#  push:
-#    tags:
-#      # Run when a tag is pushed with a valid semantic version number
-#      - 'v[0-9]+.[0-9]+.[0-9]+'
-
 on:
   push:
-    branches:
-      - master
-  pull_request:
+    tags:
+      # Run when a tag is pushed with a valid semantic version number
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   build:
@@ -39,9 +33,6 @@ jobs:
       - name: Build
         run: |
           poetry build
-
-#      - name: Copy TOML File as a build artifact
-#        run: cp pyproject.toml dist/
 
       - name: Save build artifacts
         uses: actions/upload-artifact@v2
@@ -112,13 +103,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
           pip install poetry-dynamic-versioning
-          poetry config repositories.test-pypi https://test.pypi.org/legacy/
-
-#      - name: Move TOML File to base directory
-#        run: |
-#          mv dist/pyproject.toml .
-#          find . -type f -exec touch {} +
 
       - name: Upload to PyPI
         run: |
-          poetry publish --repository test-pypi -u ${{ secrets.TEST_PYPI_USERNAME }} -p ${{ secrets.TEST_PYPI_PASSWORD }}
+          poetry publish -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
