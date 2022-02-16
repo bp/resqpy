@@ -87,6 +87,7 @@ jobs:
         with:
           python-version: '3.9'
 
+      # Retrieve the code and GIT history so that poetry-dynamic-versioning knows which version to upload
       - name: Checkout code
         uses: actions/checkout@v2
         with:
