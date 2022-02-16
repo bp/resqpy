@@ -114,4 +114,7 @@ jobs:
 
       - name: Upload to PyPI
         run: |
-          poetry publish --repository test
+          env:
+             POETRY_PYPI_TOKEN_TEST: ${{ secrets.POETRY_PYPI_TOKEN_TEST}}
+             POETRY_PYPI_TOKEN_PYPI: ${{ secrets.POETRY_PYPI_TOKEN_PYPI}}
+          poetry publish --repository test 
