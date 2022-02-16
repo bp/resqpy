@@ -53,6 +53,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Get build artifacts
         uses: actions/download-artifact@v2
@@ -64,7 +66,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest-mock
-          pip install resqpy --target=dist --find-links=dist/
+          pip install resqpy --pre --target=dist --find-links=dist/
 
       - name: Copy tests and example data to dist folder for testing against artifacts
         run: |
@@ -85,6 +87,12 @@ jobs:
         with:
           python-version: '3.9'
 
+      # Retrieve the code and GIT history so that poetry-dynamic-versioning knows which version to upload
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
       - name: Get build artifacts
         uses: actions/download-artifact@v2
         with:
@@ -92,11 +100,15 @@ jobs:
           path: dist/
 
       - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          pip install poetry-dynamic-versioning
 
       - name: Upload to PyPI
+        env:
+          POETRY_PYPI_TOKEN_TEST: ${{ secrets.POETRY_PYPI_TOKEN_TEST}}
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.POETRY_PYPI_TOKEN_PYPI}}
         run: |
-          poetry publish -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+          poetry config repositories.test https://test.pypi.org/legacy/
+          poetry publish # --repository test
