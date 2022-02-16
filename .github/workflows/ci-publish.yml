@@ -2,11 +2,17 @@
 
 name: Publish release
 
+#on:
+#  push:
+#    tags:
+#      # Run when a tag is pushed with a valid semantic version number
+#      - 'v[0-9]+.[0-9]+.[0-9]+'
+
 on:
   push:
-    tags:
-      # Run when a tag is pushed with a valid semantic version number
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - master
+  pull_request:
 
 jobs:
   build:
@@ -16,8 +22,6 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -104,7 +108,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
           pip install poetry-dynamic-versioning
+          poetry config repositories.test-pypi https://test.pypi.org/legacy/
 
       - name: Upload to PyPI
         run: |
-          poetry publish -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+          poetry publish --repository test-pypi
