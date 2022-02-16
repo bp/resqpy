@@ -511,6 +511,7 @@ def extract_inactive_mask(grid, check_pinchout = False):
     # note: use of bespoke (local) property kind 'active' as suggested in resqml usage guide
     active_gpc.inherit_parts_selectively_from_other_collection(other = gpc,
                                                                property_kind = 'active',
+                                                               indexable = 'cells',
                                                                continuous = False)
     active_parts = active_gpc.parts()
     if len(active_parts) > 1:
