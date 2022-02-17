@@ -54,6 +54,8 @@ def test_faces_for_surface(tmp_model):
     surf = resqpy.surface.Surface(tmp_model, crs_uuid = crs.uuid)
     surf.set_from_triangles_and_points(triangles, points.reshape((-1, 3)))
     assert surf is not None
+    assert surf.node_count() == 4
+    assert surf.triangle_count() == 2
     for mode in ['staffa', 'regular', 'auto']:
         gcs = rqgs.find_faces_to_represent_surface(grid, surf, name = mode, mode = mode)
         assert gcs is not None
@@ -130,6 +132,7 @@ def test_surface_from_mesh_file(example_model_and_crs, test_data_path, mesh_file
     # Assert
     assert surface is not None
     assert surface.patch_list[0].triangle_count == 12
+    assert surface.triangle_count() == 12
     assert surface.patch_list[0].points[0][2] == firstval
 
 
@@ -146,6 +149,7 @@ def test_surface_from_tsurf_file(example_model_and_crs, test_data_path):
     assert surface is not None
     assert surface.represented_interpretation_root is not None
     assert surface.patch_list[0].triangle_count == 12
+    assert surface.triangle_count() == 12
     assert surface.patch_list[0].points[0][2] == 0.4228516
 
 
@@ -201,6 +205,7 @@ def test_regular_mesh(example_model_and_crs):
     # check that we can build a Surface from the Mesh
     surf = persistent_mesh.surface(quad_triangles = True)
     assert surf is not None
+    assert surf.node_count() == 7 * 5 + 6 * 4  # quad triangles introduce extra nodes
 
     # do some basic checks that the surface looks consistent with the mesh
     t, p = surf.triangles_and_points()

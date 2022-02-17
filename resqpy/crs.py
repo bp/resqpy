@@ -248,7 +248,7 @@ class Crs(BaseResqpy):
     def is_equivalent(self, other_crs: 'Crs') -> bool:
         """Returns True if this crs is effectively the same as the other crs."""
 
-        log.debug('testing crs equivalence')
+        # log.debug('testing crs equivalence')
         if other_crs is None:
             return False
         if self is other_crs:

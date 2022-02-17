@@ -468,7 +468,7 @@ class RegularGrid(Grid):
             if grid.is_aligned:
                 dxyz = np.array([grid.block_dxyz_dkji[2 - axis, axis] for axis in range(3)])
                 temp_box = np.zeros((2, 3))
-                temp_box[1] = np.array(grid.extent_kji, dtype = float) * dxyz
+                temp_box[1] = np.array((grid.ni, grid.nj, grid.nk), dtype = float) * dxyz
                 grid.xyz_box_cached[0] = np.amin(temp_box, axis = 0)
                 grid.xyz_box_cached[1] = np.amax(temp_box, axis = 0)
             else:

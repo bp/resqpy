@@ -1133,6 +1133,10 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
 
     # log.debug('finding surface triangle boxes')
     t, p = surface.triangles_and_points()
+    if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
+        log.debug('converting from surface crs to grid crs')
+        s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
+        s_crs.convert_array_to(grid.crs, p)
     triangles = p[t]
     assert triangles.size > 0, 'no triangles in surface'
     triangle_boxes = np.empty((triangles.shape[0], 2, 3))
@@ -1205,7 +1209,25 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
 
 
 def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = None):
-    """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
+    """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
+
+    arguments:
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
+        surface (Surface): the surface to be intersected with the grid
+        name (str): the feature name to use in the grid connection set
+        progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
+           the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+
+    returns:
+        a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created
+
+    notes:
+        this function can handle the surface and grid being in different coordinate reference systems, as
+        long as the implicit parent crs is shared;
+        no trimming of the surface is carried out here: for computational efficiency, it is recommended
+        to trim first;
+        organisational objects for the feature are created if needed
+    """
 
     assert isinstance(grid, grr.RegularGrid)
     assert grid.is_aligned
@@ -1213,19 +1235,28 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
     if progress_fn is not None:
         progress_fn(0.0)
 
+    log.debug(f'intersecting surface {surface.title} with regular_grid {grid.title}')
+
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
     centres = grid.centre_point()
     t, p = surface.triangles_and_points()
+    if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
+        log.debug('converting from surface crs to grid crs')
+        s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
+        s_crs.convert_array_to(grid.crs, p)
+
     t_count = len(t)
 
     # todo: batch up either centres or triangles to reduce memory requirement for large models
 
     # K direction (xy projection)
     if grid.nk > 1:
+        log.debug('searching for k faces')
         k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
         k_centres = centres[0, :, :].reshape((-1, 3))
         k_hits = vec.points_in_triangles(p, t, k_centres, projection = 'xy', edged = True).reshape(
             (t_count, grid.nj, grid.ni))
+        del k_centres
         for k_t, k_j, k_i in np.stack(np.where(k_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[0, k_j, k_i],
                                                centres[-1, k_j, k_i] - centres[0, k_j, k_i],
@@ -1236,6 +1267,8 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
             k_face = int((xyz[2] - centres[0, k_j, k_i, 2]) / grid_dxyz[2])
             assert 0 <= k_face < grid.nk - 1
             k_faces[k_face, k_j, k_i] = True
+        del k_hits
+        log.debug(f'k face count: {np.count_nonzero(k_faces)}')
     else:
         k_faces = None
 
@@ -1244,10 +1277,12 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
 
     # J direction (xz projection)
     if grid.nj > 1:
+        log.debug('searching for j faces')
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
         j_centres = centres[:, 0, :].reshape((-1, 3))
         j_hits = vec.points_in_triangles(p, t, j_centres, projection = 'xz', edged = True).reshape(
             (t_count, grid.nk, grid.ni))
+        del j_centres
         for j_t, j_k, j_i in np.stack(np.where(j_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[j_k, 0, j_i],
                                                centres[j_k, -1, j_i] - centres[j_k, 0, j_i],
@@ -1258,6 +1293,8 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
             j_face = int((xyz[1] - centres[j_k, 0, j_i, 1]) / grid_dxyz[1])
             assert 0 <= j_face < grid.nj - 1
             j_faces[j_k, j_face, j_i] = True
+        del j_hits
+        log.debug(f'j face count: {np.count_nonzero(j_faces)}')
     else:
         j_faces = None
 
@@ -1266,10 +1303,12 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
 
     # I direction (yz projection)
     if grid.ni > 1:
+        log.debug('searching for i faces')
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
         i_centres = centres[:, :, 0].reshape((-1, 3))
         i_hits = vec.points_in_triangles(p, t, i_centres, projection = 'yz', edged = True).reshape(
             (t_count, grid.nk, grid.nj))
+        del i_centres
         for i_t, i_k, i_j in np.stack(np.where(i_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[i_k, i_j, 0],
                                                centres[i_k, i_j, -1] - centres[i_k, i_j, 0],
@@ -1280,12 +1319,15 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
             i_face = int((xyz[0] - centres[i_k, i_j, 0, 0]) / grid_dxyz[0])
             assert 0 <= i_face < grid.ni - 1
             i_faces[i_k, i_j, i_face] = True
+        del i_hits
+        log.debug(f'i face count: {np.count_nonzero(i_faces)}')
     else:
         i_faces = None
 
     if progress_fn is not None:
         progress_fn(0.9)
 
+    log.debug('converting face sets into grid connection set')
     gcs = rqf.GridConnectionSet(grid.model,
                                 grid = grid,
                                 k_faces = k_faces,

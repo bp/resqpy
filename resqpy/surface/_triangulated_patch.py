@@ -109,6 +109,61 @@ class TriangulatedPatch:
             raise
         return (self.triangles, self.points)
 
+    def set_to_trimmed_patch(self, larger_patch, xyz_box = None, xy_polygon = None):
+        """Populate this (empty) patch with triangles and points that overlap with a trimming volume.
+
+        arguments:
+            larger_patch (TriangulatedPatch): the larger patch, a copy of which is to be trimmed
+            xyz_box (numpy float array of shape (2, 3), optional): if present, a cuboid in xyz space
+               against which to trim the patch
+            xy_polygon (closed convex resqpy.lines.Polyline, optional): if present, an xy boundary
+               against which to trim
+
+        notes:
+            at least one of xyz_box or xy_polygon must be present; if both are present, a triangle
+            must have at least one point within both boundaries to survive the trimming;
+            xyz_box and xy_polygon must be in the same crs as the larger patch
+        """
+
+        log.debug('trimming patch')
+        assert xyz_box is not None or xy_polygon is not None
+        if xyz_box is not None:
+            log.debug(f'trim xyz_box: {xyz_box}')
+        if xy_polygon is not None:
+            log.debug(f'xy_polygon min xyz: {np.min(xy_polygon.coordinates, axis = 0)}')
+            log.debug(f'xy_polygon max xyz: {np.max(xy_polygon.coordinates, axis = 0)}')
+        large_t, large_p = larger_patch.triangles_and_points()
+        log.debug(f'large surface min xyz: {np.min(large_p, axis = 0)}')
+        log.debug(f'large surface max xyz: {np.max(large_p, axis = 0)}')
+        # create bool per point indicating inclusion in box volume
+        if xyz_box is None:
+            points_in = np.ones(large_p.shape, dtype = bool)
+        else:
+            points_in = np.logical_and(np.all(large_p >= np.expand_dims(xyz_box[0], axis = 0), axis = -1),
+                                       np.all(large_p <= np.expand_dims(xyz_box[1], axis = 0), axis = -1))
+        # and check against xy polygon if present
+        if xy_polygon is not None:
+            points_in = np.logical_and(points_in, xy_polygon.points_are_inside_xy(large_p))
+        # find where in large_t uses those points
+        tp_in = points_in[large_t]
+        t_in = np.any(tp_in, axis = -1)
+        # find unique points used by those triangles
+        p_keep = np.unique(large_t[t_in])
+        # note new point index for each old point that is being kept
+        p_map = np.full(len(points_in), -1, dtype = int)
+        p_map[p_keep] = np.arange(len(p_keep))
+        # copy those unique points into a trimmed points array
+        points_trimmed = large_p[p_keep]
+        # copy selected triangles, replacing p indices with compressed indices
+        t_trim = large_t[t_in]
+        triangles_trimmed = p_map[t_trim]
+        assert np.all(triangles_trimmed >= 0)
+        assert np.all(triangles_trimmed < len(points_trimmed))
+        self.points = points_trimmed
+        self.node_count = len(self.points)
+        self.triangles = triangles_trimmed
+        self.triangle_count = len(self.triangles)
+
     def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
         """Populate this (empty) patch with two triangles defining a flat, horizontal plane at a given depth.
 
