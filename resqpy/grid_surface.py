@@ -1239,6 +1239,9 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
     else:
         k_faces = None
 
+    if progress_fn is not None:
+        progress_fn(0.3)
+
     # J direction (xz projection)
     if grid.nj > 1:
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
@@ -1258,6 +1261,9 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
     else:
         j_faces = None
 
+    if progress_fn is not None:
+        progress_fn(0.6)
+
     # I direction (yz projection)
     if grid.ni > 1:
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
@@ -1276,6 +1282,9 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
             i_faces[i_k, i_j, i_face] = True
     else:
         i_faces = None
+
+    if progress_fn is not None:
+        progress_fn(0.9)
 
     gcs = rqf.GridConnectionSet(grid.model,
                                 grid = grid,
