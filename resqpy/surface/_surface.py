@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.olio.triangulation as triangulate
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
@@ -142,9 +143,8 @@ class Surface(BaseSurface):
     def extract_patches(self, surface_root):
         """Scan surface root for triangle patches, create TriangulatedPatch objects and build up patch_list."""
 
-        if len(self.patch_list):
+        if len(self.patch_list) or surface_root is None:
             return
-        assert surface_root is not None
         paired_list = []
         self.patch_list = []
         for child in surface_root:
@@ -197,6 +197,72 @@ class Surface(BaseSurface):
                 self.points = np.concatenate((self.points, p.copy()))
             points_offset += p.shape[0]
         return (self.triangles, self.points)
+
+    def triangle_count(self):
+        """Return the numner of triangles in this surface."""
+
+        self.extract_patches(self.root)
+        if not self.patch_list:
+            return 0
+        return np.sum([tp.triangle_count for tp in self.patch_list])
+
+    def node_count(self):
+        """Return the number of nodes (points) used in this surface."""
+
+        self.extract_patches(self.root)
+        if not self.patch_list:
+            return 0
+        return np.sum([tp.node_count for tp in self.patch_list])
+
+    def change_crs(self, required_crs):
+        """Changes the crs of the surface, also sets a new uuid if crs changed.
+
+        note:
+           this method is usually used to change the coordinate system for a temporary resqpy object;
+           to add as a new part, call write_hdf5() and create_xml() methods
+        """
+
+        old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+        self.crs_uuid = required_crs.uuid
+        if bu.matching_uuids(old_crs.uuid, required_crs.uuid) or not self.patch_list:
+            return
+        for patch in self.patch_list:
+            patch.triangles_and_points()
+            required_crs.convert_array_from(old_crs, patch.points)
+        self.uuid = bu.new_uuid()  # hope this doesn't cause problems
+
+    def set_to_trimmed_surface(self, large_surface, xyz_box = None, xy_polygon = None):
+        """Populate this (empty) surface with triangles and points which overlap with a trimming volume.
+
+        arguments:
+            large_surface (Surface): the larger surface, a copy of which is to be trimmed
+            xyz_box (numpy float array of shape (2, 3), optional): if present, a cuboid in xyz space
+               against which to trim the surface
+            xy_polygon (closed convex resqpy.lines.Polyline, optional): if present, an xy boundary
+               against which to trim
+
+        notes:
+            at least one of xyz_box or xy_polygon must be present; if both are present, a triangle
+            must have at least one point within both boundaries to survive the trimming;
+            xyz_box and xy_polygon must be in the same crs as the large surface
+        """
+
+        assert xyz_box is not None or xy_polygon is not None
+        if xyz_box is not None:
+            assert xyz_box.shape == (2, 3)
+        log.debug(f'trimming surface {large_surface.title} from {large_surface.triangle_count()} triangles')
+        self.crs_uuid = large_surface.crs_uuid
+        self.patch_list = []
+        for triangulated_patch in large_surface.patch_list:
+            trimmed_patch = TriangulatedPatch(self.model, patch_index = len(self.patch_list), crs_uuid = self.crs_uuid)
+            trimmed_patch.set_to_trimmed_patch(triangulated_patch, xyz_box = xyz_box, xy_polygon = xy_polygon)
+            if trimmed_patch is not None and trimmed_patch.triangle_count > 0:
+                self.patch_list.append(trimmed_patch)
+        if len(self.patch_list):
+            log.debug(f'trimmed surface {self.title} has {self.triangle_count()} triangles')
+        else:
+            log.warning('surface does not intersect trimming volume')
+        self.uuid = bu.new_uuid()
 
     def distinct_edges(self):
         """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles."""
@@ -285,6 +351,10 @@ class Surface(BaseSurface):
               by 4 triangles in the surface, with the mean of the 4 corner points used as a common centre node;
               if False (the default), only 2 triangles are used for each quadrangle; note that the 2 triangle
               mode gives a non-unique triangulated result
+
+        note:
+           this method uses a single patch to represent the torn surface, whereas strictly the RESQML standard
+           requires speparate patches where parts of a surface are completely disconnected
         """
 
         mesh_shape = mesh_xyz.shape

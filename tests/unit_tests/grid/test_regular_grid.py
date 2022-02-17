@@ -71,3 +71,30 @@ def test_thickness_cell_kji0(basic_regular_grid):
 
     # Assert
     assert thickness == 20.0
+
+
+def test_centres(basic_regular_grid):
+    grid = basic_regular_grid
+    grid.is_aligned = False
+    if hasattr(grid, 'array_centre_point'):
+        delattr(grid, 'array_centre_point')
+    generic_centres = grid.centre_point().copy()
+    grid.is_aligned = True
+    if hasattr(grid, 'array_centre_point'):
+        delattr(grid, 'array_centre_point')
+    aligned_centres = grid.centre_point().copy()
+    np.testing.assert_array_almost_equal(aligned_centres, generic_centres)
+
+
+def test_aligned_column_centres(basic_regular_grid):
+    grid = basic_regular_grid
+    grid.is_aligned = False
+    if hasattr(grid, 'array_centre_point'):
+        delattr(grid, 'array_centre_point')
+    generic_centres = grid.centre_point().copy()
+    grid.is_aligned = True
+    if hasattr(grid, 'array_centre_point'):
+        delattr(grid, 'array_centre_point')
+    col_centres = grid.aligned_column_centres()
+    assert col_centres.shape == (grid.nj, grid.ni, 2)
+    np.testing.assert_array_almost_equal(col_centres, generic_centres[0, :, :, :2])

@@ -32,7 +32,8 @@ def _write_hdf5_from_caches(grid,
     if write_active is None:
         write_active = geometry
 
-    grid.cache_all_geometry_arrays()
+    if geometry:
+        grid.cache_all_geometry_arrays()
 
     if not file:
         file = grid.model.h5_file_name()
@@ -51,7 +52,7 @@ def _write_hdf5_from_caches(grid,
         else:
             filtered_list = []
             for entry in imported_properties.imported_list:
-                if entry[2].upper() == 'ACTIVE' or entry[10] == 'active':
+                if (entry[2].upper() == 'ACTIVE' or entry[10] == 'active') and entry[14] == 'cells':
                     continue  # keyword or property kind
                 filtered_list.append(entry)
             imported_properties.imported_list = filtered_list  # might have unintended side effects elsewhere

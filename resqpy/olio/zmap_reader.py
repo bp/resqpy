@@ -41,16 +41,16 @@ def read_zmap_header(inputfile):
         if line[0] == '+':
             headers = headers + 1  # add extra line for the + symbol..
 
-    for c in comments:
-        log.debug(c)
+    # for c in comments:
+    #     log.debug(c)
 
     # ok now process the header
-#  nodes_per_line                          = int(head[0][2])
-#  field_w                                 = head[1][0]
+    # nodes_per_line                          = int(head[0][2])
+    # field_w                                 = head[1][0]
     null_value = head[1][1].strip()
     null_value2 = head[1][2].strip()
-    #  dec_places                              = head[1][3]
-    #  strt_c                                  = head[1][4]
+    # dec_places                              = head[1][3]
+    # strt_c                                  = head[1][4]
     no_rows = int(head[2][0])
     no_cols = int(head[2][1])
     minx = np.float64(head[2][2])
@@ -61,8 +61,8 @@ def read_zmap_header(inputfile):
     # decide on the null value
     if not null_value:
         null_value = null_value2
-    log.debug("Read {} header lines, we have {} rows, {} cols, and data from {} to {} and {} to {}".format(
-        headers, no_rows, no_cols, minx, maxx, miny, maxy))
+    # log.debug("Read {} header lines, we have {} rows, {} cols, and data from {} to {} and {} to {}".format(
+    #     headers, no_rows, no_cols, minx, maxx, miny, maxy))
 
     return headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value
 
@@ -127,10 +127,10 @@ def read_mesh(inputfile, dtype = np.float64, format = None):
                 else:
                     f[n] = dtype(x)
                 n += 1
-        if (n % 10000 == 0) and (n > 10000):
-            log.debug("Read node {} of {}".format(n, no_cols * no_rows))
+        # if (n % 10000 == 0) and (n > 10000):
+        #     log.debug("Read node {} of {}".format(n, no_cols * no_rows))
 
-    log.debug("Read {} nodes".format(len(f)))
+    # log.debug("Read {} nodes".format(len(f)))
 
     if format == 'zmap':
         # reshape it, and swap axis. Beacuse columns major order from fortran.

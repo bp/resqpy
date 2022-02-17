@@ -102,6 +102,7 @@ class RegularGrid(Grid):
             self.is_aligned = None  #: boolean indicating alignment of IJK axes with +/- xyz respectively
 
         if uuid is None:
+            assert extent_kji is not None and len(extent_kji) == 3
             super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
             self.grid_representation = 'IjkGrid' if as_irregular_grid else 'IjkBlockGrid'
             self.extent_kji = np.array(extent_kji).copy()
@@ -326,13 +327,27 @@ class RegularGrid(Grid):
 
         if cache_centre_array and (not hasattr(self, 'array_centre_point') or self.array_centre_point is None):
             centres = np.zeros((self.nk, self.nj, self.ni, 3))
-            # todo: replace for loops with linspace
-            for k in range(self.nk - 1):
-                centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
-            for j in range(self.nj - 1):
-                centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
-            for i in range(self.ni - 1):
-                centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
+            if self.is_aligned:
+                centres[:, :, :, 0] = np.linspace(0.0,
+                                                  self.block_dxyz_dkji[2, 0] * self.ni,
+                                                  num = self.ni,
+                                                  endpoint = False).reshape((1, 1, self.ni))
+                centres[:, :, :, 1] = np.linspace(0.0,
+                                                  self.block_dxyz_dkji[1, 1] * self.nj,
+                                                  num = self.nj,
+                                                  endpoint = False).reshape((1, self.nj, 1))
+                centres[:, :, :, 2] = np.linspace(0.0,
+                                                  self.block_dxyz_dkji[0, 2] * self.nk,
+                                                  num = self.nk,
+                                                  endpoint = False).reshape((self.nk, 1, 1))
+            else:
+                # todo: replace for loops with linspace
+                for k in range(self.nk - 1):
+                    centres[k + 1, 0, 0] = centres[k, 0, 0] + self.block_dxyz_dkji[0]
+                for j in range(self.nj - 1):
+                    centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
+                for i in range(self.ni - 1):
+                    centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
             centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
             self.array_centre_point = centres
 
@@ -345,6 +360,18 @@ class RegularGrid(Grid):
             return centre
 
         return self.array_centre_point
+
+    def aligned_column_centres(self):
+        """For an aligned grid, returns an array of column centres in xy, of shape (nj, ni, 2)."""
+
+        assert self.is_aligned
+        centres = np.zeros((self.nj, self.ni, 2))
+        centres[:, :, 0] = np.linspace(0.0, self.block_dxyz_dkji[2, 0] * self.ni, num = self.ni,
+                                       endpoint = False).reshape((1, self.ni))
+        centres[:, :, 1] = np.linspace(0.0, self.block_dxyz_dkji[1, 1] * self.nj, num = self.nj,
+                                       endpoint = False).reshape((self.nj, 1))
+        centres += self.block_origin[:2] + 0.5 * np.sum(self.block_dxyz_dkji[1:, :2], axis = 0)
+        return centres
 
     def volume(self, cell_kji0 = None):
         """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
@@ -441,7 +468,7 @@ class RegularGrid(Grid):
             if grid.is_aligned:
                 dxyz = np.array([grid.block_dxyz_dkji[2 - axis, axis] for axis in range(3)])
                 temp_box = np.zeros((2, 3))
-                temp_box[1] = np.array(grid.extent_kji, dtype = float) * dxyz
+                temp_box[1] = np.array((grid.ni, grid.nj, grid.nk), dtype = float) * dxyz
                 grid.xyz_box_cached[0] = np.amin(temp_box, axis = 0)
                 grid.xyz_box_cached[1] = np.amax(temp_box, axis = 0)
             else:
