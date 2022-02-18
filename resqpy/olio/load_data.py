@@ -26,7 +26,6 @@ import resqpy.olio.ab_toolbox as abt
 import resqpy.olio.box_utilities as box
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.keyword_files as kf
-import resqpy.olio.utility as pu
 import resqpy.olio.write_data as wd
 
 
@@ -181,7 +180,7 @@ def load_array_from_file(file_name,
         cell_count = -1  # np.fromfile interprets this as 'read everything'
         log.debug('Loading unknown number of array data elements from file ' + file_name)
     else:
-        cell_count = pu.cell_count_from_extent(extent)
+        cell_count = np.product(extent)
         log.debug('Loading %1d array data elements from file %s', cell_count, file_name)
 
     ascii_file_name = file_name
@@ -296,7 +295,7 @@ def load_array_from_ascii_file(file_name,
         cell_count = -1  # np.fromfile interprets this as 'read everything'
         log.debug('Loading unknown number of array data elements from ascii file ' + file_name)
     else:
-        cell_count = pu.cell_count_from_extent(extent)
+        cell_count = np.product(extent)
         log.debug('Loading %1d array data elements from ascii file %s', cell_count, file_name)
 
     if data_type in ['real', 'float', float]:
@@ -464,7 +463,7 @@ def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
     ascii_file_name = file_name
     binary_file_name = file_name
 
-    face_count = pu.cell_count_from_extent(mask_extent_kji)
+    face_count = np.product(extent)
     log.debug('Loading %1d fault mask elements from file %s', face_count, file_name)
 
     if use_binary:
