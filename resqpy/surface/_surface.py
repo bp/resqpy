@@ -1,6 +1,6 @@
 """_surface.py: surface class based on resqml standard."""
 
-version = '4th November 2021'
+version = '18th February 2022'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -30,7 +30,6 @@ class Surface(BaseSurface):
     def __init__(self,
                  parent_model,
                  uuid = None,
-                 surface_root = None,
                  point_set = None,
                  mesh = None,
                  mesh_file = None,
@@ -49,7 +48,6 @@ class Surface(BaseSurface):
         arguments:
            parent_model (model.Model object): the model to which this surface belongs
            uuid (uuid.UUID, optional): if present, the surface is initialised from an existing RESQML object with this uuid
-           surface_root (xml tree root node, optional): DEPRECATED: alternative to using uuid
            point_set (PointSet object, optional): if present, the surface is initialised as a Delaunay
               triangulation of the points in the point set; ignored if extracting from xml
            mesh (Mesh object, optional): if present, the surface is initialised as a triangulation of
@@ -63,7 +61,7 @@ class Surface(BaseSurface):
               is represented by 2 triangles if quad_triangles is False, 4 triangles if True
            title (string, optional): used as the citation title for the new object, ignored if
               extracting from xml
-           surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
+           surface_role (string, default 'map'): 'map' or 'pick'; ignored if uuid is not None
            crs_uuid (uuid.UUID, optional): if present and not extracting from xml, is set as the crs uuid
               applicable to mesh etc. data
            originator (str, optional): the name of the person creating the object; defaults to login id; ignored
@@ -107,8 +105,7 @@ class Surface(BaseSurface):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = surface_root)
+                         extra_metadata = extra_metadata)
         if self.root is not None:
             pass
         elif point_set is not None:
@@ -592,11 +589,11 @@ class Surface(BaseSurface):
         tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator)
 
         # todo: if crs_root is None, attempt to derive from surface patch crs uuid (within patch loop, below)
-        if crs_uuid is None:
-            crs_root = self.model.crs_root  # maverick use of model's default crs
-            crs_uuid = rqet.uuid_for_part_root(crs_root)
-        else:
-            crs_root = self.model.root_for_uuid(crs_uuid)
+        if crs_uuid is not None:
+            self.crs_uuid = crs_uuid
+        if self.crs_uuid is None:
+            crs_uuid = self.model.crs_uuid  # maverick use of model's default crs
+        assert self.crs_uuid is not None
 
         if self.represented_interpretation_root is not None:
             interp_root = self.represented_interpretation_root
@@ -657,7 +654,7 @@ class Surface(BaseSurface):
             geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'PointGeometry')
             geom.text = '\n'
 
-            self.model.create_crs_reference(crs_uuid = crs_uuid, root = geom)
+            self.model.create_crs_reference(crs_uuid = self.crs_uuid, root = geom)
 
             points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
             points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
@@ -678,6 +675,7 @@ class Surface(BaseSurface):
             self.model.add_part('obj_TriangulatedSetRepresentation', self.uuid, tri_rep)
             if add_relationships:
                 # todo: add multiple crs'es (one per patch)?
+                crs_root = self.model.root_for_uuid(self.crs_uuid)
                 self.model.create_reciprocal_relationship(tri_rep, 'destinationObject', crs_root, 'sourceObject')
                 if self.represented_interpretation_root is not None:
                     self.model.create_reciprocal_relationship(tri_rep, 'destinationObject',

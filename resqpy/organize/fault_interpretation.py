@@ -28,7 +28,6 @@ class FaultInterpretation(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  title = None,
                  tectonic_boundary_feature = None,
@@ -66,8 +65,7 @@ class FaultInterpretation(BaseResqpy):
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = title,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+                         extra_metadata = extra_metadata)
 
     @property
     def feature_uuid(self):

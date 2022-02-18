@@ -20,7 +20,6 @@ class EarthModelInterpretation(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  title = None,
                  organization_feature = None,
@@ -36,19 +35,19 @@ class EarthModelInterpretation(BaseResqpy):
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = title,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
-        self.domain = rqet.find_tag_text(self.root, 'Domain')
-        interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
+        root = self.root
+        self.domain = rqet.find_tag_text(root, 'Domain')
+        interp_feature_ref_node = rqet.find_tag(root, 'InterpretedFeature')
         assert interp_feature_ref_node is not None
         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
         if self.feature_root is not None:
             self.organization_feature = OrganizationFeature(self.model,
                                                             uuid = self.feature_root.attrib['uuid'],
                                                             feature_name = self.model.title_for_root(self.feature_root))
-        self.has_occurred_during = extract_has_occurred_during(self.root)
+        self.has_occurred_during = extract_has_occurred_during(root)
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this interpretation is essentially the same as the other; otherwise False."""

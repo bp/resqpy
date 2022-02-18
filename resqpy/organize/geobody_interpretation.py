@@ -35,7 +35,6 @@ class GeobodyInterpretation(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  title = None,
                  geobody_feature = None,
@@ -56,21 +55,21 @@ class GeobodyInterpretation(BaseResqpy):
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = title,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
-        interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
+        root_node = self.root
+        interp_feature_ref_node = rqet.find_tag(root_node, 'InterpretedFeature')
         assert interp_feature_ref_node is not None
         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
         if self.feature_root is not None:
             self.geobody_feature = GeobodyFeature(self.model,
                                                   uuid = self.feature_root.attrib['uuid'],
                                                   feature_name = self.model.title_for_root(self.feature_root))
-        self.has_occurred_during = extract_has_occurred_during(self.root)
-        self.composition = rqet.find_tag_text(self.root, 'GeologicUnitComposition')
-        self.implacement = rqet.find_tag_text(self.root, 'GeologicUnitMaterialImplacement')
-        self.geobody_shape = rqet.find_tag_text(self.root, 'Geobody3dShape')
+        self.has_occurred_during = extract_has_occurred_during(root_node)
+        self.composition = rqet.find_tag_text(root_node, 'GeologicUnitComposition')
+        self.implacement = rqet.find_tag_text(root_node, 'GeologicUnitMaterialImplacement')
+        self.geobody_shape = rqet.find_tag_text(root_node, 'Geobody3dShape')
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this interpretation is essentially the same as the other; otherwise False."""

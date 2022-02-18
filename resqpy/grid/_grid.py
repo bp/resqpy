@@ -3,14 +3,11 @@
 # note: only IJK Grid format supported at present
 # see also rq_import.py
 
-version = '7th February 2022'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('_grid.py version ' + version)
 
 import numpy as np
 
@@ -23,7 +20,7 @@ import resqpy.crs as rqc
 from resqpy.olio.base import BaseResqpy
 from ._transmissibility import transmissibility, half_cell_transmissibility
 from ._extract_functions import extract_grid_parent, extract_extent_kji, extract_grid_is_right_handed, \
-    extract_k_direction_is_down, extract_geometry_time_index, extract_crs_uuid, extract_crs_root, extract_k_gaps, \
+    extract_k_direction_is_down, extract_geometry_time_index, extract_crs_uuid, extract_k_gaps, \
     extract_pillar_shape, extract_has_split_coordinate_lines, extract_children, extract_stratigraphy, \
     extract_inactive_mask, extract_property_collection, set_k_direction_from_points
 
@@ -73,7 +70,6 @@ class Grid(BaseResqpy):
     def __init__(self,
                  parent_model,
                  uuid = None,
-                 grid_root = None,
                  find_properties = True,
                  geometry_required = True,
                  title = None,
@@ -84,12 +80,11 @@ class Grid(BaseResqpy):
         arguments:
            parent_model (model.Model object): the model which this grid is part of
            uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-           grid_root (DEPRECATED): use uuid instead; the root of the xml tree for the grid part
-           find_properties (boolean, default True): if True and uuid (or grid_root) is present, a
+           find_properties (boolean, default True): if True and uuid is present, a
               grid property collection is instantiated as an attribute, holding properties for which
               this grid is the supporting representation
            geometry_required (boolean, default True): if True and no geometry node exists in the xml,
-              an assertion error is raised; ignored if uuid is None (and grid_root is None)
+              an assertion error is raised; ignored if uuid is None
            title (str, optional): citation title for new grid; ignored if loading from xml
            originator (str, optional): name of person creating the grid; defaults to login id;
               ignored if loading from xml
@@ -106,7 +101,6 @@ class Grid(BaseResqpy):
         """
 
         # note: currently only handles IJK grids
-        # todo: check grid_root, if passed, is for an IJK grid
         self.parent_grid_uuid = None  #: parent grid when this is a local grid
         self.parent_window = None  #: FineCoarse cell index mapping info between self and parent grid
         self.is_refinement = None  #: True indicates self is a refinement wrt. parent; False means coarsening
@@ -116,7 +110,6 @@ class Grid(BaseResqpy):
         self.extent_kji = None  #: size of grid: (nk, nj, ni)
         self.ni = self.nj = self.nk = None  #: duplicated extent information as individual integers
         self.crs_uuid = None  #: uuid of the coordinate reference system used by the grid's geometry
-        self.crs_root = None  #: xml root node for the crs used by the grid's geometry
         self.crs = None  #: Crs object
         self.points_cached = None  #: numpy array of raw points data; loaded on demand
         # Following are only relevant to structured grid varieties
@@ -146,13 +139,12 @@ class Grid(BaseResqpy):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = grid_root)
+                         extra_metadata = extra_metadata)
 
         if not self.title:
             self.title = 'ROOT'
 
-        if (uuid is not None or grid_root is not None):
+        if uuid is not None:
             if geometry_required:
                 assert self.geometry_root is not None, 'grid geometry not present in xml'
             if find_properties:
@@ -180,7 +172,6 @@ class Grid(BaseResqpy):
                     self.set_crs(crs_uuid)
         else:
             self.extract_crs_uuid()
-            self.extract_crs_root()
             self.set_crs()
             self.extract_has_split_coordinate_lines()
             self.extract_grid_is_right_handed()
@@ -194,14 +185,9 @@ class Grid(BaseResqpy):
             assert not self.k_gaps, 'K gaps present in grid without geometry'
         self.extract_parent()
         self.extract_children()
-        #        self.create_column_pillar_mapping()  # mapping now created on demand in other methods
+        # self.create_column_pillar_mapping()  # mapping now created on demand in other methods
         self.extract_inactive_mask()
         self.extract_stratigraphy()
-
-    @property
-    def grid_root(self):
-        """Alias for root."""
-        return self.root
 
     def set_modified(self, update_xml = False, update_hdf5 = False):
         """Assigns a new uuid to this grid; also calls set_modified() for parent model.
@@ -506,7 +492,7 @@ class Grid(BaseResqpy):
         """Returns False if IJK and xyz have same handedness, True if they differ."""
 
         ijk_right_handed = self.extract_grid_is_right_handed()
-        assert rqet.find_tag_text(self.crs_root, 'ProjectedAxisOrder').lower() == 'easting northing'
+        assert self.crs.axis_order == 'easting northing'
         # note: if z increases downwards, xyz is left handed
         return ijk_right_handed == self.z_inc_down()
 
@@ -545,10 +531,9 @@ class Grid(BaseResqpy):
         :meta common:
         """
 
-        crs_root = self.extract_crs_root()
-        if crs_root is None:
+        if self.crs is None:
             return None
-        return rqet.find_tag(crs_root, 'ProjectedUom').text
+        return self.crs.xy_units
 
     def z_units(self):
         """Returns the vertical (z) units of measure of the coordinate reference system for the grid.
@@ -556,10 +541,9 @@ class Grid(BaseResqpy):
         :meta common:
         """
 
-        crs_root = self.extract_crs_root()
-        if crs_root is None:
+        if self.crs is None:
             return None
-        return rqet.find_tag(crs_root, 'VerticalUom').text
+        return self.crs.z_units
 
     def skin(self, use_single_layer_tactics = False, is_regular = False):
         """Returns a GridSkin composite surface object reoresenting the outer surface of the grid."""
@@ -581,7 +565,7 @@ class Grid(BaseResqpy):
                    write_active = True,
                    write_geometry = True,
                    extra_metadata = {}):
-        """Creates an IJK grid node from a grid object and optionally adds as child of root and/or to parts forest.
+        """Creates an IJK grid node from a grid object and optionally adds to parts forest.
 
         arguments:
            ext_uuid (uuid.UUID): the uuid of the hdf5 external part holding the array data for the grid geometry
@@ -933,19 +917,6 @@ class Grid(BaseResqpy):
            uuid.UUID object
         """
         return extract_crs_uuid(self)
-
-    def extract_crs_root(self):
-        """Returns root in parent model xml parts forest of coordinate reference system used by this grid geomwtry.
-
-        returns:
-           root node in xml tree for coordinate reference system
-
-        note:
-           resqml allows a part to refer to another part that is not actually present in the same epc package;
-           in practice, the crs is a tiny part and has always been included in datasets encountered so far;
-           if the crs is not present, this method will return None (I think)
-        """
-        return extract_crs_root(self)
 
     def set_crs(self, crs_uuid = None):
         """Establish crs attribute if not already set"""
@@ -1966,16 +1937,13 @@ class Grid(BaseResqpy):
 
     def global_to_local_crs(self,
                             a,
-                            crs_root = None,
+                            crs_uuid,
                             global_xy_units = None,
                             global_z_units = None,
-                            global_z_increasing_downward = None,
-                            crs_uuid = None):
+                            global_z_increasing_downward = None):
         """Converts array of points in situ from global coordinate system to established local one."""
-        if crs_uuid is None:
-            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
-            crs_uuid = rqet.uuid_for_part_root(crs_root)
-            assert crs_uuid is not None
+        assert crs_uuid is not None
+        # todo: change function name to be different from method name
         return global_to_local_crs(self,
                                    a,
                                    crs_uuid = crs_uuid,
@@ -1993,16 +1961,13 @@ class Grid(BaseResqpy):
     def local_to_global_crs(
             self,
             a,
-            crs_root = None,  # DEPRECATED
+            crs_uuid,
             global_xy_units = None,
             global_z_units = None,
-            global_z_increasing_downward = None,
-            crs_uuid = None):
+            global_z_increasing_downward = None):
         """Converts array of points in situ from local coordinate system to global one."""
-        if crs_uuid is None:
-            warnings.warn('crs_root is now deprecated. Please use crs_uuid instead.', DeprecationWarning)
-            crs_uuid = rqet.uuid_for_part_root(crs_root)
-            assert crs_uuid is not None
+        assert crs_uuid is not None
+        # todo: change function name to be different from method name
         return local_to_global_crs(self,
                                    a,
                                    crs_uuid = crs_uuid,

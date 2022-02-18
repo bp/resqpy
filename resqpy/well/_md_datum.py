@@ -1,7 +1,5 @@
 """_md_datum.py: resqpy module providing md datum class"""
 
-version = '18th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -36,9 +34,7 @@ class MdDatum(BaseResqpy):
             self,
             parent_model,
             uuid = None,
-            md_datum_root = None,
             crs_uuid = None,
-            crs_root = None,  # deprecated
             location = None,
             md_reference = 'mean sea level',
             title = None,
@@ -49,24 +45,19 @@ class MdDatum(BaseResqpy):
         arguments:
            parent_model (model.Model object): the model which the new md datum belongs to
            uuid: If not None, load from existing object. Else, create new.
-           md_datum_root (optional): DEPRECATED: the root node of the xml tree representing the md datum;
-              if not None, the new md datum object is initialised based on data in the tree;
-              if None, the new object is initialised from the remaining arguments
            crs_uuid (uuid.UUID): required if initialising from values
-           crs_root: DEPRECATED, use crs_uuid instead; the root node of the coordinate reference system
-              xml tree; ignored if uuid or md_datum_root is not None or crs_uuid is not None
            location: (triple float): the x, y, z location of the new measured depth datum;
-              ignored if uuid or md_datum_root is not None
+              ignored if uuid is not None
            md_reference (string): human readable resqml standard string indicating the real
               world nature of the datum, eg. 'kelly bushing'; the full list of options is
               available as the global variable valid_md_reference_list in this module;
-              ignored if uuid or md_datum_root is not None
+              ignored if uuid is not None
            title (str, optional): the citation title to use for a new datum;
-              ignored if uuid or md_datum_root is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the datum, defaults to login id;
-              ignored if uuid or md_datum_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the datum;
-              ignored if uuid or md_datum_root is not None
+              ignored if uuid is not None
 
         returns:
            the newly instantiated measured depth datum object
@@ -76,10 +67,6 @@ class MdDatum(BaseResqpy):
            if initialising from data other than an existing RESQML object
         """
 
-        if crs_root is not None:
-            warnings.warn("Attribute 'crs_root' is deprecated. Use 'crs_uuid'", DeprecationWarning)
-        # TODO: remove crs_root argument
-
         self.location = location
         self.md_reference = md_reference
         self.crs_uuid = crs_uuid
@@ -88,25 +75,12 @@ class MdDatum(BaseResqpy):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = md_datum_root)
-
-        # # temporary code to sort out crs reference, till crs_root arg is retired
-        # if self.crs_uuid is None and crs_root is not None:
-        #     self.crs_uuid = rqet.uuid_for_part_root(crs_root)
-        # assert self.crs_uuid is not None
-        self._validate_crs_uuid(crs_root = crs_root)
+                         extra_metadata = extra_metadata)
 
         if self.root is None and (location is not None or md_reference):
             assert location is not None and md_reference
             assert md_reference in valid_md_reference_list
             assert len(location) == 3
-
-    def _validate_crs_uuid(self, crs_root):
-        """Temporary code to sort out crs reference until the crs_root ard is retired."""
-        if self.crs_uuid is None and crs_root is not None:
-            self.crs_uuid = rqet.uuid_for_part_root(crs_root)
-        assert self.crs_uuid is not None
 
     def _load_from_xml(self):
         md_datum_root = self.root
@@ -119,12 +93,6 @@ class MdDatum(BaseResqpy):
         assert self.md_reference in valid_md_reference_list
         self.crs_uuid = self.extract_crs_uuid()
 
-    @property
-    def crs_root(self):
-        """XML node corresponding to self.crs_uuid."""
-
-        return self.model.root_for_uuid(self.crs_uuid)
-
     # todo: the following function is almost identical to one in the grid module: it should be made common and put in model.py
 
     def extract_crs_uuid(self):
@@ -136,13 +104,6 @@ class MdDatum(BaseResqpy):
         uuid_str = rqet.find_tag(crs_root, 'UUID').text
         self.crs_uuid = bu.uuid_from_string(uuid_str)
         return self.crs_uuid
-
-    def extract_crs_root(self):
-        """Returns root in parent model xml parts forest of coordinate reference system used by this md datum."""
-
-        if self.crs_uuid is None:
-            self.extract_crs_uuid()
-        return self.crs_root
 
     def create_part(self):
         """Creates xml for this md datum object and adds to parent model as a part; returns root node for part."""
@@ -192,7 +153,8 @@ class MdDatum(BaseResqpy):
         if add_as_part:
             self.model.add_part('obj_MdDatum', self.uuid, datum)
             if add_relationships:
-                self.model.create_reciprocal_relationship(datum, 'destinationObject', self.crs_root, 'sourceObject')
+                crs_root = self.model.root_for_uuid(self.crs_uuid)
+                self.model.create_reciprocal_relationship(datum, 'destinationObject', crs_root, 'sourceObject')
 
         return datum
 

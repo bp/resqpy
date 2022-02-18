@@ -18,7 +18,6 @@ class FluidBoundaryFeature(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  kind = None,
                  feature_name = None,
@@ -29,8 +28,7 @@ class FluidBoundaryFeature(BaseResqpy):
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = feature_name,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+                         extra_metadata = extra_metadata)
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this feature is essentially the same as the other; otherwise False."""

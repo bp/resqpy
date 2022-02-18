@@ -488,7 +488,7 @@ class Model():
 
     @property
     def crs_root(self):
-        """XML node corresponding to self.crs_uuid."""
+        """XML node corresponding to self.crs_uuid, the 'main' crs for the model."""
 
         return self.root_for_uuid(self.crs_uuid)
 

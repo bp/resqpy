@@ -31,7 +31,6 @@ class WellboreInterpretation(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  title = None,
                  is_drilled = None,
@@ -51,8 +50,7 @@ class WellboreInterpretation(BaseResqpy):
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = title,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root_node = self.root

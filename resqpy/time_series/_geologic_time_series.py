@@ -13,7 +13,6 @@ class GeologicTimeSeries(ats.AnyTimeSeries):
     def __init__(self,
                  parent_model,
                  uuid = None,
-                 time_series_root = None,
                  title = None,
                  originator = None,
                  extra_metadata = None):
@@ -23,11 +22,11 @@ class GeologicTimeSeries(ats.AnyTimeSeries):
            parent_model (model.Model): the resqpy model to which the time series will belong
            uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
            title (str, optional): the citation title to use for a new time series;
-              ignored if uuid or time_series_root is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the time series, defaults to login id;
-              ignored if uuid or time_series_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the time series;
-              ignored if uuid or time_series_root is not None
+              ignored if uuid is not None
 
         returns:
            newly instantiated GeologicTimeSeries object
@@ -44,8 +43,7 @@ class GeologicTimeSeries(ats.AnyTimeSeries):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = time_series_root)
+                         extra_metadata = extra_metadata)
         if self.extra_metadata is not None and self.extra_metadata.get('timeframe') == 'human':
             raise ValueError('attempt to instantiate a geologic time series for a human timeframe time series')
 

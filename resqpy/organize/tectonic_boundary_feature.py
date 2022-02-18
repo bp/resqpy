@@ -18,7 +18,6 @@ class TectonicBoundaryFeature(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  kind = None,
                  feature_name = None,
@@ -28,8 +27,7 @@ class TectonicBoundaryFeature(BaseResqpy):
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = feature_name,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         self.kind = rqet.find_tag_text(self.root, 'TectonicBoundaryKind')
