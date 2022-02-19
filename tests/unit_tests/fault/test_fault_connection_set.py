@@ -22,7 +22,7 @@ def test_fault_connection_set(tmp_path):
 
     # unsplit grid
 
-    g0 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g0 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
     g0.write_hdf5()
     g0.create_xml(title = 'G0 unsplit')
     g0_fcs, g0_fa = rqtr.fault_connection_set(g0)
@@ -33,7 +33,7 @@ def test_fault_connection_set(tmp_path):
     # J face split with no juxtaposition
     throw = 2.0
 
-    g1 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g1 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     g1.grid_representation = 'IjkGrid'
 
@@ -63,7 +63,7 @@ def test_fault_connection_set(tmp_path):
     # I face split with no juxtaposition
     throw = 2.0
 
-    g1 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g1 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     g1.grid_representation = 'IjkGrid'
 
@@ -96,7 +96,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 1.0
 
-    g2 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g2 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     g2.grid_representation = 'IjkGrid'
 
@@ -132,7 +132,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 1.0
 
-    g1 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g1 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     g1.grid_representation = 'IjkGrid'
 
@@ -170,7 +170,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.5
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -206,7 +206,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.5
 
-    g1 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g1 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     g1.grid_representation = 'IjkGrid'
 
@@ -244,7 +244,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -285,7 +285,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.75
 
-    g1 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g1 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     g1.grid_representation = 'IjkGrid'
 
@@ -326,7 +326,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 1.0
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -361,7 +361,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 1.0
 
-    g1 = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    g1 = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     g1.grid_representation = 'IjkGrid'
 
@@ -399,7 +399,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.5
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -439,7 +439,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.5
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -483,7 +483,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.5
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -527,7 +527,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.5
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -564,7 +564,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -601,7 +601,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.25
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -641,7 +641,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -691,7 +691,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -741,7 +741,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -791,7 +791,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = 0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -842,7 +842,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = -0.25
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -884,7 +884,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = -0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -924,7 +924,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = +0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -964,7 +964,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = +0.75
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -1004,7 +1004,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = +0.25
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -1046,7 +1046,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = +0.25
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -1090,7 +1090,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = +0.25
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -1139,7 +1139,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = +0.5
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -1183,7 +1183,7 @@ def test_fault_connection_set(tmp_path):
 
     throw = +0.5
 
-    grid = grr.RegularGrid(model, (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
+    grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), dxyz = (10.0, 10.0, 1.0))
 
     grid.grid_representation = 'IjkGrid'
 
@@ -1237,7 +1237,6 @@ def test_add_faults(tmp_path):
                          set_bool = False,
                          set_coord = a,
                          set_crs = crs.uuid,
-                         set_crsroot = crs.root,
                          title = title)
         ]
 
