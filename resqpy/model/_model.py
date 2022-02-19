@@ -16,6 +16,7 @@ import resqpy.model._forestry as m_f
 import resqpy.model._grids as m_g
 import resqpy.model._hdf5 as m_h
 import resqpy.model._xml as m_x
+import resqpy.olio.xml_et as rqet
 from resqpy import __version__
 
 log.debug('resqpy Model class version: ' + __version__ + '; xml citation format: ' + m_x.citation_format)
@@ -775,6 +776,18 @@ class Model():
         """
 
         return m_c._uuid_for_part(self, part_name, is_rels = is_rels)
+
+    def uuid_for_root(self, root_node):
+        """Returns the uuid for an object given an xml root node.
+
+        arguments:
+           root_node: the xml root node for the object for which the uuid is required
+
+        returns:
+           uuid.UUID for the specified object
+        """
+
+        return rqet.uuid_for_part_root(root_node)
 
     def type_of_part(self, part_name, strip_obj = False):
         """Returns content type for the named part (does not apply to rels parts).

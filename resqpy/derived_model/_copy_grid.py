@@ -2,8 +2,8 @@
 
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.grid as grr
-import resqpy.olio.xml_et as rqet
 
 
 def copy_grid(source_grid, target_model = None, copy_crs = True):
@@ -45,10 +45,11 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
 
     # inherit a copy of the coordinate reference system used by the grid geometry
     if copy_crs:
-        grid.crs_root = model.duplicate_node(source_grid.crs_root)
+        crs_root = model.duplicate_node(source_grid.crs.root)
+        grid.crs_uuid = model.uuid_for_root(crs_root)
     else:
-        grid.crs_root = source_grid.crs_root  # pointer to a source model xml tree
-    grid.crs_uuid = rqet.uuid_for_part_root(grid.crs_root)
+        grid.crs_uuid = source_grid.crs_uuid
+    grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
 
     # inherit a copy of the inactive cell mask
     if source_grid.inactive is None:

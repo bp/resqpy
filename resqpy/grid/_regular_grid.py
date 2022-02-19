@@ -119,6 +119,7 @@ class RegularGrid(Grid):
             self.geometry_defined_for_all_pillars_cached = True
             self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype = bool)
         else:
+            assert bu.is_uuid(uuid)
             assert is_regular_grid(parent_model.root_for_uuid(uuid))
             super().__init__(parent_model,
                              uuid = uuid,
