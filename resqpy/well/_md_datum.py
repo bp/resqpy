@@ -30,16 +30,15 @@ class MdDatum(BaseResqpy):
 
     resqml_type = 'MdDatum'
 
-    def __init__(
-            self,
-            parent_model,
-            uuid = None,
-            crs_uuid = None,
-            location = None,
-            md_reference = 'mean sea level',
-            title = None,
-            originator = None,
-            extra_metadata = None):
+    def __init__(self,
+                 parent_model,
+                 uuid = None,
+                 crs_uuid = None,
+                 location = None,
+                 md_reference = 'mean sea level',
+                 title = None,
+                 originator = None,
+                 extra_metadata = None):
         """Initialises a new MdDatum object.
 
         arguments:

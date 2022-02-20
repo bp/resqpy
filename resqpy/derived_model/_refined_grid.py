@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.fine_coarse as fc
@@ -210,8 +211,10 @@ def _refined_unfaulted_grid(model, source_grid, fine_coarse):
         grid.k_raw_index_array = np.zeros((grid.nk,), dtype = int)
         # k gap arrays populated below
     # inherit the coordinate reference system used by the grid geometry
-    grid.crs_root = source_grid.crs_root
     grid.crs_uuid = source_grid.crs_uuid
+    if source_grid.model is not model:
+        model.duplicate_node(source_grid.model.root_for_uuid(source_grid, grid.crs_uuid), add_as_part = True)
+    grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
 
     refined_points = np.empty((grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3))
 

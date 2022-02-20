@@ -262,46 +262,11 @@ def _create_doc_props(model, add_as_part = True, root = None, originator = None)
     return dp
 
 
-def _create_crs(model,
-                add_as_part = True,
-                title = 'cell grid local CRS',
-                epsg_code = None,
-                originator = None,
-                x_offset = 0.0,
-                y_offset = 0.0,
-                z_offset = 0.0,
-                areal_rotation_radians = 0.0,
-                xy_units = 'm',
-                z_units = 'm',
-                z_inc_down = True):
-    """DEPRECATED: Creates a Coordinate Reference System node and optionally adds as child of root and/or to parts forest."""
-
-    crs = rqc.Crs(model,
-                  x_offset = x_offset,
-                  y_offset = y_offset,
-                  z_offset = z_offset,
-                  rotation = areal_rotation_radians,
-                  xy_units = xy_units,
-                  z_units = z_units,
-                  z_inc_down = z_inc_down,
-                  epsg_code = epsg_code)
-
-    crs_node = crs.create_xml(add_as_part = add_as_part, title = title, originator = originator)
-
-    if model.crs_uuid is None:
-        model.crs_uuid = crs.uuid
-
-    return crs_node
-
-
-def _create_crs_reference(model, crs_root = None, root = None, crs_uuid = None):
+def _create_crs_reference(model, root = None, crs_uuid = None):
     """Creates a node refering to an existing crs node and optionally adds as child of root."""
 
-    if crs_uuid is None:
-        warnings.warn('use of crs_root is deprecated in Model.create_crs_reference(); use crs_uuid instead')
-        crs_uuid = rqet.uuid_for_part_root(crs_root)
-    else:
-        crs_root = model.root_for_uuid(crs_uuid)
+    assert crs_uuid is not None
+    crs_root = model.root_for_uuid(crs_uuid)
     assert crs_root is not None
 
     return _create_ref_node('LocalCrs',

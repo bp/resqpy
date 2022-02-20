@@ -396,6 +396,7 @@ class PointSet(BaseSurface):
             self.model.add_part('obj_PointSetRepresentation', self.uuid, ps_node)
             if add_relationships:
                 # todo: add multiple crs'es (one per patch)?
+                crs_root = self.model.root_for_uuid(self.crs_uuid)
                 self.model.create_reciprocal_relationship(ps_node, 'destinationObject', crs_root, 'sourceObject')
                 if self.represented_interpretation_root is not None:
                     self.model.create_reciprocal_relationship(ps_node, 'destinationObject',

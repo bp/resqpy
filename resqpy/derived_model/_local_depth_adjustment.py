@@ -8,6 +8,7 @@ import os
 import math as maths
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 
@@ -83,19 +84,19 @@ def local_depth_adjustment(epc_file,
     assert model is not None
 
     # take a copy of the grid
-    grid = copy_grid(source_grid, model)
+    grid = copy_grid(source_grid, model, copy_crs = True)
 
     # if not use_local_coords, convert centre_x & y into local_coords
-    crs_root = grid.extract_crs_root()
-    assert (crs_root is not None)
+    if grid.crs is None:
+        grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
     if not use_local_coords:
-        rotation = abs(float(rqet.node_text(rqet.find_tag(crs_root, 'ArealRotation'))))
+        rotation = grid.crs.rotation
         if rotation > 0.001:
             log.error('unable to account for rotation in crs: use local coordinates')
             return
-        centre_x -= float(rqet.node_text(rqet.find_tag(crs_root, 'XOffset')))
-        centre_y -= float(rqet.node_text(rqet.find_tag(crs_root, 'YOffset')))
-    z_inc_down = rqet.bool_from_text(rqet.node_text(rqet.find_tag(crs_root, 'ZIncreasingDownward')))
+        centre_x -= grid.crs.x_offset
+        centre_y -= grid.crs.y_offset
+    z_inc_down = grid.crs.z_inc_down
 
     if not z_inc_down:
         centre_shift = -centre_shift

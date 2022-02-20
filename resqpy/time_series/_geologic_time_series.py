@@ -10,12 +10,7 @@ import resqpy.time_series._any_time_series as ats
 class GeologicTimeSeries(ats.AnyTimeSeries):
     """Class for RESQML Time Series using only year offsets (for geological time frames)."""
 
-    def __init__(self,
-                 parent_model,
-                 uuid = None,
-                 title = None,
-                 originator = None,
-                 extra_metadata = None):
+    def __init__(self, parent_model, uuid = None, title = None, originator = None, extra_metadata = None):
         """Create a GeologicTimeSeries object, either from a time series node in parent model, or empty.
 
         arguments:

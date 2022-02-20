@@ -1232,13 +1232,7 @@ def test_add_faults(tmp_path):
             fp.write(f'{nines:8.3f} {nines:8.3f} {nines:8.3f}\n')
 
     def make_poly(model, a, title, crs):
-        return [
-            rql.Polyline(model,
-                         set_bool = False,
-                         set_coord = a,
-                         set_crs = crs.uuid,
-                         title = title)
-        ]
+        return [rql.Polyline(model, set_bool = False, set_coord = a, set_crs = crs.uuid, title = title)]
 
     epc = os.path.join(tmp_path, 'tic_tac_toe.epc')
 

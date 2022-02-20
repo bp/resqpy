@@ -131,7 +131,7 @@ class PolylineSet(_BasePolyline):
             assert np.sum(self.count_perpol) == len(self.coordinates)
 
             subpolys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
-                                                 self.crs_root, self.rep_int_root)
+                                                 self.rep_int_root)
             # Check we have the right number of polygons
             assert len(subpolys) == len(self.count_perpol)
 
@@ -386,13 +386,12 @@ class PolylineSet(_BasePolyline):
             out[indices_arr] = istrue
             return out
 
-    def convert_to_polylines(
-            self,
-            closed_array = None,
-            count_perpol = None,
-            coordinates = None,
-            crs_uuid = None,
-            rep_int_root = None):
+    def convert_to_polylines(self,
+                             closed_array = None,
+                             count_perpol = None,
+                             coordinates = None,
+                             crs_uuid = None,
+                             rep_int_root = None):
         """Returns a list of Polylines objects from a PolylineSet.
 
         note:

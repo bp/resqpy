@@ -18,10 +18,7 @@ class FrontierFeature(BaseResqpy):
     def __init__(self, parent_model, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a frontier feature organisational object."""
 
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = feature_name,
-                         extra_metadata = extra_metadata)
+        super().__init__(model = parent_model, uuid = uuid, title = feature_name, extra_metadata = extra_metadata)
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this feature is essentially the same as the other; otherwise False."""

@@ -1494,60 +1494,10 @@ class Model():
 
         return m_x._create_doc_props(self, add_as_part = add_as_part, root = root, originator = originator)
 
-    def create_crs(self,
-                   add_as_part = True,
-                   title = 'cell grid local CRS',
-                   epsg_code = None,
-                   originator = None,
-                   x_offset = 0.0,
-                   y_offset = 0.0,
-                   z_offset = 0.0,
-                   areal_rotation_radians = 0.0,
-                   xy_units = 'm',
-                   z_units = 'm',
-                   z_inc_down = True):
-        """DEPRECATED: Creates a Coordinate Reference System node and optionally adds as child of root and/or to parts forest.
-
-        arguments:
-            add_as_part (boolean, default True): if True the newly created crs node is added to the model
-            as a part
-            title (string): used as the Title text in the citation node
-            epsg_code (integer): EPSG code of the parent coordinate reference system that this crs sits within;
-            used for both projected and vertical frames of reference; if None then unknown settings are used
-            originator (string, optional): the name of the human being who created the crs object;
-            default is to use the login name
-            x_offset, y_offset, z_offset (floats, default 0.0): the local origin within the parent coordinate
-            reference system space
-            areal_rotation_radians (float, default 0.0): the areal rotation of the xy axes of this crs relative
-            to the parent coordinate reference system
-            xy_units (string, default 'm'): the length units of x & y values in this crs; 'm' or 'ft'
-            z_units (string, default 'm'): the length units of z values in this crs; 'm' or 'ft'
-            z_inc_down (boolean, default True): if True, z values increase with depth; if False, z values increase
-            with elevation
-
-        returns:
-            newly created coordinate reference system xml node
-        """
-
-        warnings.warn("Model.create_crs() is DEPRECATED, will be removed", DeprecationWarning)
-        return m_x._create_crs(self,
-                               add_as_part = add_as_part,
-                               title = title,
-                               epsg_code = epsg_code,
-                               originator = originator,
-                               x_offset = x_offset,
-                               y_offset = y_offset,
-                               z_offset = z_offset,
-                               areal_rotation_radians = areal_rotation_radians,
-                               xy_units = xy_units,
-                               z_units = z_units,
-                               z_inc_down = z_inc_down)
-
-    def create_crs_reference(self, crs_root = None, root = None, crs_uuid = None):
+    def create_crs_reference(self, root = None, crs_uuid = None):
         """Creates a node refering to an existing crs node and optionally adds as child of root.
 
         arguments:
-           crs_root: DEPRECATED, use uuid instead; the root xml node for the coordinate reference system being referenced
            root: the xml node to which the new reference node is to appended as a child (ie. the xml node
               for the object that is referring to the crs)
            crs_uuid: the uuid of the crs
@@ -1556,7 +1506,7 @@ class Model():
            newly created crs reference xml node
         """
 
-        return m_x._create_crs_reference(self, crs_root = crs_root, root = root, crs_uuid = crs_uuid)
+        return m_x._create_crs_reference(self, root = root, crs_uuid = crs_uuid)
 
     def create_md_datum_reference(self, md_datum_root, root = None):
         """Creates a node refering to an existing measured depth datum and optionally adds as child of root.
@@ -1802,7 +1752,9 @@ class Model():
            duplicated;
            the uuid of the part is not changed by this function, so if the source and target models are
            the same, add as part should be set False and calling code will need to assign a new uuid
-           prior to adding as part
+           prior to adding as part;
+           if add_as_part is True, the part is only added if the uuid does not already exist in this
+           model
         """
 
         return m_f._duplicate_node(self, existing_node, add_as_part = add_as_part)

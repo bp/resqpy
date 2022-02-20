@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.fine_coarse as fc
@@ -103,8 +104,10 @@ def coarsened_grid(epc_file,
     grid.has_split_coordinate_lines = False
     grid.split_pillars_count = None
     # inherit the coordinate reference system used by the grid geometry
-    grid.crs_root = source_grid.crs_root
     grid.crs_uuid = source_grid.crs_uuid
+    if source_grid.model is not model:
+        model.duplicate_node(source_grid.model.root_for_uuid(grid.crs_uuid), add_as_part = True)
+    grid.crs = rqc.Crs(model, grid.crs_uuid)
 
     coarsened_points = np.empty(
         (grid.nk + 1, (grid.nj + 1) * (grid.ni + 1), 3))  # note: gets reshaped after being populated

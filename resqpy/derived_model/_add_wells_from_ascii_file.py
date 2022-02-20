@@ -6,7 +6,7 @@ log = logging.getLogger(__name__)
 
 import os
 
-import resqpy.crs as rqcrs
+import resqpy.crs as rqc
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
@@ -81,12 +81,13 @@ def add_wells_from_ascii_file(epc_file,
 
     # sort out the coordinate reference system
     if crs_uuid is None:
-        crs_uuid = rqet.uuid_for_part_root(model.crs_root)
+        crs_uuid = model.crs_uuid
     if crs_uuid is None:
         if z_inc_down is None:
             z_inc_down = True
-        crs_root = rqcrs.Crs(model, xy_units = length_uom, z_units = length_uom, z_inc_down = z_inc_down)
-        crs_uuid = rqet.uuid_for_part_root(crs_root)
+        crs = rqc.Crs(model, xy_units = length_uom, z_units = length_uom, z_inc_down = z_inc_down)
+        crs.create_xml()
+        crs_uuid = crs.uuid
 
     # add all the well related objects to the model, based on data in the ascii file
     (feature_list, interpretation_list, trajectory_list, md_datum_list) =  \

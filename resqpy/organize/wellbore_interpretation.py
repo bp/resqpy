@@ -47,10 +47,7 @@ class WellboreInterpretation(BaseResqpy):
         if (not title) and self.wellbore_feature is not None:
             title = self.wellbore_feature.feature_name
         self.domain = domain
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         extra_metadata = extra_metadata)
+        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root_node = self.root

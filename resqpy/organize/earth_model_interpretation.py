@@ -32,10 +32,7 @@ class EarthModelInterpretation(BaseResqpy):
         self.has_occurred_during = (None, None)
         if (not title) and organization_feature is not None:
             title = organization_feature.feature_name
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         extra_metadata = extra_metadata)
+        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root = self.root

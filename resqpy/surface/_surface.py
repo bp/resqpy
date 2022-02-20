@@ -588,11 +588,15 @@ class Surface(BaseSurface):
 
         tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator)
 
-        # todo: if crs_root is None, attempt to derive from surface patch crs uuid (within patch loop, below)
+        # todo: if crs_uuid is None, attempt to set to surface patch crs uuid (within patch loop, below)
         if crs_uuid is not None:
             self.crs_uuid = crs_uuid
         if self.crs_uuid is None:
-            crs_uuid = self.model.crs_uuid  # maverick use of model's default crs
+            self.crs_uuid = self.model.crs_uuid  # maverick use of model's default crs
+        if self.crs_uuid is None:
+            crs = rqc.Crs(self.model)
+            crs.create_xml()
+            self.crs_uuid = crs.uuid
         assert self.crs_uuid is not None
 
         if self.represented_interpretation_root is not None:

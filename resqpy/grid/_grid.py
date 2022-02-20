@@ -492,6 +492,9 @@ class Grid(BaseResqpy):
         """Returns False if IJK and xyz have same handedness, True if they differ."""
 
         ijk_right_handed = self.extract_grid_is_right_handed()
+        if self.crs is None:
+            assert self.crs_uuid is not None
+            self.crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         assert self.crs.axis_order == 'easting northing'
         # note: if z increases downwards, xyz is left handed
         return ijk_right_handed == self.z_inc_down()
@@ -532,7 +535,9 @@ class Grid(BaseResqpy):
         """
 
         if self.crs is None:
-            return None
+            if self.crs_uuid is None:
+                return None
+            self.crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         return self.crs.xy_units
 
     def z_units(self):
@@ -542,7 +547,9 @@ class Grid(BaseResqpy):
         """
 
         if self.crs is None:
-            return None
+            if self.crs_uuid is None:
+                return None
+            self.crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         return self.crs.z_units
 
     def skin(self, use_single_layer_tactics = False, is_regular = False):
@@ -1958,13 +1965,12 @@ class Grid(BaseResqpy):
         """
         return z_inc_down(self)
 
-    def local_to_global_crs(
-            self,
-            a,
-            crs_uuid,
-            global_xy_units = None,
-            global_z_units = None,
-            global_z_increasing_downward = None):
+    def local_to_global_crs(self,
+                            a,
+                            crs_uuid,
+                            global_xy_units = None,
+                            global_z_units = None,
+                            global_z_increasing_downward = None):
         """Converts array of points in situ from local coordinate system to global one."""
         assert crs_uuid is not None
         # todo: change function name to be different from method name

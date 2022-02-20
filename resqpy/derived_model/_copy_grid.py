@@ -44,12 +44,13 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
         grid.k_raw_index_array = source_grid.k_raw_index_array.copy()
 
     # inherit a copy of the coordinate reference system used by the grid geometry
-    if copy_crs:
-        crs_root = model.duplicate_node(source_grid.crs.root)
-        grid.crs_uuid = model.uuid_for_root(crs_root)
+    grid.crs_uuid = source_grid.crs_uuid
+    if target_model is source_grid.model:
+        grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
+    elif copy_crs and source_grid.crs_uuid is not None:
+        model.duplicate_node(source_grid.model.root_for_uuid(source_grid.crs_uuid), add_as_part = True)
     else:
-        grid.crs_uuid = source_grid.crs_uuid
-    grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
+        grid.crs = None
 
     # inherit a copy of the inactive cell mask
     if source_grid.inactive is None:

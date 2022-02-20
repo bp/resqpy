@@ -34,24 +34,23 @@ class Crs(BaseResqpy):
     valid_axis_orders = ("easting northing", "northing easting", "westing southing", "southing westing",
                          "northing westing", "westing northing")
 
-    def __init__(
-            self,
-            parent_model: 'rq.Model',
-            uuid: Optional[uuid.UUID] = None,
-            x_offset: float = 0.0,
-            y_offset: float = 0.0,
-            z_offset: float = 0.0,
-            rotation: float = 0.0,
-            rotation_units: str = 'dega',
-            xy_units: str = 'm',
-            z_units: str = 'm',
-            z_inc_down: bool = True,
-            axis_order: str = 'easting northing',
-            time_units: Optional[str] = None,
-            epsg_code: Optional[str] = None,
-            title: Optional[str] = None,
-            originator: Optional[str] = None,
-            extra_metadata: Optional[Dict[str, str]] = None):
+    def __init__(self,
+                 parent_model: 'rq.Model',
+                 uuid: Optional[uuid.UUID] = None,
+                 x_offset: float = 0.0,
+                 y_offset: float = 0.0,
+                 z_offset: float = 0.0,
+                 rotation: float = 0.0,
+                 rotation_units: str = 'dega',
+                 xy_units: str = 'm',
+                 z_units: str = 'm',
+                 z_inc_down: bool = True,
+                 axis_order: str = 'easting northing',
+                 time_units: Optional[str] = None,
+                 epsg_code: Optional[str] = None,
+                 title: Optional[str] = None,
+                 originator: Optional[str] = None,
+                 extra_metadata: Optional[Dict[str, str]] = None):
         """Create a new coordinate reference system object.
 
         arguments:
@@ -367,13 +366,12 @@ class Crs(BaseResqpy):
         self.global_to_local_array(xyz)
         return xyz
 
-    def create_xml(
-            self,
-            title: Optional[str] = None,
-            originator: Optional[str] = None,
-            extra_metadata: Optional[Dict[str, str]] = None,
-            add_as_part: bool = True,
-            reuse: bool = True):
+    def create_xml(self,
+                   title: Optional[str] = None,
+                   originator: Optional[str] = None,
+                   extra_metadata: Optional[Dict[str, str]] = None,
+                   add_as_part: bool = True,
+                   reuse: bool = True):
         """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
         arguments:

@@ -135,9 +135,8 @@ def _get_model_details(epc_file, crs_uuid, ext_uuid):
     assert model, 'failed to read existing resqml model from file: ' + epc_file
 
     if crs_uuid is None:
-        assert model.crs_root is not None, 'no crs uuid given and no default in model'
-        crs_uuid = rqet.uuid_for_part_root(model.crs_root)
-        assert crs_uuid is not None
+        assert model.crs_uuid is not None, 'no crs uuid given and no default in model'
+        crs_uuid = model.crs_uuid
 
     if ext_uuid is None:
         ext_uuid = model.h5_uuid()

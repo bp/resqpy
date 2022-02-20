@@ -40,10 +40,7 @@ class HorizonInterpretation(BaseResqpy):
         self.has_occurred_during = (None, None)
         self.boundary_relation_list = None if not boundary_relation_list else boundary_relation_list.copy()
         self.sequence_stratigraphy_surface = sequence_stratigraphy_surface
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         extra_metadata = extra_metadata)
+        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root_node = self.root

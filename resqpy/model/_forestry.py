@@ -421,8 +421,6 @@ def _duplicate_node(model, existing_node, add_as_part = True):
         uuid = rqet.uuid_for_part_root(new_node)
         if model.part_for_uuid(uuid) is None:
             _add_part(model, rqet.node_type(new_node), uuid, new_node)
-        else:
-            log.warning('rejected attempt to add a duplicated part with an existing uuid')
     return new_node
 
 

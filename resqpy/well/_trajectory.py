@@ -43,28 +43,27 @@ class Trajectory(BaseResqpy):
     resqml_type = 'WellboreTrajectoryRepresentation'
     well_name = rqo.alias_for_attribute("title")
 
-    def __init__(
-            self,
-            parent_model,
-            uuid = None,
-            crs_uuid = None,
-            md_datum = None,
-            deviation_survey = None,
-            data_frame = None,
-            grid = None,
-            cell_kji0_list = None,
-            wellspec_file = None,
-            spline_mode = 'cube',
-            ascii_trajectory_file = None,
-            survey_file_space_separated = False,
-            length_uom = None,
-            md_domain = None,
-            represented_interp = None,
-            well_name = None,
-            set_tangent_vectors = False,
-            hdf5_source_model = None,
-            originator = None,
-            extra_metadata = None):
+    def __init__(self,
+                 parent_model,
+                 uuid = None,
+                 crs_uuid = None,
+                 md_datum = None,
+                 deviation_survey = None,
+                 data_frame = None,
+                 grid = None,
+                 cell_kji0_list = None,
+                 wellspec_file = None,
+                 spline_mode = 'cube',
+                 ascii_trajectory_file = None,
+                 survey_file_space_separated = False,
+                 length_uom = None,
+                 md_domain = None,
+                 represented_interp = None,
+                 well_name = None,
+                 set_tangent_vectors = False,
+                 hdf5_source_model = None,
+                 originator = None,
+                 extra_metadata = None):
         """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or
 
         ascii file.
