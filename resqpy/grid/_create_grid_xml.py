@@ -215,7 +215,11 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
                                                       'sourceObject')
         if write_geometry:
             # create 2 way relationship between IjkGrid and Crs
-            grid.model.create_reciprocal_relationship(ijk, 'destinationObject', grid.crs_root, 'sourceObject')
+            if grid.crs is None:
+                crs_root = grid.model.root_for_uuid(grid.crs_uuid)
+            else:
+                crs_root = grid.crs.root
+            grid.model.create_reciprocal_relationship(ijk, 'destinationObject', crs_root, 'sourceObject')
             # create 2 way relationship between IjkGrid and Ext
             ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
             ext_node = grid.model.root_for_part(ext_part)

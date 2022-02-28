@@ -2,8 +2,6 @@
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '18th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -51,7 +49,6 @@ class DeviationSurvey(BaseResqpy):
                  parent_model,
                  uuid = None,
                  title = None,
-                 deviation_survey_root = None,
                  represented_interp = None,
                  md_datum = None,
                  md_uom = 'm',
@@ -73,7 +70,6 @@ class DeviationSurvey(BaseResqpy):
            parent_model (model.Model): the model which the new survey belongs to
            uuid (uuid.UUID): If given, loads from disk. Else, creates new.
            title (str): Citation title
-           deviation_survey_root: DEPCRECATED. If given, load from disk.
            represented_interp (wellbore interpretation): if present, is noted as the wellbore
               interpretation object which this deviation survey relates to
            md_datum (MdDatum): the datum that the depths for this survey are measured from
@@ -116,14 +112,11 @@ class DeviationSurvey(BaseResqpy):
         self.md_datum = md_datum  # md datum is an object in its own right, with a related crs!
         self.wellbore_interpretation = represented_interp
 
-        # TODO: remove deviation_survey_root, use just uuid
-
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = deviation_survey_root)
+                         extra_metadata = extra_metadata)
 
     @classmethod
     def from_data_frame(cls,

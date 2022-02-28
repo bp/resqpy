@@ -69,7 +69,7 @@ def test_gcs_property_inheritance(tmp_path):
     model = rq.Model(epc, new_epc = True, create_basics = True, create_hdf5_ext = True)
 
     # create a grid
-    g = grr.RegularGrid(model, (5, 3, 3), dxyz = (10.0, 10.0, 1.0))
+    g = grr.RegularGrid(model, extent_kji = (5, 3, 3), dxyz = (10.0, 10.0, 1.0))
     g.write_hdf5()
     g.create_xml(title = 'unsplit grid')
 
@@ -151,7 +151,7 @@ def test_pinchout_and_k_gap_gcs(tmp_path):
     model = rq.new_model(epc)
 
     # create a grid
-    g = grr.RegularGrid(model, (5, 5, 5), dxyz = (100.0, 100.0, 10.0), as_irregular_grid = True)
+    g = grr.RegularGrid(model, extent_kji = (5, 5, 5), dxyz = (100.0, 100.0, 10.0), as_irregular_grid = True)
     # patch points to generate a pinchout
     p = g.points_cached
     assert p.shape == (6, 6, 6, 3)
@@ -389,7 +389,7 @@ def make_epc_with_gcs(tmp_path):
     model = rq.new_model(epc)
 
     # create a grid
-    g = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0))
+    g = grr.RegularGrid(model, extent_kji = (5, 4, 3), dxyz = (100.0, 100.0, 10.0))
     g.create_xml()
 
     # create an empty grid connection set
@@ -445,10 +445,10 @@ def make_epc_with_abutting_grids(tmp_path):
     model = rq.new_model(epc)
 
     # create a grid
-    g0 = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0))
+    g0 = grr.RegularGrid(model, extent_kji = (5, 4, 3), dxyz = (100.0, 100.0, 10.0))
     g0.create_xml()
 
-    g1 = grr.RegularGrid(model, (5, 4, 3), dxyz = (100.0, 100.0, 10.0), origin = (100.0, 400.0, 20.0))
+    g1 = grr.RegularGrid(model, extent_kji = (5, 4, 3), dxyz = (100.0, 100.0, 10.0), origin = (100.0, 400.0, 20.0))
     g1.create_xml()
 
     # create an empty grid connection set

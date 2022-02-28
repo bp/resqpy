@@ -2,8 +2,6 @@
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
-version = '18th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -45,74 +43,69 @@ class Trajectory(BaseResqpy):
     resqml_type = 'WellboreTrajectoryRepresentation'
     well_name = rqo.alias_for_attribute("title")
 
-    def __init__(
-            self,
-            parent_model,
-            trajectory_root = None,  # deprecated
-            uuid = None,
-            crs_uuid = None,
-            md_datum = None,
-            deviation_survey = None,
-            data_frame = None,
-            grid = None,
-            cell_kji0_list = None,
-            wellspec_file = None,
-            spline_mode = 'cube',
-            ascii_trajectory_file = None,
-            survey_file_space_separated = False,
-            length_uom = None,
-            md_domain = None,
-            represented_interp = None,
-            well_name = None,
-            set_tangent_vectors = False,
-            hdf5_source_model = None,
-            originator = None,
-            extra_metadata = None):
+    def __init__(self,
+                 parent_model,
+                 uuid = None,
+                 crs_uuid = None,
+                 md_datum = None,
+                 deviation_survey = None,
+                 data_frame = None,
+                 grid = None,
+                 cell_kji0_list = None,
+                 wellspec_file = None,
+                 spline_mode = 'cube',
+                 ascii_trajectory_file = None,
+                 survey_file_space_separated = False,
+                 length_uom = None,
+                 md_domain = None,
+                 represented_interp = None,
+                 well_name = None,
+                 set_tangent_vectors = False,
+                 hdf5_source_model = None,
+                 originator = None,
+                 extra_metadata = None):
         """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or
 
         ascii file.
 
         arguments:
            parent_model (model.Model object): the model which the new trajectory belongs to
-           trajectory_root (DEPRECATED): use uuid instead; the root node of an xml tree representing the trajectory;
-              if not None, the new trajectory object is initialised based on the data in the tree;
-              if None, one of the other arguments is used
            uuid (UUID, optional): if present, the Trajectory is initialised from xml for an existing RESQML object
               and the remaining arguments are mostly ignored
            crs_uuid (UUID, optional): the uuid of a Crs object to use when generating a new trajectory
            md_datum (MdDatum object): the datum that the depths for this trajectory are measured from;
-              not used if uuid or trajectory_root is not None
-           deviation_survey (DeviationSurvey object, optional): if present and uuid and trajectory_root are None
+              not used if uuid is not None
+           deviation_survey (DeviationSurvey object, optional): if present and uuid is None
               then the trajectory is derived from the deviation survey based on minimum curvature
            data_frame (optional): a pandas dataframe with columns 'MD', 'X', 'Y' and 'Z', holding
-              the measured depths, and corresponding node locations; ignored if uuid or trajectory_root is not None
+              the measured depths, and corresponding node locations; ignored if uuid is not None
            grid (grid.Grid object, optional): only required if initialising from a list of cell indices;
               ignored otherwise
            cell_kji0_list (numpy int array of shape (N, 3)): ordered list of cell indices to be visited by
-              the trajectory; ignored if uuid or trajectory_root is not None
+              the trajectory; ignored if uuid is not None
            wellspec_file (string, optional): name of an ascii file containing Nexus WELLSPEC data; well_name
               and length_uom arguments must be passed
            spline_mode (string, default 'cube'): one of 'none', 'linear', 'square', or 'cube'; affects spline
               tangent generation; only relevant if initialising from list of cells
            ascii_trajectory_file (string): filename of an ascii file holding the trajectory
-              in a tabular form; ignored if uuid or trajectory_root is not None
+              in a tabular form; ignored if uuid is not None
            survey_file_space_separated (boolean, default False): if True, deviation survey file is
               space separated; if False, comma separated (csv); ignored unless loading from survey file
            length_uom (string, default 'm'): a resqml length unit of measure applicable to the
               measured depths; should be 'm' or 'ft'
            md_domain (string, optional): if present, must be 'logger' or 'driller'; the source of the original
-              deviation data; ignored if uuid or trajectory_root is not None
+              deviation data; ignored if uuid is not None
            represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-              interpretation object which this trajectory relates to; ignored if uuid or trajectory_root is not None
+              interpretation object which this trajectory relates to; ignored if uuid is not None
            well_name (string, optional): used as citation title
            set_tangent_vectors (boolean, default False): if True and tangent vectors are not loaded then they will
               be computed from the control points
            hdf5_source_model (model.Model, optional): if present this model is used to determine the hdf5 file
               name from which to load the trajectory's array data; if None, the parent_model is used as usual
            originator (str, optional): the name of the person creating the trajectory, defaults to login id;
-              ignored if uuid or trajectory_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the trajectory;
-              ignored if uuid or trajectory_root is not None
+              ignored if uuid is not None
 
         returns:
            the newly created wellbore trajectory object
@@ -159,8 +152,7 @@ class Trajectory(BaseResqpy):
                          uuid = uuid,
                          title = well_name,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = trajectory_root)
+                         extra_metadata = extra_metadata)
 
         if self.root is not None:
             if set_tangent_vectors and type(self.knot_count) is int and self.tangent_vectors is None:
@@ -238,12 +230,6 @@ class Trajectory(BaseResqpy):
             return 'ascii_trajectory_file'
         else:
             return None
-
-    @property
-    def crs_root(self):
-        """XML node corresponding to self.crs_uuid."""
-
-        return self.model.root_for_uuid(self.crs_uuid)
 
     def iter_wellbore_frames(self):
         """Iterable of all WellboreFrames associated with a trajectory.
@@ -960,7 +946,7 @@ class Trajectory(BaseResqpy):
         if add_as_part:
             self.model.add_part('obj_WellboreTrajectoryRepresentation', self.uuid, wbt_node)
             if add_relationships:
-                crs_root = self.crs_root
+                crs_root = self.model.root_for_uuid(self.crs_uuid)
                 self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', crs_root, 'sourceObject')
                 self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', self.md_datum.root,
                                                           'sourceObject')

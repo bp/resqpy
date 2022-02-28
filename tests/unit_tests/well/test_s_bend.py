@@ -97,8 +97,8 @@ def test_s_bend_fn(tmp_path, epc = None):
 
     crs = rqc.Crs(model)
     crs_node = crs.create_xml()
-    if model.crs_root is None:
-        model.crs_root = crs_node
+    if model.crs_uuid is None:
+        model.crs_uuid = crs.crs_uuid
 
     grid.grid_representation = 'IjkGrid'
     grid.extent_kji = np.array((nk, nj, ni), dtype = 'int')
@@ -108,7 +108,7 @@ def test_s_bend_fn(tmp_path, epc = None):
     grid.has_split_coordinate_lines = False
     grid.k_gaps = None
     grid.crs_uuid = crs.uuid
-    grid.crs_root = crs_node
+    grid.crs = crs
 
     grid.points_cached = points
 
@@ -149,7 +149,7 @@ def test_s_bend_fn(tmp_path, epc = None):
 
     trajectory = rqw.Trajectory(model, md_datum = datum, data_frame = df, length_uom = 'm', well_name = 'ANGLED_WELL')
 
-    rqc.Crs(model, uuid = rqet.uuid_for_part_root(trajectory.crs_root)).uuid == crs.uuid
+    assert bu.matching_uuids(trajectory.crs_uuid, crs.uuid)
 
     trajectory.write_hdf5()
     trajectory.create_xml()

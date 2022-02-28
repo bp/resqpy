@@ -39,9 +39,10 @@ def xyz_box(grid, points_root = None, lazy = True, local = False):
             for kp in [0, 1]:
                 for jp in [0, 1]:
                     for ip in [0, 1]:
-                        eight_corners[kp, jp, ip] = grid.point(cell_kji0 = [
+                        cell_kji0 = [
                             kp * (grid.extent_kji[0] - 1), jp * (grid.extent_kji[1] - 1), ip * (grid.extent_kji[2] - 1)
-                        ],
+                        ]
+                        eight_corners[kp, jp, ip] = grid.point(cell_kji0 = cell_kji0,
                                                                corner_index = [kp, jp, ip],
                                                                points_root = points_root,
                                                                cache_array = False)
@@ -148,8 +149,10 @@ def z_inc_down(grid):
     :meta common:
     """
 
-    assert grid.crs_root is not None
-    return rqet.find_tag_bool(grid.crs_root, 'ZIncreasingDownward')
+    if grid.crs is None:
+        assert grid.crs_uuid is not None
+        grid.crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
+    return grid.crs.z_inc_down
 
 
 def global_to_local_crs(grid,

@@ -1961,7 +1961,7 @@ def __try_cell_entry(entry_knot, entry_xyz, grid, kissed, kji0, next_cell_info, 
 
 
 def __trajectory_init(blocked_well, grid, grid_crs):
-    if bu.matching_uuids(rqet.uuid_for_part_root(blocked_well.trajectory.crs_root), grid.crs_uuid):
+    if bu.matching_uuids(blocked_well.trajectory.crs_uuid, grid.crs_uuid):
         trajectory = blocked_well.trajectory
         assert grid_crs == rqc.Crs(blocked_well.model, uuid = trajectory.crs_uuid)
     else:

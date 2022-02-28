@@ -244,10 +244,6 @@ class Property(BaseResqpy):
                                                      masked = masked,
                                                      exclude_null = exclude_null)
 
-
-#   def citation_title(self):
-#      return self.collection.citation_title_for_part(self.part)
-
     def is_continuous(self):
         """Returns boolean indicating that the property contains continuous (ie. float) data.
 

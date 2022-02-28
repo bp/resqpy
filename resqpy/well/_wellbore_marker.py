@@ -1,7 +1,5 @@
 """_wellbore_marker.py: resqpy well module providing wellbore marker class"""
 
-version = '8th December 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 

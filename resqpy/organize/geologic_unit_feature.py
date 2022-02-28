@@ -16,14 +16,10 @@ class GeologicUnitFeature(BaseResqpy):
     resqml_type = "GeologicUnitFeature"
     feature_name = alias_for_attribute("title")
 
-    def __init__(self, parent_model, root_node = None, uuid = None, feature_name = None, extra_metadata = None):
+    def __init__(self, parent_model, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a geologic unit feature organisational object."""
 
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = feature_name,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+        super().__init__(model = parent_model, uuid = uuid, title = feature_name, extra_metadata = extra_metadata)
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this feature is essentially the same as the other; otherwise False."""

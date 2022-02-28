@@ -421,8 +421,6 @@ def _duplicate_node(model, existing_node, add_as_part = True):
         uuid = rqet.uuid_for_part_root(new_node)
         if model.part_for_uuid(uuid) is None:
             _add_part(model, rqet.node_type(new_node), uuid, new_node)
-        else:
-            log.warning('rejected attempt to add a duplicated part with an existing uuid')
     return new_node
 
 
@@ -659,6 +657,7 @@ def _copy_all_parts_from_other_model(model, other_model, realization = None, con
 def _set_uuid_to_part(model, part_name):
     """Adds an entry to the dictionary mapping from uuid to part name."""
 
+    assert part_name and isinstance(part_name, str)
     uuid = rqet.uuid_in_part_name(part_name)
     model.uuid_part_dict[bu.uuid_as_int(uuid)] = part_name
 

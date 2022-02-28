@@ -1,7 +1,5 @@
 """_wellbore_marker_frame.py: resqpy well module providing marker frame class"""
 
-version = '8th December 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -103,11 +101,11 @@ class WellboreMarkerFrame(BaseResqpy):
            interp_citation_title_col (string, default 'Interp_Citation_Title'): the name of the column holding the interpretation
            citation title
            title (str, optional): the citation title to use for a new wellbore marker frame;
-              ignored if uuid or wellbore_marker_frame_root is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the wellbore marker frame, defaults to login id;
-              ignored if uuid or wellbore_marker_frame_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore marker frame;
-              ignored if uuid or wellbore_marker_frame_root is not None
+              ignored if uuid is not None
 
         returns:
             the newly created wellbore marker frame object
