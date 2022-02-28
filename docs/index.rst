@@ -17,6 +17,7 @@ The repository is hosted on `GitHub <https://github.com/bp/resqpy>`_.
 
    installation
    CONTRIBUTING
+   release-notes
    trademarks
 
 .. toctree::

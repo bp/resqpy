@@ -1,6 +1,6 @@
 ---
 
-name: Python CI
+name: Tests
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
 
     steps:
       - uses: actions/checkout@v2
@@ -63,8 +63,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Run pytest
-        run: |
-          poetry run pytest --cov=resqpy --junitxml=pytest.xml
+        run: poetry run pytest --cov=resqpy --junitxml=pytest.xml
 
       - name: Upload pytest artifacts
         if: ${{ always() }}
@@ -80,8 +79,26 @@ jobs:
           files: pytest.xml
           fail_ci_if_error: true
 
-      # - name: Publish Unit Test Results
-      #   if: always()
-      #   uses: EnricoMi/publish-unit-test-result-action@v1
-        # with:
-        #   files: *.xml
+  legacy-dependencies:
+    # Test against older versions of numpy and pandas,
+    # To ensure resqpy works with the lower bounds of our published constraints
+
+    name: Unit tests (older dependencies)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        uses: ./.github/actions/prepare-poetry
+        with:
+          python-version: 3.7
+
+      - name: Downgrade numpy and pandas
+        # Use caret-style requirements (~) to fix minor version but allow patches
+        run: |
+          poetry add numpy@~1.19 pandas@~1.1
+          poetry show
+
+      - name: Run pytest
+        run: poetry run pytest
