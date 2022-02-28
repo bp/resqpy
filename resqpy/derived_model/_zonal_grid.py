@@ -200,8 +200,8 @@ def _empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count):
         grid.extent_kji = np.array((zone_count, source_grid.nj, source_grid.ni), dtype = 'int')
         grid.nk, grid.nj, grid.ni = zone_count, source_grid.nj, source_grid.ni
         grid.has_split_coordinate_lines = source_grid.has_split_coordinate_lines
-        grid.crs_root = source_grid.crs_root
         grid.crs_uuid = source_grid.crs_uuid
+
     grid.k_direction_is_down = source_grid.k_direction_is_down
     grid.grid_is_right_handed = source_grid.grid_is_right_handed
     grid.pillar_shape = source_grid.pillar_shape

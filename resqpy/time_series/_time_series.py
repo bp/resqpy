@@ -21,7 +21,6 @@ class TimeSeries(AnyTimeSeries):
     def __init__(self,
                  parent_model,
                  uuid = None,
-                 time_series_root = None,
                  first_timestamp = None,
                  daily = None,
                  monthly = None,
@@ -35,7 +34,6 @@ class TimeSeries(AnyTimeSeries):
         arguments:
            parent_model (model.Model): the resqpy model to which the time series will belong
            uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
-           time_series_root (xml node, DEPRECATED): the xml root node; use uuid instead
            first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
               this and the remaining arguments are ignored if loading from xml
            daily (non-negative int, optional): the number of one day interval timesteps to start the series
@@ -46,11 +44,11 @@ class TimeSeries(AnyTimeSeries):
            yearly (non-negative int, optional): the number of 365 day interval timesteps to follow the
               quarterly timesteps
            title (str, optional): the citation title to use for a new time series;
-              ignored if uuid or time_series_root is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the time series, defaults to login id;
-              ignored if uuid or time_series_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the time series;
-              ignored if uuid or time_series_root is not None
+              ignored if uuid is not None
 
         returns:
            newly instantiated TimeSeries object
@@ -82,8 +80,7 @@ class TimeSeries(AnyTimeSeries):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = time_series_root)
+                         extra_metadata = extra_metadata)
         if self.extra_metadata is not None and self.extra_metadata.get('timeframe') == 'geologic':
             raise ValueError('attempt to instantiate a human timeframe time series for a geologic time series')
 
@@ -221,12 +218,3 @@ class TimeSeries(AnyTimeSeries):
     def datetimes(self):
         """Returns the timestamps as a list of python-datetime objects."""
         return [dt.datetime.fromisoformat(t.rstrip('Z')) for t in self.timestamps]
-
-    @property
-    def time_series_root(self):
-        """DEPRECATED.
-
-        Alias for root
-        """
-        warnings.warn("Attribute 'time_series_root' is deprecated. Use 'root'", DeprecationWarning)
-        return self.root

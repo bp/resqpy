@@ -8,6 +8,7 @@ import os
 import numpy as np
 import copy
 
+import resqpy.crs as rqc
 import resqpy.grid_surface as rgs
 import resqpy.model as rq
 import resqpy.olio.intersection as meet
@@ -107,7 +108,13 @@ def drape_to_surface(epc_file,
         scaled_surf.vertical_rescale_points(scaling_factor = scaling_factor)
         surface = scaled_surf
 
-    # todo: check that surface and grid use same crs; if not, convert to same
+    # check that surface and grid use same crs; if not, convert to same
+    surface_crs = rqc.Crs(surface.model, surface.crs_uuid)
+    if source_grid.crs is None:
+        source_grid.crs = rqc.Crs(source_grid.model, uuid = source_grid.crs_uuid)
+    if surface_crs != source_grid.crs:
+        surface.triangles_and_points()
+        surface_crs.convert_array_to(source_grid.crs, surface.points)
 
     # take a copy of the grid
     log.debug('copying grid')
@@ -131,7 +138,7 @@ def drape_to_surface(epc_file,
 
     # access triangulated surface as triangle node indices into array of points
     log.debug('fetching surface points and triangle corner indices')
-    t, p = surface.triangles_and_points()
+    t, p = surface.triangles_and_points()  # will pick up cached crs converted copy if appropriate
 
     # compute intersections of all pillars with all triangles (sparse array returned with NaN for no intersection)
     log.debug('computing intersections of all pillars with all triangles')

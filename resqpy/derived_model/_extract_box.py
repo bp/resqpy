@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.box_utilities as bx
@@ -92,8 +93,10 @@ def extract_box(epc_file = None,
     grid.pillar_shape = source_grid.pillar_shape
     grid.has_split_coordinate_lines = source_grid.has_split_coordinate_lines
     # inherit the coordinate reference system used by the grid geometry
-    grid.crs_root = source_grid.crs_root
     grid.crs_uuid = source_grid.crs_uuid
+    if source_grid.model is not model:
+        model.duplicate_node(source_grid.model.root_for_uuid(grid.crs_uuid), add_as_part = True)
+    grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
 
     # inherit k_gaps for selected layer range
     _inherit_k_gaps(source_grid, grid, box)

@@ -1,7 +1,5 @@
 """RESQML coordinate reference systems."""
 
-version = '29th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -36,30 +34,27 @@ class Crs(BaseResqpy):
     valid_axis_orders = ("easting northing", "northing easting", "westing southing", "southing westing",
                          "northing westing", "westing northing")
 
-    def __init__(
-            self,
-            parent_model: 'rq.Model',
-            crs_root = None,  # deprecated
-            uuid: Optional[uuid.UUID] = None,
-            x_offset: float = 0.0,
-            y_offset: float = 0.0,
-            z_offset: float = 0.0,
-            rotation: float = 0.0,
-            rotation_units: str = 'dega',
-            xy_units: str = 'm',
-            z_units: str = 'm',
-            z_inc_down: bool = True,
-            axis_order: str = 'easting northing',
-            time_units: Optional[str] = None,
-            epsg_code: Optional[str] = None,
-            title: Optional[str] = None,
-            originator: Optional[str] = None,
-            extra_metadata: Optional[Dict[str, str]] = None):
+    def __init__(self,
+                 parent_model: 'rq.Model',
+                 uuid: Optional[uuid.UUID] = None,
+                 x_offset: float = 0.0,
+                 y_offset: float = 0.0,
+                 z_offset: float = 0.0,
+                 rotation: float = 0.0,
+                 rotation_units: str = 'dega',
+                 xy_units: str = 'm',
+                 z_units: str = 'm',
+                 z_inc_down: bool = True,
+                 axis_order: str = 'easting northing',
+                 time_units: Optional[str] = None,
+                 epsg_code: Optional[str] = None,
+                 title: Optional[str] = None,
+                 originator: Optional[str] = None,
+                 extra_metadata: Optional[Dict[str, str]] = None):
         """Create a new coordinate reference system object.
 
         arguments:
             parent_model (model.Model): the model to which the new Crs object will belong
-            crs_root (xml root node): DEPRECATED – use uuid instead; the xml root node for an existing RESQML crs object
             crs_uuid (uuid.UUID): the uuid of an existing RESQML crs object in model, from which to instantiate the
                 resqpy Crs object; if present, all the remaining arguments are ignored
             x_offset, y_offset, z_offset (floats, default zero): the local origin within an implicit parent crs
@@ -75,11 +70,11 @@ class Crs(BaseResqpy):
                 z_units argument is irrelevant
             epsg_code (str, optional): if present, the EPSG code of the implicit parent crs
             title (str, optional): the citation title to use for a new crs;
-                ignored if uuid or crs_root is not None
+                ignored if uuid is not None
             originator (str, optional): the name of the person creating the crs, defaults to login id;
-                ignored if uuid or crs_root is not None
+                ignored if uuid is not None
             extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs;
-                ignored if uuid or crs_root is not None
+                ignored if uuid is not None
 
         returns:
             a new resqpy Crs object
@@ -117,8 +112,7 @@ class Crs(BaseResqpy):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = crs_root)
+                         extra_metadata = extra_metadata)
 
         assert self.xy_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS xy units: {self.xy_units}'
         assert self.z_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS z units: {self.z_units}'
@@ -372,14 +366,12 @@ class Crs(BaseResqpy):
         self.global_to_local_array(xyz)
         return xyz
 
-    def create_xml(
-            self,
-            title: Optional[str] = None,
-            originator: Optional[str] = None,
-            extra_metadata: Optional[Dict[str, str]] = None,
-            add_as_part: bool = True,
-            root = None,  # deprecated
-            reuse: bool = True):
+    def create_xml(self,
+                   title: Optional[str] = None,
+                   originator: Optional[str] = None,
+                   extra_metadata: Optional[Dict[str, str]] = None,
+                   add_as_part: bool = True,
+                   reuse: bool = True):
         """Creates a Coordinate Reference System xml node and optionally adds as a part in the parent model.
 
         arguments:
@@ -389,8 +381,6 @@ class Crs(BaseResqpy):
             extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the crs
             add_as_part (boolean, default True): if True the newly created crs node is added to the model
                 as a part
-            root (optional, usually None): DEPRECATED; if not None, the newly created crs node is appended
-                as a child of this node (rarely used)
             reuse (boolean, default True): if True and an equivalent crs already exists in the model then
                 the uuid for this Crs is modified to match that of the existing object and the existing
                 xml node is returned without anything new being added
@@ -479,20 +469,12 @@ class Crs(BaseResqpy):
             epsg_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
             epsg_node.text = str(self.epsg_code)
 
-        if root is not None:
-            root.append(crs)
         if add_as_part:
             self.model.add_part('obj_' + self.resqml_type, bu.uuid_from_string(crs.attrib['uuid']), crs)
         if self.model.crs_uuid is None:
             self.model.crs_uuid = self.uuid  # mark's as 'main' (ie. first) crs for model
 
         return crs
-
-    @property
-    def crs_root(self):
-        """DEPRECATED alias for root."""
-        warnings.warn("Attribute 'crs_root' is deprecated. Use 'root'", DeprecationWarning)
-        return self.root
 
 
 def _as_xyz_tuple(xyz):

@@ -7,8 +7,6 @@ from pathlib import Path
 
 from resqpy.olio.exceptions import IncompatibleUnitsError, InvalidUnitError
 
-version = '13th September 2021'
-
 # physical constants
 feet_to_metres = 0.3048
 metres_to_feet = 1.0 / feet_to_metres

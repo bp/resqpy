@@ -2,8 +2,6 @@
 
 import resqpy.well
 
-version = '18th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -42,7 +40,6 @@ class WellboreFrame(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 frame_root = None,
                  uuid = None,
                  trajectory = None,
                  mds = None,
@@ -54,21 +51,20 @@ class WellboreFrame(BaseResqpy):
 
         arguments:
            parent_model (model.Model object): the model which the new wellbore frame belongs to
-           frame_root (optional): DEPRECATED. the root node of an xml tree representing the wellbore frame;
-              if not None, the new wellbore frame object is initialised based on the data in the tree;
-              if None, an empty wellbore frame object is returned
+           uuid (optional): the uuid of an existing wellbore frame; if present, remaining arguments are
+              ignored
            trajectory (Trajectory object, optional): the trajectory of the well; required if loading from
               list of measured depths
            mds (optional numpy 1D array, tuple or list of floats): ordered list of measured depths which
-              will constitute the frame; ignored if frame_root is not None
+              will constitute the frame; ignored if uuid is not None
            represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-              interpretation object which this frame relates to; ignored if frame_root is not None
+              interpretation object which this frame relates to; ignored if uuid is not None
            title (str, optional): the citation title to use for a new wellbore frame;
-              ignored if uuid or frame_root is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the wellbore frame, defaults to login id;
-              ignored if uuid or frame_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore frame;
-              ignored if uuid or frame_root is not None
+              ignored if uuid is not None
 
         returns:
            the newly created wellbore frame object
@@ -99,8 +95,7 @@ class WellboreFrame(BaseResqpy):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = frame_root)
+                         extra_metadata = extra_metadata)
 
         if self.root is None and trajectory is not None and mds is not None and len(mds) > 1:
             self.node_count = len(mds)
@@ -146,12 +141,12 @@ class WellboreFrame(BaseResqpy):
         self.logs = rqp.WellLogCollection(frame = self)
         # pass
 
-    def extract_crs_root(self):
-        """Returns the xml root node of the coordinate reference system used by the related trajectory."""
+    def extract_crs_uuid(self):
+        """Returns the uuid of the coordinate reference system used by the related trajectory."""
 
         if self.trajectory is None:
             return None
-        return self.trajectory.crs_root
+        return self.trajectory.crs_uuid
 
     def create_feature_and_interpretation(self):
         """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does

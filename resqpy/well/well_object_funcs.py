@@ -415,7 +415,8 @@ def add_logs_from_cellio(blockedwell, cellio):
 
     Arguments:
        blockedwell: a resqml blockedwell object
-       cellio: an ascii file exported from RMS containing blocked well geometry and logs. Must contain columns i_index, j_index and k_index, plus additional columns for logs to be imported.
+       cellio: an ascii file exported from RMS containing blocked well geometry and logs;
+           must contain columns i_index, j_index and k_index, plus additional columns for logs to be imported
     """
     # Get the initial variables from the blocked well
     assert isinstance(blockedwell, BlockedWell), 'Not a blocked wellbore object'

@@ -28,7 +28,6 @@ class FaultInterpretation(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  title = None,
                  tectonic_boundary_feature = None,
@@ -63,11 +62,7 @@ class FaultInterpretation(BaseResqpy):
         self.mean_dip = mean_dip
         self.throw_interpretation_list = None  # list of (list of throw kind, (base chrono uuid, top chrono uuid)))
 
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
 
     @property
     def feature_uuid(self):

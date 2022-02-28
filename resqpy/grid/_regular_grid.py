@@ -25,6 +25,7 @@ class RegularGrid(Grid):
 
     def __init__(self,
                  parent_model,
+                 uuid = None,
                  extent_kji = None,
                  dxyz = None,
                  dxyz_dkji = None,
@@ -33,7 +34,6 @@ class RegularGrid(Grid):
                  use_vertical = False,
                  mesh = None,
                  mesh_dz_dk = 1.0,
-                 uuid = None,
                  set_points_cached = False,
                  as_irregular_grid = False,
                  find_properties = True,
@@ -44,8 +44,10 @@ class RegularGrid(Grid):
 
         arguments:
            parent_model (model.Model object): the model to which the new grid will be assigned
+           uuid (optional): the uuid for an existing grid part; if present, the RegularGrid object is
+              based on existing data or a mix of that data and other arguments where present
            extent_kji (triple positive integers, optional): the number of cells in the grid (nk, nj, ni);
-              required unless grid_root is present
+              required unless uuid is present
            dxyz (triple float, optional): use when the I,J,K axes align with the x,y,z axes (possible with inverted
               directions); the size of each cell (dx, dy, dz); values may be negative
            dxyz_dkji (numpy float array of shape (3, 3), optional): how x,y,z values increase with each step in each
@@ -62,13 +64,11 @@ class RegularGrid(Grid):
               dxyz_dkji must be None
            mesh_dz_dk (float, default 1.0): the size of cells in the K axis, which is aligned with the z axis, when
               starting from a mesh; ignored if mesh is None
-           uuid (optional): the root of the xml tree for the grid part; if present, the RegularGrid object is
-              based on existing data or a mix of that data and other arguments where present
            set_points_cached (boolean, default False): if True, an explicit geometry is created for the regular grid
               in the form of the cached points array; will be treated as True if as_irregular_grid is True
            as_irregular_grid (boolean, default False): if True, the grid is setup such that it will appear as a Grid
               object when next loaded from disc
-           find_properties (boolean, default True): if True and grid_root is not None, a grid property collection is
+           find_properties (boolean, default True): if True and uuid is not None, a grid property collection is
               instantiated as an attribute, holding properties for which this grid is the supporting representation
            title (str, optional): citation title for new grid; ignored if loading from xml
            originator (str, optional): name of person creating the grid; defaults to login id;
@@ -84,7 +84,7 @@ class RegularGrid(Grid):
            but that is not yet supported by this code base; however, constant dx, dy, dz arrays are supported;
            alternatively, regular meshes (Grid2d) may be stored in parameterized form and used to generate a
            regular grid here;
-           if root_grid, dxyz, dxyz_dkji and mesh arguments are all None then unit cube cells aligned with
+           if uuid, dxyz, dxyz_dkji and mesh arguments are all None then unit cube cells aligned with
            the x,y,z axes will be generated;
            to store the geometry explicitly set as_irregular_grid True and use the following methods:
            make_regular_points_cached(), write_hdf5(), create_xml(..., write_geometry = True);
@@ -119,6 +119,7 @@ class RegularGrid(Grid):
             self.geometry_defined_for_all_pillars_cached = True
             self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype = bool)
         else:
+            assert bu.is_uuid(uuid)
             assert is_regular_grid(parent_model.root_for_uuid(uuid))
             super().__init__(parent_model,
                              uuid = uuid,
@@ -197,8 +198,6 @@ class RegularGrid(Grid):
             new_crs.create_xml(reuse = True)
             crs_uuid = new_crs.uuid
         self.crs_uuid = crs_uuid
-        self.crs_root = parent_model.root_for_uuid(crs_uuid)
-        assert self.crs_root is not None
 
         if self.uuid is None:
             self.uuid = bu.new_uuid()
@@ -495,7 +494,6 @@ class RegularGrid(Grid):
                    add_as_part = True,
                    add_relationships = True,
                    set_as_grid_root = True,
-                   root = None,
                    title = None,
                    originator = None,
                    write_active = True,

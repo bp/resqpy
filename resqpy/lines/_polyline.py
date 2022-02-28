@@ -1,7 +1,5 @@
 """_polyline.py: Resqml polyline module."""
 
-version = '23rd November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -26,12 +24,10 @@ class Polyline(_BasePolyline):
 
     def __init__(self,
                  parent_model,
-                 poly_root = None,
                  uuid = None,
                  set_bool = None,
                  set_coord = None,
                  set_crs = None,
-                 set_crsroot = None,
                  title = None,
                  rep_int_root = None,
                  originator = None,
@@ -40,26 +36,21 @@ class Polyline(_BasePolyline):
 
         arguments:
             parent_model (model.Model object): the model which the new PolylineRepresentation belongs to
-            poly_root (DEPRECATED): use uuid instead;
-                the root node of the xml tree representing the PolylineRepresentation;
-                if not None, the new PolylineRepresentation object is initialised based on data in tree;
-                if None, wait for further improvements
             uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineRepresentation from which
                 to initialise the resqpy Polyline
             set_bool (boolean, optional): if True, a new polyline created from coordinates is flagged as
-                a closed polyline (polygon); ignored if uuid or poly_root is not None
+                a closed polyline (polygon); ignored if uuid is not None
             set_coord (numpy array of shape (..., 3), optional): an ordered set of xyz values used to define
-                a new polyline; ignored if uuid or poly_root is not None
+                a new polyline; ignored if uuid is not None
             set_crs (uuid.UUID, optional): the uuid of a crs to be used when initialising from coordinates;
-                ignored if uuid or poly_root is not None
-            set_crsroot (DEPRECATED): the xml root node for the crs; ignored
+                ignored if uuid is not None
             title (str, optional): the citation title to use for a new polyline;
-                ignored if uuid or poly_root is not None
+                ignored if uuid is not None
             rep_int_root
             originator (str, optional): the name of the person creating the polyline, defaults to login id;
-                ignored if uuid or poly_root is not None
+                ignored if uuid is not None
             extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the polyline;
-                ignored if uuid or poly_root is not None
+                ignored if uuid is not None
 
         returns:
             the newly instantiated Polyline object
@@ -78,7 +69,6 @@ class Polyline(_BasePolyline):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         root_node = poly_root,
                          extra_metadata = extra_metadata)
 
         if self.root is None and all(i is not None for i in [set_bool, set_coord, set_crs, title]):
@@ -126,12 +116,6 @@ class Polyline(_BasePolyline):
         assert not any(map(lambda x: x is None, self.nodepatch))  # Required fields - assert neither are None
 
         self.rep_int_root = self.model.referenced_node(rqet.find_tag(poly_root, 'RepresentedInterpretation'))
-
-    @property
-    def crs_root(self):
-        """XML node corresponding to self.crs_uuid."""
-
-        return self.model.root_for_uuid(self.crs_uuid)
 
     @property
     def rep_int_uuid(self):
@@ -585,7 +569,6 @@ class Polyline(_BasePolyline):
                    ext_uuid = None,
                    add_as_part = True,
                    add_relationships = True,
-                   root = None,
                    title = None,
                    originator = None):
         """Create xml from polyline.
@@ -650,12 +633,11 @@ class Polyline(_BasePolyline):
 
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points_patch0', root = coords)
 
-        if root is not None:
-            root.append(polyline)
         if add_as_part:
             self.model.add_part('obj_PolylineRepresentation', self.uuid, polyline)
             if add_relationships:
-                self.model.create_reciprocal_relationship(polyline, 'destinationObject', self.crs_root, 'sourceObject')
+                crs_root = self.model.root_for_uuid(self.crs_uuid)
+                self.model.create_reciprocal_relationship(polyline, 'destinationObject', crs_root, 'sourceObject')
                 if self.rep_int_root is not None:  # Optional
                     self.model.create_reciprocal_relationship(polyline, 'destinationObject', self.rep_int_root,
                                                               'sourceObject')

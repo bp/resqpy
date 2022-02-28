@@ -22,7 +22,6 @@ class PropertyKind(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  title = None,
                  is_abstract = False,
@@ -41,8 +40,7 @@ class PropertyKind(BaseResqpy):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root_node = self.root

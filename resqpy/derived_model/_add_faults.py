@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
-import resqpy.crs as rqcrs
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq
@@ -95,8 +95,10 @@ def add_faults(epc_file,
     # take a copy of the resqpy grid object, without writing to hdf5 or creating xml
     # the copy will be a Grid, even if the source is a RegularGrid
     grid = copy_grid(source_grid, model)
-    grid_crs = rqcrs.Crs(model, uuid = grid.crs_uuid)
-    assert grid_crs is not None
+    grid.crs_uuid = source_grid.crs_uuid
+    if source_grid.model is not model:
+        model.duplicate_node(source_grid.model.root_for_uuid(grid.crs_uuid), add_as_part = True)
+    grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
 
     if isinstance(polylines, rql.PolylineSet):
         polylines = polylines.convert_to_polylines()
@@ -106,7 +108,7 @@ def add_faults(epc_file,
     # build pillar list dict for polylines if necessary
     if full_pillar_list_dict is None:
         full_pillar_list_dict = {}
-        _populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
+        _populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid.crs, lines_file_list,
                                                     full_pillar_list_dict, composite_face_set_dict)
 
     else:  # populate composite face set dictionary from full pillar list
@@ -350,13 +352,13 @@ def _process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw
 
 def _populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid_crs, lines_file_list,
                                                 full_pillar_list_dict, composite_face_set_dict):
-    lines_crs = None if lines_crs_uuid is None else rqcrs.Crs(model, uuid = lines_crs_uuid)
+    lines_crs = None if lines_crs_uuid is None else rqc.Crs(model, uuid = lines_crs_uuid)
     if polylines:
         for i, polyline in enumerate(polylines):
             new_line = polyline.coordinates.copy()
             if polyline.crs_uuid is not None and polyline.crs_uuid != lines_crs_uuid:
                 lines_crs_uuid = polyline.crs_uuid
-                lines_crs = rqcrs.Crs(model, uuid = lines_crs_uuid)
+                lines_crs = rqc.Crs(model, uuid = lines_crs_uuid)
             if lines_crs:
                 lines_crs.convert_array_to(grid_crs, new_line)
             title = polyline.title if polyline.title else 'fault_' + str(i)

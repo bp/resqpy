@@ -6,6 +6,7 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
@@ -26,8 +27,8 @@ def _displacement_properties(new_grid, old_grid):
     displacement_collection.z_array = displacement[..., 2].copy()
     # horizontal_displacement = np.sqrt(x_displacement * x_displacement  +  y_displacement * y_displacement)
     # todo: create prop collection to hold z_displacement and horizontal_displacement; add them to imported list
-    xy_units = rqet.find_tag(new_grid.crs_root, 'ProjectedUom').text.lower()
-    z_units = rqet.find_tag(new_grid.crs_root, 'VerticalUom').text.lower()
+    xy_units = new_grid.xy_units()
+    z_units = new_grid.z_units()
     # todo: could replace 3 displacement properties with a single points property
     displacement_collection.add_cached_array_to_imported_list(displacement_collection.x_array,
                                                               'easterly displacement from tilt',
@@ -134,9 +135,10 @@ def _write_grid(epc_file,
         log.debug('write_grid(): creating new model object')
         model = rq.new_model(epc_file)
         ext_uuid = model.h5_uuid()
-        crs_root = model.duplicate_node(grid.crs_root)
+        crs_root = model.duplicate_node(grid.model.root_for_uuid(grid.crs_uuid))
         grid.model = model
-        grid.crs_root = crs_root
+        grid.crs_uuid = model.uuid_for_root(crs_root)
+        grid.crs = rqc.Crs(model, uuid = model.crs_uuid)
     log.debug('write_grid(): number of starting parts: ' + str(model.number_of_parts()))
 
     if grid.inactive is not None and geometry:
