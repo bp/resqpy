@@ -465,7 +465,7 @@ class Crs(BaseResqpy):
             self.model.create_unknown(root = z_crs)
         else:  # not sure if this is appropriate for the vertical crs
             z_crs.set(ns['xsi'] + 'type', ns['eml'] + 'VerticalCrsEpsgCode')
-            epsg_node = rqet.SubElement(xy_crs, ns['resqml2'] + 'EpsgCode')
+            epsg_node = rqet.SubElement(z_crs, ns['resqml2'] + 'EpsgCode')
             epsg_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
             epsg_node.text = str(self.epsg_code)
 
