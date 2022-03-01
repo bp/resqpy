@@ -394,10 +394,10 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
 
 
 def _guess_uom_get_crs_info(support):
-    if support is None or not hasattr(support, 'extract_crs_root'):
+    if support is None or not hasattr(support, 'extract_crs_uuid'):
         crs_node = None
     else:
-        crs_node = support.extract_crs_root()
+        crs_node = support.model.root_for_uuid(support.extract_crs_uuid())
     return crs_node, _crs_m_or_ft(crs_node)
 
 

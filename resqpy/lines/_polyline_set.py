@@ -1,7 +1,5 @@
 """_polyline_set.py: Resqml polyline set module."""
 
-version = '23rd November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -26,7 +24,6 @@ class PolylineSet(_BasePolyline):
 
     def __init__(self,
                  parent_model,
-                 set_root = None,
                  uuid = None,
                  polylines = None,
                  irap_file = None,
@@ -38,21 +35,17 @@ class PolylineSet(_BasePolyline):
 
         arguments:
             parent_model (model.Model object): the model which the new PolylineSetRepresentation belongs to
-            set_root (DEPRECATED): use uuid instead;
-                the root node of the xml tree representing the PolylineSetRepresentation;
-                if not None, the new PolylineSetRepresentation object is initialised based on data in tree;
-                if None, expectes a list of polyline objects
             uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineSetRepresentation object from
                 which to initialise this resqpy PolylineSet
             polylines (optional): list of polyline objects from which to build the polylineset
             irap_file (str, optional): the name of a file in irap format from which to import the polyline set
             charisma_file (str, optional): the name of a file in charisma format from which to import the polyline set
             title (str, optional): the citation title to use for a new polyline set;
-                ignored if uuid or set_root is not None
+                ignored if uuid is not None
             originator (str, optional): the name of the person creating the polyline set, defaults to login id;
-                ignored if uuid or set_root is not None
+                ignored if uuid is not None
             extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the polyline set;
-                ignored if uuid or set_root is not None
+                ignored if uuid is not None
 
         returns:
             the newly instantiated PolylineSet object
@@ -74,7 +67,6 @@ class PolylineSet(_BasePolyline):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         root_node = set_root,
                          extra_metadata = extra_metadata)
 
         if self.root is not None:
@@ -88,7 +80,7 @@ class PolylineSet(_BasePolyline):
             assert len(crs_set) == 1, 'More than one CRS found in input polylines for polyline set'
             for crs_uuid in crs_set:
                 self.crs_uuid = crs_uuid
-                if self.crs_root is not None:
+                if self.crs_uuid is not None:
                     break
             self.polys = polylines
             # Setting the title of the first polyline given as the PolylineSet title
@@ -139,7 +131,7 @@ class PolylineSet(_BasePolyline):
             assert np.sum(self.count_perpol) == len(self.coordinates)
 
             subpolys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
-                                                 self.crs_root, self.rep_int_root)
+                                                 self.rep_int_root)
             # Check we have the right number of polygons
             assert len(subpolys) == len(self.count_perpol)
 
@@ -166,10 +158,10 @@ class PolylineSet(_BasePolyline):
                 else:
                     self.coordinates = np.concatenate((self.coordinates, poly))
         self.count_perpol = np.array(self.count_perpol)
-        if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
+        if self.crs_uuid is None:  # If no crs_uuid is provided, assume the main model crs is valid
             self.crs_uuid = self.model.crs_uuid
         self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
-                                               self.crs_root, self.rep_int_root)
+                                               self.rep_int_root)
 
     def _set_from_charisma(self, charisma_file):
         with open(charisma_file) as f:
@@ -197,16 +189,10 @@ class PolylineSet(_BasePolyline):
                     count = 1
                     stick = line[7]
         self.count_perpol = np.array(self.count_perpol)
-        if self.crs_root is None:  # If no crs_uuid is provided, assume the main model crs is valid
+        if self.crs_uuid is None:  # If no crs_uuid is provided, assume the main model crs is valid
             self.crs_uuid = self.model.crs_uuid
         self.polys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
-                                               self.crs_root, self.rep_int_root)
-
-    @property
-    def crs_root(self):
-        """XML node corresponding to self.crs_uuid."""
-
-        return self.model.root_for_uuid(self.crs_uuid)
+                                               self.rep_int_root)
 
     def poly_index_containing_point_in_xy(self, p, mode = 'crossing'):
         """Returns the index of the first (closed) polyline containing point p in the xy plane, or None.
@@ -227,7 +213,6 @@ class PolylineSet(_BasePolyline):
                    ext_uuid = None,
                    add_as_part = True,
                    add_relationships = True,
-                   root = None,
                    title = None,
                    originator = None,
                    save_polylines = False):
@@ -338,12 +323,11 @@ class PolylineSet(_BasePolyline):
 
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points_patch0', root = coords)
 
-        if root is not None:
-            root.append(polyset)
         if add_as_part:
             self.model.add_part('obj_PolylineSetRepresentation', self.uuid, polyset)
             if add_relationships:
-                self.model.create_reciprocal_relationship(polyset, 'destinationObject', self.crs_root, 'sourceObject')
+                crs_root = self.model.root_for_uuid(self.crs_uuid)
+                self.model.create_reciprocal_relationship(polyset, 'destinationObject', crs_root, 'sourceObject')
                 if self.rep_int_root is not None:  # Optional
                     self.model.create_reciprocal_relationship(polyset, 'destinationObject', self.rep_int_root,
                                                               'sourceObject')
@@ -402,14 +386,12 @@ class PolylineSet(_BasePolyline):
             out[indices_arr] = istrue
             return out
 
-    def convert_to_polylines(
-            self,
-            closed_array = None,
-            count_perpol = None,
-            coordinates = None,
-            crs_uuid = None,
-            crs_root = None,  # deprecated
-            rep_int_root = None):
+    def convert_to_polylines(self,
+                             closed_array = None,
+                             count_perpol = None,
+                             coordinates = None,
+                             crs_uuid = None,
+                             rep_int_root = None):
         """Returns a list of Polylines objects from a PolylineSet.
 
         note:
@@ -420,7 +402,6 @@ class PolylineSet(_BasePolyline):
             count_perpol: array containing a list of polygon "lengths" for each polygon
             coordinates: array containing coordinates for all the polygons
             crs_uuid: crs_uuid for polylineset
-            crs_root: DEPRECATED; ignored
             rep_int_root: represented interpretation root (optional)
 
         returns:
@@ -459,7 +440,6 @@ class PolylineSet(_BasePolyline):
             subtitle = f"{self.title} {i+1}"
             polys.append(
                 Polyline(self.model,
-                         poly_root = None,
                          set_bool = isclosed,
                          set_coord = subset,
                          set_crs = crs_uuid,

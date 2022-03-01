@@ -1,7 +1,5 @@
 """_blocked_well.py: resqpy well module providing blocked well class"""
 
-version = '18th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -53,7 +51,6 @@ class BlockedWell(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 blocked_well_root = None,
                  uuid = None,
                  grid = None,
                  trajectory = None,
@@ -71,19 +68,18 @@ class BlockedWell(BaseResqpy):
 
         arguments:
            parent_model (model.Model object): the model which the new blocked well belongs to
-           blocked_well_root (DEPRECATED): the root node of an xml tree representing the blocked well;
-              if not None, the new blocked well object is initialised based on the data in the tree;
-              if None, the other arguments are used
+           uuid (optional): if present, the uuid of an existing blocked wellbore, in which case remaining
+              arguments are ignored
            grid (optional, grid.Grid object): required if intialising from a trajectory or wellspec file;
-              not used if blocked_well_root is not None
+              not used if uuid is not None
            trajectory (optional, Trajectory object): the trajectory of the well, to be intersected with the grid;
-              not used if blocked_well_root is not None
+              not used if uuid is not None
            wellspec_file (optional, string): filename of an ascii file holding the Nexus wellspec data;
-              ignored if blocked_well_root is not None or trajectory is not None
+              ignored if uuid is not None or trajectory is not None
            cellio_file (optional, string): filename of an ascii file holding the RMS exported blocked well data;
-              ignored if blocked_well_root is not None or trajectory is not None or wellspec_file is not None
+              ignored if uuid is not None or trajectory is not None or wellspec_file is not None
            column_ji0 (optional, pair of ints): column indices (j0, i0) for a 'vertical' well; ignored if
-              blocked_well_root is not None or trajectory is not None or wellspec_file is not None or
+              uuid is not None or trajectory is not None or wellspec_file is not None or
               cellio_file is not None
            well_name (string): the well name as given in the wellspec or cellio file; required if loading from
               one of those files; or the name to be used as citation title for a column well
@@ -95,11 +91,11 @@ class BlockedWell(BaseResqpy):
               then entry and exit points are constructed based on a straight line at those angles passing through
               the centre of the cell; only relevant when loading from wellspec
            represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
-              interpretation object which this frame relates to; ignored if blocked_well_root is not None
+              interpretation object which this frame relates to; ignored if uuid is not None
            originator (str, optional): the name of the person creating the blocked well, defaults to login id;
-              ignored if uuid or blocked_well_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the blocked well;
-              ignored if uuid or blocked_well_root is not None
+              ignored if uuid is not None
            add_wellspec_properties (boolean or list of str, default False): if not False, and initialising from
               a wellspec file, the blocked well has its hdf5 data written and xml created and properties are
               fully created; if a list is provided the elements must be numerical wellspec column names;
@@ -157,8 +153,7 @@ class BlockedWell(BaseResqpy):
                          uuid = uuid,
                          title = well_name,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = blocked_well_root)
+                         extra_metadata = extra_metadata)
 
         if self.root is None:
             self.wellbore_interpretation = represented_interp
@@ -489,7 +484,7 @@ class BlockedWell(BaseResqpy):
         """Populate this blocked wellbore object based on intersection of trajectory with cells of grid.
 
         arguments:
-           trajectory (Trajectory object): the trajectory to intersect with the grid; control_points and crs_root attributes must
+           trajectory (Trajectory object): the trajectory to intersect with the grid; control_points and crs_uuid attributes must
               be populated
            grid (grid.Grid object): the grid with which to intersect the trajectory
            active_only (boolean, default False): if True, only active cells are included as blocked intervals
@@ -519,7 +514,7 @@ class BlockedWell(BaseResqpy):
             # fill_grid.write_hdf_from_caches()
             # fill_grid.create_xml
             grid = fill_grid
-        assert trajectory.control_points is not None and trajectory.crs_root is not None and grid.crs_root is not None
+        assert trajectory.control_points is not None and trajectory.crs_uuid is not None and grid.crs_uuid is not None
         assert len(trajectory.control_points)
 
         self.trajectory = trajectory
@@ -1839,7 +1834,7 @@ class BlockedWell(BaseResqpy):
 
     def __get_trajectory_crs_and_z_inclination(self):
 
-        if self.trajectory is None or self.trajectory.crs_root is None:
+        if self.trajectory is None or self.trajectory.crs_uuid is None:
             traj_crs = None
             traj_z_inc_down = None
         else:
@@ -2763,7 +2758,7 @@ class BlockedWell(BaseResqpy):
             return None, None
         md = 0.5 * (self.node_mds[node_index] + self.node_mds[node_index + 1])
         xyz = self.trajectory.xyz_for_md(md)
-        return xyz, rqet.uuid_for_part_root(self.trajectory.crs_root)
+        return xyz, self.trajectory.crs_uuid
 
     def create_feature_and_interpretation(self, shared_interpretation = True):
         """Instantiate new empty WellboreFeature and WellboreInterpretation objects.
@@ -2983,7 +2978,7 @@ class BlockedWell(BaseResqpy):
         return nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node, gis_values_node, fis_node, fnull_node, fis_values_node
 
     def __create_trajectory_grid_wellbore_interpretation_reference_nodes(self, bw_node):
-        """ Create nodes and add to BlockedWell object root node."""
+        """Create nodes and add to BlockedWell object root node."""
 
         traj_root = self.trajectory.root
         self.model.create_ref_node('Trajectory',
@@ -3011,7 +3006,7 @@ class BlockedWell(BaseResqpy):
 
     def __create_hdf5_dataset_references(self, ext_uuid, mds_values_node, cis_values_node, gis_values_node,
                                          fis_values_node):
-        """ Create nodes that reference the hdf5 datasets (arrays) and add to the BlockedWell onject's root node."""
+        """Create nodes that reference the hdf5 datasets (arrays) and add to the BlockedWell onject's root node."""
 
         self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'NodeMd', root = mds_values_node)
 

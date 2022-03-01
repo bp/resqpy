@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
-import resqpy.crs as rqcrs
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
@@ -74,8 +74,8 @@ def interpolated_grid(epc_file,
     model = grid_a.model
 
     if not bu.matching_uuids(grid_a.crs_uuid, grid_b.crs_uuid):
-        crs_a = rqcrs.Crs(grid_a.model, uuid = grid_a.crs_uuid)
-        crs_b = rqcrs.Crs(grid_b.model, uuid = grid_b.crs_uuid)
+        crs_a = rqc.Crs(grid_a.model, uuid = grid_a.crs_uuid)
+        crs_b = rqc.Crs(grid_b.model, uuid = grid_b.crs_uuid)
         assert crs_a.is_equivalent(crs_b),  \
             'end point grids for interpolation have different coordinate reference systems'
 
@@ -153,8 +153,11 @@ def _inherit_basics(grid, grid_a, grid_b):
     grid.pillar_shape = grid_a.pillar_shape
     grid.has_split_coordinate_lines = (grid_a.has_split_coordinate_lines or grid_b.has_split_coordinate_lines)
     # inherit the coordinate reference system used by the grid geometry
-    grid.crs_root = grid_a.crs_root
     grid.crs_uuid = grid_a.crs_uuid
+    if grid_a.model is not grid.model:
+        grid.model.duplicate_node(grid_a.model.root_for_uuid(grid_a, grid.crs_uuid), add_as_part = True)
+    grid.crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
+
     if grid_a.inactive is None or grid_b.inactive is None:
         grid.inactive = None
     else:

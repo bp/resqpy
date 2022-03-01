@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
-import resqpy.crs as rqcrs
+import resqpy.crs as rqc
 import resqpy.grid_surface as rgs
 import resqpy.model as rq
 import resqpy.olio.box_utilities as bx
@@ -136,8 +136,8 @@ def extract_box_for_well(epc_file = None,
         assert trajectory_root is not None, 'trajectory object not found for uuid: ' + str(trajectory_uuid)
         trajectory = rqw.Trajectory(traj_model, uuid = trajectory_uuid)
         well_name = rqw.well_name(trajectory)
-        traj_crs = rqcrs.Crs(trajectory.model, uuid = trajectory.crs_uuid)
-        grid_crs = rqcrs.Crs(source_grid.model, uuid = source_grid.crs_uuid)
+        traj_crs = rqc.Crs(trajectory.model, uuid = trajectory.crs_uuid)
+        grid_crs = rqc.Crs(source_grid.model, uuid = source_grid.crs_uuid)
         # modify in-memory trajectory data to be in the same crs as grid
         traj_crs.convert_array_to(grid_crs,
                                   trajectory.control_points)  # trajectory xyz points converted in situ to grid's crs

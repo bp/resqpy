@@ -21,7 +21,6 @@ class HorizonInterpretation(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  title = None,
                  genetic_boundary_feature = None,
@@ -41,15 +40,12 @@ class HorizonInterpretation(BaseResqpy):
         self.has_occurred_during = (None, None)
         self.boundary_relation_list = None if not boundary_relation_list else boundary_relation_list.copy()
         self.sequence_stratigraphy_surface = sequence_stratigraphy_surface
-        super().__init__(model = parent_model,
-                         uuid = uuid,
-                         title = title,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
+        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
-        self.domain = rqet.find_tag_text(self.root, 'Domain')
-        interp_feature_ref_node = rqet.find_tag(self.root, 'InterpretedFeature')
+        root_node = self.root
+        self.domain = rqet.find_tag_text(root_node, 'Domain')
+        interp_feature_ref_node = rqet.find_tag(root_node, 'InterpretedFeature')
         assert interp_feature_ref_node is not None
         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
         if self.feature_root is not None:
@@ -58,13 +54,13 @@ class HorizonInterpretation(BaseResqpy):
                                                                    uuid = self.feature_root.attrib['uuid'],
                                                                    feature_name = self.model.title_for_root(
                                                                        self.feature_root))
-        self.has_occurred_during = extract_has_occurred_during(self.root)
-        br_node_list = rqet.list_of_tag(self.root, 'BoundaryRelation')
+        self.has_occurred_during = extract_has_occurred_during(root_node)
+        br_node_list = rqet.list_of_tag(root_node, 'BoundaryRelation')
         if br_node_list is not None and len(br_node_list) > 0:
             self.boundary_relation_list = []
             for br_node in br_node_list:
                 self.boundary_relation_list.append(br_node.text)
-        self.sequence_stratigraphy_surface = rqet.find_tag_text(self.root, 'SequenceStratigraphySurface')
+        self.sequence_stratigraphy_surface = rqet.find_tag_text(root_node, 'SequenceStratigraphySurface')
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this interpretation is essentially the same as the other; otherwise False."""

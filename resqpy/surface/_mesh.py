@@ -31,7 +31,6 @@ class Mesh(BaseSurface):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  mesh_file = None,
                  mesh_format = None,
@@ -52,8 +51,6 @@ class Mesh(BaseSurface):
 
         arguments:
            parent_model (model.Model object): the model to which this Mesh object will be associated
-           root_node (optional): DEPRECATED, use uuid instead; the root node for an obj_Grid2dRepresentation part;
-              remaining arguments are ignored if uuid or root_node is not None
            uuid (uuid.UUID, optional): the uuid of an existing RESQML obj_Grid2dRepresentation object from which
               this resqpy Mesh object is populated
            mesh_file (string, optional): file name, required if initialising from an RMS text or zmap+ ascii file
@@ -74,14 +71,14 @@ class Mesh(BaseSurface):
               mesh; z_supporting_mesh_uuid must also be supplied
            z_supporting_mesh_uuid (uuid.UUID, optional): used to specify the supporting mesh when creating a
               ref&z or reg&z flavour mesh; z_values must also be supplied
-           surface_role (string, default 'map'): 'map' or 'pick'; ignored if root_node is not None
+           surface_role (string, default 'map'): 'map' or 'pick'; ignored if uuid is not None
            crs_uuid (uuid.Uuid or string, optional): required if generating a regular mesh, the uuid of the crs
            title (str, optional): the citation title to use for a new mesh;
-              ignored if uuid or root_node is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the mesh, defaults to login id;
-              ignored if uuid or root_node is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the mesh;
-              ignored if uuid or root_node is not None
+              ignored if uuid is not None
 
         returns:
            the newly created Mesh object
@@ -94,7 +91,7 @@ class Mesh(BaseSurface):
            is held as an array; 'ref & z', where another mesh is referred to for xy data, and z values are held
            in an array;
            there are 5 ways to initialise a Mesh object, in order of precedence:
-           1. pass root_node to initialise from xml
+           1. pass uuid to initialise from xml
            2. pass mesh_file, mesh_format and crs_uuid to load an explicit mesh from an ascii file
            3. pass xyz_values and crs_uuid to create an explicit mesh from a numpy array
            4. pass nj, ni, origin, dxyz_dij and crs_uuid to initialise a regular mesh directly
@@ -123,10 +120,7 @@ class Mesh(BaseSurface):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
-
-        self.crs_root = None if self.crs_uuid is None else self.model.root_for_uuid(self.crs_uuid)
+                         extra_metadata = extra_metadata)
 
         if self.root is not None:
             pass
@@ -672,7 +666,8 @@ class Mesh(BaseSurface):
     def __create_xml_add_parts(self, g2d_node, ref_root, add_relationships, ext_uuid):
         self.model.add_part('obj_Grid2dRepresentation', self.uuid, g2d_node)
         if add_relationships:
-            self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', self.crs_root, 'sourceObject')
+            crs_root = self.model.root_for_uuid(self.crs_uuid)
+            self.model.create_reciprocal_relationship(g2d_node, 'destinationObject', crs_root, 'sourceObject')
             if self.represented_interpretation_root is not None:
                 self.model.create_reciprocal_relationship(g2d_node, 'destinationObject',
                                                           self.represented_interpretation_root, 'sourceObject')
@@ -686,18 +681,15 @@ class Mesh(BaseSurface):
 
     def create_xml(self,
                    ext_uuid = None,
-                   crs_root = None,
                    use_xy_only = False,
                    add_as_part = True,
                    add_relationships = True,
-                   root = None,
                    title = None,
                    originator = None):
         """Creates a grid 2d representation xml node from this mesh object and optionally adds as part of model.
 
         arguments:
            ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the mesh array
-           crs_root (DEPRECATED): ignored, crs must now be established at time of initialisation
            use_xy_only (boolean, default False): if True and the flavour of this mesh is explicit, only
               the xy coordinates are stored in the hdf5 dataset, otherwise xyz are stored
            add_as_part (boolean, default True): if True, the newly created xml node is added as a part
@@ -705,8 +697,6 @@ class Mesh(BaseSurface):
            add_relationships (boolean, default True): if True, a relationship xml part is created relating the
               new grid 2d part to the crs part (and optional interpretation part), and to the represented
               interpretation if present
-           root (optional, usually None): if not None, the newly created grid 2d representation node is appended
-              as a child to this node
            title (string, optional): used as the citation Title text; should be meaningful to a human
            originator (string, optional): the name of the human being who created the grid 2d representation part;
               default is to use the login name
@@ -714,9 +704,6 @@ class Mesh(BaseSurface):
         returns:
            the newly created grid 2d representation (mesh) xml node
         """
-
-        if crs_root is not None:
-            warnings.warn('crs_root argument is deprecated and ignored in Mesh.create_xml()')
 
         if ext_uuid is None and self.flavour != 'regular':
             ext_uuid = self.model.h5_uuid()
@@ -743,8 +730,6 @@ class Mesh(BaseSurface):
             log.error('mesh has bad flavour when creating xml')
             return None
 
-        if root is not None:
-            root.append(g2d_node)
         if add_as_part:
             self.__create_xml_add_parts(g2d_node, ref_root, add_relationships, ext_uuid)
 

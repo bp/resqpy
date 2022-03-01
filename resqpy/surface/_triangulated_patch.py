@@ -1,6 +1,6 @@
 """_triangulated_patch.py: surface class based on resqml standard."""
 
-version = '4th November 2021'
+version = '18th February 2022'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -36,7 +36,6 @@ class TriangulatedPatch:
         self.ni = None  # used to convert a triangle index back into a (j, i) pair when freshly built from mesh
         self.points = None
         self.crs_uuid = crs_uuid
-        self.crs_root = None
         if patch_node is not None:
             xml_patch_index = rqet.find_tag_int(patch_node, 'PatchIndex')
             assert xml_patch_index is not None
@@ -51,16 +50,14 @@ class TriangulatedPatch:
             self.extract_crs_root_and_uuid()
 
     def extract_crs_root_and_uuid(self):
-        """Caches root and uuid for coordinate reference system, as stored in geometry xml sub-tree."""
+        """Caches uuid for coordinate reference system, as stored in geometry xml sub-tree."""
 
-        if self.crs_root is not None and self.crs_uuid is not None:
-            return self.crs_root, self.crs_uuid
-        self.crs_root = rqet.find_nested_tags(self.node, ['Geometry', 'LocalCrs'])
-        if self.crs_root is None:
-            self.crs_uuid = None
+        if self.crs_uuid is None:
+            crs_root = rqet.find_nested_tags(self.node, ['Geometry', 'LocalCrs'])
+            self.crs_uuid = self.model.uuid_for_root(crs_root)
         else:
-            self.crs_uuid = bu.uuid_from_string(rqet.find_tag_text(self.crs_root, 'UUID'))
-        return self.crs_root, self.crs_uuid
+            crs_root = self.model.root_for_uuid(self.crs_uuid)
+        return crs_root, self.crs_uuid
 
     def triangles_and_points(self):
         """Returns arrays representing the patch.

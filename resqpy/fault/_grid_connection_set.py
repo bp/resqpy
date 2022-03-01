@@ -1,7 +1,5 @@
 """_grid_connection_set.py: Module providing RESQML grid connection set class."""
 
-version = '20th October 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -33,7 +31,6 @@ class GridConnectionSet(BaseResqpy):
     def __init__(self,
                  parent_model,
                  uuid = None,
-                 connection_set_root = None,
                  find_properties = True,
                  grid = None,
                  ascii_load_format = None,
@@ -56,13 +53,10 @@ class GridConnectionSet(BaseResqpy):
            parent_model (model.Model object): the resqml model that this grid connection set will be part of
            uuid (uuid.UUID, optional): the uuid of an existing RESQML GridConnectionSetRepresentation from which
                  this resqpy object is populated
-           connection_set_root (DEPRECATED): use uuid instead; the root node of the xml tree for the
-                 obj_GridConnectionSet part; ignored if uuid is present
            find_properties (boolean, default True): if True and uuid is present, the property collection
                  relating to the grid connection set is prepared
            grid (grid.Grid object, optional): If present, the grid object that this connection set relates to;
-                 if absent, the main grid for the parent model is assumed; only used if connection set root is
-                 None; see also notes
+                 if absent, the main grid for the parent model is assumed; only used if uuid is None; see also notes
            ascii_load_format (string, optional): If present, must be 'nexus'; ignored if loading from xml;
                  otherwise required if ascii_file is present
            ascii_file (string, optional): the full path of an ascii file holding fault definition data in
@@ -79,11 +73,11 @@ class GridConnectionSet(BaseResqpy):
            fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
                  multiplier; only used if initialising from ascii and creating a multiplier property
            title (str, optional): the citation title to use for a new grid connection set;
-              ignored if uuid or connection_set_root is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the new grid connection set, defaults to login id;
-              ignored if uuid or connection_set_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the grid connection set
-              ignored if uuid or connection_set_root is not None
+              ignored if uuid is not None
 
         returns:
            a new GridConnectionSet object, initialised from xml or ascii file, or left empty
@@ -96,7 +90,7 @@ class GridConnectionSet(BaseResqpy):
            there is no throw on the fault); this is because the simulator input does not include the full
            juxtaposition information; the simple mode is adequate for identifying which faces are involved in a
            fault but not for matters of juxtaposition or absolute transmissibility calculations;
-           if uuid is None and connection_set_root is None and ascii_file is None and k_faces, j_faces & i_faces are None,
+           if uuid is None and ascii_file is None and k_faces, j_faces & i_faces are None,
            then an empty connection set is returned;
            if a transmissibility multiplier property is generated, it will only appear in the property collection
            for the grid connection set after the create_xml() method has been called
@@ -139,8 +133,7 @@ class GridConnectionSet(BaseResqpy):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = connection_set_root)
+                         extra_metadata = extra_metadata)
 
         if self.root is None:
             log.debug('setting grid for new connection set to default (ROOT)')
@@ -1021,7 +1014,7 @@ class GridConnectionSet(BaseResqpy):
                    originator = None):
         """Creates a Grid Connection Set (fault faces) xml node.
         
-        Optionally adds as child of root and/or to parts forest.
+        Optionally adds to parts forest.
 
         :meta common:
         """

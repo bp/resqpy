@@ -23,7 +23,6 @@ class StringLookup(BaseResqpy):
 
     def __init__(self,
                  parent_model,
-                 root_node = None,
                  uuid = None,
                  int_to_str_dict = None,
                  title = None,
@@ -33,10 +32,10 @@ class StringLookup(BaseResqpy):
 
         arguments:
            parent_model: the model to which this string lookup belongs
-           root_node (optional): if present, the root xml node for the StringTableLookup from which this object is populated
+           uuid (optional): if present, the uuid for an exising StringTableLookup from which this object is populated
            int_to_str_dict (optional): if present, a dictionary mapping from integers to strings, used to populate the lookup;
-              ignored if root_node is present
-           title (string, optional): if present, is used as the citation title for the object; ignored if root_node is not None
+              ignored if uuid is present
+           title (string, optional): if present, is used as the citation title for the object; ignored if uuid is not None
 
         returns:
            the new StringLookup object
@@ -53,9 +52,8 @@ class StringLookup(BaseResqpy):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata,
-                         root_node = root_node)
-        if uuid is None and root_node is None:
+                         extra_metadata = extra_metadata)
+        if uuid is None:
             self.load_from_dict(int_to_str_dict)
 
     def _load_from_xml(self):

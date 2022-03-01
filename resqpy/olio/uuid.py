@@ -130,6 +130,7 @@ def uuid_as_bytes(uuid_obj):
         return None
     if isinstance(uuid_obj, str):
         uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+    assert isinstance(uuid_obj, uuid.UUID)
     return uuid_obj.bytes
 
 
@@ -147,6 +148,8 @@ def uuid_as_int(uuid_obj):
         return None
     if isinstance(uuid_obj, str):
         uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
+    if not isinstance(uuid_obj, uuid.UUID):
+        raise ValueError(f'non uuid object where uuid expected: {uuid_obj}')
     return uuid_obj.int
 
 
@@ -194,3 +197,16 @@ def version_string(uuid_obj):
     if len(v_str) > max_version_string_length:
         v_str = v_str[:max_version_string_length]
     return v_str
+
+
+def is_uuid(uuid_obj):
+    """Returns boolean indicating whether uuid_obj seems to be a uuid."""
+
+    if isinstance(uuid_obj, uuid.UUID):
+        return True
+    if not uuid_obj or not isinstance(uuid_obj, str):
+        return False
+    if uuid_obj[0] == '_':
+        return len(uuid_obj) == 37
+    return len(uuid_obj) == 36
+    # could also check for hyphens in correct places, and hexadecimals only

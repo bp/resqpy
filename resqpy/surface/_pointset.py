@@ -1,6 +1,6 @@
 """_pointset.py: pointset class based on resqml standard."""
 
-version = '4th November 2021'
+version = '18th February 2022'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -27,7 +27,6 @@ class PointSet(BaseSurface):
 
     def __init__(self,
                  parent_model,
-                 point_set_root = None,
                  uuid = None,
                  load_hdf5 = False,
                  points_array = None,
@@ -44,16 +43,14 @@ class PointSet(BaseSurface):
 
         arguments:
            parent_model (model.Model object): the model to which the new point set belongs
-           point_set_root (xml node, optional): DEPRECATED, use uuid instead;
-              if present, the new point set is created based on the xml
            uuid (uuid.UUID, optional): if present, the object is populated from the RESQML PointSetRepresentation
               with this uuid
-           load_hdf5 (boolean, default False): if True and point_set_root is present, the actual points are
+           load_hdf5 (boolean, default False): if True and uuid is present, the actual points are
               pre-loaded into a numpy array; otherwise the points will be loaded on demand
            points_array (numpy float array of shape (..., 2 or 3), optional): if present, the xy(&z) data which
-              will constitute the point set; missing z will be set to zero; ignored if point_set_root is not None
+              will constitute the point set; missing z will be set to zero; ignored if uuid is not None
            crs_uuid (uuid.UUID, optional): if present, identifies the coordinate reference system for the points;
-              ignored if point_set_root is not None; if None, 'imported' points will be associated with the
+              ignored if uuid is not None; if None, 'imported' points will be associated with the
               default crs of the parent model
            polyset (optional): if present, creates a pointset from points in a polylineset
            polyline (optional): if present and random_point_count is None or zero, creates a pointset from
@@ -64,11 +61,11 @@ class PointSet(BaseSurface):
            charisma_file (optional): if present, creates a pointset from a charisma 3d interpretation file
            irap_file (optional): if present, creates a pointset from an IRAP classic points format file
            title (str, optional): the citation title to use for a new point set;
-              ignored if uuid or point_set_root is not None
+              ignored if uuid is not None
            originator (str, optional): the name of the person creating the point set, defaults to login id;
-              ignored if uuid or point_set_root is not None
+              ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the point set;
-              ignored if uuid or point_set_root is not None
+              ignored if uuid is not None
 
         returns:
            newly created PointSet object
@@ -87,7 +84,6 @@ class PointSet(BaseSurface):
                          uuid = uuid,
                          title = title,
                          originator = originator,
-                         root_node = point_set_root,
                          extra_metadata = extra_metadata)
 
         if self.root is not None:
@@ -327,10 +323,8 @@ class PointSet(BaseSurface):
 
     def create_xml(self,
                    ext_uuid = None,
-                   crs_root = None,
                    add_as_part = True,
                    add_relationships = True,
-                   root = None,
                    title = None,
                    originator = None):
         """Creates a point set representation xml node from this point set object and optionally adds as part of model.
@@ -341,8 +335,6 @@ class PointSet(BaseSurface):
                 in the model
             add_relationships (boolean, default True): if True, a relationship xml part is created relating the
                 new point set part to the crs part (and optional interpretation part)
-            root (optional, usually None): if not None, the newly created point set representation node is appended
-                as a child to this node
             title (string): used as the citation Title text; should be meaningful to a human
             originator (string, optional): the name of the human being who created the point set representation part;
                 default is to use the login name
@@ -358,14 +350,8 @@ class PointSet(BaseSurface):
 
         ps_node = super().create_xml(add_as_part = False, title = title, originator = originator)
 
-        if crs_root is None:
-            if self.crs_uuid is None:
-                crs_root = self.model.crs_root  # maverick use of model's default crs
-                self.crs_uuid = rqet.uuid_for_part_root(crs_root)
-            else:
-                crs_root = self.model.root_for_part(self.model.part_for_uuid(self.crs_uuid))
-        else:
-            self.crs_uuid = rqet.uuid_for_part_root(crs_root)
+        if self.crs_uuid is None:
+            self.crs_uuid = self.model.crs_uuid  # maverick use of model's default crs
 
         if self.represented_interpretation_root is not None:
             interp_root = self.represented_interpretation_root
@@ -406,12 +392,11 @@ class PointSet(BaseSurface):
 
             self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'points_{}'.format(patch_index), root = coords)
 
-        if root is not None:
-            root.append(ps_node)
         if add_as_part:
             self.model.add_part('obj_PointSetRepresentation', self.uuid, ps_node)
             if add_relationships:
                 # todo: add multiple crs'es (one per patch)?
+                crs_root = self.model.root_for_uuid(self.crs_uuid)
                 self.model.create_reciprocal_relationship(ps_node, 'destinationObject', crs_root, 'sourceObject')
                 if self.represented_interpretation_root is not None:
                     self.model.create_reciprocal_relationship(ps_node, 'destinationObject',

@@ -392,7 +392,6 @@ def test_points_properties(tmp_path):
     model = rq.Model(epc)
     grid = model.grid(title = 'unfaulted grid')
     assert grid.crs_uuid is not None
-    assert grid.crs_root is not None
 
     pc = grid.property_collection
 
@@ -1529,7 +1528,7 @@ def test_guess_uom(tmp_model, expected, xy_uom, z_uom, property_kind, minimum, m
     support = grr.RegularGrid(parent_model = model,
                               origin = (0, 0, 0),
                               extent_kji = (3, 5, 5),
-                              crs_uuid = rqet.uuid_for_part_root(model.crs_root),
+                              crs_uuid = model.crs_uuid,
                               set_points_cached = True)
     support.cache_all_geometry_arrays()
     support.write_hdf5_from_caches(file = model.h5_file_name(file_must_exist = False), mode = 'w')
