@@ -2610,8 +2610,6 @@ class BlockedWell(BaseResqpy):
                             length_uom = length_uom,
                             preferential_perforation = preferential_perforation)
 
-        BlockedWell.__set_angla_none_to_zero(df = df)
-
         sep = ' ' if space_instead_of_tab_separator else '\t'
 
         with open(wellspec_file, mode = mode) as fp:
@@ -2701,16 +2699,6 @@ class BlockedWell(BaseResqpy):
         fp.write('WELLSPEC ' + str(well_name) + '\n')
 
     @staticmethod
-    def __set_angla_none_to_zero(df):
-        """Replace any None ANGLA values with zero."""
-        if 'ANGLA' not in df.columns:
-            return
-        for row_info in df.iterrows():
-            if row_info['ANGLA'] is None:
-                row_info['ANGLA'] = 0.0
-        assert not any(df['ANGLA'] is None)
-
-    @staticmethod
     def __write_wellspec_file_columns(df, fp, col_width_dict, sep):
         """Write the column names to the WELLSPEC file."""
         for col_name in df.columns:
@@ -2735,7 +2723,10 @@ class BlockedWell(BaseResqpy):
                         width = 10
                     if BlockedWell.__is_float_column(col_name):
                         form = '{0:>' + str(width) + '.3f}'
-                        fp.write(sep + form.format(float(row[col_name])))
+                        value = row[col_name]
+                        if col_name == 'ANGLA' and (np.isnan(value) or value is None):
+                            value = 0.0
+                        fp.write(sep + form.format(float(value)))
                     else:
                         form = '{0:>' + str(width) + '}'
                         if BlockedWell.__is_int_column(col_name):
