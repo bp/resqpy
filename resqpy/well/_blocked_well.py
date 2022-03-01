@@ -2610,6 +2610,8 @@ class BlockedWell(BaseResqpy):
                             length_uom = length_uom,
                             preferential_perforation = preferential_perforation)
 
+        BlockedWell.__set_angla_none_to_zero(df = df)
+
         sep = ' ' if space_instead_of_tab_separator else '\t'
 
         with open(wellspec_file, mode = mode) as fp:
@@ -2697,6 +2699,16 @@ class BlockedWell(BaseResqpy):
                                                                    in extra_columns_list or 'KH' in extra_columns_list):
             fp.write(f'! Length units along wellbore: {self.trajectory.md_uom if length_uom is None else length_uom}\n')
         fp.write('WELLSPEC ' + str(well_name) + '\n')
+
+    @staticmethod
+    def __set_angla_none_to_zero(df):
+        """Replace any None ANGLA values with zero."""
+        if 'ANGLA' not in df.columns:
+            return
+        for row_info in df.iterrows():
+            if row_info['ANGLA'] is None:
+                row_info['ANGLA'] = 0.0
+        assert not any(df['ANGLA'] is None)
 
     @staticmethod
     def __write_wellspec_file_columns(df, fp, col_width_dict, sep):
