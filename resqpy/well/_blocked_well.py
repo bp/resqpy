@@ -2718,7 +2718,10 @@ class BlockedWell(BaseResqpy):
                         width = 10
                     if BlockedWell.__is_float_column(col_name):
                         form = '{0:>' + str(width) + '.3f}'
-                        fp.write(sep + form.format(float(row[col_name])))
+                        value = row[col_name]
+                        if col_name == 'ANGLA' and (np.isnan(value) or value is None):
+                            value = 0.0
+                        fp.write(sep + form.format(float(value)))
                     else:
                         form = '{0:>' + str(width) + '}'
                         if BlockedWell.__is_int_column(col_name):
