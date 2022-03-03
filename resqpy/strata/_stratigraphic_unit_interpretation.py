@@ -28,20 +28,19 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
 
     resqml_type = 'StratigraphicUnitInterpretation'
 
-    def __init__(
-            self,
-            parent_model,
-            uuid = None,
-            title = None,
-            domain = 'time',  # or should this be depth?
-            stratigraphic_unit_feature = None,
-            composition = None,
-            material_implacement = None,
-            deposition_mode = None,
-            min_thickness = None,
-            max_thickness = None,
-            thickness_uom = None,
-            extra_metadata = None):
+    def __init__(self,
+                 parent_model,
+                 uuid = None,
+                 title = None,
+                 domain = 'depth',
+                 stratigraphic_unit_feature = None,
+                 composition = None,
+                 material_implacement = None,
+                 deposition_mode = None,
+                 min_thickness = None,
+                 max_thickness = None,
+                 thickness_uom = None,
+                 extra_metadata = None):
         """Initialises a stratigraphic unit interpretation object.
 
         arguments:

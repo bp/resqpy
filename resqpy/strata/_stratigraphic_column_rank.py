@@ -62,7 +62,7 @@ class StratigraphicColumnRank(BaseResqpy):
         self.domain = domain
         self.index = rank_index
         self.has_occurred_during = (None, None)  # optional RESQML item
-        self.units = []  # ordered list of (index, stratagraphic unit interpretation uuid)
+        self.units = []  # ordered list of (index, stratagraphic unit interpretations)
         self.contacts = []  # optional ordered list of binary contact interpretations
 
         super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
