@@ -157,6 +157,7 @@ class Surface(BaseSurface):
                 if not bu.matching_uuids(triangulated_patch.crs_uuid, self.crs_uuid):
                     log.warning('mixed coordinate reference systems in use within a surface')
             paired_list.append((patch_index, triangulated_patch))
+        assert len(paired_list), f'no triangulated patches found for surface: {self.title}'
         paired_list.sort()
         assert len(paired_list) and paired_list[0][0] == 0 and len(paired_list) == paired_list[-1][0] + 1
         for _, patch in paired_list:
@@ -222,10 +223,15 @@ class Surface(BaseSurface):
         old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         self.crs_uuid = required_crs.uuid
         if bu.matching_uuids(old_crs.uuid, required_crs.uuid) or not self.patch_list:
+            log.debug(f'no crs change needed for {self.title}')
             return
+        log.debug(f'crs change needed for {self.title} from {old_crs.title} to {required_crs.title}')
         for patch in self.patch_list:
             patch.triangles_and_points()
             required_crs.convert_array_from(old_crs, patch.points)
+            patch.crs_uuid = self.crs_uuid
+        self.triangles = None  # clear cached arrays for surface
+        self.points = None
         self.uuid = bu.new_uuid()  # hope this doesn't cause problems
 
     def set_to_trimmed_surface(self, large_surface, xyz_box = None, xy_polygon = None):

@@ -120,7 +120,7 @@ def local_to_global_crs(grid,
     crs = rqc.Crs(grid.model, uuid = crs_uuid)
 
     if crs.rotated:
-        a = vec.rotate_array(crs.rotation_matrix, a)
+        a[:] = vec.rotate_array(crs.rotation_matrix, a)
 
     flat_a = a.reshape((-1, 3))  # flattened view of array a as vector of (x, y, z) points, in situ
 
@@ -189,7 +189,7 @@ def global_to_local_crs(grid,
             flat_a[:, 2] = np.negative(flat_a[:, 2])
 
     if crs.rotated:
-        flat_a = vec.rotate_array(crs.reverse_rotation_matrix, flat_a)
+        flat_a[:] = vec.rotate_array(crs.reverse_rotation_matrix, flat_a)
 
     return flat_a.reshape(a.shape)
 

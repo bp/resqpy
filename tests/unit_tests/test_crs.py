@@ -102,9 +102,9 @@ def test_crs(tmp_path):
     assert_array_almost_equal(pt, pt_s)
 
     # todo: test rotation
-    p = (234.00, 0.00, 5678.90)
+    p = (0.00, 234.00, 5678.90)
     pr = crs_rotate.local_to_global(p)
-    assert_array_almost_equal(pr, (0.00, 234.00, 5678.90))
+    assert_array_almost_equal(pr, (234.00, 0.00, 5678.90))
     assert_array_almost_equal(crs_rotate.global_to_local(pr), p)
 
 

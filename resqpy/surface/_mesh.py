@@ -448,7 +448,7 @@ class Mesh(BaseSurface):
     def surface(self, quad_triangles = False):
         """Returns a surface object generated from this mesh."""
 
-        return Surface(self.model, mesh = self, quad_triangles = quad_triangles)
+        return Surface(self.model, crs_uuid = self.crs_uuid, mesh = self, quad_triangles = quad_triangles)
 
     def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
         """Create or append to an hdf5 file, writing datasets for the mesh depending on flavour."""

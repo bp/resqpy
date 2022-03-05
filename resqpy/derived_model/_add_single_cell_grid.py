@@ -10,6 +10,8 @@ import resqpy.rq_import as rqi
 def add_single_cell_grid(points, new_grid_title = None, new_epc_file = None):
     """Creates a model with a single cell IJK Grid, with a cuboid cell aligned with x,y,z axes, enclosing points."""
 
+    assert new_epc_file is not None
+
     # determine range of points
     min_xyz = np.nanmin(points.reshape((-1, 3)), axis = 0)
     max_xyz = np.nanmax(points.reshape((-1, 3)), axis = 0)
