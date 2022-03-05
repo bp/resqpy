@@ -487,7 +487,10 @@ class RegularGrid(Grid):
             return grid.xyz_box_cached
         global_xyz_box = grid.xyz_box_cached.copy()
         grid.local_to_global_crs(global_xyz_box, crs_uuid = grid.crs_uuid)
-        return global_xyz_box
+        g_xyz_box = np.empty((2, 3), dtype = float)
+        g_xyz_box[0] = np.amin(global_xyz_box, axis = 0)
+        g_xyz_box[1] = np.amax(global_xyz_box, axis = 0)
+        return g_xyz_box
 
     def create_xml(self,
                    ext_uuid = None,

@@ -48,13 +48,15 @@ class TriangulatedPatch:
             self.node_count = rqet.find_tag_int(patch_node, 'NodeCount')
             assert self.node_count is not None
             self.extract_crs_root_and_uuid()
+            assert self.crs_uuid is not None
 
     def extract_crs_root_and_uuid(self):
         """Caches uuid for coordinate reference system, as stored in geometry xml sub-tree."""
 
         if self.crs_uuid is None:
             crs_root = rqet.find_nested_tags(self.node, ['Geometry', 'LocalCrs'])
-            self.crs_uuid = self.model.uuid_for_root(crs_root)
+            assert crs_root is not None, 'failed to find crs reference in triangulated patch xml'
+            self.crs_uuid = bu.uuid_from_string(rqet.find_tag_text(crs_root, 'UUID'))
         else:
             crs_root = self.model.root_for_uuid(self.crs_uuid)
         return crs_root, self.crs_uuid
@@ -134,7 +136,7 @@ class TriangulatedPatch:
         log.debug(f'large surface max xyz: {np.max(large_p, axis = 0)}')
         # create bool per point indicating inclusion in box volume
         if xyz_box is None:
-            points_in = np.ones(large_p.shape, dtype = bool)
+            points_in = np.ones(large_p.shape[:-1], dtype = bool)
         else:
             points_in = np.logical_and(np.all(large_p >= np.expand_dims(xyz_box[0], axis = 0), axis = -1),
                                        np.all(large_p <= np.expand_dims(xyz_box[1], axis = 0), axis = -1))
@@ -156,6 +158,7 @@ class TriangulatedPatch:
         triangles_trimmed = p_map[t_trim]
         assert np.all(triangles_trimmed >= 0)
         assert np.all(triangles_trimmed < len(points_trimmed))
+        self.crs_uuid = larger_patch.crs_uuid
         self.points = points_trimmed
         self.node_count = len(self.points)
         self.triangles = triangles_trimmed
