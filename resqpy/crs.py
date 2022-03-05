@@ -152,7 +152,7 @@ class Crs(BaseResqpy):
 
     def set_rotation_matrices(self):
         """Sets the rotation matrices, and the rotated and null_transform flags, call after changing rotation."""
-        
+
         rotation_deg = wam.convert(self.rotation, self.rotation_units, 'dega', quantity = 'plane angle')
         # log.debug(f'setting rotation matrices for dega: {rotation_deg}')
         self.rotated = (not maths.isclose(rotation_deg, 0.0, abs_tol = 1e-8) and
