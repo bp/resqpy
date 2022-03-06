@@ -246,6 +246,7 @@ def _h5_array_element(model,
             else:
                 index = reshaped_index(index, required_shape, shape_tuple)
                 result = h5_root[h5_key_pair[1]][tuple(index)]
+        _h5_release(model)
         if dtype is None:
             return result
         if result.size == 1:
