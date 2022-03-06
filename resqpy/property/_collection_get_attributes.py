@@ -22,9 +22,6 @@ def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, 
     zorro = collection.masked_array(cached_array, exclude_value = null_value)
     if not discrete and np.all(np.isnan(zorro)):
         min_value = max_value = None
-    elif discrete:
-        min_value = int(np.nanmin(zorro))
-        max_value = int(np.nanmax(zorro))
     else:
         min_value = np.nanmin(zorro)
         max_value = np.nanmax(zorro)
