@@ -670,10 +670,6 @@ class BlockedWell(BaseResqpy):
         angles_present = ('ANGLV' in df.columns and 'ANGLA' in df.columns and not pd.isnull(df.iloc[0]['ANGLV']) and
                           not pd.isnull(df.iloc[0]['ANGLA']))
 
-        # TODO: remove these temporary overrides
-        angles_present = False
-        use_face_centres = True
-
         if not angles_present and not use_face_centres:
             log.warning(f'ANGLV and/or ANGLA data unavailable for well {well_name}: using face centres')
             use_face_centres = True
