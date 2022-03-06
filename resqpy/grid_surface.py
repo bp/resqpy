@@ -1267,7 +1267,8 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
             xyz = meet.line_triangle_intersect(centres[0, k_j, k_i],
                                                centres[-1, k_j, k_i] - centres[0, k_j, k_i],
                                                p[t[k_t]],
-                                               line_segment = True)
+                                               line_segment = True,
+                                               t_tol = 1.0e-6)
             if xyz is None:
                 continue
             k_face = int((xyz[2] - centres[0, k_j, k_i, 2]) / grid_dxyz[2])
@@ -1293,8 +1294,12 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
             xyz = meet.line_triangle_intersect(centres[j_k, 0, j_i],
                                                centres[j_k, -1, j_i] - centres[j_k, 0, j_i],
                                                p[t[j_t]],
-                                               line_segment = True)
+                                               line_segment = True,
+                                               t_tol = 1.0e-6)
             if xyz is None:
+                log.debug(
+                    f'J face issue: k: {j_k}; i: {j_i}; cp: {centres[j_k, 0, j_i]}, {centres[j_k, -1, j_i]}; t: {j_t}; tp: {p[t[j_t]]}'
+                )
                 continue
             j_face = int((xyz[1] - centres[j_k, 0, j_i, 1]) / grid_dxyz[1])
             assert 0 <= j_face < grid.nj - 1
@@ -1319,7 +1324,8 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
             xyz = meet.line_triangle_intersect(centres[i_k, i_j, 0],
                                                centres[i_k, i_j, -1] - centres[i_k, i_j, 0],
                                                p[t[i_t]],
-                                               line_segment = True)
+                                               line_segment = True,
+                                               t_tol = 1.0e-6)
             if xyz is None:
                 continue
             i_face = int((xyz[0] - centres[i_k, i_j, 0, 0]) / grid_dxyz[0])
