@@ -1423,9 +1423,7 @@ class PropertyCollection():
         sl_uuid = self.string_lookup_uuid_for_part(part)
         if sl_uuid is None:
             return None
-        sl_root = self.model.root_for_uuid(sl_uuid)
-        assert sl_root is not None, 'string table lookup referenced by property is not present in model'
-        return StringLookup(self.model, sl_root)
+        return StringLookup(self.model, uuid = sl_uuid)
 
     def string_lookup_uuid_list(self, sort_list = True):
         """Returns a list of unique string lookup uuids found amongst the parts of the collection."""

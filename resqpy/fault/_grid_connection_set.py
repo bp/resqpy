@@ -39,6 +39,7 @@ class GridConnectionSet(BaseResqpy):
                  j_faces = None,
                  i_faces = None,
                  feature_name = None,
+                 feature_type = 'fault',
                  create_organizing_objects_where_needed = False,
                  create_transmissibility_multiplier_property = True,
                  fault_tmult_dict = None,
@@ -64,6 +65,8 @@ class GridConnectionSet(BaseResqpy):
                  must also be set
            k_faces, j_faces, i_faces (boolean arrays, optional): if present, these arrays are used to identify
                  which faces between logically neighbouring cells to include in the new grid connection set
+           feature_name (string, optional): the feature name to use when setting from faces
+           feature_type (string, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
            create_organizing_objects_where_needed (boolean, default False): if True when loading from ascii or
                  face masks, a fault interpretation object and tectonic boundary feature object will be created
                  for any named fault for which such objects do not exist; if False, missing organizational objects
@@ -167,8 +170,12 @@ class GridConnectionSet(BaseResqpy):
                 #                                      str(len(list_pair[0])) + ' j face cols; from ' + origin)
                 # note: grid structures assume curtain like set of kelp
             elif k_faces is not None or j_faces is not None or i_faces is not None:
-                self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name,
-                                               create_organizing_objects_where_needed)
+                self.set_pairs_from_face_masks(k_faces,
+                                               j_faces,
+                                               i_faces,
+                                               feature_name,
+                                               create_organizing_objects_where_needed,
+                                               feature_type = feature_type)
         elif find_properties:
             self.extract_property_collection()
 

@@ -126,6 +126,66 @@ def k_gap_connection_set(grid, skip_inactive = True, feature_name = 'k gap conne
     return kgcs
 
 
+def cell_set_skin_connection_set(grid,
+                                 cell_set_mask,
+                                 feature_name,
+                                 feature_type = 'geobody boundary',
+                                 title = None,
+                                 create_organizing_objects_where_needed = True):
+    """Add a grid connection set containing external faces of selected set of cells.
+
+    arguments:
+        grid (Grid): the grid for which the connection set is required
+        cell_set_mask (numpy bool array of shape grid.extent_kji): True values identify cells included in the set
+        feature_name (str): the name of the skin feature
+        feature_type (str, default 'geobody boundary'): 'fault', 'horizon' or 'geobody boundary'
+        title (str, optional): the citation title to use for the gcs; defaults to the feature_name
+        create_organizing_objects_where_needed (bool, default True): if True, feature and interpretation
+            objects will be created if they do not exist
+
+    returns:
+        the newly created grid connection set
+
+    notes:
+        this function does not take into consideration split pillars, it assumes cells are neighbouring based
+        on the cell indices; faces on the outer skin of the grid are not included in the connection set;
+        any cell face between a cell in the cell set and one not in it will be included in the connection set,
+        therefore the set may contain internal skin faces as well as the outer skin
+    """
+
+    from resqpy.fault._grid_connection_set import GridConnectionSet
+
+    assert grid is not None
+    assert cell_set_mask.shape == tuple(grid.extent_kji)
+    assert feature_name, 'no feature name given for cell set skin connection set'
+    assert feature_type in ['geobody boundary', 'fault', 'horizon'], f'invalid feature type: {feature_type}'
+    if not title:
+        title = feature_name
+
+    k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+    j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+    i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+
+    if grid.nk > 1:
+        k_faces[np.where(cell_set_mask[1:, :, :] != cell_set_mask[:-1, :, :])] = True
+    if grid.nj > 1:
+        j_faces[np.where(cell_set_mask[:, 1:, :] != cell_set_mask[:, :-1, :])] = True
+    if grid.ni > 1:
+        i_faces[np.where(cell_set_mask[:, :, 1:] != cell_set_mask[:, :, :-1])] = True
+
+    gcs = GridConnectionSet(grid.model,
+                            grid = grid,
+                            k_faces = k_faces,
+                            j_faces = j_faces,
+                            i_faces = i_faces,
+                            feature_name = feature_name,
+                            feature_type = feature_type,
+                            create_organizing_objects_where_needed = create_organizing_objects_where_needed,
+                            title = title)
+
+    return gcs
+
+
 def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
     """Add a grid connection set to a resqml model, based on a fault include file and a dictionary of fault:tmult pairs.
 

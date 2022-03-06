@@ -33,7 +33,7 @@ def line_plane_intersect(line_p, line_v, triangle):
     return line_p + t * line_v
 
 
-def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
+def line_triangle_intersect(line_p, line_v, triangle, line_segment = False, l_tol = 0.0, t_tol = 0.0):
     """Find the intersection of a line within a triangle in 3D space.
 
     arguments:
@@ -41,6 +41,10 @@ def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
        line_v (3 element numpy vector): vector being the direction of the line
        triangle ((3, 3) numpy array): three corners of the triangle (second index is xyz)
        line_segment (boolean): if True, returns None if intersection is outwith (line_p .. line_p + line_v)
+       l_tol (float, default 0.0): a fraction of the line length to allow for an intersection to be found
+           just outside the segment
+       t_tol (float, default 0.0): a fraction of the triangle size to allow for an intersection to be found
+           just outside the triangle
 
     returns:
        point (3 element numpy vector) of intersection of the line within the triangle,
@@ -58,13 +62,13 @@ def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
         return None  # line is parallel to plane
     lp_t0 = line_p - triangle[0]
     t = np.dot(norm, lp_t0) / denom
-    if line_segment and (t < 0.0 or t > 1.0):
+    if line_segment and (t < 0.0 - l_tol or t > 1.0 + l_tol):
         return None
     u = np.dot(np.cross(p02, line_rv), lp_t0) / denom
-    if u < 0.0 or u > 1.0:
+    if u < 0.0 - t_tol or u > 1.0 + t_tol:
         return None
     v = np.dot(np.cross(line_rv, p01), lp_t0) / denom
-    if v < 0.0 or u + v > 1.0:
+    if v < 0.0 - t_tol or u + v > 1.0 + t_tol:
         return None
 
     return line_p + t * line_v
