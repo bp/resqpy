@@ -1487,7 +1487,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert grid is not None
 
     flavour = grr.grid_flavour(grid.root)
-    if not flavour.startswith('IjkGrid'):
+    if not flavour.startswith('Ijk'):
         raise NotImplementedError('well blocking only implemented for IjkGridRepresentation')
     is_regular = (flavour == 'IjkBlockGrid') and hasattr(grid, 'is_aligned') and grid.is_aligned
 
