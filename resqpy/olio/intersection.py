@@ -8,6 +8,8 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
+import resqpy.olio.vector_utilities as vec
+
 
 def line_plane_intersect(line_p, line_v, triangle):
     """Find the intersection of a line with a plane defined by a triangle.
@@ -365,3 +367,25 @@ def line_line_intersect(x1, y1, x2, y2, x3, y3, x4, y4, line_segment = False, ha
         y = (a * (y3 - y4) - (y1 - y2) * b) / divisor
 
     return x, y
+
+
+def point_projected_to_line_2d(p, l1, l2):
+    """Return the point on the unbounded line passing through l1 & l2 which is closest to point p, in xy plane."""
+
+    # create normal vector to l1, l2
+    v = l2 - l1
+    n = np.array((-v[0], v[1]))
+    # find intersection of p, p->n with l1, l2
+    pn = np.array(p) + n
+    return line_line_intersect(l1[0], l1[1], l2[0], l2[1], p[0], p[1], pn[0], pn[1], line_segment = False)
+
+
+def point_snapped_to_line_segment_2d(p, l1, l2):
+    """Returns the point on the bounded line segment l1, l2 which is closest to point p, in xy plane."""
+
+    if vec.is_obtuse_2d(l1, p, l2):
+        return l1
+    elif vec.is_obtuse_2d(l2, p, l1):
+        return l2
+    else:
+        return point_projected_to_line_2d(p, l1, l2)

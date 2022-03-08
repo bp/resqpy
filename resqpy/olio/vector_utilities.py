@@ -6,7 +6,7 @@ a vector is a one dimensional numpy array with 3 elements: x, y, z.
 some functions accept a tuple or list of 3 elements as an alternative to a numpy array.
 """
 
-version = '15th November 2021'
+version = '8th March 2022'
 
 import logging
 
@@ -505,7 +505,25 @@ def in_circumcircle(a, b, c, d):
 def point_distance_to_line_2d(p, l1, l2):
     """Ignoring any z values, returns the xy distance of point p from line passing through l1 and l2."""
 
-    return (abs(p[0] * (l1[1] - l2[1]) + l1[0] * (l2[1] - p[1]) + l2[0] * (p[1] - l1[1])) / naive_2d_length(l2 - l1))
+    return (abs(p[0] * (l1[1] - l2[1]) + l1[0] * (l2[1] - p[1]) + l2[0] * (p[1] - l1[1])) /
+            naive_2d_length(l2[:2] - l1[:2]))
+
+
+def point_distance_to_line_segment_2d(p, l1, l2):
+    """Ignoring any z values, returns the xy distance of point p from line segment between l1 and l2."""
+
+    if is_obtuse_2d(l1, p, l2):
+        return naive_2d_length(p[:2] - l1[:2])
+    elif is_obtuse_2d(l2, p, l1):
+        return naive_2d_length(p[:2] - l2[:2])
+    else:
+        return point_distance_to_line_2d(p, l1, l2)
+
+
+def is_obtuse_2d(p, p1, p2):
+    """Returns True if the angle at point p subtended by points p1 and p2, in xy plane, is greater than 90 degrees; else False."""
+
+    return np.dot((p1[:2] - p[:2]), (p2[:2] - p[:2])) < 0.0
 
 
 def isclose(a, b, tolerance = 1.0e-6):
