@@ -81,6 +81,7 @@ class Polyline(_BasePolyline):
             self.coordinates[..., :set_coord.shape[-1]] = set_coord
             if set_coord.ndim > 2:
                 self.coordinates = self.coordinates.reshape((-1, 3))
+            assert len(self.coordinates) > 1, 'at least 2 coordinates needed for polyline'
             self.nodepatch = (0, len(self.coordinates))
             assert not any(map(lambda x: x is None, self.nodepatch))  # Required fields - assert neither are None
 
@@ -377,6 +378,48 @@ class Polyline(_BasePolyline):
             if x is not None:
                 return segment, x, y
         return None, None, None
+
+    def closest_segment_and_distance_to_point_xy(self, p):
+        """Returns the index of the closest segment to a point, and its distance, in the xy plant.
+
+        arguments:
+            p (pair or triple float): the point
+
+        returns:
+            (int, float) where the int is the index of the line segment that the point is closest to;
+            and the float is the distance of the point from that bounded segment, in the xy plane;
+            units of measure are the crs xy units
+        """
+
+        p = np.array(p[:2], dtype = float)
+        min_distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[0][:2], self.coordinates[1][:2])
+        min_segment = 0
+        for seg in range(1, len(self.coordinates) - 1):
+            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[seg][:2], self.coordinates[seg + 1][:2])
+            if distance < min_distance:
+                min_distance = distance
+                min_segment = seg
+        if self.isclosed:
+            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[-1][:2], self.coordinates[0][:2])
+            if distance < min_distance:
+                min_distance = distance
+                min_segment = len(self.coordinates)
+        return min_segment, min_distance
+
+    def point_snapped_to_segment_xy(self, segment, p):
+        """Returns the point on a specified segment, in xy plane, that is closest to a point.
+
+        arguments:
+            segment (int): the index of the line segment within the polyline
+            p (pair or triple float): the point p (z value is ignored if present)
+
+        returns:
+            numpy float array of shape (2,) being the x, y coordinates of the snapped point
+        """
+
+        if segment == len(self.coordinates) - 1:
+            segment = -1
+        return meet.point_snapped_to_line_segment_2d(p, self.coordinates[segment], self.coordinates[segment + 1])
 
     def normalised_xy(self, x, y, mode = 'square'):
         """Returns a normalised x',y' pair (in range 0..1) being point x,y under mapping from convex polygon.
