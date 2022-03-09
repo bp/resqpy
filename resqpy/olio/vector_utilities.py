@@ -341,11 +341,9 @@ def tilt_3d_matrix(azimuth, dip):
 def tilt_points(pivot_xyz, azimuth, dip, points):
     """Modifies array of xyz points in situ to apply dip in direction of azimuth, about pivot point."""
 
-    #   log.debug('pivot xyz: ' + str(pivot_xyz))
     matrix = tilt_3d_matrix(azimuth, dip)
     points_shape = points.shape
     points[:] -= pivot_xyz
-    #   log.debug('points shape: ' + str(points.shape))
     points[:] = np.matmul(matrix, points.reshape((-1, 3)).transpose()).transpose().reshape(points_shape)
     points[:] += pivot_xyz
 

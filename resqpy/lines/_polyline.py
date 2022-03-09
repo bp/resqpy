@@ -391,19 +391,25 @@ class Polyline(_BasePolyline):
             units of measure are the crs xy units
         """
 
+        # log.debug(f'{self.title}: closest_segment_and_distance_to_point_xy: {p}')
+        # log.debug(f'{self.coordinates}')
         p = np.array(p[:2], dtype = float)
-        min_distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[0][:2], self.coordinates[1][:2])
+        min_distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[0, :2], self.coordinates[1, :2])
         min_segment = 0
+        # log.debug(f'.min_seg: {min_segment}; min_distance: {min_distance}')
         for seg in range(1, len(self.coordinates) - 1):
-            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[seg][:2], self.coordinates[seg + 1][:2])
+            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[seg, :2], self.coordinates[seg + 1, :2])
             if distance < min_distance:
                 min_distance = distance
                 min_segment = seg
+            # log.debug(f'..min_seg: {min_segment}; min_distance: {min_distance}')
         if self.isclosed:
-            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[-1][:2], self.coordinates[0][:2])
+            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[-1, :2], self.coordinates[0, :2])
             if distance < min_distance:
                 min_distance = distance
-                min_segment = len(self.coordinates)
+                min_segment = len(self.coordinates) - 1
+            # log.debug(f'...min_seg: {min_segment}; min_distance: {min_distance}')
+        # log.debug(f'min_seg: {min_segment}; min_distance: {min_distance}')
         return min_segment, min_distance
 
     def point_snapped_to_segment_xy(self, segment, p):
@@ -535,7 +541,7 @@ class Polyline(_BasePolyline):
             fx = abs(norm_x - 0.5)
             fy = abs(norm_y - 0.5)
             f = 2.0 * max(fx, fy)
-            log.debug(f'intersect x,y: {px}, {py}')
+            # log.debug(f'intersect x,y: {px}, {py}')
             if px == centre_xy[0]:
                 x = centre_xy[0]
             else:
@@ -544,7 +550,7 @@ class Polyline(_BasePolyline):
                 y = centre_xy[1]
             else:
                 y = centre_xy[1] + f * (py - centre_xy[1])
-            log.debug(f'denormal x,y: {x}, {y}')
+            # log.debug(f'denormal x,y: {x}, {y}')
         elif mode == 'perimeter':
             if norm_y == 1.0:
                 norm_y = 0.0
