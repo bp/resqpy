@@ -374,9 +374,9 @@ def point_projected_to_line_2d(p, l1, l2):
 
     # create normal vector to l1, l2
     v = l2 - l1
-    n = np.array((-v[0], v[1]))
+    n = np.array((-v[1], v[0]))
     # find intersection of p, p->n with l1, l2
-    pn = np.array(p) + n
+    pn = np.array(p[:2]) + n
     return line_line_intersect(l1[0], l1[1], l2[0], l2[1], p[0], p[1], pn[0], pn[1], line_segment = False)
 
 
@@ -384,8 +384,8 @@ def point_snapped_to_line_segment_2d(p, l1, l2):
     """Returns the point on the bounded line segment l1, l2 which is closest to point p, in xy plane."""
 
     if vec.is_obtuse_2d(l1, p, l2):
-        return l1
+        return l1[:2]
     elif vec.is_obtuse_2d(l2, p, l1):
-        return l2
+        return l2[:2]
     else:
         return point_projected_to_line_2d(p, l1, l2)
