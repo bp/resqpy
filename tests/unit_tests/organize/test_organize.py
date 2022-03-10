@@ -157,6 +157,17 @@ def test_GeobodyBoundary(tmp_model):
     assert gb == gb2
 
 
+def test_Boundary(tmp_model):
+
+    gen = rqo.BoundaryFeature(tmp_model)
+    bfi = rqo.BoundaryFeatureInterpretation(tmp_model, boundary_feature = gen)
+
+    gen.create_xml()
+    bfi.create_xml()
+    bfi2 = rqo.BoundaryFeatureInterpretation(tmp_model, uuid = bfi.uuid)
+    assert bfi == bfi2
+
+
 def test_wellbore_interp_title(tmp_model):
     # Create a feature and interp objects
     feature_name = 'well A'
