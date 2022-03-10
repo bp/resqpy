@@ -137,7 +137,7 @@ The table below shows which high level resqpy class is used to represent each RE
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_BoundaryFeature                                    | none       | :class:`resqpy.organize.BoundaryFeature`                  |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_BoundaryFeatureInterpretation                      |            |                                                           |
+| obj_BoundaryFeatureInterpretation                      | none       | :class:`resqpy.organize.BoundaryFeatureInterpretation`    |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_CategoricalProperty                                | large      | :class:`resqpy.property.PropertyCollection`               |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
