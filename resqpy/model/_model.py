@@ -1727,8 +1727,43 @@ class Model():
 
         returns:
            None
+
+        note:
+           this method has the same effect as create_reciprocal_relationship_uuids() but takes xml root nodes
+           rather than uuids as arguments
         """
 
+        return m_x._create_reciprocal_relationship(self,
+                                                   node_a,
+                                                   rel_type_a,
+                                                   node_b,
+                                                   rel_type_b,
+                                                   avoid_duplicates = avoid_duplicates)
+
+    def create_reciprocal_relationship_uuids(self, uuid_a, rel_type_a, uuid_b, rel_type_b, avoid_duplicates = True):
+        """Adds a node to each of a pair of trees in the rels forest, to represent a two-way relationship.
+
+        arguments:
+           uuid_a: uuid of one of the two parts to be related
+           rel_type_a (string): the Type (role) associated with uuid_a in the relationship;
+              usually 'sourceObject' or 'destinationObject'
+           uuid_a: uuid of the other part to be related
+           rel_type_a (string): the Type (role) associated with uuid_b in the relationship
+              usually 'sourceObject' or 'destinationObject' (opposite of rel_type_a)
+           avoid_duplicates (boolean, default True): if True, xml for a relationship is not added
+              where it already exists; if False, a duplicate will be created in this situation
+
+        returns:
+           None
+
+        note:
+           this method has the same effect as create_reciprocal_relationship() but takes uuids rather than
+           xml root nodes as arguments
+        """
+
+        node_a = self.root_for_uuid(uuid_a)
+        node_b = self.root_for_uuid(uuid_b)
+        assert node_a is not None and node_b is not None, 'part not present when creating relationship'
         return m_x._create_reciprocal_relationship(self,
                                                    node_a,
                                                    rel_type_a,
