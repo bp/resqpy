@@ -689,3 +689,60 @@ def triangulated_polygons(p, v, centres = None):
     assert t_index == t_count
 
     return points, triangles
+
+
+def reorient(points, rough = True):
+    """Returns a reoriented copy of a set of points, such that z axis is approximate normal to average plane of points.
+
+    arguments:
+       points (numpy float array of shape (..., 3)): the points to be reoriented
+       rough (bool, default True): if True, the resulting orientation will be within around 10 degrees of the optimum;
+          if False, that reduces to around 2.5 degrees of the optimum
+
+    returns:
+       numpy float array of the same shape as points, being a copy of points rotated in 3D space to minimise the z range
+
+    notes:
+       the original points array is not modified by this function;
+       the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
+       determine the triangulation
+    """
+
+    def z_range(p):
+        return np.nanmax(p[..., 2]) - np.nanmin(p[..., 2])
+
+    def best_angles(points, mid_x, mid_y, steps, d_theta):
+        best_range = None
+        best_x_rotation = None
+        best_y_rotation = None
+        half_steps = float(steps - 1) / 2.0
+        for xi in range(steps):
+            x_degrees = mid_x + (float(xi) - half_steps) * d_theta
+            for yi in range(steps):
+                y_degrees = mid_y + (float(yi) - half_steps) * d_theta
+                rotation_m = vec.rotation_3d_matrix((x_degrees, 0.0, y_degrees))
+                p = points.copy()
+                rotated_p = vec.rotate_array(rotation_m, p)
+                z_r = z_range(rotated_p)
+                if best_range is None or z_r < best_range:
+                    best_range = z_r
+                    best_x_rotation = x_degrees
+                    best_y_rotation = y_degrees
+        return (best_x_rotation, best_y_rotation)
+
+    assert points.ndim >= 2 and points.shape[-1] == 3
+
+    # coarse iteration trying a few different angles
+    best_x_rotation, best_y_rotation = best_angles(points, 0.0, 0.0, 7, 30.0)
+
+    # finer iteration searching around the best coarse rotation
+    best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 5, 10.0)
+
+    if not rough:
+        # finer iteration searching around the best coarse rotation
+        best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 7, 2.5)
+
+    rotation_m = vec.rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))
+    p = points.copy()
+
+    return vec.rotate_array(rotation_m, p)
