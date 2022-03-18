@@ -17,10 +17,12 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
+import resqpy.surface as rqs
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.fault._gcs_functions import zero_base_cell_indices_in_faces_df,  \
-    standardize_face_indicator_in_faces_df, remove_external_faces_from_faces_df
+    standardize_face_indicator_in_faces_df, remove_external_faces_from_faces_df,  \
+    _triangulate_unsplit_grid_connection_set
 
 
 class GridConnectionSet(BaseResqpy):
@@ -1686,6 +1688,26 @@ class GridConnectionSet(BaseResqpy):
                                   self.face_index_pairs == self.face_index_pairs_null_value)
         combined = 6 * self.cell_index_pairs + self.face_index_pairs
         return np.where(null_mask, self.face_index_pairs_null_value, combined)
+
+    def surface(self, feature_index = None):
+        """Returns a Surface object representing the faces of the feature, for an unsplit grid.
+
+        note:
+           this method does not write the hdf5 data nor create the xml for the surface
+        """
+        t = _triangulate_unsplit_grid_connection_set(self, feature_index = feature_index)
+        if t is None:
+            return None
+        p = self.grid_list[0].points_cached.reshape((-1, 3))
+        assert p is not None
+        if feature_index is None:
+            feature_index = 0
+        title = self.feature_name_for_feature_index(feature_index)
+        surf = rqs.Surface(self.model, crs_uuid = self.grid_list[0].crs_uuid, title = title)
+        assert surf is not None
+        # TODO: compress t, p to only those points that are used
+        surf.set_from_triangles_and_points(t, p)
+        return surf
 
     def _create_multiplier_property(self, mult_list, const_mult):
         pc = self.extract_property_collection()

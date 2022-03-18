@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import resqpy.grid as grr
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 
@@ -323,3 +324,63 @@ def _make_k_gcs_from_cip_list(grid, cip_list, feature_name):
     pcs.feature_list = [('obj_HorizonInterpretation', fi_uuid, str(feature_name))]
 
     return pcs
+
+
+def _triangulate_unsplit_grid_connection_set(gcs, feature_index = None):
+    # returns triangulation as indices into grid.points_cached, for a single grid gcs only
+
+    def flat_point_index(grid, cell_kji0, corner_index):
+        ci = cell_kji0 + corner_index
+        return (ci[0] * (grid.nj + 1) + ci[1]) * (grid.ni + 1) + ci[0]
+
+    def add_to_tri(grid, tri, index, cell_kji0, axis, polarity):
+        kjip = np.zeros(3, dtype = 'int')
+        kjip[axis] = polarity
+        a = (axis + 1) % 3
+        b = (a + 1) % 3
+        tri[index, :, 0] = flat_point_index(grid, cell_kji0, kjip)
+        kjip[a] = 1
+        kjip[b] = 1
+        tri[index, :, 1] = flat_point_index(grid, cell_kji0, kjip)
+        kjip[a] = 0
+        tri[index, 0, 2] = flat_point_index(grid, cell_kji0, kjip)
+        kjip[a] = 1
+        kjip[b] = 0
+        tri[index, 1, 2] = flat_point_index(grid, cell_kji0, kjip)
+
+    if feature_index is None:
+        assert gcs.number_of_features() == 1, 'no gcs feature selected for triangulation'
+        feature_index = 0
+
+    assert gcs.number_of_grids() == 1, 'more than one grid references by gcs'
+    grid = gcs.grid_list[0]
+    if isinstance(grid, grr.RegularGrid):
+        grid.make_regular_points_cached(apply_origin_offset = False)
+    else:
+        assert not grid.has_split_coordinate_lines, 'grid is faulted'
+        grid.cache_all_geometry_arrays()
+
+    feature_name = gcs.feature_name_for_feature_index(feature_index)
+    ci_pairs, fi_pairs = gcs.list_of_cell_face_pairs_for_feature_index(feature_index)
+    cell_index_pairs = ci_pairs.copy()
+    face_index_pairs = fi_pairs.copy()
+    if cell_index_pairs is None or face_index_pairs is None:
+        log.warning(f'no cell face pairs found in grid connection set for feature: {feature_name}')
+        return None
+    connection_count = cell_index_pairs.shape[0]
+
+    tri_extent = (connection_count, 2, 3)  # 2 triangles per face, will get flattened to (-1, 3)
+    tri = np.zeros(tri_extent, dtype = 'int')  # point indices
+    tri_index = 0
+
+    for connection in range(connection_count):
+        cell_pair = cell_index_pairs[connection]  # shape (2, 3); values kji0
+        axis, polarity = face_index_pairs[connection, 0]
+        add_to_tri(grid, tri, tri_index, cell_pair[0], axis, polarity)
+        tri_index += 1
+
+    result = tri[:tri_index, :, :].reshape((-1, 3))
+    if result.size == 0:
+        return None
+
+    return result
