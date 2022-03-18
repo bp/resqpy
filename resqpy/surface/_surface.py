@@ -703,3 +703,23 @@ class Surface(BaseSurface):
                                                           'externalPartProxyToMl')
 
         return tri_rep
+
+
+def distill_triangle_points(t, p):
+    """Returns a (triangles, points) pair with points distilled as only those used from p."""
+
+    assert np.all(t < len(p))
+    # find unique points used by triangles
+    p_keep = np.unique(t)
+    # note new point index for each old point that is being kept
+    p_map = np.full(len(p), -1, dtype = int)
+    p_map[p_keep] = np.arange(len(p_keep))
+    # copy those unique points into a trimmed points array
+    points_distilled = p[p_keep]
+    # copy triangles, replacing p indices with compressed indices
+    triangles_mapped = p_map[t]
+    assert triangles_mapped.shape == t.shape
+    assert np.all(triangles_mapped >= 0)
+    assert np.all(triangles_mapped < len(points_distilled))
+
+    return triangles_mapped, points_distilled

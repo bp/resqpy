@@ -331,7 +331,7 @@ def _triangulate_unsplit_grid_connection_set(gcs, feature_index = None):
 
     def flat_point_index(grid, cell_kji0, corner_index):
         ci = cell_kji0 + corner_index
-        return (ci[0] * (grid.nj + 1) + ci[1]) * (grid.ni + 1) + ci[0]
+        return (ci[0] * (grid.nj + 1) + ci[1]) * (grid.ni + 1) + ci[2]
 
     def add_to_tri(grid, tri, index, cell_kji0, axis, polarity):
         kjip = np.zeros(3, dtype = 'int')

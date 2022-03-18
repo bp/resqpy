@@ -1700,12 +1700,12 @@ class GridConnectionSet(BaseResqpy):
             return None
         p = self.grid_list[0].points_cached.reshape((-1, 3))
         assert p is not None
+        t, p = rqs.distill_triangle_points(t, p)
         if feature_index is None:
             feature_index = 0
         title = self.feature_name_for_feature_index(feature_index)
         surf = rqs.Surface(self.model, crs_uuid = self.grid_list[0].crs_uuid, title = title)
         assert surf is not None
-        # TODO: compress t, p to only those points that are used
         surf.set_from_triangles_and_points(t, p)
         return surf
 
