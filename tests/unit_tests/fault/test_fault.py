@@ -111,6 +111,12 @@ def test_gcs_property_inheritance(tmp_path):
     pk_uuid = model.uuid(obj_type = 'PropertyKind', title = 'transmissibility multiplier')
     assert pk_uuid is not None
 
+    # check that we can create a surface object for the gcs
+    surf = gcs.surface()
+    assert surf is not None
+    t, _ = surf.triangles_and_points()
+    assert t.shape == (2 * gcs.count, 3)
+
     # create a derived grid connection set using a layer range
     thin_gcs, thin_indices = gcs.filtered_by_layer_range(min_k0 = 1, max_k0 = 3, return_indices = True)
     assert thin_gcs is not None and thin_indices is not None
