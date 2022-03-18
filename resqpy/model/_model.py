@@ -1832,22 +1832,84 @@ class Model():
            other_h5_file_name (string, optional): h5 file name for other model; can be passed as
               an optimisation when calling method repeatedly
 
+        returns:
+           the part name of the part in this model, after copying; may differ from requested part if
+           consolidate is True; None in the case of failure
+
         notes:
            if the part name already exists in this model, no action is taken;
            default hdf5 file used in this model and assumed in other_model
         """
 
-        m_f._copy_part_from_other_model(self,
-                                        other_model,
-                                        part,
-                                        realization = realization,
-                                        consolidate = consolidate,
-                                        force = force,
-                                        cut_refs_to_uuids = cut_refs_to_uuids,
-                                        cut_node_types = cut_node_types,
-                                        self_h5_file_name = self_h5_file_name,
-                                        h5_uuid = h5_uuid,
-                                        other_h5_file_name = other_h5_file_name)
+        return m_f._copy_part_from_other_model(self,
+                                               other_model,
+                                               part,
+                                               realization = realization,
+                                               consolidate = consolidate,
+                                               force = force,
+                                               cut_refs_to_uuids = cut_refs_to_uuids,
+                                               cut_node_types = cut_node_types,
+                                               self_h5_file_name = self_h5_file_name,
+                                               h5_uuid = h5_uuid,
+                                               other_h5_file_name = other_h5_file_name)
+
+    def copy_uuid_from_other_model(self,
+                                   other_model,
+                                   uuid,
+                                   realization = None,
+                                   consolidate = True,
+                                   force = False,
+                                   cut_refs_to_uuids = None,
+                                   cut_node_types = None,
+                                   self_h5_file_name = None,
+                                   h5_uuid = None,
+                                   other_h5_file_name = None):
+        """Fully copies part for uuid in from another model, with referenced parts, hdf5 data and relationships.
+
+        arguments:
+           other model (Model): the source model from which to copy a part
+           uuid (UUID): the uuid of the part in the other model to copy into this model
+           realization (int, optional): if present and the part is a property, the realization
+              will be set to this value, instead of the value in use in the other model if any
+           consolidate (boolean, default True): if True and an equivalent part already exists in
+              this model, do not duplicate but instead note uuids as equivalent
+           force (boolean, default False): if True, the part itself is copied without much checking
+              and all references are required to be handled by an entry in the consolidation object
+           cut_refs_to_uuids (list of UUIDs, optional): if present, then xml reference nodes
+              referencing any of the listed uuids are cut out in the copy; use with caution
+           cut_node_types (list of str, optional): if present, any child nodes of a type in the list
+              will be cut out in the copy; use with caution
+           self_h5_file_name (string, optional): h5 file name for this model; can be passed as
+              an optimisation when calling method repeatedly
+           h5_uuid (uuid, optional): UUID for this model's hdf5 external part; can be passed as
+              an optimisation when calling method repeatedly
+           other_h5_file_name (string, optional): h5 file name for other model; can be passed as
+              an optimisation when calling method repeatedly
+
+        returns:
+           the uuid of the part in this model, after copying; may differ from requested uuid if
+           consolidate is True; None in the case of failure
+
+        notes:
+           if the part already exists in this model, no action is taken;
+           default hdf5 file used in this model and assumed in other_model
+        """
+
+        part = other_model.part_for_uuid(uuid)
+        copied_part = m_f._copy_part_from_other_model(self,
+                                                      other_model,
+                                                      part,
+                                                      realization = realization,
+                                                      consolidate = consolidate,
+                                                      force = force,
+                                                      cut_refs_to_uuids = cut_refs_to_uuids,
+                                                      cut_node_types = cut_node_types,
+                                                      self_h5_file_name = self_h5_file_name,
+                                                      h5_uuid = h5_uuid,
+                                                      other_h5_file_name = other_h5_file_name)
+        if copied_part is None:
+            return None
+        return self.uuid_for_part(copied_part)
 
     def copy_all_parts_from_other_model(self, other_model, realization = None, consolidate = True):
         """Fully copies parts in from another model, with referenced parts, hdf5 data and relationships.
