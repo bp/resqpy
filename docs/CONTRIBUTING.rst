@@ -56,7 +56,7 @@ Development environment setup
 2. Set up a Python environment
 
    The RESQPY project uses `Poetry <https://python-poetry.org/>`_ for dependency management and environment setup. Please `install Poetry <https://python-poetry.org/docs/#osx--linux--bashonwindows-install-instructions>`_ first if you have not already done so.
-   With Poetry installed, the environment can then be setup automatically with all dependencies installed using:
+   With Poetry installed, the environment can then be setup automatically with all dependencies installed using the following command in the base directory (the directory with the pyproject.toml file):
 
    .. code-block:: bash
 
