@@ -287,7 +287,7 @@ class Surface(BaseSurface):
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
 
-    def set_from_point_set(self, point_set, convexity_parameter = 5.0):
+    def set_from_point_set(self, point_set, convexity_parameter = 5.0, reorient = False):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -295,11 +295,17 @@ class Surface(BaseSurface):
            convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
               convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
               chance of even a slight concavity
+           reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
+              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
         """
 
         p = point_set.full_array_ref()
+        if reorient:
+            p_xy = triangulate.reorient(p)
+        else:
+            p_xy = p
         log.debug('number of points going into dt: ' + str(len(p)))
-        t = triangulate.dt(p[:, :2], container_size_factor = convexity_parameter)
+        t = triangulate.dt(p_xy[:, :2], container_size_factor = convexity_parameter)
         log.debug('number of triangles: ' + str(len(t)))
         self.crs_uuid = point_set.crs_uuid
         self.set_from_triangles_and_points(t, p)
