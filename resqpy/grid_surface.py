@@ -1208,13 +1208,15 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
     return gcs
 
 
-def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = None):
+def find_faces_to_represent_surface_regular(grid, surface, name, centres = None, progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     arguments:
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
         surface (Surface): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
+        centres (numpy float array of shape (nk, nj, ni, 3), optional): precomputed cell centre points in
+           local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
 
@@ -1239,14 +1241,21 @@ def find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = N
     log.debug(f'grid extent kji: {grid.extent_kji}')
 
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
-    centres = grid.centre_point()
+    if centres is None:
+        centres = grid.centre_point()
     t, p = surface.triangles_and_points()
+    assert t is not None and p is not None, f'surface {surface.title} is empty'
+    log.debug(f'surface: {surface.title}; p0: {p[0]}; crs uuid: {surface.crs_uuid}')
     log.debug(f'surface min xyz: {np.min(p, axis = 0)}')
     log.debug(f'surface max xyz: {np.max(p, axis = 0)}')
     if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
         log.debug('converting from surface crs to grid crs')
         s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
         s_crs.convert_array_to(grid.crs, p)
+        surface.crs_uuid = grid.crs.uuid
+        log.debug(f'surface: {surface.title}; p0: {p[0]}; crs uuid: {surface.crs_uuid}')
+        log.debug(f'surface min xyz: {np.min(p, axis = 0)}')
+        log.debug(f'surface max xyz: {np.max(p, axis = 0)}')
 
     log.debug(f'centres min xyz: {np.min(centres.reshape((-1, 3)), axis = 0)}')
     log.debug(f'centres max xyz: {np.max(centres.reshape((-1, 3)), axis = 0)}')

@@ -380,7 +380,7 @@ class Polyline(_BasePolyline):
         return None, None, None
 
     def closest_segment_and_distance_to_point_xy(self, p):
-        """Returns the index of the closest segment to a point, and its distance, in the xy plant.
+        """Returns the index of the closest segment to a point, and its distance, in the xy plane.
 
         arguments:
             p (pair or triple float): the point

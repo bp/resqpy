@@ -222,7 +222,7 @@ class Surface(BaseSurface):
 
         old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         self.crs_uuid = required_crs.uuid
-        if bu.matching_uuids(old_crs.uuid, required_crs.uuid) or not self.patch_list:
+        if required_crs == old_crs or not self.patch_list:
             log.debug(f'no crs change needed for {self.title}')
             return
         log.debug(f'crs change needed for {self.title} from {old_crs.title} to {required_crs.title}')
@@ -254,6 +254,8 @@ class Surface(BaseSurface):
         if xyz_box is not None:
             assert xyz_box.shape == (2, 3)
         log.debug(f'trimming surface {large_surface.title} from {large_surface.triangle_count()} triangles')
+        if not self.title:
+            self.title = str(large_surface.title) + ' trimmed'
         self.crs_uuid = large_surface.crs_uuid
         self.patch_list = []
         for triangulated_patch in large_surface.patch_list:

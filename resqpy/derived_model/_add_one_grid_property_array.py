@@ -1,6 +1,7 @@
 """High level add_one_grid_property_array() function."""
 
 import os
+import numpy as np
 
 import resqpy.grid as grr
 import resqpy.model as rq
@@ -29,13 +30,14 @@ def add_one_grid_property_array(epc_file,
                                 local_property_kind_uuid = None,
                                 count_per_element = 1,
                                 const_value = None,
+                                expand_const_arrays = False,
                                 points = False,
                                 extra_metadata = {},
                                 new_epc_file = None):
     """Adds a grid property from a numpy array to an existing resqml dataset.
 
     arguments:
-       epc_file (string): file name to load model resqml model from (and rewrite to if new_epc_file is None)
+       epc_file (string): file name to load resqml model from (and rewrite to if new_epc_file is None)
        a (3D numpy array): the property array to be added to the model; for a constant array set this None
           and use the const_value argument, otherwise this array is required
        property_kind (string): the resqml property kind
@@ -62,6 +64,8 @@ def add_one_grid_property_array(epc_file,
           must be the fastest cycling axis in the cached array, ie last index
        const_value (float or int, optional): if present, a constant array is added 'filled' with this value, in which
           case argument a should be None
+       expand_const_arrays (bool, default False): if True and a const_value is provided, a fully expanded array is
+          added to the model instead of a const array
        points (bool, default False): if True, this is a points property with an extra dimension of extent 3
        extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
           property
@@ -90,6 +94,17 @@ def add_one_grid_property_array(epc_file,
 
     if not discrete:
         string_lookup_uuid = None
+
+    if const_value is not None and expand_const_arrays:
+        assert count_per_element == 1 and not points, 'attempt to expand const array for non-standard shape'
+        if isinstance(const_value, bool):
+            dtype = bool
+        elif discrete:
+            dtype = int
+        else:
+            dtype = float
+        a = np.full(grid.extent_kji, const_value, dtype = dtype)
+        const_value = None
 
     # create an empty property collection and add the new array to its 'imported' list
     gpc = rqp.GridPropertyCollection()
