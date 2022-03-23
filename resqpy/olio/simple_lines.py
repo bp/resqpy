@@ -9,7 +9,6 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
-   
 
 def read_lines(filename):
     """Returns a list of line arrays, read from ascii file.
