@@ -280,6 +280,12 @@ def rotation_3d_matrix(xzy_axis_angles):
     return matrix
 
 
+def reverse_rotation_3d_matrix(xzy_axis_angles):
+    """Returns a rotation matrix which will rotate back points about 3 axes by angles in degrees."""
+
+    return rotation_3d_matrix(xzy_axis_angles).T
+
+
 def rotate_vector(rotation_matrix, vector):
     """Returns the rotated vector."""
 

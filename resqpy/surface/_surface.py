@@ -1,6 +1,6 @@
 """_surface.py: surface class based on resqml standard."""
 
-version = '18th February 2022'
+version = '23rd March 2022'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -12,8 +12,10 @@ log = logging.getLogger(__name__)
 import numpy as np
 
 import resqpy.crs as rqc
+import resqpy.olio.intersection as meet
 import resqpy.olio.triangulation as triangulate
 import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -100,6 +102,7 @@ class Surface(BaseSurface):
         self.points = None  # composite points (all patches)
         self.boundaries = None  # todo: read up on what this is for and look out for examples
         self.represented_interpretation_root = None
+        self.normal_vector = None  # a derived vector that is roughly normal to the surface
         self.title = title
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -269,6 +272,61 @@ class Surface(BaseSurface):
             log.warning('surface does not intersect trimming volume')
         self.uuid = bu.new_uuid()
 
+    def set_to_split_surface(self, large_surface, line, delta_xyz):
+        """Populate this (empty) surface with a version of a larger surface split by an xy line.
+
+        arguments:
+            large_surface (Surface): the larger surface, a copy of which is to be split
+            line (numpy float array of shape (2, 3)): the end points of a line (z will be ignored)
+            delta_xyz (numpy float array of shape (2, 3)): an xyz offset to add to the points on the
+                right and left sides of the line repspectively
+
+        notes:
+            this method can be used to introduce a tear into a surface, typically to represent a horizon
+            being split by a planar fault with a throw
+        """
+
+        assert line.shape == (2, 3)
+        assert delta_xyz.shape == (2, 3)
+        t, p = large_surface.triangles_and_points()
+        assert p.ndim == 2 and p.shape[1] == 3
+        pp = np.concatenate((p, line), axis = 0)
+        tp = np.empty(p.shape, dtype = int)
+        tp[:, 0] = len(p)
+        tp[:, 1] = len(p) + 1
+        tp[:, 2] = np.arange(len(p), dtype = int)
+        cw = vec.clockwise_triangles(pp, tp)
+        pai = np.where(cw >= 0.0, True, False)  # bool mask over p
+        pbi = np.where(cw <= 0.0, True, False)  # bool mask over p
+        tap = pai[t]
+        tbp = pbi[t]
+        ta = np.any(tap, axis = 1)  # bool array over t
+        tb = np.any(tbp, axis = 1)  # bool array over t
+
+        # here we stick the two halves together into a single patch
+        # todo: keep as two patches as required by RESQML business rules
+        p_combo = np.empty((0, 3))
+        t_combo = np.empty((0, 3), dtype = int)
+        for i, tab in enumerate((ta, tb)):
+            p_keep = np.unique(t[tab])
+            # note new point index for each old point that is being kept
+            p_map = np.full(len(p), -1, dtype = int)
+            p_map[p_keep] = np.arange(len(p_keep))
+            # copy those unique points into a trimmed points array
+            points_trimmed = p[p_keep].copy()
+            # copy selected triangles, replacing p indices with compressed indices
+            t_trim = t[tab]
+            triangles_trimmed = p_map[t_trim].copy()
+            assert np.all(triangles_trimmed >= 0)
+            assert np.all(triangles_trimmed < len(points_trimmed))
+            points_trimmed += np.expand_dims(delta_xyz[i], axis = 0)
+            t_shift = len(p_combo)
+            p_combo = np.concatenate((p_combo, points_trimmed), axis = 0)
+            triangles_trimmed += t_shift
+            t_combo = np.concatenate((t_combo, triangles_trimmed), axis = 0)
+
+        self.set_from_triangles_and_points(t_combo, p_combo)
+
     def distinct_edges(self):
         """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles."""
 
@@ -289,7 +347,7 @@ class Surface(BaseSurface):
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
 
-    def set_from_point_set(self, point_set, convexity_parameter = 5.0, reorient = False):
+    def set_from_point_set(self, point_set, convexity_parameter = 5.0, reorient = False, make_clockwise = False):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -299,18 +357,52 @@ class Surface(BaseSurface):
               chance of even a slight concavity
            reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
               z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+           make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
+              viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
+              enforced in the reoriented space
         """
 
         p = point_set.full_array_ref()
         if reorient:
-            p_xy = triangulate.reorient(p)
+            p_xy, self.normal_vector = triangulate.reorient(p)
         else:
             p_xy = p
         log.debug('number of points going into dt: ' + str(len(p)))
         t = triangulate.dt(p_xy[:, :2], container_size_factor = convexity_parameter)
         log.debug('number of triangles: ' + str(len(t)))
+        if make_clockwise:
+            triangulate.make_all_clockwise_xy(t, p)  # modifies t in situ
         self.crs_uuid = point_set.crs_uuid
         self.set_from_triangles_and_points(t, p)
+
+    def make_all_clockwise_xy(self, reorient = False):
+        """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
+
+        note:
+           if reorient is set True, a copy of the points is first reoriented such that they lie roughly in
+           the xy plane, and the clockwise-ness of the triangles is effected in that space
+        """
+
+        _, p = self.triangles_and_points()
+        if reorient:
+            p_xy, self.normal_vector = triangulate.reorient(p)
+        else:
+            p_xy = p
+        triangulate.make_all_clockwise_xy(self.triangles, p_xy)  # modifies t in situ
+        # assert np.all(vec.clockwise_triangles(p_xy, self.triangles) >= 0.0)
+
+    def normal(self):
+        """Returns a vector that is roughly normal to the surface.
+
+        notes:
+           the result becomes more meaningless the less planar the surface is;
+           even for a parfectly planar surface, the result is approximate
+        """
+
+        if self.normal_vector is None:
+            _, p = self.triangles_and_points()
+            _, self.normal_vector = triangulate.reorient(p)
+        return self.normal_vector
 
     def set_from_irregular_mesh(self, mesh_xyz, quad_triangles = False):
         """Populate this (empty) Surface object from an untorn mesh array of shape (N, M, 3).
@@ -550,6 +642,17 @@ class Surface(BaseSurface):
         self.points = None
         for patch in self.patch_list:
             patch.vertical_rescale_points(ref_depth, scaling_factor)
+
+    def line_intersection(self, line_p, line_v, line_segment = False):
+        """Returns x,y,z of an intersection point of straight line with the surface, or None if no intersection found."""
+
+        t, p = self.triangles_and_points()
+        tp = p[t]
+        intersects = meet.line_triangles_intersects(line_p, line_v, tp, line_segment = line_segment)
+        indices = meet.intersects_indices(intersects)
+        if not indices or len(indices) == 0:
+            return None
+        return intersects[indices[0]]
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
