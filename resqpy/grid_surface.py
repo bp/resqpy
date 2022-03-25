@@ -730,7 +730,7 @@ def find_first_intersection_of_trajectory_with_surface(trajectory,
                                                        start_xyz = None,
                                                        nudge = None,
                                                        return_second = False):
-    """Returns xyz and other info of the first intersection of well trajectory with layer interface.
+    """Returns xyz and other info of the first intersection of well trajectory with surface.
 
     arguments:
        trajectory (well.Trajectory object): the wellbore trajectory object(s) to find the intersection for
@@ -1208,7 +1208,12 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
     return gcs
 
 
-def find_faces_to_represent_surface_regular(grid, surface, name, centres = None, progress_fn = None):
+def find_faces_to_represent_surface_regular(grid,
+                                            surface,
+                                            name,
+                                            centres = None,
+                                            progress_fn = None,
+                                            consistent_side = False):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     arguments:
@@ -1219,6 +1224,8 @@ def find_faces_to_represent_surface_regular(grid, surface, name, centres = None,
            local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+        consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
+           cells in each pair are on one side of the surface, and all the second cells on the other
 
     returns:
         a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created
@@ -1243,6 +1250,10 @@ def find_faces_to_represent_surface_regular(grid, surface, name, centres = None,
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
     if centres is None:
         centres = grid.centre_point()
+    if consistent_side:
+        log.debug('making all triangles clockwise')
+        surface.make_all_clockwise_xy(
+            reorient = True)  # note: will shuffle order of vertices within t cached in surface
     t, p = surface.triangles_and_points()
     assert t is not None and p is not None, f'surface {surface.title} is empty'
     log.debug(f'surface: {surface.title}; p0: {p[0]}; crs uuid: {surface.crs_uuid}')
@@ -1268,21 +1279,26 @@ def find_faces_to_represent_surface_regular(grid, surface, name, centres = None,
     if grid.nk > 1:
         log.debug('searching for k faces')
         k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_sides = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
         k_centres = centres[0, :, :].reshape((-1, 3))
         k_hits = vec.points_in_triangles(p, t, k_centres, projection = 'xy', edged = True).reshape(
             (t_count, grid.nj, grid.ni))
         del k_centres
+        if consistent_side:
+            cwt = (vec.clockwise_triangles(p, t, projection = 'xy') >= 0.0)
         for k_t, k_j, k_i in np.stack(np.where(k_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[0, k_j, k_i],
                                                centres[-1, k_j, k_i] - centres[0, k_j, k_i],
                                                p[t[k_t]],
                                                line_segment = True,
                                                t_tol = 1.0e-6)
-            if xyz is None:
+            if xyz is None:  # meeting point is outwith grid
                 continue
             k_face = int((xyz[2] - centres[0, k_j, k_i, 2]) / grid_dxyz[2])
             assert 0 <= k_face < grid.nk - 1
             k_faces[k_face, k_j, k_i] = True
+            if consistent_side:
+                k_sides[k_face, k_j, k_i] = cwt[k_t]
         del k_hits
         log.debug(f'k face count: {np.count_nonzero(k_faces)}')
     else:
@@ -1295,24 +1311,26 @@ def find_faces_to_represent_surface_regular(grid, surface, name, centres = None,
     if grid.nj > 1:
         log.debug('searching for j faces')
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_sides = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
         j_centres = centres[:, 0, :].reshape((-1, 3))
         j_hits = vec.points_in_triangles(p, t, j_centres, projection = 'xz', edged = True).reshape(
             (t_count, grid.nk, grid.ni))
         del j_centres
+        if consistent_side:
+            cwt = (vec.clockwise_triangles(p, t, projection = 'xz') >= 0.0)
         for j_t, j_k, j_i in np.stack(np.where(j_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[j_k, 0, j_i],
                                                centres[j_k, -1, j_i] - centres[j_k, 0, j_i],
                                                p[t[j_t]],
                                                line_segment = True,
                                                t_tol = 1.0e-6)
-            if xyz is None:
-                log.debug(
-                    f'J face issue: k: {j_k}; i: {j_i}; cp: {centres[j_k, 0, j_i]}, {centres[j_k, -1, j_i]}; t: {j_t}; tp: {p[t[j_t]]}'
-                )
+            if xyz is None:  # meeting point is outwith grid
                 continue
             j_face = int((xyz[1] - centres[j_k, 0, j_i, 1]) / grid_dxyz[1])
             assert 0 <= j_face < grid.nj - 1
             j_faces[j_k, j_face, j_i] = True
+            if consistent_side:
+                j_sides[j_k, j_face, j_i] = cwt[j_t]
         del j_hits
         log.debug(f'j face count: {np.count_nonzero(j_faces)}')
     else:
@@ -1325,21 +1343,26 @@ def find_faces_to_represent_surface_regular(grid, surface, name, centres = None,
     if grid.ni > 1:
         log.debug('searching for i faces')
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_sides = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
         i_centres = centres[:, :, 0].reshape((-1, 3))
         i_hits = vec.points_in_triangles(p, t, i_centres, projection = 'yz', edged = True).reshape(
             (t_count, grid.nk, grid.nj))
         del i_centres
+        if consistent_side:
+            cwt = (vec.clockwise_triangles(p, t, projection = 'yz') >= 0.0)
         for i_t, i_k, i_j in np.stack(np.where(i_hits), axis = -1):
             xyz = meet.line_triangle_intersect(centres[i_k, i_j, 0],
                                                centres[i_k, i_j, -1] - centres[i_k, i_j, 0],
                                                p[t[i_t]],
                                                line_segment = True,
                                                t_tol = 1.0e-6)
-            if xyz is None:
+            if xyz is None:  # meeting point is outwith grid
                 continue
             i_face = int((xyz[0] - centres[i_k, i_j, 0, 0]) / grid_dxyz[0])
             assert 0 <= i_face < grid.ni - 1
             i_faces[i_k, i_j, i_face] = True
+            if consistent_side:
+                i_sides[i_k, i_j, i_face] = cwt[i_t]
         del i_hits
         log.debug(f'i face count: {np.count_nonzero(i_faces)}')
     else:
@@ -1348,12 +1371,20 @@ def find_faces_to_represent_surface_regular(grid, surface, name, centres = None,
     if progress_fn is not None:
         progress_fn(0.9)
 
+    if not consistent_side:
+        k_sides = None
+        j_sides = None
+        i_sides = None
+
     log.debug('converting face sets into grid connection set')
     gcs = rqf.GridConnectionSet(grid.model,
                                 grid = grid,
                                 k_faces = k_faces,
                                 j_faces = j_faces,
                                 i_faces = i_faces,
+                                k_sides = k_sides,
+                                j_sides = j_sides,
+                                i_sides = i_sides,
                                 feature_name = name,
                                 create_organizing_objects_where_needed = True)
 

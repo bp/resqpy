@@ -40,6 +40,9 @@ class GridConnectionSet(BaseResqpy):
                  k_faces = None,
                  j_faces = None,
                  i_faces = None,
+                 k_sides = None,
+                 j_sides = None,
+                 i_sides = None,
                  feature_name = None,
                  feature_type = 'fault',
                  create_organizing_objects_where_needed = False,
@@ -67,6 +70,8 @@ class GridConnectionSet(BaseResqpy):
                  must also be set
            k_faces, j_faces, i_faces (boolean arrays, optional): if present, these arrays are used to identify
                  which faces between logically neighbouring cells to include in the new grid connection set
+           k_sides, j_sides, i_sides (boolean arrays, optional): if present, and k_faces etc are present, these
+                 arrays are used to determine which side of the cell face should appear as the first in the pairing
            feature_name (string, optional): the feature name to use when setting from faces
            feature_type (string, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
            create_organizing_objects_where_needed (boolean, default False): if True when loading from ascii or
@@ -177,7 +182,10 @@ class GridConnectionSet(BaseResqpy):
                                                i_faces,
                                                feature_name,
                                                create_organizing_objects_where_needed,
-                                               feature_type = feature_type)
+                                               feature_type = feature_type,
+                                               k_sides = k_sides,
+                                               j_sides = j_sides,
+                                               i_sides = i_sides)
         elif find_properties:
             self.extract_property_collection()
 
@@ -302,13 +310,17 @@ class GridConnectionSet(BaseResqpy):
             i_faces = None
         self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name, create_organizing_objects_where_needed)
 
-    def set_pairs_from_face_masks(self,
-                                  k_faces,
-                                  j_faces,
-                                  i_faces,
-                                  feature_name,
-                                  create_organizing_objects_where_needed,
-                                  feature_type = 'fault'):  # other feature_type values: 'horizon', 'geobody boundary'
+    def set_pairs_from_face_masks(
+            self,
+            k_faces,
+            j_faces,
+            i_faces,
+            feature_name,
+            create_organizing_objects_where_needed,
+            feature_type = 'fault',  # other feature_type values: 'horizon', 'geobody boundary'
+            k_sides = None,
+            j_sides = None,
+            i_sides = None):
         """Sets cell_index_pairs and face_index_pairs based on triple face masks, using simple no throw pairing."""
 
         assert feature_type in ['fault', 'horizon', 'geobody boundary']
@@ -372,20 +384,38 @@ class GridConnectionSet(BaseResqpy):
         face_pair_list = []
         nj_ni = grid.nj * grid.ni
         if k_faces is not None:
-            for cell_kji0 in np.stack(np.where(k_faces)).T:
+            if k_sides is None:
+                k_sides = np.zeros(k_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(k_faces)).T, k_sides[np.where(k_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + nj_ni))
-                face_pair_list.append((self.face_index_map[0, 1], self.face_index_map[0, 0]))
+                if flip:
+                    cell_pair_list.append((cell + nj_ni, cell))
+                    face_pair_list.append((self.face_index_map[0, 0], self.face_index_map[0, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + nj_ni))
+                    face_pair_list.append((self.face_index_map[0, 1], self.face_index_map[0, 0]))
         if j_faces is not None:
-            for cell_kji0 in np.stack(np.where(j_faces)).T:
+            if j_sides is None:
+                j_sides = np.zeros(j_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(j_faces)).T, j_sides[np.where(j_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + grid.ni))
-                face_pair_list.append((self.face_index_map[1, 1], self.face_index_map[1, 0]))
+                if flip:
+                    cell_pair_list.append((cell + grid.ni, cell))
+                    face_pair_list.append((self.face_index_map[1, 0], self.face_index_map[1, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + grid.ni))
+                    face_pair_list.append((self.face_index_map[1, 1], self.face_index_map[1, 0]))
         if i_faces is not None:
-            for cell_kji0 in np.stack(np.where(i_faces)).T:
+            if i_sides is None:
+                i_sides = np.zeros(i_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(i_faces)).T, i_sides[np.where(i_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + 1))
-                face_pair_list.append((self.face_index_map[2, 1], self.face_index_map[2, 0]))
+                if flip:
+                    cell_pair_list.append((cell + 1, cell))
+                    face_pair_list.append((self.face_index_map[2, 0], self.face_index_map[2, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + 1))
+                    face_pair_list.append((self.face_index_map[2, 1], self.face_index_map[2, 0]))
         self.cell_index_pairs = np.array(cell_pair_list, dtype = int)
         self.face_index_pairs = np.array(face_pair_list, dtype = int)
         self.count = len(self.cell_index_pairs)

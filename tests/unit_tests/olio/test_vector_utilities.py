@@ -153,3 +153,14 @@ def test_point_distance_to_line_segment_2d():
     assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), 2.0 * maths.sqrt(2.0))
     p = np.array((3.0, 5.0))
     assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), maths.sqrt(2.0))
+
+
+def test_rotation():
+    x = 47.3
+    y = -32.9
+    p = np.array((1234.2, 106.7, 742.5))
+    m = vec.rotation_3d_matrix((x, 0.0, y))
+    rm = vec.reverse_rotation_3d_matrix((x, 0.0, y))
+    pp = vec.rotate_vector(m, p)
+    ppp = vec.rotate_vector(rm, pp)
+    assert_array_almost_equal(p, ppp)

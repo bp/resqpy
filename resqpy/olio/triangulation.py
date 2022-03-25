@@ -700,7 +700,8 @@ def reorient(points, rough = True):
           if False, that reduces to around 2.5 degrees of the optimum
 
     returns:
-       numpy float array of the same shape as points, being a copy of points rotated in 3D space to minimise the z range
+       numpy float array of the same shape as points, numpy xyz vector; the array being a copy of points rotated in 3D
+       space to minimise the z range; the vector is a normal vector to the original points
 
     notes:
        the original points array is not modified by this function;
@@ -743,6 +744,22 @@ def reorient(points, rough = True):
         best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 7, 2.5)
 
     rotation_m = vec.rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))
+    reverse_m = vec.reverse_rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))  # just the transpose of abpve!
     p = points.copy()
 
-    return vec.rotate_array(rotation_m, p)
+    return vec.rotate_array(rotation_m, p), vec.rotate_vector(reverse_m, np.array((0.0, 0.0, 1.0)))
+
+
+def make_all_clockwise_xy(t, p):
+    """Modifies t in situ such that each triangle is clockwise in xy plane (viewed from -ve z axis).
+
+    note:
+       assumes xyz axes are left handed; all will be made anti-clockwise in the case of right handed xyz axes
+    """
+
+    cw = (vec.clockwise_triangles(p, t, projection = 'xy') > 0.0)
+    t_flip = t.copy()
+    t_flip[:, 0] = t[:, 1]
+    t_flip[:, 1] = t[:, 0]
+    t[:] = np.where(np.expand_dims(cw, axis = 1), t, t_flip)
+    return t

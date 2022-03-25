@@ -199,7 +199,7 @@ def copy_h5(file_in, file_out, uuid_inclusion_list = None, uuid_exclusion_list =
                 if group in main_group_out:
                     log.warning('not copying hdf5 data due to pre-existence for: ' + str(group))
                     continue
-                log.debug('copying hdf5 data for uuid: ' + group)
+                # log.debug('copying hdf5 data for uuid: ' + group)
                 main_group_in.copy(group,
                                    main_group_out,
                                    expand_soft = True,

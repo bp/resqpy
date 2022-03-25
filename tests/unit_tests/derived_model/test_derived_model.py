@@ -1296,6 +1296,15 @@ def test_gather_ensemble(tmp_path):
                                          title = 'NETGRS',
                                          uom = 'm3/m3',
                                          indexable_element = 'cells')
+        rqdm.add_one_grid_property_array(epc,
+                                         None,
+                                         const_value = 0.2 + 0.3 * float(m),
+                                         expand_const_arrays = True,
+                                         property_kind = 'porosity',
+                                         grid_uuid = grid.uuid,
+                                         title = 'PORO',
+                                         uom = 'm3/m3',
+                                         indexable_element = 'cells')
         epc_list.append(epc)
     # gather ensemble
     combined_epc = os.path.join(tmp_path, 'combo.epc')
