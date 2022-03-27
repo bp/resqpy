@@ -1198,7 +1198,8 @@ class GridConnectionSet(BaseResqpy):
                     for (obj_type, f_uuid, _) in self.feature_list:
                         fi_part = rqet.part_name_for_object(obj_type, f_uuid)
                         fi_root = self.model.root_for_part(fi_part)
-                        self.model.create_reciprocal_relationship(gcs, 'destinationObject', fi_root, 'sourceObject')
+                        if fi_root is not None:
+                            self.model.create_reciprocal_relationship(gcs, 'destinationObject', fi_root, 'sourceObject')
                 ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(gcs, 'mlToExternalPartProxy', ext_node,

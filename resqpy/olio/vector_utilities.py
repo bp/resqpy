@@ -92,6 +92,19 @@ def unit_vectors(v):
     return result
 
 
+def nan_unit_vectors(v):
+    """Returns vectors with same direction as those in v but with unit length, allowing NaNs."""
+    nan_mask = np.isnan(v)
+    restore = np.seterr(all = 'ignore')
+    scaling = np.sqrt(np.sum(v * v, axis = -1))
+    zero_mask = np.zeros(v.shape, dtype = bool)
+    zero_mask[np.where(scaling == 0.0), :] = True
+    result = np.where(zero_mask, 0.0, v / np.expand_dims(scaling, -1))
+    result = np.where(nan_mask, np.nan, result)
+    np.seterr(**restore)
+    return result
+
+
 def unit_vector_from_azimuth(azimuth):
     """Returns horizontal unit vector in compass bearing given by azimuth (x = East, y = North)."""
     azimuth = azimuth % 360.0
@@ -147,10 +160,29 @@ def azimuths(va):  # 'azimuth' is synonymous with 'compass bearing'
 
 def inclination(v):
     """Returns the inclination in degrees of v (angle relative to +ve z axis)."""
-    assert 2 <= len(v) <= 3
+    assert len(v) == 3
     unit_v = unit_vector(v)
-    radians = maths.acos(dot_product(unit_v, np.array((0.0, 0.0, 1.0))))
+    radians = maths.acos(unit_v[2])
     return degrees_from_radians(radians)
+
+
+def inclinations(a):
+    """Returns the inclination in degrees of each vector in a (angle relative to +ve z axis)."""
+    assert a.ndim > 1 and a.shape[-1] == 3
+    unit_vs = unit_vectors(a)
+    radians = np.arccos(unit_vs[..., 2])
+    return degrees_from_radians(radians)
+
+
+def nan_inclinations(a):
+    """Returns the inclination in degrees of each vector in a (angle relative to +ve z axis), allowing NaNs."""
+    assert a.ndim > 1 and a.shape[-1] == 3
+    unit_vs = nan_unit_vectors(a)
+    restore = np.seterr(all = 'ignore')
+    radians = np.where(np.isnan(unit_vs[..., 2]), np.nan, np.arccos(unit_vs[..., 2]))
+    result = np.where(np.isnan(radians), np.nan, degrees_from_radians(radians))
+    np.seterr(**restore)
+    return result
 
 
 def points_direction_vector(a, axis):
@@ -489,6 +521,13 @@ def points_in_triangles(p, t, da, projection = 'xy', edged = False):
         return np.all(cwtd <= 0.0, axis = 2)
     else:
         return np.all(cwtd < 0.0, axis = 2)
+
+
+def triangle_normal_vector(p3):
+    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
+
+    # todo: handle degenerate triangles
+    return unit_vector(cross_product(p3[0] - p3[1], p3[0] - p3[2]))
 
 
 def in_circumcircle(a, b, c, d):

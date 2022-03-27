@@ -1213,7 +1213,8 @@ def find_faces_to_represent_surface_regular(grid,
                                             name,
                                             centres = None,
                                             progress_fn = None,
-                                            consistent_side = False):
+                                            consistent_side = False,
+                                            return_normal_vectors = False):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     arguments:
@@ -1226,9 +1227,14 @@ def find_faces_to_represent_surface_regular(grid,
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
            cells in each pair are on one side of the surface, and all the second cells on the other
+        return_normal_vectors (bool, default False): if True, an array of normal vectors is created for the gcs,
+           holding a unit vector normal to the surface at the centre of each face; it is returned with the gcs
 
     returns:
-        a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created
+        gcs  or  (gcs, normals)
+        where gcs is a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created;
+        normals is a numpy float array of shape (gcs.count, 3) holding unit a vector normal to the surface
+        for each of the faces in the gcs; this is only returned if return_normal_vectors is True
 
     notes:
         this function can handle the surface and grid being in different coordinate reference systems, as
@@ -1280,6 +1286,7 @@ def find_faces_to_represent_surface_regular(grid,
         log.debug('searching for k faces')
         k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
         k_sides = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan) if return_normal_vectors else None
         k_centres = centres[0, :, :].reshape((-1, 3))
         k_hits = vec.points_in_triangles(p, t, k_centres, projection = 'xy', edged = True).reshape(
             (t_count, grid.nj, grid.ni))
@@ -1299,10 +1306,17 @@ def find_faces_to_represent_surface_regular(grid,
             k_faces[k_face, k_j, k_i] = True
             if consistent_side:
                 k_sides[k_face, k_j, k_i] = cwt[k_t]
+            if return_normal_vectors:
+                k_normals[k_face, k_j, k_i] = vec.triangle_normal_vector(p[t[k_t]])
+                # todo: if consistent side, could deliver information about horizon surface inversion
+                if k_normals[k_face, k_j, k_i, 2] > 0.0:
+                    k_normals[k_face, k_j, k_i] = -k_normals[k_face, k_j, k_i]  # -ve z hemisphere normal
         del k_hits
         log.debug(f'k face count: {np.count_nonzero(k_faces)}')
     else:
         k_faces = None
+        k_sides = None
+        k_normals = None
 
     if progress_fn is not None:
         progress_fn(0.3)
@@ -1312,6 +1326,7 @@ def find_faces_to_represent_surface_regular(grid,
         log.debug('searching for j faces')
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
         j_sides = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_normals = np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan) if return_normal_vectors else None
         j_centres = centres[:, 0, :].reshape((-1, 3))
         j_hits = vec.points_in_triangles(p, t, j_centres, projection = 'xz', edged = True).reshape(
             (t_count, grid.nk, grid.ni))
@@ -1331,10 +1346,16 @@ def find_faces_to_represent_surface_regular(grid,
             j_faces[j_k, j_face, j_i] = True
             if consistent_side:
                 j_sides[j_k, j_face, j_i] = cwt[j_t]
+            if return_normal_vectors:
+                j_normals[j_k, j_face, j_i] = vec.triangle_normal_vector(p[t[j_t]])
+                if j_normals[j_k, j_face, j_i, 2] > 0.0:
+                    j_normals[j_k, j_face, j_i] = -j_normals[j_k, j_face, j_i]  # -ve z hemisphere normal
         del j_hits
         log.debug(f'j face count: {np.count_nonzero(j_faces)}')
     else:
         j_faces = None
+        j_sides = None
+        j_normals = None
 
     if progress_fn is not None:
         progress_fn(0.6)
@@ -1344,6 +1365,7 @@ def find_faces_to_represent_surface_regular(grid,
         log.debug('searching for i faces')
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
         i_sides = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_normals = np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan) if return_normal_vectors else None
         i_centres = centres[:, :, 0].reshape((-1, 3))
         i_hits = vec.points_in_triangles(p, t, i_centres, projection = 'yz', edged = True).reshape(
             (t_count, grid.nk, grid.nj))
@@ -1363,10 +1385,16 @@ def find_faces_to_represent_surface_regular(grid,
             i_faces[i_k, i_j, i_face] = True
             if consistent_side:
                 i_sides[i_k, i_j, i_face] = cwt[i_t]
+            if return_normal_vectors:
+                i_normals[i_k, i_j, i_face] = vec.triangle_normal_vector(p[t[i_t]])
+                if i_normals[i_k, i_j, i_face, 2] > 0.0:
+                    i_normals[i_k, i_j, i_face] = -i_normals[i_k, i_j, i_face]  # -ve z hemisphere normal
         del i_hits
         log.debug(f'i face count: {np.count_nonzero(i_faces)}')
     else:
         i_faces = None
+        i_sides = None
+        i_normals = None
 
     if progress_fn is not None:
         progress_fn(0.9)
@@ -1388,8 +1416,23 @@ def find_faces_to_represent_surface_regular(grid,
                                 feature_name = name,
                                 create_organizing_objects_where_needed = True)
 
+    # NB. following assumes faces have been added to gcs in a particular order!
+    if return_normal_vectors:
+        # k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[np.expand_dims(k_faces, axis = -1)]
+        # j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[np.expand_dims(j_faces, axis = -1)]
+        # i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[np.expand_dims(i_faces, axis = -1)]
+        k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[np.where(k_faces)]
+        j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[np.where(j_faces)]
+        i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[np.where(i_faces)]
+        all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
+        log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
+        assert all_normals.shape == (gcs.count, 3)
+
     if progress_fn is not None:
         progress_fn(1.0)
+
+    if return_normal_vectors:
+        return (gcs, all_normals)
 
     return gcs
 
