@@ -2289,7 +2289,7 @@ class PropertyCollection():
                 uuid = entry[0]
                 cached_name = _cache_name_for_uuid(uuid)
                 assert self.support is not None
-                #  note: will not handle direction dependent shapes
+                #  note: will not handle direction dependent shapes or points
                 shape = self.supporting_shape(indexable_element = entry[14])
                 value = float(entry[17]) if isinstance(entry[17], str) else entry[17]
                 self.__dict__[cached_name] = np.full(shape, value, dtype = dtype)
