@@ -2,11 +2,7 @@
 
 version = '4th November 2021'
 
-# RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
-# GOCAD is also a trademark of Emerson
-
 import logging
-
 log = logging.getLogger(__name__)
 
 import resqpy.organize as rqo

@@ -2,9 +2,6 @@
 
 version = '18th February 2022'
 
-# RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
-# GOCAD is also a trademark of Emerson
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -108,7 +105,7 @@ class TriangulatedPatch:
             raise
         return (self.triangles, self.points)
 
-    def set_to_trimmed_patch(self, larger_patch, xyz_box = None, xy_polygon = None):
+    def set_to_trimmed_patch(self, larger_patch, xyz_box = None, xy_polygon = None, internal = False):
         """Populate this (empty) patch with triangles and points that overlap with a trimming volume.
 
         arguments:
@@ -117,10 +114,13 @@ class TriangulatedPatch:
                against which to trim the patch
             xy_polygon (closed convex resqpy.lines.Polyline, optional): if present, an xy boundary
                against which to trim
+            internal (bool, default False): if True, only those triangles where all three vertices
+               are wtihin the trimming space are kept; if False, triangles with at least one vertex
+               within the space are kept
 
         notes:
             at least one of xyz_box or xy_polygon must be present; if both are present, a triangle
-            must have at least one point within both boundaries to survive the trimming;
+            must be within both boundaries to survive the trimming;
             xyz_box and xy_polygon must be in the same crs as the larger patch
         """
 
@@ -145,7 +145,7 @@ class TriangulatedPatch:
             points_in = np.logical_and(points_in, xy_polygon.points_are_inside_xy(large_p))
         # find where in large_t uses those points
         tp_in = points_in[large_t]
-        t_in = np.any(tp_in, axis = -1)
+        t_in = np.all(tp_in, axis = -1) if internal else np.any(tp_in, axis = -1)
         # find unique points used by those triangles
         p_keep = np.unique(large_t[t_in])
         # note new point index for each old point that is being kept
