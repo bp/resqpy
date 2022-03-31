@@ -273,7 +273,7 @@ class PointSet(BaseSurface):
 
         old_crs = rcrs.Crs(self.model, uuid = self.crs_uuid)
         self.crs_uuid = required_crs.uuid
-        if required_crs == old_crs or not self.patch_list:
+        if required_crs == old_crs or not self.patch_ref_list:
             log.debug(f'no crs change needed for {self.title}')
             return
         log.debug(f'crs change needed for {self.title} from {old_crs.title} to {required_crs.title}')
