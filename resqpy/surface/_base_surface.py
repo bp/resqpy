@@ -3,6 +3,7 @@
 version = '4th November 2021'
 
 import logging
+
 log = logging.getLogger(__name__)
 
 import resqpy.organize as rqo
