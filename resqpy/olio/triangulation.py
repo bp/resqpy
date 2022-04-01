@@ -702,8 +702,10 @@ def reorient(points, rough = True):
           if False, that reduces to around 2.5 degrees of the optimum
 
     returns:
-       numpy float array of the same shape as points, numpy xyz vector; the array being a copy of points rotated in 3D
-       space to minimise the z range; the vector is a normal vector to the original points
+       numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
+       the array being a copy of points rotated in 3D space to minimise the z range;
+       the vector is a normal vector to the original points;
+       the matrix is rotation matrix used to transform the original points to the reoriented points
 
     notes:
        the original points array is not modified by this function;
@@ -749,7 +751,7 @@ def reorient(points, rough = True):
     reverse_m = vec.reverse_rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))  # just the transpose of abpve!
     p = points.copy()
 
-    return vec.rotate_array(rotation_m, p), vec.rotate_vector(reverse_m, np.array((0.0, 0.0, 1.0)))
+    return vec.rotate_array(rotation_m, p), vec.rotate_vector(reverse_m, np.array((0.0, 0.0, 1.0))), rotation_m
 
 
 def make_all_clockwise_xy(t, p):

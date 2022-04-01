@@ -371,20 +371,28 @@ class Surface(BaseSurface):
 
         p = point_set.full_array_ref()
         if reorient:
-            p_xy, self.normal_vector = triangulate.reorient(p)
+            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(p)
         else:
             p_xy = p
         if extend_with_flange:
-            p_xy_e = np.concatenate((p_xy, triangulate.surrounding_xy_ring(p_xy, 11, 10.0)), axis = 0)
+            flange_points = triangulate.surrounding_xy_ring(p_xy, 11, 10.0)
+            p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
+            if reorient:
+                # reorient back extenstion points into original p space
+                flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
+                p_e = np.concatenate((p, flange_points_reverse_oriented), axis = 0)
+            else:
+                p_e = p_xy_e
         else:
             p_xy_e = p_xy
+            p_e = p
         log.debug('number of points going into dt: ' + str(len(p_xy_e)))
         t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter)
         log.debug('number of triangles: ' + str(len(t)))
         if make_clockwise:
-            triangulate.make_all_clockwise_xy(t, p_xy_e)  # modifies t in situ
+            triangulate.make_all_clockwise_xy(t, p_e)  # modifies t in situ
         self.crs_uuid = point_set.crs_uuid
-        self.set_from_triangles_and_points(t, p_xy_e)
+        self.set_from_triangles_and_points(t, p_e)
 
     def make_all_clockwise_xy(self, reorient = False):
         """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
@@ -396,7 +404,7 @@ class Surface(BaseSurface):
 
         _, p = self.triangles_and_points()
         if reorient:
-            p_xy, self.normal_vector = triangulate.reorient(p)
+            p_xy, self.normal_vector, _ = triangulate.reorient(p)
         else:
             p_xy = p
         triangulate.make_all_clockwise_xy(self.triangles, p_xy)  # modifies t in situ
@@ -412,7 +420,7 @@ class Surface(BaseSurface):
 
         if self.normal_vector is None:
             _, p = self.triangles_and_points()
-            _, self.normal_vector = triangulate.reorient(p)
+            _, self.normal_vector, _ = triangulate.reorient(p)
         return self.normal_vector
 
     def set_from_irregular_mesh(self, mesh_xyz, quad_triangles = False):
