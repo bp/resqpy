@@ -375,14 +375,16 @@ class Surface(BaseSurface):
         else:
             p_xy = p
         if extend_with_flange:
-            p_xy = np.concatenate((p_xy, triangulate.surrounding_xy_ring(p_xy, 11, 10.0)))
-        log.debug('number of points going into dt: ' + str(len(p)))
-        t = triangulate.dt(p_xy[:, :2], container_size_factor = convexity_parameter)
+            p_xy_e = np.concatenate((p_xy, triangulate.surrounding_xy_ring(p_xy, 11, 10.0)), axis = 0)
+        else:
+            p_xy_e = p_xy
+        log.debug('number of points going into dt: ' + str(len(p_xy_e)))
+        t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter)
         log.debug('number of triangles: ' + str(len(t)))
         if make_clockwise:
-            triangulate.make_all_clockwise_xy(t, p)  # modifies t in situ
+            triangulate.make_all_clockwise_xy(t, p_xy_e)  # modifies t in situ
         self.crs_uuid = point_set.crs_uuid
-        self.set_from_triangles_and_points(t, p)
+        self.set_from_triangles_and_points(t, p_xy_e)
 
     def make_all_clockwise_xy(self, reorient = False):
         """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
