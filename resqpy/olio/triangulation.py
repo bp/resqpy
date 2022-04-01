@@ -784,8 +784,8 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0):
     assert p.shape[-1] == 3
     assert radial_factor >= 1.0
     centre = np.nanmean(p.reshape((-1, 3)), axis = 0)
-    p_radius = np.nanmax(np.abs(p.reshape((-1, 3)) - centre), axis = 0)
-    p_radius = maths.sqrt((p_radius * p_radius)[:2])
+    p_radius_v = np.nanmax(np.abs(p.reshape((-1, 3)) - np.expand_dims(centre, axis = 0)), axis = 0)[:2]
+    p_radius = maths.sqrt(np.sum(p_radius_v * p_radius_v))
     radius = p_radius * radial_factor
     delta_theta = 2.0 * maths.pi / float(count)
     ring = np.zeros((count, 3))
