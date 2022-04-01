@@ -6,7 +6,9 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import math as maths
 import numpy as np
+
 import resqpy.crs as rqc
 import resqpy.lines as rql
 import resqpy.model as rq
@@ -763,3 +765,31 @@ def make_all_clockwise_xy(t, p):
     t_flip[:, 1] = t[:, 0]
     t[:] = np.where(np.expand_dims(cw, axis = 1), t, t_flip)
     return t
+
+
+def surrounding_xy_ring(p, count = 12, radial_factor = 10.0):
+    """Creates a set of points surrounding the point set p, in the xy plane.
+
+    arguments:
+       p (numpy float array of shape (..., 3)): xyz set of points to be surrounded
+       count (int): the number of points to generate in the surrounding ring
+       radial_factor (float): a distance factor roughly determining the radius of the ring relative to
+          the 'radius' of the outermost points in p
+
+    returns:
+       numpy float array of shape (count, 3) being xyz points in surrounding ring; z is set constant to
+       mean value of z in p
+    """
+
+    assert p.shape[-1] == 3
+    assert radial_factor >= 1.0
+    centre = np.nanmean(p.reshape((-1, 3)), axis = 0)
+    p_radius = np.nanmax(np.abs(p.reshape((-1, 3)) - centre), axis = 0)
+    p_radius = maths.sqrt((p_radius * p_radius)[:2])
+    radius = p_radius * radial_factor
+    delta_theta = 2.0 * maths.pi / float(count)
+    ring = np.zeros((count, 3))
+    for i in range(count):
+        theta = float(i) * delta_theta
+        ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
+    return ring
