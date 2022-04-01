@@ -347,7 +347,12 @@ class Surface(BaseSurface):
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
 
-    def set_from_point_set(self, point_set, convexity_parameter = 5.0, reorient = False, make_clockwise = False):
+    def set_from_point_set(self,
+                           point_set,
+                           convexity_parameter = 5.0,
+                           reorient = False,
+                           extend_with_flange = False,
+                           make_clockwise = False):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -357,6 +362,8 @@ class Surface(BaseSurface):
               chance of even a slight concavity
            reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
               z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+           extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
+              points before the triangulation, effectively extending the surface with a flange
            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
               viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
               enforced in the reoriented space
@@ -367,6 +374,8 @@ class Surface(BaseSurface):
             p_xy, self.normal_vector = triangulate.reorient(p)
         else:
             p_xy = p
+        if extend_with_flange:
+            p_xy = np.concatenate((p_xy, triangulate.surrounding_xy_ring(p_xy, 11, 10.0)))
         log.debug('number of points going into dt: ' + str(len(p)))
         t = triangulate.dt(p_xy[:, :2], container_size_factor = convexity_parameter)
         log.debug('number of triangles: ' + str(len(t)))
