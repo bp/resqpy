@@ -352,6 +352,8 @@ class Surface(BaseSurface):
                            convexity_parameter = 5.0,
                            reorient = False,
                            extend_with_flange = False,
+                           flange_point_count = 11,
+                           flange_radial_factor = 10.0,
                            make_clockwise = False):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
@@ -364,6 +366,10 @@ class Surface(BaseSurface):
               z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
            extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
               points before the triangulation, effectively extending the surface with a flange
+           flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
+              extend_with_flange is False
+           flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
+              factor of the maximum radial distance of the points themselves; ignored if extend_with_flange is False
            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
               viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
               enforced in the reoriented space
@@ -375,7 +381,7 @@ class Surface(BaseSurface):
         else:
             p_xy = p
         if extend_with_flange:
-            flange_points = triangulate.surrounding_xy_ring(p_xy, 11, 10.0)
+            flange_points = triangulate.surrounding_xy_ring(p_xy, flange_point_count, flange_radial_factor)
             p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
             if reorient:
                 # reorient back extenstion points into original p space
@@ -387,7 +393,16 @@ class Surface(BaseSurface):
             p_xy_e = p_xy
             p_e = p
         log.debug('number of points going into dt: ' + str(len(p_xy_e)))
-        t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter)
+        success = False
+        try:
+            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter)
+            success = True
+        except AssertionError:
+            pass
+        if not success:
+            log.warning('triangulation failed, trying again with tiny perturbation of points')
+            p_xy_e[:, :2] += (np.random.random((len(p_xy_e), 2)) - 0.5) * 0.001
+            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter * 1.1)
         log.debug('number of triangles: ' + str(len(t)))
         if make_clockwise:
             triangulate.make_all_clockwise_xy(t, p_e)  # modifies t in situ

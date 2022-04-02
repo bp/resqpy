@@ -139,7 +139,6 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
 
         # find triangle that contains this point
         f_t = None
-
         for ti in range(nt):
             if vec.in_triangle_edged(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]], p[p_i]):
                 f_t = ti
