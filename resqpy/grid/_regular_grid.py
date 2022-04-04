@@ -304,27 +304,30 @@ class RegularGrid(Grid):
 
         return half_t
 
-    def centre_point(self, cell_kji0 = None, cache_centre_array = False):
+    def centre_point(self, cell_kji0 = None, cache_centre_array = False, use_origin = True):
         """Returns centre point of a cell or array of centre points of all cells.
 
         arguments:
            cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
               centre point is required; zero based indexing
-           cache_centre_array (boolean, default False): If True, or cell_kji0 is None, an array of centre points
+           cache_centre_array (bool, default False): If True, or cell_kji0 is None, an array of centre points
               is generated and added as an attribute of the grid, with attribute name array_centre_point
+           use_origin (bool, default True): if True, the x, y & z offsets (local origin) are added to the
+              computed cell centre points
 
         returns:
            (x, y, z) 3 element numpy array of floats holding centre point of cell;
            or numpy 3+1D array if cell_kji0 is None
 
         note:
-           resulting coordinates are in the same (local) crs as the grid points
+           resulting coordinates are in the same (local) crs as the grid points if use_origin is True
         """
 
         if cell_kji0 is None:
             cache_centre_array = True
 
-        if cache_centre_array and (not hasattr(self, 'array_centre_point') or self.array_centre_point is None):
+        if cache_centre_array and (not hasattr(self, 'array_centre_point') or self.array_centre_point is None or
+                                   not use_origin):
             centres = np.zeros((self.nk, self.nj, self.ni, 3))
             if self.is_aligned:
                 centres[:, :, :, 0] = np.linspace(0.0,
@@ -347,16 +350,26 @@ class RegularGrid(Grid):
                     centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
                 for i in range(self.ni - 1):
                     centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
-            centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
-            self.array_centre_point = centres
+            centres += 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
+            if use_origin:
+                centres += self.block_origin
+                self.array_centre_point = centres
+        else:
+            centres = None
 
         if cell_kji0 is not None:
-            if hasattr(self, 'array_centre_point') and self.array_centre_point is not None:
+            if centres is not None:
+                return centres[tuple(cell_kji0)]
+            if hasattr(self, 'array_centre_point') and self.array_centre_point is not None and use_origin:
                 return self.array_centre_point[tuple(cell_kji0)]
             float_kji0 = np.array(cell_kji0, dtype = float) + 0.5
-            centre = self.block_origin + np.sum(
-                self.block_dxyz_dkji * np.expand_dims(float_kji0, axis = -1).repeat(3, axis = -1), axis = 0)
+            centre = np.sum(self.block_dxyz_dkji * np.expand_dims(float_kji0, axis = -1).repeat(3, axis = -1), axis = 0)
+            if use_origin:
+                centre += self.block_origin
             return centre
+
+        if centres is not None:
+            return centres
 
         return self.array_centre_point
 
@@ -567,3 +580,8 @@ class RegularGrid(Grid):
         if self.block_dxyz_dkji is None:
             self.is_aligned = None
         self.is_aligned = (np.count_nonzero(self.block_dxyz_dkji * np.array([[1.0, 1, 0], [1, 0, 1], [0, 1, 1]])) == 0)
+
+    def aligned_dxyz(self):
+        """Returns triple float dx, dy, dz cell dimensions for aligned grids only."""
+        assert self.is_aligned
+        return (self.block_dxyz_dkji[2, 0], self.block_dxyz_dkji[1, 1], self.block_dxyz_dkji[0, 2])

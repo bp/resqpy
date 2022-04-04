@@ -139,7 +139,6 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
 
         # find triangle that contains this point
         f_t = None
-
         for ti in range(nt):
             if vec.in_triangle_edged(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]], p[p_i]):
                 f_t = ti
@@ -693,13 +692,15 @@ def triangulated_polygons(p, v, centres = None):
     return points, triangles
 
 
-def reorient(points, rough = True):
+def reorient(points, rough = True, max_dip = None):
     """Returns a reoriented copy of a set of points, such that z axis is approximate normal to average plane of points.
 
     arguments:
        points (numpy float array of shape (..., 3)): the points to be reoriented
        rough (bool, default True): if True, the resulting orientation will be within around 10 degrees of the optimum;
           if False, that reduces to around 2.5 degrees of the optimum
+       max_dip (float, optional): if present, the reorientation of perspective off vertical is
+          limited to this angle in degrees
 
     returns:
        numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
@@ -749,6 +750,15 @@ def reorient(points, rough = True):
 
     rotation_m = vec.rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))
     reverse_m = vec.reverse_rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))  # just the transpose of abpve!
+
+    if max_dip is not None:
+        v = vec.rotate_vector(reverse_m, np.array((0.0, 0.0, 1.0)))
+        incl = vec.inclination(v)
+        if incl > max_dip:
+            azi = vec.azimuth(v)
+            rotation_m = vec.tilt_3d_matrix(azi, max_dip)  # TODO: check whether any reverse direction errors here
+            reverse_m = rotation_m.T
+
     p = points.copy()
 
     return vec.rotate_array(rotation_m, p), vec.rotate_vector(reverse_m, np.array((0.0, 0.0, 1.0))), rotation_m
