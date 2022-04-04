@@ -1211,6 +1211,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
 def find_faces_to_represent_surface_regular(grid,
                                             surface,
                                             name,
+                                            title = None,
                                             centres = None,
                                             progress_fn = None,
                                             consistent_side = False,
@@ -1223,6 +1224,7 @@ def find_faces_to_represent_surface_regular(grid,
         name (str): the feature name to use in the grid connection set
         centres (numpy float array of shape (nk, nj, ni, 3), optional): precomputed cell centre points in
            local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
+        title (str, optional): the citation title to use for the grid connection set; defaults to name
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
@@ -1246,6 +1248,8 @@ def find_faces_to_represent_surface_regular(grid,
 
     assert isinstance(grid, grr.RegularGrid)
     assert grid.is_aligned
+    if title is None:
+        title = name
 
     if progress_fn is not None:
         progress_fn(0.0)
@@ -1414,6 +1418,7 @@ def find_faces_to_represent_surface_regular(grid,
                                 j_sides = j_sides,
                                 i_sides = i_sides,
                                 feature_name = name,
+                                title = title,
                                 create_organizing_objects_where_needed = True)
 
     # NB. following assumes faces have been added to gcs in a particular order!

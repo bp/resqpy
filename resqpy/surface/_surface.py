@@ -351,6 +351,7 @@ class Surface(BaseSurface):
                            point_set,
                            convexity_parameter = 5.0,
                            reorient = False,
+                           reorient_max_dip = None,
                            extend_with_flange = False,
                            flange_point_count = 11,
                            flange_radial_factor = 10.0,
@@ -364,6 +365,8 @@ class Surface(BaseSurface):
               chance of even a slight concavity
            reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
               z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+           reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
+              limited to this angle in degrees
            extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
               points before the triangulation, effectively extending the surface with a flange
            flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
@@ -377,7 +380,7 @@ class Surface(BaseSurface):
 
         p = point_set.full_array_ref()
         if reorient:
-            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(p)
+            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(p, max_dip = reorient_max_dip)
         else:
             p_xy = p
         if extend_with_flange:
