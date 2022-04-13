@@ -178,6 +178,7 @@ class RegularGrid(Grid):
         if set_points_cached:
             self.make_regular_points_cached()
 
+        new_crs = None
         shift_origin = np.any(origin != 0.0) and uuid is None and not as_irregular_grid
         if crs_uuid is None and self.extra_metadata is not None:
             crs_uuid = bu.uuid_from_string(self.extra_metadata.get('crs uuid'))
@@ -198,6 +199,7 @@ class RegularGrid(Grid):
             new_crs.create_xml(reuse = True)
             crs_uuid = new_crs.uuid
         self.crs_uuid = crs_uuid
+        self.crs = rqc.Crs(parent_model, uuid = crs_uuid) if new_crs is None else new_crs
 
         if self.uuid is None:
             self.uuid = bu.new_uuid()
