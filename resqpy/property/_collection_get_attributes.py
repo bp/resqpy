@@ -414,6 +414,14 @@ def _supporting_shape_wellboreframe(support, indexable_element):
     return shape_list
 
 
+def _supporting_shape_wellboremarkerframe(support, indexable_element):
+    if indexable_element is None or indexable_element == 'nodes':
+        shape_list = [support.node_count]
+    elif indexable_element == 'intervals':
+        shape_list = [support.node_count - 1]
+    return shape_list
+
+
 def _supporting_shape_blockedwell(support, indexable_element):
     if indexable_element is None or indexable_element == 'intervals':
         shape_list = [support.node_count - 1]  # all intervals, including unblocked
@@ -462,7 +470,7 @@ def _get_indexable_element(indexable_element, support_type):
                 'obj_UnstructuredGridRepresentation'
         ]:
             indexable_element = 'cells'
-        elif support_type == 'obj_WellboreFrameRepresentation':
+        elif support_type in ['obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation']:
             indexable_element = 'nodes'  # note: could be 'intervals'
         elif support_type == 'obj_GridConnectionSetRepresentation':
             indexable_element = 'faces'

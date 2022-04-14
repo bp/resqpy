@@ -1,6 +1,6 @@
 """Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '1st December 2021'
+version = '14th April 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -122,7 +122,8 @@ class PropertyCollection():
         Arguments:
            support_uuid: the uuid of the supporting representation which the properties in this collection are for
            support: a grid.Grid, unstructured.UnstructuredGrid (or derived class), well.WellboreFrame, well.BlockedWell,
-              surface.Mesh, or fault.GridConnectionSet object which the properties in this collection are for
+              surface.Mesh, well.WellboreMarkerFrame or fault.GridConnectionSet object which the properties in this
+              collection are for
            model (model.Model object, optional): if present, the model associated with this collection is set to this;
               otherwise the model is assigned from the supporting object
            modify_parts (boolean, default True): if True, any parts already in this collection have their individual
@@ -184,6 +185,9 @@ class PropertyCollection():
                 rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid
         ]:
             shape_list, support = pcga._supporting_shape_other(support, indexable_element)
+
+        elif isinstance(support, rqw.WellboreMarkerFrame):
+            shape_list = pcga._supporting_shape_wellboremarkerframe(support, indexable_element)
 
         else:
             raise Exception(f'unsupported support class {type(support)} for property')
