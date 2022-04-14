@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
+from numpy.testing import assert_array_almost_equal
 
 import resqpy.well
 import resqpy.organize as rqo
 import resqpy.olio.uuid as bu
+import resqpy.property as rqp
 from resqpy.model import Model
 
 
@@ -293,3 +295,117 @@ def test_find_marker_from_index(example_model_and_crs):
     # --------- Assert ----------
     assert bu.matching_uuids(wellbore_marker_frame.marker_list[1].uuid, found_woc_marker.uuid)
     assert index_error_result is None
+
+
+def test_property_collection(example_model_and_crs):
+    # Create a WellboreMarkerFrame object
+    # Load example model from a fixture
+    model, crs = example_model_and_crs
+
+    # Create a trajectory
+    well_name = 'Banoffee'
+    elevation = 100
+    datum = resqpy.well.MdDatum(parent_model = model,
+                                crs_uuid = crs.uuid,
+                                location = (0, 0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds = np.array([300.0, 310.0, 330.0])
+    zs = mds - elevation
+    source_dataframe = pd.DataFrame({
+        'MD': mds,
+        'X': [150.0, 165.0, 180.0],
+        'Y': [240.0, 260.0, 290.0],
+        'Z': zs,
+    })
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        data_frame = source_dataframe,
+                                        well_name = well_name,
+                                        md_datum = datum,
+                                        length_uom = 'm')
+    trajectory.write_hdf5()
+    trajectory.create_xml()
+    trajectory_uuid = trajectory.uuid
+
+    # Create features and interpretations
+    horizon_feature_1 = rqo.GeneticBoundaryFeature(parent_model = model,
+                                                   kind = 'horizon',
+                                                   feature_name = 'horizon_feature_1')
+    horizon_feature_1.create_xml()
+    horizon_interp_1 = rqo.HorizonInterpretation(parent_model = model,
+                                                 title = 'horizon_interp_1',
+                                                 genetic_boundary_feature = horizon_feature_1,
+                                                 sequence_stratigraphy_surface = 'flooding',
+                                                 boundary_relation_list = ['conformable'])
+    horizon_interp_1.create_xml()
+
+    woc_feature_1 = rqo.FluidBoundaryFeature(parent_model = model, kind = 'water oil contact', feature_name = 'woc_1')
+    # fluid boundary feature does not have an associated interpretation
+    woc_feature_1.create_xml()
+
+    fault_feature_1 = rqo.TectonicBoundaryFeature(parent_model = model,
+                                                  kind = 'fault',
+                                                  feature_name = 'fault_feature_1')
+    fault_feature_1.create_xml()
+    fault_interp_1 = rqo.FaultInterpretation(parent_model = model,
+                                             title = 'fault_interp_1',
+                                             tectonic_boundary_feature = fault_feature_1,
+                                             is_normal = True,
+                                             maximum_throw = 15)
+    fault_interp_1.create_xml()
+
+    df = pd.DataFrame({
+        'MD': [400.0, 410.0, 430.0],
+        'Boundary_Feature_Type': ['horizon', 'water oil contact', 'fault'],
+        'Marker_Citation_Title': ['marker_horizon_1', 'marker_woc_1', 'marker_fault_1'],
+        'Interp_Citation_Title': ['horizon_interp_1', None, 'fault_interp_1'],
+    })
+
+    # Create a wellbore marker frame from a dataframe
+    wellbore_marker_frame = resqpy.well.WellboreMarkerFrame.from_dataframe(
+        parent_model = model,
+        dataframe = df,
+        trajectory_uuid = trajectory_uuid,
+        title = 'WBF1',
+        originator = 'Human',
+        extra_metadata = {'target_reservoir': 'treacle'})
+    wellbore_marker_frame.write_hdf5()
+    wellbore_marker_frame.create_xml()
+
+    # create a property collection for the wellbore marker frame and add a couple of properties
+    pc = rqp.PropertyCollection(support = wellbore_marker_frame)
+    assert pc is not None
+    node_prop = np.array([123.45, -456.78, 987.65])
+    pc.add_cached_array_to_imported_list(node_prop,
+                                         source_info = 'unit test',
+                                         keyword = 'node prop',
+                                         uom = 'm',
+                                         property_kind = 'length',
+                                         indexable_element = 'nodes')
+    interval_prop = np.array([3, 1], dtype = int)
+    pc.add_cached_array_to_imported_list(interval_prop,
+                                         source_info = 'unit test',
+                                         keyword = 'interval prop',
+                                         discrete = True,
+                                         null_value = -1,
+                                         property_kind = 'discrete',
+                                         indexable_element = 'intervals')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    del pc
+
+    # reload the property collection
+    pc = rqp.PropertyCollection(support = wellbore_marker_frame)
+    node_prop_part = model.part(obj_type = 'ContinuousProperty', title = 'node prop')
+    interval_prop_part = model.part(obj_type = 'DiscreteProperty', title = 'interval prop')
+
+    # check the property arrays
+    assert pc is not None
+    assert pc.number_of_parts() == 2
+    assert node_prop_part is not None
+    assert interval_prop_part is not None
+    assert node_prop_part in pc.parts()
+    assert interval_prop_part in pc.parts()
+    assert_array_almost_equal(pc.cached_part_array_ref(node_prop_part), [123.45, -456.78, 987.65])
+    int_prop_array = pc.cached_part_array_ref(interval_prop_part)
+    assert int_prop_array.size == 2
+    assert np.all(int_prop_array == (3, 1))
