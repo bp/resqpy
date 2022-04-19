@@ -276,7 +276,7 @@ class Trajectory(BaseResqpy):
             ds_uuid = self.model.uuid(obj_type = 'DeviationSurveyRepresentation',
                                       uuid = ds_uuid)  # check part is present
             if ds_uuid is not None:
-                self.deviation_survey = DeviationSurvey(self.model, uuid = ds_uuid, md_datum = self.md_datum)
+                self.deviation_survey = DeviationSurvey(self.model, uuid = ds_uuid)
         interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
         if interp_uuid is None:
             self.wellbore_interpretation = None
