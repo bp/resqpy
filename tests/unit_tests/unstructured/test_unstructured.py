@@ -344,7 +344,7 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
     # create a very similar grid using explicit triangulation arguments
 
     # make the same Delauney triangulation
-    triangles = triangulation.dt(pentagon_points)
+    triangles = triangulation.dt(pentagon_points, algorithm="simple")
 
     # slightly shrink pentagon points to be within area of surfaces
     for i in range(len(pentagon_points)):

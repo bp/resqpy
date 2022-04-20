@@ -115,3 +115,29 @@ def test_voronoi():
                                   set_crs = crs.uuid,
                                   title = 'v cell')
             assert v_cell.point_is_inside_xy(points_2[len(c_hept) + cell])
+
+
+def test_delaunay_triagulation():
+    # Arrange
+    points = np.array([
+        [0.84500347, 0.84401839],
+        [0.86625247, 0.05204284],
+        [0.1220099,  0.56185864],
+        [0.35034472, 0.02159957],
+        [0.23992621, 0.23115569],
+        [0.08040452, 0.75776318],
+        [0.28902254, 0.86261331],
+        [0.85916324, 0.63093401],
+        [0.87953801, 0.27585486],
+        [0.10630805, 0.46939924],
+    ])
+    def sort_array(array):
+        return np.sort(array)[np.lexsort((np.sort(array)[:,2], np.sort(array)[:,1], np.sort(array)[:,0]))]
+
+    # Act
+    tri_simple, hull_indices_simple = tri._dt_simple(points)
+    tri_scipy, hull_indices_scipy = tri._dt_scipy(points)
+
+    # Assert
+    np.testing.assert_array_equal(sort_array(tri_simple), sort_array(tri_scipy))
+    np.testing.assert_array_equal(hull_indices_simple, hull_indices_scipy)

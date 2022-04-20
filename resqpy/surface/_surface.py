@@ -398,7 +398,7 @@ class Surface(BaseSurface):
         log.debug('number of points going into dt: ' + str(len(p_xy_e)))
         success = False
         try:
-            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter)
+            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter, algorithm="simple")
             success = True
         except AssertionError:
             pass

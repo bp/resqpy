@@ -228,7 +228,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     return tri_set, external_pi
 
 
-def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
+def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
     """Returns the Delauney Triangulation of 2D point set p.
 
     arguments:
@@ -254,20 +254,21 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
     """
     assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delauney Triangulation'
 
-    if not algorithm:
-        algorithm = 'simple'
-
-    if algorithm == 'simple':
-        t, boundary = _dt_simple(p,
-                                 plot_fn = plot_fn,
-                                 progress_fn = progress_fn,
-                                 container_size_factor = container_size_factor)
-        if return_hull:
-            return t, vec.clockwise_sorted_indices(p, boundary)
-        else:
-            return t
+    if algorithm == "scipy":
+        tri, boundary = _dt_scipy(p)
+    elif algorithm == 'simple':
+        tri, boundary = _dt_simple(p,
+            plot_fn = plot_fn,
+            progress_fn = progress_fn,
+            container_size_factor = container_size_factor
+        )
     else:
         raise Exception('unrecognised Delauney Triangulation algorithm name')
+
+    if return_hull:
+        return tri, vec.clockwise_sorted_indices(p, boundary)
+    else:
+        return tri
 
 
 def ccc(p1, p2, p3):
