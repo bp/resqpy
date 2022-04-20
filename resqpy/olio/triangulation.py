@@ -6,8 +6,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
+from typing import Tuple
 import math as maths
 import numpy as np
+from scipy.spatial import Delaunay
 
 import resqpy.crs as rqc
 import resqpy.lines as rql
@@ -19,6 +21,26 @@ import resqpy.olio.vector_utilities as vec
 # def _ccw_t(p, t):   # puts triangle vertex indices into anti-clockwise order, in situ
 #    if vec.clockwise(p[t[0]], p[t[1]], p[t[2]]) > 0.0:
 #       t[1], t[2] = t[2], t[1]
+
+def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Calculates the Delaunay triangulation for an array of points and the convex hull indices.
+    
+    Args:
+        points (np.ndarray): Coordinates of the points to triangulate. Array has shape
+            (npoints, ndim).
+
+    Returns:
+        (tuple): tuple containing:
+
+            simplices (np.ndarray): Indices of the points forming the triangulation simplices. Array
+                has shape (nsimplex, ndim+1).
+            convex_hull_indices (np.ndarray): Indices of the points forming the convex hull. Array
+                has shape (nhull,).
+    """
+    delaunay = Delaunay(points)
+    simplices = delaunay.simplices
+    convex_hull_indices = np.unique(delaunay.convex_hull)
+    return simplices, convex_hull_indices
 
 
 def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = None):
