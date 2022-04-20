@@ -305,10 +305,10 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                             data[col].extend([wellspec_dtype[col](v)])
                         if data[col][-1] != np.NaN:
                             all_null = False
-            data = {k: v for k, v in data.items() if v}
             if all_null:
                 log.warning(f'skipping null wellspec data for well {well_name}')
                 continue
+            data = {k: v for k, v in data.items() if v}
             df = pd.DataFrame(data, columns = df_col)
             if well:
                 well_dict[well] = df
