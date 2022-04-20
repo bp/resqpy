@@ -22,6 +22,7 @@ import resqpy.olio.vector_utilities as vec
 #    if vec.clockwise(p[t[0]], p[t[1]], p[t[2]]) > 0.0:
 #       t[1], t[2] = t[2], t[1]
 
+
 def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Calculates the Delaunay triangulation for an array of points and the convex hull indices.
     
@@ -258,10 +259,9 @@ def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_siz
         tri, boundary = _dt_scipy(p)
     elif algorithm == 'simple':
         tri, boundary = _dt_simple(p,
-            plot_fn = plot_fn,
-            progress_fn = progress_fn,
-            container_size_factor = container_size_factor
-        )
+                                   plot_fn = plot_fn,
+                                   progress_fn = progress_fn,
+                                   container_size_factor = container_size_factor)
     else:
         raise Exception('unrecognised Delauney Triangulation algorithm name')
 

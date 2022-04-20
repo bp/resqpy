@@ -122,7 +122,7 @@ def test_delaunay_triagulation():
     points = np.array([
         [0.84500347, 0.84401839],
         [0.86625247, 0.05204284],
-        [0.1220099,  0.56185864],
+        [0.1220099, 0.56185864],
         [0.35034472, 0.02159957],
         [0.23992621, 0.23115569],
         [0.08040452, 0.75776318],
@@ -131,8 +131,9 @@ def test_delaunay_triagulation():
         [0.87953801, 0.27585486],
         [0.10630805, 0.46939924],
     ])
+
     def sort_array(array):
-        return np.sort(array)[np.lexsort((np.sort(array)[:,2], np.sort(array)[:,1], np.sort(array)[:,0]))]
+        return np.sort(array)[np.lexsort((np.sort(array)[:, 2], np.sort(array)[:, 1], np.sort(array)[:, 0]))]
 
     # Act
     tri_simple, hull_indices_simple = tri._dt_simple(points)
