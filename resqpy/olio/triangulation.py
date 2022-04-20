@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 from typing import Tuple
 import math as maths
 import numpy as np
-from scipy.spatial import Delaunay
+from scipy.spatial import Delaunay  # type: ignore
 
 import resqpy.crs as rqc
 import resqpy.lines as rql
