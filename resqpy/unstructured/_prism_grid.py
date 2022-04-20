@@ -389,7 +389,7 @@ class VerticalPrismGrid(PrismGrid):
         assert area_of_interest.isclosed and area_of_interest.is_convex()
 
         # compute Delauney triangulation
-        delauney_t, hull_indices = tri.dt(seed_xy, return_hull = True)
+        delauney_t, hull_indices = tri.dt(seed_xy, return_hull = True, algorithm = "simple")
 
         # construct Voronoi graph
         voronoi_points, voronoi_indices = tri.voronoi(seed_xy, delauney_t, hull_indices, area_of_interest)
