@@ -703,7 +703,7 @@ class UnstructuredGrid(BaseResqpy):
         """
 
         face_points = self.planar_face_points(face_index, xy_plane = True)
-        local_triangulation = tri.dt(face_points, algorithm = "simple")  # returns int array of shape (M, 3)
+        local_triangulation = tri.dt(face_points, algorithm = 'scipy')  # returns int array of shape (M, 3)
         assert len(
             local_triangulation) == len(face_points) - 2, 'face triangulation failure (concave edges when planar?)'
         if local_nodes:

@@ -236,6 +236,7 @@ class Surface(BaseSurface):
         self.triangles = None  # clear cached arrays for surface
         self.points = None
         self.uuid = bu.new_uuid()  # hope this doesn't cause problems
+        assert self.root is None
 
     def set_to_trimmed_surface(self, large_surface, xyz_box = None, xy_polygon = None):
         """Populate this (empty) surface with triangles and points which overlap with a trimming volume.
@@ -398,7 +399,7 @@ class Surface(BaseSurface):
         log.debug('number of points going into dt: ' + str(len(p_xy_e)))
         success = False
         try:
-            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter, algorithm = "simple")
+            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter, algorithm = "scipy")
             success = True
         except AssertionError:
             pass
