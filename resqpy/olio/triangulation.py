@@ -37,8 +37,11 @@ def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
                 has shape (nsimplex, ndim+1).
             convex_hull_indices (np.ndarray): Indices of the points forming the convex hull. Array
                 has shape (nhull,).
+
+    Note:
+        the triangulation is carried out on the points as projected onto the xy plane
     """
-    delaunay = Delaunay(points)
+    delaunay = Delaunay(points[..., :2])
     simplices = delaunay.simplices
     convex_hull_indices = np.unique(delaunay.convex_hull)
     return simplices, convex_hull_indices
@@ -234,7 +237,7 @@ def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_siz
 
     arguments:
        p (numpy float array of shape (N, 2): the x,y coordinates of the points
-       algorithm (string, optional): selects which algorithm to use; current options: ['simple'];
+       algorithm (string, optional): selects which algorithm to use; current options: ['simple', 'scipy'];
           if None, the current best algorithm is selected
        plot_fn (function of form f(p, t), optional): if present, this function is called each time the
           algorithm feels it is worth refreshing a plot of the progress; p is a copy of the point set,
@@ -252,10 +255,17 @@ def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_siz
           per triangle in the Delauney Triangulation - and if return_hull is True, another int array
           of shape (B,) - being indices into p of the clockwise ordered points on the boundary of
           the triangulation
+
+    notes:
+       the plot_fn, progress_fn and container_size_factor arguments are only used by the 'simple' algorithm;
+       if points p are 3D, the projection onto the xy plane is used for the triangulation
     """
     assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delauney Triangulation'
 
-    if algorithm == "scipy":
+    if not algorithm:
+        algorithm = 'scipy'
+
+    if algorithm == 'scipy':
         tri, boundary = _dt_scipy(p)
     elif algorithm == 'simple':
         tri, boundary = _dt_simple(p,
@@ -263,7 +273,9 @@ def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_siz
                                    progress_fn = progress_fn,
                                    container_size_factor = container_size_factor)
     else:
-        raise Exception('unrecognised Delauney Triangulation algorithm name')
+        raise Exception(f'unrecognised Delauney Triangulation algorithm name: {algorithm}')
+
+    assert tri.ndim == 2 and tri.shape[1] == 3
 
     if return_hull:
         return tri, vec.clockwise_sorted_indices(p, boundary)
