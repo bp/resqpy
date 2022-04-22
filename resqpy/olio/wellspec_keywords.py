@@ -1,6 +1,6 @@
 """Module defining dictionary of nexus WELLSPEC column keywords"""
 
-version = '29th April 2021'
+version = '19th April 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -315,6 +315,6 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                 break  # NB. if more than one table for a well, this function returns first, Nexus uses last
             well_dict[well_name] = df
 
-    #   log.debug(f'load-wellspecs returning:\n{well_dict}')
+    # log.debug(f'load-wellspecs returning:\n{well_dict}')
 
     return well_dict

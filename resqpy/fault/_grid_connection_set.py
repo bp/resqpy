@@ -33,6 +33,7 @@ class GridConnectionSet(BaseResqpy):
     def __init__(self,
                  parent_model,
                  uuid = None,
+                 cache_arrays = False,
                  find_properties = True,
                  grid = None,
                  ascii_load_format = None,
@@ -186,8 +187,11 @@ class GridConnectionSet(BaseResqpy):
                                                k_sides = k_sides,
                                                j_sides = j_sides,
                                                i_sides = i_sides)
-        elif find_properties:
-            self.extract_property_collection()
+        else:
+            if cache_arrays:
+                self.cache_arrays()
+            if find_properties:
+                self.extract_property_collection()
 
     def _load_from_xml(self):
         root = self.root
