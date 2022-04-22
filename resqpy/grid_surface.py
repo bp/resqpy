@@ -1259,7 +1259,7 @@ def find_faces_to_represent_surface_regular(grid,
 
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
     if centres is None:
-        centres = grid.centre_point()
+        centres = grid.centre_point(use_origin = True)
     if consistent_side:
         log.debug('making all triangles clockwise')
         surface.make_all_clockwise_xy(
@@ -1306,6 +1306,10 @@ def find_faces_to_represent_surface_regular(grid,
             if xyz is None:  # meeting point is outwith grid
                 continue
             k_face = int((xyz[2] - centres[0, k_j, k_i, 2]) / grid_dxyz[2])
+            if k_face == -1:  # handle rounding precision issues
+                k_face = 0
+            elif k_face == grid.nk - 1:
+                k_face -= 1
             assert 0 <= k_face < grid.nk - 1
             k_faces[k_face, k_j, k_i] = True
             if consistent_side:
@@ -1346,6 +1350,10 @@ def find_faces_to_represent_surface_regular(grid,
             if xyz is None:  # meeting point is outwith grid
                 continue
             j_face = int((xyz[1] - centres[j_k, 0, j_i, 1]) / grid_dxyz[1])
+            if j_face == -1:  # handle rounding precision issues
+                j_face = 0
+            elif j_face == grid.nj - 1:
+                j_face -= 1
             assert 0 <= j_face < grid.nj - 1
             j_faces[j_k, j_face, j_i] = True
             if consistent_side:
@@ -1385,6 +1393,10 @@ def find_faces_to_represent_surface_regular(grid,
             if xyz is None:  # meeting point is outwith grid
                 continue
             i_face = int((xyz[0] - centres[i_k, i_j, 0, 0]) / grid_dxyz[0])
+            if i_face == -1:  # handle rounding precision issues
+                i_face = 0
+            elif i_face == grid.ni - 1:
+                i_face -= 1
             assert 0 <= i_face < grid.ni - 1
             i_faces[i_k, i_j, i_face] = True
             if consistent_side:
