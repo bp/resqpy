@@ -15,6 +15,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
+import resqpy.organize as rqo
 
 from ._trajectory import Trajectory
 from ._wellbore_marker import WellboreMarker
@@ -83,6 +84,7 @@ class WellboreMarkerFrame(BaseResqpy):
                        boundary_feature_type_col = 'Boundary_Feature_Type',
                        marker_citation_title_col = 'Marker_Citation_Title',
                        interp_citation_title_col = 'Interp_Citation_Title',
+                       create_organizing_objects_where_needed = True,
                        title = None,
                        originator = None,
                        extra_metadata = None):
@@ -99,6 +101,8 @@ class WellboreMarkerFrame(BaseResqpy):
             "free water contact", "gas oil contact", "gas water contact", "water oil contact", "seal"
            marker_citation_title_col (string, default 'Marker_Citation_Title'): the name of the column holding the marker citation title
            interp_citation_title_col (string, default 'Interp_Citation_Title'): the name of the column holding the interpretation
+           create_organizing_objects_where_needed (bool, default True): if True, interpretation and feature objects will be created
+              when needed if they do not already exist; if False, an exception will be raised if a required interpretation is missing
            citation title
            title (str, optional): the citation title to use for a new wellbore marker frame;
               ignored if uuid is not None
@@ -120,9 +124,9 @@ class WellboreMarkerFrame(BaseResqpy):
 
         # verify that the boundary feature types specified are valid
         for i, boundary_feature in enumerate(dataframe[boundary_feature_type_col]):
-            assert boundary_feature in (["fault", "geobody", "horizon", "gas down to", "oil down to", "water down to",
-                                      "gas up to", "oil up to", "water up to", "free water contact", "gas oil contact",
-                                      "gas water contact", "water oil contact", "seal"]),\
+            assert boundary_feature.lower() in (["fault", "geobody", "horizon", "gas down to", "oil down to", "water down to",
+                                                 "gas up to", "oil up to", "water up to", "free water contact", "gas oil contact",
+                                                 "gas water contact", "water oil contact", "seal"]),\
                 f"invalid boundary feature type specified in row {i}"
 
         # create a wellbore marker object for each of the rows of the dataframe
@@ -134,7 +138,8 @@ class WellboreMarkerFrame(BaseResqpy):
                 parent_model = parent_model,
                 row = row,
                 row_marker_type = row_marker_type,
-                interp_citation_title_col = interp_citation_title_col)
+                interp_citation_title_col = interp_citation_title_col,
+                create_organizing_objects_where_needed = create_organizing_objects_where_needed)
             row_marker_citation_title = row[marker_citation_title_col]
             row_wellbore_marker_object = WellboreMarker(parent_model = parent_model,
                                                         parent_frame = WellboreMarkerFrame,
@@ -158,9 +163,11 @@ class WellboreMarkerFrame(BaseResqpy):
         return wellbore_marker_frame
 
     @staticmethod
-    def __parse_dataframe_row_for_interp_uuid(parent_model, row, row_marker_type, interp_citation_title_col):
+    def __parse_dataframe_row_for_interp_uuid(parent_model, row, row_marker_type, interp_citation_title_col,
+                                              create_organizing_objects_where_needed):
         """Extract the uuid of the interpretation object that the marker relates to from a row in the dataframe."""
 
+        row_marker_type = row_marker_type.lower()
         if row_marker_type in ['horizon', 'fault', 'geobody']:
             row_interp_type = 'obj_' + row_marker_type.capitalize() + 'Interpretation'
         else:
@@ -168,9 +175,13 @@ class WellboreMarkerFrame(BaseResqpy):
         try:
             if row_interp_type is not None:
                 row_interp_citation_title = row[interp_citation_title_col]
-                row_interp_part = parent_model.part(obj_type = row_interp_type, title = row_interp_citation_title)
-                row_interp_uuid = parent_model.uuid_for_part(part_name = row_interp_part)
-                assert row_interp_uuid is not None, 'interpretation uuid cannot be found'
+                row_interp_uuid = parent_model.uuid(obj_type = row_interp_type, title = row_interp_citation_title)
+                if row_interp_uuid is None:
+                    if create_organizing_objects_where_needed:
+                        row_interp_uuid = WellboreMarkerFrame._create_feature_and_interpretation(
+                            parent_model, row_marker_type, row_interp_citation_title)
+                    else:
+                        raise ValueError(f'interpretation uuid cannot be found for title {row_interp_citation_title}')
             else:
                 # no interpretation exists for the boundary feature
                 row_interp_uuid = None
@@ -178,6 +189,27 @@ class WellboreMarkerFrame(BaseResqpy):
             row_interp_uuid = None
 
         return row_interp_uuid
+
+    @staticmethod
+    def _create_feature_and_interpretation(model, feature_type, feature_name):
+        # includes create_xml() for created organisational objects
+        feature_type = feature_type.lower()
+        assert feature_type in ['fault', 'horizon', 'geobody']
+        if feature_type == 'fault':
+            tbf = rqo.TectonicBoundaryFeature(model, kind = 'fault', feature_name = feature_name)
+        else:
+            tbf = rqo.GeneticBoundaryFeature(model, kind = feature_type, feature_name = feature_name)
+        tbf.create_xml(reuse = True)
+        if feature_type == 'fault':
+            fi = rqo.FaultInterpretation(model, tectonic_boundary_feature = tbf, is_normal = True)
+            # todo: set is_normal correctly
+        elif feature_type == 'horizon':
+            fi = rqo.HorizonInterpretation(model, genetic_boundary_feature = tbf)
+            # todo: support boundary relation list and sequence stratigraphy surface
+        else:  # geobody boundary
+            fi = rqo.GeobodyBoundaryInterpretation(model, genetic_boundary_feature = tbf)
+        fi.create_xml(reuse = True)
+        return fi.uuid
 
     def _load_from_xml(self):
         """Loads the wellbore marker frame object from an xml node (and associated hdf5 data).
