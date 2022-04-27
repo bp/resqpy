@@ -1537,6 +1537,9 @@ def trajectory_grid_overlap(trajectory, grid, lazy = False):
         t_crs = rqc.Crs(trajectory.model, uuid = trajectory.crs_uuid)
         g_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
         t_crs.convert_array_to(g_crs, traj_box)
+        t_box = traj_box.copy()
+        traj_box[0] = np.min(t_box, axis = 0)
+        traj_box[1] = np.max(t_box, axis = 0)
     log.debug(f'overlap check: traj: {traj_box}; grid{grid_box}; overlap: {bx.boxes_overlap(traj_box, grid_box)}')
     return bx.boxes_overlap(traj_box, grid_box)
 
