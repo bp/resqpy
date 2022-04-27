@@ -285,6 +285,9 @@ class WellboreMarkerFrame(BaseResqpy):
 
         assert type(add_as_part) is bool
 
+        if not self.title:
+            self.title = title
+
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
 
