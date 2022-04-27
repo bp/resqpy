@@ -63,8 +63,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Run pytest
-        run: poetry run pytest --cov=resqpy --junitxml=pytest.xml
-
+        run: poetry run pytest --cov=resqpy --cov-report=xml --junitxml=pytest.xml
+    
       - name: Upload pytest artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
@@ -76,7 +76,7 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: pytest.xml
+          files: coverage.xml
           fail_ci_if_error: true
 
   legacy-dependencies:
