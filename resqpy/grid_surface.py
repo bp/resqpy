@@ -51,7 +51,7 @@ class GridSkin:
             # build a simplified two triangle surface for each of the six skin surfaces
             xyz_box = grid.xyz_box(local = True)
             for axis in range(3):
-                if grid.block_dxyz_dkji[3 - axis, axis] < 0.0:
+                if grid.block_dxyz_dkji[2 - axis, axis] < 0.0:
                     xyz_box[:, axis] = (xyz_box[1, axis], xyz_box[0, axis])
             min_x, min_y, min_z = xyz_box[0]
             max_x, max_y, max_z = xyz_box[1]
@@ -1593,6 +1593,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     if not flavour.startswith('Ijk'):
         raise NotImplementedError('well blocking only implemented for IjkGridRepresentation')
     is_regular = (flavour == 'IjkBlockGrid') and hasattr(grid, 'is_aligned') and grid.is_aligned
+    log.debug(f"well blocking: grid {'is' if is_regular else 'is not'} regular and aligned")
 
     if grid.k_gaps:
         use_single_layer_tactics = False
@@ -1603,7 +1604,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     traj_xyz = trajectory.control_points
 
     if not trajectory_grid_overlap(trajectory, grid):
-        log.error(f'no overlap of trajectory with grid for trajectory uuid: {trajectory.uuid}')
+        log.error(f'no overlap of trajectory xyz box with grid for trajectory uuid: {trajectory.uuid}')
         return None
     grid_box = grid.xyz_box(lazy = False, local = True).copy()
     if grid_crs.z_inc_down:
@@ -1624,6 +1625,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
         knot += 1
     log.debug(f'skipped trajectory to knot: {knot}')
     if knot == knot_count:
+        log.warning('no well blocking due to entire trajectory being shallower than top of grid')
         return None  # entire well is above grid
 
     if lazy:
@@ -1638,9 +1640,9 @@ def populate_blocked_well_from_trajectory(blocked_well,
             heal_faults = False,
             quad_triangles = quad_triangles,
             is_regular = is_regular)
-        log.debug(f'top intersection x,y,z: {xyz}; knot: {entry_knot}; col j0,i0: {col_ji0[0]}, {col_ji0[1]}')
+        log.debug(f'lazy top intersection x,y,z: {xyz}; knot: {entry_knot}; col j0,i0: {col_ji0[0]}, {col_ji0[1]}')
         if xyz is None:
-            log.error('failed to find intersection of trajectory with top surface of grid')
+            log.error('failed to lazily find intersection of trajectory with top surface of grid')
             return None
         cell_kji0 = np.array((0, col_ji0[0], col_ji0[1]), dtype = int)
         axis = 0
@@ -2083,12 +2085,16 @@ def __trajectory_init(blocked_well, grid, grid_crs):
         # create a local trajectory object for crs alignment of control points with grid
         # NB. temporary objects, relationships left in a mess
         # model = rq.Model(create_basics = True)
+        log.debug(f'creating temp trajectory in grid crs for well {rqw.well_name(blocked_well.trajectory)}')
         model = blocked_well.trajectory.model
         trajectory = rqw.Trajectory(model, uuid = blocked_well.trajectory.uuid)
         assert trajectory is not None and trajectory.control_points is not None
         traj_crs = rqc.Crs(model, uuid = trajectory.crs_uuid)
         traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs
         trajectory.crs_uuid = grid_crs.uuid
+        log.debug(
+            f'temp traj xyz box: {np.min(trajectory.control_points, axis = 0)} to {np.max(trajectory.control_points, axis = 0)}'
+        )
         # note: any represented interpretation object will not be present in the temporary model
     return trajectory
 
