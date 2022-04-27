@@ -1537,6 +1537,9 @@ def trajectory_grid_overlap(trajectory, grid, lazy = False):
         t_crs = rqc.Crs(trajectory.model, uuid = trajectory.crs_uuid)
         g_crs = rqc.Crs(grid.model, uuid = grid.crs_uuid)
         t_crs.convert_array_to(g_crs, traj_box)
+        t_box = traj_box.copy()
+        traj_box[0] = np.min(t_box, axis = 0)
+        traj_box[1] = np.max(t_box, axis = 0)
     log.debug(f'overlap check: traj: {traj_box}; grid{grid_box}; overlap: {bx.boxes_overlap(traj_box, grid_box)}')
     return bx.boxes_overlap(traj_box, grid_box)
 
@@ -2082,9 +2085,10 @@ def __trajectory_init(blocked_well, grid, grid_crs):
         # model = rq.Model(create_basics = True)
         model = blocked_well.trajectory.model
         trajectory = rqw.Trajectory(model, uuid = blocked_well.trajectory.uuid)
-        assert trajectory is not None
+        assert trajectory is not None and trajectory.control_points is not None
         traj_crs = rqc.Crs(model, uuid = trajectory.crs_uuid)
         traj_crs.convert_array_to(grid_crs, trajectory.control_points)  # trajectory xyz converted in situ to grid's crs
+        trajectory.crs_uuid = grid_crs.uuid
         # note: any represented interpretation object will not be present in the temporary model
     return trajectory
 
