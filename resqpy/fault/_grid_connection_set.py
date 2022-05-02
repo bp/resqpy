@@ -904,11 +904,12 @@ class GridConnectionSet(BaseResqpy):
         self.property_collection.add_to_imported_list_sampling_other_collection(other.property_collection,
                                                                                 selected_indices)
 
-    def list_of_cell_face_pairs_for_feature_index(self, feature_index):
+    def list_of_cell_face_pairs_for_feature_index(self, feature_index = None):
         """Returns list of cell face pairs contributing to feature (fault) with given index.
 
         arguments:
-           feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
+           feature_index (non-negative integer, optional): the index into the ordered feature list
+               (fault interpretation list); if None, all cell face pairs are returned
 
         returns:
            (cell_index_pairs, face_index_pairs) or (cell_index_pairs, face_index_pairs, grid_index_pairs)
@@ -922,9 +923,12 @@ class GridConnectionSet(BaseResqpy):
         """
 
         self.cache_arrays()
-        if self.feature_indices is None:
-            return None
-        pairs_tuple = self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
+        if feature_index is None:
+            pairs_tuple = (self.cell_index_pairs, self.face_index_pairs)
+        else:
+            if self.feature_indices is None:
+                return None
+            pairs_tuple = self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
         if len(self.grid_list) == 1:
             raw_cell_pairs, raw_face_pairs = pairs_tuple
             grid_pairs = None
@@ -955,10 +959,10 @@ class GridConnectionSet(BaseResqpy):
         """
 
         cell_pairs, face_pairs = self.list_of_cell_face_pairs_for_feature_index(feature_index)
-        simple_j_set = set(
-        )  # set of (j0, i0) pairs of column indices where J+ faces contribute, as 2 element numpy arrays
-        simple_i_set = set(
-        )  # set of (j0, i0) pairs of column indices where I+ faces contribute, as 2 element numpy arrays
+        # set of (j0, i0) pairs of column indices where J+ faces contribute, as 2 element numpy arrays
+        simple_j_set = set()
+        # set of (j0, i0) pairs of column indices where I+ faces contribute, as 2 element numpy arrays
+        simple_i_set = set()
         for i in range(cell_pairs.shape[0]):
             for ip in range(2):
                 cell_kji0 = cell_pairs[i, ip].copy()
