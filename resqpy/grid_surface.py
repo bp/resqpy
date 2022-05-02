@@ -1215,7 +1215,8 @@ def find_faces_to_represent_surface_regular(grid,
                                             centres = None,
                                             progress_fn = None,
                                             consistent_side = False,
-                                            return_normal_vectors = False):
+                                            return_properties = None):
+    # return_normal_vectors = False):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     arguments:
@@ -1229,25 +1230,37 @@ def find_faces_to_represent_surface_regular(grid,
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
            cells in each pair are on one side of the surface, and all the second cells on the other
-        return_normal_vectors (bool, default False): if True, an array of normal vectors is created for the gcs,
-           holding a unit vector normal to the surface at the centre of each face; it is returned with the gcs
+        return_properties (list of str, optional): if present, a list of property arrays to calculate and
+           return as a dictionary; recognised values in the list are 'offset' and 'normal vector'; offset
+           is a measure of the distance between the centre of the cell face and the intersection point of the
+           inter-cell centre vector with a triangle in the surface; normal vector is a unit vector normal
+           to the surface triangle; each array has an entry for each face in the gcs; the returned dictionary
+           has the passed strings as keys and numpy arrays as values
 
     returns:
-        gcs  or  (gcs, normals)
+        gcs  or  (gcs, dict)
         where gcs is a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created;
-        normals is a numpy float array of shape (gcs.count, 3) holding unit a vector normal to the surface
-        for each of the faces in the gcs; this is only returned if return_normal_vectors is True
+        dict is a dictionary mapping from property name to numpy array; 'offset' will map to a numpy float
+        array of shape (gcs.count, ); 'normal vector' will map to a numpy float array of shape (gcs.count, 3)
+        holding a unit vector normal to the surface for each of the faces in the gcs; the dict is only
+        returned if a non-empty list has been passed as return_properties
 
     notes:
         this function can handle the surface and grid being in different coordinate reference systems, as
-        long as the implicit parent crs is shared;
-        no trimming of the surface is carried out here: for computational efficiency, it is recommended
-        to trim first;
+        long as the implicit parent crs is shared; no trimming of the surface is carried out here: for
+        computational efficiency, it is recommended to trim first;
         organisational objects for the feature are created if needed
     """
 
     assert isinstance(grid, grr.RegularGrid)
     assert grid.is_aligned
+    return_normal_vectors = False
+    return_offsets = False
+    if return_properties:
+        assert all([p in ['offset', 'normal vector'] for p in return_properties])
+        return_normal_vectors = ('normal vector' in return_properties)
+        return_offsets = ('offset' in return_properties)
+
     if title is None:
         title = name
 
@@ -1262,8 +1275,8 @@ def find_faces_to_represent_surface_regular(grid,
         centres = grid.centre_point(use_origin = True)
     if consistent_side:
         log.debug('making all triangles clockwise')
-        surface.make_all_clockwise_xy(
-            reorient = True)  # note: will shuffle order of vertices within t cached in surface
+        # note: following will shuffle order of vertices within t cached in surface
+        surface.make_all_clockwise_xy(reorient = True)
     t, p = surface.triangles_and_points()
     assert t is not None and p is not None, f'surface {surface.title} is empty'
     log.debug(f'surface: {surface.title}; p0: {p[0]}; crs uuid: {surface.crs_uuid}')
@@ -1290,6 +1303,7 @@ def find_faces_to_represent_surface_regular(grid,
         log.debug('searching for k faces')
         k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
         k_sides = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan) if return_offsets else None
         k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan) if return_normal_vectors else None
         k_centres = centres[0, :, :].reshape((-1, 3))
         k_hits = vec.points_in_triangles(p, t, k_centres, projection = 'xy', edged = True).reshape(
@@ -1314,6 +1328,10 @@ def find_faces_to_represent_surface_regular(grid,
             k_faces[k_face, k_j, k_i] = True
             if consistent_side:
                 k_sides[k_face, k_j, k_i] = cwt[k_t]
+            if return_offsets:
+                # compute offset as z diff between xyz and face
+                k_offsets[k_face, k_j,
+                          k_i] = xyz[2] - 0.5 * (centres[k_face, k_j, k_i, 2] - centres[k_face + 1, k_j, k_i, 2])
             if return_normal_vectors:
                 k_normals[k_face, k_j, k_i] = vec.triangle_normal_vector(p[t[k_t]])
                 # todo: if consistent side, could deliver information about horizon surface inversion
@@ -1334,6 +1352,7 @@ def find_faces_to_represent_surface_regular(grid,
         log.debug('searching for j faces')
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
         j_sides = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_offsets = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan) if return_offsets else None
         j_normals = np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan) if return_normal_vectors else None
         j_centres = centres[:, 0, :].reshape((-1, 3))
         j_hits = vec.points_in_triangles(p, t, j_centres, projection = 'xz', edged = True).reshape(
@@ -1358,6 +1377,10 @@ def find_faces_to_represent_surface_regular(grid,
             j_faces[j_k, j_face, j_i] = True
             if consistent_side:
                 j_sides[j_k, j_face, j_i] = cwt[j_t]
+            if return_offsets:
+                # compute offset as y diff between xyz and face
+                j_offsets[j_k, j_face,
+                          j_i] = xyz[1] - 0.5 * (centres[j_k, j_face, j_i, 1] - centres[j_k, j_face + 1, j_i, 1])
             if return_normal_vectors:
                 j_normals[j_k, j_face, j_i] = vec.triangle_normal_vector(p[t[j_t]])
                 if j_normals[j_k, j_face, j_i, 2] > 0.0:
@@ -1377,6 +1400,7 @@ def find_faces_to_represent_surface_regular(grid,
         log.debug('searching for i faces')
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
         i_sides = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_offsets = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan) if return_offsets else None
         i_normals = np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan) if return_normal_vectors else None
         i_centres = centres[:, :, 0].reshape((-1, 3))
         i_hits = vec.points_in_triangles(p, t, i_centres, projection = 'yz', edged = True).reshape(
@@ -1401,6 +1425,10 @@ def find_faces_to_represent_surface_regular(grid,
             i_faces[i_k, i_j, i_face] = True
             if consistent_side:
                 i_sides[i_k, i_j, i_face] = cwt[i_t]
+            if return_offsets:
+                # compute offset as x diff between xyz and face
+                i_offsets[i_k, i_j,
+                          i_face] = xyz[0] - 0.5 * (centres[i_k, i_j, i_face, 0] - centres[i_k, i_j, i_face + 1, 0])
             if return_normal_vectors:
                 i_normals[i_k, i_j, i_face] = vec.triangle_normal_vector(p[t[i_t]])
                 if i_normals[i_k, i_j, i_face, 2] > 0.0:
@@ -1434,10 +1462,16 @@ def find_faces_to_represent_surface_regular(grid,
                                 create_organizing_objects_where_needed = True)
 
     # NB. following assumes faces have been added to gcs in a particular order!
+    if return_offsets:
+        k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[np.where(k_faces)]
+        j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[np.where(j_faces)]
+        i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[np.where(i_faces)]
+        all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
+        log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
+        assert all_offsets.shape == (gcs.count,)
+
+    # NB. following assumes faces have been added to gcs in a particular order!
     if return_normal_vectors:
-        # k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[np.expand_dims(k_faces, axis = -1)]
-        # j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[np.expand_dims(j_faces, axis = -1)]
-        # i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[np.expand_dims(i_faces, axis = -1)]
         k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[np.where(k_faces)]
         j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[np.where(j_faces)]
         i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[np.where(i_faces)]
@@ -1448,8 +1482,14 @@ def find_faces_to_represent_surface_regular(grid,
     if progress_fn is not None:
         progress_fn(1.0)
 
-    if return_normal_vectors:
-        return (gcs, all_normals)
+    # if returning properties, construct dictionary
+    if return_properties:
+        props_dict = {}
+        if return_offsets:
+            props_dict['offset'] = all_offsets
+        if return_normal_vectors:
+            props_dict['normal vector'] = all_normals
+        return (gcs, props_dict)
 
     return gcs
 
