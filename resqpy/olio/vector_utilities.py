@@ -566,15 +566,13 @@ def points_in_polygon(points, polygon):
     Returns:
         polygon_points (np.ndarray): boolean array of which points are within the polygon.
     """
-    polygon_points = np.empty(len(points), dtype=numba.boolean)
+    polygon_points = np.empty(len(points), dtype = numba.boolean)
     for point_num in numba.prange(0, len(polygon_points)):
-        polygon_points[point_num] = point_in_polygon(
-            points[point_num, 0], points[point_num, 1], polygon
-        )
+        polygon_points[point_num] = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
     return polygon_points
 
 
-@njit(parallel=True)
+@njit(parallel = True)
 def points_in_polygons(points: np.ndarray, polygons: np.ndarray) -> np.ndarray:
     """Calculates which points are within which polygons in 2D.
     
@@ -585,7 +583,7 @@ def points_in_polygons(points: np.ndarray, polygons: np.ndarray) -> np.ndarray:
     Returns:
         polygons_points (np.ndarray): boolean array of which points are within each polygon.
     """
-    polygons_points = np.empty((len(polygons), len(points)), dtype=numba.boolean)
+    polygons_points = np.empty((len(polygons), len(points)), dtype = numba.boolean)
     for polygon_num in numba.prange(0, len(polygons)):
         polygons_points[polygon_num] = points_in_polygon(points, polygons[polygon_num])
     return polygons_points

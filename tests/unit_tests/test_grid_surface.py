@@ -1,6 +1,7 @@
 import resqpy.grid_surface as rqgs
 import numpy as np
 
+
 def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surface):
     # Arrange
     grid = small_grid_and_surface[0]
@@ -31,11 +32,11 @@ def test_find_faces_to_represent_surface_regular_optimised_with_consistent_side(
         return np.sort(array)[np.lexsort((np.sort(array)[:, 1], np.sort(array)[:, 0]))]
 
     # Act
-    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name, consistent_side=True)
+    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name, consistent_side = True)
     cip_normal = gcs_normal.cell_index_pairs
     fip_normal = gcs_normal.face_index_pairs
 
-    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name, consistent_side=True)
+    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name, consistent_side = True)
     cip_optimised = gcs_optimised.cell_index_pairs
     fip_optimised = gcs_optimised.face_index_pairs
 

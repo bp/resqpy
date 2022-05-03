@@ -1503,7 +1503,7 @@ def where_true(data: np.ndarray) -> np.ndarray:
     return np.where(data)
 
 
-@njit(parallel=True)
+@njit(parallel = True)
 def intersect_numba(
     axis: int,
     index1: int,
@@ -1552,7 +1552,7 @@ def intersect_numba(
         - normals (np.ndarray): array of normal vectors to the surface at the centre of its
             corresponding cell face.
     """
-    hit_stack = np.stack(where_true(hits), axis=-1)
+    hit_stack = np.stack(where_true(hits), axis = -1)
     for i in numba.prange(len(hit_stack)):
         hit = hit_stack[i]
         tri = hit[0]
@@ -1560,37 +1560,37 @@ def intersect_numba(
         # Two dimensions for the centre point in this projection.
         d1 = hit[1]
         d2 = hit[2]
-        
-        ind0 = np.zeros(3, dtype=numba.int32)
+
+        ind0 = np.zeros(3, dtype = numba.int32)
         ind0[index1] = d1
         ind0[index2] = d2
-        
-        ind1 = np.zeros(3, dtype=numba.int32)
+
+        ind1 = np.zeros(3, dtype = numba.int32)
         ind1[index1] = d1
         ind1[index2] = d2
-        ind1[2-axis] = -1
-        
+        ind1[2 - axis] = -1
+
         xyz = meet.line_triangle_intersect_numba(
             centres[ind0[0], ind0[1], ind0[2]],
             centres[ind1[0], ind1[1], ind1[2]] - centres[ind0[0], ind0[1], ind0[2]],
             points[triangles[tri]],
-            line_segment=True,
-            t_tol=1.0e-6,
+            line_segment = True,
+            t_tol = 1.0e-6,
         )
         if xyz is None:  # meeting point is outwith grid
             continue
-            
-        ind2 = np.zeros(4, dtype=np.int32)
+
+        ind2 = np.zeros(4, dtype = np.int32)
         ind2[index1] = d1
         ind2[index2] = d2
-        ind2[-1] = axis        
-        
+        ind2[-1] = axis
+
         face = int((xyz[axis] - centres[ind2[0], ind2[1], ind2[2], ind2[3]]) / grid_dxyz[axis])
-        ind_face = np.zeros(3, dtype=np.int32)
+        ind_face = np.zeros(3, dtype = np.int32)
         ind_face[index1] = d1
         ind_face[index2] = d2
-        ind_face[2-axis] = face
-        
+        ind_face[2 - axis] = face
+
         faces[ind_face[0], ind_face[1], ind_face[2]] = True
         if consistent_side:
             sides[ind_face[0], ind_face[1], ind_face[2]] = cwt[tri]
@@ -1606,11 +1606,11 @@ def find_faces_to_represent_surface_regular_optimised(
     grid,
     surface,
     name,
-    title=None,
-    centres=None,
-    progress_fn=None,
-    consistent_side=False,
-    return_normal_vectors=False,
+    title = None,
+    centres = None,
+    progress_fn = None,
+    consistent_side = False,
+    return_normal_vectors = False,
 ):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
@@ -1662,8 +1662,7 @@ def find_faces_to_represent_surface_regular_optimised(
     if consistent_side:
         log.debug("making all triangles clockwise")
         surface.make_all_clockwise_xy(
-            reorient=True
-        )  # note: will shuffle order of vertices within t cached in surface
+            reorient = True)  # note: will shuffle order of vertices within t cached in surface
     triangles, points = surface.triangles_and_points()
     assert triangles is not None and points is not None, f"surface {surface.title} is empty"
     log.debug(f"surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}")
@@ -1671,7 +1670,7 @@ def find_faces_to_represent_surface_regular_optimised(
     log.debug(f"surface max xyz: {np.max(points, axis = 0)}")
     if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
         log.debug("converting from surface crs to grid crs")
-        s_crs = rqc.Crs(surface.model, uuid=surface.crs_uuid)
+        s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
         s_crs.convert_array_to(grid.crs, points)
         surface.crs_uuid = grid.crs.uuid
         log.debug(f"surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}")
@@ -1686,19 +1685,15 @@ def find_faces_to_represent_surface_regular_optimised(
     # K direction (xy projection)
     if grid.nk > 1:
         log.debug("searching for k faces")
-        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype=bool)
-        k_sides = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype=bool)
-        k_normals = (
-            np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
-        )
+        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_sides = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_normals = (np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan))
         k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
         p_xy = np.delete(points, 2, 1)
 
-        k_hits = vec.points_in_polygons(k_centres, p_xy[triangles]).reshape(
-            (t_count, grid.nj, grid.ni)
-        )
-        cwt = vec.clockwise_triangles(points, triangles, projection="xy") >= 0.0
-            
+        k_hits = vec.points_in_polygons(k_centres, p_xy[triangles]).reshape((t_count, grid.nj, grid.ni))
+        cwt = vec.clockwise_triangles(points, triangles, projection = "xy") >= 0.0
+
         axis = 2
         index1 = 1
         index2 = 2
@@ -1730,18 +1725,14 @@ def find_faces_to_represent_surface_regular_optimised(
     # J direction (xz projection)
     if grid.nj > 1:
         log.debug("searching for j faces")
-        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype=bool)
-        j_sides = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype=bool)
-        j_normals = (
-            np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan)
-        )
+        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_sides = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_normals = (np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan))
         j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
         p_xz = np.delete(points, 1, 1)
 
-        j_hits = vec.points_in_polygons(j_centres, p_xz[triangles]).reshape(
-            (t_count, grid.nk, grid.ni)
-        )
-        cwt = vec.clockwise_triangles(points, triangles, projection="xz") >= 0.0
+        j_hits = vec.points_in_polygons(j_centres, p_xz[triangles]).reshape((t_count, grid.nk, grid.ni))
+        cwt = vec.clockwise_triangles(points, triangles, projection = "xz") >= 0.0
 
         axis = 1
         index1 = 0
@@ -1775,18 +1766,14 @@ def find_faces_to_represent_surface_regular_optimised(
     # I direction (yz projection)
     if grid.ni > 1:
         log.debug("searching for i faces")
-        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype=bool)
-        i_sides = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype=bool)
-        i_normals = (
-            np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan)
-        )
+        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_sides = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_normals = (np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan))
         i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
         p_yz = np.delete(points, 0, 1)
 
-        i_hits = vec.points_in_polygons(i_centres, p_yz[triangles]).reshape(
-            (t_count, grid.nk, grid.nj)
-        )
-        cwt = vec.clockwise_triangles(points, triangles, projection="yz") >= 0.0
+        i_hits = vec.points_in_polygons(i_centres, p_yz[triangles]).reshape((t_count, grid.nk, grid.nj))
+        cwt = vec.clockwise_triangles(points, triangles, projection = "yz") >= 0.0
 
         axis = 0
         index1 = 0
@@ -1824,16 +1811,16 @@ def find_faces_to_represent_surface_regular_optimised(
     log.debug("converting face sets into grid connection set")
     gcs = rqf.GridConnectionSet(
         grid.model,
-        grid=grid,
-        k_faces=k_faces,
-        j_faces=j_faces,
-        i_faces=i_faces,
-        k_sides=k_sides,
-        j_sides=j_sides,
-        i_sides=i_sides,
-        feature_name=name,
-        title=title,
-        create_organizing_objects_where_needed=True,
+        grid = grid,
+        k_faces = k_faces,
+        j_faces = j_faces,
+        i_faces = i_faces,
+        k_sides = k_sides,
+        j_sides = j_sides,
+        i_sides = i_sides,
+        feature_name = name,
+        title = title,
+        create_organizing_objects_where_needed = True,
     )
 
     # NB. following assumes faces have been added to gcs in a particular order!
@@ -1841,18 +1828,10 @@ def find_faces_to_represent_surface_regular_optimised(
         # k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[np.expand_dims(k_faces, axis = -1)]
         # j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[np.expand_dims(j_faces, axis = -1)]
         # i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[np.expand_dims(i_faces, axis = -1)]
-        k_normals_list = (
-            np.empty((0, 3)) if k_normals is None else k_normals[np.where(k_faces)]
-        )
-        j_normals_list = (
-            np.empty((0, 3)) if j_normals is None else j_normals[np.where(j_faces)]
-        )
-        i_normals_list = (
-            np.empty((0, 3)) if i_normals is None else i_normals[np.where(i_faces)]
-        )
-        all_normals = np.concatenate(
-            (k_normals_list, j_normals_list, i_normals_list), axis=0
-        )
+        k_normals_list = (np.empty((0, 3)) if k_normals is None else k_normals[np.where(k_faces)])
+        j_normals_list = (np.empty((0, 3)) if j_normals is None else j_normals[np.where(j_faces)])
+        i_normals_list = (np.empty((0, 3)) if i_normals is None else i_normals[np.where(i_faces)])
+        all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
         log.debug(f"gcs count: {gcs.count}; all normals shape: {all_normals.shape}")
         assert all_normals.shape == (gcs.count, 3)
 

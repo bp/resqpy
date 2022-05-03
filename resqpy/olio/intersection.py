@@ -82,7 +82,7 @@ def line_triangle_intersect_numba(
     line_p: np.ndarray,
     line_v: np.ndarray,
     triangle: np.ndarray,
-    line_segment: bool = False, 
+    line_segment: bool = False,
     l_tol: float = 0.0,
     t_tol: float = 0.0,
 ) -> np.ndarray:

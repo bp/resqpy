@@ -450,14 +450,12 @@ def small_grid_and_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surfa
     dxyz = (1.0, 1.0, 1.0)
     crs_uuid = crs.uuid
     title = "small_grid"
-    grid = grr.RegularGrid(
-        tmp_model, extent_kji=extent_kji, dxyz=dxyz, crs_uuid=crs_uuid, title=title
-    )
+    grid = grr.RegularGrid(tmp_model, extent_kji = extent_kji, dxyz = dxyz, crs_uuid = crs_uuid, title = title)
 
     n_points = 100
     points = np.random.rand(n_points, 3) * extent
     triangles = tri.dt(points)
-    surface = rqs.Surface(tmp_model, crs_uuid=crs_uuid, title="small_surface")
+    surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_surface")
     surface.set_from_triangles_and_points(triangles, points)
     surface.triangles_and_points()
 
