@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
 
 import numpy as np
-import numba
+import numba    # type: ignore
 from numba import njit
 from typing import Tuple
 
@@ -1522,7 +1522,7 @@ def intersect_numba(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Iterates through the grid centres that intersected the surface in 2D to then find the face
     normals that intersect the surface in 3D.
-    
+
     Args:
         axis (int): axis number. Axis i is 0, j is 1, and k is 2.
         index1 (int): the first index. Axis i is 0, j is 0, and k is 1.

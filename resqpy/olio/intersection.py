@@ -6,8 +6,9 @@ import logging
 
 log = logging.getLogger(__name__)
 
+from typing import Union
 import numpy as np
-from numba import njit
+from numba import njit  # type: ignore
 
 import resqpy.olio.vector_utilities as vec
 
@@ -85,7 +86,7 @@ def line_triangle_intersect_numba(
     line_segment: bool = False,
     l_tol: float = 0.0,
     t_tol: float = 0.0,
-) -> np.ndarray:
+) -> Union[None, np.ndarray]:
     """Find the intersection of a line within a triangle in 3D space.
 
     Args:
