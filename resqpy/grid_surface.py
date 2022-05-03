@@ -1520,8 +1520,7 @@ def intersect_numba(
     normals: np.ndarray,
     cwt: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Iterates through the grid centres that intersected the surface in 2D to then find the face
-    normals that intersect the surface in 3D.
+    """Finds the faces that intersect the surface in 3D.
 
     Args:
         axis (int): axis number. Axis i is 0, j is 1, and k is 2.
