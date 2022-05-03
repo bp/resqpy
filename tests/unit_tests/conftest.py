@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from shutil import copytree
 import os
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,8 @@ from resqpy.organize import WellboreFeature, WellboreInterpretation
 from resqpy.well import MdDatum, Trajectory, WellboreFrame
 import resqpy.time_series as rqts
 import resqpy.olio.fine_coarse as rqfc
+import resqpy.olio.triangulation as tri
+import resqpy.surface as rqs
 
 
 @pytest.fixture(autouse = True)
@@ -434,3 +437,28 @@ def example_fine_coarse_model(example_model_and_crs):
     fc.set_all_proprtions_equal()
 
     return model, coarse, fine, fc
+
+
+@pytest.fixture
+def small_grid_and_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
+    """Creates a small RegularGrid and a random triangular surface."""
+    crs = Crs(tmp_model)
+    crs.create_xml()
+
+    extent = 10
+    extent_kji = (extent, extent, extent)
+    dxyz = (1.0, 1.0, 1.0)
+    crs_uuid = crs.uuid
+    title = "small_grid"
+    grid = grr.RegularGrid(
+        tmp_model, extent_kji=extent_kji, dxyz=dxyz, crs_uuid=crs_uuid, title=title
+    )
+
+    n_points = 100
+    points = np.random.rand(n_points, 3) * extent
+    triangles = tri.dt(points)
+    surface = rqs.Surface(tmp_model, crs_uuid=crs_uuid, title="small_surface")
+    surface.set_from_triangles_and_points(triangles, points)
+    surface.triangles_and_points()
+
+    return grid, surface

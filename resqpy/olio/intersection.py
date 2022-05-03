@@ -7,6 +7,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+from numba import njit
 
 import resqpy.olio.vector_utilities as vec
 
@@ -52,6 +53,55 @@ def line_triangle_intersect(line_p, line_v, triangle, line_segment = False, l_to
        point (3 element numpy vector) of intersection of the line within the triangle,
        or None if line is parallel to plane of triangle or intersection with the plane is
        outside the triangle
+    """
+
+    p01 = triangle[1] - triangle[0]
+    p02 = triangle[2] - triangle[0]
+
+    norm = np.cross(p01, p02)  # normal to plane
+    line_rv = np.negative(line_v)
+    denom = np.dot(line_rv, norm)
+    if denom == 0.0:
+        return None  # line is parallel to plane
+    lp_t0 = line_p - triangle[0]
+    t = np.dot(norm, lp_t0) / denom
+    if line_segment and (t < 0.0 - l_tol or t > 1.0 + l_tol):
+        return None
+    u = np.dot(np.cross(p02, line_rv), lp_t0) / denom
+    if u < 0.0 - t_tol or u > 1.0 + t_tol:
+        return None
+    v = np.dot(np.cross(line_rv, p01), lp_t0) / denom
+    if v < 0.0 - t_tol or u + v > 1.0 + t_tol:
+        return None
+
+    return line_p + t * line_v
+
+
+@njit
+def line_triangle_intersect_numba(
+    line_p: np.ndarray,
+    line_v: np.ndarray,
+    triangle: np.ndarray,
+    line_segment: bool = False, 
+    l_tol: float = 0.0,
+    t_tol: float = 0.0,
+) -> np.ndarray:
+    """Find the intersection of a line within a triangle in 3D space.
+
+    Args:
+        line_p (np.ndarray): a point on the line.
+        line_v (np.ndarray): vector being the direction of the line.
+        triangle (np.ndarray): three corners of the triangle (second index is xyz).
+        line_segment (bool): if True, returns None if intersection is outwith (line_p .. line_p + line_v).
+        l_tol (float, default 0.0): a fraction of the line length to allow for an intersection to be found
+            just outside the segment.
+        t_tol (float, default 0.0): a fraction of the triangle size to allow for an intersection to be found
+            just outside the triangle.
+
+    Returns:
+        point (np.ndarray) of intersection of the line within the triangle,
+        or None if line is parallel to plane of triangle or intersection with the plane is
+        outside the triangle.
     """
 
     p01 = triangle[1] - triangle[0]

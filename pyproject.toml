@@ -48,6 +48,7 @@ h5py = "^3.2"
 lxml = "^4.6"
 lasio = "^0.29"
 scipy = "^1.7.3"
+numba = "^0.55.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
