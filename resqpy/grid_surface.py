@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
 
 import numpy as np
-import numba    # type: ignore
+import numba  # type: ignore
 from numba import njit
 from typing import Tuple
 
