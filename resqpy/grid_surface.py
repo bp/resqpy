@@ -8,6 +8,9 @@ log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
 
 import numpy as np
+import numba  # type: ignore
+from numba import njit
+from typing import Tuple
 
 import resqpy.crs as rqc
 import resqpy.fault as rqf
@@ -1494,6 +1497,357 @@ def find_faces_to_represent_surface_regular(grid,
     return gcs
 
 
+@njit
+def where_true(data: np.ndarray) -> np.ndarray:
+    """Jitted NumPy 'where' function to improve performance on subsequent calls."""
+    return np.where(data)
+
+
+@njit(parallel = True)
+def intersect_numba(
+    axis: int,
+    index1: int,
+    index2: int,
+    hits: np.ndarray,
+    centres: np.ndarray,
+    points: np.ndarray,
+    triangles: np.ndarray,
+    grid_dxyz: Tuple[float],
+    faces: np.ndarray,
+    consistent_side: bool,
+    sides: np.ndarray,
+    return_normal_vectors: bool,
+    normals: np.ndarray,
+    cwt: np.ndarray,
+    return_offsets: bool,
+    offsets: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Finds the faces that intersect the surface in 3D.
+
+    Args:
+        axis (int): axis number. Axis i is 0, j is 1, and k is 2.
+        index1 (int): the first index. Axis i is 0, j is 0, and k is 1.
+        index2 (int): the second index. Axis i is 1, j is 2, and k is 2.
+        hits (np.ndarray): boolean array of grid centres that intersected the surface for the given
+            axis.
+        centres (np.ndarray): array of all the grid centre points in 3D.
+        points (np.ndarray): array of all the surface node points in 3D.
+        triangles (np.ndarray): array of all the triangle indices creating each triangle.
+        grid_dxyz (Tuple[float]): tuple of a cell's thickness in each axis.
+        faces (np.ndarray): boolean array of each cell face that can represent the surface.
+        consistent_side (bool): if True, the cell pairs will be ordered so that all the first cells
+            in each pair are on one side of the surface, and all the second cells on the other.
+        sides (np.ndarray): array of the sides creating the cells in the grid.
+        return_normal_vectors (bool): if True, an array of normal vectors is calculated.
+        normals (np.ndarray): array of normal vectors to the surface at the centre of its
+            corresponding cell face.
+        cwt (np.ndarray): array of all the triangle indices creating each triangle in clockwise form.
+        return_offsets (bool): if True, an array of the offsets is calculated.
+        offsets (np.ndarray): array of the distance between the centre of the cell face and the
+            intersection point of the inter-cell centre vector with a triangle in the surface.
+
+    Returns:
+        Tuple containing:
+
+        - faces (np.ndarray): boolean array of each cell face that can represent the surface.
+        - sides (np.ndarray): array of the sides creating the cells in the grid.
+        - normals (np.ndarray): array of normal vectors to the surface at the centre of its
+            corresponding cell face.
+        - offsets (np.ndarray): array of the distance between the centre of the cell face and the
+            intersection point of the inter-cell centre vector with a triangle in the surface.
+    """
+    hit_stack = np.stack(where_true(hits), axis = -1)
+    n_faces = faces.shape[2 - axis]
+    for i in numba.prange(len(hit_stack)):
+        hit = hit_stack[i]
+        tri = hit[0]
+
+        # Two dimensions for the centre point in this projection.
+        d1 = hit[1]
+        d2 = hit[2]
+
+        ind0 = np.zeros(3, dtype = numba.int32)
+        ind0[index1] = d1
+        ind0[index2] = d2
+
+        ind1 = np.zeros(3, dtype = numba.int32)
+        ind1[index1] = d1
+        ind1[index2] = d2
+        ind1[2 - axis] = -1
+
+        xyz = meet.line_triangle_intersect_numba(
+            centres[ind0[0], ind0[1], ind0[2]],
+            centres[ind1[0], ind1[1], ind1[2]] - centres[ind0[0], ind0[1], ind0[2]],
+            points[triangles[tri]],
+            line_segment = True,
+            t_tol = 1.0e-6,
+        )
+        if xyz is None:  # meeting point is outwith grid
+            continue
+
+        ind2 = np.zeros(4, dtype = np.int32)
+        ind2[index1] = d1
+        ind2[index2] = d2
+        ind2[-1] = axis
+
+        face = int((xyz[axis] - centres[ind2[0], ind2[1], ind2[2], ind2[3]]) / grid_dxyz[axis])
+        if face == -1:  # handle rounding precision issues
+            face = 0
+        elif face == n_faces:
+            face -= 1
+        assert 0 <= face < n_faces
+        ind_face = np.zeros(3, dtype = np.int32)
+        ind_face[index1] = d1
+        ind_face[index2] = d2
+        ind_face[2 - axis] = face
+
+        faces[ind_face[0], ind_face[1], ind_face[2]] = True
+        if consistent_side:
+            sides[ind_face[0], ind_face[1], ind_face[2]] = cwt[tri]
+        if return_offsets:
+            # compute offset as z diff between xyz and face
+            ind2[2 - axis] = face
+            ind3 = np.copy(ind2)
+            ind3[2 - axis] = int(face + 1)
+            offsets[ind_face[0], ind_face[1],
+                    ind_face[2]] = xyz[axis] - 0.5 * (centres[ind2[0], ind2[1], ind2[2], ind2[3]] -
+                                                      centres[ind3[0], ind3[1], ind3[2], ind3[3]])
+        if return_normal_vectors:
+            normals[ind_face[0], ind_face[1], ind_face[2]] = vec.triangle_normal_vector_numba(points[triangles[tri]])
+            if normals[ind2[0], ind2[1], ind2[2], 2] > 0.0:
+                normals[ind_face[0], ind_face[1], ind_face[2]] = -normals[ind_face[0], ind_face[1], ind_face[2]]
+    return faces, sides, normals, offsets
+
+
+def find_faces_to_represent_surface_regular_optimised(
+    grid,
+    surface,
+    name,
+    title = None,
+    centres = None,
+    progress_fn = None,
+    consistent_side = False,
+    return_properties = None,
+):
+    """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
+
+    Args:
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
+        surface (Surface): the surface to be intersected with the grid
+        name (str): the feature name to use in the grid connection set
+        centres (numpy float array of shape (nk, nj, ni, 3), optional): precomputed cell centre points in
+           local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
+        title (str, optional): the citation title to use for the grid connection set; defaults to name
+        progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
+           the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+        consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
+           cells in each pair are on one side of the surface, and all the second cells on the other
+        return_properties (list of str, optional): if present, a list of property arrays to calculate and
+           return as a dictionary; recognised values in the list are 'offset' and 'normal vector'; offset
+           is a measure of the distance between the centre of the cell face and the intersection point of the
+           inter-cell centre vector with a triangle in the surface; normal vector is a unit vector normal
+           to the surface triangle; each array has an entry for each face in the gcs; the returned dictionary
+           has the passed strings as keys and numpy arrays as values
+
+    Returns:
+        gcs  or  (gcs, normals)
+        where gcs is a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created;
+        normals is a numpy float array of shape (gcs.count, 3) holding unit a vector normal to the surface
+        for each of the faces in the gcs; this is only returned if return_normal_vectors is True
+
+    Notes:
+        this function can handle the surface and grid being in different coordinate reference systems, as
+        long as the implicit parent crs is shared;
+        no trimming of the surface is carried out here: for computational efficiency, it is recommended
+        to trim first;
+        organisational objects for the feature are created if needed
+    """
+
+    assert isinstance(grid, grr.RegularGrid)
+    assert grid.is_aligned
+    return_normal_vectors = False
+    return_offsets = False
+    if return_properties:
+        assert all([p in ['offset', 'normal vector'] for p in return_properties])
+        return_normal_vectors = ('normal vector' in return_properties)
+        return_offsets = ('offset' in return_properties)
+
+    if title is None:
+        title = name
+
+    if progress_fn is not None:
+        progress_fn(0.0)
+
+    log.debug(f'intersecting surface {surface.title} with regular grid {grid.title}')
+    log.debug(f'grid extent kji: {grid.extent_kji}')
+
+    grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
+    if centres is None:
+        centres = grid.centre_point(use_origin = True)
+    if consistent_side:
+        log.debug('making all triangles clockwise')
+        # note: following will shuffle order of vertices within t cached in surface
+        surface.make_all_clockwise_xy(reorient = True)
+    triangles, points = surface.triangles_and_points()
+    assert triangles is not None and points is not None, f'surface {surface.title} is empty'
+    log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
+    log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
+    log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
+    if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
+        log.debug('converting from surface crs to grid crs')
+        s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
+        s_crs.convert_array_to(grid.crs, points)
+        surface.crs_uuid = grid.crs.uuid
+        log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
+        log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
+        log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
+
+    log.debug(f'centres min xyz: {np.min(centres.reshape((-1, 3)), axis = 0)}')
+    log.debug(f'centres max xyz: {np.max(centres.reshape((-1, 3)), axis = 0)}')
+
+    t_count = len(triangles)
+
+    # K direction (xy projection)
+    if grid.nk > 1:
+        log.debug("searching for k faces")
+        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_sides = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
+        k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
+        k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
+        p_xy = np.delete(points, 2, 1)
+
+        k_hits = vec.points_in_polygons(k_centres, p_xy[triangles]).reshape((t_count, grid.nj, grid.ni))
+        cwt = vec.clockwise_triangles(points, triangles, projection = "xy") >= 0.0
+
+        axis = 2
+        index1 = 1
+        index2 = 2
+        k_faces, k_sides, k_normals, k_offsets = intersect_numba(axis, index1, index2, k_hits, centres, points,
+                                                                 triangles, grid_dxyz, k_faces, consistent_side,
+                                                                 k_sides, return_normal_vectors, k_normals, cwt,
+                                                                 return_offsets, k_offsets)
+        log.debug(f"k face count: {np.count_nonzero(k_faces)}")
+    else:
+        k_faces = None
+        k_sides = None
+        k_normals = None
+
+    if progress_fn is not None:
+        progress_fn(0.3)
+
+    # J direction (xz projection)
+    if grid.nj > 1:
+        log.debug("searching for j faces")
+        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_sides = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_offsets = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
+        j_normals = (np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan))
+        j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
+        p_xz = np.delete(points, 1, 1)
+
+        j_hits = vec.points_in_polygons(j_centres, p_xz[triangles]).reshape((t_count, grid.nk, grid.ni))
+        cwt = vec.clockwise_triangles(points, triangles, projection = "xz") >= 0.0
+
+        axis = 1
+        index1 = 0
+        index2 = 2
+        j_faces, j_sides, j_normals, j_offsets = intersect_numba(axis, index1, index2, j_hits, centres, points,
+                                                                 triangles, grid_dxyz, j_faces, consistent_side,
+                                                                 j_sides, return_normal_vectors, j_normals, cwt,
+                                                                 return_offsets, j_offsets)
+        log.debug(f"j face count: {np.count_nonzero(j_faces)}")
+
+    else:
+        j_faces = None
+        j_sides = None
+        j_normals = None
+
+    if progress_fn is not None:
+        progress_fn(0.6)
+
+    # I direction (yz projection)
+    if grid.ni > 1:
+        log.debug("searching for i faces")
+        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_sides = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_offsets = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
+        i_normals = (np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan))
+        i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
+        p_yz = np.delete(points, 0, 1)
+
+        i_hits = vec.points_in_polygons(i_centres, p_yz[triangles]).reshape((t_count, grid.nk, grid.nj))
+        cwt = vec.clockwise_triangles(points, triangles, projection = "yz") >= 0.0
+
+        axis = 0
+        index1 = 0
+        index2 = 1
+        i_faces, i_sides, i_normals, i_offsets = intersect_numba(axis, index1, index2, i_hits, centres, points,
+                                                                 triangles, grid_dxyz, i_faces, consistent_side,
+                                                                 i_sides, return_normal_vectors, i_normals, cwt,
+                                                                 return_offsets, i_offsets)
+        log.debug(f"i face count: {np.count_nonzero(i_faces)}")
+    else:
+        i_faces = None
+        i_sides = None
+        i_normals = None
+
+    if progress_fn is not None:
+        progress_fn(0.9)
+
+    if not consistent_side:
+        k_sides = None
+        j_sides = None
+        i_sides = None
+
+    log.debug("converting face sets into grid connection set")
+    gcs = rqf.GridConnectionSet(
+        grid.model,
+        grid = grid,
+        k_faces = k_faces,
+        j_faces = j_faces,
+        i_faces = i_faces,
+        k_sides = k_sides,
+        j_sides = j_sides,
+        i_sides = i_sides,
+        feature_name = name,
+        title = title,
+        create_organizing_objects_where_needed = True,
+    )
+
+    # NB. following assumes faces have been added to gcs in a particular order!
+    if return_offsets:
+        k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[where_true(k_faces)]
+        j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[where_true(j_faces)]
+        i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[where_true(i_faces)]
+        all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
+        log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
+        assert all_offsets.shape == (gcs.count,)
+
+    # NB. following assumes faces have been added to gcs in a particular order!
+    if return_normal_vectors:
+        k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[where_true(k_faces)]
+        j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[where_true(j_faces)]
+        i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[where_true(i_faces)]
+        all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
+        log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
+        assert all_normals.shape == (gcs.count, 3)
+
+    if progress_fn is not None:
+        progress_fn(1.0)
+
+    # if returning properties, construct dictionary
+    if return_properties:
+        props_dict = {}
+        if return_offsets:
+            props_dict['offset'] = all_offsets
+        if return_normal_vectors:
+            props_dict['normal vector'] = all_normals
+        return (gcs, props_dict)
+
+    return gcs
+
+
 def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
@@ -1507,6 +1861,8 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', progress
         return find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = progress_fn)
     elif mode == 'regular':
         return find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = progress_fn)
+    elif mode == 'regular_optimised':
+        return find_faces_to_represent_surface_regular_optimised(grid, surface, name, progress_fn = progress_fn)
     log.critical('unrecognised mode: ' + str(mode))
     return None
 

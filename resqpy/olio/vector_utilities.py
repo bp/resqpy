@@ -13,8 +13,9 @@ import logging
 log = logging.getLogger(__name__)
 
 import math as maths
-
 import numpy as np
+import numba  # type: ignore
+from numba import njit
 
 
 def radians_from_degrees(deg):
@@ -523,11 +524,83 @@ def points_in_triangles(p, t, da, projection = 'xy', edged = False):
         return np.all(cwtd < 0.0, axis = 2)
 
 
+@njit
+def point_in_polygon(x, y, polygon):
+    """Calculates if a point in within a polygon in 2D.
+    
+    Args:
+        x (float): the point's x-coordinate.
+        y (float): the point's y-coordinate.
+        polygon (np.ndarray): array of the polygon's vertices in 2D.
+    
+    Returns:
+        inside (bool): True if point is within the polygon, False otherwise.
+    """
+    polygon_vertices = len(polygon)
+    inside = False
+    p2x = 0.0
+    p2y = 0.0
+    xints = 0.0
+    p1x, p1y = polygon[0]
+    for i in numba.prange(polygon_vertices + 1):
+        p2x, p2y = polygon[i % polygon_vertices]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xints:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+    return inside
+
+
+@njit
+def points_in_polygon(points, polygon):
+    """Calculates which points are within a polygon in 2D.
+    
+    Args:
+        points (np.ndarray): array of the points in 2D.
+        polygon (np.ndarray): array of the polygon's vertices in 2D.
+    
+    Returns:
+        polygon_points (np.ndarray): boolean array of which points are within the polygon.
+    """
+    polygon_points = np.empty(len(points), dtype = numba.boolean)
+    for point_num in numba.prange(0, len(polygon_points)):
+        polygon_points[point_num] = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
+    return polygon_points
+
+
+@njit(parallel = True)
+def points_in_polygons(points: np.ndarray, polygons: np.ndarray) -> np.ndarray:
+    """Calculates which points are within which polygons in 2D.
+    
+    Args:
+        points (np.ndarray): array of the points in 2D.
+        polygons (np.ndarray): array of each polygons' vertices in 2D.
+    
+    Returns:
+        polygons_points (np.ndarray): boolean array of which points are within each polygon.
+    """
+    polygons_points = np.empty((len(polygons), len(points)), dtype = numba.boolean)
+    for polygon_num in numba.prange(0, len(polygons)):
+        polygons_points[polygon_num] = points_in_polygon(points, polygons[polygon_num])
+    return polygons_points
+
+
 def triangle_normal_vector(p3):
     """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
 
     # todo: handle degenerate triangles
     return unit_vector(cross_product(p3[0] - p3[1], p3[0] - p3[2]))
+
+
+@njit
+def triangle_normal_vector_numba(points):
+    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
+    v = np.cross(points[0] - points[1], points[0] - points[2])
+    return v / np.linalg.norm(v)
 
 
 def in_circumcircle(a, b, c, d):
