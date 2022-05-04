@@ -314,7 +314,7 @@ def grid_columns_property_from_gcs_property(model,
         if face_pairs[index, 0, 0] != 0 or face_pairs[index, 1, 0] != 0:
             continue  # not a K face
         col_j, col_i = cell_pairs[index, 0, 1:]  # assume paired cell is in same column!
-        if count_per_col[col_j, col_i == 0] or multiple_handling == 'any':
+        if count_per_col[col_j, col_i] == 0 or multiple_handling == 'any':
             map[col_j, col_i] = gcs_prop_array[index]
         elif multiple_handling == 'mean':
             map[col_j, col_i] = (((map[col_j, col_i] * count_per_col[col_j, col_i]) + gcs_prop_array[index]) /
