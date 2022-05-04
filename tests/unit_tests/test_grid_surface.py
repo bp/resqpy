@@ -72,5 +72,5 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     # Assert
     np.testing.assert_array_equal(cip_normal, cip_optimised)
     np.testing.assert_array_equal(fip_normal, fip_optimised)
-    np.testing.assert_array_equal(offsets_normal, offsets_optimised)
+    np.testing.assert_array_almost_equal(offsets_normal, offsets_optimised)
     np.testing.assert_array_almost_equal(normal_vectors_normal, normal_vectors_optimised)
