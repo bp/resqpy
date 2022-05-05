@@ -130,7 +130,7 @@ class PropertyCollection():
               support_uuid set
         """
 
-        # todo: check uuid's of individual parts' supports match that of support being set for whole collection
+        # todo: check uuids of individual parts' supports match that of support being set for whole collection
         model = pcs._set_support_model(self, model, support)
 
         if support_uuid is None and support is not None:
