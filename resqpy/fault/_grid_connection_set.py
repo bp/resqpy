@@ -33,6 +33,7 @@ class GridConnectionSet(BaseResqpy):
     def __init__(self,
                  parent_model,
                  uuid = None,
+                 cache_arrays = False,
                  find_properties = True,
                  grid = None,
                  ascii_load_format = None,
@@ -40,6 +41,9 @@ class GridConnectionSet(BaseResqpy):
                  k_faces = None,
                  j_faces = None,
                  i_faces = None,
+                 k_sides = None,
+                 j_sides = None,
+                 i_sides = None,
                  feature_name = None,
                  feature_type = 'fault',
                  create_organizing_objects_where_needed = False,
@@ -67,6 +71,8 @@ class GridConnectionSet(BaseResqpy):
                  must also be set
            k_faces, j_faces, i_faces (boolean arrays, optional): if present, these arrays are used to identify
                  which faces between logically neighbouring cells to include in the new grid connection set
+           k_sides, j_sides, i_sides (boolean arrays, optional): if present, and k_faces etc are present, these
+                 arrays are used to determine which side of the cell face should appear as the first in the pairing
            feature_name (string, optional): the feature name to use when setting from faces
            feature_type (string, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
            create_organizing_objects_where_needed (boolean, default False): if True when loading from ascii or
@@ -177,9 +183,15 @@ class GridConnectionSet(BaseResqpy):
                                                i_faces,
                                                feature_name,
                                                create_organizing_objects_where_needed,
-                                               feature_type = feature_type)
-        elif find_properties:
-            self.extract_property_collection()
+                                               feature_type = feature_type,
+                                               k_sides = k_sides,
+                                               j_sides = j_sides,
+                                               i_sides = i_sides)
+        else:
+            if cache_arrays:
+                self.cache_arrays()
+            if find_properties:
+                self.extract_property_collection()
 
     def _load_from_xml(self):
         root = self.root
@@ -302,13 +314,17 @@ class GridConnectionSet(BaseResqpy):
             i_faces = None
         self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name, create_organizing_objects_where_needed)
 
-    def set_pairs_from_face_masks(self,
-                                  k_faces,
-                                  j_faces,
-                                  i_faces,
-                                  feature_name,
-                                  create_organizing_objects_where_needed,
-                                  feature_type = 'fault'):  # other feature_type values: 'horizon', 'geobody boundary'
+    def set_pairs_from_face_masks(
+            self,
+            k_faces,
+            j_faces,
+            i_faces,
+            feature_name,
+            create_organizing_objects_where_needed,
+            feature_type = 'fault',  # other feature_type values: 'horizon', 'geobody boundary'
+            k_sides = None,
+            j_sides = None,
+            i_sides = None):
         """Sets cell_index_pairs and face_index_pairs based on triple face masks, using simple no throw pairing."""
 
         assert feature_type in ['fault', 'horizon', 'geobody boundary']
@@ -372,20 +388,38 @@ class GridConnectionSet(BaseResqpy):
         face_pair_list = []
         nj_ni = grid.nj * grid.ni
         if k_faces is not None:
-            for cell_kji0 in np.stack(np.where(k_faces)).T:
+            if k_sides is None:
+                k_sides = np.zeros(k_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(k_faces)).T, k_sides[np.where(k_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + nj_ni))
-                face_pair_list.append((self.face_index_map[0, 1], self.face_index_map[0, 0]))
+                if flip:
+                    cell_pair_list.append((cell + nj_ni, cell))
+                    face_pair_list.append((self.face_index_map[0, 0], self.face_index_map[0, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + nj_ni))
+                    face_pair_list.append((self.face_index_map[0, 1], self.face_index_map[0, 0]))
         if j_faces is not None:
-            for cell_kji0 in np.stack(np.where(j_faces)).T:
+            if j_sides is None:
+                j_sides = np.zeros(j_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(j_faces)).T, j_sides[np.where(j_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + grid.ni))
-                face_pair_list.append((self.face_index_map[1, 1], self.face_index_map[1, 0]))
+                if flip:
+                    cell_pair_list.append((cell + grid.ni, cell))
+                    face_pair_list.append((self.face_index_map[1, 0], self.face_index_map[1, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + grid.ni))
+                    face_pair_list.append((self.face_index_map[1, 1], self.face_index_map[1, 0]))
         if i_faces is not None:
-            for cell_kji0 in np.stack(np.where(i_faces)).T:
+            if i_sides is None:
+                i_sides = np.zeros(i_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(i_faces)).T, i_sides[np.where(i_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + 1))
-                face_pair_list.append((self.face_index_map[2, 1], self.face_index_map[2, 0]))
+                if flip:
+                    cell_pair_list.append((cell + 1, cell))
+                    face_pair_list.append((self.face_index_map[2, 0], self.face_index_map[2, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + 1))
+                    face_pair_list.append((self.face_index_map[2, 1], self.face_index_map[2, 0]))
         self.cell_index_pairs = np.array(cell_pair_list, dtype = int)
         self.face_index_pairs = np.array(face_pair_list, dtype = int)
         self.count = len(self.cell_index_pairs)
@@ -870,11 +904,12 @@ class GridConnectionSet(BaseResqpy):
         self.property_collection.add_to_imported_list_sampling_other_collection(other.property_collection,
                                                                                 selected_indices)
 
-    def list_of_cell_face_pairs_for_feature_index(self, feature_index):
+    def list_of_cell_face_pairs_for_feature_index(self, feature_index = None):
         """Returns list of cell face pairs contributing to feature (fault) with given index.
 
         arguments:
-           feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
+           feature_index (non-negative integer, optional): the index into the ordered feature list
+               (fault interpretation list); if None, all cell face pairs are returned
 
         returns:
            (cell_index_pairs, face_index_pairs) or (cell_index_pairs, face_index_pairs, grid_index_pairs)
@@ -888,9 +923,12 @@ class GridConnectionSet(BaseResqpy):
         """
 
         self.cache_arrays()
-        if self.feature_indices is None:
-            return None
-        pairs_tuple = self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
+        if feature_index is None:
+            pairs_tuple = (self.cell_index_pairs, self.face_index_pairs)
+        else:
+            if self.feature_indices is None:
+                return None
+            pairs_tuple = self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
         if len(self.grid_list) == 1:
             raw_cell_pairs, raw_face_pairs = pairs_tuple
             grid_pairs = None
@@ -921,10 +959,10 @@ class GridConnectionSet(BaseResqpy):
         """
 
         cell_pairs, face_pairs = self.list_of_cell_face_pairs_for_feature_index(feature_index)
-        simple_j_set = set(
-        )  # set of (j0, i0) pairs of column indices where J+ faces contribute, as 2 element numpy arrays
-        simple_i_set = set(
-        )  # set of (j0, i0) pairs of column indices where I+ faces contribute, as 2 element numpy arrays
+        # set of (j0, i0) pairs of column indices where J+ faces contribute, as 2 element numpy arrays
+        simple_j_set = set()
+        # set of (j0, i0) pairs of column indices where I+ faces contribute, as 2 element numpy arrays
+        simple_i_set = set()
         for i in range(cell_pairs.shape[0]):
             for ip in range(2):
                 cell_kji0 = cell_pairs[i, ip].copy()
@@ -1168,7 +1206,8 @@ class GridConnectionSet(BaseResqpy):
                     for (obj_type, f_uuid, _) in self.feature_list:
                         fi_part = rqet.part_name_for_object(obj_type, f_uuid)
                         fi_root = self.model.root_for_part(fi_part)
-                        self.model.create_reciprocal_relationship(gcs, 'destinationObject', fi_root, 'sourceObject')
+                        if fi_root is not None:
+                            self.model.create_reciprocal_relationship(gcs, 'destinationObject', fi_root, 'sourceObject')
                 ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(gcs, 'mlToExternalPartProxy', ext_node,

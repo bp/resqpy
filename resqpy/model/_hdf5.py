@@ -295,10 +295,10 @@ def _change_hdf5_uuid_in_hdf5_references(model, node, old_uuid, new_uuid):
                 count += 1
         except Exception:
             pass
-    if count == 1:
-        log.debug('one hdf5 reference modified')
-    else:
-        log.debug(str(count) + ' hdf5 references modified')
+    # if count == 1:
+    #     log.debug('one hdf5 reference modified')
+    # else:
+    #     log.debug(str(count) + ' hdf5 references modified')
     if count > 0:
         model.set_modified()
 

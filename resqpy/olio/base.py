@@ -55,11 +55,12 @@ class BaseResqpy(metaclass = ABCMeta):
             self.uuid = bu.new_uuid()  #: Unique identifier
         else:
             self.uuid = uuid
-            citation_node = rqet.find_tag(self.root, 'Citation')
+            root_node = self.root
+            citation_node = rqet.find_tag(root_node, 'Citation')
             if citation_node is not None:
                 self.title = rqet.find_tag_text(citation_node, 'Title')
                 self.originator = rqet.find_tag_text(citation_node, 'Originator')
-            self.extra_metadata = rqet.load_metadata_from_xml(self.root)
+            self.extra_metadata = rqet.load_metadata_from_xml(root_node)
             self._load_from_xml()
 
     # usually overridden by derived class, unless generic code above handles all attributes

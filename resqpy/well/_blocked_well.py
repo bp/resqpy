@@ -527,9 +527,11 @@ class BlockedWell(BaseResqpy):
                                                        lazy = False,
                                                        use_single_layer_tactics = use_single_layer_tactics)
         if bw is None:
-            raise Exception('failed to generate blocked well from trajectory with uuid: ' + str(trajectory.uuid))
-
-        assert bw is self
+            log.error(f'failed to generate blocked well from trajectory with uuid: {trajectory.uuid}')
+            self.node_count = None
+            self.cell_count = None
+        else:
+            assert bw is self
 
     def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True):
         """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md

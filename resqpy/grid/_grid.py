@@ -293,15 +293,15 @@ class Grid(BaseResqpy):
         """Returns an integer array holding kji0 indices for the cells with given natural indices.
 
         argument:
-           c0s: numpy integer array of shape (..., 3) being natural cell indices (for a flattened array)
+           c0s: numpy integer array of shape (...,) being natural cell indices (for a flattened array)
 
         returns:
            numpy integer array of shape (..., 3) being the equivalent kji0 protocol cell indices
         """
 
-        k0s, ji0s = divmod(c0s, self.nj * self.ni)
+        k0s, ji0s = divmod(c0s.flatten(), self.nj * self.ni)
         j0s, i0s = divmod(ji0s, self.ni)
-        return np.stack((k0s, j0s, i0s), axis = -1)
+        return np.stack((k0s, j0s, i0s), axis = -1).reshape(tuple(list(c0s.shape) + [3]))
 
     def resolve_geometry_child(self, tag, child_node = None):
         """If xml child node is None, looks for tag amongst children of geometry root.

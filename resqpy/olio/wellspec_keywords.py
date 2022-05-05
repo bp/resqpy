@@ -1,6 +1,6 @@
 """Module defining dictionary of nexus WELLSPEC column keywords"""
 
-version = '29th April 2021'
+version = '19th April 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -267,6 +267,7 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
             else:
                 df_col = columns_present
             data = {col: [] for col in df_col}
+            all_null = True
             while True:
                 kf.skip_comments(fp)
                 if kf.blank_line(fp):
@@ -275,8 +276,8 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                     break
                 line = kf.strip_trailing_comment(fp.readline())
                 words = line.split()
-                assert len(words) >= len(
-                    columns_present), f'insufficient data in line of wellspec table {well} [{line}]'
+                assert len(words) >= len(columns_present),  \
+                    f'insufficient data in line of wellspec table {well} [{line}]'
                 if selecting:
                     for col_index, col in enumerate(column_list):
                         if column_map[col_index] < 0:
@@ -292,6 +293,8 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                                 data[col].extend([v])
                             else:
                                 data[col].extend([wellspec_dtype[col.upper()](v)])
+                        if data[col][-1] != np.NaN:
+                            all_null = False
                 else:
                     for col, v in zip(columns_present, words[:len(columns_present)]):
                         if v == 'NA':
@@ -300,6 +303,11 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                             data[col].extend([v])
                         else:
                             data[col].extend([wellspec_dtype[col](v)])
+                        if data[col][-1] != np.NaN:
+                            all_null = False
+            if all_null:
+                log.warning(f'skipping null wellspec data for well {well_name}')
+                continue
             data = {k: v for k, v in data.items() if v}
             df = pd.DataFrame(data, columns = df_col)
             if well:
@@ -307,6 +315,6 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                 break  # NB. if more than one table for a well, this function returns first, Nexus uses last
             well_dict[well_name] = df
 
-    #   log.debug(f'load-wellspecs returning:\n{well_dict}')
+    # log.debug(f'load-wellspecs returning:\n{well_dict}')
 
     return well_dict

@@ -11,9 +11,12 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import resqpy.fault as rqf
 import resqpy.grid as grr
+import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
+import resqpy.property as rqp
 
 
 def pinchout_connection_set(grid, skip_inactive = True, feature_name = 'pinchout'):
@@ -239,6 +242,118 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
     log.info("Grid connection set added")
 
     return gcs.uuid
+
+
+def grid_columns_property_from_gcs_property(model,
+                                            gcs_property_uuid,
+                                            null_value = np.nan,
+                                            title = None,
+                                            multiple_handling = 'default'):
+    """Derives a new grid columns property (map) from a single-grid gcs property using values for k faces.
+
+    arguments:
+        model (Model): the model in which the existing objects are to be found and the new property added
+        gcs_property_uuid (UUID): the uuid of the existing grid connection set property
+        null_value (float or int, default NaN): the value to use in columns where no K faces are present in the gcs
+        title (str, optional): the title for the new grid property; defaults to that of the gcs property
+        multiple_handling (str, default 'mean'): one of 'default', 'mean', 'min', 'max', 'min_k', 'max_k', 'exception';
+            determines how a value is generated when more than one K face is present in the gcs for a column
+
+    returns:
+        uuid of the newly created Property (RESQML ContinuousProperty, DiscreteProperty, CategoricalProperty or
+        PointsProperty)
+
+    notes:
+        the grid connection set which is the support for gcs_property must involve only one grid;
+        the resulting columns grid property is of the same class as the original gcs property;
+        the write_hdf() and create_xml() methods are called by this function, for the new property,
+        which is added to the model;
+        the default multiple handling mode is mean for continuous data, any for discrete (inc categorical);
+        in the case of discrete (including categorical) data, a null_value of NaN will be changed to -1
+    """
+    assert multiple_handling in ['default', 'mean', 'min', 'max', 'any', 'exception']
+    assert gcs_property_uuid is not None and bu.is_uuid(gcs_property_uuid)
+    gcs_property = rqp.Property(model, uuid = gcs_property_uuid)
+    assert gcs_property is not None
+    support_uuid = gcs_property.collection.support_uuid
+    assert support_uuid is not None
+    assert model.type_of_uuid(support_uuid, strip_obj = True) == 'GridConnectionSetRepresentation'
+    gcs = rqf.GridConnectionSet(model, uuid = support_uuid)
+    gcs_prop_array = gcs_property.array_ref()
+    if gcs_property.is_continuous():
+        dtype = float
+        if multiple_handling == 'default':
+            multiple_handling = 'mean'
+    else:
+        dtype = int
+        if null_value == np.nan:
+            null_value = -1
+        elif type(null_value) is float:
+            null_value = int(null_value)
+        if multiple_handling == 'default':
+            multiple_handling = 'any'
+        assert multiple_handling != 'mean', 'mean specified as multiple handling for non-continuous property'
+    assert gcs.number_of_grids() == 1, 'only single grid gcs supported for grid columns property derivation'
+    grid = gcs.grid_list[0]
+    if gcs_property.is_points():
+        map_shape = (grid.nj, grid.ni, 3)
+    else:
+        map_shape = (grid.nj, grid.ni)
+    assert gcs_property.count() == 1
+    map = np.full(map_shape, null_value, dtype = dtype)
+    count_per_col = np.zeros((grid.nj, grid.ni), dtype = int)
+    cells_and_faces = gcs.list_of_cell_face_pairs_for_feature_index(None)
+    assert cells_and_faces is not None and len(cells_and_faces) == 2
+    cell_pairs, face_pairs = cells_and_faces
+    if cell_pairs is None or len(cell_pairs) == 0:
+        log.warning('no faces found for grid connection set property {gcs_property.title}')
+        return None
+    assert len(cell_pairs) == len(face_pairs)
+    assert len(cell_pairs) == len(gcs_prop_array)
+    for index in range(len(cell_pairs)):
+        if face_pairs[index, 0, 0] != 0 or face_pairs[index, 1, 0] != 0:
+            continue  # not a K face
+        col_j, col_i = cell_pairs[index, 0, 1:]  # assume paired cell is in same column!
+        if count_per_col[col_j, col_i] == 0 or multiple_handling == 'any':
+            map[col_j, col_i] = gcs_prop_array[index]
+        elif multiple_handling == 'mean':
+            map[col_j, col_i] = (((map[col_j, col_i] * count_per_col[col_j, col_i]) + gcs_prop_array[index]) /
+                                 float(count_per_col[col_j, col_i] + 1))
+        elif multiple_handling == 'min':
+            if gcs_prop_array[index] < map[col_j, col_i]:
+                map[col_j, col_i] = gcs_prop_array[index]
+        elif multiple_handling == 'max':
+            if gcs_prop_array[index] > map[col_j, col_i]:
+                map[col_j, col_i] = gcs_prop_array[index]
+        else:
+            raise ValueError('multiple grid connection set K faces found for column')
+        count_per_col[col_j, col_i] += 1
+    # create an empty PropertyCollection and add the map data as a new property
+    time_index = gcs_property.time_index()
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = grid)
+    pc.add_cached_array_to_imported_list(
+        map,
+        source_info = f'{gcs.title} property {gcs_property.title} map',
+        keyword = title if title else gcs_property.title,
+        discrete = not gcs_property.is_continuous(),
+        uom = gcs_property.uom(),
+        time_index = time_index,
+        null_value = None if gcs_property.is_continuous() else null_value,
+        property_kind = gcs_property.property_kind(),
+        local_property_kind_uuid = gcs_property.local_property_kind_uuid(),
+        facet_type = gcs_property.facet_type(),
+        facet = gcs_property.facet(),
+        realization = None,  # do we want to preserve the realisation number?
+        indexable_element = 'columns',
+        points = gcs_property.is_points())
+    time_series_uuid = pc.write_hdf5_for_imported_list()
+    string_lookup_uuid = gcs_property.string_lookup_uuid()
+    time_series_uuid = None if time_index is None else gcs_property.time_series_uuid()
+    new_uuids = pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid,
+                                                                       string_lookup_uuid = string_lookup_uuid)
+    assert len(new_uuids) == 1
+    return new_uuids[0]
 
 
 # fault face table pandas dataframe functions
