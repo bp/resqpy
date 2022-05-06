@@ -1333,8 +1333,8 @@ def find_faces_to_represent_surface_regular(grid,
                 k_sides[k_face, k_j, k_i] = cwt[k_t]
             if return_offsets:
                 # compute offset as z diff between xyz and face
-                k_offsets[k_face, k_j,
-                          k_i] = xyz[2] - 0.5 * (centres[k_face, k_j, k_i, 2] - centres[k_face + 1, k_j, k_i, 2])
+                k_offsets[k_face, k_j, k_i] =  \
+                    xyz[2] - 0.5 * (centres[k_face, k_j, k_i, 2] + centres[k_face + 1, k_j, k_i, 2])
             if return_normal_vectors:
                 k_normals[k_face, k_j, k_i] = vec.triangle_normal_vector(p[t[k_t]])
                 # todo: if consistent side, could deliver information about horizon surface inversion
@@ -1382,8 +1382,8 @@ def find_faces_to_represent_surface_regular(grid,
                 j_sides[j_k, j_face, j_i] = cwt[j_t]
             if return_offsets:
                 # compute offset as y diff between xyz and face
-                j_offsets[j_k, j_face,
-                          j_i] = xyz[1] - 0.5 * (centres[j_k, j_face, j_i, 1] - centres[j_k, j_face + 1, j_i, 1])
+                j_offsets[j_k, j_face, j_i] =  \
+                    xyz[1] - 0.5 * (centres[j_k, j_face, j_i, 1] + centres[j_k, j_face + 1, j_i, 1])
             if return_normal_vectors:
                 j_normals[j_k, j_face, j_i] = vec.triangle_normal_vector(p[t[j_t]])
                 if j_normals[j_k, j_face, j_i, 2] > 0.0:
@@ -1430,8 +1430,8 @@ def find_faces_to_represent_surface_regular(grid,
                 i_sides[i_k, i_j, i_face] = cwt[i_t]
             if return_offsets:
                 # compute offset as x diff between xyz and face
-                i_offsets[i_k, i_j,
-                          i_face] = xyz[0] - 0.5 * (centres[i_k, i_j, i_face, 0] - centres[i_k, i_j, i_face + 1, 0])
+                i_offsets[i_k, i_j, i_face] =  \
+                    xyz[0] - 0.5 * (centres[i_k, i_j, i_face, 0] + centres[i_k, i_j, i_face + 1, 0])
             if return_normal_vectors:
                 i_normals[i_k, i_j, i_face] = vec.triangle_normal_vector(p[t[i_t]])
                 if i_normals[i_k, i_j, i_face, 2] > 0.0:
@@ -1609,9 +1609,8 @@ def intersect_numba(
             ind2[2 - axis] = face
             ind3 = np.copy(ind2)
             ind3[2 - axis] = int(face + 1)
-            offsets[ind_face[0], ind_face[1],
-                    ind_face[2]] = xyz[axis] - 0.5 * (centres[ind2[0], ind2[1], ind2[2], ind2[3]] -
-                                                      centres[ind3[0], ind3[1], ind3[2], ind3[3]])
+            fc = 0.5 * (centres[ind2[0], ind2[1], ind2[2], ind2[3]] + centres[ind3[0], ind3[1], ind3[2], ind3[3]])
+            offsets[ind_face[0], ind_face[1], ind_face[2]] = xyz[axis] - fc
         if return_normal_vectors:
             normals[ind_face[0], ind_face[1], ind_face[2]] = vec.triangle_normal_vector_numba(points[triangles[tri]])
             if normals[ind2[0], ind2[1], ind2[2], 2] > 0.0:
