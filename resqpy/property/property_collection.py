@@ -130,7 +130,7 @@ class PropertyCollection():
               support_uuid set
         """
 
-        # todo: check uuid's of individual parts' supports match that of support being set for whole collection
+        # todo: check uuids of individual parts' supports match that of support being set for whole collection
         model = pcs._set_support_model(self, model, support)
 
         if support_uuid is None and support is not None:
@@ -724,17 +724,21 @@ class PropertyCollection():
             time_index = None,
             uom = None,
             string_lookup_uuid = None,
-            categorical = None):
+            categorical = None,
+            multiple_handling = 'exception'):
         """Returns a single part selected by those arguments which are not None.
 
-        For each argument: if None, then all members of collection pass this filter;
+           multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
+
+        For each argument (other than multiple_handling): if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
-        finally, the filters for all the attributes must be passed for a given member (part)
-        to be selected
+        finally, the filters for all the attributes must pass for a given member (part) to be selected
+
+        multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
 
         returns:
            part name (string) of the part which matches all selection arguments which are not None;
-           returns None if no parts match; raises an assertion error if more than one part matches
+           returns None if no parts match; if more than one part matches multiple_handling argument determines behaviour
 
         :meta common:
         """
@@ -764,6 +768,8 @@ class PropertyCollection():
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
+        if len(parts_list) > 1 and multiple_handling != 'exception' and support is not None:
+            parts_list = [support.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
         assert len(parts_list) == 1, 'More than one property part matches selection criteria'
         return parts_list[0]
 
@@ -789,7 +795,8 @@ class PropertyCollection():
             categorical = None,
             dtype = None,
             masked = False,
-            exclude_null = False):
+            exclude_null = False,
+            multiple_handling = 'exception'):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -799,6 +806,7 @@ class PropertyCollection():
               numpy array; the mask is set to the inactive array attribute of the grid object
            exclude_null (boolean, default False): it True and masked is True, elements holding the null value
               will also be masked out
+           multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
 
         Other optional arguments:
         realization, support, support_uuid, grid, continuous, points, count, indexable, property_kind, facet_type, facet,
@@ -806,15 +814,14 @@ class PropertyCollection():
 
         For each of these arguments: if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
-        finally, the filters for all the attributes must be passed for a given member (part)
-        to be selected
+        finally, the filters for all the attributes must pass for a given member (part) to be selected
 
         returns:
            reference to a cached numpy array containing the actual property data for the part which matches all
            selection arguments which are not None
 
         notes:
-           returns None if no parts match; raises an assertion error if more than one part matches;
+           returns None if no parts match; if more than one part matches multiple_handling argument determines behaviour;
            multiple calls will return the same cached array so calling code should copy if duplication is needed;
            support and grid arguments are for backward compatibilty: support_uuid takes precedence over support and
            both take precendence over grid
@@ -842,7 +849,8 @@ class PropertyCollection():
                               time_index = time_index,
                               uom = uom,
                               string_lookup_uuid = string_lookup_uuid,
-                              categorical = categorical)
+                              categorical = categorical,
+                              multiple_handling = multiple_handling)
         if part is None:
             return None
         return self.cached_part_array_ref(part, dtype = dtype, masked = masked, exclude_null = exclude_null)
