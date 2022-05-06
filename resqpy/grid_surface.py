@@ -1,6 +1,6 @@
 """Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '15th November 2021'
+version = '6th May 2022'
 
 import logging
 
