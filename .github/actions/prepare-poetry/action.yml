@@ -18,10 +18,10 @@ runs:
         python-version: ${{ inputs.python-version }}
 
     - name: Load cached Poetry installation
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/.local  # the path depends on the OS
-        key: poetry-0  # increment to reset cache
+        key: poetry-1  # increment to reset cache
 
     - name: Install Poetry
       uses: snok/install-poetry@v1
@@ -37,10 +37,10 @@ runs:
       
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-1
      
     - name: Install dependencies and library
       # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
