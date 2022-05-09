@@ -111,6 +111,7 @@ class BlockedWell(BaseResqpy):
            centres of the k faces in the column;
            optional RESQML attributes are not handled by this code (WITSML log reference, interval stratigraphic units,
            cell fluid phase units);
+           multiple grids are currently only supported when loading an existing blocked well from xml;
            mysterious RESQML WellboreFrameIndexableElements is not used in any other RESQML classes and is therefore
            not used here
 
@@ -127,8 +128,7 @@ class BlockedWell(BaseResqpy):
         self.cell_indices = None  #: cell_count natural cell indices, paired with non-null grid_indices
         self.grid_indices = None  #: node_count-1 indices into grid list for each interval in node_mds; -1 for unblocked interval
         self.face_pair_indices = None  #: entry, exit face per cell indices, -1 for Target Depth termination within a cell
-        self.grid_list = [
-        ]  #: list of grid objects indexed by grid_indices; for now only handles 1 grid unless loading from xml
+        self.grid_list = []  #: list of grid objects indexed by grid_indices
         self.wellbore_interpretation = None  #: associated wellbore interpretation object
         self.wellbore_feature = None  #: associated wellbore feature object
 
@@ -659,11 +659,11 @@ class BlockedWell(BaseResqpy):
         previous_xyz = None
         trajectory_mds = []
         trajectory_points = []  # entries paired with trajectory_mds
-        blocked_intervals = [
-        ]  # will have one fewer entries than trajectory nodes; 0 = blocked, -1 = not blocked (for grid indices)
+        blocked_intervals = []  # will have one fewer entries than trajectory nodes
+        # blocked_intervals values; 0 = blocked, -1 = not blocked (for grid indices)
         blocked_cells_kji0 = []  # will have length equal to number of 0's in blocked intervals
-        blocked_face_pairs = [
-        ]  # same length as blocked_cells_kji0; each is ((entry axis, entry polarity), (exit axis, exit polarity))
+        blocked_face_pairs = []  # same length as blocked_cells_kji0
+        # blocked_face_pairs is list of ((entry axis, entry polarity), (exit axis, exit polarity))
 
         log.debug('wellspec dataframe for well ' + str(well_name) + ' has ' + str(len(df)) + ' row' + _pl(len(df)))
 

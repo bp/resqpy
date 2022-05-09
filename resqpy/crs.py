@@ -246,7 +246,7 @@ class Crs(BaseResqpy):
 
     def has_same_epsg_code(self, other_crs: 'Crs') -> bool:
         """Returns True if either of the crs'es has a null EPSG code, or if they are the same."""
-        return self.epsg_code is None or other_crs.epsg_code is None or self.epsg_code == other_crs.epsg_code
+        return not self.epsg_code or not other_crs.epsg_code or self.epsg_code == other_crs.epsg_code
 
     def is_equivalent(self, other_crs: 'Crs') -> bool:
         """Returns True if this crs is effectively the same as the other crs."""
@@ -290,7 +290,9 @@ class Crs(BaseResqpy):
         if self is other_crs:
             return _as_xyz_tuple(xyz)
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         xyz = self.local_to_global(xyz)
         # yapf: disable
         if self.resqml_type == 'LocalDepth3dCrs':
@@ -314,7 +316,9 @@ class Crs(BaseResqpy):
         if self.is_equivalent(other_crs):
             return xyz
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         self.local_to_global_array(xyz)
         if self.resqml_type == 'LocalDepth3dCrs':
             if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
@@ -337,7 +341,9 @@ class Crs(BaseResqpy):
         if self is other_crs:
             return _as_xyz_tuple(xyz)
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         xyz = other_crs.local_to_global(xyz)
         # yapf: disable
         if self.resqml_type == 'LocalDepth3dCrs':
@@ -361,7 +367,9 @@ class Crs(BaseResqpy):
         if self.is_equivalent(other_crs):
             return xyz
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         other_crs.local_to_global_array(xyz)
         if self.resqml_type == 'LocalDepth3dCrs':
             if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
