@@ -233,8 +233,8 @@ class GridConnectionSet(BaseResqpy):
             assert feature_type in ['obj_FaultInterpretation', 'obj_HorizonInterpretation']
             self.feature_list.append((feature_type, feature_uuid, feature_title))
             log.debug('connection set references fault interpretation: ' + feature_title)
-        log.debug('number of faults referred to in connection set: ' + str(len(self.feature_list)))
-        assert len(self.feature_list) > 0, 'list of fault interpretation references is empty for connection set'
+        log.debug('number of features referred to in connection set: ' + str(len(self.feature_list)))
+        assert len(self.feature_list) > 0, 'list of interpretation references is empty for connection set'
         # leave feature indices till on-demand load
 
     def extract_property_collection(self):
@@ -725,7 +725,7 @@ class GridConnectionSet(BaseResqpy):
                                         array_attribute = 'fi_cl',
                                         dtype = 'uint32')
             assert self.fi_cl.shape == (
-                self.count,), 'connection set face pair(s) not assigned to exactly one fault'  # rough check
+                self.count,), 'connection set face pair(s) not assigned to exactly one feature'  # rough check
 
         # delattr(self, 'fi_cl')  # assumed to be one-to-one mapping, so cumulative length is discarded
 
