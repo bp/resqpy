@@ -573,7 +573,7 @@ class Surface(BaseSurface):
         axis, polarity = divmod(remainder, 2)
         return cell_number, axis, polarity
 
-    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
+    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0, quad_triangles = False):
         """Populate this (empty) surface with a patch of two triangles.
         
         Triangles define a flat, horizontal plane at a given depth.
@@ -582,12 +582,13 @@ class Surface(BaseSurface):
             depth (float): z value to use in all points in the triangulated patch
             box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
             border (float): an optional border width added around the x,y area defined by box_xyz
+            quad_triangles (bool, default False): if True, 4 triangles are used instead of 2
 
         :meta common:
         """
 
         tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
-        tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border)
+        tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border, quad_triangles = quad_triangles)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
 

@@ -164,6 +164,38 @@ class Polyline(_BasePolyline):
 
         return polyline
 
+    @classmethod
+    def for_regular_polygon(cls, model, n, radius, centre_xyz, crs_uuid, title):
+        """`Returns a closed polyline representing a regular polygon in xy plane.
+
+        arguments:
+           model (Model): the model for which the new polyline is intended
+           n (int): number of sides for the regular polygon
+           radius (float): distance from centre of polygon to vertices; units are crs xy unites
+           centre_xyz (triple float): the centre of the polygon
+           crs_uuid (UUID): the uuid of the crs for the centre point and the returned polyline
+           title (str): the citation title for the new polyline
+
+        returns:
+           a new closed Polyline representing a regular polygon in the xy plane
+
+        notee:
+           z values are all set to the z value of the centre point;
+           one vertex will have an x value identical to the centre and a positive y offset (due north usually);
+           this method does not write to hdf5 nor create xml for the new polyline
+        """
+
+        assert n >= 3 and radius > 0.0 and len(centre_xyz) == 3 and crs_uuid is not None
+
+        coords = np.zeros((n, 3), dtype = float)
+        for i in range(n):
+            theta = i * 2.0 * maths.pi / float(n)
+            coords[i] = np.array((radius * maths.sin(theta), radius * maths.cos(theta), 0.0), dtype = float) +  \
+                        np.array(centre_xyz, dtype = float)
+        polyline = cls(model, set_bool = True, set_coord = coords, set_crs = crs_uuid, title = title)
+
+        return polyline
+
     def is_convex(self, trust_metadata = True):
         """Returns True if the polyline is closed and convex in the xy plane, otherwise False."""
 

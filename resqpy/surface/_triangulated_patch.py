@@ -164,32 +164,38 @@ class TriangulatedPatch:
         self.triangles = triangles_trimmed
         self.triangle_count = len(self.triangles)
 
-    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
+    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0, quad_triangles = False):
         """Populate this (empty) patch with two triangles defining a flat, horizontal plane at a given depth.
 
         arguments:
            depth (float): z value to use in all points in the triangulated patch
            box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
            border (float): an optional border width added around the x,y area defined by box_xyz
+           quad_triangles (bool, default False): if True, 4 triangles are used instead of 2
         """
 
         # expand area by border
         box = box_xyz.copy()
         box[0, :2] -= border
         box[1, :2] += border
-        self.node_count = 4
-        self.points = np.empty((4, 3))
-        # set 2 points common to both triangles
+        self.node_count = 5 if quad_triangles else 4
+        self.points = np.empty((self.node_count, 3))
+        # set 4 points from corners of box
         self.points[0, :] = box[0, :]
         self.points[1, :] = box[1, :]
-        # and 2 others to form a rectangle aligned with x,y axes
         self.points[2, 0], self.points[2, 1] = box[0, 0], box[1, 1]  # min x, max y
         self.points[3, 0], self.points[3, 1] = box[1, 0], box[0, 1]  # max x, min y
+        if quad_triangles:
+            self.points[4] = np.mean(box, axis = 0)
         # set depth for all points
         self.points[:, 2] = depth
         # create pair of triangles
-        self.triangle_count = 2
-        self.triangles = np.array([[0, 1, 2], [0, 3, 1]], dtype = int)
+        if quad_triangles:
+            self.triangle_count = 4
+            self.triangles = np.array([[0, 2, 4], [2, 1, 4], [1, 3, 4], [3, 0, 4]], dtype = int)
+        else:
+            self.triangle_count = 2
+            self.triangles = np.array([[0, 1, 2], [0, 3, 1]], dtype = int)
 
     def set_to_triangle(self, corners):
         """Populate this (empty) patch with a single triangle."""
