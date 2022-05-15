@@ -1,6 +1,6 @@
 """Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '14th April 2022'
+version = '15th May 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -180,6 +180,9 @@ class PropertyCollection():
 
         elif isinstance(support, rqf.GridConnectionSet):
             shape_list = pcga._supporting_shape_gridconnectionset(support, indexable_element)
+
+        elif isinstance(support, rqs.Surface):
+            shape_list = pcga._supporting_shape_surface(support, indexable_element)
 
         elif type(support) in [
                 rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid
@@ -725,10 +728,12 @@ class PropertyCollection():
             uom = None,
             string_lookup_uuid = None,
             categorical = None,
-            multiple_handling = 'exception'):
+            multiple_handling = 'exception',
+            title = None):
         """Returns a single part selected by those arguments which are not None.
 
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
+           title (string, optional): synonym for citation_title argument
 
         For each argument (other than multiple_handling): if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
@@ -764,7 +769,8 @@ class PropertyCollection():
                                                           time_index = time_index,
                                                           uom = uom,
                                                           string_lookup_uuid = string_lookup_uuid,
-                                                          categorical = categorical)
+                                                          categorical = categorical,
+                                                          title = title)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
@@ -796,7 +802,8 @@ class PropertyCollection():
             dtype = None,
             masked = False,
             exclude_null = False,
-            multiple_handling = 'exception'):
+            multiple_handling = 'exception',
+            title = None):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -807,6 +814,7 @@ class PropertyCollection():
            exclude_null (boolean, default False): it True and masked is True, elements holding the null value
               will also be masked out
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
+           title (string, optional): synonym for citation_title argument
 
         Other optional arguments:
         realization, support, support_uuid, grid, continuous, points, count, indexable, property_kind, facet_type, facet,
@@ -850,7 +858,8 @@ class PropertyCollection():
                               uom = uom,
                               string_lookup_uuid = string_lookup_uuid,
                               categorical = categorical,
-                              multiple_handling = multiple_handling)
+                              multiple_handling = multiple_handling,
+                              title = title)
         if part is None:
             return None
         return self.cached_part_array_ref(part, dtype = dtype, masked = masked, exclude_null = exclude_null)

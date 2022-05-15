@@ -48,7 +48,7 @@ def _set_support_uuid_notnone(collection, support, support_uuid, model, modify_p
         if type(collection.support) in [
                 grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
                 rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
-                rug.PyramidGrid, rqw.WellboreMarkerFrame
+                rug.PyramidGrid, rqw.WellboreMarkerFrame, rqs.Surface
         ]:
             collection.support_root = collection.support.root
         else:
@@ -83,6 +83,8 @@ def _set_support_uuid_notnone_supportnone(collection, support_uuid, model):
         collection.support = rqs.Mesh(model, uuid = collection.support_uuid)
     elif support_type == 'obj_GridConnectionSetRepresentation':
         collection.support = rqf.GridConnectionSet(model, uuid = collection.support_uuid)
+    elif support_type == 'obj_TriangulatedSetRepresentation':
+        collection.support = rqs.Surface(model, uuid = collection.support_uuid)
     elif support_type == 'obj_UnstructuredGridRepresentation':
         collection.support = rug.UnstructuredGrid(model,
                                                   uuid = collection.support_uuid,

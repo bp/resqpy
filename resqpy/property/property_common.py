@@ -2,8 +2,6 @@
 import warnings
 import resqpy.property
 
-version = '24th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -510,7 +508,8 @@ def selective_version_of_collection(
         time_index = None,
         uom = None,
         string_lookup_uuid = None,
-        categorical = None):
+        categorical = None,
+        title = None):
     """Returns a new PropertyCollection with those parts which match all arguments that are not None.
 
     arguments:
@@ -520,12 +519,12 @@ def selective_version_of_collection(
 
     Other optional arguments:
     realization, support_uuid, grid, uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
-    citation_title, time_series_uuid, time_index, uom, string_lookup_uuid, categorical:
+    citation_title, time_series_uuid, time_index, uom, string_lookup_uuid, categorical, title:
 
     for each of these arguments: if None, then all members of collection pass this filter;
     if not None then only those members with the given value pass this filter;
     finally, the filters for all the attributes must be passed for a given member
-    to be included in the returned collection.
+    to be included in the returned collection; title is a synonym for the citation_title argument
 
     returns:
        a new PropertyCollection containing those properties which match the filter parameters that are not None
@@ -545,6 +544,8 @@ def selective_version_of_collection(
         view.set_support(support_uuid = support_uuid, model = collection.model)
     if realization is not None:
         view.set_realization(realization)
+    if citation_title is None:
+        citation_title = title
     view.inherit_parts_selectively_from_other_collection(collection,
                                                          realization = realization,
                                                          support_uuid = support_uuid,
