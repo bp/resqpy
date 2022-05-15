@@ -377,6 +377,15 @@ class Surface(BaseSurface):
            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
               viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
               enforced in the reoriented space
+
+        returns:
+           if extend_with_flange is True, numpy bool array with a value per triange indicating flange trianges;
+           if extent_with_flange is False, None
+
+        note:
+           if extend_with_flange is True, then a boolean array is created for the surface, with a value per triangle,
+           set to False (zero) for non-flange triangles and True (one) for flange triangles; this array is
+           suitable for adding as a property for the surface, with indexable element 'faces'
         """
 
         p = point_set.full_array_ref()
@@ -412,6 +421,11 @@ class Surface(BaseSurface):
             triangulate.make_all_clockwise_xy(t, p_e)  # modifies t in situ
         self.crs_uuid = point_set.crs_uuid
         self.set_from_triangles_and_points(t, p_e)
+        if extend_with_flange:
+            flange_array = np.zeros(len(t), dtype = bool)
+            flange_array[:] = np.where(np.any(t >= len(p), axis = 1), True, False)
+            return flange_array
+        return None
 
     def make_all_clockwise_xy(self, reorient = False):
         """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
