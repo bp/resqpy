@@ -440,6 +440,14 @@ def _supporting_shape_mesh(support, indexable_element):
     return shape_list
 
 
+def _supporting_shape_surface(support, indexable_element):
+    if indexable_element is None or indexable_element == 'faces':
+        shape_list = [support.triangle_count()]
+    elif indexable_element == 'nodes':
+        shape_list = [support.node_count()]
+    return shape_list
+
+
 def _supporting_shape_gridconnectionset(support, indexable_element):
     if indexable_element is None or indexable_element == 'faces':
         shape_list = [support.count]
@@ -472,7 +480,7 @@ def _get_indexable_element(indexable_element, support_type):
             indexable_element = 'cells'
         elif support_type in ['obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation']:
             indexable_element = 'nodes'  # note: could be 'intervals'
-        elif support_type == 'obj_GridConnectionSetRepresentation':
+        elif support_type in ['obj_GridConnectionSetRepresentation', 'obj_TriangulatedSetRepresentation']:
             indexable_element = 'faces'
         else:
             raise Exception('indexable element unknown for unsupported supporting representation object')
@@ -564,16 +572,19 @@ def _realizations_array_ref_get_shape_list(collection, indexable_element, r_exte
 
 
 def _realizations_array_ref_initial_checks(collection):
-    assert collection.support is not None, 'attempt to build realizations array for property collection without supporting representation'
-    assert collection.number_of_parts() > 0, 'attempt to build realizations array for empty property collection'
-    assert collection.has_single_property_kind(
-    ), 'attempt to build realizations array for collection with multiple property kinds'
-    assert collection.has_single_indexable_element(
-    ), 'attempt to build realizations array for collection containing a variety of indexable elements'
-    assert collection.has_single_uom(
-    ), 'attempt to build realizations array for collection containing multiple units of measure'
+    assert collection.support is not None,  \
+        'attempt to build realizations array for property collection without supporting representation'
+    assert collection.number_of_parts() > 0,  \
+        'attempt to build realizations array for empty property collection'
+    assert collection.has_single_property_kind(),  \
+        'attempt to build realizations array for collection with multiple property kinds'
+    assert collection.has_single_indexable_element(),  \
+        'attempt to build realizations array for collection containing a variety of indexable elements'
+    assert collection.has_single_uom(),  \
+        'attempt to build realizations array for collection containing multiple units of measure'
     r_list = collection.realization_list(sort_list = True)
-    assert collection.number_of_parts() == len(r_list), 'collection covers more than realizations of a single property'
+    assert collection.number_of_parts() == len(r_list),  \
+        'collection covers more than realizations of a single property'
     continuous = collection.all_continuous()
     if not continuous:
         assert collection.all_discrete(), 'mixture of continuous and discrete properties in collection'
@@ -581,17 +592,20 @@ def _realizations_array_ref_initial_checks(collection):
 
 
 def _time_array_ref_initial_checks(collection):
-    assert collection.support is not None, 'attempt to build time series array for property collection without supporting representation'
-    assert collection.number_of_parts() > 0, 'attempt to build time series array for empty property collection'
-    assert collection.has_single_property_kind(
-    ), 'attempt to build time series array for collection with multiple property kinds'
-    assert collection.has_single_indexable_element(
-    ), 'attempt to build time series array for collection containing a variety of indexable elements'
-    assert collection.has_single_uom(
-    ), 'attempt to build time series array for collection containing multiple units of measure'
+    assert collection.support is not None,  \
+        'attempt to build time series array for property collection without supporting representation'
+    assert collection.number_of_parts() > 0,  \
+        'attempt to build time series array for empty property collection'
+    assert collection.has_single_property_kind(),  \
+        'attempt to build time series array for collection with multiple property kinds'
+    assert collection.has_single_indexable_element(),  \
+        'attempt to build time series array for collection containing a variety of indexable elements'
+    assert collection.has_single_uom(),  \
+        'attempt to build time series array for collection containing multiple units of measure'
 
     ti_list = collection.time_index_list(sort_list = True)
-    assert collection.number_of_parts() == len(ti_list), 'collection covers more than time indices of a single property'
+    assert collection.number_of_parts() == len(ti_list),  \
+        'collection covers more than time indices of a single property'
 
     continuous = collection.all_continuous()
     if not continuous:
@@ -620,11 +634,13 @@ def _time_array_ref_not_fill_missing(collection, ti_list, dtype, a):
 
 
 def _facet_array_ref_checks(collection):
-    assert collection.support is not None, 'attempt to build facets array for property collection without supporting representation'
-    assert collection.number_of_parts() > 0, 'attempt to build facets array for empty property collection'
-    assert collection.has_single_property_kind(
-    ), 'attempt to build facets array for collection containing multiple property kinds'
-    assert collection.has_single_indexable_element(
-    ), 'attempt to build facets array for collection containing a variety of indexable elements'
-    assert collection.has_single_uom(
-    ), 'attempt to build facets array for collection containing multiple units of measure'
+    assert collection.support is not None,  \
+        'attempt to build facets array for property collection without supporting representation'
+    assert collection.number_of_parts() > 0,  \
+        'attempt to build facets array for empty property collection'
+    assert collection.has_single_property_kind(),  \
+        'attempt to build facets array for collection containing multiple property kinds'
+    assert collection.has_single_indexable_element(),  \
+        'attempt to build facets array for collection containing a variety of indexable elements'
+    assert collection.has_single_uom(),  \
+        'attempt to build facets array for collection containing multiple units of measure'

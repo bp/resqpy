@@ -22,8 +22,6 @@ from resqpy.property import property_kind_and_facet_from_keyword, guess_uom
 
 # ---- Test PropertyCollection methods ---
 
-# TODO
-
 
 def test_property(tmp_path):
     epc = os.path.join(tmp_path, 'test_prop.epc')
@@ -2128,3 +2126,59 @@ def test_mesh_support(example_model_and_crs):
             assert shape == (2, 2)
             array = pc.cached_part_array_ref(part)
             assert_array_almost_equal(array, cell_prop)
+
+
+def test_surface_support(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'test surface')
+    surf.set_to_horizontal_plane(depth = 1000.0,
+                                 box_xyz = np.array([[2000.0, 3000.0, 0.0], [2500.0, 3500.0, 0.0]]),
+                                 quad_triangles = True)
+    surf.write_hdf5()
+    surf.create_xml()
+
+    assert surf.triangle_count() == 4
+    assert surf.node_count() == 5
+
+    t_prop_float = np.array([125.0, -67.3, 247.9, -0.1], dtype = float)
+    t_prop_int = np.arange(4, dtype = int) + 27
+    p_prop_float = np.random.random(5)
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = surf)
+    pc.add_cached_array_to_imported_list(t_prop_float,
+                                         source_info = '',
+                                         keyword = 'test float',
+                                         discrete = False,
+                                         property_kind = 'length',
+                                         indexable_element = 'faces',
+                                         uom = 'cm')
+    pc.add_cached_array_to_imported_list(t_prop_int,
+                                         source_info = '',
+                                         keyword = 'test int',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         null_value = -1)
+    pc.add_cached_array_to_imported_list(p_prop_float,
+                                         source_info = '',
+                                         keyword = 'test float',
+                                         discrete = False,
+                                         property_kind = 'thermodynamic temperature',
+                                         indexable_element = 'nodes',
+                                         uom = 'K')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    surf_reload = rqs.Surface(model, uuid = surf.uuid)
+    pc_reload = rqp.PropertyCollection(support = surf_reload)
+    assert pc_reload.number_of_parts() == 3
+    tpf_reload = pc_reload.single_array_ref(continuous = True, indexable = 'faces')
+    tpi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'faces')
+    ppf_reload = pc_reload.single_array_ref(indexable = 'nodes')
+    assert tpf_reload is not None
+    assert tpi_reload is not None
+    assert ppf_reload is not None
+    assert_array_almost_equal(tpf_reload, t_prop_float)
+    assert np.all(tpi_reload == t_prop_int)
+    assert_array_almost_equal(ppf_reload, p_prop_float)
