@@ -1,6 +1,6 @@
 """Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '6th May 2022'
+version = '17th May 2022'
 
 import logging
 
@@ -1216,6 +1216,7 @@ def find_faces_to_represent_surface_regular(grid,
                                             name,
                                             title = None,
                                             centres = None,
+                                            agitate = False,
                                             progress_fn = None,
                                             consistent_side = False,
                                             return_properties = None):
@@ -1228,6 +1229,9 @@ def find_faces_to_represent_surface_regular(grid,
         name (str): the feature name to use in the grid connection set
         centres (numpy float array of shape (nk, nj, ni, 3), optional): precomputed cell centre points in
            local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
+        agitate (bool, default False): if True, the points of the surface are perturbed by a small random
+           offset, which can help if the surface has been built from a regular mesh with a periodic resonance
+           with the grid
         title (str, optional): the citation title to use for the grid connection set; defaults to name
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
@@ -1282,6 +1286,8 @@ def find_faces_to_represent_surface_regular(grid,
         surface.make_all_clockwise_xy(reorient = True)
     t, p = surface.triangles_and_points()
     assert t is not None and p is not None, f'surface {surface.title} is empty'
+    if agitate:
+        p += 1.0e-5 * (np.random.random(p.shape) - 0.5)
     log.debug(f'surface: {surface.title}; p0: {p[0]}; crs uuid: {surface.crs_uuid}')
     log.debug(f'surface min xyz: {np.min(p, axis = 0)}')
     log.debug(f'surface max xyz: {np.max(p, axis = 0)}')
@@ -1614,6 +1620,7 @@ def find_faces_to_represent_surface_regular_optimised(
     name,
     title = None,
     centres = None,
+    agitate = False,
     progress_fn = None,
     consistent_side = False,
     return_properties = None,
@@ -1624,9 +1631,12 @@ def find_faces_to_represent_surface_regular_optimised(
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
         surface (Surface): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
+        title (str, optional): the citation title to use for the grid connection set; defaults to name
         centres (numpy float array of shape (nk, nj, ni, 3), optional): precomputed cell centre points in
            local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
-        title (str, optional): the citation title to use for the grid connection set; defaults to name
+        agitate (bool, default False): if True, the points of the surface are perturbed by a small random
+           offset, which can help if the surface has been built from a regular mesh with a periodic resonance
+           with the grid
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
@@ -1681,6 +1691,8 @@ def find_faces_to_represent_surface_regular_optimised(
         surface.make_all_clockwise_xy(reorient = True)
     triangles, points = surface.triangles_and_points()
     assert triangles is not None and points is not None, f'surface {surface.title} is empty'
+    if agitate:
+        points += 1.0e-5 * (np.random.random(points.shape) - 0.5)
     log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
     log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
     log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
