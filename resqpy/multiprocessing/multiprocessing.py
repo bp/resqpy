@@ -27,7 +27,7 @@ def rm_tree(path: Path) -> None:
 
 
 def function_multiprocessing(function: Callable,
-                             kwargs_list: List[Dict[Any]],
+                             kwargs_list: List[Dict[str, Any]],
                              recombined_epc: Optional[Union[Path, str]] = None,
                              consolidate: bool = True,
                              processes: Optional[int] = None) -> List[bool]:
@@ -76,11 +76,11 @@ def function_multiprocessing(function: Callable,
     log.info("Function calls complete.")
 
     # Sorting the results by the original kwargs_list index.
-    results = sorted(results, key = lambda x: x[3])
+    results = sorted(results, key = lambda x: x[0])
 
-    success_list = [results[result][0] for result in len(results)]
-    epc_list = [results[result][1] for result in len(results)]
-    uuids_list = [results[result][2] for result in len(results)]
+    success_list = [results[result][1] for result in len(results)]
+    epc_list = [results[result][2] for result in len(results)]
+    uuids_list = [results[result][3] for result in len(results)]
     log.info("Number of successes: %s/%s.", sum(success_list), len(results))
 
     epc_file = Path(str(recombined_epc))

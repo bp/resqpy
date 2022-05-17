@@ -1,4 +1,5 @@
-from typing import Tuple, Union, List
+import numpy as np
+from typing import Tuple, Union, List, Dict, Any, Optional, Callable
 import resqpy.grid_surface as rqgs
 from resqpy.model import new_model
 from resqpy.grid import RegularGrid
@@ -6,8 +7,20 @@ from resqpy.surface import Surface
 from resqpy.property import PropertyCollection
 
 
-def find_faces_to_represent_surface_regular_wrapper(grid: RegularGrid, surface: Surface, name: str, tmp_dir: str,
-                                                    index: int) -> Tuple[Union[bool, str, List[str], int]]:
+def find_faces_to_represent_surface_regular_wrapper(
+    index: int,
+    tmp_dir: str,
+    use_index_as_realisation: bool,
+    grid: RegularGrid,
+    surface: Surface,
+    name: str,
+    title: Optional[str] = None,
+    centres: Optional[np.ndarray] = None,
+    agitate: bool = False,
+    progress_fn: Optional[Callable] = None,
+    consistent_side: bool = False,
+    return_properties: Optional[List[str]] = None,
+) -> Tuple[Union[int, bool, str, List[str]]]:
     """Wrapper function of find_faces_to_represent_surface_regular_optimised.
     
     Used for multiprocessing to create a new model that is saved in a temporary epc file
@@ -15,43 +28,91 @@ def find_faces_to_represent_surface_regular_wrapper(grid: RegularGrid, surface: 
     recombine all the objects into a single epc file.
     
     Args:
+        index (int): the index of the function call from the multiprocessing function.
+        tmp_dir (str): path of the temporary directory that will hold the epc file for
+            relevant objects that are saved in this function.
         grid (RegularGrid): the grid for which to create a grid connection set
             representation of the surface.
         surface (Surface): the surface to be intersected with the grid.
         name (str): the feature name to use in the grid connection set.
-        tmp_dir (str): path of the temporary directory that will hold the epc file for
-            relevant objects that are saved in this function.
-        index (int): the index of the function call from the multiprocessing function.
+        title (str): the citation title to use for the grid connection set; defaults to name
+        centres (np.ndarray, shape (nk, nj, ni, 3)): precomputed cell centre points in
+           local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
+        agitate (bool): if True, the points of the surface are perturbed by a small random
+           offset, which can help if the surface has been built from a regular mesh with a periodic resonance
+           with the grid
+        progress_fn (Callable): a callback function to be called at intervals by this function;
+           the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+        consistent_side (bool): if True, the cell pairs will be ordered so that all the first
+           cells in each pair are on one side of the surface, and all the second cells on the other
+        return_properties (List[str]): if present, a list of property arrays to calculate and
+           return as a dictionary; recognised values in the list are 'triangle', 'offset' and 'normal vector';
+           triangle is an index into the surface triangles of the triangle detected for the gcs face; offset
+           is a measure of the distance between the centre of the cell face and the intersection point of the
+           inter-cell centre vector with a triangle in the surface; normal vector is a unit vector normal
+           to the surface triangle; each array has an entry for each face in the gcs; the returned dictionary
+           has the passed strings as keys and numpy arrays as values.
 
     Returns:
         Tuple containing:
 
+            - index (int): the index passed to the function.
             - success (bool): whether the function call was successful, whatever that
                 definiton is.
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
-            - index (int): the index passed to the function.
     """
-
     epc_file = f"{tmp_dir}/wrapper.epc"
     model = new_model(epc_file = epc_file)
     model.copy_uuid_from_other_model(grid.model, uuid = grid.uuid)
     model.copy_uuid_from_other_model(surface.model, uuid = surface.uuid)
 
     uuid_list = []
+    uuid_list.append(grid.uuid)
     uuid_list.append(surface.uuid)
 
-    returns = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name)
+    returns = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name, title, centres, agitate,
+                                                                     progress_fn, consistent_side, return_properties)
 
-    if isinstance(returns, tuple):
+    if return_properties is not None:
         gcs = returns[0]
         properties = returns[1]
+        realisation = index if use_index_as_realisation else None
         property_collection = PropertyCollection(support = gcs)
         for name, array in properties.items():
             if name == "normal vector":
-                property_collection.add_cached_array_to_imported_list(array, indexable_element = "faces", points = True)
+                property_collection.add_cached_array_to_imported_list(array,
+                                                                      "from find_faces... function",
+                                                                      name,
+                                                                      discrete = False,
+                                                                      uom = "Euc",
+                                                                      property_kind = "continuous",
+                                                                      realization = realisation,
+                                                                      indexable_element = "faces",
+                                                                      points = True)
+            elif name == "triangle":
+                property_collection.add_cached_array_to_imported_list(array,
+                                                                      "from find_faces... function",
+                                                                      name,
+                                                                      discrete = True,
+                                                                      null_value = -1,
+                                                                      property_kind = "discrete",
+                                                                      realization = realisation,
+                                                                      indexable_element = "faces")
+            elif name == "offset":
+                property_collection.add_cached_array_to_imported_list(array,
+                                                                      "from find_faces... function",
+                                                                      name,
+                                                                      discrete = False,
+                                                                      uom = grid.crs.z_units,
+                                                                      property_kind = "continuous",
+                                                                      realization = realisation,
+                                                                      indexable_element = "faces")
             else:
-                property_collection.add_cached_array_to_imported_list(array, indexable_element = "faces")
+                raise ValueError(f"Name {name} not supported in wrapper.")
+        property_collection.write_hdf5_for_imported_list()
+        uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model()
+        uuid_list.extend(uuids_properties)
     else:
         gcs = returns
 
@@ -59,9 +120,11 @@ def find_faces_to_represent_surface_regular_wrapper(grid: RegularGrid, surface: 
     if gcs.count > 0:
         success = True
 
+    gcs.write_hdf5()
+    gcs.create_xml()
     model.copy_uuid_from_other_model(gcs.model, uuid = gcs.uuid)
     uuid_list.append(gcs.uuid)
 
     model.store_epc()
 
-    return success, epc_file, uuid_list, index
+    return index, success, epc_file, uuid_list

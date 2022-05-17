@@ -3,7 +3,7 @@ from resqpy.multiprocessing.multiprocessing import function_multiprocessing
 from resqpy.multiprocessing.wrappers.grid_surface import find_faces_to_represent_surface_regular_wrapper
 
 
-@pytest.skip("Function not complete.")
+@pytest.mark.skip("Function not complete.")
 def test_function_multiprocessing_three_calls(tmp_path):
     # Arrange
     recombined_epc = f"{tmp_path}/test.epc"
