@@ -39,11 +39,11 @@ def function_multiprocessing(function: Callable,
     Args:
         function (Callable): the function to be called. Needs to return:
 
+            - index (int): the index of the kwargs in the kwargs_list.
             - success (bool): whether the function call was successful, whatever that
                 definiton is.
             - epc_file (Path/str): the epc file path where the objects are stored.
             - uuid_list (List[Union[UUID/str]]): list of UUIDs of relevant objects.
-            - index (int): the index of the kwargs in the kwargs_list.
 
         kwargs_list (List[Dict[Any]]): A list of keyword argument dictionaries that are
             used when calling the function.
@@ -70,7 +70,11 @@ def function_multiprocessing(function: Callable,
     with Pool(processes = processes) as pool:
         log.info("Number of processes: %s", pool._processes)
 
-        function_calls = [pool.apply_async(function, kwds = kwargs) for kwargs in kwargs_list]
+        function_calls = []
+        for kwargs in kwargs_list:
+            a = pool.apply_async(function, kwds = kwargs)
+            b = a.get()
+            function_calls.append(a)
         results = [func.get() for func in function_calls]
 
     log.info("Function calls complete.")

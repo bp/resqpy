@@ -5,14 +5,16 @@ from resqpy.model import new_model
 from resqpy.grid import RegularGrid
 from resqpy.surface import Surface
 from resqpy.property import PropertyCollection
+from pathlib import Path
+from resqpy.model import Model
 
 
 def find_faces_to_represent_surface_regular_wrapper(
     index: int,
     tmp_dir: str,
     use_index_as_realisation: bool,
-    grid: RegularGrid,
-    surface: Surface,
+    grid_epc: Union[Path, str],
+    surface_epc: Union[Path, str],
     name: str,
     title: Optional[str] = None,
     centres: Optional[np.ndarray] = None,
@@ -62,6 +64,9 @@ def find_faces_to_represent_surface_regular_wrapper(
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
     """
+    grid = RegularGrid(model=Model(grid_epc), uuid=None)
+    surface = Surface(model=Model(surface_epc), uuid=None)
+
     epc_file = f"{tmp_dir}/wrapper.epc"
     model = new_model(epc_file = epc_file)
     model.copy_uuid_from_other_model(grid.model, uuid = grid.uuid)
@@ -108,8 +113,6 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                                       property_kind = "continuous",
                                                                       realization = realisation,
                                                                       indexable_element = "faces")
-            else:
-                raise ValueError(f"Name {name} not supported in wrapper.")
         property_collection.write_hdf5_for_imported_list()
         uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model()
         uuid_list.extend(uuids_properties)
