@@ -639,11 +639,27 @@ class Polyline(_BasePolyline):
     def area(self):
         """Returns the area in the xy plane of a closed convex polygon."""
         assert self.isclosed
-        assert self.is_convex()
-        centre = np.mean(self.coordinates, axis = 0)
-        a = 0.0
-        for node in range(len(self.coordinates)):
-            a += vu.area_of_triangle(centre, self.coordinates[node - 1], self.coordinates[node])
+        if self.is_convex():
+            centre = np.mean(self.coordinates, axis = 0)
+            a = 0.0
+            for node in range(len(self.coordinates)):
+                a += vu.area_of_triangle(centre, self.coordinates[node - 1], self.coordinates[node])
+        else:  # use a regular 2D sampling of points to determine approx area
+            xy_box = np.zeros((2, 2), dtype = float)
+            xy_box[0] = np.min(self.coordinates[:, :2], axis = 0)
+            xy_box[1] = np.max(self.coordinates[:, :2], axis = 0)
+            assert np.all(xy_box[1] > xy_box[0])
+            d_xy = xy_box[1] - xy_box[0]
+            d = d_xy[0] + d_xy[1]
+            f_xy = d_xy / d
+            n_xy = np.ceil(100.0 * f_xy).astype(int)
+            x = np.linspace(xy_box[0, 0], xy_box[1, 0], num = n_xy[0], dtype = float)
+            y = np.linspace(xy_box[0, 1], xy_box[1, 1], num = n_xy[1], dtype = float)
+            xy = np.stack(np.meshgrid(x, y), axis = -1).reshape((-1, 2))
+            inside = pip.pip_array_cn(xy, self.coordinates)
+            nf_xy = n_xy.astype(float)
+            d_xy *= (nf_xy + 1.0) / nf_xy
+            a = d_xy[0] * d_xy[1] * float(np.count_nonzero(inside)) / float(inside.size)
         return a
 
     def create_xml(self,

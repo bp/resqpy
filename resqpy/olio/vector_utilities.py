@@ -621,6 +621,8 @@ def in_circumcircle(a, b, c, d):
 def point_distance_to_line_2d(p, l1, l2):
     """Ignoring any z values, returns the xy distance of point p from line passing through l1 and l2."""
 
+    if np.all(l2[:2] == l1[:2]):
+        return naive_2d_length(p[:2] - l1[:2])
     return (abs(p[0] * (l1[1] - l2[1]) + l1[0] * (l2[1] - p[1]) + l2[0] * (p[1] - l1[1])) /
             naive_2d_length(l2[:2] - l1[:2]))
 

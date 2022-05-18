@@ -278,6 +278,13 @@ def test_area(example_model_and_crs):
     assert maths.isclose(line.area(), 14.0)
 
 
+def test_concave_area(example_model_and_crs):
+    # create an octagonal polyline with some concavities
+    model, crs = example_model_and_crs
+    line = __concave_octagon(model, crs)
+    assert maths.isclose(line.area(), 12.0, rel_tol = 0.01)
+
+
 def test_splined_and_tangent_vectors(example_model_and_crs):
     model, crs = example_model_and_crs
     line = __zig_zag(model, crs)
@@ -333,6 +340,19 @@ def __octagon(model, crs):
     title = 'octagon'
     coords = np.array([(2.5, 2.5, 0.0), (2.0, 3.0, 0.0), (2.0, 5.0, 0.0), (3.0, 6.0, 0.0), (5.0, 6.0, 0.0),
                        (6.0, 5.0, 0.0), (6.0, 3.0, 0.0), (5.0, 2.0, 0.0), (3.0, 2.0, 0.0)])
+    line = resqpy.lines.Polyline(parent_model = model,
+                                 title = title,
+                                 set_crs = crs.uuid,
+                                 set_bool = True,
+                                 set_coord = coords)
+    return line
+
+
+def __concave_octagon(model, crs):
+    title = 'concave octagon'
+    coords = np.array([(2.5, 2.5, 0.0), (2.0, 3.0, 0.0), (2.0, 5.0, 0.0), (3.0, 6.0, 0.0), (5.0, 6.0, 0.0),
+                       (6.0, 5.0, 0.0), (5.0, 4.0, 0.0), (6.0, 3.0, 0.0), (5.0, 2.0, 0.0), (4.0, 3.0, 0.0),
+                       (3.0, 2.0, 0.0)])
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
