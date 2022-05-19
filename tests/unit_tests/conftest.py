@@ -462,4 +462,6 @@ def small_grid_and_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surfa
     surface.write_hdf5()
     surface.create_xml()
 
+    tmp_model.store_epc()
+
     return grid, surface

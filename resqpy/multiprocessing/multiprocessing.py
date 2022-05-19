@@ -5,6 +5,7 @@ import logging
 import tempfile
 from resqpy.model import Model, new_model
 from uuid import UUID
+import os
 
 log = logging.getLogger(__name__)
 
@@ -73,18 +74,17 @@ def function_multiprocessing(function: Callable,
         function_calls = []
         for kwargs in kwargs_list:
             a = pool.apply_async(function, kwds = kwargs)
-            b = a.get()
             function_calls.append(a)
         results = [func.get() for func in function_calls]
 
     log.info("Function calls complete.")
 
     # Sorting the results by the original kwargs_list index.
-    results = sorted(results, key = lambda x: x[0])
+    results = list(sorted(results, key = lambda x: x[0]))
 
-    success_list = [results[result][1] for result in len(results)]
-    epc_list = [results[result][2] for result in len(results)]
-    uuids_list = [results[result][3] for result in len(results)]
+    success_list = [result[1] for result in results]
+    epc_list = [result[2] for result in results]
+    uuids_list = [result[3] for result in results]
     log.info("Number of successes: %s/%s.", sum(success_list), len(results))
 
     epc_file = Path(str(recombined_epc))
@@ -94,7 +94,7 @@ def function_multiprocessing(function: Callable,
         model_recombined = new_model(epc_file = str(epc_file))
 
     log.info("Creating the recombined epc file.")
-    for i, epc in epc_list:
+    for i, epc in enumerate(epc_list):
         if epc is None:
             continue
         model = Model(epc_file = epc)

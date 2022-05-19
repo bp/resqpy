@@ -7,6 +7,10 @@ from resqpy.surface import Surface
 from resqpy.property import PropertyCollection
 from pathlib import Path
 from resqpy.model import Model
+import logging
+from uuid import UUID
+
+log = logging.getLogger(__name__)
 
 
 def find_faces_to_represent_surface_regular_wrapper(
@@ -14,7 +18,9 @@ def find_faces_to_represent_surface_regular_wrapper(
     tmp_dir: str,
     use_index_as_realisation: bool,
     grid_epc: Union[Path, str],
+    grid_uuid: Union[UUID, str],
     surface_epc: Union[Path, str],
+    surface_uuid: Union[UUID, str],
     name: str,
     title: Optional[str] = None,
     centres: Optional[np.ndarray] = None,
@@ -33,9 +39,12 @@ def find_faces_to_represent_surface_regular_wrapper(
         index (int): the index of the function call from the multiprocessing function.
         tmp_dir (str): path of the temporary directory that will hold the epc file for
             relevant objects that are saved in this function.
-        grid (RegularGrid): the grid for which to create a grid connection set
-            representation of the surface.
-        surface (Surface): the surface to be intersected with the grid.
+        use_index_as_realisation (bool): if True, uses the index number as the realization number on
+            the property collection.
+        grid_epc (Path/str): epc file path where the grid is saved.
+        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
+        surface_epc (Path/str): epc file path where the surface is saved.
+        surface_uuid (UUID/str): UUID (universally unique identifier) of the surface object.
         name (str): the feature name to use in the grid connection set.
         title (str): the citation title to use for the grid connection set; defaults to name
         centres (np.ndarray, shape (nk, nj, ni, 3)): precomputed cell centre points in
@@ -64,17 +73,17 @@ def find_faces_to_represent_surface_regular_wrapper(
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
     """
-    grid = RegularGrid(model=Model(grid_epc), uuid=None)
-    surface = Surface(model=Model(surface_epc), uuid=None)
+    surface = Surface(parent_model = Model(surface_epc), uuid = surface_uuid)
 
     epc_file = f"{tmp_dir}/wrapper.epc"
     model = new_model(epc_file = epc_file)
-    model.copy_uuid_from_other_model(grid.model, uuid = grid.uuid)
-    model.copy_uuid_from_other_model(surface.model, uuid = surface.uuid)
+    model.copy_uuid_from_other_model(Model(grid_epc), uuid = grid_uuid)
+    model.copy_uuid_from_other_model(surface.model, uuid = surface_uuid)
+
+    grid = RegularGrid(parent_model = model, uuid = grid_uuid)
 
     uuid_list = []
-    uuid_list.append(grid.uuid)
-    uuid_list.append(surface.uuid)
+    uuid_list.extend([grid_uuid, surface_uuid])
 
     returns = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name, title, centres, agitate,
                                                                      progress_fn, consistent_side, return_properties)
@@ -87,7 +96,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         for name, array in properties.items():
             if name == "normal vector":
                 property_collection.add_cached_array_to_imported_list(array,
-                                                                      "from find_faces... function",
+                                                                      "from find_faces function",
                                                                       name,
                                                                       discrete = False,
                                                                       uom = "Euc",
@@ -97,7 +106,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                                       points = True)
             elif name == "triangle":
                 property_collection.add_cached_array_to_imported_list(array,
-                                                                      "from find_faces... function",
+                                                                      "from find_faces function",
                                                                       name,
                                                                       discrete = True,
                                                                       null_value = -1,
@@ -106,7 +115,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                                       indexable_element = "faces")
             elif name == "offset":
                 property_collection.add_cached_array_to_imported_list(array,
-                                                                      "from find_faces... function",
+                                                                      "from find_faces function",
                                                                       name,
                                                                       discrete = False,
                                                                       uom = grid.crs.z_units,
