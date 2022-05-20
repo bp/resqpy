@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple, Union, List, Dict, Any, Optional, Callable
+from typing import Tuple, Union, List, Optional, Callable
 import resqpy.grid_surface as rqgs
 from resqpy.model import new_model
 from resqpy.grid import RegularGrid
@@ -7,10 +7,7 @@ from resqpy.surface import Surface
 from resqpy.property import PropertyCollection
 from pathlib import Path
 from resqpy.model import Model
-import logging
 from uuid import UUID
-
-log = logging.getLogger(__name__)
 
 
 def find_faces_to_represent_surface_regular_wrapper(
@@ -73,14 +70,14 @@ def find_faces_to_represent_surface_regular_wrapper(
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
     """
-    surface = Surface(parent_model = Model(surface_epc), uuid = surface_uuid)
+    surface = Surface(parent_model = Model(surface_epc), uuid = str(surface_uuid))
 
     epc_file = f"{tmp_dir}/wrapper.epc"
     model = new_model(epc_file = epc_file)
-    model.copy_uuid_from_other_model(Model(grid_epc), uuid = grid_uuid)
-    model.copy_uuid_from_other_model(surface.model, uuid = surface_uuid)
+    model.copy_uuid_from_other_model(Model(grid_epc), uuid = str(grid_uuid))
+    model.copy_uuid_from_other_model(surface.model, uuid = str(surface_uuid))
 
-    grid = RegularGrid(parent_model = model, uuid = grid_uuid)
+    grid = RegularGrid(parent_model = model, uuid = str(grid_uuid))
 
     uuid_list = []
     uuid_list.extend([grid_uuid, surface_uuid])

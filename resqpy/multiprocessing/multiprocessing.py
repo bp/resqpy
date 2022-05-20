@@ -4,8 +4,6 @@ from pathlib import Path
 import logging
 import tempfile
 from resqpy.model import Model, new_model
-from uuid import UUID
-import os
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +42,7 @@ def function_multiprocessing(function: Callable,
             - success (bool): whether the function call was successful, whatever that
                 definiton is.
             - epc_file (Path/str): the epc file path where the objects are stored.
-            - uuid_list (List[Union[UUID/str]]): list of UUIDs of relevant objects.
+            - uuid_list (List[str]): list of UUIDs of relevant objects.
 
         kwargs_list (List[Dict[Any]]): A list of keyword argument dictionaries that are
             used when calling the function.
@@ -71,10 +69,7 @@ def function_multiprocessing(function: Callable,
     with Pool(processes = processes) as pool:
         log.info("Number of processes: %s", pool._processes)
 
-        function_calls = []
-        for kwargs in kwargs_list:
-            a = pool.apply_async(function, kwds = kwargs)
-            function_calls.append(a)
+        function_calls = [pool.apply_async(function, kwds = kwargs) for kwargs in kwargs_list]
         results = [func.get() for func in function_calls]
 
     log.info("Function calls complete.")
