@@ -54,7 +54,7 @@ Development environment setup
       cd resqpy
 
 2. Set up a Python environment
-
+   **Note: due to a requirement of one of the dependencies, you will need to use a 64-bit installation of Python when working with RESQPY.**
    The RESQPY project uses `Poetry <https://python-poetry.org/>`_ for dependency management and environment setup. Please `install Poetry <https://python-poetry.org/docs/master/#installing-with-pip>`_ first if you have not already done so.
    With Poetry installed, please then install the `Poetry Dynamic Versioning Plugin <https://github.com/mtkennerly/poetry-dynamic-versioning>`_.
 
