@@ -1896,6 +1896,8 @@ class Model():
         """
 
         part = other_model.part_for_uuid(uuid)
+        if part is None:
+            return None
         copied_part = m_f._copy_part_from_other_model(self,
                                                       other_model,
                                                       part,
