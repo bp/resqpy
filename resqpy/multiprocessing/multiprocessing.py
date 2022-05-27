@@ -5,6 +5,7 @@ from resqpy.model import Model, new_model
 from dask.distributed import Client, LocalCluster
 from dask_jobqueue import JobQueueCluster
 import os
+import tempfile
 
 log = logging.getLogger(__name__)
 
@@ -28,11 +29,11 @@ def rm_tree(path: Path) -> None:
 
 
 def function_multiprocessing(
-    function: Callable,
-    kwargs_list: List[Dict[str, Any]],
-    recombined_epc: Union[Path, str],
-    consolidate: bool = True,
-    cluster: Union[LocalCluster, JobQueueCluster] = LocalCluster(),
+        function: Callable,
+        kwargs_list: List[Dict[str, Any]],
+        recombined_epc: Union[Path, str],
+        consolidate: bool = True,
+        cluster: Union[LocalCluster, JobQueueCluster] = LocalCluster(),
 ) -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
@@ -63,8 +64,14 @@ def function_multiprocessing(
     """
     log.info("Multiprocessing function called with %s function.", function.__name__)
 
+    # Creating temporary directories.
+    tmp_dirs = []
     for i, kwargs in enumerate(kwargs_list):
+        dirpath = tempfile.mkdtemp()
+        kwargs["tmp_dir"] = dirpath
         kwargs["index"] = i
+        tmp_dirs.append(Path(dirpath))
+    log.info("Temporary directories created.")
 
     workers = len(Client(cluster).scheduler_info()["workers"])
     threads_per_worker = list(Client(cluster).scheduler_info()['workers'].values())[0]['nthreads']
@@ -84,7 +91,7 @@ def function_multiprocessing(
     log.info("Function calls complete.")
 
     # Sorting the results by the original kwargs_list index.
-    results = list(sorted(results, key=lambda x: x[0]))
+    results = list(sorted(results, key = lambda x: x[0]))
 
     success_list = [result[1] for result in results]
     epc_list = [result[2] for result in results]
@@ -93,26 +100,25 @@ def function_multiprocessing(
 
     epc_file = Path(str(recombined_epc))
     if epc_file.is_file():
-        model_recombined = Model(epc_file=str(epc_file))
+        model_recombined = Model(epc_file = str(epc_file))
     else:
-        model_recombined = new_model(epc_file=str(epc_file))
+        model_recombined = new_model(epc_file = str(epc_file))
 
     log.info("Creating the recombined epc file.")
     for i, epc in enumerate(epc_list):
         if epc is None:
             continue
-        model = Model(epc_file=epc)
+        model = Model(epc_file = epc)
         uuids = uuids_list[i]
         if uuids is None:
             uuids = model.uuids()
         for uuid in uuids:
-            model_recombined.copy_uuid_from_other_model(
-                model, uuid=uuid, consolidate=consolidate
-            )
+            model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
 
     # Deleting temporary directory.
     log.info("Deleting the temporary directory")
-    rm_tree("tmp_dir")
+    for tmp_dir in tmp_dirs:
+        rm_tree(tmp_dir)
 
     model_recombined.store_epc()
 

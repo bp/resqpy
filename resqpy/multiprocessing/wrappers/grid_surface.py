@@ -8,11 +8,11 @@ from resqpy.property import PropertyCollection
 from pathlib import Path
 from resqpy.model import Model
 from uuid import UUID
-import uuid
 
 
 def find_faces_to_represent_surface_regular_wrapper(
     index: int,
+    tmp_dir,
     use_index_as_realisation: bool,
     grid_epc: Union[Path, str],
     grid_uuid: Union[UUID, str],
@@ -68,16 +68,16 @@ def find_faces_to_represent_surface_regular_wrapper(
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
     """
-    surface = Surface(parent_model=Model(surface_epc), uuid=str(surface_uuid))
+    surface = Surface(parent_model = Model(surface_epc), uuid = str(surface_uuid))
 
-    tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
-    tmp_dir.mkdir(parents=True, exist_ok=True)
+    # tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
+    # tmp_dir.mkdir(parents=True, exist_ok=True)
     epc_file = f"{tmp_dir}/wrapper.epc"
-    model = new_model(epc_file=epc_file)
-    model.copy_uuid_from_other_model(Model(grid_epc), uuid=str(grid_uuid))
-    model.copy_uuid_from_other_model(surface.model, uuid=str(surface_uuid))
+    model = new_model(epc_file = epc_file)
+    model.copy_uuid_from_other_model(Model(grid_epc), uuid = str(grid_uuid))
+    model.copy_uuid_from_other_model(surface.model, uuid = str(surface_uuid))
 
-    grid = RegularGrid(parent_model=model, uuid=str(grid_uuid))
+    grid = RegularGrid(parent_model = model, uuid = str(grid_uuid))
 
     uuid_list = []
     uuid_list.extend([grid_uuid, surface_uuid])
@@ -101,46 +101,44 @@ def find_faces_to_represent_surface_regular_wrapper(
         gcs = returns[0]
         properties = returns[1]
         realisation = index if use_index_as_realisation else None
-        property_collection = PropertyCollection(support=gcs)
+        property_collection = PropertyCollection(support = gcs)
         for name, array in properties.items():
             if name == "normal vector":
                 property_collection.add_cached_array_to_imported_list(
                     array,
                     "from find_faces function",
                     name,
-                    discrete=False,
-                    uom="Euc",
-                    property_kind="continuous",
-                    realization=realisation,
-                    indexable_element="faces",
-                    points=True,
+                    discrete = False,
+                    uom = "Euc",
+                    property_kind = "continuous",
+                    realization = realisation,
+                    indexable_element = "faces",
+                    points = True,
                 )
             elif name == "triangle":
                 property_collection.add_cached_array_to_imported_list(
                     array,
                     "from find_faces function",
                     name,
-                    discrete=True,
-                    null_value=-1,
-                    property_kind="discrete",
-                    realization=realisation,
-                    indexable_element="faces",
+                    discrete = True,
+                    null_value = -1,
+                    property_kind = "discrete",
+                    realization = realisation,
+                    indexable_element = "faces",
                 )
             elif name == "offset":
                 property_collection.add_cached_array_to_imported_list(
                     array,
                     "from find_faces function",
                     name,
-                    discrete=False,
-                    uom=grid.crs.z_units,
-                    property_kind="continuous",
-                    realization=realisation,
-                    indexable_element="faces",
+                    discrete = False,
+                    uom = grid.crs.z_units,
+                    property_kind = "continuous",
+                    realization = realisation,
+                    indexable_element = "faces",
                 )
         property_collection.write_hdf5_for_imported_list()
-        uuids_properties = (
-            property_collection.create_xml_for_imported_list_and_add_parts_to_model()
-        )
+        uuids_properties = (property_collection.create_xml_for_imported_list_and_add_parts_to_model())
         uuid_list.extend(uuids_properties)
     else:
         gcs = returns
@@ -151,7 +149,7 @@ def find_faces_to_represent_surface_regular_wrapper(
 
     gcs.write_hdf5()
     gcs.create_xml()
-    model.copy_uuid_from_other_model(gcs.model, uuid=gcs.uuid)
+    model.copy_uuid_from_other_model(gcs.model, uuid = gcs.uuid)
     uuid_list.append(gcs.uuid)
 
     model.store_epc()
