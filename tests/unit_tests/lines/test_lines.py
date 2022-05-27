@@ -348,6 +348,13 @@ def test_closest_segment_and_distance_to_point_xy(example_model_and_crs):
             assert m_seg is not None and m_d is not None
             assert m_seg == seg
             assert maths.isclose(m_d, d, rel_tol = 1.0e-6)
+        pv = nonagon.coordinates[seg]
+        p_out = (pv - c) * 13.9 + c
+        d = vec.naive_length(p_out - pv)
+        m_seg, m_d = nonagon.closest_segment_and_distance_to_point_xy(p_out)
+        assert m_seg is not None and m_d is not None
+        assert m_seg in [seg, (seg - 1) % 9]
+        assert maths.isclose(m_d, d, rel_tol = 1.0e-6)
 
 
 def __zig_zag(model, crs):
