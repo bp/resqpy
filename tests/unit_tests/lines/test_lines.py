@@ -6,6 +6,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.lines
 import resqpy.model as rq
 import resqpy.organize
+import resqpy.olio.vector_utilities as vec
 
 
 def test_lines(example_model_and_crs):
@@ -323,6 +324,30 @@ def test_poly_index_containing_point_in_xy(example_model_and_crs):
         assert pl_set.poly_index_containing_point_in_xy((5.8, 5.8), mode = mode) is None
         assert pl_set.poly_index_containing_point_in_xy((5.1, 5.1), mode = mode) == 0
         assert pl_set.poly_index_containing_point_in_xy((6.2, 4.8, 0.0), mode = mode) == 1
+
+
+def test_closest_segment_and_distance_to_point_xy(example_model_and_crs):
+    model, crs = example_model_and_crs
+    c = np.array((123.45, 678.90, 0.0), dtype = float)
+    nonagon = resqpy.lines.Polyline.for_regular_polygon(model, 9, 5.7, c, crs.uuid, 'nonagon')
+    assert nonagon is not None
+    assert len(nonagon.coordinates) == 9
+    cp = np.mean(nonagon.coordinates, axis = 0)
+    assert_array_almost_equal(cp, c)
+    for seg in range(9):
+        p = np.array(nonagon.segment_midpoint(seg), dtype = float)
+        m_seg, m_d = nonagon.closest_segment_and_distance_to_point_xy(p)
+        assert m_seg is not None and m_d is not None
+        assert m_seg == seg
+        assert maths.isclose(m_d, 0.0, abs_tol = 1.0e-6)
+        p_in = (p - c) * 0.2 + c
+        p_out = (p - c) * 23.4 + c
+        for pp in [p_in, p_out]:
+            d = vec.naive_length(p - pp)
+            m_seg, m_d = nonagon.closest_segment_and_distance_to_point_xy(pp)
+            assert m_seg is not None and m_d is not None
+            assert m_seg == seg
+            assert maths.isclose(m_d, d, rel_tol = 1.0e-6)
 
 
 def __zig_zag(model, crs):
