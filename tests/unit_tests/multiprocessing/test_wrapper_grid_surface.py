@@ -1,13 +1,12 @@
 from resqpy.multiprocessing.wrappers.grid_surface import find_faces_to_represent_surface_regular_wrapper
 from resqpy.model import Model
-from pathlib import Path
 from typing import Tuple
 from resqpy.grid import RegularGrid
 from resqpy.surface import Surface
+from resqpy.multiprocessing.multiprocessing import rm_tree
 
 
-def test_find_faces_to_represent_surface_regular_wrapper(tmp_path: Path, small_grid_and_surface: Tuple[RegularGrid,
-                                                                                                       Surface]):
+def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface: Tuple[RegularGrid, Surface]):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -20,8 +19,9 @@ def test_find_faces_to_represent_surface_regular_wrapper(tmp_path: Path, small_g
 
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
-        input_index, tmp_path, use_index_as_realisation, grid_epc, grid_uuid, surface_epc, surface_uuid, name)
+        input_index, use_index_as_realisation, grid_epc, grid_uuid, surface_epc, surface_uuid, name)
     model = Model(epc_file = epc_file)
+    rm_tree("tmp_dir")
 
     # Assert
     assert success is True
@@ -36,8 +36,7 @@ def test_find_faces_to_represent_surface_regular_wrapper(tmp_path: Path, small_g
     assert len(uuid_list) == 3
 
 
-def test_find_faces_to_represent_surface_regular_wrapper_properties(tmp_path: Path,
-                                                                    small_grid_and_surface: Tuple[RegularGrid,
+def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_and_surface: Tuple[RegularGrid,
                                                                                                   Surface]):
     # Arrange
     grid, surface = small_grid_and_surface
@@ -53,7 +52,6 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(tmp_path: Pa
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -62,6 +60,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(tmp_path: Pa
         name,
         return_properties = return_properties)
     model = Model(epc_file = epc_file)
+    rm_tree("tmp_dir")
 
     # Assert
     assert success is True

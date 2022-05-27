@@ -64,14 +64,9 @@ def function_multiprocessing(
     """
     log.info("Multiprocessing function called with %s function.", function.__name__)
 
-    # Creating temporary directories.
-    tmp_dirs = []
+
     for i, kwargs in enumerate(kwargs_list):
-        dirpath = tempfile.mkdtemp()
-        kwargs["tmp_dir"] = dirpath
         kwargs["index"] = i
-        tmp_dirs.append(Path(dirpath))
-    log.info("Temporary directories created.")
 
     workers = len(Client(cluster).scheduler_info()["workers"])
     threads_per_worker = list(Client(cluster).scheduler_info()['workers'].values())[0]['nthreads']
@@ -117,8 +112,7 @@ def function_multiprocessing(
 
     # Deleting temporary directory.
     log.info("Deleting the temporary directory")
-    for tmp_dir in tmp_dirs:
-        rm_tree(tmp_dir)
+    rm_tree("tmp_dir")
 
     model_recombined.store_epc()
 
