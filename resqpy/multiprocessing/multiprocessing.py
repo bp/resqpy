@@ -4,7 +4,6 @@ import logging
 from resqpy.model import Model, new_model
 from joblib import Parallel, delayed, parallel_backend
 
-
 log = logging.getLogger(__name__)
 
 
@@ -71,7 +70,7 @@ def function_multiprocessing(
     log.info("Function calls complete.")
 
     # Sorting the results by the original kwargs_list index.
-    results = list(sorted(results, key=lambda x: x[0]))
+    results = list(sorted(results, key = lambda x: x[0]))
 
     success_list = [result[1] for result in results]
     epc_list = [result[2] for result in results]
@@ -80,9 +79,9 @@ def function_multiprocessing(
 
     epc_file = Path(str(recombined_epc))
     if epc_file.is_file():
-        model_recombined = Model(epc_file=str(epc_file))
+        model_recombined = Model(epc_file = str(epc_file))
     else:
-        model_recombined = new_model(epc_file=str(epc_file))
+        model_recombined = new_model(epc_file = str(epc_file))
 
     log.info("Creating the recombined epc file.")
     for i, epc in enumerate(epc_list):
@@ -90,7 +89,7 @@ def function_multiprocessing(
             continue
         while True:
             try:
-                model = Model(epc_file=epc)
+                model = Model(epc_file = epc)
                 break
             except FileNotFoundError:
                 continue
@@ -98,9 +97,7 @@ def function_multiprocessing(
         if uuids is None:
             uuids = model.uuids()
         for uuid in uuids:
-            model_recombined.copy_uuid_from_other_model(
-                model, uuid=uuid, consolidate=consolidate
-            )
+            model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
 
     # Deleting temporary directory.
     log.info("Deleting the temporary directory")

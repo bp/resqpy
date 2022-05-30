@@ -71,7 +71,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     surface = Surface(parent_model = Model(surface_epc), uuid = str(surface_uuid))
 
     tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
-    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = f"{tmp_dir}/wrapper.epc"
     model = new_model(epc_file = epc_file)
     model.copy_uuid_from_other_model(Model(grid_epc), uuid = str(grid_uuid))
