@@ -1,3 +1,5 @@
+"""Multiprocessing wrapper functions for the grid_surface module."""
+
 import numpy as np
 from typing import Tuple, Union, List, Optional, Callable
 import resqpy.grid_surface as rqgs
@@ -14,9 +16,9 @@ import uuid
 def find_faces_to_represent_surface_regular_wrapper(
     index: int,
     use_index_as_realisation: bool,
-    grid_epc: Union[Path, str],
+    grid_epc: str,
     grid_uuid: Union[UUID, str],
-    surface_epc: Union[Path, str],
+    surface_epc: str,
     surface_uuid: Union[UUID, str],
     name: str,
     title: Optional[str] = None,
@@ -25,7 +27,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     progress_fn: Optional[Callable] = None,
     consistent_side: bool = False,
     return_properties: Optional[List[str]] = None,
-) -> Tuple[Union[int, bool, str, List[str]]]:
+) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Wrapper function of find_faces_to_represent_surface_regular_optimised.
 
     Used for multiprocessing to create a new model that is saved in a temporary epc file
@@ -36,9 +38,9 @@ def find_faces_to_represent_surface_regular_wrapper(
         index (int): the index of the function call from the multiprocessing function.
         use_index_as_realisation (bool): if True, uses the index number as the realization number on
             the property collection.
-        grid_epc (Path/str): epc file path where the grid is saved.
+        grid_epc (str): epc file path where the grid is saved.
         grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
-        surface_epc (Path/str): epc file path where the surface is saved.
+        surface_epc (str): epc file path where the surface is saved.
         surface_uuid (UUID/str): UUID (universally unique identifier) of the surface object.
         name (str): the feature name to use in the grid connection set.
         title (str): the citation title to use for the grid connection set; defaults to name

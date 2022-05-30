@@ -1,17 +1,20 @@
+"""Multiprocessing module containing the function used to run the wrapper
+functions in parallel."""
+
+import logging
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
-import logging
 from resqpy.model import Model, new_model
 from joblib import Parallel, delayed, parallel_backend
 
 log = logging.getLogger(__name__)
 
 
-def rm_tree(path: Path) -> None:
+def rm_tree(path: Union[Path, str]) -> None:
     """Removes a directory using a pathlib Path.
 
     Args:
-        path (Path): pathlib Path of the directory.
+        path (Path/str): pathlib Path or string of the directory path.
 
     Returns:
         None.
