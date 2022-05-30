@@ -6,6 +6,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.lines
 import resqpy.model as rq
 import resqpy.organize
+import resqpy.olio.vector_utilities as vec
 
 
 def test_lines(example_model_and_crs):
@@ -278,6 +279,13 @@ def test_area(example_model_and_crs):
     assert maths.isclose(line.area(), 14.0)
 
 
+def test_concave_area(example_model_and_crs):
+    # create an octagonal polyline with some concavities
+    model, crs = example_model_and_crs
+    line = __concave_octagon(model, crs)
+    assert maths.isclose(line.area(), 12.0, rel_tol = 0.01)
+
+
 def test_splined_and_tangent_vectors(example_model_and_crs):
     model, crs = example_model_and_crs
     line = __zig_zag(model, crs)
@@ -318,6 +326,37 @@ def test_poly_index_containing_point_in_xy(example_model_and_crs):
         assert pl_set.poly_index_containing_point_in_xy((6.2, 4.8, 0.0), mode = mode) == 1
 
 
+def test_closest_segment_and_distance_to_point_xy(example_model_and_crs):
+    model, crs = example_model_and_crs
+    c = np.array((123.45, 678.90, 0.0), dtype = float)
+    nonagon = resqpy.lines.Polyline.for_regular_polygon(model, 9, 5.7, c, crs.uuid, 'nonagon')
+    assert nonagon is not None
+    assert len(nonagon.coordinates) == 9
+    cp = np.mean(nonagon.coordinates, axis = 0)
+    assert_array_almost_equal(cp, c)
+    for seg in range(9):
+        p = np.array(nonagon.segment_midpoint(seg), dtype = float)
+        m_seg, m_d = nonagon.closest_segment_and_distance_to_point_xy(p)
+        assert m_seg is not None and m_d is not None
+        assert m_seg == seg
+        assert maths.isclose(m_d, 0.0, abs_tol = 1.0e-6)
+        p_in = (p - c) * 0.2 + c
+        p_out = (p - c) * 23.4 + c
+        for pp in [p_in, p_out]:
+            d = vec.naive_length(p - pp)
+            m_seg, m_d = nonagon.closest_segment_and_distance_to_point_xy(pp)
+            assert m_seg is not None and m_d is not None
+            assert m_seg == seg
+            assert maths.isclose(m_d, d, rel_tol = 1.0e-6)
+        pv = nonagon.coordinates[seg]
+        p_out = (pv - c) * 13.9 + c
+        d = vec.naive_length(p_out - pv)
+        m_seg, m_d = nonagon.closest_segment_and_distance_to_point_xy(p_out)
+        assert m_seg is not None and m_d is not None
+        assert m_seg in [seg, (seg - 1) % 9]
+        assert maths.isclose(m_d, d, rel_tol = 1.0e-6)
+
+
 def __zig_zag(model, crs):
     title = 'zig_zag'
     coords = np.array([(4.0, 5.0, 10.0), (1.0, 8.0, 13.0), (5.0, 8.0, 14.0), (1.0, 12.0, 10.0), (5.0, 12.0, 10.0)])
@@ -333,6 +372,19 @@ def __octagon(model, crs):
     title = 'octagon'
     coords = np.array([(2.5, 2.5, 0.0), (2.0, 3.0, 0.0), (2.0, 5.0, 0.0), (3.0, 6.0, 0.0), (5.0, 6.0, 0.0),
                        (6.0, 5.0, 0.0), (6.0, 3.0, 0.0), (5.0, 2.0, 0.0), (3.0, 2.0, 0.0)])
+    line = resqpy.lines.Polyline(parent_model = model,
+                                 title = title,
+                                 set_crs = crs.uuid,
+                                 set_bool = True,
+                                 set_coord = coords)
+    return line
+
+
+def __concave_octagon(model, crs):
+    title = 'concave octagon'
+    coords = np.array([(2.5, 2.5, 0.0), (2.0, 3.0, 0.0), (2.0, 5.0, 0.0), (3.0, 6.0, 0.0), (5.0, 6.0, 0.0),
+                       (6.0, 5.0, 0.0), (5.0, 4.0, 0.0), (6.0, 3.0, 0.0), (5.0, 2.0, 0.0), (4.0, 3.0, 0.0),
+                       (3.0, 2.0, 0.0)])
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
