@@ -1,11 +1,10 @@
-"""Multiprocessing module containing the function used to run the wrapper
-functions in parallel."""
+"""Multiprocessing module containing the function used to run the wrapperfunctions in parallel."""
 
 import logging
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
 from resqpy.model import Model, new_model
-from joblib import Parallel, delayed, parallel_backend
+from joblib import Parallel, delayed, parallel_backend  # type: ignore
 
 log = logging.getLogger(__name__)
 
