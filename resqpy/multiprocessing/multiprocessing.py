@@ -103,7 +103,12 @@ def function_multiprocessing(
     for i, epc in enumerate(epc_list):
         if epc is None:
             continue
-        model = Model(epc_file = epc)
+        while True:
+            try:
+                model = Model(epc_file = epc)
+                break
+            except FileNotFoundError:
+                continue
         uuids = uuids_list[i]
         if uuids is None:
             uuids = model.uuids()
