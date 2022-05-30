@@ -48,8 +48,7 @@ lxml = "^4.6"
 lasio = "^0.29"
 scipy = "^1.7.3"
 numba = ">=0.52, < 1.0"
-dask = {version = "2022.2.0", extras = ["distributed"]}
-dask-jobqueue = "^0.7.0"
+joblib = "^1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

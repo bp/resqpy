@@ -2,10 +2,8 @@ from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
 import logging
 from resqpy.model import Model, new_model
-from dask.distributed import Client, LocalCluster
-from dask_jobqueue import JobQueueCluster
-import os
-import tempfile
+from joblib import Parallel, delayed, parallel_backend
+
 
 log = logging.getLogger(__name__)
 
@@ -29,11 +27,11 @@ def rm_tree(path: Path) -> None:
 
 
 def function_multiprocessing(
-        function: Callable,
-        kwargs_list: List[Dict[str, Any]],
-        recombined_epc: Union[Path, str],
-        consolidate: bool = True,
-        cluster: Union[LocalCluster, JobQueueCluster] = LocalCluster(),
+    function: Callable,
+    kwargs_list: List[Dict[str, Any]],
+    recombined_epc: Union[Path, str],
+    cluster,
+    consolidate: bool = True,
 ) -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
@@ -53,40 +51,27 @@ def function_multiprocessing(
             used when calling the function.
         recombined_epc (Path/str): A pathlib Path or path string of
             where the combined epc will be saved.
-        consolidate (bool): if True and an equivalent part already exists in
-            a model, it is not duplicated and the uuids are noted as equivalent.
         cluster (LocalCluster/JobQueueCluster): a LocalCluster is a Dask cluster on a
             local machine. If using a job queing system, a JobQueueCluster can be used
             such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
+        consolidate (bool): if True and an equivalent part already exists in
+            a model, it is not duplicated and the uuids are noted as equivalent.
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
     """
     log.info("Multiprocessing function called with %s function.", function.__name__)
 
-
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
 
-    workers = len(Client(cluster).scheduler_info()["workers"])
-    threads_per_worker = list(Client(cluster).scheduler_info()['workers'].values())[0]['nthreads']
-
-    log.info("Number of workers: %s", workers)
-    log.info("Threads per worker: %s", threads_per_worker)
-
-    def set_numba_threads():
-        os.environ["NUMBA_NUM_THREADS"] = str(1)
-
-    with Client(cluster) as client:
-        client.wait_for_workers()
-        client.run(set_numba_threads)
-        c = [client.submit(function, **kwargs) for kwargs in kwargs_list]
-        results = [call.result() for call in c]
+    with parallel_backend("dask"):
+        results = Parallel()(delayed(function)(**kwargs) for kwargs in kwargs_list)
 
     log.info("Function calls complete.")
 
     # Sorting the results by the original kwargs_list index.
-    results = list(sorted(results, key = lambda x: x[0]))
+    results = list(sorted(results, key=lambda x: x[0]))
 
     success_list = [result[1] for result in results]
     epc_list = [result[2] for result in results]
@@ -95,9 +80,9 @@ def function_multiprocessing(
 
     epc_file = Path(str(recombined_epc))
     if epc_file.is_file():
-        model_recombined = Model(epc_file = str(epc_file))
+        model_recombined = Model(epc_file=str(epc_file))
     else:
-        model_recombined = new_model(epc_file = str(epc_file))
+        model_recombined = new_model(epc_file=str(epc_file))
 
     log.info("Creating the recombined epc file.")
     for i, epc in enumerate(epc_list):
@@ -105,7 +90,7 @@ def function_multiprocessing(
             continue
         while True:
             try:
-                model = Model(epc_file = epc)
+                model = Model(epc_file=epc)
                 break
             except FileNotFoundError:
                 continue
@@ -113,7 +98,9 @@ def function_multiprocessing(
         if uuids is None:
             uuids = model.uuids()
         for uuid in uuids:
-            model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
+            model_recombined.copy_uuid_from_other_model(
+                model, uuid=uuid, consolidate=consolidate
+            )
 
     # Deleting temporary directory.
     log.info("Deleting the temporary directory")
