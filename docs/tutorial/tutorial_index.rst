@@ -33,3 +33,4 @@ executed whilst progressing through the material.
    surfaces
    creating_test
    working_with_equinor_pyscal
+   multiprocessing

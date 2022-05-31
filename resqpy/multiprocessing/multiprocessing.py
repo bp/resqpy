@@ -1,4 +1,4 @@
-"""Multiprocessing module containing the function used to run the wrapperfunctions in parallel."""
+"""Multiprocessing module containing the function used to run the wrapper functions in parallel."""
 
 import logging
 import time
@@ -41,7 +41,7 @@ def function_multiprocessing(
     all results are returned, they are combined into a single epc file.
 
     Args:
-        function (Callable): the function to be called. Needs to return:
+        function (Callable): the wrapper function to be called. Needs to return:
 
             - index (int): the index of the kwargs in the kwargs_list.
             - success (bool): whether the function call was successful, whatever that
@@ -66,7 +66,8 @@ def function_multiprocessing(
         This function uses the Dask backend to run the given function in parallel, so a
         Dask cluster must be setup and passed as an argument. Dask will need to be
         installed in the Python environment because it is not a dependency of the
-        project. More info can be found at https://docs.dask.org/en/latest/deploying.html
+        project. More info can be found at 
+        https://resqpy.readthedocs.io/en/latest/tutorial/multiprocessing.html
     """
     log.info("Multiprocessing function called with %s function.", function.__name__)
 
