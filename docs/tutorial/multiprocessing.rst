@@ -164,8 +164,7 @@ wrapper function for the `find_faces_to_represent_surface_regular` function, how
 function can be created, providing that it returns the following:
 
 * index (int): the index passed to the function.
-* success (bool): whether the function call was successful, whatever that
-    definiton is.
+* success (bool): whether the function call was successful, whatever that definiton is.
 * epc_file (str): the epc file path where the objects are stored.
 * uuid_list (List[str]): list of UUIDs of relevant objects.
 
@@ -176,17 +175,18 @@ Calling the Multiprocessing Function
 ------------------------------------
 The multiprocessing function must receive the following arguments:
 
-* function (Callable): the wrapper function to be called, that must return the items
-    described above.
-* kwargs_list (List[Dict[Any]]): A list of keyword argument dictionaries that are
-    used when calling the function.
-* recombined_epc (Path/str): A pathlib Path or path string of
-    where the combined epc will be saved.
+* function (Callable): the wrapper function to be called, that must return the items described
+  above.
+* kwargs_list (List[Dict[Any]]): A list of keyword argument dictionaries that are used when calling
+  the function.
+* recombined_epc (Path/str): A pathlib Path or path string of where the combined epc will be saved.
 * cluster (LocalCluster/JobQueueCluster): the relevant cluster, as explained above.
-* consolidate (bool): if True and an equivalent part already exists in
-    a model, it is not duplicated and the uuids are noted as equivalent.
+* consolidate (bool): if True and an equivalent part already exists in a model, it is not duplicated
+  and the uuids are noted as equivalent.
 
 .. code-block:: python
+
+    from resqpy.multiprocessing import function_multiprocessing
 
     success_list = function_multiprocessing(func, kwargs_list, recombined_epc, cluster=cluster)
 
