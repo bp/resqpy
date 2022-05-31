@@ -1,6 +1,7 @@
 """Multiprocessing module containing the function used to run the wrapperfunctions in parallel."""
 
 import logging
+import time
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
 from resqpy.model import Model, new_model
@@ -60,6 +61,12 @@ def function_multiprocessing(
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
+
+    Note:
+        This function uses the Dask backend to run the given function in parallel, so a
+        Dask cluster must be setup and passed as an argument. Dask will need to be
+        installed in the Python environment because it is not a dependency of the
+        project. More info can be found at https://docs.dask.org/en/latest/deploying.html
     """
     log.info("Multiprocessing function called with %s function.", function.__name__)
 
@@ -94,6 +101,7 @@ def function_multiprocessing(
                 model = Model(epc_file = epc)
                 break
             except FileNotFoundError:
+                time.sleep(1)
                 continue
         uuids = uuids_list[i]
         if uuids is None:
