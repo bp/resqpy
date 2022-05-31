@@ -30,3 +30,5 @@ resqpy/version.py
 resqpy/olio/data/*.xml
 resqpy/olio/data/*.xsd
 
+# Dask
+dask-worker-space
