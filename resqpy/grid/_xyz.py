@@ -104,12 +104,12 @@ def composite_bounding_box(grid, bounding_box_list):
     return result
 
 
-def local_to_global_crs(grid,
-                        a,
-                        crs_uuid = None,
-                        global_xy_units = None,
-                        global_z_units = None,
-                        global_z_increasing_downward = None):
+def _local_to_global_crs(grid,
+                         a,
+                         crs_uuid = None,
+                         global_xy_units = None,
+                         global_z_units = None,
+                         global_z_increasing_downward = None):
     """Converts array of points in situ from local coordinate system to global one."""
 
     if crs_uuid is None:
@@ -155,12 +155,12 @@ def z_inc_down(grid):
     return grid.crs.z_inc_down
 
 
-def global_to_local_crs(grid,
-                        a,
-                        crs_uuid = None,
-                        global_xy_units = None,
-                        global_z_units = None,
-                        global_z_increasing_downward = None):
+def _global_to_local_crs(grid,
+                         a,
+                         crs_uuid = None,
+                         global_xy_units = None,
+                         global_z_units = None,
+                         global_z_increasing_downward = None):
     """Converts array of points in situ from global coordinate system to established local one."""
 
     if crs_uuid is None:

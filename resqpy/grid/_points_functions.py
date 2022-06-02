@@ -1062,7 +1062,7 @@ def find_cell_for_point_xy(grid, x, y, k0 = 0, vertical_ref = 'top', local_coord
     # then check the four cells around that corner point
     a = np.array([[x, y, 0.0]])  # extra axis needed to keep global_to_local_crs happy
     if not local_coords:
-        grid.global_to_local_crs(a)
+        grid.global_to_local_crs(a, crs_uuid = grid.crs_uuid)
     if a is None:
         return (None, None)
     a[0, 2] = 0.0  # discard z

@@ -2156,6 +2156,7 @@ class PropertyCollection():
             return None, min_value, max_value
 
         n_prop = p_array.astype(float)
+        # todo: for discrete p_array, set n_prop to nan where p_array == null value
         if use_logarithm:
             n_prop, min_value, max_value = pcga._normalized_part_array_use_logarithm(min_value, n_prop, masked)
             if min_value == np.nan or max_value == np.nan:
@@ -2166,10 +2167,11 @@ class PropertyCollection():
                                                                                    fix_zero_at)
 
         if max_value == min_value:
-            n_prop[:] = 0.5
+            n_prop[:] = np.where(np.isnan(p_array), np.nan, 0.5)
             return n_prop, min_value, max_value
 
-        return (n_prop - min_value) / (max_value - min_value), min_value, max_value
+        n_prop[:] = np.where(np.isnan(p_array), np.nan, (n_prop - min_value) / (max_value - min_value))
+        return n_prop, min_value, max_value
 
     def uncache_part_array(self, part):
         """Removes the cached copy of the array of data for the named property part.
