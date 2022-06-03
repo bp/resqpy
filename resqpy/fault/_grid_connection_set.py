@@ -24,9 +24,10 @@ from resqpy.fault._gcs_functions import zero_base_cell_indices_in_faces_df,  \
     standardize_face_indicator_in_faces_df, remove_external_faces_from_faces_df,  \
     _triangulate_unsplit_grid_connection_set
 
-valid_interpretation_types = ['obj_FaultInterpretation',
-                              'obj_HorizonInterpretation',
-                              'obj_GeobodyBoundaryInterpretation']
+valid_interpretation_types = [
+    'obj_FaultInterpretation', 'obj_HorizonInterpretation', 'obj_GeobodyBoundaryInterpretation'
+]
+
 
 class GridConnectionSet(BaseResqpy):
     """Class for obj_GridConnectionSetRepresentation holding pairs of connected faces, usually for faults."""
@@ -248,7 +249,12 @@ class GridConnectionSet(BaseResqpy):
             self.property_collection = rqp.PropertyCollection(support = self)
         return self.property_collection
 
-    def set_pairs_from_kelp(self, kelp_0, kelp_1, feature_name, create_organizing_objects_where_needed, axis = 'K',
+    def set_pairs_from_kelp(self,
+                            kelp_0,
+                            kelp_1,
+                            feature_name,
+                            create_organizing_objects_where_needed,
+                            axis = 'K',
                             feature_type = 'fault'):
         """Set cell_index_pairs and face_index_pairs based on j and i face kelp strands.
         
@@ -317,7 +323,11 @@ class GridConnectionSet(BaseResqpy):
                 i_faces[:] = i_layer.reshape((grid.nk, 1, grid.ni - 1))
         else:
             i_faces = None
-        self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name, create_organizing_objects_where_needed,
+        self.set_pairs_from_face_masks(k_faces,
+                                       j_faces,
+                                       i_faces,
+                                       feature_name,
+                                       create_organizing_objects_where_needed,
                                        feature_type = feature_type)
 
     def set_pairs_from_face_masks(

@@ -1885,15 +1885,21 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
         else:
             mode = 'staffa'
     if mode == 'staffa':
-        return find_faces_to_represent_surface_staffa(grid, surface, name,
+        return find_faces_to_represent_surface_staffa(grid,
+                                                      surface,
+                                                      name,
                                                       feature_type = feature_type,
                                                       progress_fn = progress_fn)
     elif mode == 'regular':
-        return find_faces_to_represent_surface_regular(grid, surface, name,
+        return find_faces_to_represent_surface_regular(grid,
+                                                       surface,
+                                                       name,
                                                        feature_type = feature_type,
                                                        progress_fn = progress_fn)
     elif mode == 'regular_optimised':
-        return find_faces_to_represent_surface_regular_optimised(grid, surface, name,
+        return find_faces_to_represent_surface_regular_optimised(grid,
+                                                                 surface,
+                                                                 name,
                                                                  feature_type = feature_type,
                                                                  progress_fn = progress_fn)
     log.critical('unrecognised mode: ' + str(mode))
