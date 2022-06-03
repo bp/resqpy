@@ -1073,7 +1073,7 @@ def find_intersection_of_trajectory_interval_with_column_face(trajectory,
     return xyz, k0
 
 
-def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = None):
+def find_faces_to_represent_surface_staffa(grid, surface, name, feature_type = 'fault', progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
     if progress_fn is not None:
@@ -1203,6 +1203,7 @@ def find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = No
                                 j_faces = j_faces,
                                 i_faces = i_faces,
                                 feature_name = name,
+                                feature_type = feature_type,
                                 create_organizing_objects_where_needed = True)
 
     if progress_fn is not None:
@@ -1217,6 +1218,7 @@ def find_faces_to_represent_surface_regular(grid,
                                             title = None,
                                             centres = None,
                                             agitate = False,
+                                            feature_type = 'fault',
                                             progress_fn = None,
                                             consistent_side = False,
                                             return_properties = None):
@@ -1227,12 +1229,13 @@ def find_faces_to_represent_surface_regular(grid,
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
         surface (Surface): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
+        title (str, optional): the citation title to use for the grid connection set; defaults to name
         centres (numpy float array of shape (nk, nj, ni, 3), optional): precomputed cell centre points in
            local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
         agitate (bool, default False): if True, the points of the surface are perturbed by a small random
            offset, which can help if the surface has been built from a regular mesh with a periodic resonance
            with the grid
-        title (str, optional): the citation title to use for the grid connection set; defaults to name
+        feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
@@ -1467,6 +1470,7 @@ def find_faces_to_represent_surface_regular(grid,
                                 j_sides = j_sides,
                                 i_sides = i_sides,
                                 feature_name = name,
+                                feature_type = feature_type,
                                 title = title,
                                 create_organizing_objects_where_needed = True)
 
@@ -1621,6 +1625,7 @@ def find_faces_to_represent_surface_regular_optimised(
     title = None,
     centres = None,
     agitate = False,
+    feature_type = 'fault',
     progress_fn = None,
     consistent_side = False,
     return_properties = None,
@@ -1637,6 +1642,7 @@ def find_faces_to_represent_surface_regular_optimised(
         agitate (bool, default False): if True, the points of the surface are perturbed by a small random
            offset, which can help if the surface has been built from a regular mesh with a periodic resonance
            with the grid
+        feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
@@ -1820,6 +1826,7 @@ def find_faces_to_represent_surface_regular_optimised(
         j_sides = j_sides,
         i_sides = i_sides,
         feature_name = name,
+        feature_type = feature_type,
         title = title,
         create_organizing_objects_where_needed = True,
     )
@@ -1868,7 +1875,7 @@ def find_faces_to_represent_surface_regular_optimised(
     return gcs
 
 
-def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', progress_fn = None):
+def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_type = 'fault', progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
 
     log.debug('finding cell faces for surface')
@@ -1878,11 +1885,17 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', progress
         else:
             mode = 'staffa'
     if mode == 'staffa':
-        return find_faces_to_represent_surface_staffa(grid, surface, name, progress_fn = progress_fn)
+        return find_faces_to_represent_surface_staffa(grid, surface, name,
+                                                      feature_type = feature_type,
+                                                      progress_fn = progress_fn)
     elif mode == 'regular':
-        return find_faces_to_represent_surface_regular(grid, surface, name, progress_fn = progress_fn)
+        return find_faces_to_represent_surface_regular(grid, surface, name,
+                                                       feature_type = feature_type,
+                                                       progress_fn = progress_fn)
     elif mode == 'regular_optimised':
-        return find_faces_to_represent_surface_regular_optimised(grid, surface, name, progress_fn = progress_fn)
+        return find_faces_to_represent_surface_regular_optimised(grid, surface, name,
+                                                                 feature_type = feature_type,
+                                                                 progress_fn = progress_fn)
     log.critical('unrecognised mode: ' + str(mode))
     return None
 
