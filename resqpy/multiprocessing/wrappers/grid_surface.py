@@ -24,6 +24,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     title: Optional[str] = None,
     centres: Optional[np.ndarray] = None,
     agitate: bool = False,
+    feature_type = 'fault',
     progress_fn: Optional[Callable] = None,
     consistent_side: bool = False,
     return_properties: Optional[List[str]] = None,
@@ -49,6 +50,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         agitate (bool): if True, the points of the surface are perturbed by a small random
            offset, which can help if the surface has been built from a regular mesh with a periodic resonance
            with the grid
+        feature_type (str, default 'fault'): one of 'fault', 'horizon', or 'geobody boundary'
         progress_fn (Callable): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool): if True, the cell pairs will be ordered so that all the first
@@ -93,6 +95,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         title,
         centres,
         agitate,
+        feature_type,
         progress_fn,
         consistent_side,
         return_properties,
