@@ -4,6 +4,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import math as maths
 import numpy as np
 
 import resqpy.crs as rqc
@@ -506,6 +507,29 @@ class RegularGrid(Grid):
         g_xyz_box[0] = np.amin(global_xyz_box, axis = 0)
         g_xyz_box[1] = np.amax(global_xyz_box, axis = 0)
         return g_xyz_box
+
+    def find_cell_for_point_xy(self, x, y, k0 = 0, vertical_ref = 'top', local_coords = True):
+        """Searches in 2D for a cell containing point x,y in layer k0; return (j0, i0) or (None, None)."""
+
+        if x is None or y is None:
+            return (None, None)
+        if not local_coords and self.crs_uuid is not None:
+            a = np.array([[x, y, 0.0]])  # extra axis needed to keep global_to_local_crs happy
+            self.global_to_local_crs(a, crs_uuid = self.crs_uuid)
+            x = a[0, 0]
+            y = a[0, 1]
+        log.debug(f'find for local x: {x}; y: {y}')
+        if self.is_aligned:
+            i0 = maths.floor(x / self.block_dxyz_dkji[2, 0])
+            j0 = maths.floor(y / self.block_dxyz_dkji[1, 1])
+        else:
+            # TODO
+            raise NotImplementedError('finding cell for x,y in unaligned regular grid')
+            i0 = j0 = -1
+        log.debug(f'found j0: {j0}; i0: {i0}')
+        if 0 <= i0 < self.ni and 0 <= j0 < self.nj:
+            return (j0, i0)
+        return (None, None)
 
     def create_xml(self,
                    ext_uuid = None,
