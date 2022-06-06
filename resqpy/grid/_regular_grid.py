@@ -611,3 +611,33 @@ class RegularGrid(Grid):
         """Returns triple float dx, dy, dz cell dimensions for aligned grids only."""
         assert self.is_aligned
         return (self.block_dxyz_dkji[2, 0], self.block_dxyz_dkji[1, 1], self.block_dxyz_dkji[0, 2])
+
+    def slice_points(self, axis = 0, ref_slice = 0, local = False):
+        """Returns a slice of points data for a layer or a cross section.
+
+        arguments:
+           axis (int, default 0): the axis of slicing 0 for K, 1 for J, 2 for I
+           ref_slice (int, default 0): the slice index in the direction of axis
+           local (bool, default False): if True, returned points are in the local crs; if False in global
+
+        returns:
+           numpy float array of points data of shape (Na, Nb, 3); (Na, Nb) are (NJ+1, NI+1), (NK+1, NI+1) or
+           (NK+1, NJ+1) for axis values of 0, 1, or 2 respectively
+        """
+        assert 0 <= axis < 3
+        assert 0 <= ref_slice <= self.extent_kji[axis]
+        other_axes = np.array([[1, 2], [0, 2], [0, 1]], dtype = int)[axis]
+        shape = (self.extent_kji[other_axes[0]] + 1, self.extent_kji[other_axes[1]] + 1, 3)
+        dxyz_da = self.block_dxyz_dkji[other_axes[0]]
+        dxyz_db = self.block_dxyz_dkji[other_axes[1]]
+        p = np.zeros(shape, dtype = float)
+        if ref_slice:
+            p[0, 0] = ref_slice * self.block_dxyz_dkji[axis]
+        for a in range(1, shape[0]):
+            p[a, 0] = p[0, 0] + a * dxyz_da
+        for b in range(1, shape[1]):
+            p[:, b] = p[:, 0] + b * dxyz_db
+        if not local:
+            assert self.crs is not None
+            self.crs.local_to_global_array(p)
+        return p
