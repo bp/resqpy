@@ -613,21 +613,16 @@ class RegularGrid(Grid):
         return (self.block_dxyz_dkji[2, 0], self.block_dxyz_dkji[1, 1], self.block_dxyz_dkji[0, 2])
 
     def slice_points(self, axis = 0, ref_slice = 0, local = False):
-        """Return a slice of points data for a layer or cross section.
+        """Returns a slice of points data for a layer or a cross section.
 
         arguments:
-            axis (int, default 0): 0 (K), 1 (J), or 2 (I) being the direction of the slice
-            ref_slice (int, default 0): the index in axis, ranging of n+1
-            local (bool, default False): if False, the returned points are in global crs space;
-               if True, the returned points are in the local grid crs
+           axis (int, default 0): the axis of slicing 0 for K, 1 for J, 2 for I
+           ref_slice (int, default 0): the slice index in the direction of axis
+           local (bool, default False): if True, returned points are in the local crs; if False in global
 
         returns:
-            numpy float array of shape (Na + 1, Nb + 1, 3) where (Na,Nb) are (NJ,NI), (NK,NI) or (NK,NJ)
-            for axis values of 0,1,2 respectively; the 3 covers x,y,z
-
-        notes:
-            this method is functionally similar to the Grid.horizon_points() and Grid.unsplit_x_section_points()
-            methods
+           numpy float array of points data of shape (Na, Nb, 3); (Na, Nb) are (NJ+1, NI+1), (NK+1, NI+1) or
+           (NK+1, NJ+1) for axis values of 0, 1, or 2 respectively
         """
         assert 0 <= axis < 3
         assert 0 <= ref_slice <= self.extent_kji[axis]
