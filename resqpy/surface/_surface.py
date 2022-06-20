@@ -255,8 +255,13 @@ class Surface(BaseSurface):
         """
 
         assert xyz_box is not None or xy_polygon is not None
+        box = None
         if xyz_box is not None:
             assert xyz_box.shape == (2, 3)
+            # guard against reversed ranges in xyz_box
+            box = np.empty((2, 3), dtype = float)
+            box[0] = np.amin(xyz_box, axis = 0)
+            box[1] = np.amax(xyz_box, axis = 0)
         log.debug(f'trimming surface {large_surface.title} from {large_surface.triangle_count()} triangles')
         if not self.title:
             self.title = str(large_surface.title) + ' trimmed'
@@ -264,7 +269,7 @@ class Surface(BaseSurface):
         self.patch_list = []
         for triangulated_patch in large_surface.patch_list:
             trimmed_patch = TriangulatedPatch(self.model, patch_index = len(self.patch_list), crs_uuid = self.crs_uuid)
-            trimmed_patch.set_to_trimmed_patch(triangulated_patch, xyz_box = xyz_box, xy_polygon = xy_polygon)
+            trimmed_patch.set_to_trimmed_patch(triangulated_patch, xyz_box = box, xy_polygon = xy_polygon)
             if trimmed_patch is not None and trimmed_patch.triangle_count > 0:
                 self.patch_list.append(trimmed_patch)
         if len(self.patch_list):
