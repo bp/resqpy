@@ -86,8 +86,6 @@ def find_faces_to_represent_surface_regular_wrapper(
     uuid_list = []
     uuid_list.extend([grid_uuid, surface_uuid])
 
-    print("About to call function")
-
     returns = rqgs.find_faces_to_represent_surface_regular_optimised(
         grid,
         surface,
@@ -101,7 +99,6 @@ def find_faces_to_represent_surface_regular_wrapper(
         return_properties,
     )
 
-    print("Function returned")
     if return_properties is not None:
         gcs = returns[0]
         properties = returns[1]
