@@ -361,6 +361,7 @@ class Surface(BaseSurface):
                            extend_with_flange = False,
                            flange_point_count = 11,
                            flange_radial_factor = 10.0,
+                           flange_radial_distance = None,
                            make_clockwise = False):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
@@ -379,6 +380,8 @@ class Surface(BaseSurface):
               extend_with_flange is False
            flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
               factor of the maximum radial distance of the points themselves; ignored if extend_with_flange is False
+           flange_radial_distance (float, optional): if present, the minimum absolute distance of flange points from
+              centre of points; units are those of the crs
            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
               viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
               enforced in the reoriented space
@@ -387,10 +390,12 @@ class Surface(BaseSurface):
            if extend_with_flange is True, numpy bool array with a value per triange indicating flange trianges;
            if extent_with_flange is False, None
 
-        note:
+        notes:
            if extend_with_flange is True, then a boolean array is created for the surface, with a value per triangle,
            set to False (zero) for non-flange triangles and True (one) for flange triangles; this array is
-           suitable for adding as a property for the surface, with indexable element 'faces'
+           suitable for adding as a property for the surface, with indexable element 'faces';
+           when flange extension occurs, the radius is the greater of the values determined from the radial factor
+           and radial distance arguments
         """
 
         p = point_set.full_array_ref()
@@ -399,7 +404,10 @@ class Surface(BaseSurface):
         else:
             p_xy = p
         if extend_with_flange:
-            flange_points = triangulate.surrounding_xy_ring(p_xy, flange_point_count, flange_radial_factor)
+            flange_points = triangulate.surrounding_xy_ring(p_xy,
+                                                            count = flange_point_count,
+                                                            radial_factor = flange_radial_factor,
+                                                            radial_distance = flange_radial_distance)
             p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
             if reorient:
                 # reorient back extenstion points into original p space

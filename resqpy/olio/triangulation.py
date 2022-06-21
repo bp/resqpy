@@ -1,6 +1,6 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '5th October 2021'
+version = '21st June 2022'
 
 import logging
 
@@ -814,7 +814,7 @@ def make_all_clockwise_xy(t, p):
     return t
 
 
-def surrounding_xy_ring(p, count = 12, radial_factor = 10.0):
+def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None):
     """Creates a set of points surrounding the point set p, in the xy plane.
 
     arguments:
@@ -822,6 +822,8 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0):
        count (int): the number of points to generate in the surrounding ring
        radial_factor (float): a distance factor roughly determining the radius of the ring relative to
           the 'radius' of the outermost points in p
+       radial_distance (float): if present, the radius of the ring of points, unless radial_factor
+          results in a greater distance in which case that is used
 
     returns:
        numpy float array of shape (count, 3) being xyz points in surrounding ring; z is set constant to
@@ -834,6 +836,8 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0):
     p_radius_v = np.nanmax(np.abs(p.reshape((-1, 3)) - np.expand_dims(centre, axis = 0)), axis = 0)[:2]
     p_radius = maths.sqrt(np.sum(p_radius_v * p_radius_v))
     radius = p_radius * radial_factor
+    if radial_distance is not None and radial_distance > radius:
+        radius = radial_distance
     delta_theta = 2.0 * maths.pi / float(count)
     ring = np.zeros((count, 3))
     for i in range(count):
