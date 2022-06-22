@@ -326,6 +326,38 @@ class PointSet(BaseSurface):
         self.add_patch(points[keep_mask, :].copy())
         self.uuid = bu.new_uuid()  # hope this doesn't cause problems
 
+    def minimum_xy_area_rectangle(self, delta_theta = 5.0):
+        """Returns the xy projection rectangle of minimum area that contains the points.
+
+        arguments:
+           delta_theta (float, default 5.0): the incremental angle in degrees to test against
+
+        returns:
+           (d1, d2, r) where d1 and d2 are lengths of sides of an xy plane rectangle that just contains the
+           points, and d1 <= d2, and r is a bearing in degrees of a d2 (longer) side between 0.0 and 180.0
+        """
+
+        def try_angle(pset, theta):
+            p = pset.full_array_ref().copy()
+            m = vec.rotation_matrix_3d_axial(0, theta)
+            p = vec.rotate_array(m, p)[:, :2]
+            dxy = np.nanmax(p, axis = 0) - np.nanmin(p, axis = 0)
+            return dxy
+
+        assert self.patch_count > 0
+        theta = 0.0
+        min_dxy = try_angle(self, theta)
+        min_area = np.sum(min_dxy * min_dxy)
+        while theta < 180.0 - delta_theta:
+            theta += delta_theta
+            dxy = try_angle(self, theta)
+            area = np.sum(dxy * dxy)
+            if area < min_area:
+                min_dxy = dxy
+        if dxy[0] <= dxy[1]:
+            return dxy[0], dxy[1], theta
+        return dxy[1], dxy[0], theta + 90.0 if theta < 90.0 else theta - 90.0
+
     def full_array_ref(self):
         """Return a single numpy float array of shape (N, 3) containing all points from all patches.
 
