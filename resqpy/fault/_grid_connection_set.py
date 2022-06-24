@@ -1077,7 +1077,8 @@ class GridConnectionSet(BaseResqpy):
                    add_relationships = True,
                    write_new_properties = True,
                    title = None,
-                   originator = None):
+                   originator = None,
+                   extra_metadata = None):
         """Creates a Grid Connection Set (fault faces) xml node.
         
         Optionally adds to parts forest.
@@ -1093,7 +1094,10 @@ class GridConnectionSet(BaseResqpy):
         if not self.title and not title:
             title = 'ROOT'
 
-        gcs = super().create_xml(add_as_part = False, title = title, originator = originator)
+        gcs = super().create_xml(add_as_part = False,
+                                 title = title,
+                                 originator = originator,
+                                 extra_metadata = extra_metadata)
 
         c_node = rqet.SubElement(gcs, ns['resqml2'] + 'Count')
         c_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')

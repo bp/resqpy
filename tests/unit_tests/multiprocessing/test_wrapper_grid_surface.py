@@ -18,8 +18,14 @@ def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface:
     use_index_as_realisation = False
 
     # Act
-    index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
-        input_index, use_index_as_realisation, grid_epc, grid_uuid, surface_epc, surface_uuid, name)
+    index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(input_index,
+                                                                                          use_index_as_realisation,
+                                                                                          grid_epc,
+                                                                                          grid_uuid,
+                                                                                          surface_epc,
+                                                                                          surface_uuid,
+                                                                                          name,
+                                                                                          trimmed = True)
     model = Model(epc_file = epc_file)
     rm_tree("tmp_dir")
 
@@ -32,8 +38,8 @@ def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface:
     assert len(model.uuids(obj_type = 'GridConnectionSetRepresentation')) == 1
     assert len(model.uuids(obj_type = 'FaultInterpretation')) == 1
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
-    assert len(model.uuids()) == 6
-    assert len(uuid_list) == 3
+    assert len(model.uuids()) == 9
+    assert len(uuid_list) == 7
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_and_surface: Tuple[RegularGrid,
@@ -67,12 +73,12 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_a
     assert index == input_index
     assert len(model.uuids(obj_type = 'LocalDepth3dCrs')) == 1
     assert len(model.uuids(obj_type = 'IjkGridRepresentation')) == 1
-    assert len(model.uuids(obj_type = 'TriangulatedSetRepresentation')) == 1
+    assert len(model.uuids(obj_type = 'TriangulatedSetRepresentation')) == 2
     assert len(model.uuids(obj_type = 'GridConnectionSetRepresentation')) == 1
     assert len(model.uuids(obj_type = 'FaultInterpretation')) == 1
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 1
-    assert len(model.uuids(obj_type = 'ContinuousProperty')) == 1
+    assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
     assert len(model.uuids(obj_type = 'PointsProperty')) == 1
-    assert len(model.uuids()) == 9
-    assert len(uuid_list) == 6
+    assert len(model.uuids()) == 13
+    assert len(uuid_list) == 10
