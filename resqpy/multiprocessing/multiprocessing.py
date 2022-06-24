@@ -28,13 +28,12 @@ def rm_tree(path: Union[Path, str]) -> None:
     path.rmdir()
 
 
-def function_multiprocessing(
-    function: Callable,
-    kwargs_list: List[Dict[str, Any]],
-    recombined_epc: Union[Path, str],
-    cluster,
-    consolidate: bool = True,
-) -> List[bool]:
+def function_multiprocessing(function: Callable,
+                             kwargs_list: List[Dict[str, Any]],
+                             recombined_epc: Union[Path, str],
+                             cluster,
+                             consolidate: bool = True,
+                             require_success = False) -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
     A multiprocessing pool is used to call the function multiple times in parallel. Once
@@ -58,6 +57,8 @@ def function_multiprocessing(
             such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
         consolidate (bool): if True and an equivalent part already exists in
             a model, it is not duplicated and the uuids are noted as equivalent.
+        require_success (bool): if True and any instance fails, then an exception is
+            raised
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
@@ -69,7 +70,7 @@ def function_multiprocessing(
         project. More info can be found at 
         https://resqpy.readthedocs.io/en/latest/tutorial/multiprocessing.html
     """
-    log.info("Multiprocessing function called with %s function.", function.__name__)
+    log.info("multiprocessing function called with %s function.", function.__name__)
 
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
@@ -77,15 +78,16 @@ def function_multiprocessing(
     with parallel_backend("dask"):
         results = Parallel()(delayed(function)(**kwargs) for kwargs in kwargs_list)
 
-    log.info("Function calls complete.")
-
     # Sorting the results by the original kwargs_list index.
     results = list(sorted(results, key = lambda x: x[0]))
 
     success_list = [result[1] for result in results]
     epc_list = [result[2] for result in results]
     uuids_list = [result[3] for result in results]
-    log.info("Number of successes: %s/%s.", sum(success_list), len(results))
+    success_count = sum(success_list)
+    log.info("multiprocessing function calls complete; successes: %s/%s.", success_count, len(results))
+    if require_success and success_count < len(results):
+        raise Exception('one or more multiprocessing instances failed')
 
     epc_file = Path(str(recombined_epc))
     if epc_file.is_file():
@@ -93,7 +95,7 @@ def function_multiprocessing(
     else:
         model_recombined = new_model(epc_file = str(epc_file))
 
-    log.info("Creating the recombined epc file.")
+    log.info("creating the recombined epc file")
     for i, epc in enumerate(epc_list):
         if epc is None:
             continue
@@ -111,11 +113,11 @@ def function_multiprocessing(
             model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
 
     # Deleting temporary directory.
-    log.info("Deleting the temporary directory")
+    log.debug("deleting the temporary directory")
     rm_tree("tmp_dir")
 
     model_recombined.store_epc()
 
-    log.info("Recombined epc file complete.")
+    log.info("recombined epc file complete")
 
     return success_list

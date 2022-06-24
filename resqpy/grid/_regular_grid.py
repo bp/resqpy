@@ -599,6 +599,10 @@ class RegularGrid(Grid):
                     self.property_collection.set_support(support = self)
                 self.property_collection.inherit_parts_from_other_collection(dpc)
 
+            if add_relationships and self.crs_uuid is not None:
+                self.model.create_reciprocal_relationship_uuids(self.uuid, 'destinationObject', self.crs_uuid,
+                                                                'sourceObject')
+
         return node
 
     def _set_is_aligned(self):

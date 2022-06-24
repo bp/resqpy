@@ -1720,7 +1720,7 @@ class Model():
            rel_type_a (string): the Type (role) associated with node_a in the relationship;
               usually 'sourceObject' or 'destinationObject'
            node_b: the other xml node to be related
-           rel_type_a (string): the Type (role) associated with node_b in the relationship
+           rel_type_b (string): the Type (role) associated with node_b in the relationship
               usually 'sourceObject' or 'destinationObject' (opposite of rel_type_a)
            avoid_duplicates (boolean, default True): if True, xml for a relationship is not added
               where it already exists; if False, a duplicate will be created in this situation
@@ -1747,8 +1747,8 @@ class Model():
            uuid_a: uuid of one of the two parts to be related
            rel_type_a (string): the Type (role) associated with uuid_a in the relationship;
               usually 'sourceObject' or 'destinationObject'
-           uuid_a: uuid of the other part to be related
-           rel_type_a (string): the Type (role) associated with uuid_b in the relationship
+           uuid_b: uuid of the other part to be related
+           rel_type_b (string): the Type (role) associated with uuid_b in the relationship
               usually 'sourceObject' or 'destinationObject' (opposite of rel_type_a)
            avoid_duplicates (boolean, default True): if True, xml for a relationship is not added
               where it already exists; if False, a duplicate will be created in this situation
