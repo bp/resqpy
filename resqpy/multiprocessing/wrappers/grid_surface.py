@@ -66,12 +66,12 @@ def find_faces_to_represent_surface_regular_wrapper(
            cells in each pair are on one side of the surface, and all the second cells on the other
         extra_metadata (dict, optional): extra metadata items to be added to the grid connection set
         return_properties (List[str]): if present, a list of property arrays to calculate and
-           return as a dictionary; recognised values in the list are 'triangle', 'offset' and 'normal vector';
-           triangle is an index into the surface triangles of the triangle detected for the gcs face; offset
-           is a measure of the distance between the centre of the cell face and the intersection point of the
-           inter-cell centre vector with a triangle in the surface; normal vector is a unit vector normal
-           to the surface triangle; each array has an entry for each face in the gcs; the returned dictionary
-           has the passed strings as keys and numpy arrays as values.
+           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset' and 'normal vector';
+           triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
+           the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
+           offset is a measure of the distance between the centre of the cell face and the intersection point;
+           normal vector is a unit vector normal to the surface triangle; each array has an entry for each face
+           in the gcs; the returned dictionary has the passed strings as keys and numpy arrays as values.
 
     Returns:
         Tuple containing:
@@ -227,6 +227,21 @@ def find_faces_to_represent_surface_regular_wrapper(
                     discrete = False,
                     uom = grid.crs.z_units,
                     property_kind = "continuous",
+                    realization = realisation,
+                    indexable_element = "faces",
+                )
+            elif p_name == "depth":
+                # convert values to global z inc down
+                array[:] += grid.crs.z_offset
+                if not grid.crs.z_inc_down:
+                    array = -array
+                property_collection.add_cached_array_to_imported_list(
+                    array,
+                    "from find_faces function",
+                    p_name,
+                    discrete = False,
+                    uom = grid.crs.z_units,
+                    property_kind = "depth",
                     realization = realisation,
                     indexable_element = "faces",
                 )
