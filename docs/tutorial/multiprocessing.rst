@@ -156,6 +156,26 @@ running a defined function.
     client.run(set_numba_threads)
 
 
+Adding a Logger
+---------------
+A custom logger and file handler can be setup in a similar way to the environment variables. The log
+levels of other loggers can also be specified, such as *Numba* in the following example.
+
+.. code-block:: python
+
+    def setup_logging():
+        logging.basicConfig(
+            filename="path/to/log/file",
+            filemode='a',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.DEBUG,
+        )
+        logging.getLogger("numba").setLevel(logging.WARNING)
+
+    client.run(setup_logging)
+
+
 Resqpy Wrapper Functions
 ------------------------
 To run the multiprocessing function, a wrapper function for the corresponding resqpy function is
