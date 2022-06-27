@@ -1,6 +1,6 @@
 """_mesh.py: surface class based on resqml standard."""
 
-version = '4th November 2021'
+version = '27th June 2022'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -14,10 +14,14 @@ import math as maths
 
 import numpy as np
 
+import resqpy.crs as rqc
+import resqpy.grid as grr
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.property as rqp
+import resqpy.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
 from ._base_surface import BaseSurface
@@ -137,6 +141,181 @@ class Mesh(BaseSurface):
         assert self.crs_uuid is not None
         if not self.title:
             self.title = 'mesh'
+
+    @classmethod
+    def from_regular_grid_column_property(cls, parent_model, grid_uuid, property_uuid):
+        """Creates a reg&z flavoured Mesh from an aligned regular grid column property.
+
+        arguments:
+            parent_model (Model): the model that the property is part of and the new Mesh will be part of
+            grid_uuid (UUID): the uuid of the RegularGrid object
+            property_uuid (UUID): the uuid of a property whose supporting representation is a
+                RegularGrid and where the indexable elements are columns
+
+        returns:
+            a new Mesh object with flavour reg&z, the xy regular points are the column centres and
+            the z values are the property values
+
+        notes:
+            the grid's (constant) dx, dy & dz properties must be avaiable in the model;
+            the property must not be a points property and must have a count of 1;
+            discrete property data will be converted to continuous (float) data;
+            if the property uom is of quantity class length, a suitable crs will be used for the mesh,
+            otherwise the grid's crs will be used and a uom extra metadata item will be added;
+            calling code will need to call the write_hdf5() and create_xml() methods for the mesh
+        """
+        grid = grr.RegularGrid(parent_model, uuid = grid_uuid)
+        assert grid is not None
+        assert grid.is_aligned
+        prop = rqp.Property(parent_model, uuid = property_uuid, support_uuid = grid_uuid)
+        assert prop is not None
+        assert prop.indexable_element() == 'columns' and prop.count() == 1 and not prop.is_points()
+        prop_array = prop.array_ref().astype(float)
+        assert prop_array.shape == (grid.nj, grid.ni)
+        crs = grid.crs
+        em_uom = None
+        if prop.is_continuous():
+            uom = prop.uom()
+            if uom != grid.crs.z_units and uom in wam.valid_uoms(quantity = 'length'):
+                # create a copy of the grid's crs with the z units set to the property's uom
+                crs = rqc.Crs(parent_model, uuid = grid.crs_uuid)
+                crs.uuid = bu.new_uuid()
+                crs.z_units = uom
+                crs.create_xml(reuse = True)
+            em_uom = uom
+        else:  # use grid's crs and add extra metadata item
+            em_uom = 'Euc'
+        dxyz_dij = np.zeros((2, 3), dtype = float)
+        dxyz_dij[0, 0] = grid.block_dxyz_dkji[2, 0]
+        dxyz_dij[1, 1] = grid.block_dxyz_dkji[1, 1]
+        assert dxyz_dij[0, 0] != 0.0 and dxyz_dij[1, 1] != 0.0
+        em = prop.extra_metadata
+        if em is None:
+            em = {}
+        if em_uom is not None:
+            em['uom'] = em_uom
+        mesh = cls(parent_model,
+                   mesh_flavour = 'reg&z',
+                   nj = grid.nj,
+                   ni = grid.ni,
+                   origin = (0.5 * dxyz_dij[0, 0], 0.5 * dxyz_dij[1, 1], 0.0),
+                   dxyz_dij = dxyz_dij,
+                   z_values = prop_array,
+                   surface_role = 'map',
+                   crs_uuid = crs.uuid,
+                   title = prop.title,
+                   extra_metadata = em)
+        return mesh
+
+    def set_represented_interpretation_root(self, interp_root):
+        """Makes a note of the xml root of the represented interpretation."""
+
+        self.represented_interpretation_root = interp_root
+
+    def full_array_ref(self):
+        """Populates a full 2D(+1) numpy array of shape (nj, ni, 3) with xyz values, caches and returns.
+
+        note:
+           z values may be zero or not applicable when using the mesh as support for properties.
+        """
+
+        if self.full_array is not None:
+            return self.full_array
+
+        if self.flavour == 'explicit':
+            self.__full_array_ref_explicit()
+        elif self.flavour in ['regular', 'reg&z']:
+            self.__full_array_ref_regular()
+        elif self.flavour == 'ref&z':
+            self.__full_array_ref_refz()
+        else:
+            raise Exception(f'unrecognised mesh flavour when fetching full array: {self.flavour}')
+
+        return self.full_array
+
+    def surface(self, quad_triangles = False):
+        """Returns a surface object generated from this mesh."""
+
+        return Surface(self.model, crs_uuid = self.crs_uuid, mesh = self, quad_triangles = quad_triangles)
+
+    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
+        """Create or append to an hdf5 file, writing datasets for the mesh depending on flavour."""
+
+        if not file_name:
+            file_name = self.model.h5_file_name()
+        if self.uuid is None:
+            self.uuid = bu.new_uuid()
+        if self.flavour == 'regular':
+            return
+        # NB: arrays must have been set up prior to calling this function
+        h5_reg = rwh5.H5Register(self.model)
+        a = self.full_array_ref()
+        if self.flavour == 'explicit':
+            if use_xy_only:
+                h5_reg.register_dataset(self.uuid, 'points', a[..., :2])  # todo: check what others use here
+            else:
+                h5_reg.register_dataset(self.uuid, 'points', a)
+        elif self.flavour == 'ref&z' or self.flavour == 'reg&z':
+            h5_reg.register_dataset(self.uuid, 'zvalues', a[..., 2])
+        else:
+            log.error('bad mesh flavour when writing hdf5 array')
+        h5_reg.write(file_name, mode = mode)
+
+    def create_xml(self,
+                   ext_uuid = None,
+                   use_xy_only = False,
+                   add_as_part = True,
+                   add_relationships = True,
+                   title = None,
+                   originator = None):
+        """Creates a grid 2d representation xml node from this mesh object and optionally adds as part of model.
+
+        arguments:
+           ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the mesh array
+           use_xy_only (boolean, default False): if True and the flavour of this mesh is explicit, only
+              the xy coordinates are stored in the hdf5 dataset, otherwise xyz are stored
+           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
+              in the model
+           add_relationships (boolean, default True): if True, a relationship xml part is created relating the
+              new grid 2d part to the crs part (and optional interpretation part), and to the represented
+              interpretation if present
+           title (string, optional): used as the citation Title text; should be meaningful to a human
+           originator (string, optional): the name of the human being who created the grid 2d representation part;
+              default is to use the login name
+
+        returns:
+           the newly created grid 2d representation (mesh) xml node
+        """
+
+        if ext_uuid is None and self.flavour != 'regular':
+            ext_uuid = self.model.h5_uuid()
+
+        g2d_node = super().create_xml(add_as_part = False, title = title, originator = originator)
+
+        p_node = self.__create_xml_basics(g2d_node)
+
+        ref_root = None
+
+        if self.flavour == 'regular':
+            self.__create_xml_regular(p_node)
+
+        elif self.flavour == 'ref&z':
+            self.__create_xml_refandz(p_node, ext_uuid)
+
+        elif self.flavour == 'reg&z':
+            self.__create_xml_regandz(p_node, ext_uuid)
+
+        elif self.flavour == 'explicit':
+            self.__create_xml_explicit(p_node, ext_uuid, use_xy_only)
+
+        else:
+            log.error('mesh has bad flavour when creating xml')
+            return None
+
+        if add_as_part:
+            self.__create_xml_add_parts(g2d_node, ref_root, add_relationships, ext_uuid)
+
+        return g2d_node
 
     def __load_from_arguments(self, ni, nj, origin, dxyz_dij, z_values, z_supporting_mesh_uuid, crs_uuid):
         assert ni is not None and nj is not None, 'If loading from arguments ni and nj must be provided'
@@ -361,11 +540,6 @@ class Mesh(BaseSurface):
         else:
             raise Exception('unrecognised flavour for mesh points')
 
-    def set_represented_interpretation_root(self, interp_root):
-        """Makes a note of the xml root of the represented interpretation."""
-
-        self.represented_interpretation_root = interp_root
-
     def __full_array_ref_explicit(self):
         # load array directly from hdf5 points reference; note: could be xyz or xy data
         assert self.explicit_h5_key_pair is not None, 'h5 key pair not established for mesh'
@@ -423,55 +597,6 @@ class Mesh(BaseSurface):
         self.full_array[..., 2] = self.temp_z
         #        if np.any(np.isnan(self.temp_z)): log.warning('z values include some NaNs')
         delattr(self, 'temp_z')
-
-    def full_array_ref(self):
-        """Populates a full 2D(+1) numpy array of shape (nj, ni, 3) with xyz values, caches and returns.
-
-        note:
-           z values may be zero or not applicable when using the mesh as support for properties.
-        """
-
-        if self.full_array is not None:
-            return self.full_array
-
-        if self.flavour == 'explicit':
-            self.__full_array_ref_explicit()
-        elif self.flavour in ['regular', 'reg&z']:
-            self.__full_array_ref_regular()
-        elif self.flavour == 'ref&z':
-            self.__full_array_ref_refz()
-        else:
-            raise Exception(f'unrecognised mesh flavour when fetching full array: {self.flavour}')
-
-        return self.full_array
-
-    def surface(self, quad_triangles = False):
-        """Returns a surface object generated from this mesh."""
-
-        return Surface(self.model, crs_uuid = self.crs_uuid, mesh = self, quad_triangles = quad_triangles)
-
-    def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
-        """Create or append to an hdf5 file, writing datasets for the mesh depending on flavour."""
-
-        if not file_name:
-            file_name = self.model.h5_file_name()
-        if self.uuid is None:
-            self.uuid = bu.new_uuid()
-        if self.flavour == 'regular':
-            return
-        # NB: arrays must have been set up prior to calling this function
-        h5_reg = rwh5.H5Register(self.model)
-        a = self.full_array_ref()
-        if self.flavour == 'explicit':
-            if use_xy_only:
-                h5_reg.register_dataset(self.uuid, 'points', a[..., :2])  # todo: check what others use here
-            else:
-                h5_reg.register_dataset(self.uuid, 'points', a)
-        elif self.flavour == 'ref&z' or self.flavour == 'reg&z':
-            h5_reg.register_dataset(self.uuid, 'zvalues', a[..., 2])
-        else:
-            log.error('bad mesh flavour when writing hdf5 array')
-        h5_reg.write(file_name, mode = mode)
 
     def __create_xml_regular(self, p_node):
 
@@ -678,59 +803,3 @@ class Mesh(BaseSurface):
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(g2d_node, 'mlToExternalPartProxy', ext_node,
                                                           'externalPartProxyToMl')
-
-    def create_xml(self,
-                   ext_uuid = None,
-                   use_xy_only = False,
-                   add_as_part = True,
-                   add_relationships = True,
-                   title = None,
-                   originator = None):
-        """Creates a grid 2d representation xml node from this mesh object and optionally adds as part of model.
-
-        arguments:
-           ext_uuid (uuid.UUID, optional): the uuid of the hdf5 external part holding the mesh array
-           use_xy_only (boolean, default False): if True and the flavour of this mesh is explicit, only
-              the xy coordinates are stored in the hdf5 dataset, otherwise xyz are stored
-           add_as_part (boolean, default True): if True, the newly created xml node is added as a part
-              in the model
-           add_relationships (boolean, default True): if True, a relationship xml part is created relating the
-              new grid 2d part to the crs part (and optional interpretation part), and to the represented
-              interpretation if present
-           title (string, optional): used as the citation Title text; should be meaningful to a human
-           originator (string, optional): the name of the human being who created the grid 2d representation part;
-              default is to use the login name
-
-        returns:
-           the newly created grid 2d representation (mesh) xml node
-        """
-
-        if ext_uuid is None and self.flavour != 'regular':
-            ext_uuid = self.model.h5_uuid()
-
-        g2d_node = super().create_xml(add_as_part = False, title = title, originator = originator)
-
-        p_node = self.__create_xml_basics(g2d_node)
-
-        ref_root = None
-
-        if self.flavour == 'regular':
-            self.__create_xml_regular(p_node)
-
-        elif self.flavour == 'ref&z':
-            self.__create_xml_refandz(p_node, ext_uuid)
-
-        elif self.flavour == 'reg&z':
-            self.__create_xml_regandz(p_node, ext_uuid)
-
-        elif self.flavour == 'explicit':
-            self.__create_xml_explicit(p_node, ext_uuid, use_xy_only)
-
-        else:
-            log.error('mesh has bad flavour when creating xml')
-            return None
-
-        if add_as_part:
-            self.__create_xml_add_parts(g2d_node, ref_root, add_relationships, ext_uuid)
-
-        return g2d_node

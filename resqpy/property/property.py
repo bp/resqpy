@@ -1,6 +1,6 @@
 """Containing resqml property class"""
 
-version = '24th November 2021'
+version = '27th June 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -64,8 +64,8 @@ class Property(BaseResqpy):
         if self.collection.model is None:
             self.collection.model = self.model
         self.collection.add_part_to_dict(part)
-        self.extra_metadata = self.collection.extra_metadata_for_part(
-            part)  # duplicate, as standard attribute in BaseResqpy
+        # duplicate extra metadata, as standard attribute in BaseResqpy
+        self.extra_metadata = self.collection.extra_metadata_for_part(part)
         self.collection.has_single_property_kind_flag = True
         self.collection.has_single_indexable_element_flag = True
         self.collection.has_multiple_realizations_flag = False
