@@ -117,6 +117,7 @@ def function_multiprocessing(function: Callable,
     rm_tree("tmp_dir")
 
     model_recombined.store_epc()
+    model.h5_release()
 
     log.info("recombined epc file complete")
 
