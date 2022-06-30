@@ -6,7 +6,7 @@ a vector is a one dimensional numpy array with 3 elements: x, y, z.
 some functions accept a tuple or list of 3 elements as an alternative to a numpy array.
 """
 
-version = '8th March 2022'
+version = '30th June 2022'
 
 import logging
 
@@ -177,10 +177,10 @@ def inclinations(a):
     return degrees_from_radians(radians)
 
 
-def nan_inclinations(a):
+def nan_inclinations(a, already_unit_vectors = False):
     """Returns the inclination in degrees of each vector in a (angle relative to +ve z axis), allowing NaNs."""
     assert a.ndim > 1 and a.shape[-1] == 3
-    unit_vs = nan_unit_vectors(a)
+    unit_vs = a if already_unit_vectors else nan_unit_vectors(a)
     restore = np.seterr(all = 'ignore')
     radians = np.where(np.isnan(unit_vs[..., 2]), np.nan, np.arccos(unit_vs[..., 2]))
     result = np.where(np.isnan(radians), np.nan, degrees_from_radians(radians))
