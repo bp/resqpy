@@ -6,7 +6,7 @@ a vector is a one dimensional numpy array with 3 elements: x, y, z.
 some functions accept a tuple or list of 3 elements as an alternative to a numpy array.
 """
 
-version = '8th March 2022'
+version = '30th June 2022'
 
 import logging
 
@@ -95,15 +95,17 @@ def unit_vectors(v):
 
 def nan_unit_vectors(v):
     """Returns vectors with same direction as those in v but with unit length, allowing NaNs."""
-    nan_mask = np.isnan(v)
+    assert v.shape[-1] == 3
+    vf = v.reshape((-1, 3))
+    nan_mask = np.isnan(vf)
     restore = np.seterr(all = 'ignore')
-    scaling = np.sqrt(np.sum(v * v, axis = -1))
-    zero_mask = np.zeros(v.shape, dtype = bool)
+    scaling = np.sqrt(np.sum(vf * vf, axis = -1))
+    zero_mask = np.zeros(vf.shape, dtype = bool)
     zero_mask[np.where(scaling == 0.0), :] = True
-    result = np.where(zero_mask, 0.0, v / np.expand_dims(scaling, -1))
+    result = np.where(zero_mask, 0.0, vf / np.expand_dims(scaling, -1))
     result = np.where(nan_mask, np.nan, result)
     np.seterr(**restore)
-    return result
+    return result.reshape(v.shape)
 
 
 def unit_vector_from_azimuth(azimuth):
@@ -175,10 +177,10 @@ def inclinations(a):
     return degrees_from_radians(radians)
 
 
-def nan_inclinations(a):
+def nan_inclinations(a, already_unit_vectors = False):
     """Returns the inclination in degrees of each vector in a (angle relative to +ve z axis), allowing NaNs."""
     assert a.ndim > 1 and a.shape[-1] == 3
-    unit_vs = nan_unit_vectors(a)
+    unit_vs = a if already_unit_vectors else nan_unit_vectors(a)
     restore = np.seterr(all = 'ignore')
     radians = np.where(np.isnan(unit_vs[..., 2]), np.nan, np.arccos(unit_vs[..., 2]))
     result = np.where(np.isnan(radians), np.nan, degrees_from_radians(radians))

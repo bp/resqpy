@@ -1,6 +1,6 @@
 """Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '15th May 2022'
+version = '30th June 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -85,10 +85,10 @@ class PropertyCollection():
         self.parent_set_root = None
         self.realization = realization  # model realization number within an ensemble
         self.null_value = None
-        self.imported_list = [
-        ]  # list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
-        #                                   min_value, max_value, property_kind, facet_type, facet, realization,
-        #                                   indexable_element, count, local_property_kind_uuid, const_value, points)
+        self.imported_list = []
+        # above is list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
+        #                   min_value, max_value, property_kind, facet_type, facet, realization,
+        #                   indexable_element, count, local_property_kind_uuid, const_value, points)
         self.guess_warning = False
         if support is not None:
             self.model = support.model
@@ -444,6 +444,7 @@ class PropertyCollection():
             uom = None,
             string_lookup_uuid = None,
             categorical = None,
+            related_uuid = None,
             ignore_clashes = False):
         """Adds those parts from the other PropertyCollection which match all arguments that are not None.
 
@@ -461,7 +462,7 @@ class PropertyCollection():
         For each of these arguments: if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
         finally, the filters for all the attributes must be passed for a given member (part)
-        to be inherited.
+        to be inherited; a soft relationship is sufficient for related_uuid to pass.
 
         note:
            the grid argument is maintained for backward compatibility; it is treated synonymously with support
@@ -481,7 +482,8 @@ class PropertyCollection():
             pcap._add_selected_part_from_other_dict(self, part, other, realization, support_uuid, uuid, continuous,
                                                     categorical, count, points, indexable, property_kind, facet_type,
                                                     facet, citation_title, citation_title_match_starts_with,
-                                                    time_series_uuid, time_index, string_lookup_uuid, ignore_clashes)
+                                                    time_series_uuid, time_index, string_lookup_uuid, related_uuid,
+                                                    ignore_clashes)
 
     def inherit_similar_parts_for_time_series_from_other_collection(self,
                                                                     other,
@@ -664,7 +666,8 @@ class PropertyCollection():
             time_index = None,
             uom = None,
             string_lookup_uuid = None,
-            categorical = None):
+            categorical = None,
+            related_uuid = None):
         """Returns a list of parts filtered by those arguments which are not None.
 
         All arguments are optional.
@@ -704,6 +707,7 @@ class PropertyCollection():
                                                           time_index = time_index,
                                                           uom = uom,
                                                           categorical = categorical,
+                                                          related_uuid = related_uuid,
                                                           string_lookup_uuid = string_lookup_uuid)
         parts_list = temp_collection.parts()
         return parts_list
@@ -729,7 +733,8 @@ class PropertyCollection():
             string_lookup_uuid = None,
             categorical = None,
             multiple_handling = 'exception',
-            title = None):
+            title = None,
+            related_uuid = None):
         """Returns a single part selected by those arguments which are not None.
 
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
@@ -770,7 +775,8 @@ class PropertyCollection():
                                                           uom = uom,
                                                           string_lookup_uuid = string_lookup_uuid,
                                                           categorical = categorical,
-                                                          title = title)
+                                                          title = title,
+                                                          related_uuid = related_uuid)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
@@ -803,7 +809,8 @@ class PropertyCollection():
             masked = False,
             exclude_null = False,
             multiple_handling = 'exception',
-            title = None):
+            title = None,
+            related_uuid = None):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -818,7 +825,7 @@ class PropertyCollection():
 
         Other optional arguments:
         realization, support, support_uuid, grid, continuous, points, count, indexable, property_kind, facet_type, facet,
-        citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical:
+        citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical, related_uuid:
 
         For each of these arguments: if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
@@ -859,7 +866,8 @@ class PropertyCollection():
                               string_lookup_uuid = string_lookup_uuid,
                               categorical = categorical,
                               multiple_handling = multiple_handling,
-                              title = title)
+                              title = title,
+                              related_uuid = related_uuid)
         if part is None:
             return None
         return self.cached_part_array_ref(part, dtype = dtype, masked = masked, exclude_null = exclude_null)
