@@ -95,15 +95,17 @@ def unit_vectors(v):
 
 def nan_unit_vectors(v):
     """Returns vectors with same direction as those in v but with unit length, allowing NaNs."""
-    nan_mask = np.isnan(v)
+    assert v.shape[-1] == 3
+    vf = v.reshape((-1, 3))
+    nan_mask = np.isnan(vf)
     restore = np.seterr(all = 'ignore')
-    scaling = np.sqrt(np.sum(v * v, axis = -1))
-    zero_mask = np.zeros(v.shape, dtype = bool)
+    scaling = np.sqrt(np.sum(vf * vf, axis = -1))
+    zero_mask = np.zeros(vf.shape, dtype = bool)
     zero_mask[np.where(scaling == 0.0), :] = True
-    result = np.where(zero_mask, 0.0, v / np.expand_dims(scaling, -1))
+    result = np.where(zero_mask, 0.0, vf / np.expand_dims(scaling, -1))
     result = np.where(nan_mask, np.nan, result)
     np.seterr(**restore)
-    return result
+    return result.reshape(v.shape)
 
 
 def unit_vector_from_azimuth(azimuth):
