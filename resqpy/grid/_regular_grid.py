@@ -135,13 +135,16 @@ class RegularGrid(Grid):
                 assert self.property_collection is not None
                 dxi_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'I')
+                                                              facet = 'I',
+                                                              indexable = 'cells')
                 dyj_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'J')
+                                                              facet = 'J',
+                                                              indexable = 'cells')
                 dzk_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'K')
+                                                              facet = 'K',
+                                                              indexable = 'cells')
                 if dxi_part is not None and dyj_part is not None and dzk_part is not None:
                     dxi = self.property_collection.constant_value_for_part(dxi_part)
                     dyj = self.property_collection.constant_value_for_part(dyj_part)
