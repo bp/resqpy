@@ -5,7 +5,8 @@ version = "19th April 2022"
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
-from typing import Any, Dict, Tuple, Type
+from typing import Any, Dict, Tuple, Type, Optional, List, Union
+import io
 
 log = logging.getLogger(__name__)
 
@@ -238,24 +239,26 @@ def length_unit_conversion_applicable(keyword):
     return wellspec_dict[keyword][4]
 
 
-def load_wellspecs(wellspec_file, well=None, column_list=[]):
+def load_wellspecs(
+    wellspec_file: str,
+    well: Optional[str] = None,
+    column_list: Union[List[str], None] = [],
+) -> Dict[str, Union[pd.DataFrame, None]]:
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
-    args:
-       wellspec_file (string): file path of ascii input file containing wellspec keywords
-       well (optional, string): if present, only the data for the named well are loaded;
-          if None, data for all wells are loaded
-       column_list (list of strings, optional): if present, each dataframe returned contains
-          these columns, in this order; if None, the resulting dictionary contains only
-          well names as keys (each mapping to None rather than a dataframe); if an empty list,
-          each dataframe contains the columns listed in the corresponding wellspec header, in
-          the order found in the file
+    Args:
+       wellspec_file (str): file path of ascii input file containing wellspec keywords.
+       well (str, optional): if present, only the data for the named well are loaded. If None, data
+          for all wells are loaded.
+       column_list (List[str]/None): if present, each dataframe returned contains these
+          columns, in this order. If None, the resulting dictionary contains only well names as keys
+          (each mapping to None rather than a dataframe). If an empty list, each dataframe contains
+          the columns listed in the corresponding wellspec header, in the order found in the file.
 
-    returns:
-       dictionary (string: pandas dataframe) mapping each well name found in the wellspec file
-          to a dataframe containing the wellspec data
+    Returns:
+       well_dict (Dict[str, Union[pd.DataFrame, None]]): mapping each well name found in the
+          wellspec file to a dataframe containing the wellspec data.
     """
-
     assert wellspec_file, "no wellspec file specified"
 
     if column_list is not None:
@@ -265,51 +268,84 @@ def load_wellspecs(wellspec_file, well=None, column_list=[]):
             ), "unrecognized wellspec column name " + str(column)
     selecting = bool(column_list)
 
-    well_dict = (
-        {}
-    )  # maps from well name to pandas data frame with column_list as columns
+    well_dict = {}
     well_pointers = get_well_pointers(wellspec_file)
 
-    with open(wellspec_file, "r") as fp:
+    if column_list is None:
+        well_dict = dict.fromkeys(well_pointers, None)
+        return well_dict
+
+    with open(wellspec_file, "r") as file:
         if well:
             well_data = get_well_data(
-                fp, well, well_pointers[well], column_list, selecting
+                file, well, well_pointers[well], column_list, selecting
             )
-            if isinstance(well_data, pd.DataFrame) or well_data is None:
+            if well_data is not None:
                 well_dict[well] = well_data
         else:
             for well_name, pointer in well_pointers.items():
                 well_data = get_well_data(
-                    fp, well_name, pointer, column_list, selecting
+                    file, well_name, pointer, column_list, selecting
                 )
-                if isinstance(well_data, pd.DataFrame) or well_data is None:
+                if well_data is not None:
                     well_dict[well_name] = well_data
 
     return well_dict
 
 
-def get_well_pointers(wellspec_file):
+def get_well_pointers(wellspec_file: str) -> Dict[str, int]:
+    """Gets the file locations of each well in the wellspec file for optimised processing of the data.
+
+    Args:
+        wellspec_file (str): file path of ascii input file containing wellspec keywords.
+
+    Returns:
+       well_pointers (Dict[str, int]): mapping each well name found in the wellspec file
+          to their file location.
+    """
     well_pointers = {}
-    with open(wellspec_file, "r") as fp:
+    with open(wellspec_file, "r") as file:
         while True:
-            found = kf.find_keyword(fp, "WELLSPEC")
+            found = kf.find_keyword(file, "WELLSPEC")
             if not found:
                 break
-            line = fp.readline()
+            line = file.readline()
             words = line.split()
             assert len(words) >= 2, "missing well name after WELLSPEC keyword"
             well_name = words[1]
-            well_pointers[well_name] = fp.tell()
+            well_pointers[well_name] = file.tell()
 
     return well_pointers
 
 
-def get_well_data(fp, well_name, pointer, column_list, selecting):
-    fp.seek(pointer)
-    if column_list is None:
-        return
-    kf.skip_blank_lines_and_comments(fp)
-    line = kf.strip_trailing_comment(fp.readline()).upper()
+def get_well_data(
+    file: io.TextIOWrapper,
+    well_name: str,
+    pointer: int,
+    column_list: Union[List[str], None],
+    selecting: bool,
+) -> Union[pd.DataFrame, None]:
+    """Creates a dataframe of the well data for a given well name in the wellspec file.
+
+    The pointer argument is used to go to the file location where the well data is located.
+
+    Args:
+        file (io.TextIOWrapper): the opened wellspec file object.
+        well_name (str): name of the well.
+        pointer (int): the file object's start position of the well data represented as number of
+            bytes from the beginning of the file.
+        column_list (List[str]/None): if present, each dataframe returned contains these
+            columns, in this order. If None, the resulting dictionary contains only well names as keys
+            (each mapping to None rather than a dataframe). If an empty list, each dataframe contains
+            the columns listed in the corresponding wellspec header, in the order found in the file.
+        selecting (bool): True if the column_list contains at least one column name, False otherwise.
+
+    Returns:
+       Pandas dataframe of the well data or None if there is a nan in the last row.
+    """
+    file.seek(pointer)
+    kf.skip_blank_lines_and_comments(file)
+    line = kf.strip_trailing_comment(file.readline()).upper()
     columns_present = line.split()
     if selecting:
         column_map = np.full((len(column_list),), -1, dtype=int)
@@ -323,14 +359,14 @@ def get_well_data(fp, well_name, pointer, column_list, selecting):
     data = {col: [] for col in df_col}
     all_null = True
     while True:
-        kf.skip_comments(fp)
-        if kf.blank_line(fp):
+        kf.skip_comments(file)
+        if kf.blank_line(file):
             break  # unclear from Nexus doc what marks end of table
-        if kf.specific_keyword_next(fp, "WELLSPEC") or kf.specific_keyword_next(
-            fp, "WELLMOD"
+        if kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(
+            file, "WELLMOD"
         ):
             break
-        line = kf.strip_trailing_comment(fp.readline())
+        line = kf.strip_trailing_comment(file.readline())
         words = line.split()
         assert len(words) >= len(
             columns_present
@@ -343,27 +379,28 @@ def get_well_data(fp, well_name, pointer, column_list, selecting):
                     else:
                         data[col].extend([np.NaN])
                 else:
-                    v = words[column_map[col_index]]
-                    if v == "NA":
+                    value = words[column_map[col_index]]
+                    if value == "NA":
                         data[col].extend([np.NaN])
-                    elif v == "#":
-                        data[col].extend([v])
-                    elif v:
-                        data[col].extend([wellspec_dtype[col.upper()](v)])
+                    elif value == "#":
+                        data[col].extend([value])
+                    elif value:
+                        data[col].extend([wellspec_dtype[col.upper()](value)])
                 if data[col][-1] != np.NaN:
                     all_null = False
         else:
-            for col, v in zip(columns_present, words[: len(columns_present)]):
-                if v == "NA":
+            for col, value in zip(columns_present, words[: len(columns_present)]):
+                if value == "NA":
                     data[col].extend([np.NaN])
-                elif v == "#":
-                    data[col].extend([v])
-                elif v:
-                    data[col].extend([wellspec_dtype[col](v)])
+                elif value == "#":
+                    data[col].extend([value])
+                elif value:
+                    data[col].extend([wellspec_dtype[col](value)])
                 if data[col][-1] != np.NaN:
                     all_null = False
+
     if all_null:
         log.warning(f"skipping null wellspec data for well {well_name}")
-        return False
+        return
 
     return pd.DataFrame(data)
