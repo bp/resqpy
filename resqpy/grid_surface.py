@@ -1508,7 +1508,7 @@ def find_faces_to_represent_surface_regular(grid,
 
 
 @njit
-def where_true(data: np.ndarray) -> np.ndarray:
+def where_true(data: np.ndarray):
     """Jitted NumPy 'where' function to improve performance on subsequent calls."""
     return np.where(data)
 
