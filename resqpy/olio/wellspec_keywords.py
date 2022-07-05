@@ -5,8 +5,7 @@ version = "19th April 2022"
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
-from typing import Any, Dict, Tuple, Type, Optional, List, Union
-import io
+from typing import Any, Dict, Tuple, Type, Optional, List, Union, TextIO
 
 log = logging.getLogger(__name__)
 
@@ -309,7 +308,7 @@ def get_well_pointers(wellspec_file: str) -> Dict[str, int]:
 
 
 def get_well_data(
-    file: io.TextIO,
+    file: TextIO,
     well_name: str,
     pointer: int,
     column_list: List[str],
@@ -320,7 +319,7 @@ def get_well_data(
     The pointer argument is used to go to the file location where the well data is located.
 
     Args:
-        file (io.TextIO): the opened wellspec file object.
+        file (TextIO): the opened wellspec file object.
         well_name (str): name of the well.
         pointer (int): the file object's start position of the well data represented as number of
             bytes from the beginning of the file.
