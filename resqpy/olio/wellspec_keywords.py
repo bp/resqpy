@@ -309,7 +309,7 @@ def get_well_pointers(wellspec_file: str) -> Dict[str, int]:
 
 
 def get_well_data(
-    file: io.TextIOWrapper,
+    file: io.TextIO,
     well_name: str,
     pointer: int,
     column_list: Union[List[str], None],
@@ -320,7 +320,7 @@ def get_well_data(
     The pointer argument is used to go to the file location where the well data is located.
 
     Args:
-        file (io.TextIOWrapper): the opened wellspec file object.
+        file (io.TextIO): the opened wellspec file object.
         well_name (str): name of the well.
         pointer (int): the file object's start position of the well data represented as number of
             bytes from the beginning of the file.
