@@ -5,7 +5,7 @@ version = "19th April 2022"
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
-from typing import Any, Dict, Tuple, Type, Optional, List, Union
+from typing import Any, Dict, Tuple, Type, Optional, List, Union, TextIO
 
 log = logging.getLogger(__name__)
 
@@ -308,7 +308,7 @@ def get_well_pointers(wellspec_file: str) -> Dict[str, int]:
 
 
 def get_well_data(
-    file,
+    file: TextIO,
     well_name: str,
     pointer: int,
     column_list: List[str],
