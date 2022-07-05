@@ -31,9 +31,7 @@ wk_okay = 0
 wk_preferred = 1
 wk_required = 2
 
-wellspec_dict: Dict[
-    str, Tuple[int, int, int, Any, bool]
-] = {}  # mapping wellspec column key to:
+wellspec_dict: Dict[str, Tuple[int, int, int, Any, bool]] = {}  # mapping wellspec column key to:
 #     (warn count, required in, required out, default, length units boolean, )
 
 # NB: changing entries in this list will usually require other code change elsewhere
@@ -183,16 +181,16 @@ def check_value(keyword, value):
         if not known_keyword(key):
             return False
         if key in [
-            "IW",
-            "JW",
-            "L",
-            "LAYER",
-            "IRELPM",
-            "CELL",
-            "SECT",
-            "FLOWSECT",
-            "ZONE",
-            "IPTN",
+                "IW",
+                "JW",
+                "L",
+                "LAYER",
+                "IRELPM",
+                "CELL",
+                "SECT",
+                "FLOWSECT",
+                "ZONE",
+                "IPTN",
         ]:
             return int(value) > 0
         elif key == "GRID":
@@ -214,7 +212,7 @@ def check_value(keyword, value):
         elif key in ["SKIN", "DEPTH", "X", "Y", "TEMP"]:
             float(value)
             return True
-        else:    # pragma: no cover
+        else:  # pragma: no cover
             return True
     except Exception:
         return False
@@ -236,7 +234,7 @@ def length_unit_conversion_applicable(keyword):  # pragma: no cover
     return wellspec_dict[keyword][4]
 
 
-def load_wellspecs(wellspec_file, well=None, column_list=[]):
+def load_wellspecs(wellspec_file, well = None, column_list = []):
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
     args:
@@ -257,14 +255,10 @@ def load_wellspecs(wellspec_file, well=None, column_list=[]):
 
     if column_list is not None:
         for column in column_list:
-            assert (
-                column.upper() in wellspec_dict
-            ), "unrecognized wellspec column name " + str(column)
+            assert (column.upper() in wellspec_dict), "unrecognized wellspec column name " + str(column)
     selecting = bool(column_list)
 
-    well_dict = (
-        {}
-    )  # maps from well name to pandas data frame with column_list as columns
+    well_dict = ({})  # maps from well name to pandas data frame with column_list as columns
 
     with open(wellspec_file, "r") as fp:
         while True:
@@ -284,7 +278,7 @@ def load_wellspecs(wellspec_file, well=None, column_list=[]):
             line = kf.strip_trailing_comment(fp.readline()).upper()
             columns_present = line.split()
             if selecting:
-                column_map = np.full((len(column_list),), -1, dtype=int)
+                column_map = np.full((len(column_list),), -1, dtype = int)
                 for i in range(len(column_list)):
                     column = column_list[i].upper()
                     if column in columns_present:
@@ -298,15 +292,12 @@ def load_wellspecs(wellspec_file, well=None, column_list=[]):
                 kf.skip_comments(fp)
                 if kf.blank_line(fp):
                     break  # unclear from Nexus doc what marks end of table
-                if kf.specific_keyword_next(fp, "WELLSPEC") or kf.specific_keyword_next(
-                    fp, "WELLMOD"
-                ):
+                if kf.specific_keyword_next(fp, "WELLSPEC") or kf.specific_keyword_next(fp, "WELLMOD"):
                     break
                 line = kf.strip_trailing_comment(fp.readline())
                 words = line.split()
                 assert len(words) >= len(
-                    columns_present
-                ), f"insufficient data in line of wellspec table {well} [{line}]"
+                    columns_present), f"insufficient data in line of wellspec table {well} [{line}]"
                 if selecting:
                     for col_index, col in enumerate(column_list):
                         if column_map[col_index] < 0:
@@ -325,7 +316,7 @@ def load_wellspecs(wellspec_file, well=None, column_list=[]):
                         if not pd.isnull(data[col][-1]):
                             all_null = False
                 else:
-                    for col, v in zip(columns_present, words[: len(columns_present)]):
+                    for col, v in zip(columns_present, words[:len(columns_present)]):
                         if v == "NA":
                             data[col].append(np.NaN)
                         elif v == "#":
@@ -338,7 +329,7 @@ def load_wellspecs(wellspec_file, well=None, column_list=[]):
                 log.warning(f"skipping null wellspec data for well {well_name}")
                 continue
             data = {k: v for k, v in data.items() if v}
-            df = pd.DataFrame(data, columns=df_col)
+            df = pd.DataFrame(data, columns = df_col)
             if well:
                 well_dict[well] = df
                 break  # NB. if more than one table for a well, this function returns first, Nexus uses last
