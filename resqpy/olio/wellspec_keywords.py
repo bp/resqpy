@@ -296,8 +296,8 @@ def get_well_pointers(wellspec_file: str) -> Dict[str, int]:
         wellspec_file (str): file path of ascii input file containing wellspec keywords.
 
     Returns:
-       well_pointers (Dict[str, int]): mapping each well name found in the wellspec file
-          to their file location.
+        well_pointers (Dict[str, int]): mapping each well name found in the wellspec file to their
+            file location.
     """
     well_pointers = {}
     with open(wellspec_file, "r") as file:
@@ -337,7 +337,7 @@ def get_well_data(
         selecting (bool): True if the column_list contains at least one column name, False otherwise.
 
     Returns:
-       Pandas dataframe of the well data or None if there is a nan in the last row.
+        Pandas dataframe of the well data or None if there is a nan in the last row.
     """
     file.seek(pointer)
     kf.skip_blank_lines_and_comments(file)
@@ -371,28 +371,28 @@ def get_well_data(
             for col_index, col in enumerate(column_list):
                 if column_map[col_index] < 0:
                     if column_list[col_index].upper() == "GRID":
-                        data[col].extend(["ROOT"])
+                        data[col].append("ROOT")
                     else:
-                        data[col].extend([np.NaN])
+                        data[col].append(np.NaN)
                 else:
                     value = words[column_map[col_index]]
                     if value == "NA":
-                        data[col].extend([np.NaN])
+                        data[col].append(np.NaN)
                     elif value == "#":
-                        data[col].extend([value])
+                        data[col].append(value)
                     elif value:
-                        data[col].extend([wellspec_dtype[col.upper()](value)])
-                if data[col][-1] != np.NaN:
+                        data[col].append(wellspec_dtype[col.upper()](value))
+                if not pd.isnull(data[col][-1]):
                     all_null = False
         else:
             for col, value in zip(columns_present, words[: len(columns_present)]):
                 if value == "NA":
-                    data[col].extend([np.NaN])
+                    data[col].append(np.NaN)
                 elif value == "#":
-                    data[col].extend([value])
+                    data[col].append(value)
                 elif value:
-                    data[col].extend([wellspec_dtype[col](value)])
-                if data[col][-1] != np.NaN:
+                    data[col].append(wellspec_dtype[col](value))
+                if not pd.isnull(data[col][-1]):
                     all_null = False
 
     if all_null:
