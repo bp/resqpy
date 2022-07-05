@@ -258,7 +258,7 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
             assert (column.upper() in wellspec_dict), "unrecognized wellspec column name " + str(column)
     selecting = bool(column_list)
 
-    well_dict = ({})  # maps from well name to pandas data frame with column_list as columns
+    well_dict = {}  # maps from well name to pandas data frame with column_list as columns
 
     with open(wellspec_file, "r") as fp:
         while True:
@@ -296,8 +296,8 @@ def load_wellspecs(wellspec_file, well = None, column_list = []):
                     break
                 line = kf.strip_trailing_comment(fp.readline())
                 words = line.split()
-                assert len(words) >= len(
-                    columns_present), f"insufficient data in line of wellspec table {well} [{line}]"
+                assert len(words) >= len(columns_present), \
+                    f"insufficient data in line of wellspec table {well} [{line}]"
                 if selecting:
                     for col_index, col in enumerate(column_list):
                         if column_map[col_index] < 0:
