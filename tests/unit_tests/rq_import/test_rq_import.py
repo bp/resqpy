@@ -292,6 +292,8 @@ def test_grid_from_cp_kgap_zvoid(example_model_and_crs):
                           (['Surface_roxartext.txt'], 'rms', True, 'map', 'surface', 4),
                           (['Surface_tsurf.txt'], 'GOCAD-Tsurf', False, 'map', 'surface', 2),
                           (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 4),
+                          (['Surface_tsurf_2.txt'], 'GOCAD-Tsurf', False, 'map', 'surface', 2),
+                          (['Surface_tsurf_2.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 4),
                           (['Surface_zmap.dat', 'Surface_zmap.dat'], 'zmap', False, 'map', 'surface', 3),
                           (['Surface_zmap.dat', 'Surface_zmap.dat'], 'zmap', True, 'map', 'surface', 6),
                           (['Surface_zmap.dat'], 'zmap', False, 'pick', 'surface', 2),
