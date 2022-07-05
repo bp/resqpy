@@ -312,7 +312,7 @@ def get_well_data(
     file: io.TextIO,
     well_name: str,
     pointer: int,
-    column_list: Union[List[str], None],
+    column_list: List[str],
     selecting: bool,
 ) -> Union[pd.DataFrame, None]:
     """Creates a dataframe of the well data for a given well name in the wellspec file.
@@ -324,7 +324,7 @@ def get_well_data(
         well_name (str): name of the well.
         pointer (int): the file object's start position of the well data represented as number of
             bytes from the beginning of the file.
-        column_list (List[str]/None): if present, each dataframe returned contains these
+        column_list (List[str]): if present, each dataframe returned contains these
             columns, in this order. If None, the resulting dictionary contains only well names as keys
             (each mapping to None rather than a dataframe). If an empty list, each dataframe contains
             the columns listed in the corresponding wellspec header, in the order found in the file.
@@ -346,7 +346,7 @@ def get_well_data(
         df_col = column_list
     else:
         df_col = columns_present
-    data = {col: [] for col in df_col}
+    data: Dict[str, List] = {col: [] for col in df_col}
     all_null = True
     while True:
         kf.skip_comments(file)
@@ -387,6 +387,6 @@ def get_well_data(
 
     if all_null:
         log.warning(f"skipping null wellspec data for well {well_name}")
-        return
+        return None
 
     return pd.DataFrame(data)
