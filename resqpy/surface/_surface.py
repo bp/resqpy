@@ -669,9 +669,9 @@ class Surface(BaseSurface):
             lines = fl.readlines()
             for line in lines:
                 if "VRTX" in line:
-                    vertices.append(line.rstrip().split(" ")[2:])
+                    vertices.append(line.rstrip().split(" ")[2:5])
                 elif "TRGL" in line:
-                    triangles.append(line.rstrip().split(" ")[1:])
+                    triangles.append(line.rstrip().split(" ")[1:4])
         triangles = np.array(triangles, dtype = int)
         vertices = np.array(vertices, dtype = float)
         self.set_from_triangles_and_points(triangles = triangles, points = vertices)
