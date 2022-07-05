@@ -172,12 +172,12 @@ class Crs(BaseResqpy):
     def is_right_handed_xy(self) -> bool:
         """Returns True if the xy axes are right handed when viewed from above; False if left handed."""
 
-        return self.axis_order in ["northing easting", "southing westing", "westing northing"]
+        return bool(self.axis_order in ["northing easting", "southing westing", "westing northing"])
 
     def is_right_handed_xyz(self) -> bool:
         """Returns True if the xyz axes are right handed; False if left handed."""
 
-        return self.is_right_handed_xy() == self.z_inc_down
+        return self.is_right_handed_xy() is bool(self.z_inc_down)
 
     def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
         """Convert a single xyz point from the parent coordinate reference system to this one."""

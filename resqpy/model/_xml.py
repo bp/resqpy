@@ -535,8 +535,9 @@ def _create_reciprocal_relationship(model, node_a, rel_type_a, node_b, rel_type_
     if avoid_duplicates:
         existing_rel_nodes = rqet.list_of_tag(rel_root_a, 'Relationship')
         for existing in existing_rel_nodes:
-            if (rqet.stripped_of_prefix(existing.attrib['Type']) == rel_type_a and
-                    existing.attrib['Target'] == part_name_b):
+            # if (rqet.stripped_of_prefix(existing.attrib['Type']) == rel_type_a and
+            #         existing.attrib['Target'] == part_name_b):
+            if existing.attrib['Target'] == part_name_b:
                 create_a = False
                 break
     if create_a:
@@ -550,8 +551,9 @@ def _create_reciprocal_relationship(model, node_a, rel_type_a, node_b, rel_type_
     if avoid_duplicates:
         existing_rel_nodes = rqet.list_of_tag(rel_root_b, 'Relationship')
         for existing in existing_rel_nodes:
-            if (rqet.stripped_of_prefix(existing.attrib['Type']) == rel_type_b and
-                    existing.attrib['Target'] == part_name_a):
+            # if (rqet.stripped_of_prefix(existing.attrib['Type']) == rel_type_b and
+            #         existing.attrib['Target'] == part_name_a):
+            if existing.attrib['Target'] == part_name_a:
                 create_b = False
                 break
     if create_b:

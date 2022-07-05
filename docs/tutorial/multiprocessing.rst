@@ -8,12 +8,12 @@ You should edit the file paths in the examples to point to your own files.
 
 Installing Dask
 ---------------
-To use the multiprocesing module, Dask needs to be installed in the Python environment because it is
-not a dependency of the project. Dask is a flexible open-source Python library for parallel
+To use the multiprocesing module, *Dask* needs to be installed in the Python environment because it is
+not a dependency of the project. *Dask* is a flexible open-source Python library for parallel
 computing. It scales Python code from multi-core local machines to large distributed clusters
 on-prem or in the cloud.
 
-Dask contains multiple modules but only the distributed module is needed here. Dask Distributed can
+Dask contains multiple modules but only the *distributed* module is needed here. *Dask Distributed* can
 be installed using pip, conda, or from source.
 
 Pip
@@ -39,7 +39,7 @@ Source
     cd distributed
     python -m pip install .
 
-If using a Job Queue Cluster, Dask Jobqueue must also be installed. This can be installed in the
+If using a Job Queue Cluster, *Dask Jobqueue* must also be installed. This can be installed in the
 same ways.
 
 Pip
@@ -68,8 +68,8 @@ Source
 
 Cluster & Client Setup
 ----------------------
-If using a local machine, a `LocalCluster` must be setup. If using a job queing system, a
-`JobQueueCluster` can be used such as an `SGECluster`, `SLURMCluster`, `PBSCluster`, `LSFCluster`
+If using a local machine, a ``LocalCluster`` must be setup. If using a job queing system, a
+``JobQueueCluster`` can be used such as an ``SGECluster``, ``SLURMCluster``, ``PBSCluster``, ``LSFCluster``
 etc. Full details can be found at https://docs.dask.org/en/latest/deploying.html
 
 A client can also be setup to provide a live feedback dashboard or to capture diagnosics, which is
@@ -77,7 +77,7 @@ explained in the next section.
 
 Local Cluster
 ~~~~~~~~~~~~~
-Documentation of creating a `LocalCluster` can be found at
+Documentation of creating a ``LocalCluster`` can be found at
 https://distributed.dask.org/en/stable/api.html#distributed.LocalCluster
 
 .. code-block:: python
@@ -89,8 +89,8 @@ https://distributed.dask.org/en/stable/api.html#distributed.LocalCluster
 
 Job Queue Cluster Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-As an example, an SGE Cluster can be setup using Dask Jobqueue. Documentation of creating a
-`JobQueueCluster` can be found at https://jobqueue.dask.org/en/latest/api.html
+As an example, an SGE Cluster can be setup using *Dask Jobqueue*. Documentation of creating a
+``JobQueueCluster`` can be found at https://jobqueue.dask.org/en/latest/api.html
 
 .. code-block:: python
 
@@ -110,17 +110,17 @@ Viewing the Client
 ------------------
 If using a Local Cluster, the client dashboard is typically served at http://localhost:8787/status ,
 but may be served elsewhere if this port is taken. The address of the dashboard will be displayed if
-you are in a Jupyter Notebook, or can be queried from client.dashboard_link.
+you are in a Jupyter Notebook, or can be queried from ``client.dashboard_link``.
 
 Some clusters restrict the ports that are visible to the outside world. These ports may include the
 default port for the web interface, 8787. There are a few ways to handle this:
 
 * Open port 8787 to the outside world. Often this involves asking your cluster administrator.
-* Use a different port that is publicly accessible using the `scheduler_options` argument, like above.
-* Use fancier techniques, like Port Forwarding
+* Use a different port that is publicly accessible using the ``scheduler_options`` argument, like above.
+* Use fancier techniques, like Port Forwarding.
 
 You can capture some of the same information that the dashboard presents for offline processing
-using the `Client.get_task_stream` and `Client.profile` methods. These capture the start and stop
+using the ``Client.get_task_stream`` and ``Client.profile`` methods. These capture the start and stop
 time of every task and transfer, as well as the results of a statistical profiler. More info on this
 can be found at https://docs.dask.org/en/stable/diagnostics-distributed.html#capture-diagnostics
 
@@ -145,7 +145,7 @@ git clone of the repo can be uploaded to the client.
         client.wait_for_workers()
         client.upload_file(filename)
 
-Environment variables may also need to be set such as the Numba thread limit, which can be done by
+Environment variables may also need to be set such as the *Numba* thread limit, which can be done by
 running a defined function.
 
 .. code-block:: python
@@ -156,18 +156,37 @@ running a defined function.
     client.run(set_numba_threads)
 
 
+Adding a Logger
+---------------
+A custom logger and file handler can be setup in a similar way to the environment variables. The log
+levels of other loggers can also be specified, such as *Numba* in the following example.
+
+.. code-block:: python
+
+    def setup_logging():
+        logging.basicConfig(
+            filename="path/to/log/file",
+            filemode='a',
+            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+            datefmt='%H:%M:%S',
+            level=logging.DEBUG,
+        )
+        logging.getLogger("numba").setLevel(logging.WARNING)
+
+    client.run(setup_logging)
+
+
 Resqpy Wrapper Functions
 ------------------------
 To run the multiprocessing function, a wrapper function for the corresponding resqpy function is
-required. These can be found within the `multiprocessing.wrappers` module. Currently there is only a
-wrapper function for the `find_faces_to_represent_surface_regular` function, however any wrapper
+required. These can be found within the ``multiprocessing.wrappers`` module. Currently there is only a
+wrapper function for the ``find_faces_to_represent_surface_regular`` function, however any wrapper
 function can be created, providing that it returns the following:
 
-* index (int): the index passed to the function.
-* success (bool): whether the function call was successful, whatever that
-    definiton is.
-* epc_file (str): the epc file path where the objects are stored.
-* uuid_list (List[str]): list of UUIDs of relevant objects.
+* index (*int*): the index passed to the function.
+* success (*bool*): whether the function call was successful, whatever that definiton is.
+* epc_file (*str*): the epc file path where the objects are stored.
+* uuid_list (*List[str]*): list of UUIDs of relevant objects.
 
 The multiprocessing function will combine all of the objects that have their UUIDs returned, into a
 single epc file.
@@ -176,17 +195,18 @@ Calling the Multiprocessing Function
 ------------------------------------
 The multiprocessing function must receive the following arguments:
 
-* function (Callable): the wrapper function to be called, that must return the items
-    described above.
-* kwargs_list (List[Dict[Any]]): A list of keyword argument dictionaries that are
-    used when calling the function.
-* recombined_epc (Path/str): A pathlib Path or path string of
-    where the combined epc will be saved.
-* cluster (LocalCluster/JobQueueCluster): the relevant cluster, as explained above.
-* consolidate (bool): if True and an equivalent part already exists in
-    a model, it is not duplicated and the uuids are noted as equivalent.
+* function (*Callable*): the wrapper function to be called, that must return the items described
+  above.
+* kwargs_list (*List[Dict[Any]]*): A list of keyword argument dictionaries that are used when calling
+  the function.
+* recombined_epc (*Path/str*): A pathlib Path or path string of where the combined epc will be saved.
+* cluster (*LocalCluster/JobQueueCluster*): the relevant cluster, as explained above.
+* consolidate (*bool*): if True and an equivalent part already exists in a model, it is not duplicated
+  and the uuids are noted as equivalent.
 
 .. code-block:: python
+
+    from resqpy.multiprocessing import function_multiprocessing
 
     success_list = function_multiprocessing(func, kwargs_list, recombined_epc, cluster=cluster)
 

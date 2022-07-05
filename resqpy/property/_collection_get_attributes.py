@@ -20,7 +20,8 @@ from .property_kind import PropertyKind
 def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, discrete):
     collection.__dict__[cached_name] = cached_array
     zorro = collection.masked_array(cached_array, exclude_value = null_value)
-    if not discrete and np.all(np.isnan(zorro)):
+    if zorro is None or zorro.size == 0 or (not discrete and np.all(np.isnan(zorro))) or (discrete and
+                                                                                          np.all(zorro == null_value)):
         min_value = max_value = None
     else:
         min_value = np.nanmin(zorro)
@@ -373,16 +374,16 @@ def _supporting_shape_grid(support, indexable_element, direction):
     elif indexable_element == 'faces':
         shape_list = _supporting_shape_grid_faces(direction, support)
     elif indexable_element == 'column edges':
-        shape_list = [(support.nj * (support.ni + 1)) + ((support.nj + 1) * support.ni)
-                     ]  # I edges first; include outer edges
+        # I edges first; include outer edges
+        shape_list = [(support.nj * (support.ni + 1)) + ((support.nj + 1) * support.ni)]
     elif indexable_element == 'edges per column':
         shape_list = [support.nj, support.ni, 4]  # assume I-, J+, I+, J- ordering
     elif indexable_element == 'faces per cell':
         shape_list = [support.nk, support.nj, support.ni, 6]  # assume K-, K+, J-, I+, J+, I- ordering
         # TODO: resolve ordering of edges and make consistent with maps code (edges per column) and fault module (gcs faces)
     elif indexable_element == 'nodes per cell':
-        shape_list = [support.nk, support.nj, support.ni, 2, 2,
-                      2]  # kp, jp, ip within each cell; todo: check RESQML shaping
+        # kp, jp, ip within each cell; todo: check RESQML shaping
+        shape_list = [support.nk, support.nj, support.ni, 2, 2, 2]
     elif indexable_element == 'nodes':
         shape_list = _supporting_shape_grid_nodes(support)
     return shape_list

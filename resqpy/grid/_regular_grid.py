@@ -4,6 +4,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import math as maths
 import numpy as np
 
 import resqpy.crs as rqc
@@ -134,13 +135,16 @@ class RegularGrid(Grid):
                 assert self.property_collection is not None
                 dxi_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'I')
+                                                              facet = 'I',
+                                                              indexable = 'cells')
                 dyj_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'J')
+                                                              facet = 'J',
+                                                              indexable = 'cells')
                 dzk_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'K')
+                                                              facet = 'K',
+                                                              indexable = 'cells')
                 if dxi_part is not None and dyj_part is not None and dzk_part is not None:
                     dxi = self.property_collection.constant_value_for_part(dxi_part)
                     dyj = self.property_collection.constant_value_for_part(dyj_part)
@@ -507,6 +511,29 @@ class RegularGrid(Grid):
         g_xyz_box[1] = np.amax(global_xyz_box, axis = 0)
         return g_xyz_box
 
+    def find_cell_for_point_xy(self, x, y, k0 = 0, vertical_ref = 'top', local_coords = True):
+        """Searches in 2D for a cell containing point x,y in layer k0; return (j0, i0) or (None, None)."""
+
+        if x is None or y is None:
+            return (None, None)
+        if not local_coords and self.crs_uuid is not None:
+            a = np.array([[x, y, 0.0]])  # extra axis needed to keep global_to_local_crs happy
+            self.global_to_local_crs(a, crs_uuid = self.crs_uuid)
+            x = a[0, 0]
+            y = a[0, 1]
+        log.debug(f'find for local x: {x}; y: {y}')
+        if self.is_aligned:
+            i0 = maths.floor(x / self.block_dxyz_dkji[2, 0])
+            j0 = maths.floor(y / self.block_dxyz_dkji[1, 1])
+        else:
+            # TODO
+            raise NotImplementedError('finding cell for x,y in unaligned regular grid')
+            i0 = j0 = -1
+        log.debug(f'found j0: {j0}; i0: {i0}')
+        if 0 <= i0 < self.ni and 0 <= j0 < self.nj:
+            return (j0, i0)
+        return (None, None)
+
     def create_xml(self,
                    ext_uuid = None,
                    add_as_part = True,
@@ -575,6 +602,10 @@ class RegularGrid(Grid):
                     self.property_collection.set_support(support = self)
                 self.property_collection.inherit_parts_from_other_collection(dpc)
 
+            if add_relationships and self.crs_uuid is not None:
+                self.model.create_reciprocal_relationship_uuids(self.uuid, 'destinationObject', self.crs_uuid,
+                                                                'sourceObject')
+
         return node
 
     def _set_is_aligned(self):
@@ -587,3 +618,33 @@ class RegularGrid(Grid):
         """Returns triple float dx, dy, dz cell dimensions for aligned grids only."""
         assert self.is_aligned
         return (self.block_dxyz_dkji[2, 0], self.block_dxyz_dkji[1, 1], self.block_dxyz_dkji[0, 2])
+
+    def slice_points(self, axis = 0, ref_slice = 0, local = False):
+        """Returns a slice of points data for a layer or a cross section.
+
+        arguments:
+           axis (int, default 0): the axis of slicing 0 for K, 1 for J, 2 for I
+           ref_slice (int, default 0): the slice index in the direction of axis
+           local (bool, default False): if True, returned points are in the local crs; if False in global
+
+        returns:
+           numpy float array of points data of shape (Na, Nb, 3); (Na, Nb) are (NJ+1, NI+1), (NK+1, NI+1) or
+           (NK+1, NJ+1) for axis values of 0, 1, or 2 respectively
+        """
+        assert 0 <= axis < 3
+        assert 0 <= ref_slice <= self.extent_kji[axis]
+        other_axes = np.array([[1, 2], [0, 2], [0, 1]], dtype = int)[axis]
+        shape = (self.extent_kji[other_axes[0]] + 1, self.extent_kji[other_axes[1]] + 1, 3)
+        dxyz_da = self.block_dxyz_dkji[other_axes[0]]
+        dxyz_db = self.block_dxyz_dkji[other_axes[1]]
+        p = np.zeros(shape, dtype = float)
+        if ref_slice:
+            p[0, 0] = ref_slice * self.block_dxyz_dkji[axis]
+        for a in range(1, shape[0]):
+            p[a, 0] = p[0, 0] + a * dxyz_da
+        for b in range(1, shape[1]):
+            p[:, b] = p[:, 0] + b * dxyz_db
+        if not local:
+            assert self.crs is not None
+            self.crs.local_to_global_array(p)
+        return p

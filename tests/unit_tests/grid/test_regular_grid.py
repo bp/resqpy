@@ -98,3 +98,33 @@ def test_aligned_column_centres(basic_regular_grid):
     col_centres = grid.aligned_column_centres()
     assert col_centres.shape == (grid.nj, grid.ni, 2)
     np.testing.assert_array_almost_equal(col_centres, generic_centres[0, :, :, :2])
+
+
+def test_slice_points_k(aligned_regular_grid):
+    grid = aligned_regular_grid
+    assert grid.is_aligned
+    # test K slicing
+    e = np.array([[(0.0, 0.0, 0.0), (100.0, 0.0, 0.0), (200.0, 0.0, 0.0), (300.0, 0.0, 0.0), (400.0, 0.0, 0.0)],
+                  [(0.0, 50.0, 0.0), (100.0, 50.0, 0.0), (200.0, 50.0, 0.0), (300.0, 50.0, 0.0), (400.0, 50.0, 0.0)],
+                  [(0.0, 100.0, 0.0), (100.0, 100.0, 0.0), (200.0, 100.0, 0.0), (300.0, 100.0, 0.0),
+                   (400.0, 100.0, 0.0)],
+                  [(0.0, 150.0, 0.0), (100.0, 150.0, 0.0), (200.0, 150.0, 0.0), (300.0, 150.0, 0.0),
+                   (400.0, 150.0, 0.0)]])
+    p = grid.slice_points(local = True)
+    np.testing.assert_array_almost_equal(p, e)
+    e[..., 2] = 40.0
+    for local in [True, False]:
+        p = grid.slice_points(axis = 0, ref_slice = 2, local = local)
+        np.testing.assert_array_almost_equal(p, e)
+    # test J slicing
+    e = np.array([[(0.0, 0.0, 0.0), (100.0, 0.0, 0.0), (200.0, 0.0, 0.0), (300.0, 0.0, 0.0), (400.0, 0.0, 0.0)],
+                  [(0.0, 0.0, 20.0), (100.0, 0.0, 20.0), (200.0, 0.0, 20.0), (300.0, 0.0, 20.0), (400.0, 0.0, 20.0)],
+                  [(0.0, 0.0, 40.0), (100.0, 0.0, 40.0), (200.0, 0.0, 40.0), (300.0, 0.0, 40.0), (400.0, 0.0, 40.0)]])
+    p = grid.slice_points(axis = 1, local = True)
+    np.testing.assert_array_almost_equal(p, e)
+    # test I slicing
+    e = np.array([[(0.0, 0.0, 0.0), (0.0, 50.0, 0.0), (0.0, 100.0, 0.0), (0.0, 150.0, 0.0)],
+                  [(0.0, 0.0, 20.0), (0.0, 50.0, 20.0), (0.0, 100.0, 20.0), (0.0, 150.0, 20.0)],
+                  [(0.0, 0.0, 40.0), (0.0, 50.0, 40.0), (0.0, 100.0, 40.0), (0.0, 150.0, 40.0)]])
+    p = grid.slice_points(axis = 2, local = True)
+    np.testing.assert_array_almost_equal(p, e)

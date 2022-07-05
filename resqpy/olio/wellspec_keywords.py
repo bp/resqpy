@@ -128,7 +128,7 @@ wellspec_dtype['DZ']       = float
 # yapf: enable
 
 
-def increment_complaints(keyword):
+def increment_complaints(keyword):  # pragma: no cover
     """Increments the count of complaints (warnings) associated with the keyword."""
 
     global wellspec_dict
@@ -143,13 +143,13 @@ def increment_complaints(keyword):
     )
 
 
-def known_keyword(keyword):
+def known_keyword(keyword):  # pragma: no cover
     """Returns True if the keyword exists in the wellspec dictionary."""
 
     return keyword.upper() in wellspec_dict.keys()
 
 
-def add_unknown_keyword(keyword):
+def add_unknown_keyword(keyword):  # pragma: no cover
     """Adds the keyword to the dictionary with attributes flagged as unknown."""
 
     global wellspec_dict
@@ -163,14 +163,14 @@ def add_unknown_keyword(keyword):
     )  # assumes warning or error already given
 
 
-def default_value(keyword):
+def default_value(keyword):  # pragma: no cover
     """Returns the default value for the keyword."""
 
     assert known_keyword(keyword)
     return wellspec_dict[keyword][3]
 
 
-def complaints(keyword):
+def complaints(keyword):  # pragma: no cover
     """Returns the number of complaints (warnings) logged for the keyword."""
 
     assert known_keyword(keyword)
@@ -179,22 +179,21 @@ def complaints(keyword):
 
 def check_value(keyword, value):
     """Returns True if the value is acceptable for the keyword."""
-
     try:
         key = keyword.upper()
         if not known_keyword(key):
             return False
         if key in [
-            "IW",
-            "JW",
-            "L",
-            "LAYER",
-            "IRELPM",
-            "CELL",
-            "SECT",
-            "FLOWSECT",
-            "ZONE",
-            "IPTN",
+                "IW",
+                "JW",
+                "L",
+                "LAYER",
+                "IRELPM",
+                "CELL",
+                "SECT",
+                "FLOWSECT",
+                "ZONE",
+                "IPTN",
         ]:
             return int(value) > 0
         elif key == "GRID":
@@ -216,15 +215,14 @@ def check_value(keyword, value):
         elif key in ["SKIN", "DEPTH", "X", "Y", "TEMP"]:
             float(value)
             return True
-        else:
+        else:  # pragma: no cover
             return True
     except Exception:
         return False
 
 
-def required_out_list():
+def required_out_list():  # pragma: no cover
     """Returns a list of keywords that are required."""
-
     list = []
     for key in wellspec_dict.keys():
         if wellspec_dict[key][2] == wk_required:
@@ -232,7 +230,7 @@ def required_out_list():
     return list
 
 
-def length_unit_conversion_applicable(keyword):
+def length_unit_conversion_applicable(keyword):  # pragma: no cover
     """Returns True if the keyword has a quantity class of length."""
 
     assert known_keyword(keyword)
@@ -263,9 +261,7 @@ def load_wellspecs(
 
     if column_list is not None:
         for column in column_list:
-            assert (
-                column.upper() in wellspec_dict
-            ), "unrecognized wellspec column name " + str(column)
+            assert (column.upper() in wellspec_dict), "unrecognized wellspec column name " + str(column)
     selecting = bool(column_list)
 
     well_dict = {}

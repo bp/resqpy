@@ -1,7 +1,5 @@
 """Submodule containing functions for adding properties to a property collection."""
 
-version = '1st December 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -18,7 +16,7 @@ import resqpy.property._collection_get_attributes as pcga
 def _add_selected_part_from_other_dict(collection, part, other, realization, support_uuid, uuid, continuous,
                                        categorical, count, points, indexable, property_kind, facet_type, facet,
                                        citation_title, citation_title_match_starts_with, time_series_uuid, time_index,
-                                       string_lookup_uuid, ignore_clashes):
+                                       string_lookup_uuid, related_uuid, ignore_clashes):
     if _check_not_none_and_not_equals(realization, other.realization_for_part, part):
         return
     if _check_not_none_and_not_uuid_match(support_uuid, other.support_uuid_for_part, part):
@@ -49,6 +47,10 @@ def _add_selected_part_from_other_dict(collection, part, other, realization, sup
         return
     if _check_not_none_and_not_uuid_match(string_lookup_uuid, other.string_lookup_uuid_for_part, part):
         return
+    if related_uuid is not None:
+        assert other.model is not None
+        if other.model.part(parts_list = [part], related_uuid = related_uuid) is None:
+            return
     if part in collection.dict.keys():
         if ignore_clashes:
             return
