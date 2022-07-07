@@ -1,6 +1,6 @@
 """_surface.py: surface class based on resqml standard."""
 
-version = '23rd March 2022'
+version = '5th July 2022'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -667,13 +667,25 @@ class Surface(BaseSurface):
         triangles, vertices = [], []
         with open(filename, 'r') as fl:
             lines = fl.readlines()
+            v_index = None
             for line in lines:
                 if "VRTX" in line:
-                    vertices.append(line.rstrip().split(" ")[2:])
+                    words = line.rstrip().split(" ")
+                    v_i = int(words[1])
+                    if v_index is None:
+                        v_index = v_i
+                        index_offset = v_index
+                    else:
+                        assert v_i == v_index + 1, 'Tsurf vertex indices out of sequence'
+                        v_index = v_i
+                    vertices.append(words[2:5])
                 elif "TRGL" in line:
-                    triangles.append(line.rstrip().split(" ")[1:])
-        triangles = np.array(triangles, dtype = int)
+                    triangles.append(line.rstrip().split(" ")[1:4])
+        assert len(vertices) >= 3, 'vertices missing'
+        assert len(triangles) > 0, 'triangles missing'
+        triangles = np.array(triangles, dtype = int) - index_offset
         vertices = np.array(vertices, dtype = float)
+        assert np.all(triangles >= 0) and np.all(triangles < len(vertices)), 'triangle vertex indices out of range'
         self.set_from_triangles_and_points(triangles = triangles, points = vertices)
 
     def set_from_zmap_file(self, filename, quad_triangles = False):
