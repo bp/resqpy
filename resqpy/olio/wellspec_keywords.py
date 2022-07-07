@@ -330,7 +330,7 @@ def get_well_data(
             the columns listed in the corresponding wellspec header, in the order found in the file.
         selecting (bool): True if the column_list contains at least one column name, False otherwise
             (default).
-        keep_duplicates (bool): if True (default), duplicates in the "L" column are kept, otherwise only the
+        keep_duplicates (bool): if True (default), duplicate cells are kept, otherwise only the
             last entry is kept.
 
     Returns:
@@ -393,8 +393,8 @@ def get_well_data(
         return None
 
     df = pd.DataFrame(data)
-    if not keep_duplicates and not df["L"].is_unique:
+    if not keep_duplicates and any(df.duplicated(subset = ["IW", "JW", "L"])):
         log.warning(f"There are duplicates in column 'L' for well {well_name}.")
-        df.drop_duplicates(subset = "L", keep = "last", inplace = True)
+        df.drop_duplicates(subset = ["IW", "JW", "L"], keep = "last", inplace = True)
 
     return df
