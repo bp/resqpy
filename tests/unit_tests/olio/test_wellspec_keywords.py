@@ -153,16 +153,7 @@ def test_get_well_data_duplicates(wellspec_file_duplicates, test_well_dataframe_
 
     # Act
     with open(wellspec_file_duplicates, "r") as file:
-        well_data = wk.get_well_data(
-            file,
-            well_name,
-            pointer,
-            column_list,
-            selecting,
-            keep_duplicates
-        )
-
-    print(well_data.to_dict())
+        well_data = wk.get_well_data(file, well_name, pointer, column_list, selecting, keep_duplicates)
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_removed)
@@ -178,7 +169,6 @@ def test_get_well_data_keep_duplicates(wellspec_file_duplicates, test_well_dataf
     # Act
     with open(wellspec_file_duplicates, "r") as file:
         well_data = wk.get_well_data(file, well_name, pointer, column_list, selecting)
-    print(well_data.to_dict())
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_kept)
