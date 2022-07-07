@@ -77,7 +77,7 @@ def test_load_wellspecs_column_list(wellspec_file_one_well, test_well_dataframe)
     well_data = test_well_dataframe[column_list]
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_one_well, column_list=column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_one_well, column_list = column_list)
 
     # Assert
     assert len(well_dict) == 1
@@ -89,7 +89,7 @@ def test_load_wellspecs_column_list_none(wellspec_file_two_wells):
     column_list = None
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_two_wells, column_list=column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_two_wells, column_list = column_list)
 
     # Assert
     assert len(well_dict) == 2
@@ -139,7 +139,7 @@ def test_get_well_data_duplicates(wellspec_file_duplicates, test_well_dataframe_
 
     # Act
     with open(wellspec_file_duplicates, "r") as file:
-        well_data = wk.get_well_data(file, well_name, pointer, keep_duplicates=keep_duplicates)
+        well_data = wk.get_well_data(file, well_name, pointer, keep_duplicates = keep_duplicates)
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_removed)
