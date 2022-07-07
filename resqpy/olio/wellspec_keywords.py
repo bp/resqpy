@@ -311,9 +311,9 @@ def get_well_data(
     file: TextIO,
     well_name: str,
     pointer: int,
-    column_list: Union[List[str], None] = [],
+    column_list: List[str] = [],
     selecting: bool = False,
-    keep_duplicates: bool = False,
+    keep_duplicates: bool = True,
 ) -> Union[pd.DataFrame, None]:
     """Creates a dataframe of the well data for a given well name in the wellspec file.
 
@@ -330,11 +330,11 @@ def get_well_data(
             the columns listed in the corresponding wellspec header, in the order found in the file.
         selecting (bool): True if the column_list contains at least one column name, False otherwise
             (default).
-        keep_duplicates (bool): if True, duplicates in the "L" column are kept, otherwise only the
-            last entry is kept (default).
+        keep_duplicates (bool): if True (default), duplicates in the "L" column are kept, otherwise only the
+            last entry is kept.
 
     Returns:
-        Pandas dataframe of the well data or None if there is a nan in the last row.
+        Pandas dataframe of the well data or None if at least one row contains all NA.
     """
     file.seek(pointer)
     kf.skip_blank_lines_and_comments(file)
