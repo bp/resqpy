@@ -57,12 +57,14 @@ def test_fine_coarse_functions():
         assert const is None
     assert np.all(fct.vector_ratios[1] == (1, 2, 3, 3, 3, 2, 1))
     assert np.all(fct.vector_ratios[2] == (2, 3, 4, 4, 4, 3, 2))
-    ep = np.array((1.0/3, 1.0/3, 1.0/3, 1.0/3, 1.0/3, 1.0/3, 0.5, 0.5, 1, 1), dtype = float)
+    ep = np.array((1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5, 1, 1), dtype = float)
     assert_array_almost_equal(fct.proportions_for_axis(0), ep)
-    ep = np.array((1.0, 0.5, 0.5, 1.0/3, 1.0/3, 1.0/3, 1.0/3, 1.0/3, 1.0/3, 1.0/3,
-                   1.0/3, 1.0/3, 0.5, 0.5, 1.0), dtype = float)
+    ep = np.array(
+        (1.0, 0.5, 0.5, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5, 1.0),
+        dtype = float)
     assert_array_almost_equal(fct.proportions_for_axis(1), ep)
-    ep = np.array((0.5, 0.5, 1.0/3, 1.0/3, 1.0/3, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
-                   0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 1.0/3, 1.0/3, 1.0/3, 0.5, 0.5), dtype = float)
+    ep = np.array((0.5, 0.5, 1.0 / 3, 1.0 / 3, 1.0 / 3, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
+                   0.25, 0.25, 1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5),
+                  dtype = float)
     assert_array_almost_equal(fct.proportions_for_axis(2), ep)
     # todo: add test of tartan refinement in exponential mode

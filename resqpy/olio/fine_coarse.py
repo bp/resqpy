@@ -187,12 +187,13 @@ class FineCoarse:
 
         if self.equal_proportions[axis]:
             if self.constant_ratios[axis] is None:
-                assert self.vector_ratios[axis] is not None and len(self.vector_ratios[axis]) == self.coarse_extent_kji[axis]
+                assert self.vector_ratios[axis] is not None and len(
+                    self.vector_ratios[axis]) == self.coarse_extent_kji[axis]
                 fractions = 1.0 / self.vector_ratios[axis].astype(float)
                 proportions = np.zeros((self.fine_extent_kji[axis],), dtype = float)
                 fi = 0
                 for ci in range(self.coarse_extent_kji[axis]):
-                    proportions[fi : fi + self.vector_ratios[axis][ci]] = fractions[ci]
+                    proportions[fi:fi + self.vector_ratios[axis][ci]] = fractions[ci]
                     fi += self.vector_ratios[axis][ci]
                 return proportions
             count = self.constant_ratios[axis]
