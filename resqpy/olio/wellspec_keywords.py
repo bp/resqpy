@@ -247,7 +247,7 @@ def load_wellspecs(
           for all wells are loaded.
        column_list (List[str]/None): if present, each dataframe returned contains these
           columns, in this order. If None, the resulting dictionary contains only well names as keys
-          (each mapping to None rather than a dataframe). If an empty list, each dataframe contains
+          (each mapping to None rather than a dataframe). If an empty list (default), each dataframe contains
           the columns listed in the corresponding wellspec header, in the order found in the file.
 
     Returns:
@@ -311,8 +311,9 @@ def get_well_data(
     file: TextIO,
     well_name: str,
     pointer: int,
-    column_list: List[str],
-    selecting: bool,
+    column_list: List[str] = [],
+    selecting: bool = False,
+    keep_duplicates: bool = True,
 ) -> Union[pd.DataFrame, None]:
     """Creates a dataframe of the well data for a given well name in the wellspec file.
 
@@ -325,12 +326,15 @@ def get_well_data(
             bytes from the beginning of the file.
         column_list (List[str]): if present, each dataframe returned contains these
             columns, in this order. If None, the resulting dictionary contains only well names as keys
-            (each mapping to None rather than a dataframe). If an empty list, each dataframe contains
+            (each mapping to None rather than a dataframe). If an empty list (default), each dataframe contains
             the columns listed in the corresponding wellspec header, in the order found in the file.
-        selecting (bool): True if the column_list contains at least one column name, False otherwise.
+        selecting (bool): True if the column_list contains at least one column name, False otherwise
+            (default).
+        keep_duplicates (bool): if True (default), duplicate cells are kept, otherwise only the
+            last entry is kept.
 
     Returns:
-        Pandas dataframe of the well data or None if there is a nan in the last row.
+        Pandas dataframe of the well data or None if at least one row contains all NA.
     """
     file.seek(pointer)
     kf.skip_blank_lines_and_comments(file)
@@ -385,7 +389,12 @@ def get_well_data(
                     all_null = False
 
     if all_null:
-        log.warning(f"skipping null wellspec data for well {well_name}")
+        log.warning(f"Null wellspec data for well {well_name}.")
         return None
 
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    if not keep_duplicates and any(df.duplicated(subset = ["IW", "JW", "L"])):
+        log.warning(f"There are duplicate cells for well {well_name}.")
+        df.drop_duplicates(subset = ["IW", "JW", "L"], keep = "last", inplace = True)
+
+    return df

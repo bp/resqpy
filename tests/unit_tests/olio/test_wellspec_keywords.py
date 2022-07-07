@@ -49,10 +49,9 @@ def test_check_value_known_keyword(keyword, value, boolean_return_expected):
 def test_load_wellspecs_single_well(wellspec_file_one_well, test_well_dataframe):
     # Arrange
     well = None
-    column_list = []
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_one_well, well, column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_one_well, well)
 
     # Assert
     assert len(well_dict) == 1
@@ -62,10 +61,9 @@ def test_load_wellspecs_single_well(wellspec_file_one_well, test_well_dataframe)
 def test_load_wellspecs_specific_well(wellspec_file_two_wells, test_well2_dataframe):
     # Arrange
     well = "TEST_WELL2"
-    column_list = []
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_two_wells, well, column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_two_wells, well)
 
     # Assert
     assert len(well_dict) == 1
@@ -74,13 +72,12 @@ def test_load_wellspecs_specific_well(wellspec_file_two_wells, test_well2_datafr
 
 def test_load_wellspecs_column_list(wellspec_file_one_well, test_well_dataframe):
     # Arrange
-    well = None
     column_list = ["IW", "JW", "L", "LENGTH", "DEPTH"]
 
     well_data = test_well_dataframe[column_list]
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_one_well, well, column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_one_well, column_list = column_list)
 
     # Assert
     assert len(well_dict) == 1
@@ -89,11 +86,10 @@ def test_load_wellspecs_column_list(wellspec_file_one_well, test_well_dataframe)
 
 def test_load_wellspecs_column_list_none(wellspec_file_two_wells):
     # Arrange
-    well = None
     column_list = None
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_two_wells, well, column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_two_wells, column_list = column_list)
 
     # Assert
     assert len(well_dict) == 2
@@ -101,12 +97,8 @@ def test_load_wellspecs_column_list_none(wellspec_file_two_wells):
 
 
 def test_load_wellspecs_all_null(wellspec_file_null_well):
-    # Arrange
-    well = None
-    column_list = []
-
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_null_well, well, column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_null_well)
 
     # Assert
     assert well_dict == {}
@@ -126,8 +118,6 @@ def test_get_well_data(wellspec_file_one_well, test_well_dataframe):
     # Arrange
     well_name = "TEST_WELL"
     pointer = 20
-    column_list = []
-    selecting = False
 
     # Act
     with open(wellspec_file_one_well, "r") as file:
@@ -135,9 +125,34 @@ def test_get_well_data(wellspec_file_one_well, test_well_dataframe):
             file,
             well_name,
             pointer,
-            column_list,
-            selecting,
         )
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe)
+
+
+def test_get_well_data_duplicates(wellspec_file_duplicates, test_well_dataframe_duplicates_removed):
+    # Arrange
+    well_name = "TEST_WELL"
+    pointer = 20
+    keep_duplicates = False
+
+    # Act
+    with open(wellspec_file_duplicates, "r") as file:
+        well_data = wk.get_well_data(file, well_name, pointer, keep_duplicates = keep_duplicates)
+
+    # Assert
+    pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_removed)
+
+
+def test_get_well_data_keep_duplicates(wellspec_file_duplicates, test_well_dataframe_duplicates_kept):
+    # Arrange
+    well_name = "TEST_WELL"
+    pointer = 20
+
+    # Act
+    with open(wellspec_file_duplicates, "r") as file:
+        well_data = wk.get_well_data(file, well_name, pointer)
+
+    # Assert
+    pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_kept)
