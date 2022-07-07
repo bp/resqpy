@@ -31,9 +31,7 @@ wk_okay = 0
 wk_preferred = 1
 wk_required = 2
 
-wellspec_dict: Dict[
-    str, Tuple[int, int, int, Any, bool]
-] = {}  # mapping wellspec column key to:
+wellspec_dict: Dict[str, Tuple[int, int, int, Any, bool]] = {}  # mapping wellspec column key to:
 #     (warn count, required in, required out, default, length units boolean, )
 
 # NB: changing entries in this list will usually require other code change elsewhere
@@ -183,16 +181,16 @@ def check_value(keyword, value):
         if not known_keyword(key):
             return False
         if key in [
-            "IW",
-            "JW",
-            "L",
-            "LAYER",
-            "IRELPM",
-            "CELL",
-            "SECT",
-            "FLOWSECT",
-            "ZONE",
-            "IPTN",
+                "IW",
+                "JW",
+                "L",
+                "LAYER",
+                "IRELPM",
+                "CELL",
+                "SECT",
+                "FLOWSECT",
+                "ZONE",
+                "IPTN",
         ]:
             return int(value) > 0
         elif key == "GRID":
@@ -260,9 +258,7 @@ def load_wellspecs(
 
     if column_list is not None:
         for column in column_list:
-            assert (
-                column.upper() in wellspec_dict
-            ), "unrecognized wellspec column name " + str(column)
+            assert (column.upper() in wellspec_dict), "unrecognized wellspec column name " + str(column)
     selecting = bool(column_list)
 
     well_dict = {}
@@ -274,16 +270,12 @@ def load_wellspecs(
 
     with open(wellspec_file, "r") as file:
         if well:
-            well_data = get_well_data(
-                file, well, well_pointers[well], column_list, selecting
-            )
+            well_data = get_well_data(file, well, well_pointers[well], column_list, selecting)
             if well_data is not None:
                 well_dict[well] = well_data
         else:
             for well_name, pointer in well_pointers.items():
-                well_data = get_well_data(
-                    file, well_name, pointer, column_list, selecting
-                )
+                well_data = get_well_data(file, well_name, pointer, column_list, selecting)
                 if well_data is not None:
                     well_dict[well_name] = well_data
 
@@ -349,7 +341,7 @@ def get_well_data(
     line = kf.strip_trailing_comment(file.readline()).upper()
     columns_present = line.split()
     if selecting:
-        column_map = np.full((len(column_list),), -1, dtype=int)
+        column_map = np.full((len(column_list),), -1, dtype = int)
         for i in range(len(column_list)):
             column = column_list[i].upper()
             if column in columns_present:
@@ -363,15 +355,11 @@ def get_well_data(
         kf.skip_comments(file)
         if kf.blank_line(file):
             break  # unclear from Nexus doc what marks end of table
-        if kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(
-            file, "WELLMOD"
-        ):
+        if kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(file, "WELLMOD"):
             break
         line = kf.strip_trailing_comment(file.readline())
         words = line.split()
-        assert len(words) >= len(
-            columns_present
-        ), f"insufficient data in line of wellspec table {well_name} [{line}]"
+        assert len(words) >= len(columns_present), f"insufficient data in line of wellspec table {well_name} [{line}]"
         if selecting:
             for col_index, col in enumerate(column_list):
                 if column_map[col_index] < 0:
@@ -390,7 +378,7 @@ def get_well_data(
                 if not pd.isnull(data[col][-1]):
                     all_null = False
         else:
-            for col, value in zip(columns_present, words[: len(columns_present)]):
+            for col, value in zip(columns_present, words[:len(columns_present)]):
                 if value == "NA":
                     data[col].append(np.NaN)
                 elif value == "#":
@@ -407,6 +395,6 @@ def get_well_data(
     df = pd.DataFrame(data)
     if not keep_duplicates and not df["L"].is_unique:
         log.warning(f"There are duplicates in column 'L' for well {well_name}.")
-        df.drop_duplicates(subset="L", keep="last", inplace=True)
+        df.drop_duplicates(subset = "L", keep = "last", inplace = True)
 
     return df
