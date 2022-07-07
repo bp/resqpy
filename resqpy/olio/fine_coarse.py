@@ -183,9 +183,18 @@ class FineCoarse:
         return self.vector_proportions[axis][c0]
 
     def proportions_for_axis(self, axis):
-        """Return the axial relative proportions as array of floats summing to one."""
+        """Return the axial relative proportions as array of floats summing to one for each coarse slice."""
 
         if self.equal_proportions[axis]:
+            if self.constant_ratios[axis] is None:
+                assert self.vector_ratios[axis] is not None and len(self.vector_ratios[axis]) == self.coarse_extent_kji[axis]
+                fractions = 1.0 / self.vector_ratios[axis].astype(float)
+                proportions = np.zeros((self.fine_extent_kji[axis],), dtype = float)
+                fi = 0
+                for ci in range(self.coarse_extent_kji[axis]):
+                    proportions[fi : fi + self.vector_ratios[axis][ci]] = fractions[ci]
+                    fi += self.vector_ratios[axis][ci]
+                return proportions
             count = self.constant_ratios[axis]
             fraction = 1.0 / float(count)
             return np.full((self.fine_extent_kji[axis],), fraction)
