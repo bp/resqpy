@@ -394,7 +394,7 @@ def get_well_data(
 
     df = pd.DataFrame(data)
     if not keep_duplicates and any(df.duplicated(subset = ["IW", "JW", "L"])):
-        log.warning(f"There are duplicates in column 'L' for well {well_name}.")
+        log.warning(f"There are duplicate cells for well {well_name}.")
         df.drop_duplicates(subset = ["IW", "JW", "L"], keep = "last", inplace = True)
 
     return df
