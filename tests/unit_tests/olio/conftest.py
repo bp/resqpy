@@ -325,3 +325,20 @@ def test_well_dataframe_duplicates_kept() -> pd.DataFrame:
             5: 9193.4,
         },
     })
+
+
+@pytest.fixture()
+def test_well_dataframe_null_columns_dropped() -> pd.DataFrame:
+
+    return pd.DataFrame({
+        "IW": [18, 18, 18, 18],
+        "JW": [28, 28, 28, 28],
+        "L": [2, 3, 4, 5],
+        "RADW": [0.32, 0.32, 0.32, 0.32],
+        "SKIN": [0.0, 0.0, 0.0, 0.0],
+        "STAT": ["ON", "ON", "ON", "ON"],
+        "LENGTH": [5.0, 5.0, 5.0, 5.0],
+        "ANGLV": [88.08, 88.08, 88.08, 88.08],
+        "ANGLA": [86.8, 86.8, 86.8, 86.8],
+        "DEPTH": [9165.28, 9165.28, 9165.28, 9165.28],
+    })
