@@ -252,20 +252,19 @@ def load_wellspecs(
           for all wells are loaded.
        column_list (List[str]/None): if present, each dataframe returned contains these
           columns, in this order. If None, the resulting dictionary contains only well names as keys
-          (each mapping to None rather than a dataframe). If an empty list (default), each dataframe contains
-          the columns listed in the corresponding wellspec header, in the order found in the file.
+          (each mapping to None rather than a dataframe). If an empty list (default), each dataframe
+          contains the columns listed in the corresponding wellspec header, in the order found in
+          the file.
 
     Returns:
        well_dict (Dict[str, Union[pd.DataFrame, None]]): mapping each well name found in the
           wellspec file to a dataframe containing the wellspec data.
     """
-    assert wellspec_file, "no wellspec file specified"
+    assert wellspec_file, "No wellspec file specified."
 
     if column_list is not None:
         for column in column_list:
-            assert (
-                column.upper() in wellspec_dict
-            ), "unrecognized wellspec column name " + str(column)
+            assert (column.upper() in wellspec_dict), f"Unrecognized wellspec column name {column}."
     selecting = bool(column_list)
 
     well_dict = {}
@@ -367,7 +366,8 @@ def get_well_data(
     pointer: int,
     column_list: List[str] = [],
     selecting: bool = False,
-    keep_duplicates: bool = False,
+    keep_duplicate_cells: bool = True,
+    keep_null_columns: bool = True,
 ) -> Union[pd.DataFrame, None]:
     """Creates a dataframe of the well data for a given well name in the wellspec file.
 
@@ -379,13 +379,16 @@ def get_well_data(
         pointer (int): the file object's start position of the well data represented as number of
             bytes from the beginning of the file.
         column_list (List[str]): if present, each dataframe returned contains these
-            columns, in this order. If None, the resulting dictionary contains only well names as keys
-            (each mapping to None rather than a dataframe). If an empty list (default), each dataframe contains
-            the columns listed in the corresponding wellspec header, in the order found in the file.
+            columns, in this order. If None, the resulting dictionary contains only well names as
+            keys (each mapping to None rather than a dataframe). If an empty list (default), each
+            dataframe contains the columns listed in the corresponding wellspec header, in the order
+            found in the file.
         selecting (bool): True if the column_list contains at least one column name, False otherwise
             (default).
-        keep_duplicates (bool): if True (default), duplicate cells are kept, otherwise only the
+        keep_duplicate_cells (bool): if True (default), duplicate cells are kept, otherwise only the
             last entry is kept.
+        keep_null_columns (bool): if True (default), columns that contain all NA values are kept,
+            otherwise they are removed.
 
     Returns:
         Pandas dataframe of the well data or None if at least one row contains all NA.
@@ -415,9 +418,7 @@ def get_well_data(
             break
         line = kf.strip_trailing_comment(file.readline())
         words = line.split()
-        assert len(words) >= len(
-            columns_present
-        ), f"insufficient data in line of wellspec table {well_name} [{line}]"
+        assert len(words) >= len(columns_present), f"Insufficient data in line of wellspec table {well_name} [{line}]."
         if selecting:
             for col_index, col in enumerate(column_list):
                 if column_map[col_index] < 0:
@@ -451,7 +452,11 @@ def get_well_data(
         return None
 
     df = pd.DataFrame(data)
-    if not keep_duplicates and any(df.duplicated(subset=["IW", "JW", "L"])):
+
+    if not keep_null_columns:
+        df.drop(columns = df.columns[df.isna().all()], inplace = True)
+
+    if not keep_duplicate_cells and any(df.duplicated(subset = ["IW", "JW", "L"])):
         log.warning(f"There are duplicate cells for well {well_name}.")
         df.drop_duplicates(subset=["IW", "JW", "L"], keep="last", inplace=True)
 
