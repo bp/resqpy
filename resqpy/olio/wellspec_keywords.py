@@ -241,20 +241,27 @@ def load_wellspecs(
     wellspec_file: str,
     well: Optional[str] = None,
     column_list: Union[List[str], None] = [],
-    keep_duplicates: bool = False,
+    keep_duplicate_cells: bool = False,
+    keep_null_columns: bool = True,
     last_data_only: bool = True,
 ) -> Dict[str, Union[pd.DataFrame, None]]:
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
     Args:
-       wellspec_file (str): file path of ascii input file containing wellspec keywords.
-       well (str, optional): if present, only the data for the named well are loaded. If None, data
-          for all wells are loaded.
-       column_list (List[str]/None): if present, each dataframe returned contains these
-          columns, in this order. If None, the resulting dictionary contains only well names as keys
-          (each mapping to None rather than a dataframe). If an empty list (default), each dataframe
-          contains the columns listed in the corresponding wellspec header, in the order found in
-          the file.
+        wellspec_file (str): file path of ascii input file containing wellspec keywords.
+        well (str, optional): if present, only the data for the named well are loaded. If None, data
+            for all wells are loaded.
+        column_list (List[str]/None): if present, each dataframe returned contains these
+            columns, in this order. If None, the resulting dictionary contains only well names as keys
+            (each mapping to None rather than a dataframe). If an empty list (default), each dataframe
+            contains the columns listed in the corresponding wellspec header, in the order found in
+            the file.
+        keep_duplicate_cells (bool): if True (default), duplicate cells are kept, otherwise only the
+            last entry is kept.
+        keep_null_columns (bool): if True (default), columns that contain all NA values are kept,
+            otherwise they are removed.
+        last_data_only (bool): If True, only the last entry of well data in the file are used in the
+            dataframe, otherwise all of the well data is used at different times.
 
     Returns:
        well_dict (Dict[str, Union[pd.DataFrame, None]]): mapping each well name found in the
@@ -264,7 +271,9 @@ def load_wellspecs(
 
     if column_list is not None:
         for column in column_list:
-            assert (column.upper() in wellspec_dict), f"Unrecognized wellspec column name {column}."
+            assert (
+                column.upper() in wellspec_dict
+            ), f"Unrecognized wellspec column name {column}."
     selecting = bool(column_list)
 
     well_dict = {}
@@ -282,7 +291,8 @@ def load_wellspecs(
                 well_pointers[well],
                 column_list,
                 selecting,
-                keep_duplicates,
+                keep_duplicate_cells,
+                keep_null_columns,
                 last_data_only,
             )
             if well_data is not None:
@@ -295,7 +305,8 @@ def load_wellspecs(
                     pointer,
                     column_list,
                     selecting,
-                    keep_duplicates,
+                    keep_duplicate_cells,
+                    keep_null_columns,
                     last_data_only,
                 )
                 if well_data is not None:
@@ -305,16 +316,19 @@ def load_wellspecs(
 
 
 def get_well_pointers(
-    wellspec_file: str, us_date_format: bool = False
-) -> Dict[str, int]:
+    wellspec_file: str, usa_date_format: bool = False
+) -> Dict[str, List[Tuple[int, Union[None, str]]]]:
     """Gets the file locations of each well in the wellspec file for optimised processing of the data.
 
     Args:
         wellspec_file (str): file path of ascii input file containing wellspec keywords.
+        usa_date_format (bool): if True, the date taken from the wellspec file is in the format
+            MM/DD/YYYY, otherwise it is in the format DD/MM/YYYY.
 
     Returns:
-        well_pointers (Dict[str, int]): mapping each well name found in the wellspec file to their
-            file location.
+        well_pointers (Dict[str, List[Tuple[int, None/str]]]): mapping each well name found in the
+            wellspec file to a list of their file locations and dates as tuples. If there is no date
+            before the well data in the file, the date is None.
     """
     well_pointers = {}
     with open(wellspec_file, "r") as file:
@@ -341,10 +355,10 @@ def get_well_pointers(
             words = line.split()
             assert len(words) >= 2, "Missing date after TIME keyword."
             date = words[1]
-            if us_date_format:
-                date = datetime.datetime.strptime(date, "%m/%d/%Y")
+            if usa_date_format:
+                date = datetime.datetime.strptime(date, "%m/%d/%Y").isoformat()
             else:
-                date = datetime.datetime.strptime(date, "%d/%m/%Y")
+                date = datetime.datetime.strptime(date, "%d/%m/%Y").isoformat()
             time_pointers[file.tell()] = date
 
     for well, well_pointer_list in well_pointers.items():
@@ -418,7 +432,9 @@ def get_well_data(
             break
         line = kf.strip_trailing_comment(file.readline())
         words = line.split()
-        assert len(words) >= len(columns_present), f"Insufficient data in line of wellspec table {well_name} [{line}]."
+        assert len(words) >= len(
+            columns_present
+        ), f"Insufficient data in line of wellspec table {well_name} [{line}]."
         if selecting:
             for col_index, col in enumerate(column_list):
                 if column_map[col_index] < 0:
@@ -454,9 +470,9 @@ def get_well_data(
     df = pd.DataFrame(data)
 
     if not keep_null_columns:
-        df.drop(columns = df.columns[df.isna().all()], inplace = True)
+        df.drop(columns=df.columns[df.isna().all()], inplace=True)
 
-    if not keep_duplicate_cells and any(df.duplicated(subset = ["IW", "JW", "L"])):
+    if not keep_duplicate_cells and any(df.duplicated(subset=["IW", "JW", "L"])):
         log.warning(f"There are duplicate cells for well {well_name}.")
         df.drop_duplicates(subset=["IW", "JW", "L"], keep="last", inplace=True)
 
@@ -466,44 +482,56 @@ def get_well_data(
 def get_all_well_data(
     file: TextIO,
     well_name: str,
-    pointers: List[int],
+    pointers: List[Tuple[int, Union[None, str]]],
     column_list: List[str] = [],
     selecting: bool = False,
-    keep_duplicates: bool = False,
-    last_data_only=True,
+    keep_duplicate_cells: bool = False,
+    keep_null_columns: bool = True,
+    last_data_only: bool = True,
 ):
     """Creates a dataframe of all the well data for a given well name in the wellspec file.
-
 
     The pointer argument is used to go to the file location where the well data is located.
 
     Args:
         file (TextIO): the opened wellspec file object.
         well_name (str): name of the well.
-        pointer (int): the file object's start position of the well data represented as number of
-            bytes from the beginning of the file.
+        pointers (List[Tuple[int, None/str]]): a list of the file object's start position of the
+            well data represented as number of bytes from the beginning of the file and the well's
+            date. If no date existed before the well in the file, the date will be None.
         column_list (List[str]): if present, each dataframe returned contains these
-            columns, in this order. If None, the resulting dictionary contains only well names as keys
-            (each mapping to None rather than a dataframe). If an empty list (default), each dataframe contains
-            the columns listed in the corresponding wellspec header, in the order found in the file.
+            columns, in this order. If None, the resulting dictionary contains only well names as
+            keys (each mapping to None rather than a dataframe). If an empty list (default), each
+            dataframe contains the columns listed in the corresponding wellspec header, in the order
+            found in the file.
         selecting (bool): True if the column_list contains at least one column name, False otherwise
             (default).
-        keep_duplicates (bool): if True (default), duplicate cells are kept, otherwise only the
+        keep_duplicate_cells (bool): if True (default), duplicate cells are kept, otherwise only the
             last entry is kept.
+        keep_null_columns (bool): if True (default), columns that contain all NA values are kept,
+            otherwise they are removed.
+        last_data_only (bool): If True, only the last entry of well data in the file are used in the
+            dataframe, otherwise all of the well data is used at different times.
 
     Returns:
         Pandas dataframe of the well data or None if at least one row contains all NA.
     """
     if last_data_only:
         df = get_well_data(
-            file, well_name, pointers[-1][-1], column_list, selecting, keep_duplicates
+            file,
+            well_name,
+            pointers[-1][-1],
+            column_list,
+            selecting,
+            keep_duplicate_cells,
+            keep_null_columns,
         )
         return df
     else:
         df_list = []
         for pointer, date in pointers:
             df = get_well_data(
-                file, well_name, pointer, column_list, selecting, keep_duplicates
+                file, well_name, pointer, column_list, selecting, keep_duplicate_cells
             )
             if df is None:
                 continue
@@ -515,5 +543,10 @@ def get_all_well_data(
             return None
 
         df_combined = pd.concat(df_list, ignore_index=True)
+
+        if not keep_null_columns:
+            df_combined.drop(
+                columns=df_combined.columns[df_combined.isna().all()], inplace=True
+            )
 
         return df_combined
