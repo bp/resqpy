@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
+import datetime
 
 import resqpy.olio.keyword_files as kf
 
@@ -31,7 +32,9 @@ wk_okay = 0
 wk_preferred = 1
 wk_required = 2
 
-wellspec_dict: Dict[str, Tuple[int, int, int, Any, bool]] = {}  # mapping wellspec column key to:
+wellspec_dict: Dict[
+    str, Tuple[int, int, int, Any, bool]
+] = {}  # mapping wellspec column key to:
 #     (warn count, required in, required out, default, length units boolean, )
 
 # NB: changing entries in this list will usually require other code change elsewhere
@@ -181,16 +184,16 @@ def check_value(keyword, value):
         if not known_keyword(key):
             return False
         if key in [
-                "IW",
-                "JW",
-                "L",
-                "LAYER",
-                "IRELPM",
-                "CELL",
-                "SECT",
-                "FLOWSECT",
-                "ZONE",
-                "IPTN",
+            "IW",
+            "JW",
+            "L",
+            "LAYER",
+            "IRELPM",
+            "CELL",
+            "SECT",
+            "FLOWSECT",
+            "ZONE",
+            "IPTN",
         ]:
             return int(value) > 0
         elif key == "GRID":
@@ -238,6 +241,8 @@ def load_wellspecs(
     wellspec_file: str,
     well: Optional[str] = None,
     column_list: Union[List[str], None] = [],
+    keep_duplicates: bool = False,
+    last_data_only: bool = True,
 ) -> Dict[str, Union[pd.DataFrame, None]]:
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
@@ -258,7 +263,9 @@ def load_wellspecs(
 
     if column_list is not None:
         for column in column_list:
-            assert (column.upper() in wellspec_dict), "unrecognized wellspec column name " + str(column)
+            assert (
+                column.upper() in wellspec_dict
+            ), "unrecognized wellspec column name " + str(column)
     selecting = bool(column_list)
 
     well_dict = {}
@@ -270,19 +277,37 @@ def load_wellspecs(
 
     with open(wellspec_file, "r") as file:
         if well:
-            well_data = get_well_data(file, well, well_pointers[well], column_list, selecting)
+            well_data = get_all_well_data(
+                file,
+                well,
+                well_pointers[well],
+                column_list,
+                selecting,
+                keep_duplicates,
+                last_data_only,
+            )
             if well_data is not None:
                 well_dict[well] = well_data
         else:
             for well_name, pointer in well_pointers.items():
-                well_data = get_well_data(file, well_name, pointer, column_list, selecting)
+                well_data = get_all_well_data(
+                    file,
+                    well_name,
+                    pointer,
+                    column_list,
+                    selecting,
+                    keep_duplicates,
+                    last_data_only,
+                )
                 if well_data is not None:
                     well_dict[well_name] = well_data
 
     return well_dict
 
 
-def get_well_pointers(wellspec_file: str) -> Dict[str, int]:
+def get_well_pointers(
+    wellspec_file: str, us_date_format: bool = False
+) -> Dict[str, int]:
     """Gets the file locations of each well in the wellspec file for optimised processing of the data.
 
     Args:
@@ -300,9 +325,38 @@ def get_well_pointers(wellspec_file: str) -> Dict[str, int]:
                 break
             line = file.readline()
             words = line.split()
-            assert len(words) >= 2, "missing well name after WELLSPEC keyword"
+            assert len(words) >= 2, "Missing well name after WELLSPEC keyword."
             well_name = words[1]
-            well_pointers[well_name] = file.tell()
+            if well_name in well_pointers:
+                well_pointers[well_name].append(file.tell())
+            else:
+                well_pointers[well_name] = [file.tell()]
+
+    time_pointers = {}
+    with open(wellspec_file, "r") as file:
+        while True:
+            found = kf.find_keyword(file, "TIME")
+            if not found:
+                break
+            line = file.readline()
+            words = line.split()
+            assert len(words) >= 2, "Missing date after TIME keyword."
+            date = words[1]
+            if us_date_format:
+                date = datetime.datetime.strptime(date, "%m/%d/%Y")
+            else:
+                date = datetime.datetime.strptime(date, "%d/%m/%Y")
+            time_pointers[file.tell()] = date
+
+    for well, well_pointer_list in well_pointers.items():
+        for i, well_pointer in enumerate(well_pointer_list):
+            current_date = None  # Before first TIME
+            for time_pointer, date in time_pointers.items():
+                if well_pointer > time_pointer:
+                    current_date = date
+                else:
+                    break
+            well_pointers[well][i] = (well_pointer, current_date)
 
     return well_pointers
 
@@ -313,7 +367,7 @@ def get_well_data(
     pointer: int,
     column_list: List[str] = [],
     selecting: bool = False,
-    keep_duplicates: bool = True,
+    keep_duplicates: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Creates a dataframe of the well data for a given well name in the wellspec file.
 
@@ -341,7 +395,7 @@ def get_well_data(
     line = kf.strip_trailing_comment(file.readline()).upper()
     columns_present = line.split()
     if selecting:
-        column_map = np.full((len(column_list),), -1, dtype = int)
+        column_map = np.full((len(column_list),), -1, dtype=int)
         for i in range(len(column_list)):
             column = column_list[i].upper()
             if column in columns_present:
@@ -355,11 +409,15 @@ def get_well_data(
         kf.skip_comments(file)
         if kf.blank_line(file):
             break  # unclear from Nexus doc what marks end of table
-        if kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(file, "WELLMOD"):
+        if kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(
+            file, "WELLMOD"
+        ):
             break
         line = kf.strip_trailing_comment(file.readline())
         words = line.split()
-        assert len(words) >= len(columns_present), f"insufficient data in line of wellspec table {well_name} [{line}]"
+        assert len(words) >= len(
+            columns_present
+        ), f"insufficient data in line of wellspec table {well_name} [{line}]"
         if selecting:
             for col_index, col in enumerate(column_list):
                 if column_map[col_index] < 0:
@@ -378,7 +436,7 @@ def get_well_data(
                 if not pd.isnull(data[col][-1]):
                     all_null = False
         else:
-            for col, value in zip(columns_present, words[:len(columns_present)]):
+            for col, value in zip(columns_present, words[: len(columns_present)]):
                 if value == "NA":
                     data[col].append(np.NaN)
                 elif value == "#":
@@ -393,8 +451,64 @@ def get_well_data(
         return None
 
     df = pd.DataFrame(data)
-    if not keep_duplicates and any(df.duplicated(subset = ["IW", "JW", "L"])):
+    if not keep_duplicates and any(df.duplicated(subset=["IW", "JW", "L"])):
         log.warning(f"There are duplicate cells for well {well_name}.")
-        df.drop_duplicates(subset = ["IW", "JW", "L"], keep = "last", inplace = True)
+        df.drop_duplicates(subset=["IW", "JW", "L"], keep="last", inplace=True)
 
     return df
+
+
+def get_all_well_data(
+    file: TextIO,
+    well_name: str,
+    pointers: List[int],
+    column_list: List[str] = [],
+    selecting: bool = False,
+    keep_duplicates: bool = False,
+    last_data_only=True,
+):
+    """Creates a dataframe of all the well data for a given well name in the wellspec file.
+
+
+    The pointer argument is used to go to the file location where the well data is located.
+
+    Args:
+        file (TextIO): the opened wellspec file object.
+        well_name (str): name of the well.
+        pointer (int): the file object's start position of the well data represented as number of
+            bytes from the beginning of the file.
+        column_list (List[str]): if present, each dataframe returned contains these
+            columns, in this order. If None, the resulting dictionary contains only well names as keys
+            (each mapping to None rather than a dataframe). If an empty list (default), each dataframe contains
+            the columns listed in the corresponding wellspec header, in the order found in the file.
+        selecting (bool): True if the column_list contains at least one column name, False otherwise
+            (default).
+        keep_duplicates (bool): if True (default), duplicate cells are kept, otherwise only the
+            last entry is kept.
+
+    Returns:
+        Pandas dataframe of the well data or None if at least one row contains all NA.
+    """
+    if last_data_only:
+        df = get_well_data(
+            file, well_name, pointers[-1][-1], column_list, selecting, keep_duplicates
+        )
+        return df
+    else:
+        df_list = []
+        for pointer, date in pointers:
+            df = get_well_data(
+                file, well_name, pointer, column_list, selecting, keep_duplicates
+            )
+            if df is None:
+                continue
+
+            df["Date"] = date
+            df_list.append(df)
+
+        if len(df_list) == 0:
+            return None
+
+        df_combined = pd.concat(df_list, ignore_index=True)
+
+        return df_combined

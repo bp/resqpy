@@ -156,3 +156,63 @@ def test_get_well_data_keep_duplicates(wellspec_file_duplicates, test_well_dataf
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_kept)
+
+
+def test_get_well_pointers_new(tmp_path):
+    # Arrange
+    wellspec_file = f"{tmp_path}/test.dat"
+
+    with open(wellspec_file, "w") as file:
+        file.write("""
+WELLSPEC TEST_WELL1
+IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    ANGLA    DEPTH
+18    28    2    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    3    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+
+WELLSPEC TEST_WELL2
+IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    ANGLA    DEPTH
+18    28    2    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    3    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+
+TIME 12/03/1993
+
+WELLSPEC TEST_WELL3
+IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    ANGLA    DEPTH
+18    28    2    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    3    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+
+TIME 12/03/1994
+
+WELLSPEC TEST_WELL4
+IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    ANGLA    DEPTH
+18    28    2    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    3    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+
+WELLSPEC TEST_WELL5
+IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    ANGLA    DEPTH
+18    28    2    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    3    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+
+WELLSPEC TEST_WELL2
+IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    ANGLA    DEPTH
+18    28    2    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    3    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+
+TIME 12/03/1995
+            """)
+
+    # Act
+    well_pointers = wk.get_well_pointers(wellspec_file)
+    with open(wellspec_file, "r") as file:
+        df = wk.get_all_well_data(file, "TEST_WELL2", well_pointers["TEST_WELL2"])
+
+    print(df)
+    # Assert
+    assert well_pointers == {
+        'TEST_WELL1': [(21, None)],
+        'TEST_WELL2': [(333, None), (1615, '12/03/1994')],
+        'TEST_WELL3': [(662, '12/03/1993')],
+        'TEST_WELL4': [(991, '12/03/1994')],
+        'TEST_WELL5': [(1303, '12/03/1994')]
+    }
+    pd.testing.assert_frame_equal(df, pd.DataFrame())
