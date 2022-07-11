@@ -355,10 +355,16 @@ def get_well_pointers(
             words = line.split()
             assert len(words) >= 2, "Missing date after TIME keyword."
             date = words[1]
-            if usa_date_format:
-                date = datetime.datetime.strptime(date, "%m/%d/%Y").isoformat()
-            else:
-                date = datetime.datetime.strptime(date, "%d/%m/%Y").isoformat()
+            try:
+                if usa_date_format:
+                    date = datetime.datetime.strptime(date, "%m/%d/%Y").isoformat()
+                else:
+                    date = datetime.datetime.strptime(date, "%d/%m/%Y").isoformat()
+            except ValueError:
+                raise ValueError(
+                    f"The date found '{date}' does not match the correct format (usa_date_format "
+                    f"is {usa_date_format})."
+                )
             time_pointers[file.tell()] = date
 
     for well, well_pointer_list in well_pointers.items():
@@ -517,10 +523,12 @@ def get_all_well_data(
         Pandas dataframe of the well data or None if at least one row contains all NA.
     """
     if last_data_only:
+        if column_list is None:
+            return None
         df = get_well_data(
             file,
             well_name,
-            pointers[-1][-1],
+            pointers[-1][0],
             column_list,
             selecting,
             keep_duplicate_cells,
