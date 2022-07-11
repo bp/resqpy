@@ -77,7 +77,7 @@ def test_load_wellspecs_column_list(wellspec_file_one_well, test_well_dataframe)
     well_data = test_well_dataframe[column_list]
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_one_well, column_list=column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_one_well, column_list = column_list)
 
     # Assert
     assert len(well_dict) == 1
@@ -89,65 +89,49 @@ def test_load_wellspecs_column_list_none(wellspec_file_two_wells):
     column_list = None
 
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_two_wells, column_list=column_list)
+    well_dict = wk.load_wellspecs(wellspec_file_two_wells, column_list = column_list)
 
     # Assert
     assert len(well_dict) == 2
     assert all([value is None for value in well_dict.values()])
 
 
-def test_load_wellspecs_remove_duplicate_cells(
-    wellspec_file_duplicates, test_well_dataframe_duplicates_removed
-):
+def test_load_wellspecs_remove_duplicate_cells(wellspec_file_duplicates, test_well_dataframe_duplicates_removed):
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_duplicates, keep_duplicate_cells=False)
+    well_dict = wk.load_wellspecs(wellspec_file_duplicates, keep_duplicate_cells = False)
 
     # Assert
     assert len(well_dict) == 1
-    pd.testing.assert_frame_equal(
-        well_dict["TEST_WELL"], test_well_dataframe_duplicates_removed
-    )
+    pd.testing.assert_frame_equal(well_dict["TEST_WELL"], test_well_dataframe_duplicates_removed)
 
 
-def test_load_wellspecs_keep_duplicate_cells(
-    wellspec_file_duplicates, test_well_dataframe_duplicates_kept
-):
+def test_load_wellspecs_keep_duplicate_cells(wellspec_file_duplicates, test_well_dataframe_duplicates_kept):
     # Act
-    well_dict = wk.load_wellspecs(wellspec_file_duplicates, keep_duplicate_cells=True)
+    well_dict = wk.load_wellspecs(wellspec_file_duplicates, keep_duplicate_cells = True)
 
     # Assert
     assert len(well_dict) == 1
-    pd.testing.assert_frame_equal(
-        well_dict["TEST_WELL"], test_well_dataframe_duplicates_kept
-    )
+    pd.testing.assert_frame_equal(well_dict["TEST_WELL"], test_well_dataframe_duplicates_kept)
 
 
-def test_load_wellspecs_all_data(
-    wellspec_file_multiple_wells, test_well_dataframe_all_data
-):
+def test_load_wellspecs_all_data(wellspec_file_multiple_wells, test_well_dataframe_all_data):
     # Arrange
     well = "TEST_WELL2"
 
     # Act
-    well_dict = wk.load_wellspecs(
-        wellspec_file_multiple_wells, well=well, last_data_only=False
-    )
+    well_dict = wk.load_wellspecs(wellspec_file_multiple_wells, well = well, last_data_only = False)
 
     # Assert
     assert len(well_dict) == 1
     pd.testing.assert_frame_equal(well_dict[well], test_well_dataframe_all_data)
 
 
-def test_load_wellspecs_last_data_only(
-    wellspec_file_multiple_wells, test_well_dataframe_last_data_only
-):
+def test_load_wellspecs_last_data_only(wellspec_file_multiple_wells, test_well_dataframe_last_data_only):
     # Arrange
     well = "TEST_WELL2"
 
     # Act
-    well_dict = wk.load_wellspecs(
-        wellspec_file_multiple_wells, well=well, last_data_only=True
-    )
+    well_dict = wk.load_wellspecs(wellspec_file_multiple_wells, well = well, last_data_only = True)
 
     # Assert
     assert len(well_dict) == 1
@@ -195,13 +179,9 @@ def test_get_well_pointers(wellspec_file_two_wells):
         ),
     ],
 )
-def test_get_well_pointers_multiple_with_times(
-    wellspec_file_multiple_wells, usa_date_format, well_pointers_expected
-):
+def test_get_well_pointers_multiple_with_times(wellspec_file_multiple_wells, usa_date_format, well_pointers_expected):
     # Act
-    well_pointers = wk.get_well_pointers(
-        wellspec_file_multiple_wells, usa_date_format=usa_date_format
-    )
+    well_pointers = wk.get_well_pointers(wellspec_file_multiple_wells, usa_date_format = usa_date_format)
 
     # Assert
     print(well_pointers)
@@ -231,26 +211,20 @@ def test_get_well_data(wellspec_file_one_well, test_well_dataframe):
     pd.testing.assert_frame_equal(well_data, test_well_dataframe)
 
 
-def test_get_well_data_duplicates(
-    wellspec_file_duplicates, test_well_dataframe_duplicates_removed
-):
+def test_get_well_data_duplicates(wellspec_file_duplicates, test_well_dataframe_duplicates_removed):
     # Arrange
     well_name = "TEST_WELL"
     pointer = 20
 
     # Act
     with open(wellspec_file_duplicates, "r") as file:
-        well_data = wk.get_well_data(
-            file, well_name, pointer, keep_duplicate_cells=False
-        )
+        well_data = wk.get_well_data(file, well_name, pointer, keep_duplicate_cells = False)
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_removed)
 
 
-def test_get_well_data_keep_duplicate_cells(
-    wellspec_file_duplicates, test_well_dataframe_duplicates_kept
-):
+def test_get_well_data_keep_duplicate_cells(wellspec_file_duplicates, test_well_dataframe_duplicates_kept):
     # Arrange
     well_name = "TEST_WELL"
     pointer = 20
@@ -263,26 +237,20 @@ def test_get_well_data_keep_duplicate_cells(
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_kept)
 
 
-def test_get_well_data_remove_duplicate_cells(
-    wellspec_file_duplicates, test_well_dataframe_duplicates_removed
-):
+def test_get_well_data_remove_duplicate_cells(wellspec_file_duplicates, test_well_dataframe_duplicates_removed):
     # Arrange
     well_name = "TEST_WELL"
     pointer = 20
 
     # Act
     with open(wellspec_file_duplicates, "r") as file:
-        well_data = wk.get_well_data(
-            file, well_name, pointer, keep_duplicate_cells=False
-        )
+        well_data = wk.get_well_data(file, well_name, pointer, keep_duplicate_cells = False)
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_duplicates_removed)
 
 
-def test_get_well_data_keep_null_columns_false(
-    wellspec_file_one_well, test_well_dataframe_null_columns_dropped
-):
+def test_get_well_data_keep_null_columns_false(wellspec_file_one_well, test_well_dataframe_null_columns_dropped):
     # Arrange
     well_name = "TEST_WELL"
     pointer = 20
@@ -290,9 +258,7 @@ def test_get_well_data_keep_null_columns_false(
 
     # Act
     with open(wellspec_file_one_well, "r") as file:
-        well_data = wk.get_well_data(
-            file, well_name, pointer, keep_null_columns=keep_null_columns
-        )
+        well_data = wk.get_well_data(file, well_name, pointer, keep_null_columns = keep_null_columns)
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_null_columns_dropped)
@@ -334,9 +300,7 @@ def test_get_all_well_data_column_list(wellspec_file_one_well, test_well_datafra
 
     # Act
     with open(wellspec_file_one_well, "r") as file:
-        df = wk.get_all_well_data(
-            file, well, pointers, column_list=column_list, selecting=True
-        )
+        df = wk.get_all_well_data(file, well, pointers, column_list = column_list, selecting = True)
 
     # Assert
     pd.testing.assert_frame_equal(df, well_data)
@@ -350,67 +314,59 @@ def test_get_all_well_data_column_list_none(wellspec_file_two_wells):
 
     # Act
     with open(wellspec_file_two_wells, "r") as file:
-        df = wk.get_all_well_data(file, well, pointers, column_list=column_list)
+        df = wk.get_all_well_data(file, well, pointers, column_list = column_list)
 
     # Assert
     assert df is None
 
 
-def test_get_all_well_data_remove_duplicate_cells(
-    wellspec_file_duplicates, test_well_dataframe_duplicates_removed
-):
+def test_get_all_well_data_remove_duplicate_cells(wellspec_file_duplicates, test_well_dataframe_duplicates_removed):
     # Arrange
     well = "TEST_WELL"
     pointers = [(20, None)]
 
     # Act
     with open(wellspec_file_duplicates, "r") as file:
-        df = wk.get_all_well_data(file, well, pointers, keep_duplicate_cells=False)
+        df = wk.get_all_well_data(file, well, pointers, keep_duplicate_cells = False)
 
     # Assert
     pd.testing.assert_frame_equal(df, test_well_dataframe_duplicates_removed)
 
 
-def test_get_all_well_data_keep_duplicate_cells(
-    wellspec_file_duplicates, test_well_dataframe_duplicates_kept
-):
+def test_get_all_well_data_keep_duplicate_cells(wellspec_file_duplicates, test_well_dataframe_duplicates_kept):
     # Arrange
     well = "TEST_WELL"
     pointers = [(20, None)]
 
     # Act
     with open(wellspec_file_duplicates, "r") as file:
-        df = wk.get_all_well_data(file, well, pointers, keep_duplicate_cells=True)
+        df = wk.get_all_well_data(file, well, pointers, keep_duplicate_cells = True)
 
     # Assert
     pd.testing.assert_frame_equal(df, test_well_dataframe_duplicates_kept)
 
 
-def test_get_all_well_data_all_data(
-    wellspec_file_multiple_wells, test_well_dataframe_all_data
-):
+def test_get_all_well_data_all_data(wellspec_file_multiple_wells, test_well_dataframe_all_data):
     # Arrange
     well = "TEST_WELL2"
     pointers = [(333, None), (1615, "1994-03-12T00:00:00")]
 
     # Act
     with open(wellspec_file_multiple_wells, "r") as file:
-        df = wk.get_all_well_data(file, well, pointers, last_data_only=False)
+        df = wk.get_all_well_data(file, well, pointers, last_data_only = False)
 
     # Assert
     pd.testing.assert_frame_equal(df, test_well_dataframe_all_data)
 
 
-def test_get_all_well_data_last_data_only(
-    wellspec_file_multiple_wells, test_well_dataframe_last_data_only
-):
+def test_get_all_well_data_last_data_only(wellspec_file_multiple_wells, test_well_dataframe_last_data_only):
     # Arrange
     well = "TEST_WELL2"
     pointers = [(333, None), (1615, "1994-03-12T00:00:00")]
 
     # Act
     with open(wellspec_file_multiple_wells, "r") as file:
-        df = wk.get_all_well_data(file, well, pointers, last_data_only=True)
+        df = wk.get_all_well_data(file, well, pointers, last_data_only = True)
 
     # Assert
     pd.testing.assert_frame_equal(df, test_well_dataframe_last_data_only)

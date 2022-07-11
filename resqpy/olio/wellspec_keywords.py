@@ -32,9 +32,7 @@ wk_okay = 0
 wk_preferred = 1
 wk_required = 2
 
-wellspec_dict: Dict[
-    str, Tuple[int, int, int, Any, bool]
-] = {}  # mapping wellspec column key to:
+wellspec_dict: Dict[str, Tuple[int, int, int, Any, bool]] = {}  # mapping wellspec column key to:
 #     (warn count, required in, required out, default, length units boolean, )
 
 # NB: changing entries in this list will usually require other code change elsewhere
@@ -184,16 +182,16 @@ def check_value(keyword, value):
         if not known_keyword(key):
             return False
         if key in [
-            "IW",
-            "JW",
-            "L",
-            "LAYER",
-            "IRELPM",
-            "CELL",
-            "SECT",
-            "FLOWSECT",
-            "ZONE",
-            "IPTN",
+                "IW",
+                "JW",
+                "L",
+                "LAYER",
+                "IRELPM",
+                "CELL",
+                "SECT",
+                "FLOWSECT",
+                "ZONE",
+                "IPTN",
         ]:
             return int(value) > 0
         elif key == "GRID":
@@ -271,9 +269,7 @@ def load_wellspecs(
 
     if column_list is not None:
         for column in column_list:
-            assert (
-                column.upper() in wellspec_dict
-            ), f"Unrecognized wellspec column name {column}."
+            assert (column.upper() in wellspec_dict), f"Unrecognized wellspec column name {column}."
     selecting = bool(column_list)
 
     well_dict = {}
@@ -315,9 +311,8 @@ def load_wellspecs(
     return well_dict
 
 
-def get_well_pointers(
-    wellspec_file: str, usa_date_format: bool = False
-) -> Dict[str, List[Tuple[int, Union[None, str]]]]:
+def get_well_pointers(wellspec_file: str,
+                      usa_date_format: bool = False) -> Dict[str, List[Tuple[int, Union[None, str]]]]:
     """Gets the file locations of each well in the wellspec file for optimised processing of the data.
 
     Args:
@@ -361,10 +356,8 @@ def get_well_pointers(
                 else:
                     date = datetime.datetime.strptime(date, "%d/%m/%Y").isoformat()
             except ValueError:
-                raise ValueError(
-                    f"The date found '{date}' does not match the correct format (usa_date_format "
-                    f"is {usa_date_format})."
-                )
+                raise ValueError(f"The date found '{date}' does not match the correct format (usa_date_format "
+                                 f"is {usa_date_format}).")
             time_pointers[file.tell()] = date
 
     for well, well_pointer_list in well_pointers.items():
@@ -418,7 +411,7 @@ def get_well_data(
     line = kf.strip_trailing_comment(file.readline()).upper()
     columns_present = line.split()
     if selecting:
-        column_map = np.full((len(column_list),), -1, dtype=int)
+        column_map = np.full((len(column_list),), -1, dtype = int)
         for i in range(len(column_list)):
             column = column_list[i].upper()
             if column in columns_present:
@@ -432,15 +425,11 @@ def get_well_data(
         kf.skip_comments(file)
         if kf.blank_line(file):
             break  # unclear from Nexus doc what marks end of table
-        if kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(
-            file, "WELLMOD"
-        ):
+        if kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(file, "WELLMOD"):
             break
         line = kf.strip_trailing_comment(file.readline())
         words = line.split()
-        assert len(words) >= len(
-            columns_present
-        ), f"Insufficient data in line of wellspec table {well_name} [{line}]."
+        assert len(words) >= len(columns_present), f"Insufficient data in line of wellspec table {well_name} [{line}]."
         if selecting:
             for col_index, col in enumerate(column_list):
                 if column_map[col_index] < 0:
@@ -459,7 +448,7 @@ def get_well_data(
                 if not pd.isnull(data[col][-1]):
                     all_null = False
         else:
-            for col, value in zip(columns_present, words[: len(columns_present)]):
+            for col, value in zip(columns_present, words[:len(columns_present)]):
                 if value == "NA":
                     data[col].append(np.NaN)
                 elif value == "#":
@@ -476,11 +465,11 @@ def get_well_data(
     df = pd.DataFrame(data)
 
     if not keep_null_columns:
-        df.drop(columns=df.columns[df.isna().all()], inplace=True)
+        df.drop(columns = df.columns[df.isna().all()], inplace = True)
 
-    if not keep_duplicate_cells and any(df.duplicated(subset=["IW", "JW", "L"])):
+    if not keep_duplicate_cells and any(df.duplicated(subset = ["IW", "JW", "L"])):
         log.warning(f"There are duplicate cells for well {well_name}.")
-        df.drop_duplicates(subset=["IW", "JW", "L"], keep="last", inplace=True)
+        df.drop_duplicates(subset = ["IW", "JW", "L"], keep = "last", inplace = True)
 
     return df
 
@@ -538,9 +527,7 @@ def get_all_well_data(
     else:
         df_list = []
         for pointer, date in pointers:
-            df = get_well_data(
-                file, well_name, pointer, column_list, selecting, keep_duplicate_cells
-            )
+            df = get_well_data(file, well_name, pointer, column_list, selecting, keep_duplicate_cells)
             if df is None:
                 continue
 
@@ -550,11 +537,9 @@ def get_all_well_data(
         if len(df_list) == 0:
             return None
 
-        df_combined = pd.concat(df_list, ignore_index=True)
+        df_combined = pd.concat(df_list, ignore_index = True)
 
         if not keep_null_columns:
-            df_combined.drop(
-                columns=df_combined.columns[df_combined.isna().all()], inplace=True
-            )
+            df_combined.drop(columns = df_combined.columns[df_combined.isna().all()], inplace = True)
 
         return df_combined
