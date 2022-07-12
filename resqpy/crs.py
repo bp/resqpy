@@ -271,6 +271,8 @@ class Crs(BaseResqpy):
             return False
         if not self.has_same_epsg_code(other_crs):
             return False
+        if not _matching_extra_metadata(self, other_crs):
+            return False
         if self.null_transform and other_crs.null_transform:
             return True
         if (maths.isclose(self.x_offset, other_crs.x_offset, abs_tol = 1e-4) and
@@ -498,3 +500,18 @@ def _as_xyz_tuple(xyz):
     """Coerce into 3-tuple of floats."""
 
     return tuple((float(xyz[0]), float(xyz[1]), float(xyz[2])))
+
+
+def _matching_extra_metadata(a, b):
+    if not hasattr(a, 'extra_metadata') and not hasattr(b, 'extra_metadata'):
+        return True
+    if not hasattr(a, 'extra_metadata') or not hasattr(b, 'extra_metadata'):
+        return False
+    if len(a.extra_metadata) != len(b.extra_metadata):
+        return False
+    if len(a.extra_metadata) == 0:
+        return True
+    for i in a.extra_metadata.items():
+        if i not in b.extra_metadata.items():
+            return False
+    return True

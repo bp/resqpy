@@ -1,6 +1,7 @@
 """Multiprocessing module containing the function used to run the wrapper functions in parallel."""
 
 import logging
+import os
 import time
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
@@ -99,18 +100,36 @@ def function_multiprocessing(function: Callable,
     for i, epc in enumerate(epc_list):
         if epc is None:
             continue
+        attempt = 0
+        while not os.path.exists(epc):
+            attempt += 1
+            if attempt > 5:
+                raise FileNotFoundError
+            time.sleep(1)
+        attempt = 0
         while True:
+            attempt += 1
             try:
                 model = Model(epc_file = epc)
                 break
             except FileNotFoundError:
+                if attempt >= 5:
+                    raise
                 time.sleep(1)
-                continue
         uuids = uuids_list[i]
         if uuids is None:
             uuids = model.uuids()
         for uuid in uuids:
-            model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
+            attempt = 0
+            while True:
+                attempt += 1
+                try:
+                    model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
+                    break
+                except BlockingIOError:
+                    if attempt >= 3:
+                        raise
+                time.sleep(1)
 
     # Deleting temporary directory.
     log.debug("deleting the temporary directory")
