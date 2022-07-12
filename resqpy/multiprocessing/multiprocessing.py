@@ -103,7 +103,7 @@ def function_multiprocessing(function: Callable,
         attempt = 0
         while not os.path.exists(epc):
             attempt += 1
-            if attempt > 5:
+            if attempt > 30:
                 raise FileNotFoundError
             time.sleep(1)
         attempt = 0
@@ -113,7 +113,7 @@ def function_multiprocessing(function: Callable,
                 model = Model(epc_file = epc)
                 break
             except FileNotFoundError:
-                if attempt >= 5:
+                if attempt >= 10:
                     raise
                 time.sleep(1)
         uuids = uuids_list[i]
@@ -127,7 +127,7 @@ def function_multiprocessing(function: Callable,
                     model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
                     break
                 except BlockingIOError:
-                    if attempt >= 3:
+                    if attempt >= 5:
                         raise
                 time.sleep(1)
 
