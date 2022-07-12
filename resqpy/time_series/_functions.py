@@ -131,6 +131,8 @@ def geologic_time_str(years):
 def timeframe_for_time_series_uuid(model, uuid):
     """Returns string 'human' or 'geologic' indicating timeframe of the RESQML time series with a given uuid."""
 
+    assert model is not None
+    log.info(f'uuid: {uuid}; type: {model.type_of_uuid(uuid = uuid, strip_obj = True)}')
     assert model.type_of_uuid(uuid = uuid, strip_obj = True) == 'TimeSeries'
 
     root = model.root(uuid = uuid)

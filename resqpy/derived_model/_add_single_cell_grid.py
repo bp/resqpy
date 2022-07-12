@@ -7,7 +7,12 @@ import resqpy.olio.grid_functions as gf
 import resqpy.rq_import as rqi
 
 
-def add_single_cell_grid(points, new_grid_title = None, new_epc_file = None):
+def add_single_cell_grid(points,
+                         new_grid_title = None,
+                         new_epc_file = None,
+                         xy_units = 'm',
+                         z_units = 'm',
+                         z_inc_down = True):
     """Creates a model with a single cell IJK Grid, with a cuboid cell aligned with x,y,z axes, enclosing points."""
 
     assert new_epc_file is not None
@@ -36,7 +41,13 @@ def add_single_cell_grid(points, new_grid_title = None, new_epc_file = None):
     one_cell_model = rqi.import_nexus(new_epc_file[:-4],
                                       extent_ijk = (1, 1, 1),
                                       corp_file = temp_file,
+                                      corp_xy_units = xy_units,
+                                      corp_z_units = z_units,
+                                      corp_z_inc_down = z_inc_down,
                                       ijk_handedness = 'left',
+                                      resqml_xy_units = xy_units,
+                                      resqml_z_units = z_units,
+                                      resqml_z_inc_down = z_inc_down,
                                       use_binary = True,
                                       split_pillars = False,
                                       grid_title = new_grid_title)
