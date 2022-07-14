@@ -103,9 +103,9 @@ def function_multiprocessing(function: Callable,
         attempt = 0
         while not os.path.exists(epc):
             attempt += 1
-            if attempt > 30:
-                raise FileNotFoundError
-            time.sleep(1)
+            if attempt > 300:
+                raise FileNotFoundError('timeout waiting for multiprocess worker epc to become available')
+            time.sleep(min(attempt, 10))
         attempt = 0
         while True:
             attempt += 1
