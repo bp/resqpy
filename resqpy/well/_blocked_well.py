@@ -2386,7 +2386,7 @@ class BlockedWell(BaseResqpy):
             extra = column.upper()
             pk, uom = self.__set_pk_and_uom_for_df_properties(extra = extra, length_uom = length_uom)
             # 'SKIN': use defaults for now; todo: create local property kind for skin
-            expanded = df[column]
+            expanded = df[column].to_numpy()
             extra_pc.add_cached_array_to_imported_list(expanded,
                                                        'blocked well dataframe',
                                                        extra,
