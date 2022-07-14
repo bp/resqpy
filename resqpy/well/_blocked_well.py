@@ -2405,18 +2405,21 @@ class BlockedWell(BaseResqpy):
 
     def __set_pk_and_uom_for_df_properties(self, extra, length_uom):
         """Set the property kind and unit of measure for all properties in the dataframe."""
-        column_list = ['ANGLA', 'ANGLV', 'KH', 'PPERF', 'STAT']
-        uom_list = ['dega', 'dega', f'mD.{length_uom}', f'{length_uom}/{length_uom}', None]
-        pk_list = ['azimuth', 'inclination', 'permeability_length', 'continuous', 'discrete'
-                  ]  # neither azimuth nor dip are correct property kinds; todo: create local property kinds
-        if extra in column_list:
-            list_position = column_list.index(extra)
-            uom, pk = uom_list[list_position], pk_list[list_position]
-        elif extra in ['LENGTH', 'MD', 'X', 'Y', 'DEPTH', 'RADW']:
-            uom, pk = self.__set_pk_and_uom_for_length_based_properties(length_uom = length_uom, extra = extra)
-        else:
-            uom = 'Euc'
-            pk = 'continuous'
+        length_uom_pk = self.__set_pk_and_uom_for_length_based_properties(length_uom = length_uom, extra = extra)
+        uom_pk_dict = {
+            'ANGLA': ('dega', 'azimuth'), 
+            'ANGLV': ('dega', 'inclination'), 
+            'KH': (f'mD.{length_uom}', 'permeability_length'), 
+            'PPERF': (f'{length_uom}/{length_uom}', 'continuous'), 
+            'STAT': (None, 'discrete'),
+            'LENGTH': length_uom_pk,
+            'MD': length_uom_pk,
+            'X': length_uom_pk,
+            'Y': length_uom_pk,
+            'DEPTH': length_uom_pk,
+            'RADW': length_uom_pk,
+        }
+        uom, pk = uom_pk_dict.get(extra, ('Euc', 'continuous'))
         return uom, pk
 
     def __set_pk_and_uom_for_length_based_properties(self, length_uom, extra):
