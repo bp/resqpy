@@ -948,7 +948,7 @@ class BlockedWell(BaseResqpy):
                 property_columns = add_as_properties
             else:
                 property_columns = df.columns[3:]
-            self._add_df_properties(df, property_columns, length_uom = length_uom)
+            self.add_df_properties(df, property_columns, length_uom = length_uom)
 
     def import_from_rms_cellio(self,
                                cellio_file,
@@ -1129,12 +1129,16 @@ class BlockedWell(BaseResqpy):
 
         blocked_count = len(blocked_cells_kji0)
         if blocked_count == 0:
-            log.warning('no intervals blocked for well ' + well_name + ' in grid ' + str(grid_name))
+            log.warning(
+                f"No intervals blocked for well {well_name} in grid"
+                f"{f' {grid_name}' if grid_name is not None else ''}."
+            )
             return None
         else:
             log.info(
-                str(blocked_count) + ' interval' + _pl(blocked_count) + ' blocked for well ' + well_name + ' in grid ' +
-                str(grid_name))
+                f"{blocked_count} interval{_pl(blocked_count)} blocked for well {well_name} in"
+                f" grid{f' {grid_name}' if grid_name is not None else ''}."
+            )
 
     def dataframe(self,
                   i_col = 'IW',
@@ -1544,7 +1548,6 @@ class BlockedWell(BaseResqpy):
         self.__add_as_properties(df = df,
                                  add_as_properties = add_as_properties,
                                  extra_columns_list = extra_columns_list,
-                                 row_ci_list = row_ci_list,
                                  length_uom = length_uom)
 
         return df
@@ -2340,7 +2343,7 @@ class BlockedWell(BaseResqpy):
 
         return df
 
-    def __add_as_properties(self, df, add_as_properties, extra_columns_list, row_ci_list, length_uom):
+    def __add_as_properties(self, df, add_as_properties, extra_columns_list, length_uom):
         """Checks that the column can be added as a property part then creates said part."""
 
         if add_as_properties:
@@ -2350,39 +2353,44 @@ class BlockedWell(BaseResqpy):
                 property_columns = add_as_properties
             else:
                 property_columns = extra_columns_list
-            self._add_df_properties(df, property_columns, row_ci_list = row_ci_list, length_uom = length_uom)
+            self.add_df_properties(df, property_columns, length_uom = length_uom)
 
-    def _add_df_properties(self, df, columns, row_ci_list = None, length_uom = None):
-        # creates a property part for each named column, based on the dataframe values
-        # column name used as the citation title
-        # self must already exist as a part in the model
-        # currently only handles single grid situations
+    def add_df_properties(self, df, columns, length_uom = None, time_index = None, time_series_uuid = None):
+        """Creates a property part for each column in the dataframe, based on the dataframe values.
+        
+        The column name is used as the citation title. Self must already exist as a part in the
+        model and this method currently only handles single grid situations.
+
+        Args:
+            df (pd.DataFrame): dataframe containing the columns that will be converted to properties.
+            columns (List[str]): list of the column names that will be converted to properties.
+            length_uom (str, optional): the length unit of measure.
+            time_index (int, optional): if adding a timestamp to the property, this is the timestamp
+                index of the TimeSeries timestamps attribute.
+            time_series_uuid (uuid.UUID, optional): if adding a timestamp to the property, this is
+                the uuid of the TimeSeries object.
+
+        Returns:
+            None
+        """
         # todo: rewrite to add separate property objects for each grid references by the blocked well
-        log.debug('_add_df_props: df:')
-        log.debug(f'\n{df}')
-        log.debug(f'columns: {columns}')
         assert len(self.grid_list) == 1
         if columns is None or len(columns) == 0 or len(df) == 0:
             return
-        if row_ci_list is None:
-            row_ci_list = np.arange(self.cell_count)
-        assert len(row_ci_list) == len(df)
         if length_uom is None:
             length_uom = self.trajectory.md_uom
         extra_pc = rqp.PropertyCollection()
         extra_pc.set_support(support = self)
-        ci_map = np.array(row_ci_list, dtype = int)
 
-        for e in columns:
-            extra = e.upper()
+        for column in columns:
+            extra = column.upper()
             pk, uom = self.__set_pk_and_uom_for_df_properties(extra = extra, length_uom = length_uom)
             # 'SKIN': use defaults for now; todo: create local property kind for skin
-            expanded = np.full(self.cell_count, np.NaN)
-            expanded[ci_map] = df[extra]
+            expanded = df[column]
             extra_pc.add_cached_array_to_imported_list(expanded,
                                                        'blocked well dataframe',
                                                        extra,
-                                                       discrete = False,
+                                                       discrete = (extra == "STAT"),
                                                        uom = uom,
                                                        property_kind = pk,
                                                        local_property_kind_uuid = None,
@@ -2390,15 +2398,16 @@ class BlockedWell(BaseResqpy):
                                                        facet = None,
                                                        realization = None,
                                                        indexable_element = 'cells',
-                                                       count = 1)
+                                                       count = 1,
+                                                       time_index = time_index)
         extra_pc.write_hdf5_for_imported_list()
-        extra_pc.create_xml_for_imported_list_and_add_parts_to_model()
+        extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid)
 
     def __set_pk_and_uom_for_df_properties(self, extra, length_uom):
         """Set the property kind and unit of measure for all properties in the dataframe."""
-        column_list = ['ANGLA', 'ANGLV', 'KH', 'PPERF']
-        uom_list = ['dega', 'dega', 'mD.' + length_uom, length_uom + '/' + length_uom]
-        pk_list = ['azimuth', 'inclination', 'permeability_length', 'continuous'
+        column_list = ['ANGLA', 'ANGLV', 'KH', 'PPERF', 'STAT']
+        uom_list = ['dega', 'dega', f'mD.{length_uom}', f'{length_uom}/{length_uom}', None]
+        pk_list = ['azimuth', 'inclination', 'permeability_length', 'continuous', 'discrete'
                   ]  # neither azimuth nor dip are correct property kinds; todo: create local property kinds
         if extra in column_list:
             list_position = column_list.index(extra)
