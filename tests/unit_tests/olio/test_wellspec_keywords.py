@@ -161,20 +161,20 @@ def test_get_well_pointers(wellspec_file_two_wells):
             False,
             {
                 "TEST_WELL1": [(21, None)],
-                "TEST_WELL2": [(333, None), (1615, "1994-03-12T00:00:00")],
-                "TEST_WELL3": [(662, "1993-03-12T00:00:00")],
-                "TEST_WELL4": [(991, "1994-03-12T00:00:00")],
-                "TEST_WELL5": [(1303, "1994-03-12T00:00:00")],
+                "TEST_WELL2": [(333, None), (1615, "1994-03-12")],
+                "TEST_WELL3": [(662, "1993-03-12")],
+                "TEST_WELL4": [(991, "1994-03-12")],
+                "TEST_WELL5": [(1303, "1994-03-12")],
             },
         ),
         (
             True,
             {
                 "TEST_WELL1": [(21, None)],
-                "TEST_WELL2": [(333, None), (1615, "1994-12-03T00:00:00")],
-                "TEST_WELL3": [(662, "1993-12-03T00:00:00")],
-                "TEST_WELL4": [(991, "1994-12-03T00:00:00")],
-                "TEST_WELL5": [(1303, "1994-12-03T00:00:00")],
+                "TEST_WELL2": [(333, None), (1615, "1994-12-03")],
+                "TEST_WELL3": [(662, "1993-12-03")],
+                "TEST_WELL4": [(991, "1994-12-03")],
+                "TEST_WELL5": [(1303, "1994-12-03")],
             },
         ),
     ],
@@ -349,7 +349,7 @@ def test_get_all_well_data_keep_duplicate_cells(wellspec_file_duplicates, test_w
 def test_get_all_well_data_all_data(wellspec_file_multiple_wells, test_well_dataframe_all_data):
     # Arrange
     well = "TEST_WELL2"
-    pointers = [(333, None), (1615, "1994-03-12T00:00:00")]
+    pointers = [(333, None), (1615, "1994-03-12")]
 
     # Act
     with open(wellspec_file_multiple_wells, "r") as file:
@@ -362,7 +362,7 @@ def test_get_all_well_data_all_data(wellspec_file_multiple_wells, test_well_data
 def test_get_all_well_data_last_data_only(wellspec_file_multiple_wells, test_well_dataframe_last_data_only):
     # Arrange
     well = "TEST_WELL2"
-    pointers = [(333, None), (1615, "1994-03-12T00:00:00")]
+    pointers = [(333, None), (1615, "1994-03-12")]
 
     # Act
     with open(wellspec_file_multiple_wells, "r") as file:
