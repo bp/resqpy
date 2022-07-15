@@ -1129,16 +1129,12 @@ class BlockedWell(BaseResqpy):
 
         blocked_count = len(blocked_cells_kji0)
         if blocked_count == 0:
-            log.warning(
-                f"No intervals blocked for well {well_name} in grid"
-                f"{f' {grid_name}' if grid_name is not None else ''}."
-            )
+            log.warning(f"No intervals blocked for well {well_name} in grid"
+                        f"{f' {grid_name}' if grid_name is not None else ''}.")
             return None
         else:
-            log.info(
-                f"{blocked_count} interval{_pl(blocked_count)} blocked for well {well_name} in"
-                f" grid{f' {grid_name}' if grid_name is not None else ''}."
-            )
+            log.info(f"{blocked_count} interval{_pl(blocked_count)} blocked for well {well_name} in"
+                     f" grid{f' {grid_name}' if grid_name is not None else ''}.")
 
     def dataframe(self,
                   i_col = 'IW',
@@ -2381,12 +2377,13 @@ class BlockedWell(BaseResqpy):
             length_uom = self.trajectory.md_uom
         extra_pc = rqp.PropertyCollection()
         extra_pc.set_support(support = self)
+        missing_cells_nan_array = np.zeros(self.cell_count - len(df)) + np.nan
 
         for column in columns:
             extra = column.upper()
             pk, uom = self.__set_pk_and_uom_for_df_properties(extra = extra, length_uom = length_uom)
             # 'SKIN': use defaults for now; todo: create local property kind for skin
-            expanded = df[column].to_numpy()
+            expanded = np.append(df[column].to_numpy(), missing_cells_nan_array)
             extra_pc.add_cached_array_to_imported_list(expanded,
                                                        'blocked well dataframe',
                                                        extra,
@@ -2403,14 +2400,19 @@ class BlockedWell(BaseResqpy):
         extra_pc.write_hdf5_for_imported_list()
         extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid)
 
-    def __set_pk_and_uom_for_df_properties(self, extra, length_uom):
+    def __set_pk_and_uom_for_df_properties(self, extra, length_uom, temperature_uom = None):
         """Set the property kind and unit of measure for all properties in the dataframe."""
+        if length_uom not in ['m', 'ft']:
+            raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
+        if extra == 'TEMP' and (temperature_uom is None or temperature_uom[0].upper() not in ['C', 'F']):
+            raise ValueError("The temperature_uom must be either 'C' or 'F'.")
+
         length_uom_pk = self.__set_pk_and_uom_for_length_based_properties(length_uom = length_uom, extra = extra)
         uom_pk_dict = {
-            'ANGLA': ('dega', 'azimuth'), 
-            'ANGLV': ('dega', 'inclination'), 
-            'KH': (f'mD.{length_uom}', 'permeability_length'), 
-            'PPERF': (f'{length_uom}/{length_uom}', 'continuous'), 
+            'ANGLA': ('dega', 'azimuth'),
+            'ANGLV': ('dega', 'inclination'),
+            'KH': (f'mD.{length_uom}', 'permeability_length'),
+            'PPERF': (f'{length_uom}/{length_uom}', 'continuous'),
             'STAT': (None, 'discrete'),
             'LENGTH': length_uom_pk,
             'MD': length_uom_pk,
@@ -2418,6 +2420,21 @@ class BlockedWell(BaseResqpy):
             'Y': length_uom_pk,
             'DEPTH': length_uom_pk,
             'RADW': length_uom_pk,
+            'RADB': length_uom_pk,
+            'RADBP': length_uom_pk,
+            'RADWP': length_uom_pk,
+            'FM': (f'{length_uom}/{length_uom}', 'continuous'),
+            'IRELPM': (None, 'discrete'),
+            'SECT': (None, 'discrete'),
+            'LAYER': (None, 'discrete'),
+            'ANGLE': ('dega', 'radial'),
+            'TEMP': (f'deg{temperature_uom}', 'continuous'),
+            'MD': length_uom_pk,
+            'MDCON': length_uom_pk,
+            'K': ('mD', 'permeability rock'),
+            'DZ': (length_uom, 'cell length'),
+            'DTOP': (length_uom, 'depth'),
+            'DBOT': (length_uom, 'depth'),
         }
         uom, pk = uom_pk_dict.get(extra, ('Euc', 'continuous'))
         return uom, pk
