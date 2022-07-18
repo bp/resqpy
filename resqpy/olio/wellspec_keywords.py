@@ -1,5 +1,7 @@
-"""Module defining a dictionary of nexus WELLSPEC column keywords and functionality to read 
-WELLSPEC files and transform the well data into Pandas DataFrames."""
+"""Module for loading WELLSPEC files. 
+
+The module includes a dictionary of nexus WELLSPEC column keywords, functionality to
+read WELLSPEC files and transform the well data into Pandas DataFrames."""
 
 version = "19th April 2022"
 
@@ -307,7 +309,7 @@ def get_well_pointers(
     wellspec_file: str,
     usa_date_format: bool = False,
     no_date_replacement: Optional[datetime.date] = None,
-) -> Dict[str, List[Tuple[int, Union[None, str]]]]:
+) -> Optional[Dict[str, List[Tuple[int, Union[None, str]]]]]:
     """Gets the file locations of each well in the wellspec file for optimised processing of the data.
 
     Args:
@@ -318,11 +320,12 @@ def get_well_pointers(
             date is used.
 
     Returns:
-        well_pointers (Dict[str, List[Tuple[int, None/str]]]): mapping each well name found in the
-            wellspec file to a list of their file locations and dates as tuples. If there is no date
-            before the well data in the file, the date is None.
+        well_pointers (Dict[str, List[Tuple[int, None/str]]]/ None): mapping each well name found in
+            the wellspec file to a list of their file locations and dates as tuples. If there is no
+            date before the well data in the file, the date is None. If there is a FileNotFoundError
+            then None is returned.
     """
-    well_pointers = {}
+    well_pointers: Dict[str, List[Tuple[int, Union[None, str]]]] = {}
     try:
         with open(wellspec_file, "r") as file:
             while True:
@@ -334,9 +337,9 @@ def get_well_pointers(
                 assert len(words) >= 2, "Missing well name after WELLSPEC keyword."
                 well_name = words[1]
                 if well_name in well_pointers:
-                    well_pointers[well_name].append(file.tell())
+                    well_pointers[well_name].append((file.tell(), None))
                 else:
-                    well_pointers[well_name] = [file.tell()]
+                    well_pointers[well_name] = [(file.tell(), None)]
     except FileNotFoundError:
         log.error(FileNotFoundError(f"The file {wellspec_file} can't be found."))
         return None
@@ -371,11 +374,11 @@ def get_well_pointers(
     for well, well_pointer_list in well_pointers.items():
         for i, well_pointer in enumerate(well_pointer_list):
             for time_pointer, date in time_pointers.items():
-                if well_pointer > time_pointer:
+                if well_pointer[0] > time_pointer:
                     current_date = date
                 else:
                     break
-            well_pointers[well][i] = (well_pointer, current_date)
+            well_pointers[well][i] = (well_pointer[0], current_date)
 
     return well_pointers
 
