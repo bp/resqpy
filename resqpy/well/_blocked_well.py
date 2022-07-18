@@ -2381,13 +2381,13 @@ class BlockedWell(BaseResqpy):
 
         for column in columns:
             extra = column.upper()
-            pk, uom = self.__set_pk_and_uom_for_df_properties(extra = extra, length_uom = length_uom)
+            uom, pk, discrete = self.__set_uom_pk_discrete_for_df_properties(extra = extra, length_uom = length_uom)
             # 'SKIN': use defaults for now; todo: create local property kind for skin
             expanded = np.append(df[column].to_numpy(), missing_cells_nan_array)
             extra_pc.add_cached_array_to_imported_list(expanded,
                                                        'blocked well dataframe',
                                                        extra,
-                                                       discrete = (extra == "STAT"),
+                                                       discrete = discrete,
                                                        uom = uom,
                                                        property_kind = pk,
                                                        local_property_kind_uuid = None,
@@ -2400,46 +2400,45 @@ class BlockedWell(BaseResqpy):
         extra_pc.write_hdf5_for_imported_list()
         extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid)
 
-    def __set_pk_and_uom_for_df_properties(self, extra, length_uom, temperature_uom = None):
+    def __set_uom_pk_discrete_for_df_properties(self, extra, length_uom, temperature_uom = None):
         """Set the property kind and unit of measure for all properties in the dataframe."""
         if length_uom not in ['m', 'ft']:
             raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
         if extra == 'TEMP' and (temperature_uom is None or temperature_uom[0].upper() not in ['C', 'F']):
             raise ValueError("The temperature_uom must be either 'C' or 'F'.")
 
-        length_uom_pk = self.__set_pk_and_uom_for_length_based_properties(length_uom = length_uom, extra = extra)
-        uom_pk_dict = {
-            'ANGLA': ('dega', 'azimuth'),
-            'ANGLV': ('dega', 'inclination'),
-            'KH': (f'mD.{length_uom}', 'permeability_length'),
-            'PPERF': (f'{length_uom}/{length_uom}', 'continuous'),
-            'STAT': (None, 'discrete'),
-            'LENGTH': length_uom_pk,
-            'MD': length_uom_pk,
-            'X': length_uom_pk,
-            'Y': length_uom_pk,
-            'DEPTH': length_uom_pk,
-            'RADW': length_uom_pk,
-            'RADB': length_uom_pk,
-            'RADBP': length_uom_pk,
-            'RADWP': length_uom_pk,
-            'FM': (f'{length_uom}/{length_uom}', 'continuous'),
-            'IRELPM': (None, 'discrete'),
-            'SECT': (None, 'discrete'),
-            'LAYER': (None, 'discrete'),
-            'ANGLE': ('dega', 'radial'),
-            'TEMP': (f'deg{temperature_uom}', 'continuous'),
-            'MD': length_uom_pk,
-            'MDCON': length_uom_pk,
-            'K': ('mD', 'permeability rock'),
-            'DZ': (length_uom, 'cell length'),
-            'DTOP': (length_uom, 'depth'),
-            'DBOT': (length_uom, 'depth'),
+        length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom, extra = extra)
+        uom_pk_discrete_dict = {
+            'ANGLA': ('dega', 'azimuth', False),
+            'ANGLV': ('dega', 'inclination', False),
+            'KH': (f'mD.{length_uom}', 'permeability_length', False),
+            'PPERF': (f'{length_uom}/{length_uom}', 'continuous', False),
+            'STAT': (None, 'discrete', True),
+            'LENGTH': length_uom_pk_discrete,
+            'MD': length_uom_pk_discrete,
+            'X': length_uom_pk_discrete,
+            'Y': length_uom_pk_discrete,
+            'DEPTH': length_uom_pk_discrete,
+            'RADW': length_uom_pk_discrete,
+            'RADB': length_uom_pk_discrete,
+            'RADBP': length_uom_pk_discrete,
+            'RADWP': length_uom_pk_discrete,
+            'FM': (f'{length_uom}/{length_uom}', 'continuous', False),
+            'IRELPM': (None, 'discrete', True),
+            'SECT': (None, 'discrete', True),
+            'LAYER': (None, 'discrete', True),
+            'ANGLE': ('dega', 'radial', False),
+            'TEMP': (f'deg{temperature_uom}', 'continuous', False),
+            'MD': length_uom_pk_discrete,
+            'MDCON': length_uom_pk_discrete,
+            'K': ('mD', 'permeability rock', False),
+            'DZ': (length_uom, 'cell length', False),
+            'DTOP': (length_uom, 'depth', False),
+            'DBOT': (length_uom, 'depth', False),
         }
-        uom, pk = uom_pk_dict.get(extra, ('Euc', 'continuous'))
-        return uom, pk
+        return uom_pk_discrete_dict.get(extra, ('Euc', 'continuous', False))
 
-    def __set_pk_and_uom_for_length_based_properties(self, length_uom, extra):
+    def __set_uom_pk_discrete_for_length_based_properties(self, length_uom, extra):
         if length_uom is None or length_uom == 'Euc':
             if extra in ['LENGTH', 'MD']:
                 uom = self.trajectory.md_uom
@@ -2453,7 +2452,7 @@ class BlockedWell(BaseResqpy):
             pk = 'depth'
         else:
             pk = 'length'
-        return pk, uom
+        return uom, pk, False
 
     def static_kh(self,
                   ntg_uuid = None,
