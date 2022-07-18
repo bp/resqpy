@@ -2404,14 +2404,14 @@ class BlockedWell(BaseResqpy):
         """Set the property kind and unit of measure for all properties in the dataframe."""
         if length_uom not in ['m', 'ft']:
             raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
-        if extra == 'TEMP' and (temperature_uom is None or temperature_uom[0].upper() not in ['C', 'F']):
-            raise ValueError("The temperature_uom must be either 'C' or 'F'.")
+        if extra == 'TEMP' and (temperature_uom is None or temperature_uom not in bwam.valid_uoms('thermodynamic temperature')):
+            raise ValueError(f"The temperature_uom must be in {bwam.valid_uoms('thermodynamic temperature')}.")
 
         length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom, extra = extra)
         uom_pk_discrete_dict = {
-            'ANGLA': ('dega', 'azimuth', False),
-            'ANGLV': ('dega', 'inclination', False),
-            'KH': (f'mD.{length_uom}', 'permeability_length', False),
+            'ANGLA': ('dega', 'plane angle', False),
+            'ANGLV': ('dega', 'plane angle', False),
+            'KH': (f'mD.{length_uom}', 'permeability length', False),
             'PPERF': (f'{length_uom}/{length_uom}', 'continuous', False),
             'STAT': (None, 'discrete', True),
             'LENGTH': length_uom_pk_discrete,
@@ -2427,22 +2427,23 @@ class BlockedWell(BaseResqpy):
             'IRELPM': (None, 'discrete', True),
             'SECT': (None, 'discrete', True),
             'LAYER': (None, 'discrete', True),
-            'ANGLE': ('dega', 'radial', False),
-            'TEMP': (f'deg{temperature_uom}', 'continuous', False),
-            'MD': length_uom_pk_discrete,
+            'ANGLE': ('dega', 'plane angle', False),
+            'TEMP': (temperature_uom, 'thermodynamic temperature', False),
             'MDCON': length_uom_pk_discrete,
             'K': ('mD', 'permeability rock', False),
             'DZ': (length_uom, 'cell length', False),
             'DTOP': (length_uom, 'depth', False),
             'DBOT': (length_uom, 'depth', False),
+            'SKIN': ('Euc', 'continuous', False),
+            'WI': ('Euc', 'continuous', False),
         }
         return uom_pk_discrete_dict.get(extra, ('Euc', 'continuous', False))
 
     def __set_uom_pk_discrete_for_length_based_properties(self, length_uom, extra):
         if length_uom is None or length_uom == 'Euc':
-            if extra in ['LENGTH', 'MD']:
+            if extra in ['LENGTH', 'MD', 'MDCON']:
                 uom = self.trajectory.md_uom
-            elif extra in ['X', 'Y', 'RADW']:
+            elif extra in ['X', 'Y', 'RADW', 'RADB', 'RADBP', 'RADWP']:
                 uom = self.grid_list[0].xy_units()
             else:
                 uom = self.grid_list[0].z_units()
