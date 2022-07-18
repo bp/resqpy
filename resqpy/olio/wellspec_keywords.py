@@ -1,7 +1,8 @@
 """Module for loading WELLSPEC files. 
 
 The module includes a dictionary of nexus WELLSPEC column keywords, functionality to
-read WELLSPEC files and transform the well data into Pandas DataFrames."""
+read WELLSPEC files and transform the well data into Pandas DataFrames.
+"""
 
 version = "19th April 2022"
 
@@ -309,7 +310,7 @@ def get_well_pointers(
     wellspec_file: str,
     usa_date_format: bool = False,
     no_date_replacement: Optional[datetime.date] = None,
-) -> Optional[Dict[str, List[Tuple[int, Union[None, str]]]]]:
+) -> Dict[str, List[Tuple[int, Union[None, str]]]]:
     """Gets the file locations of each well in the wellspec file for optimised processing of the data.
 
     Args:
@@ -320,7 +321,7 @@ def get_well_pointers(
             date is used.
 
     Returns:
-        well_pointers (Dict[str, List[Tuple[int, None/str]]]/ None): mapping each well name found in
+        well_pointers (Dict[str, List[Tuple[int, None/str]]]): mapping each well name found in
             the wellspec file to a list of their file locations and dates as tuples. If there is no
             date before the well data in the file, the date is None. If there is a FileNotFoundError
             then None is returned.
@@ -341,8 +342,7 @@ def get_well_pointers(
                 else:
                     well_pointers[well_name] = [(file.tell(), None)]
     except FileNotFoundError:
-        log.error(FileNotFoundError(f"The file {wellspec_file} can't be found."))
-        return None
+        raise FileNotFoundError(f"The file {wellspec_file} can't be found.")
 
     time_pointers = {}
     with open(wellspec_file, "r") as file:
