@@ -2404,10 +2404,12 @@ class BlockedWell(BaseResqpy):
         """Set the property kind and unit of measure for all properties in the dataframe."""
         if length_uom not in ['m', 'ft']:
             raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
-        if extra == 'TEMP' and (temperature_uom is None or temperature_uom not in bwam.valid_uoms('thermodynamic temperature')):
+        if extra == 'TEMP' and (temperature_uom is None or
+                                temperature_uom not in bwam.valid_uoms('thermodynamic temperature')):
             raise ValueError(f"The temperature_uom must be in {bwam.valid_uoms('thermodynamic temperature')}.")
 
-        length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom, extra = extra)
+        length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom,
+                                                                                        extra = extra)
         uom_pk_discrete_dict = {
             'ANGLA': ('dega', 'plane angle', False),
             'ANGLV': ('dega', 'plane angle', False),
