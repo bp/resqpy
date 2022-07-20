@@ -387,6 +387,8 @@ class GridConnectionSet(BaseResqpy):
                     else:
                         tbf = rqo.GeneticBoundaryFeature(self.model, kind = feature_type, feature_name = feature_name)
                     tbf_root = tbf.create_xml()
+                else:
+                    tbf_root = tbf.root
                 if feature_type == 'fault':
                     fi = rqo.FaultInterpretation(
                         self.model, tectonic_boundary_feature = tbf,

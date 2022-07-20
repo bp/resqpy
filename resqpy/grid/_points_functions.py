@@ -617,7 +617,7 @@ def coordinate_line_end_points(grid):
        numpy float array of shape (nj + 1, ni + 1, 2, 3)
     """
 
-    points = grid.points_ref(masked = False).reshape((grid.nk + 1, -1, 3))
+    points = grid.points_ref(masked = False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
     primary_pillar_count = (grid.nj + 1) * (grid.ni + 1)
     result = np.empty((grid.nj + 1, grid.ni + 1, 2, 3))
     result[:, :, 0, :] = points[0, :primary_pillar_count, :].reshape((grid.nj + 1, grid.ni + 1, 3))
