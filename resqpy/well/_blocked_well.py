@@ -2382,21 +2382,28 @@ class BlockedWell(BaseResqpy):
         for column in columns:
             extra = column.upper()
             uom, pk, discrete = self.__set_uom_pk_discrete_for_df_properties(extra = extra, length_uom = length_uom)
+            if discrete:
+                null_value = -1
+            else:
+                null_value = None
             # 'SKIN': use defaults for now; todo: create local property kind for skin
             expanded = np.append(df[column].to_numpy(), missing_cells_nan_array)
-            extra_pc.add_cached_array_to_imported_list(expanded,
-                                                       'blocked well dataframe',
-                                                       extra,
-                                                       discrete = discrete,
-                                                       uom = uom,
-                                                       property_kind = pk,
-                                                       local_property_kind_uuid = None,
-                                                       facet_type = None,
-                                                       facet = None,
-                                                       realization = None,
-                                                       indexable_element = 'cells',
-                                                       count = 1,
-                                                       time_index = time_index)
+            extra_pc.add_cached_array_to_imported_list(
+                expanded,
+                'blocked well dataframe',
+                extra,
+                discrete = discrete,
+                uom = uom,
+                property_kind = pk,
+                local_property_kind_uuid = None,
+                facet_type = None,
+                facet = None,
+                realization = None,
+                indexable_element = 'cells',
+                count = 1,
+                time_index = time_index,
+                null_value = null_value,
+            )
         extra_pc.write_hdf5_for_imported_list()
         extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid)
 

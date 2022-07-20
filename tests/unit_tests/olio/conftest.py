@@ -155,7 +155,7 @@ def test_well_dataframe() -> pd.DataFrame:
         "SKIN": [0.0, 0.0, 0.0, 0.0],
         "RADB": [np.nan, np.nan, np.nan, np.nan],
         "WI": [np.nan, np.nan, np.nan, np.nan],
-        "STAT": [True, True, True, True],
+        "STAT": [1, 1, 1, 1],
         "LENGTH": [5.0, 5.0, 5.0, 5.0],
         "ANGLV": [88.08, 88.08, 88.08, 88.08],
         "ANGLA": [86.8, 86.8, 86.8, 86.8],
@@ -175,7 +175,7 @@ def test_well2_dataframe() -> pd.DataFrame:
         "SKIN": [0.0, 0.0, 0.0, 0.0],
         "RADB": [np.nan, np.nan, np.nan, np.nan],
         "WI": [np.nan, np.nan, np.nan, np.nan],
-        "STAT": [True, True, True, True],
+        "STAT": [1, 1, 1, 1],
         "LENGTH": [4.0, 4.0, 4.0, 4.0],
         "ANGLV": [89.24, 89.24, 89.24, 89.24],
         "ANGLA": [88.23, 88.23, 88.23, 88.23],
@@ -244,11 +244,11 @@ def test_well_dataframe_duplicates_removed() -> pd.DataFrame:
             5: np.nan
         },
         "STAT": {
-            0: True,
-            2: False,
-            3: True,
-            4: False,
-            5: True,
+            0: 1,
+            2: 0,
+            3: 1,
+            4: 0,
+            5: 1,
         },
         "LENGTH": {
             0: 5.0,
@@ -350,12 +350,12 @@ def test_well_dataframe_duplicates_kept() -> pd.DataFrame:
             5: np.nan
         },
         "STAT": {
-            0: True,
-            1: True,
-            2: False,
-            3: True,
-            4: False,
-            5: True,
+            0: 1,
+            1: 1,
+            2: 0,
+            3: 1,
+            4: 0,
+            5: 1,
         },
         "LENGTH": {
             0: 5.0,
@@ -401,7 +401,7 @@ def test_well_dataframe_null_columns_dropped() -> pd.DataFrame:
         "L": [2, 3, 4, 5],
         "RADW": [0.32, 0.32, 0.32, 0.32],
         "SKIN": [0.0, 0.0, 0.0, 0.0],
-        "STAT": [True, True, True, True],
+        "STAT": [1, 1, 1, 1],
         "LENGTH": [5.0, 5.0, 5.0, 5.0],
         "ANGLV": [88.08, 88.08, 88.08, 88.08],
         "ANGLA": [86.8, 86.8, 86.8, 86.8],
@@ -446,8 +446,8 @@ def test_well_dataframe_last_data_only() -> pd.DataFrame:
             1: np.nan
         },
         "STAT": {
-            0: True,
-            1: True,
+            0: 1,
+            1: 1,
         },
         "LENGTH": {
             0: 5.0,
@@ -521,10 +521,10 @@ def test_well_dataframe_all_data() -> pd.DataFrame:
             3: np.nan
         },
         "STAT": {
-            0: True,
-            1: True,
-            2: True,
-            3: True,
+            0: 1,
+            1: 1,
+            2: 1,
+            3: 1,
         },
         "LENGTH": {
             0: 5.0,

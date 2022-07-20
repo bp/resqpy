@@ -486,9 +486,9 @@ def get_well_data(
 
     def stat_tranformation(row):
         if row["STAT"] == "ON":
-            return True
+            return 1
         else:
-            return False
+            return 0
 
     if "STAT" in df.columns:
         df["STAT"] = df.apply(lambda row: stat_tranformation(row), axis = 1)
