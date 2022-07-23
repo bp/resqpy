@@ -465,3 +465,38 @@ def small_grid_and_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surfa
     tmp_model.store_epc()
 
     return grid, surface
+
+
+@pytest.fixture
+def small_grid_and_extended_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
+    """Creates a small RegularGrid and a random triangular surface extended with a flange."""
+    crs = Crs(tmp_model)
+    crs.create_xml()
+
+    extent = 10
+    extent_kji = (extent, extent + 1, extent + 2)
+    dxyz = (1.0, 1.0, 1.0)
+    crs_uuid = crs.uuid
+    title = "small_grid"
+    grid = grr.RegularGrid(tmp_model, extent_kji = extent_kji, dxyz = dxyz, crs_uuid = crs_uuid, title = title)
+    grid.create_xml()
+
+    n_points = 100
+    points = np.random.rand(n_points, 3) * extent
+    surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_surface")
+    ps = rqs.PointSet(tmp_model, points_array = points, crs_uuid = crs_uuid, title = 'temp point set')
+    surface.set_from_point_set(ps,
+                               convexity_parameter = 0.05,
+                               reorient = True,
+                               extend_with_flange = True,
+                               flange_point_count = 11,
+                               flange_radial_factor = 10.0,
+                               flange_radial_distance = None,
+                               make_clockwise = False)
+    surface.triangles_and_points()
+    surface.write_hdf5()
+    surface.create_xml()
+
+    tmp_model.store_epc()
+
+    return grid, surface

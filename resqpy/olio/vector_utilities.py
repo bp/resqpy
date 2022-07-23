@@ -304,6 +304,14 @@ def rotation_matrix_3d_axial(axis, angle):
     return matrix
 
 
+def no_rotation_matrix():
+    """Returns a rotation matrix which will not move points."""
+    matrix = np.zeros((3, 3))
+    for axis in range(3):
+        matrix[axis, axis] = 1.0
+    return matrix
+
+
 def rotation_3d_matrix(xzy_axis_angles):
     """Returns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
 

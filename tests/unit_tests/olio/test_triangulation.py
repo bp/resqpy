@@ -142,3 +142,38 @@ def test_delaunay_triagulation():
     # Assert
     np.testing.assert_array_equal(sort_array(tri_simple), sort_array(tri_scipy))
     np.testing.assert_array_equal(hull_indices_simple, hull_indices_scipy)
+
+
+def test_reorient():
+    points = np.array([
+        [0.84500347, 0.84401839, 0.0],
+        [0.86625247, 0.05204284, 0.0],
+        [0.1220099, 0.56185864, 0.0],
+        [0.35034472, 0.02159957, 0.0],
+        [0.23992621, 0.23115569, 0.0],
+        [0.08040452, 0.75776318, 0.0],
+        [0.28902254, 0.86261331, 0.0],
+        [0.85916324, 0.63093401, 0.0],
+        [0.87953801, 0.27585486, 0.0],
+        [0.10630805, 0.46939924, 0.0],
+    ])
+    points[:, 2] = points[:, 0] + 0.5 * points[:, 1] + 0.1 * np.random.random(len(points))
+
+    la_p, la_nv, la_m = tri.reorient(points, rough = False, use_linalg = True)
+    old_p, old_nv, old_m = tri.reorient(points, rough = False, use_linalg = False)
+
+    assert all([x is not None for x in [la_p, la_nv, la_m, old_p, old_nv, old_m]])
+    assert la_p.shape == points.shape and old_p.shape == points.shape
+    assert la_nv.shape == (3,) and old_nv.shape == (3,)
+    assert la_m.shape == (3, 3) and old_m.shape == (3, 3)
+    if la_nv[2] * old_nv[2] < 0.0:
+        old_nv = -old_nv
+    la_incl = vec.inclination(la_nv)
+    la_azi = vec.azimuth(la_nv)
+    old_incl = vec.inclination(old_nv)
+    old_azi = vec.azimuth(old_nv)
+    assert abs(la_incl - old_incl) < 5.0
+    d_azi = abs(la_azi - old_azi)
+    if d_azi > 180.0:
+        d_azi = 360.0 - d_azi
+    assert d_azi < 5.0

@@ -66,12 +66,15 @@ def find_faces_to_represent_surface_regular_wrapper(
            cells in each pair are on one side of the surface, and all the second cells on the other
         extra_metadata (dict, optional): extra metadata items to be added to the grid connection set
         return_properties (List[str]): if present, a list of property arrays to calculate and
-           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset' and 'normal vector';
+           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset', 'normal vector',
+           and 'grid bisector';
            triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
            the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
            offset is a measure of the distance between the centre of the cell face and the intersection point;
            normal vector is a unit vector normal to the surface triangle; each array has an entry for each face
-           in the gcs; the returned dictionary has the passed strings as keys and numpy arrays as values.
+           in the gcs; grid bisector is a grid cell boolean property holding True for the set of cells on one
+           side of the surface, deemed to be shallower;
+           the returned dictionary has the passed strings as keys and numpy arrays as values.
 
     Returns:
         Tuple containing:
@@ -194,6 +197,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         properties = returns[1]
         realisation = index if use_index_as_realisation else None
         property_collection = PropertyCollection(support = gcs)
+        grid_pc = None
         for p_name, array in properties.items():
             log.debug(f'{name} found property {p_name}')
             if p_name == "normal vector":
@@ -245,9 +249,27 @@ def find_faces_to_represent_surface_regular_wrapper(
                     realization = realisation,
                     indexable_element = "faces",
                 )
+            elif p_name == 'grid bisector':
+                if grid_pc is None:
+                    grid_pc = grid.extract_property_collection()
+                grid_pc.add_cached_array_to_imported_list(
+                    array,
+                    "from find_faces function",
+                    p_name,
+                    discrete = True,
+                    property_kind = "discrete",
+                    realization = realisation,
+                    indexable_element = "cells",
+                )
+            else:
+                raise ValueError(f'unrecognised property name {p_name}')
         property_collection.write_hdf5_for_imported_list()
         uuids_properties = (property_collection.create_xml_for_imported_list_and_add_parts_to_model())
         uuid_list.extend(uuids_properties)
+        if grid_pc is not None:
+            grid_pc.write_hdf5_for_imported_list()
+            uuids_properties = (grid_pc.create_xml_for_imported_list_and_add_parts_to_model())
+            uuid_list.extend(uuids_properties)
     else:
         log.debug(f'{name} no requested properties')
 
