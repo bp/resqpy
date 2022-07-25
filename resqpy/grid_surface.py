@@ -1,12 +1,13 @@
 """Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '17th May 2022'
+version = '25th July 2022'
 
 import logging
 
 log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
 
+import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit
@@ -1633,8 +1634,9 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
             bisecting surface
 
     returns:
-        numpy bool array of shape grid_extent_kji, set True for cells on one side of the face sets deemed
-        to be shallower (more strictly, lower K index on average); set False for cells on othe side
+        (numpy bool array of shape grid_extent_kji, bool) where the array is set True for cells on one side
+        of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
+        on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
 
     notes:
         the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
@@ -1678,11 +1680,13 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
         not_a_k_sum += (k + 1) * (layer_cell_count - a_layer_count)
     a_mean_k = float(a_k_sum) / float(a_count)
     not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
+    is_curtain = False
     if a_mean_k > not_a_mean_k:
         a[:] = np.logical_not(a)
-    elif a_mean_k == not_a_mean_k:
+    elif maths.isclose(a_mean_k, not_a_mean_k, abs_tol = 0.01):
         log.warning('unable to determine which side of surface is shallower')
-    return a
+        is_curtain = True
+    return a, is_curtain
 
 
 def find_faces_to_represent_surface_regular_optimised(
@@ -1958,7 +1962,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
-        bisector = bisector_from_faces(grid.extent_kji, k_faces, j_faces, i_faces)
+        bisector, is_curtain = bisector_from_faces(grid.extent_kji, k_faces, j_faces, i_faces)
 
     if progress_fn is not None:
         progress_fn(1.0)
@@ -1975,7 +1979,7 @@ def find_faces_to_represent_surface_regular_optimised(
         if return_normal_vectors:
             props_dict['normal vector'] = all_normals
         if return_bisector:
-            props_dict['grid bisector'] = bisector
+            props_dict['grid bisector'] = (bisector, is_curtain)
         return (gcs, props_dict)
 
     return gcs

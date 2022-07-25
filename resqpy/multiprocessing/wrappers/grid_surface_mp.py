@@ -61,7 +61,8 @@ def find_faces_to_represent_surface_regular_wrapper(
         trimmed (bool, default True): if True the surface has already been trimmed
         extend_fault_representation (bool, default False): if True, the representation is extended with a flange
         retriangulate (bool, default False): if True, a retriangulation is performed even if not needed otherwise
-        related_uuid (uuid, optional): if present, the uuid of an object to be softly related to the gcs
+        related_uuid (uuid, optional): if present, the uuid of an object to be softly related to the gcs (and to
+           grid bisector property if requested)
         progress_fn (Callable): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool): if True, the cell pairs will be ordered so that all the first
@@ -260,6 +261,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     indexable_element = "faces",
                 )
             elif p_name == 'grid bisector':
+                array, is_curtain = array
                 if grid_pc is None:
                     grid_pc = PropertyCollection()
                     grid_pc.set_support(support = grid)
@@ -269,6 +271,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = True,
                     property_kind = "discrete",
+                    facet_type = 'direction',
+                    facet = 'vertical' if is_curtain else 'sloping',
                     realization = realisation,
                     indexable_element = "cells",
                 )
@@ -281,6 +285,10 @@ def find_faces_to_represent_surface_regular_wrapper(
             grid_pc.write_hdf5_for_imported_list()
             uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model()
             uuid_list.extend(uuids_properties)
+            if related_uuid is not None:
+                for p_uuid in uuids_properties:
+                    model.create_reciprocal_relationship_uuids(p_uuid, 'sourceObject', related_uuid,
+                                                               'destinationObject')
     else:
         log.debug(f'{name} no requested properties')
 
