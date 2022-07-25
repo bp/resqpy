@@ -438,7 +438,7 @@ class PropertyCollection():
             facet_type = None,
             facet = None,
             citation_title = None,
-            citation_title_match_starts_with = False,
+            citation_title_match_mode = False,
             time_series_uuid = None,
             time_index = None,
             uom = None,
@@ -450,8 +450,8 @@ class PropertyCollection():
 
         arguments:
            other: another PropertyCollection object related to the same support as this collection
-           citation_title_match_starts_with (boolean, default False): if True, any citation title that
-              starts with the given citation_title argument will be deemed to have passed that filter
+           citation_title_match_mode (str, optional): if present, one of 'is', 'starts', 'ends', 'contains', 'is not',
+              'does not start', 'does not end', 'does not contain'; None is the same as 'is'
            ignore_clashes (boolean, default False): if False, any part in other which passes the filters
               yet is already in this collection will result in an assertion error; if True, such duplicates
               are simply skipped without modifying the existing part in this collection
@@ -481,22 +481,21 @@ class PropertyCollection():
         for (part, info) in other.dict.items():
             pcap._add_selected_part_from_other_dict(self, part, other, realization, support_uuid, uuid, continuous,
                                                     categorical, count, points, indexable, property_kind, facet_type,
-                                                    facet, citation_title, citation_title_match_starts_with,
-                                                    time_series_uuid, time_index, string_lookup_uuid, related_uuid,
-                                                    ignore_clashes)
+                                                    facet, citation_title, citation_title_match_mode, time_series_uuid,
+                                                    time_index, string_lookup_uuid, related_uuid, ignore_clashes)
 
     def inherit_similar_parts_for_time_series_from_other_collection(self,
                                                                     other,
                                                                     example_part,
-                                                                    citation_title_match_starts_with = False,
+                                                                    citation_title_match_mode = None,
                                                                     ignore_clashes = False):
         """Adds the example part from other collection and any other parts for the same property at different times.
 
         arguments:
            other: another PropertyCollection object related to the same grid as this collection, from which to inherit
            example_part (string): the part name of an example member of other (which has an associated time_series)
-           citation_title_match_starts_with (booleam, default False): if True, any citation title that starts with
-              the example's citation_title after removing trailing digits, will be deemed to have passed that filter
+           citation_title_match_mode (str, optional): if present, one of 'is', 'starts', 'ends', 'contains', 'is not',
+              'does not start', 'does not end', 'does not contain'; None is the same as 'is'
            ignore_clashes (boolean, default False): if False, any part in other which passes the filters
               yet is already in this collection will result in an assertion error; if True, such duplicates
               are simply skipped without modifying the existing part in this collection
@@ -511,36 +510,35 @@ class PropertyCollection():
         time_series_uuid = other.time_series_uuid_for_part(example_part)
         assert time_series_uuid is not None
         title = other.citation_title_for_part(example_part)
-        if citation_title_match_starts_with:
-            while title and title[-1].isdigit():
-                title = title[:-1]
-        self.inherit_parts_selectively_from_other_collection(
-            other,
-            realization = other.realization_for_part(example_part),
-            support_uuid = other.support_uuid_for_part(example_part),
-            continuous = other.continuous_for_part(example_part),
-            points = other.points_for_part(example_part),
-            indexable = other.indexable_for_part(example_part),
-            property_kind = other.property_kind_for_part(example_part),
-            facet_type = other.facet_type_for_part(example_part),
-            facet = other.facet_for_part(example_part),
-            citation_title = title,
-            citation_title_match_starts_with = citation_title_match_starts_with,
-            time_series_uuid = time_series_uuid,
-            ignore_clashes = ignore_clashes)
+        # if citation_title_match_starts_with:
+        #     while title and title[-1].isdigit():
+        #         title = title[:-1]
+        self.inherit_parts_selectively_from_other_collection(other,
+                                                             realization = other.realization_for_part(example_part),
+                                                             support_uuid = other.support_uuid_for_part(example_part),
+                                                             continuous = other.continuous_for_part(example_part),
+                                                             points = other.points_for_part(example_part),
+                                                             indexable = other.indexable_for_part(example_part),
+                                                             property_kind = other.property_kind_for_part(example_part),
+                                                             facet_type = other.facet_type_for_part(example_part),
+                                                             facet = other.facet_for_part(example_part),
+                                                             citation_title = title,
+                                                             citation_title_match_mode = citation_title_match_mode,
+                                                             time_series_uuid = time_series_uuid,
+                                                             ignore_clashes = ignore_clashes)
 
     def inherit_similar_parts_for_facets_from_other_collection(self,
                                                                other,
                                                                example_part,
-                                                               citation_title_match_starts_with = False,
+                                                               citation_title_match_mode = None,
                                                                ignore_clashes = False):
         """Adds the example part from other collection and any other parts for same property with different facets.
 
         arguments:
            other: another PropertyCollection object related to the same grid as this collection, from which to inherit
            example_part (string): the part name of an example member of other
-           citation_title_match_starts_with (booleam, default False): if True, any citation title that starts with
-              the example's citation_title after removing trailing digits, will be deemed to have passed that filter
+           citation_title_match_mode (str, optional): if present, one of 'is', 'starts', 'ends', 'contains', 'is not',
+              'does not start', 'does not end', 'does not contain'; None is the same as 'is'
            ignore_clashes (boolean, default False): if False, any part in other which passes the filters
               yet is already in this collection will result in an assertion error; if True, such duplicates
               are simply skipped without modifying the existing part in this collection
@@ -555,9 +553,9 @@ class PropertyCollection():
         assert other is not None
         assert other.part_in_collection(example_part)
         title = other.citation_title_for_part(example_part)
-        if citation_title_match_starts_with:
-            while title and title[-1].isdigit():
-                title = title[:-1]
+        # if citation_title_match_starts_with:
+        #     while title and title[-1].isdigit():
+        #         title = title[:-1]
         self.inherit_parts_selectively_from_other_collection(
             other,
             realization = other.realization_for_part(example_part),
@@ -567,6 +565,7 @@ class PropertyCollection():
             indexable = other.indexable_for_part(example_part),
             property_kind = other.property_kind_for_part(example_part),
             citation_title = title,
+            citation_title_match_mode = citation_title_match_mode,
             time_series_uuid = other.time_series_uuid_for_part(example_part),
             time_index = other.time_index_for_part(example_part),
             ignore_clashes = ignore_clashes)
@@ -574,15 +573,15 @@ class PropertyCollection():
     def inherit_similar_parts_for_realizations_from_other_collection(self,
                                                                      other,
                                                                      example_part,
-                                                                     citation_title_match_starts_with = False,
+                                                                     citation_title_match_mode = None,
                                                                      ignore_clashes = False):
         """Add the example part from other collection and any other parts for same property with different realizations.
 
         arguments:
            other: another PropertyCollection object related to the same support as this collection, from which to inherit
            example_part (string): the part name of an example member of other
-           citation_title_match_starts_with (booleam, default False): if True, any citation title that starts with
-              the example's citation_title after removing trailing digits, will be deemed to have passed that filter
+           citation_title_match_mode (str, optional): if present, one of 'is', 'starts', 'ends', 'contains', 'is not',
+              'does not start', 'does not end', 'does not contain'; None is the same as 'is'
            ignore_clashes (boolean, default False): if False, any part in other which passes the filters
               yet is already in this collection will result in an assertion error; if True, such duplicates
               are simply skipped without modifying the existing part in this collection
@@ -595,9 +594,9 @@ class PropertyCollection():
         assert other is not None
         assert other.part_in_collection(example_part)
         title = other.citation_title_for_part(example_part)
-        if citation_title_match_starts_with:
-            while title and title[-1].isdigit():
-                title = title[:-1]
+        # if citation_title_match_starts_with:
+        #     while title and title[-1].isdigit():
+        #         title = title[:-1]
         self.inherit_parts_selectively_from_other_collection(
             other,
             realization = None,
@@ -609,7 +608,7 @@ class PropertyCollection():
             facet_type = other.facet_type_for_part(example_part),
             facet = other.facet_for_part(example_part),
             citation_title = title,
-            citation_title_match_starts_with = citation_title_match_starts_with,
+            citation_title_match_mode = citation_title_match_mode,
             time_series_uuid = other.time_series_uuid_for_part(example_part),
             time_index = other.time_index_for_part(example_part),
             ignore_clashes = ignore_clashes)
@@ -662,12 +661,14 @@ class PropertyCollection():
             facet_type = None,
             facet = None,
             citation_title = None,
+            title_mode = None,
             time_series_uuid = None,
             time_index = None,
             uom = None,
             string_lookup_uuid = None,
             categorical = None,
-            related_uuid = None):
+            related_uuid = None,
+            title = None):
         """Returns a list of parts filtered by those arguments which are not None.
 
         All arguments are optional.
@@ -675,7 +676,7 @@ class PropertyCollection():
         For each of these arguments: if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
         finally, the filters for all the attributes must be passed for a given member (part)
-        to be included in the returned list of parts
+        to be included in the returned list of parts; title is a synonym for citation_title
 
         returns:
            list of part names (strings) of those parts which match any selection arguments which are not None
@@ -692,6 +693,9 @@ class PropertyCollection():
         if support_uuid is None and support is not None:
             support_uuid = support.uuid
 
+        if title and not citation_title:
+            citation_title = title
+
         temp_collection = selective_version_of_collection(self,
                                                           realization = realization,
                                                           support_uuid = support_uuid,
@@ -703,6 +707,7 @@ class PropertyCollection():
                                                           facet_type = facet_type,
                                                           facet = facet,
                                                           citation_title = citation_title,
+                                                          title_mode = title_mode,
                                                           time_series_uuid = time_series_uuid,
                                                           time_index = time_index,
                                                           uom = uom,
@@ -734,6 +739,7 @@ class PropertyCollection():
             categorical = None,
             multiple_handling = 'exception',
             title = None,
+            title_mode = None,
             related_uuid = None):
         """Returns a single part selected by those arguments which are not None.
 
@@ -776,6 +782,7 @@ class PropertyCollection():
                                                           string_lookup_uuid = string_lookup_uuid,
                                                           categorical = categorical,
                                                           title = title,
+                                                          title_mode = title_mode,
                                                           related_uuid = related_uuid)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
@@ -810,6 +817,7 @@ class PropertyCollection():
             exclude_null = False,
             multiple_handling = 'exception',
             title = None,
+            title_mode = None,
             related_uuid = None):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
@@ -867,6 +875,7 @@ class PropertyCollection():
                               categorical = categorical,
                               multiple_handling = multiple_handling,
                               title = title,
+                              title_mode = title_mode,
                               related_uuid = related_uuid)
         if part is None:
             return None

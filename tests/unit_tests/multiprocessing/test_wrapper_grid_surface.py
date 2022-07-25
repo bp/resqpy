@@ -1,4 +1,4 @@
-from resqpy.multiprocessing.wrappers.grid_surface import find_faces_to_represent_surface_regular_wrapper
+from resqpy.multiprocessing.wrappers.grid_surface_mp import find_faces_to_represent_surface_regular_wrapper
 from resqpy.model import Model
 from typing import Tuple
 from resqpy.grid import RegularGrid

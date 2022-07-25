@@ -1643,6 +1643,7 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
     """
     assert len(grid_extent_kji) == 3
     a = np.zeros(grid_extent_kji, dtype = bool)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = bool)  # cells changing
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
@@ -1650,7 +1651,7 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
     a[0, 0, 0] = True
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
     while True:
-        c = np.zeros(grid_extent_kji, dtype = bool)
+        c[:] = False
         # k faces
         c[1:, :, :] = np.logical_and(a[:-1, :, :], open_k)
         c[:-1, :, :] = np.logical_or(c[:-1, :, :], np.logical_and(a[1:, :, :], open_k))
@@ -1660,10 +1661,10 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
         # i faces
         c[:, :, 1:] = np.logical_or(c[:, :, 1:], np.logical_and(a[:, :, :-1], open_i))
         c[:, :, :-1] = np.logical_or(c[:, :, :-1], np.logical_and(a[:, :, 1:], open_i))
-        c = np.logical_and(c, np.logical_not(a))
+        c[:] = np.logical_and(c, np.logical_not(a))
         if np.count_nonzero(c) == 0:
             break
-        a = np.logical_or(a, c)
+        a[:] = np.logical_or(a, c)
     a_count = np.count_nonzero(a)
     cell_count = np.product(grid_extent_kji)
     assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
@@ -1678,7 +1679,7 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
     a_mean_k = float(a_k_sum) / float(a_count)
     not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
     if a_mean_k > not_a_mean_k:
-        a = np.logical_not(a)
+        a[:] = np.logical_not(a)
     elif a_mean_k == not_a_mean_k:
         log.warning('unable to determine which side of surface is shallower')
     return a

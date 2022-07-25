@@ -727,16 +727,16 @@ def triangulated_polygons(p, v, centres = None):
     return points, triangles
 
 
-def reorient(points, rough = True, max_dip = None, use_linalg = True):
+def reorient(points, rough = True, max_dip = None, use_linalg = False):
     """Returns a reoriented copy of a set of points, such that z axis is approximate normal to average plane of points.
 
     arguments:
        points (numpy float array of shape (..., 3)): the points to be reoriented
        rough (bool, default True): if True, the resulting orientation will be within around 10 degrees of the optimum;
-          if False, that reduces to around 2.5 degrees of the optimum; iugnored if use_scipy is True
+          if False, that reduces to around 2.5 degrees of the optimum; iugnored if use_linalg is True
        max_dip (float, optional): if present, the reorientation of perspective off vertical is
           limited to this angle in degrees
-       use_scipy (bool, default True): if True, the numpy linear algebra svd function is used and rough is ignored
+       use_linalg (bool, default False): if True, the numpy linear algebra svd function is used and rough is ignored
 
     returns:
        numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
@@ -747,7 +747,8 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True):
     notes:
        the original points array is not modified by this function;
        the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
-       determine the triangulation
+       determine the triangulation;
+       the numpy linear algebra option seems to be memory intensive
     """
 
     def z_range(p):
