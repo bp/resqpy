@@ -1624,6 +1624,67 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
     return faces, sides, normals, offsets, triangle_per_face
 
 
+def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
+    """Returns a numpy bool array denoting the bisection of the grid by the face sets.
+
+    arguments:
+        grid_extent_kji (triple int): the shape of the grid
+        k_faces, j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
+            bisecting surface
+
+    returns:
+        numpy bool array of shape grid_extent_kji, set True for cells on one side of the face sets deemed
+        to be shallower (more strictly, lower K index on average); set False for cells on othe side
+
+    notes:
+        the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
+        any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+        assigned to either the True or False part
+    """
+    assert len(grid_extent_kji) == 3
+    a = np.zeros(grid_extent_kji, dtype = bool)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = bool)  # cells changing
+    open_k = np.logical_not(k_faces)
+    open_j = np.logical_not(j_faces)
+    open_i = np.logical_not(i_faces)
+    # set one or more seeds; todo: more seeds to improve performance if needed
+    a[0, 0, 0] = True
+    # repeatedly spread True values to neighbouring cells that are not the other side of a face
+    while True:
+        c[:] = False
+        # k faces
+        c[1:, :, :] = np.logical_and(a[:-1, :, :], open_k)
+        c[:-1, :, :] = np.logical_or(c[:-1, :, :], np.logical_and(a[1:, :, :], open_k))
+        # j faces
+        c[:, 1:, :] = np.logical_or(c[:, 1:, :], np.logical_and(a[:, :-1, :], open_j))
+        c[:, :-1, :] = np.logical_or(c[:, :-1, :], np.logical_and(a[:, 1:, :], open_j))
+        # i faces
+        c[:, :, 1:] = np.logical_or(c[:, :, 1:], np.logical_and(a[:, :, :-1], open_i))
+        c[:, :, :-1] = np.logical_or(c[:, :, :-1], np.logical_and(a[:, :, 1:], open_i))
+        c[:] = np.logical_and(c, np.logical_not(a))
+        if np.count_nonzero(c) == 0:
+            break
+        a[:] = np.logical_or(a, c)
+    a_count = np.count_nonzero(a)
+    cell_count = np.product(grid_extent_kji)
+    assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
+    # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
+    layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
+    a_k_sum = 0
+    not_a_k_sum = 0
+    for k in range(grid_extent_kji[0]):
+        a_layer_count = np.count_nonzero(a[k])
+        a_k_sum += (k + 1) * a_layer_count
+        not_a_k_sum += (k + 1) * (layer_cell_count - a_layer_count)
+    a_mean_k = float(a_k_sum) / float(a_count)
+    not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
+    if a_mean_k > not_a_mean_k:
+        a[:] = np.logical_not(a)
+    elif a_mean_k == not_a_mean_k:
+        log.warning('unable to determine which side of surface is shallower')
+    return a
+
+
 def find_faces_to_represent_surface_regular_optimised(
     grid,
     surface,
@@ -1654,12 +1715,15 @@ def find_faces_to_represent_surface_regular_optimised(
         consistent_side (bool, default False): if True, the cell pairs will be ordered so that all the first
            cells in each pair are on one side of the surface, and all the second cells on the other
         return_properties (List[str]): if present, a list of property arrays to calculate and
-           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset' and 'normal vector';
+           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset', 'normal vector',
+           or 'grid bisector';
            triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
            the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
            offset is a measure of the distance between the centre of the cell face and the intersection point;
            normal vector is a unit vector normal to the surface triangle; each array has an entry for each face
-           in the gcs; the returned dictionary has the passed strings as keys and numpy arrays as values.
+           in the gcs; grid bisector is a grid cell boolean property holding True for the set of cells on one
+           side of the surface, deemed to be shallower;
+           the returned dictionary has the passed strings as keys and numpy arrays as values.
 
     Returns:
         gcs  or  (gcs, gcs_props)
@@ -1680,12 +1744,14 @@ def find_faces_to_represent_surface_regular_optimised(
     return_normal_vectors = False
     return_depths = False
     return_offsets = False
+    return_bisector = False
     if return_properties:
-        assert all([p in ['triangle', 'depth', 'offset', 'normal vector'] for p in return_properties])
+        assert all([p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector'] for p in return_properties])
         return_triangles = ('triangle' in return_properties)
         return_normal_vectors = ('normal vector' in return_properties)
         return_depths = ('depth' in return_properties)
         return_offsets = ('offset' in return_properties)
+        return_bisector = ('grid bisector' in return_properties)
 
     if title is None:
         title = name
@@ -1890,6 +1956,10 @@ def find_faces_to_represent_surface_regular_optimised(
         log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
         assert all_normals.shape == (gcs.count, 3)
 
+    # note: following is a grid cells property, not a gcs property
+    if return_bisector:
+        bisector = bisector_from_faces(grid.extent_kji, k_faces, j_faces, i_faces)
+
     if progress_fn is not None:
         progress_fn(1.0)
 
@@ -1904,6 +1974,8 @@ def find_faces_to_represent_surface_regular_optimised(
             props_dict['offset'] = all_offsets
         if return_normal_vectors:
             props_dict['normal vector'] = all_normals
+        if return_bisector:
+            props_dict['grid bisector'] = bisector
         return (gcs, props_dict)
 
     return gcs

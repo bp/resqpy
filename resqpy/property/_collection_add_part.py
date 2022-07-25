@@ -15,7 +15,7 @@ import resqpy.property._collection_get_attributes as pcga
 
 def _add_selected_part_from_other_dict(collection, part, other, realization, support_uuid, uuid, continuous,
                                        categorical, count, points, indexable, property_kind, facet_type, facet,
-                                       citation_title, citation_title_match_starts_with, time_series_uuid, time_index,
+                                       citation_title, citation_title_match_mode, time_series_uuid, time_index,
                                        string_lookup_uuid, related_uuid, ignore_clashes):
     if _check_not_none_and_not_equals(realization, other.realization_for_part, part):
         return
@@ -39,7 +39,7 @@ def _add_selected_part_from_other_dict(collection, part, other, realization, sup
         return
     if _check_not_none_and_not_equals(facet, other.facet_for_part, part):
         return
-    if _check_citation_title(citation_title, citation_title_match_starts_with, other, part):
+    if _check_citation_title(citation_title, citation_title_match_mode, other, part):
         return
     if _check_not_none_and_not_uuid_match(time_series_uuid, other.time_series_uuid_for_part, part):
         return
@@ -123,14 +123,28 @@ def _check_not_none_and_not_uuid_match(uuid, method, part):
     return uuid is not None and not bu.matching_uuids(uuid, method(part))
 
 
-def _check_citation_title(citation_title, citation_title_match_starts_with, other, part):
+def _check_citation_title(citation_title, citation_title_match_mode, other, part):
     if citation_title is not None:
-        if citation_title_match_starts_with:
-            if not other.citation_title_for_part(part).startswith():
-                return True
+        if isinstance(citation_title_match_mode, bool):
+            citation_title_match_mode = 'starts' if citation_title_match_mode else None
+        if citation_title_match_mode is None or citation_title_match_mode == 'is':
+            return other.citation_title_for_part(part) != citation_title
+        elif citation_title_match_mode == 'starts':
+            return not other.citation_title_for_part(part).startswith(citation_title)
+        elif citation_title_match_mode == 'ends':
+            return not other.citation_title_for_part(part).endswith(citation_title)
+        elif citation_title_match_mode == 'contains':
+            return citation_title not in other.citation_title_for_part(part)
+        elif citation_title_match_mode == 'is not':
+            return other.citation_title_for_part(part) == citation_title
+        elif citation_title_match_mode == 'does not start':
+            return other.citation_title_for_part(part).startswith(citation_title)
+        elif citation_title_match_mode == 'does not end':
+            return other.citation_title_for_part(part).endswith(citation_title)
+        elif citation_title_match_mode == 'does not contain':
+            return citation_title in other.citation_title_for_part(part)
         else:
-            if other.citation_title_for_part(part) != citation_title:
-                return True
+            raise ValueError(f'invalid title mode {citation_title_match_mode} in property filtering')
     return False
 
 

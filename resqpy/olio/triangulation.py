@@ -727,15 +727,16 @@ def triangulated_polygons(p, v, centres = None):
     return points, triangles
 
 
-def reorient(points, rough = True, max_dip = None):
+def reorient(points, rough = True, max_dip = None, use_linalg = False):
     """Returns a reoriented copy of a set of points, such that z axis is approximate normal to average plane of points.
 
     arguments:
        points (numpy float array of shape (..., 3)): the points to be reoriented
        rough (bool, default True): if True, the resulting orientation will be within around 10 degrees of the optimum;
-          if False, that reduces to around 2.5 degrees of the optimum
+          if False, that reduces to around 2.5 degrees of the optimum; iugnored if use_linalg is True
        max_dip (float, optional): if present, the reorientation of perspective off vertical is
           limited to this angle in degrees
+       use_linalg (bool, default False): if True, the numpy linear algebra svd function is used and rough is ignored
 
     returns:
        numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
@@ -746,7 +747,8 @@ def reorient(points, rough = True, max_dip = None):
     notes:
        the original points array is not modified by this function;
        the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
-       determine the triangulation
+       determine the triangulation;
+       the numpy linear algebra option seems to be memory intensive
     """
 
     def z_range(p):
@@ -771,32 +773,53 @@ def reorient(points, rough = True, max_dip = None):
                     best_y_rotation = y_degrees
         return (best_x_rotation, best_y_rotation)
 
+    def linalg_normal_vector(p):
+        assert p.ndim >= 2 and p.shape[-1] == 3
+        p = p.reshape((-1, 3))
+        centre = p.sum(axis = 0) / p.shape[0]
+        u, s, vh = np.linalg.svd(p - centre)
+        # unit normal vector
+        return vh[2, :]
+
     assert points.ndim >= 2 and points.shape[-1] == 3
 
-    # coarse iteration trying a few different angles
-    best_x_rotation, best_y_rotation = best_angles(points, 0.0, 0.0, 7, 30.0)
+    if use_linalg:
 
-    # finer iteration searching around the best coarse rotation
-    best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 5, 10.0)
+        normal_vector = linalg_normal_vector(points)
+        incl = vec.inclination(normal_vector)
+        if incl == 0.0:
+            rotation_m = vec.no_rotation_matrix()
+        else:
+            azi = vec.azimuth(normal_vector)
+            rotation_m = vec.tilt_3d_matrix(azi, incl)
 
-    if not rough:
+    else:
+
+        # coarse iteration trying a few different angles
+        best_x_rotation, best_y_rotation = best_angles(points, 0.0, 0.0, 7, 30.0)
+
         # finer iteration searching around the best coarse rotation
-        best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 7, 2.5)
+        best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 5, 10.0)
 
-    rotation_m = vec.rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))
-    reverse_m = vec.reverse_rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))  # just the transpose of abpve!
+        if not rough:
+            # finer iteration searching around the best coarse rotation
+            best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 7, 2.5)
+
+        rotation_m = vec.rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))
+
+        normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
 
     if max_dip is not None:
-        v = vec.rotate_vector(reverse_m, np.array((0.0, 0.0, 1.0)))
+        v = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
         incl = vec.inclination(v)
         if incl > max_dip:
             azi = vec.azimuth(v)
             rotation_m = vec.tilt_3d_matrix(azi, max_dip)  # TODO: check whether any reverse direction errors here
-            reverse_m = rotation_m.T
+        normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
 
     p = points.copy()
 
-    return vec.rotate_array(rotation_m, p), vec.rotate_vector(reverse_m, np.array((0.0, 0.0, 1.0))), rotation_m
+    return vec.rotate_array(rotation_m, p), normal_vector, rotation_m
 
 
 def make_all_clockwise_xy(t, p):

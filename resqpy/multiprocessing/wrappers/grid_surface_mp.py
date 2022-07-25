@@ -31,6 +31,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     feature_type: str = 'fault',
     trimmed: bool = False,
     extend_fault_representation: bool = False,
+    retriangulate: bool = False,
     related_uuid = None,
     progress_fn: Optional[Callable] = None,
     consistent_side: bool = False,
@@ -59,6 +60,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         feature_type (str, default 'fault'): one of 'fault', 'horizon', or 'geobody boundary'
         trimmed (bool, default True): if True the surface has already been trimmed
         extend_fault_representation (bool, default False): if True, the representation is extended with a flange
+        retriangulate (bool, default False): if True, a retriangulation is performed even if not needed otherwise
         related_uuid (uuid, optional): if present, the uuid of an object to be softly related to the gcs
         progress_fn (Callable): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
@@ -66,12 +68,15 @@ def find_faces_to_represent_surface_regular_wrapper(
            cells in each pair are on one side of the surface, and all the second cells on the other
         extra_metadata (dict, optional): extra metadata items to be added to the grid connection set
         return_properties (List[str]): if present, a list of property arrays to calculate and
-           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset' and 'normal vector';
+           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset', 'normal vector',
+           and 'grid bisector';
            triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
            the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
            offset is a measure of the distance between the centre of the cell face and the intersection point;
            normal vector is a unit vector normal to the surface triangle; each array has an entry for each face
-           in the gcs; the returned dictionary has the passed strings as keys and numpy arrays as values.
+           in the gcs; grid bisector is a grid cell boolean property holding True for the set of cells on one
+           side of the surface, deemed to be shallower;
+           the returned dictionary has the passed strings as keys and numpy arrays as values.
 
     Returns:
         Tuple containing:
@@ -104,11 +109,14 @@ def find_faces_to_represent_surface_regular_wrapper(
         else:
             log.warning(f'grid cell length property {prop_title} NOT found')
     grid = RegularGrid(parent_model = model, uuid = grid_uuid)
+    assert grid.is_aligned
+    flange_radius = 5.0 * np.sum(np.array(grid.extent_kji, dtype = float) * np.array(grid.aligned_dxyz()))
     s_model = Model(surface_epc)
     model.copy_uuid_from_other_model(s_model, uuid = str(surface_uuid))
     repr_type = model.type_of_part(model.part(uuid = surface_uuid), strip_obj = True)
     assert repr_type in ['TriangulatedSetRepresentation', 'PointSetRepresentation']
     extended = False
+    retriangulated = False
     if repr_type == 'PointSetRepresentation':
         # trim pointset to grid xyz box
         pset = PointSet(model, uuid = surface_uuid)
@@ -131,8 +139,10 @@ def find_faces_to_represent_surface_regular_wrapper(
                                 convexity_parameter = 2.0,
                                 reorient = True,
                                 extend_with_flange = extend_fault_representation,
+                                flange_radial_distance = flange_radius,
                                 make_clockwise = False)
         extended = extend_fault_representation
+        retriangulated = True
         surf.write_hdf5()
         surf.create_xml()
         surface_uuid = surf.uuid
@@ -144,16 +154,19 @@ def find_faces_to_represent_surface_regular_wrapper(
         trimmed_surf.set_to_trimmed_surface(surface, xyz_box = grid.xyz_box(local = True))
         surface = trimmed_surf
         trimmed = True
-    if extend_fault_representation and not extended:
+    if extend_fault_representation and not extended or retriangulate and not retriangulated:
         _, p = surface.triangles_and_points()
         pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surface.title)
         surface = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
         surface.set_from_point_set(pset,
                                    convexity_parameter = 2.0,
                                    reorient = True,
-                                   extend_with_flange = True,
+                                   extend_with_flange = extend_fault_representation,
+                                   flange_radial_distance = flange_radius,
                                    make_clockwise = False)
+        del pset
         extended = True
+        retriangulated = True
     if not bu.matching_uuids(surface.uuid, surface_uuid):
         surface.write_hdf5()
         surface.create_xml()
@@ -194,13 +207,14 @@ def find_faces_to_represent_surface_regular_wrapper(
         properties = returns[1]
         realisation = index if use_index_as_realisation else None
         property_collection = PropertyCollection(support = gcs)
+        grid_pc = None
         for p_name, array in properties.items():
             log.debug(f'{name} found property {p_name}')
             if p_name == "normal vector":
                 property_collection.add_cached_array_to_imported_list(
                     array,
-                    "from find_faces function",
-                    p_name,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
                     discrete = False,
                     uom = "Euc",
                     property_kind = "continuous",
@@ -211,8 +225,8 @@ def find_faces_to_represent_surface_regular_wrapper(
             elif p_name == "triangle":
                 property_collection.add_cached_array_to_imported_list(
                     array,
-                    "from find_faces function",
-                    p_name,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
                     discrete = True,
                     null_value = -1,
                     property_kind = "discrete",
@@ -222,8 +236,8 @@ def find_faces_to_represent_surface_regular_wrapper(
             elif p_name == "offset":
                 property_collection.add_cached_array_to_imported_list(
                     array,
-                    "from find_faces function",
-                    p_name,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
                     discrete = False,
                     uom = grid.crs.z_units,
                     property_kind = "continuous",
@@ -237,17 +251,36 @@ def find_faces_to_represent_surface_regular_wrapper(
                     array = -array
                 property_collection.add_cached_array_to_imported_list(
                     array,
-                    "from find_faces function",
-                    p_name,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
                     discrete = False,
                     uom = grid.crs.z_units,
                     property_kind = "depth",
                     realization = realisation,
                     indexable_element = "faces",
                 )
+            elif p_name == 'grid bisector':
+                if grid_pc is None:
+                    grid_pc = PropertyCollection()
+                    grid_pc.set_support(support = grid)
+                grid_pc.add_cached_array_to_imported_list(
+                    array,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
+                    discrete = True,
+                    property_kind = "discrete",
+                    realization = realisation,
+                    indexable_element = "cells",
+                )
+            else:
+                raise ValueError(f'unrecognised property name {p_name}')
         property_collection.write_hdf5_for_imported_list()
-        uuids_properties = (property_collection.create_xml_for_imported_list_and_add_parts_to_model())
+        uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model()
         uuid_list.extend(uuids_properties)
+        if grid_pc is not None:
+            grid_pc.write_hdf5_for_imported_list()
+            uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model()
+            uuid_list.extend(uuids_properties)
     else:
         log.debug(f'{name} no requested properties')
 

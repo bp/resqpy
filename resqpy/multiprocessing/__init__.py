@@ -3,7 +3,7 @@
 __all__ = ['function_multiprocessing', 'find_faces_to_represent_surface_regular_wrapper']
 
 from .multiprocessing import function_multiprocessing
-from .wrappers.grid_surface import find_faces_to_represent_surface_regular_wrapper
+from .wrappers.grid_surface_mp import find_faces_to_represent_surface_regular_wrapper
 
 # Set "module" attribute of all public objects to this path.
 for _name in __all__:
