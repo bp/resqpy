@@ -16,6 +16,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit
+from multiprocessing import Pool
 
 
 def radians_from_degrees(deg):
@@ -566,36 +567,66 @@ def point_in_polygon(x, y, polygon):
 
 
 @njit
-def points_in_polygon(points, polygon):
+def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
     """Calculates which points are within a polygon in 2D.
-    
+
     Args:
         points (np.ndarray): array of the points in 2D.
         polygon (np.ndarray): array of the polygon's vertices in 2D.
-    
+        points_xlen (int): the number of unique x coordinates.
+        polygon_num (int): the polygon number, default is 0.
+
     Returns:
-        polygon_points (np.ndarray): boolean array of which points are within the polygon.
+        polygon_points (np.ndarray): 2D array containing only the points within the polygon,
+            with each row being the polygon number, points x index, and points y index.
     """
-    polygon_points = np.empty(len(points), dtype = numba.boolean)
-    for point_num in numba.prange(0, len(polygon_points)):
-        polygon_points[point_num] = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
+    polygon_points = np.empty((0, 3), dtype = numba.int32)
+    for point_num in numba.prange(len(points)):
+        p = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
+        if p is True:
+            xi, yi = divmod(point_num, points_xlen)
+            polygon_points = np.append(polygon_points, np.array([[polygon_num, xi, yi]], dtype = numba.int32), axis = 0)
+
     return polygon_points
 
 
-@njit(parallel = True)
-def points_in_polygons(points: np.ndarray, polygons: np.ndarray) -> np.ndarray:
+def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
     """Calculates which points are within which polygons in 2D.
-    
+
     Args:
         points (np.ndarray): array of the points in 2D.
         polygons (np.ndarray): array of each polygons' vertices in 2D.
-    
+        points_xlen (int): the number of unique x coordinates.
+
     Returns:
-        polygons_points (np.ndarray): boolean array of which points are within each polygon.
+        polygons_points (np.ndarray): 2D array containing only the points within each polygon,
+            with each row being the polygon number, points x index, and points y index.
     """
-    polygons_points = np.empty((len(polygons), len(points)), dtype = numba.boolean)
-    for polygon_num in numba.prange(0, len(polygons)):
-        polygons_points[polygon_num] = points_in_polygon(points, polygons[polygon_num])
+    args = [(points, polygons[polygon_num], points_xlen, polygon_num) for polygon_num in range(len(polygons))]
+    with Pool() as p:
+        r = p.starmap(points_in_polygon, args)
+
+    return np.vstack(r)
+
+
+@njit
+def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
+    """Calculates which points are within which polygons in 2D.
+
+    Args:
+        points (np.ndarray): array of the points in 2D.
+        polygons (np.ndarray): array of each polygons' vertices in 2D.
+        points_xlen (int): the number of unique x coordinates.
+
+    Returns:
+        polygons_points (np.ndarray): 2D array containing only the points within each polygon,
+            with each row being the polygon number, points x index, and points y index.
+    """
+    polygons_points = np.empty((0, 3), dtype = numba.int32)
+    for polygon_num in numba.prange(len(polygons)):
+        polygon_points = points_in_polygon(points, polygons[polygon_num], points_xlen, polygon_num)
+        polygons_points = np.append(polygons_points, polygon_points, axis = 0)
+
     return polygons_points
 
 

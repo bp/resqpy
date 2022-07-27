@@ -1559,10 +1559,9 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
         - offsets (np.ndarray): array of the distance between the centre of the cell face and the
             intersection point of the inter-cell centre vector with a triangle in the surface.
     """
-    hit_stack = np.stack(where_true(hits), axis = -1)
     n_faces = faces.shape[2 - axis]
-    for i in numba.prange(len(hit_stack)):
-        hit = hit_stack[i]
+    for i in numba.prange(len(hits)):
+        hit = hits[i]
         tri = hit[0]
 
         # Two dimensions for the centre point in this projection.
@@ -1806,7 +1805,7 @@ def find_faces_to_represent_surface_regular_optimised(
         k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
         p_xy = np.delete(points, 2, 1)
 
-        k_hits = vec.points_in_polygons(k_centres, p_xy[triangles]).reshape((t_count, grid.nj, grid.ni))
+        k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
         cwt = vec.clockwise_triangles(points, triangles, projection = "xy") >= 0.0
 
         axis = 2
@@ -1818,6 +1817,10 @@ def find_faces_to_represent_surface_regular_optimised(
                             k_sides, return_normal_vectors, k_normals, cwt,
                             return_depths, k_depths,
                             return_offsets, k_offsets, return_triangles, k_triangles)
+        del k_hits
+        del cwt
+        del p_xy
+        del k_centres
         log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -1842,7 +1845,7 @@ def find_faces_to_represent_surface_regular_optimised(
         j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
         p_xz = np.delete(points, 1, 1)
 
-        j_hits = vec.points_in_polygons(j_centres, p_xz[triangles]).reshape((t_count, grid.nk, grid.ni))
+        j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
         cwt = vec.clockwise_triangles(points, triangles, projection = "xz") >= 0.0
 
         axis = 1
@@ -1854,8 +1857,11 @@ def find_faces_to_represent_surface_regular_optimised(
                             j_sides, return_normal_vectors, j_normals, cwt,
                             return_depths, j_depths,
                             return_offsets, j_offsets, return_triangles, j_triangles)
+        del j_hits
+        del cwt
+        del p_xz
+        del j_centres
         log.debug(f"j face count: {np.count_nonzero(j_faces)}")
-
     else:
         j_faces = None
         j_sides = None
@@ -1879,7 +1885,7 @@ def find_faces_to_represent_surface_regular_optimised(
         i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
         p_yz = np.delete(points, 0, 1)
 
-        i_hits = vec.points_in_polygons(i_centres, p_yz[triangles]).reshape((t_count, grid.nk, grid.nj))
+        i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
         cwt = vec.clockwise_triangles(points, triangles, projection = "yz") >= 0.0
 
         axis = 0
@@ -1891,6 +1897,10 @@ def find_faces_to_represent_surface_regular_optimised(
                             i_sides, return_normal_vectors, i_normals, cwt,
                             return_depths, i_depths,
                             return_offsets, i_offsets, return_triangles, i_triangles)
+        del i_hits
+        del cwt
+        del p_yz
+        del i_centres
         log.debug(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
