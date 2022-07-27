@@ -569,6 +569,7 @@ def point_in_polygon(x, y, polygon):
 @njit
 def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
     """Calculates which points are within a polygon in 2D.
+
     Args:
         points (np.ndarray): array of the points in 2D.
         polygon (np.ndarray): array of the polygon's vertices in 2D.
@@ -590,6 +591,7 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
 
 def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
     """Calculates which points are within which polygons in 2D.
+
     Args:
         points (np.ndarray): array of the points in 2D.
         polygons (np.ndarray): array of each polygons' vertices in 2D.
@@ -608,6 +610,7 @@ def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points
 @njit
 def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
     """Calculates which points are within which polygons in 2D.
+
     Args:
         points (np.ndarray): array of the points in 2D.
         polygons (np.ndarray): array of each polygons' vertices in 2D.
