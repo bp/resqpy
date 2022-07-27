@@ -1630,24 +1630,24 @@ def bisector_from_faces(grid_extent_kji: Tuple[int], k_faces: np.ndarray, j_face
                         i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
 
-    arguments:
+    Args:
         grid_extent_kji (triple int): the shape of the grid
         k_faces, j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
             bisecting surface
 
-    returns:
+    Returns:
         (numpy bool array of shape grid_extent_kji, bool) where the array is set True for cells on one side
         of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
         on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
 
-    notes:
+    Notes:
         the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
         any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    a = np.zeros(grid_extent_kji, dtype = bool)  # initialise to False
-    c = np.zeros(grid_extent_kji, dtype = bool)  # cells changing
+    a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
@@ -1686,7 +1686,7 @@ def bisector_from_faces(grid_extent_kji: Tuple[int], k_faces: np.ndarray, j_face
     is_curtain = False
     if a_mean_k > not_a_mean_k:
         a[:] = np.logical_not(a)
-    elif maths.isclose(a_mean_k, not_a_mean_k, abs_tol = 0.01):
+    elif abs(a_mean_k - not_a_mean_k) <= 0.01:
         # log.warning('unable to determine which side of surface is shallower')
         is_curtain = True
     return a, is_curtain
