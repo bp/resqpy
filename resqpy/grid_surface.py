@@ -1626,7 +1626,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
 
 
 @njit
-def bisector_from_faces(grid_extent_kji: Tuple[int], k_faces: np.ndarray, j_faces: np.ndarray,
+def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
                         i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
 
