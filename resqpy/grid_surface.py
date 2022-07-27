@@ -1624,33 +1624,36 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
     return faces, sides, normals, offsets, triangle_per_face
 
 
-def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
+@njit
+def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
+                        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
 
-    arguments:
+    Args:
         grid_extent_kji (triple int): the shape of the grid
         k_faces, j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
             bisecting surface
 
-    returns:
+    Returns:
         (numpy bool array of shape grid_extent_kji, bool) where the array is set True for cells on one side
         of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
         on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
 
-    notes:
+    Notes:
         the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
         any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    a = np.zeros(grid_extent_kji, dtype = bool)  # initialise to False
-    c = np.zeros(grid_extent_kji, dtype = bool)  # cells changing
+    a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
     # set one or more seeds; todo: more seeds to improve performance if needed
     a[0, 0, 0] = True
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
+    # todo: check that following works when a dimension has extent 1
     while True:
         c[:] = False
         # k faces
@@ -1667,7 +1670,7 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
             break
         a[:] = np.logical_or(a, c)
     a_count = np.count_nonzero(a)
-    cell_count = np.product(grid_extent_kji)
+    cell_count = a.size
     assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
     # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
     layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
@@ -1682,8 +1685,8 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
     is_curtain = False
     if a_mean_k > not_a_mean_k:
         a[:] = np.logical_not(a)
-    elif maths.isclose(a_mean_k, not_a_mean_k, abs_tol = 0.01):
-        log.warning('unable to determine which side of surface is shallower')
+    elif abs(a_mean_k - not_a_mean_k) <= 0.01:
+        # log.warning('unable to determine which side of surface is shallower')
         is_curtain = True
     return a, is_curtain
 
@@ -1972,7 +1975,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
-        bisector, is_curtain = bisector_from_faces(grid.extent_kji, k_faces, j_faces, i_faces)
+        bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
 
     if progress_fn is not None:
         progress_fn(1.0)
