@@ -575,6 +575,7 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
         polygon (np.ndarray): array of the polygon's vertices in 2D.
         points_xlen (int): the number of unique x coordinates.
         polygon_num (int): the polygon number, default is 0.
+
     Returns:
         polygon_points (np.ndarray): 2D array containing only the points within the polygon,
             with each row being the polygon number, points x index, and points y index.
@@ -596,6 +597,7 @@ def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points
         points (np.ndarray): array of the points in 2D.
         polygons (np.ndarray): array of each polygons' vertices in 2D.
         points_xlen (int): the number of unique x coordinates.
+
     Returns:
         polygons_points (np.ndarray): 2D array containing only the points within each polygon,
             with each row being the polygon number, points x index, and points y index.
@@ -615,6 +617,7 @@ def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: in
         points (np.ndarray): array of the points in 2D.
         polygons (np.ndarray): array of each polygons' vertices in 2D.
         points_xlen (int): the number of unique x coordinates.
+
     Returns:
         polygons_points (np.ndarray): 2D array containing only the points within each polygon,
             with each row being the polygon number, points x index, and points y index.
