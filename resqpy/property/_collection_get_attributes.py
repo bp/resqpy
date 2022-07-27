@@ -72,11 +72,13 @@ def _get_property_type_details(collection, discrete, string_lookup_uuid, points)
         collection.null_value = None
 
 
-def _get_property_array_min_max_value(collection, property_array, const_value, discrete, min_value, max_value):
+def _get_property_array_min_max_value(collection, property_array, const_value, discrete, min_value, max_value,
+                                      categorical, null_value):
     if const_value is not None:
         return _get_property_array_min_max_const(const_value, collection.null_value, min_value, max_value, discrete)
     elif property_array is not None:
-        return _get_property_array_min_max_array(property_array, min_value, max_value, discrete)
+        return _get_property_array_min_max_array(property_array, min_value, max_value, discrete, categorical,
+                                                 null_value)
     return None, None
 
 
@@ -89,9 +91,13 @@ def _get_property_array_min_max_const(const_value, null_value, min_value, max_va
     return min_value, max_value
 
 
-def _get_property_array_min_max_array(property_array, min_value, max_value, discrete):
+def _get_property_array_min_max_array(property_array, min_value, max_value, discrete, categorical, null_value):
     if discrete:
-        min_value, max_value = _get_property_array_min_max_array_discrete(property_array, min_value, max_value)
+        if categorical:
+            min_value, max_value = _get_property_array_min_max_array_categorical(property_array, min_value, max_value,
+                                                                                 null_value)
+        else:
+            min_value, max_value = _get_property_array_min_max_array_discrete(property_array, min_value, max_value)
     else:
         min_value, max_value = _get_property_array_min_max_array_continuous(property_array, min_value, max_value)
 
@@ -111,6 +117,27 @@ def _get_property_array_min_max_array_discrete(property_array, min_value, max_va
         except Exception:
             max_value = None
             log.warning('no xml maximum value set for discrete property')
+    return min_value, max_value
+
+
+def _get_property_array_min_max_array_categorical(property_array, min_value, max_value, null_value):
+    if min_value is None or max_value is None:
+        unique_values = np.unique(property_array)
+        if null_value is not None and len(unique_values):
+            if unique_values[0] == null_value:
+                unique_values = unique_values[1:]
+            elif unique_values[-1] == null_value:
+                unique_values = unique_values[:-1]
+    if min_value is None:
+        if len(unique_values):
+            min_value = unique_values[0]
+        else:
+            log.warning('no xml minimum value set for categorical property')
+    if max_value is None:
+        if len(unique_values):
+            max_value = unique_values[-1]
+        else:
+            log.warning('no xml maximum value set for categorical property')
     return min_value, max_value
 
 
@@ -299,7 +326,7 @@ def _cached_part_array_ref_get_node_values(part_node, dtype):
 
 def _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid, local_property_kind_uuid):
     if points or property_kind == 'categorical':
-        add_min_max = False
+        add_min_max = True
     elif local_property_kind_uuid is not None and string_lookup_uuid is not None:
         add_min_max = False
     else:
