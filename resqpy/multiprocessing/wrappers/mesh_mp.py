@@ -44,24 +44,23 @@ def mesh_from_regular_grid_column_property_wrapper(
     """
     uuid_list = []
     tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
-    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = f"{tmp_dir}/wrapper.epc"
-    model = new_model(epc_file=epc_file)
+    model = new_model(epc_file = epc_file)
 
     g_model = Model(grid_epc)
-    g_crs_uuid = g_model.uuid(
-        obj_type="LocalDepth3dCrs", related_uuid=grid_uuid
-    )  # todo: check this relationship exists
+    g_crs_uuid = g_model.uuid(obj_type = "LocalDepth3dCrs",
+                              related_uuid = grid_uuid)  # todo: check this relationship exists
 
     if g_crs_uuid is not None:
         model.copy_uuid_from_other_model(g_model, g_crs_uuid)
         uuid_list.append(g_crs_uuid)
-    model.copy_uuid_from_other_model(g_model, uuid=grid_uuid)
+    model.copy_uuid_from_other_model(g_model, uuid = grid_uuid)
 
     for prop_uuid in prop_uuids:
-        model.copy_uuid_from_other_model(g_model, uuid=prop_uuid)
+        model.copy_uuid_from_other_model(g_model, uuid = prop_uuid)
 
-    grid = RegularGrid(parent_model=model, uuid=grid_uuid)
+    grid = RegularGrid(parent_model = model, uuid = grid_uuid)
 
     success = True
     for prop_uuid in prop_uuids:
@@ -72,9 +71,7 @@ def mesh_from_regular_grid_column_property_wrapper(
         mesh.write_hdf5()
         mesh.create_xml()
         uuid_list.append(mesh.uuid)
-        model.create_reciprocal_relationship_uuids(
-            mesh.uuid, "sourceObject", prop_uuid, "detinationObject"
-        )
+        model.create_reciprocal_relationship_uuids(mesh.uuid, "sourceObject", prop_uuid, "detinationObject")
 
     model.store_epc()
 
@@ -107,10 +104,7 @@ def mesh_from_regular_grid_column_property_batch(
         success_list (List[bool]): A boolean list of successful function calls.
     """
     n_uuids = len(prop_uuids)
-    prop_uuids_list = [
-        prop_uuids[i * n_uuids // n_workers : (i + 1) * n_uuids // n_workers]
-        for i in range(n_workers)
-    ]
+    prop_uuids_list = [prop_uuids[i * n_uuids // n_workers:(i + 1) * n_uuids // n_workers] for i in range(n_workers)]
 
     kwargs_list = []
     for prop_uuids in prop_uuids_list:

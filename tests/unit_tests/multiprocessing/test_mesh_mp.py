@@ -23,16 +23,16 @@ def test_mesh_from_regular_grid_column_property_wrapper(small_grid_with_properti
         grid_uuid,
         prop_uuids,
     )
-    model = Model(epc_file=epc_file)
+    model = Model(epc_file = epc_file)
     rm_tree("tmp_dir")
 
     # Assert
     assert success is True
     assert index == input_index
     for prop_uuid in prop_uuids:
-        mesh_uuid = model.uuid(obj_type="Grid2dRepresentation", related_uuid=prop_uuid)
+        mesh_uuid = model.uuid(obj_type = "Grid2dRepresentation", related_uuid = prop_uuid)
         assert mesh_uuid is not None
-        mesh = Mesh(model, uuid=mesh_uuid)
+        mesh = Mesh(model, uuid = mesh_uuid)
         assert mesh is not None
         assert mesh.ni == grid.ni
         assert mesh.nj == grid.nj
