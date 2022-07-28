@@ -6,7 +6,7 @@ a vector is a one dimensional numpy array with 3 elements: x, y, z.
 some functions accept a tuple or list of 3 elements as an alternative to a numpy array.
 """
 
-version = '30th June 2022'
+version = '28th July 2022'
 
 import logging
 
@@ -685,42 +685,6 @@ def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: in
                                         axis = 0)
 
     return triangle_points
-
-
-# use of buffer below might degrade rather than improve performance
-#@njit
-#def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: int, triangle_num: int = 0) -> np.ndarray:
-#    """Calculates which points are within a triangle in 2D.
-#
-#    Args:
-#        points (np.ndarray): array of the points in 2D.
-#        triangle (np.ndarray): array of the triangle's vertices in 2D, shape (3, 2).
-#        points_xlen (int): the number of unique x coordinates.
-#        triangle_num (int): the triangle number, default is 0.
-#
-#    Returns:
-#        triangle_points (np.ndarray): 2D array containing only the points within the triangle,
-#            with each row being the triangle number, points x index, and points y index.
-#    """
-#    buffer_size = 8
-#    tpb = np.empty((buffer_size, 3), dtype = numba.int32)
-#    tpi = 0
-#    for point_num in numba.prange(len(points)):
-#        p = point_in_triangle(points[point_num, 0], points[point_num, 1], triangle)
-#        if p is True:
-#            if tpi == buffer_size:
-#               buffer_size *= 2
-#               tp2 = np.empty((buffer_size, 3), dtype = numba.int32)
-#               tp2[:tpi] = tpb
-#               del tpb
-#               tpb = tp2
-#            xi, yi = divmod(point_num, points_xlen)
-#            tpb[tpi] = np.array([[triangle_num, xi, yi]], dtype = numba.int32)
-#            tpi += 1
-#    triangle_points = np.empty((tpi, 3), dtype = numba.int32)
-#    triangle_points[:] = tpb[:tpi]
-#    del tpb
-#    return triangle_points
 
 
 def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
