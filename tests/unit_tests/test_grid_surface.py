@@ -7,6 +7,7 @@ def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surfac
     grid = small_grid_and_surface[0]
     surface = small_grid_and_surface[1]
     name = "test"
+    assert grid.is_aligned
 
     # Act
     gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name)

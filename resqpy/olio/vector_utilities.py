@@ -649,7 +649,7 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
 
     Returns:
         polygon_points (np.ndarray): 2D array containing only the points within the polygon,
-            with each row being the polygon number, points x index, and points y index.
+            with each row being the polygon number, points y index, and points x index.
     """
     polygon_points = np.empty((0, 3), dtype = numba.int32)
     for point_num in numba.prange(len(points)):
@@ -673,7 +673,7 @@ def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: in
 
     Returns:
         triangle_points (np.ndarray): 2D array containing only the points within the triangle,
-            with each row being the triangle number, points x index, and points y index.
+            with each row being the triangle number, points y index, and points x index.
     """
     triangle_points = np.empty((0, 3), dtype = numba.int32)
     for point_num in numba.prange(len(points)):
@@ -697,7 +697,7 @@ def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points
 
     Returns:
         polygons_points (np.ndarray): 2D array containing only the points within each polygon,
-            with each row being the polygon number, points x index, and points y index.
+            with each row being the polygon number, points y index, and points x index.
     """
     args = [(points, polygons[polygon_num], points_xlen, polygon_num) for polygon_num in range(len(polygons))]
     with Pool() as p:
@@ -716,8 +716,8 @@ def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: in
         points_xlen (int): the number of unique x coordinates.
 
     Returns:
-        polygons_points (np.ndarray): 2D array containing only the points within each polygon,
-            with each row being the polygon number, points x index, and points y index.
+        polygons_points (np.ndarray): 2D array (list-like) containing only the points within each polygon,
+            with each row being the polygon number, points y index, and points x index.
     """
     polygons_points = np.empty((0, 3), dtype = numba.int32)
     for polygon_num in numba.prange(len(polygons)):
@@ -737,12 +737,53 @@ def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray, points_x
         points_xlen (int): the number of unique x coordinates.
 
     Returns:
-        triangles_points (np.ndarray): 2D array containing only the points within each triangle,
-            with each row being the triangle number, points x index, and points y index.
+        triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
+            with each row being the triangle number, points y index, and points x index.
     """
     triangles_points = np.empty((0, 3), dtype = numba.int32)
     for triangle_num in numba.prange(len(triangles)):
         triangle_points = points_in_triangle(points, triangles[triangle_num], points_xlen, triangle_num)
+        triangles_points = np.append(triangles_points, triangle_points, axis = 0)
+
+    return triangles_points
+
+
+def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
+    """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
+
+    arguments:
+        nx (int): number of points in x axis
+        ny (int): number of points in y axis
+        dx (float): spacing of points in x axis (first point is at half dx)
+        dy (float): spacing of points in y axis (first point is at half dy)
+        triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2).
+        points_xlen (int): the number of unique x coordinates.
+
+    returns:
+        triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
+            with each row being the triangle number, points y index, and points x index.
+    """
+    triangles_points = np.empty((0, 3), dtype = np.int32)
+    dx_dy = np.expand_dims(np.array([dx, dy], dtype = float), axis = 0)
+    # for triangle_num in numba.prange(len(triangles)):
+    for triangle_num in range(len(triangles)):
+        tp = (triangles[triangle_num] / dx_dy) - 0.5
+        min_tpx = max(maths.ceil(min(tp[0, 0], tp[1, 0], tp[2, 0])), 0)
+        max_tpx = min(maths.floor(max(tp[0, 0], tp[1, 0], tp[2, 0])), nx - 1)
+        if max_tpx < min_tpx:
+            continue
+        min_tpy = max(maths.ceil(min(tp[0, 1], tp[1, 1], tp[2, 1])), 0)
+        max_tpy = min(maths.floor(max(tp[0, 1], tp[1, 1], tp[2, 1])), ny - 1)
+        if max_tpy < min_tpy:
+            continue
+        ntpx = max_tpx - min_tpx + 1
+        ntpy = max_tpy - min_tpy + 1
+        x = np.linspace(float(min_tpx), float(max_tpx), ntpx)
+        y = np.linspace(float(min_tpy), float(max_tpy), ntpy)
+        p = np.stack(np.meshgrid(x, y), axis = -1).reshape((-1, 2))
+        triangle_points = points_in_triangle(p, tp, ntpx, triangle_num)
+        triangle_points[:, 1] += min_tpy
+        triangle_points[:, 2] += min_tpx
         triangles_points = np.append(triangles_points, triangle_points, axis = 0)
 
     return triangles_points
