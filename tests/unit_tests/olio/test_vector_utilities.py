@@ -115,6 +115,48 @@ def test_points_in_triangles():
     assert np.all(r_edge == e_edge)
 
 
+def test_point_in_triangle():
+    p = np.array([[1.0, 2.0], [1.0, 6.0], [5.0, 6.0], [5.0, 2.0], [3.0, 4.0]])
+    t = np.empty((3, 2), dtype = float)
+    e = 1.0e-6
+    t[0] = p[0]
+    t[1] = p[1]
+    t[2] = p[4]
+    assert vec.point_in_triangle(p[0, 0] + e, p[0, 1] + 2.0 * e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[1, 0] + e, p[1, 1] - 2.0 * e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[4, 0] - e, p[4, 1], t)  # actually right on a vertex, so might fail due to precision
+    for pi in [2, 3]:
+        assert not vec.point_in_triangle(p[pi, 0], p[pi, 1], t)
+    assert vec.point_in_triangle(2.0, 3.5, t)
+    assert not vec.point_in_triangle(0.0, 0.0, t)
+    assert not vec.point_in_triangle(0.0, 4.0, t)
+    assert not vec.point_in_triangle(7.0, 4.0, t)
+    assert not vec.point_in_triangle(2.0, 0.0, t)
+    assert not vec.point_in_triangle(2.0, 7.0, t)
+    assert not vec.point_in_triangle(2.0, 2.5, t)
+    assert not vec.point_in_triangle(2.0, 5.5, t)
+    t[0] = p[2]
+    t[1] = p[1]
+    t[2] = p[4]
+    assert vec.point_in_triangle(p[2, 0] - 2.0 * e, p[2, 1] - e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[1, 0] + 2.0 * e, p[1, 1] - e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[4, 0], p[4, 1] + e, t)  # actually right on a vertex, so might fail due to precision
+    for pi in [0, 3]:
+        assert not vec.point_in_triangle(p[pi, 0], p[pi, 1], t)
+    assert vec.point_in_triangle(3.0, 5.5, t)
+    assert not vec.point_in_triangle(0.0, 0.0, t)
+    assert not vec.point_in_triangle(0.0, 4.0, t)
+    assert not vec.point_in_triangle(7.0, 4.0, t)
+    assert not vec.point_in_triangle(2.0, 0.0, t)
+    assert not vec.point_in_triangle(2.0, 7.0, t)
+    assert not vec.point_in_triangle(2.0, 4.5, t)
+    assert not vec.point_in_triangle(4.0, 4.5, t)
+
+
 def test_is_obtuse_2d():
     p = np.array((0.0, 0.0))
     p1, p2 = np.array((5.0, 0.01)), np.array((0.01, 5.0))

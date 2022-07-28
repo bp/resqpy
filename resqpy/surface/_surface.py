@@ -387,7 +387,7 @@ class Surface(BaseSurface):
               enforced in the reoriented space
 
         returns:
-           if extend_with_flange is True, numpy bool array with a value per triange indicating flange trianges;
+           if extend_with_flange is True, numpy bool array with a value per triangle indicating flange triangles;
            if extent_with_flange is False, None
 
         notes:
