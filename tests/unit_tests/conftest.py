@@ -500,3 +500,39 @@ def small_grid_and_extended_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, 
     tmp_model.store_epc()
 
     return grid, surface
+
+@pytest.fixture
+def small_grid_with_properties(tmp_model: Model) -> Tuple[grr.RegularGrid, List[str]]:
+    crs = Crs(tmp_model)
+    crs.create_xml()
+
+    extent = 10
+    extent_kji = (extent, extent, extent)
+    dxyz = (1.0, 1.0, 1.0)
+    crs_uuid = crs.uuid
+    title = "small_grid"
+    grid = grr.RegularGrid(
+        tmp_model, extent_kji=extent_kji, dxyz=dxyz, crs_uuid=crs_uuid, title=title
+    )
+    grid.create_xml()
+
+    pc = grid.extract_property_collection()
+    col_prop_shape = (grid.nj, grid.ni)
+
+    for i in range(20):
+        a = (np.random.random(col_prop_shape) + 1.0) * 3000.0
+        pc.add_cached_array_to_imported_list(
+            a,
+            source_info="test data",
+            keyword="DEPTH",
+            discrete=False,
+            uom="m",
+            property_kind="depth",
+            realization=i,
+            indexable_element="columns",
+        )
+    pc.write_hdf5_for_imported_list()
+    prop_uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    tmp_model.store_epc()
+
+    return grid, prop_uuids
