@@ -1,6 +1,6 @@
 """Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '25th July 2022'
+version = '28th July 2022'
 
 import logging
 
@@ -1696,7 +1696,7 @@ def find_faces_to_represent_surface_regular_optimised(
     surface,
     name,
     title = None,
-    centres = None,
+    centres = None,  # TODO: remove this
     agitate = False,
     feature_type = 'fault',
     progress_fn = None,
@@ -1706,7 +1706,8 @@ def find_faces_to_represent_surface_regular_optimised(
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     Args:
-        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
+           must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
         surface (Surface): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
         title (str, optional): the citation title to use for the grid connection set; defaults to name
@@ -1805,16 +1806,18 @@ def find_faces_to_represent_surface_regular_optimised(
         k_depths = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
-        k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
+        # k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
         p_xy = np.delete(points, 2, 1)
 
         # k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
-        k_hits = vec.points_in_triangles_njit(k_centres, p_xy[triangles], grid.ni)
+        # k_hits = vec.points_in_triangles_njit(k_centres, p_xy[triangles], grid.ni)
+        k_hits = vec.points_in_triangles_aligned(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1], p_xy[triangles])
         cwt = vec.clockwise_triangles(points, triangles, projection = "xy") >= 0.0
 
         axis = 2
         index1 = 1
         index2 = 2
+        # TODO: remove centres from intersect numba, making use of dxyz and grid extent instead
         k_faces, k_sides, k_normals, k_offsets, k_triangles =  \
             intersect_numba(axis, index1, index2, k_hits, centres, points,
                             triangles, grid_dxyz, k_faces, consistent_side,
@@ -1824,7 +1827,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del k_hits
         del cwt
         del p_xy
-        del k_centres
+        # del k_centres
         log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -1846,11 +1849,12 @@ def find_faces_to_represent_surface_regular_optimised(
         j_depths = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_offsets = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_normals = (np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan))
-        j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
+        # j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
         p_xz = np.delete(points, 1, 1)
 
         # j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
-        j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
+        # j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
+        j_hits = vec.points_in_triangles_aligned(grid.ni, grid.nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
         cwt = vec.clockwise_triangles(points, triangles, projection = "xz") >= 0.0
 
         axis = 1
@@ -1865,7 +1869,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del j_hits
         del cwt
         del p_xz
-        del j_centres
+        # del j_centres
         log.debug(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
@@ -1887,11 +1891,12 @@ def find_faces_to_represent_surface_regular_optimised(
         i_depths = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_offsets = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_normals = (np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan))
-        i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
+        # i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
         p_yz = np.delete(points, 0, 1)
 
         # i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
-        i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
+        # i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
+        i_hits = vec.points_in_triangles_aligned(grid.nj, grid.nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
         cwt = vec.clockwise_triangles(points, triangles, projection = "yz") >= 0.0
 
         axis = 0
@@ -1906,7 +1911,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del i_hits
         del cwt
         del p_yz
-        del i_centres
+        # del i_centres
         log.debug(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
