@@ -1,6 +1,6 @@
 """Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '25th July 2022'
+version = '28th July 2022'
 
 import logging
 
@@ -1624,33 +1624,36 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
     return faces, sides, normals, offsets, triangle_per_face
 
 
-def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
+@njit
+def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
+                        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
 
-    arguments:
+    Args:
         grid_extent_kji (triple int): the shape of the grid
         k_faces, j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
             bisecting surface
 
-    returns:
+    Returns:
         (numpy bool array of shape grid_extent_kji, bool) where the array is set True for cells on one side
         of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
         on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
 
-    notes:
+    Notes:
         the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
         any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    a = np.zeros(grid_extent_kji, dtype = bool)  # initialise to False
-    c = np.zeros(grid_extent_kji, dtype = bool)  # cells changing
+    a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
     # set one or more seeds; todo: more seeds to improve performance if needed
     a[0, 0, 0] = True
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
+    # todo: check that following works when a dimension has extent 1
     while True:
         c[:] = False
         # k faces
@@ -1667,7 +1670,7 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
             break
         a[:] = np.logical_or(a, c)
     a_count = np.count_nonzero(a)
-    cell_count = np.product(grid_extent_kji)
+    cell_count = a.size
     assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
     # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
     layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
@@ -1682,8 +1685,8 @@ def bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces):
     is_curtain = False
     if a_mean_k > not_a_mean_k:
         a[:] = np.logical_not(a)
-    elif maths.isclose(a_mean_k, not_a_mean_k, abs_tol = 0.01):
-        log.warning('unable to determine which side of surface is shallower')
+    elif abs(a_mean_k - not_a_mean_k) <= 0.01:
+        # log.warning('unable to determine which side of surface is shallower')
         is_curtain = True
     return a, is_curtain
 
@@ -1693,7 +1696,7 @@ def find_faces_to_represent_surface_regular_optimised(
     surface,
     name,
     title = None,
-    centres = None,
+    centres = None,  # TODO: remove this
     agitate = False,
     feature_type = 'fault',
     progress_fn = None,
@@ -1703,7 +1706,8 @@ def find_faces_to_represent_surface_regular_optimised(
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     Args:
-        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
+           must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
         surface (Surface): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
         title (str, optional): the citation title to use for the grid connection set; defaults to name
@@ -1802,15 +1806,18 @@ def find_faces_to_represent_surface_regular_optimised(
         k_depths = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
-        k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
+        # k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
         p_xy = np.delete(points, 2, 1)
 
-        k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
+        # k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
+        # k_hits = vec.points_in_triangles_njit(k_centres, p_xy[triangles], grid.ni)
+        k_hits = vec.points_in_triangles_aligned(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1], p_xy[triangles])
         cwt = vec.clockwise_triangles(points, triangles, projection = "xy") >= 0.0
 
         axis = 2
         index1 = 1
         index2 = 2
+        # TODO: remove centres from intersect numba, making use of dxyz and grid extent instead
         k_faces, k_sides, k_normals, k_offsets, k_triangles =  \
             intersect_numba(axis, index1, index2, k_hits, centres, points,
                             triangles, grid_dxyz, k_faces, consistent_side,
@@ -1820,7 +1827,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del k_hits
         del cwt
         del p_xy
-        del k_centres
+        # del k_centres
         log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -1842,10 +1849,12 @@ def find_faces_to_represent_surface_regular_optimised(
         j_depths = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_offsets = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_normals = (np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan))
-        j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
+        # j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
         p_xz = np.delete(points, 1, 1)
 
-        j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
+        # j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
+        # j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
+        j_hits = vec.points_in_triangles_aligned(grid.ni, grid.nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
         cwt = vec.clockwise_triangles(points, triangles, projection = "xz") >= 0.0
 
         axis = 1
@@ -1860,7 +1869,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del j_hits
         del cwt
         del p_xz
-        del j_centres
+        # del j_centres
         log.debug(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
@@ -1882,10 +1891,12 @@ def find_faces_to_represent_surface_regular_optimised(
         i_depths = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_offsets = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_normals = (np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan))
-        i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
+        # i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
         p_yz = np.delete(points, 0, 1)
 
-        i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
+        # i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
+        # i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
+        i_hits = vec.points_in_triangles_aligned(grid.nj, grid.nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
         cwt = vec.clockwise_triangles(points, triangles, projection = "yz") >= 0.0
 
         axis = 0
@@ -1900,7 +1911,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del i_hits
         del cwt
         del p_yz
-        del i_centres
+        # del i_centres
         log.debug(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
@@ -1972,7 +1983,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
-        bisector, is_curtain = bisector_from_faces(grid.extent_kji, k_faces, j_faces, i_faces)
+        bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
 
     if progress_fn is not None:
         progress_fn(1.0)

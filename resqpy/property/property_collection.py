@@ -2557,7 +2557,7 @@ class PropertyCollection():
         pcxml._create_xml_facet_node(facet_type, facet, p_node)
 
         pcxml._create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                           max_value)
+                                           max_value, string_lookup_uuid is not None, null_value)
 
         if discrete:
             sl_root = pcxml._create_xml_lookup_node(self, p_node, string_lookup_uuid)
