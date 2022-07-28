@@ -7,12 +7,11 @@ log = logging.getLogger(__name__)
 import numpy as np
 from typing import Tuple, Union, List, Optional, Callable
 import resqpy.grid_surface as rqgs
-from resqpy.model import new_model
+from resqpy.model import new_model, Model
 from resqpy.grid import RegularGrid
 from resqpy.surface import Surface, PointSet
 from resqpy.property import PropertyCollection
 from pathlib import Path
-from resqpy.model import Model
 import resqpy.olio.uuid as bu
 from uuid import UUID
 import uuid
