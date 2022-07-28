@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from shutil import copytree
 import os
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 import pandas as pd
