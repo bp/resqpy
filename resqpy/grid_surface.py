@@ -1808,7 +1808,8 @@ def find_faces_to_represent_surface_regular_optimised(
         k_centres = np.delete(centres[0, :, :].reshape((-1, 3)), 2, 1)
         p_xy = np.delete(points, 2, 1)
 
-        k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
+        # k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
+        k_hits = vec.points_in_triangles_njit(k_centres, p_xy[triangles], grid.ni)
         cwt = vec.clockwise_triangles(points, triangles, projection = "xy") >= 0.0
 
         axis = 2
@@ -1848,7 +1849,8 @@ def find_faces_to_represent_surface_regular_optimised(
         j_centres = np.delete(centres[:, 0, :].reshape((-1, 3)), 1, 1)
         p_xz = np.delete(points, 1, 1)
 
-        j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
+        # j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
+        j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
         cwt = vec.clockwise_triangles(points, triangles, projection = "xz") >= 0.0
 
         axis = 1
@@ -1888,7 +1890,8 @@ def find_faces_to_represent_surface_regular_optimised(
         i_centres = np.delete(centres[:, :, 0].reshape((-1, 3)), 0, 1)
         p_yz = np.delete(points, 0, 1)
 
-        i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
+        # i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
+        i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
         cwt = vec.clockwise_triangles(points, triangles, projection = "yz") >= 0.0
 
         axis = 0
