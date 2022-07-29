@@ -763,8 +763,8 @@ def meshgrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
             - xx (np.ndarray): the elements of x repeated to fill the matrix along the first dimension.
             - yy (np.ndarray): the elements of y repeated to fill the matrix along the second dimension.
     """
-    xx = np.empty(shape=(y.size, x.size), dtype=x.dtype)
-    yy = np.empty(shape=(y.size, x.size), dtype=y.dtype)
+    xx = np.empty(shape = (y.size, x.size), dtype = x.dtype)
+    yy = np.empty(shape = (y.size, x.size), dtype = y.dtype)
     for i in range(y.size):
         for j in range(x.size):
             xx[i, j] = x[j]
