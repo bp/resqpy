@@ -1515,7 +1515,7 @@ def where_true(data: np.ndarray):
 
 
 @njit(parallel = True)
-def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centres: np.ndarray, points: np.ndarray,
+def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, points: np.ndarray,
                     triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, consistent_side: bool,
                     sides: np.ndarray, return_normal_vectors: bool, normals: np.ndarray, cwt: np.ndarray,
                     return_depths: bool, depths: np.ndarray, return_offsets: bool, offsets: np.ndarray,
@@ -1561,25 +1561,18 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
     """
     n_faces = faces.shape[2 - axis]
     for i in numba.prange(len(hits)):
-        hit = hits[i]
-        tri = hit[0]
+        tri, d1, d2 = hits[i]
 
-        # Two dimensions for the centre point in this projection.
-        d1 = hit[1]
-        d2 = hit[2]
+        ind0 = np.zeros(3, dtype = numba.float64) + grid_dxyz[axis] / 2
+        ind0[2-index1] = (d1 + 0.5) * grid_dxyz[2-index1]
+        ind0[2-index2] = (d2 + 0.5) * grid_dxyz[2-index2]
 
-        ind0 = np.zeros(3, dtype = numba.int32)
-        ind0[index1] = d1
-        ind0[index2] = d2
-
-        ind1 = np.zeros(3, dtype = numba.int32)
-        ind1[index1] = d1
-        ind1[index2] = d2
-        ind1[2 - axis] = -1
+        ind1 = np.copy(ind0)
+        ind1[axis] = grid_dxyz[axis] * (n - 0.5)
 
         xyz = meet.line_triangle_intersect_numba(
-            centres[ind0[0], ind0[1], ind0[2]],
-            centres[ind1[0], ind1[1], ind1[2]] - centres[ind0[0], ind0[1], ind0[2]],
+            ind0,
+            ind1 - ind0,
             points[triangles[tri]],
             line_segment = True,
             t_tol = 1.0e-6,
@@ -1587,12 +1580,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
         if xyz is None:  # meeting point is outwith grid
             continue
 
-        ind2 = np.zeros(4, dtype = np.int32)
-        ind2[index1] = d1
-        ind2[index2] = d2
-        ind2[-1] = axis
-
-        face = int((xyz[axis] - centres[ind2[0], ind2[1], ind2[2], ind2[3]]) / grid_dxyz[axis])
+        face = int((xyz[axis] - ind0[axis]) / grid_dxyz[axis])
         if face == -1:  # handle rounding precision issues
             face = 0
         elif face == n_faces:
@@ -1608,15 +1596,15 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, centr
             sides[ind_face[0], ind_face[1], ind_face[2]] = cwt[tri]
         if return_depths:
             depths[ind_face[0], ind_face[1], ind_face[2]] = xyz[2]
+
+        ind2 = np.zeros(4, dtype = np.int32)
+        ind2[index2] = d2
+        ind2[-1] = axis
+
         if return_offsets:
-            # compute offset as z diff between xyz and face
-            ind2[2 - axis] = face
-            ind3 = np.copy(ind2)
-            ind3[2 - axis] = int(face + 1)
-            fc = 0.5 * (centres[ind2[0], ind2[1], ind2[2], ind2[3]] + centres[ind3[0], ind3[1], ind3[2], ind3[3]])
-            offsets[ind_face[0], ind_face[1], ind_face[2]] = xyz[axis] - fc
+            offsets[ind_face[0], ind_face[1], ind_face[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
         if return_normal_vectors:
-            normals[ind_face[0], ind_face[1], ind_face[2]] = vec.triangle_normal_vector_numba(points[triangles[tri]])
+            normals[ind_face[0], ind_face[1], ind_face[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
             if normals[ind2[0], ind2[1], ind2[2], 2] > 0.0:
                 normals[ind_face[0], ind_face[1], ind_face[2]] = -normals[ind_face[0], ind_face[1], ind_face[2]]
         if return_triangles:
@@ -1795,8 +1783,6 @@ def find_faces_to_represent_surface_regular_optimised(
     log.debug(f'centres min xyz: {np.min(centres.reshape((-1, 3)), axis = 0)}')
     log.debug(f'centres max xyz: {np.max(centres.reshape((-1, 3)), axis = 0)}')
 
-    t_count = len(triangles)
-
     # K direction (xy projection)
     if grid.nk > 1:
         log.debug("searching for k faces")
@@ -1817,9 +1803,8 @@ def find_faces_to_represent_surface_regular_optimised(
         axis = 2
         index1 = 1
         index2 = 2
-        # TODO: remove centres from intersect numba, making use of dxyz and grid extent instead
         k_faces, k_sides, k_normals, k_offsets, k_triangles =  \
-            intersect_numba(axis, index1, index2, k_hits, centres, points,
+            intersect_numba(axis, index1, index2, k_hits, grid.nk, points,
                             triangles, grid_dxyz, k_faces, consistent_side,
                             k_sides, return_normal_vectors, k_normals, cwt,
                             return_depths, k_depths,
@@ -1861,7 +1846,7 @@ def find_faces_to_represent_surface_regular_optimised(
         index1 = 0
         index2 = 2
         j_faces, j_sides, j_normals, j_offsets, j_triangles =  \
-            intersect_numba(axis, index1, index2, j_hits, centres, points,
+            intersect_numba(axis, index1, index2, j_hits, grid.nj, points,
                             triangles, grid_dxyz, j_faces, consistent_side,
                             j_sides, return_normal_vectors, j_normals, cwt,
                             return_depths, j_depths,
@@ -1903,7 +1888,7 @@ def find_faces_to_represent_surface_regular_optimised(
         index1 = 0
         index2 = 1
         i_faces, i_sides, i_normals, i_offsets, i_triangles =  \
-            intersect_numba(axis, index1, index2, i_hits, centres, points,
+            intersect_numba(axis, index1, index2, i_hits, grid.ni, points,
                             triangles, grid_dxyz, i_faces, consistent_side,
                             i_sides, return_normal_vectors, i_normals, cwt,
                             return_depths, i_depths,
