@@ -9,6 +9,7 @@ some functions accept a tuple or list of 3 elements as an alternative to a numpy
 version = '28th July 2022'
 
 import logging
+from typing import Tuple
 
 log = logging.getLogger(__name__)
 
@@ -748,6 +749,31 @@ def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray, points_x
     return triangles_points
 
 
+@njit
+def meshgrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Returns coordinate matrices from coordinate vectors x and y.
+
+    Args:
+        x (np.ndarray): 1d array of x coordinates.
+        y (np.ndarray): 1d array of y coordinates.
+
+    Returns:
+        Tuple containing:
+
+            - xx (np.ndarray): the elements of x repeated to fill the matrix along the first dimension.
+            - yy (np.ndarray): the elements of y repeated to fill the matrix along the second dimension.
+    """
+    xx = np.empty(shape = (y.size, x.size), dtype = x.dtype)
+    yy = np.empty(shape = (y.size, x.size), dtype = y.dtype)
+    for i in range(y.size):
+        for j in range(x.size):
+            xx[i, j] = x[j]
+            yy[i, j] = y[i]
+
+    return xx, yy
+
+
+@njit
 def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
@@ -764,7 +790,7 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
             with each row being the triangle number, points y index, and points x index.
     """
     triangles_points = np.empty((0, 3), dtype = np.int32)
-    dx_dy = np.expand_dims(np.array([dx, dy], dtype = float), axis = 0)
+    dx_dy = np.expand_dims(np.array([dx, dy], dtype = numba.float32), axis = 0)
     # for triangle_num in numba.prange(len(triangles)):
     for triangle_num in range(len(triangles)):
         tp = (triangles[triangle_num] / dx_dy) - 0.5
@@ -780,7 +806,7 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
         ntpy = max_tpy - min_tpy + 1
         x = np.linspace(float(min_tpx), float(max_tpx), ntpx)
         y = np.linspace(float(min_tpy), float(max_tpy), ntpy)
-        p = np.stack(np.meshgrid(x, y), axis = -1).reshape((-1, 2))
+        p = np.stack(meshgrid(x, y), axis = -1).reshape((-1, 2))
         triangle_points = points_in_triangle(p, tp, ntpx, triangle_num)
         triangle_points[:, 1] += min_tpy
         triangle_points[:, 2] += min_tpx
