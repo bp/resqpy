@@ -18,7 +18,7 @@ def mesh_from_regular_grid_column_property_wrapper(
     index: int,
     grid_epc: str,
     grid_uuid: Union[UUID, str],
-    prop_uuids: List[str],
+    prop_uuids: List[Union[UUID, str]],
 ) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Wrapper function of the Mesh from_regular_grid_column_property method.
 
@@ -30,7 +30,7 @@ def mesh_from_regular_grid_column_property_wrapper(
         index (int): the index of the function call from the multiprocessing function.
         grid_epc (str): epc file path where the grid is saved.
         grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
-        prop_uuids (List[str]): a list of the property uuids used to create each Mesh
+        prop_uuids (List[UUID/str]): a list of the property uuids used to create each Mesh
             and their relationship.
 
     Returns:
@@ -40,7 +40,7 @@ def mesh_from_regular_grid_column_property_wrapper(
             - success (bool): True if all the Mesh objects could be created, False
               otherwise.
             - epc_file (str): the epc file path where the objects are stored.
-            - uuid_list (List[str]): list of UUIDs of relevant objects.
+            - uuid_list (List[UUID/str]): list of UUIDs of relevant objects.
     """
     uuid_list = []
     tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
@@ -80,18 +80,19 @@ def mesh_from_regular_grid_column_property_wrapper(
 
 def mesh_from_regular_grid_column_property_batch(
     grid_epc: str,
-    grid_uuid: str,
-    prop_uuids: List[str],
+    grid_uuid: Union[UUID, str],
+    prop_uuids: List[Union[UUID, str]],
     recombined_epc: str,
     cluster,
     n_workers: int,
+    require_success: bool = False,
 ) -> List[bool]:
     """Creates Mesh objects from a list of property uuids in parallel.
 
     Args:
         grid_epc (str): epc file path where the grid is saved.
         grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
-        prop_uuids (List[str]): a list of the property uuids used to create each Mesh
+        prop_uuids (List[UUID/str]): a list of the column property uuids used to create each Mesh
             and their relationship.
         recombined_epc (Path/str): A pathlib Path or path string of
             where the combined epc will be saved.
@@ -99,6 +100,7 @@ def mesh_from_regular_grid_column_property_batch(
             local machine. If using a job queing system, a JobQueueCluster can be used
             such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
         n_workers (int): the number of workers on the cluster.
+        require_success (bool, default False): if True an exception is raised if any failures
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
@@ -115,11 +117,10 @@ def mesh_from_regular_grid_column_property_batch(
         }
         kwargs_list.append(d)
 
-    success_list = function_multiprocessing(
-        mesh_from_regular_grid_column_property_wrapper,
-        kwargs_list,
-        recombined_epc,
-        cluster,
-    )
+    success_list = function_multiprocessing(mesh_from_regular_grid_column_property_wrapper,
+                                            kwargs_list,
+                                            recombined_epc,
+                                            cluster,
+                                            require_success = require_success)
 
     return success_list
