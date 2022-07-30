@@ -656,8 +656,8 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
     for point_num in numba.prange(len(points)):
         p = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
         if p is True:
-            xi, yi = divmod(point_num, points_xlen)
-            polygon_points = np.append(polygon_points, np.array([[polygon_num, xi, yi]], dtype = numba.int32), axis = 0)
+            yi, xi = divmod(point_num, points_xlen)
+            polygon_points = np.append(polygon_points, np.array([[polygon_num, yi, xi]], dtype = numba.int32), axis = 0)
 
     return polygon_points
 
@@ -680,11 +680,43 @@ def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: in
     for point_num in numba.prange(len(points)):
         p = point_in_triangle(points[point_num, 0], points[point_num, 1], triangle)
         if p is True:
-            xi, yi = divmod(point_num, points_xlen)
+            yi, xi = divmod(point_num, points_xlen)
             triangle_points = np.append(triangle_points,
-                                        np.array([[triangle_num, xi, yi]], dtype = numba.int32),
+                                        np.array([[triangle_num, yi, xi]], dtype = numba.int32),
                                         axis = 0)
 
+    return triangle_points
+
+
+@njit
+def mesh_points_in_triangle(triangle: np.ndarray,
+                            points_xlen: int,
+                            points_ylen: int,
+                            triangle_num: int = 0) -> np.ndarray:
+    """Calculates which implicit mesh points are within a triangle in 2D for normalised triangle.
+
+    Args:
+        triangle (np.ndarray): array of the triangle's vertices in 2D, shape (3, 2).
+        points_xlen (int): the number of unique x coordinates, starting at 0.0, spacing 1.0.
+        points_ylen (int): the number of unique y coordinates, starting at 0.0, spacing 1.0.
+        triangle_num (int): the triangle number, default is 0.
+
+    Returns:
+        triangle_points (np.ndarray): 2D array containing only the points within the triangle,
+            with each row being the triangle number, points y index, and points x index.
+    """
+    triangle_points = np.empty((0, 3), dtype = numba.int32)
+    y = 0.0
+    for yi in numba.prange(points_ylen):
+        x = 0.0
+        for xi in numba.prange(points_xlen):
+            p = point_in_triangle(x, y, triangle)
+            if p is True:
+                triangle_points = np.append(triangle_points,
+                                            np.array([[triangle_num, yi, xi]], dtype = numba.int32),
+                                            axis = 0)
+            x += 1.0
+        y += 1.0
     return triangle_points
 
 
@@ -804,10 +836,13 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
             continue
         ntpx = max_tpx - min_tpx + 1
         ntpy = max_tpy - min_tpy + 1
-        x = np.linspace(float(min_tpx), float(max_tpx), ntpx)
-        y = np.linspace(float(min_tpy), float(max_tpy), ntpy)
-        p = np.stack(meshgrid(x, y), axis = -1).reshape((-1, 2))
-        triangle_points = points_in_triangle(p, tp, ntpx, triangle_num)
+        # x = np.linspace(float(min_tpx), float(max_tpx), ntpx)
+        # y = np.linspace(float(min_tpy), float(max_tpy), ntpy)
+        # p = np.stack(meshgrid(x, y), axis = -1).reshape((-1, 2))
+        # triangle_points = points_in_triangle(p, tp, ntpx, triangle_num)
+        tp[:, 0] -= float(min_tpx)
+        tp[:, 1] -= float(min_tpy)
+        triangle_points = mesh_points_in_triangle(tp, ntpx, ntpy, triangle_num)
         triangle_points[:, 1] += min_tpy
         triangle_points[:, 2] += min_tpx
         triangles_points = np.append(triangles_points, triangle_points, axis = 0)

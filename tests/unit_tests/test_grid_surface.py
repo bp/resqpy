@@ -23,7 +23,8 @@ def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surfac
     np.testing.assert_array_equal(fip_normal, fip_optimised)
 
 
-def test_find_faces_to_represent_surface_regular_optimised_with_consistent_side(small_grid_and_surface):
+def skip_test_find_faces_to_represent_surface_regular_optimised_with_consistent_side(small_grid_and_surface):
+    # consistent side functionality removed from find_faces_to_represent_surface_regular_optimised()
     # Arrange
     grid = small_grid_and_surface[0]
     surface = small_grid_and_surface[1]
