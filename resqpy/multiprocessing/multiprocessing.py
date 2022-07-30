@@ -98,13 +98,16 @@ def function_multiprocessing(function: Callable,
 
     log.info("creating the recombined epc file")
     for i, epc in enumerate(epc_list):
+        log.debug(f'recombining from mp instance {i} epc: {epc}')
         if epc is None:
             continue
         attempt = 0
         while not os.path.exists(epc):
             attempt += 1
+            if attempt == 7:
+                log.warning(f'mp epc slow to materialise: {epc}')
             if attempt > 300:
-                raise FileNotFoundError('timeout waiting for multiprocess worker epc to become available')
+                raise FileNotFoundError(f'timeout waiting for multiprocess worker epc to become available: {epc}')
             time.sleep(min(attempt, 10))
         attempt = 0
         while True:
@@ -114,7 +117,7 @@ def function_multiprocessing(function: Callable,
                 break
             except FileNotFoundError:
                 if attempt >= 10:
-                    raise
+                    raise FileNotFoundError(f'timeout waiting for mp epc {epc}')
                 time.sleep(1)
         uuids = uuids_list[i]
         if uuids is None:
