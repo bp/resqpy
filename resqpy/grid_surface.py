@@ -1520,7 +1520,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
                     grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool, normals: np.ndarray,
                     return_depths: bool, depths: np.ndarray, return_offsets: bool, offsets: np.ndarray,
                     return_triangles: bool,
-                    triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                    triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Finds the faces that intersect the surface in 3D.
 
     Args:
@@ -1553,6 +1553,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
             corresponding cell face.
         - offsets (np.ndarray): array of the distance between the centre of the cell face and the
             intersection point of the inter-cell centre vector with a triangle in the surface.
+        - triangles (np.ndarray): array of triangle numbers
     """
     n_faces = faces.shape[2 - axis]
     for i in numba.prange(len(hits)):
