@@ -6,6 +6,8 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import numpy as np
+
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
@@ -175,9 +177,10 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
                                                                  p_keyword, p_discrete, string_lookup_uuid, points)
 
     p_array = _process_imported_property_get_p_array(collection, p_cached_name)
+    p_array_bool = None if p_array is None else p_array.dtype in [bool, np.int8]
 
     add_min_max = pcga._process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid,
-                                                                  local_property_kind_uuid)
+                                                                  local_property_kind_uuid, p_array_bool)
 
     if selected_time_indices_list is not None and p_time_index is not None:
         p_time_index = selected_time_indices_list.index(p_time_index)

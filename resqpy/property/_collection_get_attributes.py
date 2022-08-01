@@ -20,8 +20,8 @@ from .property_kind import PropertyKind
 def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, discrete):
     collection.__dict__[cached_name] = cached_array
     zorro = collection.masked_array(cached_array, exclude_value = null_value)
-    if zorro is None or zorro.size == 0 or (not discrete and np.all(np.isnan(zorro))) or (discrete and
-                                                                                          np.all(zorro == null_value)):
+    if (zorro is None or zorro.size == 0 or zorro.dtype in [bool, np.int8] or
+        (not discrete and np.all(np.isnan(zorro))) or (discrete and np.all(zorro == null_value))):
         min_value = max_value = None
     else:
         min_value = np.nanmin(zorro)
@@ -324,9 +324,12 @@ def _cached_part_array_ref_get_node_values(part_node, dtype):
     return first_values_node, tag, dtype
 
 
-def _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid, local_property_kind_uuid):
+def _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid, local_property_kind_uuid,
+                                               is_bool):
     if points or property_kind == 'categorical':
         add_min_max = True
+    elif property_kind == 'discrete' and is_bool:
+        add_min_max = False
     elif local_property_kind_uuid is not None and string_lookup_uuid is not None:
         add_min_max = False
     else:
