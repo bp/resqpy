@@ -10,7 +10,7 @@ import resqpy.grid_surface as rqgs
 from resqpy.model import new_model, Model
 from resqpy.grid import RegularGrid
 from resqpy.surface import Surface, PointSet
-from resqpy.property import PropertyCollection
+from resqpy.property import PropertyCollection, Property
 from pathlib import Path
 import resqpy.olio.uuid as bu
 from uuid import UUID
@@ -135,17 +135,30 @@ def find_faces_to_represent_surface_regular_wrapper(
             )
         # triangulate point set to form a surface; set repr_uuid to that surface and switch repr_flavour to 'surface'
         surf = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
-        surf.set_from_point_set(pset,
-                                convexity_parameter = 2.0,
-                                reorient = True,
-                                extend_with_flange = extend_fault_representation,
-                                flange_radial_distance = flange_radius,
-                                make_clockwise = False)
+        flange_bool = surf.set_from_point_set(pset, 
+                                                       convexity_parameter = 2.0,
+                                                       reorient = True,
+                                                       extend_with_flange = extend_fault_representation,
+                                                       flange_radial_distance = flange_radius,
+                                                       make_clockwise = False)
         extended = extend_fault_representation
         retriangulated = True
         surf.write_hdf5()
         surf.create_xml()
         surface_uuid = surf.uuid
+        if flange_bool is not None:
+            flange_bool_property = Property.from_array(parent_model = model,
+                                                       cached_array = flange_bool,
+                                                       source_info = 'flange bool array',
+                                                       keyword = 'flange bool property',
+                                                       support_uuid = surface_uuid,
+                                                       property_kind = 'discrete',
+                                                       indexable_element = 'faces', 
+                                                       discrete = True)
+            flange_bool_property.write_hdf5()
+            flange_bool_property.create_xml()
+            uuid_list.append(flange_bool_property.uuid)
+            
     surface = Surface(parent_model = model, uuid = str(surface_uuid))
     surface.change_crs(grid.crs)
     if not trimmed and surface.triangle_count() > 100:
@@ -158,12 +171,12 @@ def find_faces_to_represent_surface_regular_wrapper(
         _, p = surface.triangles_and_points()
         pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surface.title)
         surface = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
-        surface.set_from_point_set(pset,
-                                   convexity_parameter = 2.0,
-                                   reorient = True,
-                                   extend_with_flange = extend_fault_representation,
-                                   flange_radial_distance = flange_radius,
-                                   make_clockwise = False)
+        flange_bool = surface.set_from_point_set(pset,
+                                                 convexity_parameter = 2.0,
+                                                 reorient = True,
+                                                 extend_with_flange = extend_fault_representation,
+                                                 flange_radial_distance = flange_radius,
+                                                 make_clockwise = False)
         del pset
         extended = True
         retriangulated = True
@@ -171,6 +184,18 @@ def find_faces_to_represent_surface_regular_wrapper(
         surface.write_hdf5()
         surface.create_xml()
         surface_uuid = surface.uuid
+    if flange_bool is not None:
+        flange_bool_property = Property.from_array(parent_model = model,
+                                                   cached_array = flange_bool,
+                                                   source_info = 'flange bool array',
+                                                   keyword = 'flange bool property',
+                                                   support_uuid = surface_uuid,
+                                                   property_kind = 'discrete',
+                                                   indexable_element = 'faces', 
+                                                   discrete = True)
+        flange_bool_property.write_hdf5()
+        flange_bool_property.create_xml()
+        uuid_list.append(flange_bool_property.uuid)
     uuid_list.append(surface_uuid)
 
     returns = rqgs.find_faces_to_represent_surface_regular_optimised(
