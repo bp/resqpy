@@ -38,9 +38,8 @@ def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface:
     assert len(model.uuids(obj_type = 'GridConnectionSetRepresentation')) == 1
     assert len(model.uuids(obj_type = 'FaultInterpretation')) == 1
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
-    assert len(model.uuids(obj_type = 'DiscreteProperty')) == 1
-    assert len(model.uuids()) == 10
-    assert len(uuid_list) == 8
+    assert len(model.uuids()) == 9
+    assert len(uuid_list) == 7
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_and_surface: Tuple[RegularGrid,
