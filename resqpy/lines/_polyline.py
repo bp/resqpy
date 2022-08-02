@@ -81,6 +81,7 @@ class Polyline(_BasePolyline):
             self.coordinates[..., :set_coord.shape[-1]] = set_coord
             if set_coord.ndim > 2:
                 self.coordinates = self.coordinates.reshape((-1, 3))
+            assert len(self.coordinates) > 1, 'at least 2 coordinates needed for polyline'
             self.nodepatch = (0, len(self.coordinates))
             assert not any(map(lambda x: x is None, self.nodepatch))  # Required fields - assert neither are None
 
@@ -160,6 +161,38 @@ class Polyline(_BasePolyline):
         o_centre = original.balanced_centre()
         polyline.coordinates = scaling * (original.coordinates - o_centre) + o_centre
         polyline.nodepatch = (0, len(polyline.coordinates))
+
+        return polyline
+
+    @classmethod
+    def for_regular_polygon(cls, model, n, radius, centre_xyz, crs_uuid, title):
+        """`Returns a closed polyline representing a regular polygon in xy plane.
+
+        arguments:
+           model (Model): the model for which the new polyline is intended
+           n (int): number of sides for the regular polygon
+           radius (float): distance from centre of polygon to vertices; units are crs xy unites
+           centre_xyz (triple float): the centre of the polygon
+           crs_uuid (UUID): the uuid of the crs for the centre point and the returned polyline
+           title (str): the citation title for the new polyline
+
+        returns:
+           a new closed Polyline representing a regular polygon in the xy plane
+
+        notee:
+           z values are all set to the z value of the centre point;
+           one vertex will have an x value identical to the centre and a positive y offset (due north usually);
+           this method does not write to hdf5 nor create xml for the new polyline
+        """
+
+        assert n >= 3 and radius > 0.0 and len(centre_xyz) == 3 and crs_uuid is not None
+
+        coords = np.zeros((n, 3), dtype = float)
+        for i in range(n):
+            theta = i * 2.0 * maths.pi / float(n)
+            coords[i] = np.array((radius * maths.sin(theta), radius * maths.cos(theta), 0.0), dtype = float) +  \
+                        np.array(centre_xyz, dtype = float)
+        polyline = cls(model, set_bool = True, set_coord = coords, set_crs = crs_uuid, title = title)
 
         return polyline
 
@@ -378,6 +411,54 @@ class Polyline(_BasePolyline):
                 return segment, x, y
         return None, None, None
 
+    def closest_segment_and_distance_to_point_xy(self, p):
+        """Returns the index of the closest segment to a point, and its distance, in the xy plane.
+
+        arguments:
+            p (pair or triple float): the point
+
+        returns:
+            (int, float) where the int is the index of the line segment that the point is closest to;
+            and the float is the distance of the point from that bounded segment, in the xy plane;
+            units of measure are the crs xy units
+        """
+
+        # log.debug(f'{self.title}: closest_segment_and_distance_to_point_xy: {p}')
+        # log.debug(f'{self.coordinates}')
+        p = np.array(p[:2], dtype = float)
+        min_distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[0, :2], self.coordinates[1, :2])
+        min_segment = 0
+        # log.debug(f'.min_seg: {min_segment}; min_distance: {min_distance}')
+        for seg in range(1, len(self.coordinates) - 1):
+            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[seg, :2], self.coordinates[seg + 1, :2])
+            if distance < min_distance:
+                min_distance = distance
+                min_segment = seg
+            # log.debug(f'..min_seg: {min_segment}; min_distance: {min_distance}')
+        if self.isclosed:
+            distance = vu.point_distance_to_line_segment_2d(p, self.coordinates[-1, :2], self.coordinates[0, :2])
+            if distance < min_distance:
+                min_distance = distance
+                min_segment = len(self.coordinates) - 1
+            # log.debug(f'...min_seg: {min_segment}; min_distance: {min_distance}')
+        # log.debug(f'min_seg: {min_segment}; min_distance: {min_distance}')
+        return min_segment, min_distance
+
+    def point_snapped_to_segment_xy(self, segment, p):
+        """Returns the point on a specified segment, in xy plane, that is closest to a point.
+
+        arguments:
+            segment (int): the index of the line segment within the polyline
+            p (pair or triple float): the point p (z value is ignored if present)
+
+        returns:
+            numpy float array of shape (2,) being the x, y coordinates of the snapped point
+        """
+
+        if segment == len(self.coordinates) - 1:
+            segment = -1
+        return meet.point_snapped_to_line_segment_2d(p, self.coordinates[segment], self.coordinates[segment + 1])
+
     def normalised_xy(self, x, y, mode = 'square'):
         """Returns a normalised x',y' pair (in range 0..1) being point x,y under mapping from convex polygon.
 
@@ -492,7 +573,7 @@ class Polyline(_BasePolyline):
             fx = abs(norm_x - 0.5)
             fy = abs(norm_y - 0.5)
             f = 2.0 * max(fx, fy)
-            log.debug(f'intersect x,y: {px}, {py}')
+            # log.debug(f'intersect x,y: {px}, {py}')
             if px == centre_xy[0]:
                 x = centre_xy[0]
             else:
@@ -501,7 +582,7 @@ class Polyline(_BasePolyline):
                 y = centre_xy[1]
             else:
                 y = centre_xy[1] + f * (py - centre_xy[1])
-            log.debug(f'denormal x,y: {x}, {y}')
+            # log.debug(f'denormal x,y: {x}, {y}')
         elif mode == 'perimeter':
             if norm_y == 1.0:
                 norm_y = 0.0
@@ -558,11 +639,27 @@ class Polyline(_BasePolyline):
     def area(self):
         """Returns the area in the xy plane of a closed convex polygon."""
         assert self.isclosed
-        assert self.is_convex()
-        centre = np.mean(self.coordinates, axis = 0)
-        a = 0.0
-        for node in range(len(self.coordinates)):
-            a += vu.area_of_triangle(centre, self.coordinates[node - 1], self.coordinates[node])
+        if self.is_convex():
+            centre = np.mean(self.coordinates, axis = 0)
+            a = 0.0
+            for node in range(len(self.coordinates)):
+                a += vu.area_of_triangle(centre, self.coordinates[node - 1], self.coordinates[node])
+        else:  # use a regular 2D sampling of points to determine approx area
+            xy_box = np.zeros((2, 2), dtype = float)
+            xy_box[0] = np.min(self.coordinates[:, :2], axis = 0)
+            xy_box[1] = np.max(self.coordinates[:, :2], axis = 0)
+            assert np.all(xy_box[1] > xy_box[0])
+            d_xy = xy_box[1] - xy_box[0]
+            d = d_xy[0] + d_xy[1]
+            f_xy = d_xy / d
+            n_xy = np.ceil(100.0 * f_xy).astype(int)
+            x = np.linspace(xy_box[0, 0], xy_box[1, 0], num = n_xy[0], dtype = float)
+            y = np.linspace(xy_box[0, 1], xy_box[1, 1], num = n_xy[1], dtype = float)
+            xy = np.stack(np.meshgrid(x, y), axis = -1).reshape((-1, 2))
+            inside = pip.pip_array_cn(xy, self.coordinates)
+            nf_xy = n_xy.astype(float)
+            d_xy *= (nf_xy + 1.0) / nf_xy
+            a = d_xy[0] * d_xy[1] * float(np.count_nonzero(inside)) / float(inside.size)
         return a
 
     def create_xml(self,

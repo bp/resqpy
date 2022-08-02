@@ -47,7 +47,7 @@ from ._cell_properties import thickness, volume, pinched_out, cell_inactive, int
     interface_lengths_kji, interface_vectors_kji, poly_line_for_cell
 from ._connection_sets import fault_connection_set, pinchout_connection_set, k_gap_connection_set
 from ._xyz import xyz_box, xyz_box_centre, bounding_box, composite_bounding_box, z_inc_down, \
-    check_top_and_base_cell_edge_directions, local_to_global_crs, global_to_local_crs
+    check_top_and_base_cell_edge_directions, _local_to_global_crs, _global_to_local_crs
 from ._pixel_maps import pixel_maps, pixel_map_for_split_horizon_points
 
 import warnings
@@ -293,15 +293,15 @@ class Grid(BaseResqpy):
         """Returns an integer array holding kji0 indices for the cells with given natural indices.
 
         argument:
-           c0s: numpy integer array of shape (..., 3) being natural cell indices (for a flattened array)
+           c0s: numpy integer array of shape (...,) being natural cell indices (for a flattened array)
 
         returns:
            numpy integer array of shape (..., 3) being the equivalent kji0 protocol cell indices
         """
 
-        k0s, ji0s = divmod(c0s, self.nj * self.ni)
+        k0s, ji0s = divmod(c0s.flatten(), self.nj * self.ni)
         j0s, i0s = divmod(ji0s, self.ni)
-        return np.stack((k0s, j0s, i0s), axis = -1)
+        return np.stack((k0s, j0s, i0s), axis = -1).reshape(tuple(list(c0s.shape) + [3]))
 
     def resolve_geometry_child(self, tag, child_node = None):
         """If xml child node is None, looks for tag amongst children of geometry root.
@@ -1951,12 +1951,12 @@ class Grid(BaseResqpy):
         """Converts array of points in situ from global coordinate system to established local one."""
         assert crs_uuid is not None
         # todo: change function name to be different from method name
-        return global_to_local_crs(self,
-                                   a,
-                                   crs_uuid = crs_uuid,
-                                   global_xy_units = global_xy_units,
-                                   global_z_units = global_z_units,
-                                   global_z_increasing_downward = global_z_increasing_downward)
+        return _global_to_local_crs(self,
+                                    a,
+                                    crs_uuid = crs_uuid,
+                                    global_xy_units = global_xy_units,
+                                    global_z_units = global_z_units,
+                                    global_z_increasing_downward = global_z_increasing_downward)
 
     def z_inc_down(self):
         """Return True if z increases downwards in the coordinate reference system used by the grid geometry
@@ -1974,12 +1974,12 @@ class Grid(BaseResqpy):
         """Converts array of points in situ from local coordinate system to global one."""
         assert crs_uuid is not None
         # todo: change function name to be different from method name
-        return local_to_global_crs(self,
-                                   a,
-                                   crs_uuid = crs_uuid,
-                                   global_xy_units = global_xy_units,
-                                   global_z_units = global_z_units,
-                                   global_z_increasing_downward = global_z_increasing_downward)
+        return _local_to_global_crs(self,
+                                    a,
+                                    crs_uuid = crs_uuid,
+                                    global_xy_units = global_xy_units,
+                                    global_z_units = global_z_units,
+                                    global_z_increasing_downward = global_z_increasing_downward)
 
     def composite_bounding_box(self, bounding_box_list):
         """Returns the xyz box which envelopes all the boxes in the list, as a numpy array of shape (2, 3)."""

@@ -1720,15 +1720,50 @@ class Model():
            rel_type_a (string): the Type (role) associated with node_a in the relationship;
               usually 'sourceObject' or 'destinationObject'
            node_b: the other xml node to be related
-           rel_type_a (string): the Type (role) associated with node_b in the relationship
+           rel_type_b (string): the Type (role) associated with node_b in the relationship
               usually 'sourceObject' or 'destinationObject' (opposite of rel_type_a)
            avoid_duplicates (boolean, default True): if True, xml for a relationship is not added
               where it already exists; if False, a duplicate will be created in this situation
 
         returns:
            None
+
+        note:
+           this method has the same effect as create_reciprocal_relationship_uuids() but takes xml root nodes
+           rather than uuids as arguments
         """
 
+        return m_x._create_reciprocal_relationship(self,
+                                                   node_a,
+                                                   rel_type_a,
+                                                   node_b,
+                                                   rel_type_b,
+                                                   avoid_duplicates = avoid_duplicates)
+
+    def create_reciprocal_relationship_uuids(self, uuid_a, rel_type_a, uuid_b, rel_type_b, avoid_duplicates = True):
+        """Adds a node to each of a pair of trees in the rels forest, to represent a two-way relationship.
+
+        arguments:
+           uuid_a: uuid of one of the two parts to be related
+           rel_type_a (string): the Type (role) associated with uuid_a in the relationship;
+              usually 'sourceObject' or 'destinationObject'
+           uuid_b: uuid of the other part to be related
+           rel_type_b (string): the Type (role) associated with uuid_b in the relationship
+              usually 'sourceObject' or 'destinationObject' (opposite of rel_type_a)
+           avoid_duplicates (boolean, default True): if True, xml for a relationship is not added
+              where it already exists; if False, a duplicate will be created in this situation
+
+        returns:
+           None
+
+        note:
+           this method has the same effect as create_reciprocal_relationship() but takes uuids rather than
+           xml root nodes as arguments
+        """
+
+        node_a = self.root_for_uuid(uuid_a)
+        node_b = self.root_for_uuid(uuid_b)
+        assert node_a is not None and node_b is not None, 'part not present when creating relationship'
         return m_x._create_reciprocal_relationship(self,
                                                    node_a,
                                                    rel_type_a,
@@ -1797,22 +1832,86 @@ class Model():
            other_h5_file_name (string, optional): h5 file name for other model; can be passed as
               an optimisation when calling method repeatedly
 
+        returns:
+           the part name of the part in this model, after copying; may differ from requested part if
+           consolidate is True; None in the case of failure
+
         notes:
            if the part name already exists in this model, no action is taken;
            default hdf5 file used in this model and assumed in other_model
         """
 
-        m_f._copy_part_from_other_model(self,
-                                        other_model,
-                                        part,
-                                        realization = realization,
-                                        consolidate = consolidate,
-                                        force = force,
-                                        cut_refs_to_uuids = cut_refs_to_uuids,
-                                        cut_node_types = cut_node_types,
-                                        self_h5_file_name = self_h5_file_name,
-                                        h5_uuid = h5_uuid,
-                                        other_h5_file_name = other_h5_file_name)
+        return m_f._copy_part_from_other_model(self,
+                                               other_model,
+                                               part,
+                                               realization = realization,
+                                               consolidate = consolidate,
+                                               force = force,
+                                               cut_refs_to_uuids = cut_refs_to_uuids,
+                                               cut_node_types = cut_node_types,
+                                               self_h5_file_name = self_h5_file_name,
+                                               h5_uuid = h5_uuid,
+                                               other_h5_file_name = other_h5_file_name)
+
+    def copy_uuid_from_other_model(self,
+                                   other_model,
+                                   uuid,
+                                   realization = None,
+                                   consolidate = True,
+                                   force = False,
+                                   cut_refs_to_uuids = None,
+                                   cut_node_types = None,
+                                   self_h5_file_name = None,
+                                   h5_uuid = None,
+                                   other_h5_file_name = None):
+        """Fully copies part for uuid in from another model, with referenced parts, hdf5 data and relationships.
+
+        arguments:
+           other model (Model): the source model from which to copy a part
+           uuid (UUID): the uuid of the part in the other model to copy into this model
+           realization (int, optional): if present and the part is a property, the realization
+              will be set to this value, instead of the value in use in the other model if any
+           consolidate (boolean, default True): if True and an equivalent part already exists in
+              this model, do not duplicate but instead note uuids as equivalent
+           force (boolean, default False): if True, the part itself is copied without much checking
+              and all references are required to be handled by an entry in the consolidation object
+           cut_refs_to_uuids (list of UUIDs, optional): if present, then xml reference nodes
+              referencing any of the listed uuids are cut out in the copy; use with caution
+           cut_node_types (list of str, optional): if present, any child nodes of a type in the list
+              will be cut out in the copy; use with caution
+           self_h5_file_name (string, optional): h5 file name for this model; can be passed as
+              an optimisation when calling method repeatedly
+           h5_uuid (uuid, optional): UUID for this model's hdf5 external part; can be passed as
+              an optimisation when calling method repeatedly
+           other_h5_file_name (string, optional): h5 file name for other model; can be passed as
+              an optimisation when calling method repeatedly
+
+        returns:
+           the uuid of the part in this model, after copying; may differ from requested uuid if
+           consolidate is True; None in the case of failure
+
+        notes:
+           if the part already exists in this model, no action is taken;
+           default hdf5 file used in this model and assumed in other_model
+        """
+
+        part = other_model.part_for_uuid(uuid)
+        if part is None:
+            return None
+        copied_part = m_f._copy_part_from_other_model(self,
+                                                      other_model,
+                                                      part,
+                                                      realization = realization,
+                                                      consolidate = consolidate,
+                                                      force = force,
+                                                      cut_refs_to_uuids = cut_refs_to_uuids,
+                                                      cut_node_types = cut_node_types,
+                                                      self_h5_file_name = self_h5_file_name,
+                                                      h5_uuid = h5_uuid,
+                                                      other_h5_file_name = other_h5_file_name)
+        if copied_part is None:
+            return None
+        return self.uuid_for_part(copied_part)
 
     def copy_all_parts_from_other_model(self, other_model, realization = None, consolidate = True):
         """Fully copies parts in from another model, with referenced parts, hdf5 data and relationships.

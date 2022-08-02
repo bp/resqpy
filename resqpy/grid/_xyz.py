@@ -104,12 +104,12 @@ def composite_bounding_box(grid, bounding_box_list):
     return result
 
 
-def local_to_global_crs(grid,
-                        a,
-                        crs_uuid = None,
-                        global_xy_units = None,
-                        global_z_units = None,
-                        global_z_increasing_downward = None):
+def _local_to_global_crs(grid,
+                         a,
+                         crs_uuid = None,
+                         global_xy_units = None,
+                         global_z_units = None,
+                         global_z_increasing_downward = None):
     """Converts array of points in situ from local coordinate system to global one."""
 
     if crs_uuid is None:
@@ -120,7 +120,7 @@ def local_to_global_crs(grid,
     crs = rqc.Crs(grid.model, uuid = crs_uuid)
 
     if crs.rotated:
-        a = vec.rotate_array(crs.rotation_matrix, a)
+        a[:] = vec.rotate_array(crs.rotation_matrix, a)
 
     flat_a = a.reshape((-1, 3))  # flattened view of array a as vector of (x, y, z) points, in situ
 
@@ -155,12 +155,12 @@ def z_inc_down(grid):
     return grid.crs.z_inc_down
 
 
-def global_to_local_crs(grid,
-                        a,
-                        crs_uuid = None,
-                        global_xy_units = None,
-                        global_z_units = None,
-                        global_z_increasing_downward = None):
+def _global_to_local_crs(grid,
+                         a,
+                         crs_uuid = None,
+                         global_xy_units = None,
+                         global_z_units = None,
+                         global_z_increasing_downward = None):
     """Converts array of points in situ from global coordinate system to established local one."""
 
     if crs_uuid is None:
@@ -189,7 +189,7 @@ def global_to_local_crs(grid,
             flat_a[:, 2] = np.negative(flat_a[:, 2])
 
     if crs.rotated:
-        flat_a = vec.rotate_array(crs.reverse_rotation_matrix, flat_a)
+        flat_a[:] = vec.rotate_array(crs.reverse_rotation_matrix, flat_a)
 
     return flat_a.reshape(a.shape)
 

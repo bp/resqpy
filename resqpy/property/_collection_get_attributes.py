@@ -20,11 +20,9 @@ from .property_kind import PropertyKind
 def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, discrete):
     collection.__dict__[cached_name] = cached_array
     zorro = collection.masked_array(cached_array, exclude_value = null_value)
-    if not discrete and np.all(np.isnan(zorro)):
+    if (zorro is None or zorro.size == 0 or zorro.dtype in [bool, np.int8] or
+        (not discrete and np.all(np.isnan(zorro))) or (discrete and np.all(zorro == null_value))):
         min_value = max_value = None
-    elif discrete:
-        min_value = int(np.nanmin(zorro))
-        max_value = int(np.nanmax(zorro))
     else:
         min_value = np.nanmin(zorro)
         max_value = np.nanmax(zorro)
@@ -74,11 +72,13 @@ def _get_property_type_details(collection, discrete, string_lookup_uuid, points)
         collection.null_value = None
 
 
-def _get_property_array_min_max_value(collection, property_array, const_value, discrete, min_value, max_value):
+def _get_property_array_min_max_value(collection, property_array, const_value, discrete, min_value, max_value,
+                                      categorical, null_value):
     if const_value is not None:
         return _get_property_array_min_max_const(const_value, collection.null_value, min_value, max_value, discrete)
     elif property_array is not None:
-        return _get_property_array_min_max_array(property_array, min_value, max_value, discrete)
+        return _get_property_array_min_max_array(property_array, min_value, max_value, discrete, categorical,
+                                                 null_value)
     return None, None
 
 
@@ -91,9 +91,13 @@ def _get_property_array_min_max_const(const_value, null_value, min_value, max_va
     return min_value, max_value
 
 
-def _get_property_array_min_max_array(property_array, min_value, max_value, discrete):
+def _get_property_array_min_max_array(property_array, min_value, max_value, discrete, categorical, null_value):
     if discrete:
-        min_value, max_value = _get_property_array_min_max_array_discrete(property_array, min_value, max_value)
+        if categorical:
+            min_value, max_value = _get_property_array_min_max_array_categorical(property_array, min_value, max_value,
+                                                                                 null_value)
+        else:
+            min_value, max_value = _get_property_array_min_max_array_discrete(property_array, min_value, max_value)
     else:
         min_value, max_value = _get_property_array_min_max_array_continuous(property_array, min_value, max_value)
 
@@ -113,6 +117,27 @@ def _get_property_array_min_max_array_discrete(property_array, min_value, max_va
         except Exception:
             max_value = None
             log.warning('no xml maximum value set for discrete property')
+    return min_value, max_value
+
+
+def _get_property_array_min_max_array_categorical(property_array, min_value, max_value, null_value):
+    if min_value is None or max_value is None:
+        unique_values = np.unique(property_array)
+        if null_value is not None and len(unique_values):
+            if unique_values[0] == null_value:
+                unique_values = unique_values[1:]
+            elif unique_values[-1] == null_value:
+                unique_values = unique_values[:-1]
+    if min_value is None:
+        if len(unique_values):
+            min_value = unique_values[0]
+        else:
+            log.warning('no xml minimum value set for categorical property')
+    if max_value is None:
+        if len(unique_values):
+            max_value = unique_values[-1]
+        else:
+            log.warning('no xml maximum value set for categorical property')
     return min_value, max_value
 
 
@@ -299,8 +324,11 @@ def _cached_part_array_ref_get_node_values(part_node, dtype):
     return first_values_node, tag, dtype
 
 
-def _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid, local_property_kind_uuid):
+def _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid, local_property_kind_uuid,
+                                               is_bool):
     if points or property_kind == 'categorical':
+        add_min_max = True
+    elif property_kind == 'discrete' and is_bool:
         add_min_max = False
     elif local_property_kind_uuid is not None and string_lookup_uuid is not None:
         add_min_max = False
@@ -376,16 +404,16 @@ def _supporting_shape_grid(support, indexable_element, direction):
     elif indexable_element == 'faces':
         shape_list = _supporting_shape_grid_faces(direction, support)
     elif indexable_element == 'column edges':
-        shape_list = [(support.nj * (support.ni + 1)) + ((support.nj + 1) * support.ni)
-                     ]  # I edges first; include outer edges
+        # I edges first; include outer edges
+        shape_list = [(support.nj * (support.ni + 1)) + ((support.nj + 1) * support.ni)]
     elif indexable_element == 'edges per column':
         shape_list = [support.nj, support.ni, 4]  # assume I-, J+, I+, J- ordering
     elif indexable_element == 'faces per cell':
         shape_list = [support.nk, support.nj, support.ni, 6]  # assume K-, K+, J-, I+, J+, I- ordering
         # TODO: resolve ordering of edges and make consistent with maps code (edges per column) and fault module (gcs faces)
     elif indexable_element == 'nodes per cell':
-        shape_list = [support.nk, support.nj, support.ni, 2, 2,
-                      2]  # kp, jp, ip within each cell; todo: check RESQML shaping
+        # kp, jp, ip within each cell; todo: check RESQML shaping
+        shape_list = [support.nk, support.nj, support.ni, 2, 2, 2]
     elif indexable_element == 'nodes':
         shape_list = _supporting_shape_grid_nodes(support)
     return shape_list
@@ -417,6 +445,14 @@ def _supporting_shape_wellboreframe(support, indexable_element):
     return shape_list
 
 
+def _supporting_shape_wellboremarkerframe(support, indexable_element):
+    if indexable_element is None or indexable_element == 'nodes':
+        shape_list = [support.node_count]
+    elif indexable_element == 'intervals':
+        shape_list = [support.node_count - 1]
+    return shape_list
+
+
 def _supporting_shape_blockedwell(support, indexable_element):
     if indexable_element is None or indexable_element == 'intervals':
         shape_list = [support.node_count - 1]  # all intervals, including unblocked
@@ -432,6 +468,14 @@ def _supporting_shape_mesh(support, indexable_element):
         shape_list = [support.nj - 1, support.ni - 1]
     elif indexable_element == 'nodes':
         shape_list = [support.nj, support.ni]
+    return shape_list
+
+
+def _supporting_shape_surface(support, indexable_element):
+    if indexable_element is None or indexable_element == 'faces':
+        shape_list = [support.triangle_count()]
+    elif indexable_element == 'nodes':
+        shape_list = [support.node_count()]
     return shape_list
 
 
@@ -465,9 +509,9 @@ def _get_indexable_element(indexable_element, support_type):
                 'obj_UnstructuredGridRepresentation'
         ]:
             indexable_element = 'cells'
-        elif support_type == 'obj_WellboreFrameRepresentation':
+        elif support_type in ['obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation']:
             indexable_element = 'nodes'  # note: could be 'intervals'
-        elif support_type == 'obj_GridConnectionSetRepresentation':
+        elif support_type in ['obj_GridConnectionSetRepresentation', 'obj_TriangulatedSetRepresentation']:
             indexable_element = 'faces'
         else:
             raise Exception('indexable element unknown for unsupported supporting representation object')
@@ -559,16 +603,19 @@ def _realizations_array_ref_get_shape_list(collection, indexable_element, r_exte
 
 
 def _realizations_array_ref_initial_checks(collection):
-    assert collection.support is not None, 'attempt to build realizations array for property collection without supporting representation'
-    assert collection.number_of_parts() > 0, 'attempt to build realizations array for empty property collection'
-    assert collection.has_single_property_kind(
-    ), 'attempt to build realizations array for collection with multiple property kinds'
-    assert collection.has_single_indexable_element(
-    ), 'attempt to build realizations array for collection containing a variety of indexable elements'
-    assert collection.has_single_uom(
-    ), 'attempt to build realizations array for collection containing multiple units of measure'
+    assert collection.support is not None,  \
+        'attempt to build realizations array for property collection without supporting representation'
+    assert collection.number_of_parts() > 0,  \
+        'attempt to build realizations array for empty property collection'
+    assert collection.has_single_property_kind(),  \
+        'attempt to build realizations array for collection with multiple property kinds'
+    assert collection.has_single_indexable_element(),  \
+        'attempt to build realizations array for collection containing a variety of indexable elements'
+    assert collection.has_single_uom(),  \
+        'attempt to build realizations array for collection containing multiple units of measure'
     r_list = collection.realization_list(sort_list = True)
-    assert collection.number_of_parts() == len(r_list), 'collection covers more than realizations of a single property'
+    assert collection.number_of_parts() == len(r_list),  \
+        'collection covers more than realizations of a single property'
     continuous = collection.all_continuous()
     if not continuous:
         assert collection.all_discrete(), 'mixture of continuous and discrete properties in collection'
@@ -576,17 +623,20 @@ def _realizations_array_ref_initial_checks(collection):
 
 
 def _time_array_ref_initial_checks(collection):
-    assert collection.support is not None, 'attempt to build time series array for property collection without supporting representation'
-    assert collection.number_of_parts() > 0, 'attempt to build time series array for empty property collection'
-    assert collection.has_single_property_kind(
-    ), 'attempt to build time series array for collection with multiple property kinds'
-    assert collection.has_single_indexable_element(
-    ), 'attempt to build time series array for collection containing a variety of indexable elements'
-    assert collection.has_single_uom(
-    ), 'attempt to build time series array for collection containing multiple units of measure'
+    assert collection.support is not None,  \
+        'attempt to build time series array for property collection without supporting representation'
+    assert collection.number_of_parts() > 0,  \
+        'attempt to build time series array for empty property collection'
+    assert collection.has_single_property_kind(),  \
+        'attempt to build time series array for collection with multiple property kinds'
+    assert collection.has_single_indexable_element(),  \
+        'attempt to build time series array for collection containing a variety of indexable elements'
+    assert collection.has_single_uom(),  \
+        'attempt to build time series array for collection containing multiple units of measure'
 
     ti_list = collection.time_index_list(sort_list = True)
-    assert collection.number_of_parts() == len(ti_list), 'collection covers more than time indices of a single property'
+    assert collection.number_of_parts() == len(ti_list),  \
+        'collection covers more than time indices of a single property'
 
     continuous = collection.all_continuous()
     if not continuous:
@@ -615,11 +665,13 @@ def _time_array_ref_not_fill_missing(collection, ti_list, dtype, a):
 
 
 def _facet_array_ref_checks(collection):
-    assert collection.support is not None, 'attempt to build facets array for property collection without supporting representation'
-    assert collection.number_of_parts() > 0, 'attempt to build facets array for empty property collection'
-    assert collection.has_single_property_kind(
-    ), 'attempt to build facets array for collection containing multiple property kinds'
-    assert collection.has_single_indexable_element(
-    ), 'attempt to build facets array for collection containing a variety of indexable elements'
-    assert collection.has_single_uom(
-    ), 'attempt to build facets array for collection containing multiple units of measure'
+    assert collection.support is not None,  \
+        'attempt to build facets array for property collection without supporting representation'
+    assert collection.number_of_parts() > 0,  \
+        'attempt to build facets array for empty property collection'
+    assert collection.has_single_property_kind(),  \
+        'attempt to build facets array for collection containing multiple property kinds'
+    assert collection.has_single_indexable_element(),  \
+        'attempt to build facets array for collection containing a variety of indexable elements'
+    assert collection.has_single_uom(),  \
+        'attempt to build facets array for collection containing multiple units of measure'

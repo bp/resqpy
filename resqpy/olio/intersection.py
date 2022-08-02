@@ -6,7 +6,11 @@ import logging
 
 log = logging.getLogger(__name__)
 
+from typing import Union
 import numpy as np
+from numba import njit  # type: ignore
+
+import resqpy.olio.vector_utilities as vec
 
 
 def line_plane_intersect(line_p, line_v, triangle):
@@ -33,7 +37,7 @@ def line_plane_intersect(line_p, line_v, triangle):
     return line_p + t * line_v
 
 
-def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
+def line_triangle_intersect(line_p, line_v, triangle, line_segment = False, l_tol = 0.0, t_tol = 0.0):
     """Find the intersection of a line within a triangle in 3D space.
 
     arguments:
@@ -41,6 +45,10 @@ def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
        line_v (3 element numpy vector): vector being the direction of the line
        triangle ((3, 3) numpy array): three corners of the triangle (second index is xyz)
        line_segment (boolean): if True, returns None if intersection is outwith (line_p .. line_p + line_v)
+       l_tol (float, default 0.0): a fraction of the line length to allow for an intersection to be found
+           just outside the segment
+       t_tol (float, default 0.0): a fraction of the triangle size to allow for an intersection to be found
+           just outside the triangle
 
     returns:
        point (3 element numpy vector) of intersection of the line within the triangle,
@@ -58,13 +66,62 @@ def line_triangle_intersect(line_p, line_v, triangle, line_segment = False):
         return None  # line is parallel to plane
     lp_t0 = line_p - triangle[0]
     t = np.dot(norm, lp_t0) / denom
-    if line_segment and (t < 0.0 or t > 1.0):
+    if line_segment and (t < 0.0 - l_tol or t > 1.0 + l_tol):
         return None
     u = np.dot(np.cross(p02, line_rv), lp_t0) / denom
-    if u < 0.0 or u > 1.0:
+    if u < 0.0 - t_tol or u > 1.0 + t_tol:
         return None
     v = np.dot(np.cross(line_rv, p01), lp_t0) / denom
-    if v < 0.0 or u + v > 1.0:
+    if v < 0.0 - t_tol or u + v > 1.0 + t_tol:
+        return None
+
+    return line_p + t * line_v
+
+
+@njit
+def line_triangle_intersect_numba(
+    line_p: np.ndarray,
+    line_v: np.ndarray,
+    triangle: np.ndarray,
+    line_segment: bool = False,
+    l_tol: float = 0.0,
+    t_tol: float = 0.0,
+) -> Union[None, np.ndarray]:
+    """Find the intersection of a line within a triangle in 3D space.
+
+    Args:
+        line_p (np.ndarray): a point on the line.
+        line_v (np.ndarray): vector being the direction of the line.
+        triangle (np.ndarray): three corners of the triangle (second index is xyz).
+        line_segment (bool): if True, returns None if intersection is outwith (line_p .. line_p + line_v).
+        l_tol (float, default 0.0): a fraction of the line length to allow for an intersection to be found
+            just outside the segment.
+        t_tol (float, default 0.0): a fraction of the triangle size to allow for an intersection to be found
+            just outside the triangle.
+
+    Returns:
+        point (np.ndarray) of intersection of the line within the triangle,
+        or None if line is parallel to plane of triangle or intersection with the plane is
+        outside the triangle.
+    """
+
+    p01 = triangle[1] - triangle[0]
+    p02 = triangle[2] - triangle[0]
+
+    norm = np.cross(p01, p02)  # normal to plane
+    line_rv = np.negative(line_v)
+    denom = np.dot(line_rv, norm)
+    if denom == 0.0:
+        return None  # line is parallel to plane
+    lp_t0 = line_p - triangle[0]
+    t = np.dot(norm, lp_t0) / denom
+    if line_segment and (t < 0.0 - l_tol or t > 1.0 + l_tol):
+        return None
+    u = np.dot(np.cross(p02, line_rv), lp_t0) / denom
+    if u < 0.0 - t_tol or u > 1.0 + t_tol:
+        return None
+    v = np.dot(np.cross(line_rv, p01), lp_t0) / denom
+    if v < 0.0 - t_tol or u + v > 1.0 + t_tol:
         return None
 
     return line_p + t * line_v
@@ -361,3 +418,25 @@ def line_line_intersect(x1, y1, x2, y2, x3, y3, x4, y4, line_segment = False, ha
         y = (a * (y3 - y4) - (y1 - y2) * b) / divisor
 
     return x, y
+
+
+def point_projected_to_line_2d(p, l1, l2):
+    """Return the point on the unbounded line passing through l1 & l2 which is closest to point p, in xy plane."""
+
+    # create normal vector to l1, l2
+    v = l2 - l1
+    n = np.array((-v[1], v[0]))
+    # find intersection of p, p->n with l1, l2
+    pn = np.array(p[:2]) + n
+    return line_line_intersect(l1[0], l1[1], l2[0], l2[1], p[0], p[1], pn[0], pn[1], line_segment = False)
+
+
+def point_snapped_to_line_segment_2d(p, l1, l2):
+    """Returns the point on the bounded line segment l1, l2 which is closest to point p, in xy plane."""
+
+    if vec.is_obtuse_2d(l1, p, l2):
+        return l1[:2]
+    elif vec.is_obtuse_2d(l2, p, l1):
+        return l2[:2]
+    else:
+        return point_projected_to_line_2d(p, l1, l2)

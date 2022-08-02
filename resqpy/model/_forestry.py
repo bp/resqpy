@@ -449,7 +449,7 @@ def _copy_part_from_other_model(model,
 
     assert other_model is not None
     if other_model is model:
-        return
+        return part
     assert part is not None
     if realization is not None:
         assert isinstance(realization, int) and realization >= 0
@@ -463,13 +463,13 @@ def _copy_part_from_other_model(model,
 
     # check whether already existing in this model
     if part in model.parts_forest.keys():
-        return
+        return part
 
     if other_model.type_of_part(part) == 'obj_EpcExternalPartReference':
-        log.debug('refusing to copy hdf5 ext part from other model')
-        return
+        # log.debug('refusing to copy hdf5 ext part from other model')
+        return None
 
-    log.debug('copying part: ' + str(part))
+    # log.debug('copying part: ' + str(part))
 
     uuid = rqet.uuid_in_part_name(part)
     if not force:
@@ -479,7 +479,7 @@ def _copy_part_from_other_model(model,
     other_root = other_model.root_for_part(part, is_rels = False)
     if other_root is None:
         log.error('failed to copy part (missing in source model?): ' + str(part))
-        return
+        return None
 
     resident_uuid = _unforced_consolidation(model, other_model, consolidate, force, part)
 
@@ -517,6 +517,8 @@ def _copy_part_from_other_model(model,
 
     # copy relationships where target part is present in this model – this part is source, then destination
     _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node)
+
+    return model.part_for_uuid(resident_uuid)
 
 
 def _unforced_consolidation(model, other_model, consolidate, force, part):

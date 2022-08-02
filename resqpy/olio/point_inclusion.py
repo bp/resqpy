@@ -104,6 +104,8 @@ def pip_array_cn(p_a, poly):
     # returned boolean array has shape of p_array less the final axis
 
     elements = np.prod(list(p_a.shape)[:-1], dtype = int)
+    if elements == 0:
+        return np.zeros((0,), dtype = bool)
     p = p_a.reshape((elements, -1))
     crossings = np.zeros((elements,), dtype = int)
 

@@ -149,7 +149,7 @@ def uuid_as_int(uuid_obj):
     if isinstance(uuid_obj, str):
         uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
     if not isinstance(uuid_obj, uuid.UUID):
-        raise ValueError(f'non uuid object where uuid expected: {uuid_obj}')
+        raise ValueError(f'non uuid object where uuid expected: {uuid_obj}; type: {type(uuid_obj)}')
     return uuid_obj.int
 
 

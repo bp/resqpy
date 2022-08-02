@@ -4,12 +4,14 @@ import pandas as pd
 from numpy.testing import assert_array_almost_equal
 import pytest
 
+import resqpy
 import resqpy.olio.uuid as bu
 from resqpy.grid import RegularGrid
 from resqpy.model import Model
 import resqpy.property as rqp
 from resqpy.well.well_utils import _derive_from_wellspec_check_grid_name
-import resqpy.well
+from resqpy.well import BlockedWell
+from resqpy.time_series import TimeSeries
 
 
 def test_wellspec_properties(example_model_and_crs):
@@ -586,3 +588,60 @@ def test_convenience_methods_xyz_and_kji0_marker(example_model_and_crs):
     np.testing.assert_equal(cell_0, np.array([1, 1, 0]))  # start blocked well at (iw, jw, l) == (1, 2, 2)
     assert grid_0_uuid == grid.uuid
     assert crs_uuid == crs.uuid  # TODO: less trivial assertion?
+
+
+def test_add_df_properties(tmp_path, tmp_model):
+    # Arrange
+    df = pd.DataFrame({
+        "IW": [18, 18, 18, 18],
+        "JW": [28, 28, 28, 28],
+        "L": [2, 3, 4, 5],
+        "KH": [np.nan, np.nan, np.nan, np.nan],
+        "RADW": [0.32, 0.32, 0.32, 0.32],
+        "SKIN": [0.0, 0.0, 0.0, 0.0],
+        "RADB": [np.nan, np.nan, np.nan, np.nan],
+        "WI": [np.nan, np.nan, np.nan, np.nan],
+        "STAT": [True, True, True, True],
+        "LENGTH": [5.0, 5.0, 5.0, 5.0],
+        "ANGLV": [88.08, 88.08, 88.08, 88.08],
+        "ANGLA": [86.8, 86.8, 86.8, 86.8],
+        "DEPTH": [9165.28, 9165.28, 9165.28, 9165.28],
+    })
+    columns = df[3:]
+    length_uom = 'm'
+
+    model = tmp_model
+    time_series = TimeSeries(model)
+    time_series.timestamps = ["2004-04-11"]
+    time_series.create_xml()
+    time_index = 0
+    time_series_uuid = time_series.uuid
+
+    wellspec_file = f"{tmp_path}/test.dat"
+    with open(wellspec_file, "w") as file:
+        file.write("""
+WELLSPEC TEST_WELL
+IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    ANGLA    DEPTH
+18    28    2    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    3    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    4    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+18    28    5    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
+            """)
+
+    grid = RegularGrid(model, extent_kji = (50, 50, 50))
+    grid.create_xml()
+
+    bw = BlockedWell(
+        model,
+        wellspec_file = wellspec_file,
+        well_name = "TEST_WELL",
+        use_face_centres = True,
+        add_wellspec_properties = False,
+    )
+
+    # Act
+    bw.add_df_properties(df, columns, length_uom, time_index, time_series_uuid)
+
+    # Assert
+    assert len(model.uuids(obj_type = 'DiscreteProperty')) == 1
+    assert len(model.uuids(obj_type = 'ContinuousProperty')) == 15

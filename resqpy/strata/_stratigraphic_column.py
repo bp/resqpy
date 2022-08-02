@@ -101,7 +101,7 @@ class StratigraphicColumn(BaseResqpy):
 
         if not isinstance(other, StratigraphicColumn):
             return False
-        if self is other or bu.matching_uuid(self.uuid, other.uuid):
+        if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
         if len(self.ranks) != len(other.ranks):
             return False

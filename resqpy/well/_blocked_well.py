@@ -111,6 +111,7 @@ class BlockedWell(BaseResqpy):
            centres of the k faces in the column;
            optional RESQML attributes are not handled by this code (WITSML log reference, interval stratigraphic units,
            cell fluid phase units);
+           multiple grids are currently only supported when loading an existing blocked well from xml;
            mysterious RESQML WellboreFrameIndexableElements is not used in any other RESQML classes and is therefore
            not used here
 
@@ -127,8 +128,7 @@ class BlockedWell(BaseResqpy):
         self.cell_indices = None  #: cell_count natural cell indices, paired with non-null grid_indices
         self.grid_indices = None  #: node_count-1 indices into grid list for each interval in node_mds; -1 for unblocked interval
         self.face_pair_indices = None  #: entry, exit face per cell indices, -1 for Target Depth termination within a cell
-        self.grid_list = [
-        ]  #: list of grid objects indexed by grid_indices; for now only handles 1 grid unless loading from xml
+        self.grid_list = []  #: list of grid objects indexed by grid_indices
         self.wellbore_interpretation = None  #: associated wellbore interpretation object
         self.wellbore_feature = None  #: associated wellbore feature object
 
@@ -527,9 +527,11 @@ class BlockedWell(BaseResqpy):
                                                        lazy = False,
                                                        use_single_layer_tactics = use_single_layer_tactics)
         if bw is None:
-            raise Exception('failed to generate blocked well from trajectory with uuid: ' + str(trajectory.uuid))
-
-        assert bw is self
+            log.error(f'failed to generate blocked well from trajectory with uuid: {trajectory.uuid}')
+            self.node_count = None
+            self.cell_count = None
+        else:
+            assert bw is self
 
     def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True):
         """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md
@@ -657,11 +659,11 @@ class BlockedWell(BaseResqpy):
         previous_xyz = None
         trajectory_mds = []
         trajectory_points = []  # entries paired with trajectory_mds
-        blocked_intervals = [
-        ]  # will have one fewer entries than trajectory nodes; 0 = blocked, -1 = not blocked (for grid indices)
+        blocked_intervals = []  # will have one fewer entries than trajectory nodes
+        # blocked_intervals values; 0 = blocked, -1 = not blocked (for grid indices)
         blocked_cells_kji0 = []  # will have length equal to number of 0's in blocked intervals
-        blocked_face_pairs = [
-        ]  # same length as blocked_cells_kji0; each is ((entry axis, entry polarity), (exit axis, exit polarity))
+        blocked_face_pairs = []  # same length as blocked_cells_kji0
+        # blocked_face_pairs is list of ((entry axis, entry polarity), (exit axis, exit polarity))
 
         log.debug('wellspec dataframe for well ' + str(well_name) + ' has ' + str(len(df)) + ' row' + _pl(len(df)))
 
@@ -669,10 +671,6 @@ class BlockedWell(BaseResqpy):
 
         angles_present = ('ANGLV' in df.columns and 'ANGLA' in df.columns and not pd.isnull(df.iloc[0]['ANGLV']) and
                           not pd.isnull(df.iloc[0]['ANGLA']))
-
-        # TODO: remove these temporary overrides
-        angles_present = False
-        use_face_centres = True
 
         if not angles_present and not use_face_centres:
             log.warning(f'ANGLV and/or ANGLA data unavailable for well {well_name}: using face centres')
@@ -950,7 +948,7 @@ class BlockedWell(BaseResqpy):
                 property_columns = add_as_properties
             else:
                 property_columns = df.columns[3:]
-            self._add_df_properties(df, property_columns, length_uom = length_uom)
+            self.add_df_properties(df, property_columns, length_uom = length_uom)
 
     def import_from_rms_cellio(self,
                                cellio_file,
@@ -1131,12 +1129,12 @@ class BlockedWell(BaseResqpy):
 
         blocked_count = len(blocked_cells_kji0)
         if blocked_count == 0:
-            log.warning('no intervals blocked for well ' + well_name + ' in grid ' + str(grid_name))
+            log.warning(f"No intervals blocked for well {well_name} in grid"
+                        f"{f' {grid_name}' if grid_name is not None else ''}.")
             return None
         else:
-            log.info(
-                str(blocked_count) + ' interval' + _pl(blocked_count) + ' blocked for well ' + well_name + ' in grid ' +
-                str(grid_name))
+            log.info(f"{blocked_count} interval{_pl(blocked_count)} blocked for well {well_name} in"
+                     f" grid{f' {grid_name}' if grid_name is not None else ''}.")
 
     def dataframe(self,
                   i_col = 'IW',
@@ -1546,7 +1544,6 @@ class BlockedWell(BaseResqpy):
         self.__add_as_properties(df = df,
                                  add_as_properties = add_as_properties,
                                  extra_columns_list = extra_columns_list,
-                                 row_ci_list = row_ci_list,
                                  length_uom = length_uom)
 
         return df
@@ -2342,7 +2339,7 @@ class BlockedWell(BaseResqpy):
 
         return df
 
-    def __add_as_properties(self, df, add_as_properties, extra_columns_list, row_ci_list, length_uom):
+    def __add_as_properties(self, df, add_as_properties, extra_columns_list, length_uom):
         """Checks that the column can be added as a property part then creates said part."""
 
         if add_as_properties:
@@ -2352,71 +2349,110 @@ class BlockedWell(BaseResqpy):
                 property_columns = add_as_properties
             else:
                 property_columns = extra_columns_list
-            self._add_df_properties(df, property_columns, row_ci_list = row_ci_list, length_uom = length_uom)
+            self.add_df_properties(df, property_columns, length_uom = length_uom)
 
-    def _add_df_properties(self, df, columns, row_ci_list = None, length_uom = None):
-        # creates a property part for each named column, based on the dataframe values
-        # column name used as the citation title
-        # self must already exist as a part in the model
-        # currently only handles single grid situations
+    def add_df_properties(self, df, columns, length_uom = None, time_index = None, time_series_uuid = None):
+        """Creates a property part for each column in the dataframe, based on the dataframe values.
+        
+        The column name is used as the citation title. Self must already exist as a part in the
+        model and this method currently only handles single grid situations.
+
+        Args:
+            df (pd.DataFrame): dataframe containing the columns that will be converted to properties.
+            columns (List[str]): list of the column names that will be converted to properties.
+            length_uom (str, optional): the length unit of measure.
+            time_index (int, optional): if adding a timestamp to the property, this is the timestamp
+                index of the TimeSeries timestamps attribute.
+            time_series_uuid (uuid.UUID, optional): if adding a timestamp to the property, this is
+                the uuid of the TimeSeries object.
+
+        Returns:
+            None
+        """
         # todo: rewrite to add separate property objects for each grid references by the blocked well
-        log.debug('_add_df_props: df:')
-        log.debug(f'\n{df}')
-        log.debug(f'columns: {columns}')
         assert len(self.grid_list) == 1
         if columns is None or len(columns) == 0 or len(df) == 0:
             return
-        if row_ci_list is None:
-            row_ci_list = np.arange(self.cell_count)
-        assert len(row_ci_list) == len(df)
         if length_uom is None:
             length_uom = self.trajectory.md_uom
         extra_pc = rqp.PropertyCollection()
         extra_pc.set_support(support = self)
-        ci_map = np.array(row_ci_list, dtype = int)
+        missing_cells_nan_array = np.zeros(self.cell_count - len(df)) + np.nan
 
-        for e in columns:
-            extra = e.upper()
-            pk, uom = self.__set_pk_and_uom_for_df_properties(extra = extra, length_uom = length_uom)
+        for column in columns:
+            extra = column.upper()
+            uom, pk, discrete = self.__set_uom_pk_discrete_for_df_properties(extra = extra, length_uom = length_uom)
+            if discrete:
+                null_value = -1
+            else:
+                null_value = None
             # 'SKIN': use defaults for now; todo: create local property kind for skin
-            expanded = np.full(self.cell_count, np.NaN)
-            expanded[ci_map] = df[extra]
-            extra_pc.add_cached_array_to_imported_list(expanded,
-                                                       'blocked well dataframe',
-                                                       extra,
-                                                       discrete = False,
-                                                       uom = uom,
-                                                       property_kind = pk,
-                                                       local_property_kind_uuid = None,
-                                                       facet_type = None,
-                                                       facet = None,
-                                                       realization = None,
-                                                       indexable_element = 'cells',
-                                                       count = 1)
+            expanded = np.append(df[column].to_numpy(), missing_cells_nan_array)
+            extra_pc.add_cached_array_to_imported_list(
+                expanded,
+                'blocked well dataframe',
+                extra,
+                discrete = discrete,
+                uom = uom,
+                property_kind = pk,
+                local_property_kind_uuid = None,
+                facet_type = None,
+                facet = None,
+                realization = None,
+                indexable_element = 'cells',
+                count = 1,
+                time_index = time_index,
+                null_value = null_value,
+            )
         extra_pc.write_hdf5_for_imported_list()
-        extra_pc.create_xml_for_imported_list_and_add_parts_to_model()
+        extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid)
 
-    def __set_pk_and_uom_for_df_properties(self, extra, length_uom):
+    def __set_uom_pk_discrete_for_df_properties(self, extra, length_uom, temperature_uom = None):
         """Set the property kind and unit of measure for all properties in the dataframe."""
-        column_list = ['ANGLA', 'ANGLV', 'KH', 'PPERF']
-        uom_list = ['dega', 'dega', 'mD.' + length_uom, length_uom + '/' + length_uom]
-        pk_list = ['azimuth', 'inclination', 'permeability_length', 'continuous'
-                  ]  # neither azimuth nor dip are correct property kinds; todo: create local property kinds
-        if extra in column_list:
-            list_position = column_list.index(extra)
-            uom, pk = uom_list[list_position], pk_list[list_position]
-        elif extra in ['LENGTH', 'MD', 'X', 'Y', 'DEPTH', 'RADW']:
-            uom, pk = self.__set_pk_and_uom_for_length_based_properties(length_uom = length_uom, extra = extra)
-        else:
-            uom = 'Euc'
-            pk = 'continuous'
-        return uom, pk
+        if length_uom not in ['m', 'ft']:
+            raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
+        if extra == 'TEMP' and (temperature_uom is None or
+                                temperature_uom not in bwam.valid_uoms('thermodynamic temperature')):
+            raise ValueError(f"The temperature_uom must be in {bwam.valid_uoms('thermodynamic temperature')}.")
 
-    def __set_pk_and_uom_for_length_based_properties(self, length_uom, extra):
+        length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom,
+                                                                                        extra = extra)
+        uom_pk_discrete_dict = {
+            'ANGLA': ('dega', 'plane angle', False),
+            'ANGLV': ('dega', 'plane angle', False),
+            'KH': (f'mD.{length_uom}', 'permeability length', False),
+            'PPERF': (f'{length_uom}/{length_uom}', 'continuous', False),
+            'STAT': (None, 'discrete', True),
+            'LENGTH': length_uom_pk_discrete,
+            'MD': length_uom_pk_discrete,
+            'X': length_uom_pk_discrete,
+            'Y': length_uom_pk_discrete,
+            'DEPTH': length_uom_pk_discrete,
+            'RADW': length_uom_pk_discrete,
+            'RADB': length_uom_pk_discrete,
+            'RADBP': length_uom_pk_discrete,
+            'RADWP': length_uom_pk_discrete,
+            'FM': (f'{length_uom}/{length_uom}', 'continuous', False),
+            'IRELPM': (None, 'discrete', True),
+            'SECT': (None, 'discrete', True),
+            'LAYER': (None, 'discrete', True),
+            'ANGLE': ('dega', 'plane angle', False),
+            'TEMP': (temperature_uom, 'thermodynamic temperature', False),
+            'MDCON': length_uom_pk_discrete,
+            'K': ('mD', 'permeability rock', False),
+            'DZ': (length_uom, 'cell length', False),
+            'DTOP': (length_uom, 'depth', False),
+            'DBOT': (length_uom, 'depth', False),
+            'SKIN': ('Euc', 'continuous', False),
+            'WI': ('Euc', 'continuous', False),
+        }
+        return uom_pk_discrete_dict.get(extra, ('Euc', 'continuous', False))
+
+    def __set_uom_pk_discrete_for_length_based_properties(self, length_uom, extra):
         if length_uom is None or length_uom == 'Euc':
-            if extra in ['LENGTH', 'MD']:
+            if extra in ['LENGTH', 'MD', 'MDCON']:
                 uom = self.trajectory.md_uom
-            elif extra in ['X', 'Y', 'RADW']:
+            elif extra in ['X', 'Y', 'RADW', 'RADB', 'RADBP', 'RADWP']:
                 uom = self.grid_list[0].xy_units()
             else:
                 uom = self.grid_list[0].z_units()
@@ -2426,7 +2462,7 @@ class BlockedWell(BaseResqpy):
             pk = 'depth'
         else:
             pk = 'length'
-        return pk, uom
+        return uom, pk, False
 
     def static_kh(self,
                   ntg_uuid = None,
@@ -2718,7 +2754,10 @@ class BlockedWell(BaseResqpy):
                         width = 10
                     if BlockedWell.__is_float_column(col_name):
                         form = '{0:>' + str(width) + '.3f}'
-                        fp.write(sep + form.format(float(row[col_name])))
+                        value = row[col_name]
+                        if col_name == 'ANGLA' and (np.isnan(value) or value is None):
+                            value = 0.0
+                        fp.write(sep + form.format(float(value)))
                     else:
                         form = '{0:>' + str(width) + '}'
                         if BlockedWell.__is_int_column(col_name):

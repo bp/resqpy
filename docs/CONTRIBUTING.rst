@@ -54,9 +54,11 @@ Development environment setup
       cd resqpy
 
 2. Set up a Python environment
+   **Note: due to a requirement of one of the dependencies, you will need to use a 64-bit installation of Python when working with RESQPY.**
+   The RESQPY project uses `Poetry <https://python-poetry.org/>`_ for dependency management and environment setup. Please `install Poetry <https://python-poetry.org/docs/master/#installing-with-pip>`_ first if you have not already done so.
+   With Poetry installed, please then install the `Poetry Dynamic Versioning Plugin <https://github.com/mtkennerly/poetry-dynamic-versioning>`_.
 
-   The RESQPY project uses `Poetry <https://python-poetry.org/>`_ for dependency management and environment setup. Please `install Poetry <https://python-poetry.org/docs/#osx--linux--bashonwindows-install-instructions>`_ first if you have not already done so.
-   With Poetry installed, the environment can then be setup automatically with all dependencies installed using:
+   Once both those packages are installed, the environment can then be setup automatically with all dependencies installed using the following command in the base directory (the directory with the pyproject.toml file):
 
    .. code-block:: bash
 
@@ -284,7 +286,7 @@ This can be interpreted as:
 * ``dev301`` : 301 commits added since the previous release.
 * ``+gddfbf6c`` : a ``+g`` prefix followed by current commit ID: ``ddfbf6c``.
 
-How the version is retreived
+How the version is retrieved
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The git history defines the version, and consequently the version number cannot

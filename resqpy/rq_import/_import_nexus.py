@@ -524,10 +524,15 @@ def import_nexus(
                     for keyword in recur_prop_list:
                         if not keyword or not keyword.isalnum():
                             continue
-                        step_import_collection.import_vdb_recurrent_property_to_cache(vdbase,
-                                                                                      timestep_number,
-                                                                                      keyword,
-                                                                                      grid_name = grid_title)
+                        prop_kind, facet_type, facet = rp.property_kind_and_facet_from_keyword(keyword)
+                        step_import_collection.import_vdb_recurrent_property_to_cache(
+                            vdbase,
+                            timestep_number,  # also used as time_index?
+                            keyword,
+                            grid_name = grid_title,
+                            property_kind = prop_kind,
+                            facet_type = facet_type,
+                            facet = facet)
                 # extend hdf5 with cached arrays for this timestep
                 log.info('number of recurrent grid property arrays for timestep: ' + str(timestep_number) + ' is: ' +
                          str(step_import_collection.number_of_imports()))

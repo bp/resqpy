@@ -113,3 +113,96 @@ def test_points_in_triangles():
     r_edge = vec.points_in_triangles(p, t, d, projection = 'xy', edged = True)
     assert np.all(r_no_edge == e_no_edge)
     assert np.all(r_edge == e_edge)
+
+
+def test_point_in_triangle():
+    p = np.array([[1.0, 2.0], [1.0, 6.0], [5.0, 6.0], [5.0, 2.0], [3.0, 4.0]])
+    t = np.empty((3, 2), dtype = float)
+    e = 1.0e-6
+    t[0] = p[0]
+    t[1] = p[1]
+    t[2] = p[4]
+    assert vec.point_in_triangle(p[0, 0] + e, p[0, 1] + 2.0 * e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[1, 0] + e, p[1, 1] - 2.0 * e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[4, 0] - e, p[4, 1], t)  # actually right on a vertex, so might fail due to precision
+    for pi in [2, 3]:
+        assert not vec.point_in_triangle(p[pi, 0], p[pi, 1], t)
+    assert vec.point_in_triangle(2.0, 3.5, t)
+    assert not vec.point_in_triangle(0.0, 0.0, t)
+    assert not vec.point_in_triangle(0.0, 4.0, t)
+    assert not vec.point_in_triangle(7.0, 4.0, t)
+    assert not vec.point_in_triangle(2.0, 0.0, t)
+    assert not vec.point_in_triangle(2.0, 7.0, t)
+    assert not vec.point_in_triangle(2.0, 2.5, t)
+    assert not vec.point_in_triangle(2.0, 5.5, t)
+    t[0] = p[2]
+    t[1] = p[1]
+    t[2] = p[4]
+    assert vec.point_in_triangle(p[2, 0] - 2.0 * e, p[2, 1] - e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[1, 0] + 2.0 * e, p[1, 1] - e,
+                                 t)  # actually right on a vertex, so might fail due to precision
+    assert vec.point_in_triangle(p[4, 0], p[4, 1] + e, t)  # actually right on a vertex, so might fail due to precision
+    for pi in [0, 3]:
+        assert not vec.point_in_triangle(p[pi, 0], p[pi, 1], t)
+    assert vec.point_in_triangle(3.0, 5.5, t)
+    assert not vec.point_in_triangle(0.0, 0.0, t)
+    assert not vec.point_in_triangle(0.0, 4.0, t)
+    assert not vec.point_in_triangle(7.0, 4.0, t)
+    assert not vec.point_in_triangle(2.0, 0.0, t)
+    assert not vec.point_in_triangle(2.0, 7.0, t)
+    assert not vec.point_in_triangle(2.0, 4.5, t)
+    assert not vec.point_in_triangle(4.0, 4.5, t)
+
+
+def test_is_obtuse_2d():
+    p = np.array((0.0, 0.0))
+    p1, p2 = np.array((5.0, 0.01)), np.array((0.01, 5.0))
+    assert not vec.is_obtuse_2d(p, p1, p2)
+    p1, p2 = np.array((10.0, 9.7)), np.array((9.9, 10.0))
+    assert not vec.is_obtuse_2d(p, p1, p2)
+    p1, p2 = -np.array((10.0, 9.7)), -np.array((9.9, 10.0))
+    assert not vec.is_obtuse_2d(p, p1, p2)
+    p1, p2 = np.array((10.0, 9.7)), np.array((-1.0, 9.0))
+    assert not vec.is_obtuse_2d(p, p1, p2)
+    p1, p2 = np.array((10.0, 9.7)), np.array((1.0, -9.0))
+    assert vec.is_obtuse_2d(p, p1, p2)
+    p1, p2 = np.array((5.0, 0.01)), np.array((-2.0, 5.0))
+    assert vec.is_obtuse_2d(p, p1, p2)
+    p1, p2 = np.array((-5.0, 0.01)), np.array((5.0, 1.0))
+    assert vec.is_obtuse_2d(p, p1, p2)
+    p1, p2 = np.array((5.0, -0.01)), np.array((0.0, 10.0))
+    assert vec.is_obtuse_2d(p, p1, p2)
+
+
+def test_point_distance_to_line_segment_2d():
+    l1, l2 = np.array((3.0, 3.0)), np.array((7.0, 7.0))
+    p = np.array((3.0, 3.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), 0.0)
+    p = np.array((5.0, 5.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), 0.0)
+    p = np.array((7.0, 7.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), 0.0)
+    p = np.array((8.0, 8.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), maths.sqrt(2.0))
+    p = np.array((0.0, -1.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), 5.0)
+    p = np.array((15.0, 1.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), 10.0)
+    p = np.array((9.0, 5.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), 2.0 * maths.sqrt(2.0))
+    p = np.array((3.0, 5.0))
+    assert maths.isclose(vec.point_distance_to_line_segment_2d(p, l1, l2), maths.sqrt(2.0))
+
+
+def test_rotation():
+    x = 47.3
+    y = -32.9
+    p = np.array((1234.2, 106.7, 742.5))
+    m = vec.rotation_3d_matrix((x, 0.0, y))
+    rm = vec.reverse_rotation_3d_matrix((x, 0.0, y))
+    pp = vec.rotate_vector(m, p)
+    ppp = vec.rotate_vector(rm, pp)
+    assert_array_almost_equal(p, ppp)

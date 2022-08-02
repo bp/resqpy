@@ -105,11 +105,11 @@ def _create_xml_patch_node(collection, p_node, points, const_value, indexable_el
 
 
 def _create_xml_property_min_max(collection, property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                 max_value):
+                                 max_value, categorical, null_value):
     if add_min_max:
         # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
         min_value, max_value = pcga._get_property_array_min_max_value(collection, property_array, const_value, discrete,
-                                                                      min_value, max_value)
+                                                                      min_value, max_value, categorical, null_value)
         if min_value is not None:
             min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
             min_node.set(ns['xsi'] + 'type', ns['xsd'] + collection.xsd_type)

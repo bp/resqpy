@@ -13,19 +13,21 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python
+      id: setup-python
       uses: actions/setup-python@v2
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Load cached Poetry installation
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/.local  # the path depends on the OS
-        key: poetry-0  # increment to reset cache
+        key: poetry-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-0  # increment to reset cache
 
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
+        version: 1.1.13
         virtualenvs-create: true
         virtualenvs-in-project: true
 
@@ -37,10 +39,10 @@ runs:
       
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-1
      
     - name: Install dependencies and library
       # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'

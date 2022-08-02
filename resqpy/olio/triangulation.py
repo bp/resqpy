@@ -1,12 +1,16 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '5th October 2021'
+version = '21st June 2022'
 
 import logging
 
 log = logging.getLogger(__name__)
 
+from typing import Tuple
+import math as maths
 import numpy as np
+from scipy.spatial import Delaunay  # type: ignore
+
 import resqpy.crs as rqc
 import resqpy.lines as rql
 import resqpy.model as rq
@@ -17,6 +21,30 @@ import resqpy.olio.vector_utilities as vec
 # def _ccw_t(p, t):   # puts triangle vertex indices into anti-clockwise order, in situ
 #    if vec.clockwise(p[t[0]], p[t[1]], p[t[2]]) > 0.0:
 #       t[1], t[2] = t[2], t[1]
+
+
+def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Calculates the Delaunay triangulation for an array of points and the convex hull indices.
+    
+    Args:
+        points (np.ndarray): Coordinates of the points to triangulate. Array has shape
+            (npoints, ndim).
+
+    Returns:
+        (tuple): tuple containing:
+
+            simplices (np.ndarray): Indices of the points forming the triangulation simplices. Array
+                has shape (nsimplex, ndim+1).
+            convex_hull_indices (np.ndarray): Indices of the points forming the convex hull. Array
+                has shape (nhull,).
+
+    Note:
+        the triangulation is carried out on the points as projected onto the xy plane
+    """
+    delaunay = Delaunay(points[..., :2])
+    simplices = delaunay.simplices
+    convex_hull_indices = np.unique(delaunay.convex_hull)
+    return simplices, convex_hull_indices
 
 
 def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = None):
@@ -137,7 +165,6 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
 
         # find triangle that contains this point
         f_t = None
-
         for ti in range(nt):
             if vec.in_triangle_edged(p[t[ti, 0]], p[t[ti, 1]], p[t[ti, 2]], p[p_i]):
                 f_t = ti
@@ -205,12 +232,12 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     return tri_set, external_pi
 
 
-def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
+def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
     """Returns the Delauney Triangulation of 2D point set p.
 
     arguments:
        p (numpy float array of shape (N, 2): the x,y coordinates of the points
-       algorithm (string, optional): selects which algorithm to use; current options: ['simple'];
+       algorithm (string, optional): selects which algorithm to use; current options: ['simple', 'scipy'];
           if None, the current best algorithm is selected
        plot_fn (function of form f(p, t), optional): if present, this function is called each time the
           algorithm feels it is worth refreshing a plot of the progress; p is a copy of the point set,
@@ -228,23 +255,32 @@ def dt(p, algorithm = None, plot_fn = None, progress_fn = None, container_size_f
           per triangle in the Delauney Triangulation - and if return_hull is True, another int array
           of shape (B,) - being indices into p of the clockwise ordered points on the boundary of
           the triangulation
+
+    notes:
+       the plot_fn, progress_fn and container_size_factor arguments are only used by the 'simple' algorithm;
+       if points p are 3D, the projection onto the xy plane is used for the triangulation
     """
     assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delauney Triangulation'
 
     if not algorithm:
-        algorithm = 'simple'
+        algorithm = 'scipy'
 
-    if algorithm == 'simple':
-        t, boundary = _dt_simple(p,
-                                 plot_fn = plot_fn,
-                                 progress_fn = progress_fn,
-                                 container_size_factor = container_size_factor)
-        if return_hull:
-            return t, vec.clockwise_sorted_indices(p, boundary)
-        else:
-            return t
+    if algorithm == 'scipy':
+        tri, boundary = _dt_scipy(p)
+    elif algorithm == 'simple':
+        tri, boundary = _dt_simple(p,
+                                   plot_fn = plot_fn,
+                                   progress_fn = progress_fn,
+                                   container_size_factor = container_size_factor)
     else:
-        raise Exception('unrecognised Delauney Triangulation algorithm name')
+        raise Exception(f'unrecognised Delauney Triangulation algorithm name: {algorithm}')
+
+    assert tri.ndim == 2 and tri.shape[1] == 3
+
+    if return_hull:
+        return tri, vec.clockwise_sorted_indices(p, boundary)
+    else:
+        return tri
 
 
 def ccc(p1, p2, p3):
@@ -689,3 +725,145 @@ def triangulated_polygons(p, v, centres = None):
     assert t_index == t_count
 
     return points, triangles
+
+
+def reorient(points, rough = True, max_dip = None, use_linalg = False):
+    """Returns a reoriented copy of a set of points, such that z axis is approximate normal to average plane of points.
+
+    arguments:
+       points (numpy float array of shape (..., 3)): the points to be reoriented
+       rough (bool, default True): if True, the resulting orientation will be within around 10 degrees of the optimum;
+          if False, that reduces to around 2.5 degrees of the optimum; iugnored if use_linalg is True
+       max_dip (float, optional): if present, the reorientation of perspective off vertical is
+          limited to this angle in degrees
+       use_linalg (bool, default False): if True, the numpy linear algebra svd function is used and rough is ignored
+
+    returns:
+       numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
+       the array being a copy of points rotated in 3D space to minimise the z range;
+       the vector is a normal vector to the original points;
+       the matrix is rotation matrix used to transform the original points to the reoriented points
+
+    notes:
+       the original points array is not modified by this function;
+       the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
+       determine the triangulation;
+       the numpy linear algebra option seems to be memory intensive
+    """
+
+    def z_range(p):
+        return np.nanmax(p[..., 2]) - np.nanmin(p[..., 2])
+
+    def best_angles(points, mid_x, mid_y, steps, d_theta):
+        best_range = None
+        best_x_rotation = None
+        best_y_rotation = None
+        half_steps = float(steps - 1) / 2.0
+        for xi in range(steps):
+            x_degrees = mid_x + (float(xi) - half_steps) * d_theta
+            for yi in range(steps):
+                y_degrees = mid_y + (float(yi) - half_steps) * d_theta
+                rotation_m = vec.rotation_3d_matrix((x_degrees, 0.0, y_degrees))
+                p = points.copy()
+                rotated_p = vec.rotate_array(rotation_m, p)
+                z_r = z_range(rotated_p)
+                if best_range is None or z_r < best_range:
+                    best_range = z_r
+                    best_x_rotation = x_degrees
+                    best_y_rotation = y_degrees
+        return (best_x_rotation, best_y_rotation)
+
+    def linalg_normal_vector(p):
+        assert p.ndim >= 2 and p.shape[-1] == 3
+        p = p.reshape((-1, 3))
+        centre = p.sum(axis = 0) / p.shape[0]
+        u, s, vh = np.linalg.svd(p - centre)
+        # unit normal vector
+        return vh[2, :]
+
+    assert points.ndim >= 2 and points.shape[-1] == 3
+
+    if use_linalg:
+
+        normal_vector = linalg_normal_vector(points)
+        incl = vec.inclination(normal_vector)
+        if incl == 0.0:
+            rotation_m = vec.no_rotation_matrix()
+        else:
+            azi = vec.azimuth(normal_vector)
+            rotation_m = vec.tilt_3d_matrix(azi, incl)
+
+    else:
+
+        # coarse iteration trying a few different angles
+        best_x_rotation, best_y_rotation = best_angles(points, 0.0, 0.0, 7, 30.0)
+
+        # finer iteration searching around the best coarse rotation
+        best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 5, 10.0)
+
+        if not rough:
+            # finer iteration searching around the best coarse rotation
+            best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 7, 2.5)
+
+        rotation_m = vec.rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))
+
+        normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
+
+    if max_dip is not None:
+        v = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
+        incl = vec.inclination(v)
+        if incl > max_dip:
+            azi = vec.azimuth(v)
+            rotation_m = vec.tilt_3d_matrix(azi, max_dip)  # TODO: check whether any reverse direction errors here
+        normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
+
+    p = points.copy()
+
+    return vec.rotate_array(rotation_m, p), normal_vector, rotation_m
+
+
+def make_all_clockwise_xy(t, p):
+    """Modifies t in situ such that each triangle is clockwise in xy plane (viewed from -ve z axis).
+
+    note:
+       assumes xyz axes are left handed; all will be made anti-clockwise in the case of right handed xyz axes
+    """
+
+    cw = (vec.clockwise_triangles(p, t, projection = 'xy') > 0.0)
+    t_flip = t.copy()
+    t_flip[:, 0] = t[:, 1]
+    t_flip[:, 1] = t[:, 0]
+    t[:] = np.where(np.expand_dims(cw, axis = 1), t, t_flip)
+    return t
+
+
+def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None):
+    """Creates a set of points surrounding the point set p, in the xy plane.
+
+    arguments:
+       p (numpy float array of shape (..., 3)): xyz set of points to be surrounded
+       count (int): the number of points to generate in the surrounding ring
+       radial_factor (float): a distance factor roughly determining the radius of the ring relative to
+          the 'radius' of the outermost points in p
+       radial_distance (float): if present, the radius of the ring of points, unless radial_factor
+          results in a greater distance in which case that is used
+
+    returns:
+       numpy float array of shape (count, 3) being xyz points in surrounding ring; z is set constant to
+       mean value of z in p
+    """
+
+    assert p.shape[-1] == 3
+    assert radial_factor >= 1.0
+    centre = np.nanmean(p.reshape((-1, 3)), axis = 0)
+    p_radius_v = np.nanmax(np.abs(p.reshape((-1, 3)) - np.expand_dims(centre, axis = 0)), axis = 0)[:2]
+    p_radius = maths.sqrt(np.sum(p_radius_v * p_radius_v))
+    radius = p_radius * radial_factor
+    if radial_distance is not None and radial_distance > radius:
+        radius = radial_distance
+    delta_theta = 2.0 * maths.pi / float(count)
+    ring = np.zeros((count, 3))
+    for i in range(count):
+        theta = float(i) * delta_theta
+        ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
+    return ring

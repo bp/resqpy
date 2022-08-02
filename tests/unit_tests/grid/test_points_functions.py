@@ -290,6 +290,18 @@ def test_coordinate_line_end_points_s_bend_faulted_grid(s_bend_faulted_grid):
     np.testing.assert_array_almost_equal(coordinate_line_end_points[5, 15, 1], np.array([67.117693, 40., 131.363778]))
 
 
+def test_coordinate_line_end_points_s_bend_k_gep_grid(s_bend_k_gap_grid):
+    # Act
+    coordinate_line_end_points = pf.coordinate_line_end_points(s_bend_k_gap_grid)
+
+    # Assert
+    # Large array so only checking a subset of points.
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[2, 7, 1], np.array([54.104242, 16., 112.723689]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[11, 28, 1], np.array([14.132444, 88., 146.132614]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[8, 18, 0], np.array([76.685067, 64., 146.146903]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[5, 15, 1], np.array([67.117693, 40., 131.363778]))
+
+
 def test_z_corner_point_depths(basic_regular_grid):
     # Arrange
     expected_z_corner_point_depths = np.array([[[[[[0.0, 0.0], [0.0, 0.0]], [[20.0, 20.0], [20.0, 20.0]]],
@@ -338,6 +350,20 @@ def test_z_corner_point_depths_s_bend_faulted_grid(s_bend_faulted_grid):
                                          np.array([[142.537693, 142.72], [142.537693, 142.72]]))
     np.testing.assert_array_almost_equal(z_corner_point_depths[1, 4, 47, 0],
                                          np.array([[179.103781, 179.103781], [179.103781, 179.103781]]))
+
+
+def test_z_corner_point_depths_s_bend_K_gap_grid(s_bend_k_gap_grid):
+    # Act
+    z_corner_point_depths = pf.z_corner_point_depths(s_bend_k_gap_grid)
+
+    # Assert
+    # Large array so only checking a subset of points.
+    # np.testing.assert_array_almost_equal(z_corner_point_depths[2, 7, 34, 0],
+    #                                      np.array([[162.582062, 165.410711], [162.582062, 165.410711]]))
+    # np.testing.assert_array_almost_equal(z_corner_point_depths[4, 11, 22, 1],
+    #                                      np.array([[142.537693, 142.72], [142.537693, 142.72]]))
+    # np.testing.assert_array_almost_equal(z_corner_point_depths[1, 4, 47, 0],
+    #                                      np.array([[179.103781, 179.103781], [179.103781, 179.103781]]))
 
 
 def test_corner_points_cell_kji0(basic_regular_grid):

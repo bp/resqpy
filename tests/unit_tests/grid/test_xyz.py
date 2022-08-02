@@ -215,7 +215,7 @@ def test_local_to_global_crs_degree_rotation(basic_regular_grid, a, a_expected):
     x_offset = 0.0
     y_offset = 0.0
     z_offset = 0.0
-    rotation = 60
+    rotation = -60
     rotation_units = 'dega'
 
     crs = rqc.Crs(basic_regular_grid.model,
@@ -258,7 +258,7 @@ def test_local_to_global_crs_radian_rotation(basic_regular_grid, a, a_expected):
     x_offset = 0.0
     y_offset = 0.0
     z_offset = 0.0
-    rotation = np.pi / 3  # 60 degrees
+    rotation = -np.pi / 3  # 60 degrees
     rotation_units = 'rad'
 
     crs = rqc.Crs(basic_regular_grid.model,
@@ -301,7 +301,7 @@ def test_local_to_global_crs_rotation_and_global_z_increasing_downward(basic_reg
     x_offset = 0.0
     y_offset = 0.0
     z_offset = 0.0
-    rotation = 60
+    rotation = -60
     rotation_units = 'dega'
 
     crs = rqc.Crs(basic_regular_grid.model,
@@ -346,7 +346,7 @@ def test_local_to_global_crs_full_transformation(basic_regular_grid, a, a_expect
     x_offset = -1.0
     y_offset = 3.0
     z_offset = 2.0
-    rotation = 45.0
+    rotation = -45.0
     rotation_units = 'dega'
 
     crs = rqc.Crs(basic_regular_grid.model,
@@ -546,7 +546,7 @@ def test_global_to_local_crs_degree_rotation(basic_regular_grid, a, a_expected):
     x_offset = 0.0
     y_offset = 0.0
     z_offset = 0.0
-    rotation = 60
+    rotation = -60
     rotation_units = 'dega'
 
     crs = rqc.Crs(basic_regular_grid.model,
@@ -593,7 +593,7 @@ def test_global_to_local_crs_radian_rotation(basic_regular_grid, a, a_expected):
     x_offset = 0.0
     y_offset = 0.0
     z_offset = 0.0
-    rotation = np.pi / 3  # 60 degrees
+    rotation = -np.pi / 3  # 60 degrees
     rotation_units = 'rad'
 
     crs = rqc.Crs(basic_regular_grid.model,
@@ -640,7 +640,7 @@ def test_global_to_local_crs_rotation_and_global_z_increasing_downward(basic_reg
     x_offset = 0.0
     y_offset = 0.0
     z_offset = 0.0
-    rotation = 60
+    rotation = -60
     rotation_units = 'dega'
 
     crs = rqc.Crs(basic_regular_grid.model,
@@ -685,7 +685,7 @@ def test_global_to_local_crs_full_transformation(basic_regular_grid, a, a_expect
     x_offset = -1.0
     y_offset = 3.0
     z_offset = 2.0
-    rotation = 45.0
+    rotation = -45.0
     rotation_units = 'dega'
 
     crs = rqc.Crs(basic_regular_grid.model,

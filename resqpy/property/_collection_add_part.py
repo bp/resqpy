@@ -1,12 +1,12 @@
 """Submodule containing functions for adding properties to a property collection."""
 
-version = '1st December 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
+
+import numpy as np
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
@@ -17,8 +17,8 @@ import resqpy.property._collection_get_attributes as pcga
 
 def _add_selected_part_from_other_dict(collection, part, other, realization, support_uuid, uuid, continuous,
                                        categorical, count, points, indexable, property_kind, facet_type, facet,
-                                       citation_title, citation_title_match_starts_with, time_series_uuid, time_index,
-                                       string_lookup_uuid, ignore_clashes):
+                                       citation_title, citation_title_match_mode, time_series_uuid, time_index,
+                                       string_lookup_uuid, related_uuid, ignore_clashes):
     if _check_not_none_and_not_equals(realization, other.realization_for_part, part):
         return
     if _check_not_none_and_not_uuid_match(support_uuid, other.support_uuid_for_part, part):
@@ -41,7 +41,7 @@ def _add_selected_part_from_other_dict(collection, part, other, realization, sup
         return
     if _check_not_none_and_not_equals(facet, other.facet_for_part, part):
         return
-    if _check_citation_title(citation_title, citation_title_match_starts_with, other, part):
+    if _check_citation_title(citation_title, citation_title_match_mode, other, part):
         return
     if _check_not_none_and_not_uuid_match(time_series_uuid, other.time_series_uuid_for_part, part):
         return
@@ -49,6 +49,10 @@ def _add_selected_part_from_other_dict(collection, part, other, realization, sup
         return
     if _check_not_none_and_not_uuid_match(string_lookup_uuid, other.string_lookup_uuid_for_part, part):
         return
+    if related_uuid is not None:
+        assert other.model is not None
+        if other.model.part(parts_list = [part], related_uuid = related_uuid) is None:
+            return
     if part in collection.dict.keys():
         if ignore_clashes:
             return
@@ -121,14 +125,28 @@ def _check_not_none_and_not_uuid_match(uuid, method, part):
     return uuid is not None and not bu.matching_uuids(uuid, method(part))
 
 
-def _check_citation_title(citation_title, citation_title_match_starts_with, other, part):
+def _check_citation_title(citation_title, citation_title_match_mode, other, part):
     if citation_title is not None:
-        if citation_title_match_starts_with:
-            if not other.citation_title_for_part(part).startswith():
-                return True
+        if isinstance(citation_title_match_mode, bool):
+            citation_title_match_mode = 'starts' if citation_title_match_mode else None
+        if citation_title_match_mode is None or citation_title_match_mode == 'is':
+            return other.citation_title_for_part(part) != citation_title
+        elif citation_title_match_mode == 'starts':
+            return not other.citation_title_for_part(part).startswith(citation_title)
+        elif citation_title_match_mode == 'ends':
+            return not other.citation_title_for_part(part).endswith(citation_title)
+        elif citation_title_match_mode == 'contains':
+            return citation_title not in other.citation_title_for_part(part)
+        elif citation_title_match_mode == 'is not':
+            return other.citation_title_for_part(part) == citation_title
+        elif citation_title_match_mode == 'does not start':
+            return other.citation_title_for_part(part).startswith(citation_title)
+        elif citation_title_match_mode == 'does not end':
+            return other.citation_title_for_part(part).endswith(citation_title)
+        elif citation_title_match_mode == 'does not contain':
+            return citation_title in other.citation_title_for_part(part)
         else:
-            if other.citation_title_for_part(part) != citation_title:
-                return True
+            raise ValueError(f'invalid title mode {citation_title_match_mode} in property filtering')
     return False
 
 
@@ -159,9 +177,10 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
                                                                  p_keyword, p_discrete, string_lookup_uuid, points)
 
     p_array = _process_imported_property_get_p_array(collection, p_cached_name)
+    p_array_bool = None if p_array is None else p_array.dtype in [bool, np.int8]
 
     add_min_max = pcga._process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid,
-                                                                  local_property_kind_uuid)
+                                                                  local_property_kind_uuid, p_array_bool)
 
     if selected_time_indices_list is not None and p_time_index is not None:
         p_time_index = selected_time_indices_list.index(p_time_index)

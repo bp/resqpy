@@ -4,6 +4,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import math as maths
 import numpy as np
 
 import resqpy.crs as rqc
@@ -134,13 +135,16 @@ class RegularGrid(Grid):
                 assert self.property_collection is not None
                 dxi_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'I')
+                                                              facet = 'I',
+                                                              indexable = 'cells')
                 dyj_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'J')
+                                                              facet = 'J',
+                                                              indexable = 'cells')
                 dzk_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
-                                                              facet = 'K')
+                                                              facet = 'K',
+                                                              indexable = 'cells')
                 if dxi_part is not None and dyj_part is not None and dzk_part is not None:
                     dxi = self.property_collection.constant_value_for_part(dxi_part)
                     dyj = self.property_collection.constant_value_for_part(dyj_part)
@@ -178,6 +182,7 @@ class RegularGrid(Grid):
         if set_points_cached:
             self.make_regular_points_cached()
 
+        new_crs = None
         shift_origin = np.any(origin != 0.0) and uuid is None and not as_irregular_grid
         if crs_uuid is None and self.extra_metadata is not None:
             crs_uuid = bu.uuid_from_string(self.extra_metadata.get('crs uuid'))
@@ -198,6 +203,7 @@ class RegularGrid(Grid):
             new_crs.create_xml(reuse = True)
             crs_uuid = new_crs.uuid
         self.crs_uuid = crs_uuid
+        self.crs = rqc.Crs(parent_model, uuid = crs_uuid) if new_crs is None else new_crs
 
         if self.uuid is None:
             self.uuid = bu.new_uuid()
@@ -304,27 +310,30 @@ class RegularGrid(Grid):
 
         return half_t
 
-    def centre_point(self, cell_kji0 = None, cache_centre_array = False):
+    def centre_point(self, cell_kji0 = None, cache_centre_array = False, use_origin = True):
         """Returns centre point of a cell or array of centre points of all cells.
 
         arguments:
            cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
               centre point is required; zero based indexing
-           cache_centre_array (boolean, default False): If True, or cell_kji0 is None, an array of centre points
+           cache_centre_array (bool, default False): If True, or cell_kji0 is None, an array of centre points
               is generated and added as an attribute of the grid, with attribute name array_centre_point
+           use_origin (bool, default True): if True, the x, y & z offsets (local origin) are added to the
+              computed cell centre points
 
         returns:
            (x, y, z) 3 element numpy array of floats holding centre point of cell;
            or numpy 3+1D array if cell_kji0 is None
 
         note:
-           resulting coordinates are in the same (local) crs as the grid points
+           resulting coordinates are in the same (local) crs as the grid points if use_origin is True
         """
 
         if cell_kji0 is None:
             cache_centre_array = True
 
-        if cache_centre_array and (not hasattr(self, 'array_centre_point') or self.array_centre_point is None):
+        if cache_centre_array and (not hasattr(self, 'array_centre_point') or self.array_centre_point is None or
+                                   not use_origin):
             centres = np.zeros((self.nk, self.nj, self.ni, 3))
             if self.is_aligned:
                 centres[:, :, :, 0] = np.linspace(0.0,
@@ -347,16 +356,26 @@ class RegularGrid(Grid):
                     centres[:, j + 1, 0] = centres[:, j, 0] + self.block_dxyz_dkji[1]
                 for i in range(self.ni - 1):
                     centres[:, :, i + 1] = centres[:, :, i] + self.block_dxyz_dkji[2]
-            centres += self.block_origin + 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
-            self.array_centre_point = centres
+            centres += 0.5 * np.sum(self.block_dxyz_dkji, axis = 0)
+            if use_origin:
+                centres += self.block_origin
+                self.array_centre_point = centres
+        else:
+            centres = None
 
         if cell_kji0 is not None:
-            if hasattr(self, 'array_centre_point') and self.array_centre_point is not None:
+            if centres is not None:
+                return centres[tuple(cell_kji0)]
+            if hasattr(self, 'array_centre_point') and self.array_centre_point is not None and use_origin:
                 return self.array_centre_point[tuple(cell_kji0)]
             float_kji0 = np.array(cell_kji0, dtype = float) + 0.5
-            centre = self.block_origin + np.sum(
-                self.block_dxyz_dkji * np.expand_dims(float_kji0, axis = -1).repeat(3, axis = -1), axis = 0)
+            centre = np.sum(self.block_dxyz_dkji * np.expand_dims(float_kji0, axis = -1).repeat(3, axis = -1), axis = 0)
+            if use_origin:
+                centre += self.block_origin
             return centre
+
+        if centres is not None:
+            return centres
 
         return self.array_centre_point
 
@@ -487,7 +506,33 @@ class RegularGrid(Grid):
             return grid.xyz_box_cached
         global_xyz_box = grid.xyz_box_cached.copy()
         grid.local_to_global_crs(global_xyz_box, crs_uuid = grid.crs_uuid)
-        return global_xyz_box
+        g_xyz_box = np.empty((2, 3), dtype = float)
+        g_xyz_box[0] = np.amin(global_xyz_box, axis = 0)
+        g_xyz_box[1] = np.amax(global_xyz_box, axis = 0)
+        return g_xyz_box
+
+    def find_cell_for_point_xy(self, x, y, k0 = 0, vertical_ref = 'top', local_coords = True):
+        """Searches in 2D for a cell containing point x,y in layer k0; return (j0, i0) or (None, None)."""
+
+        if x is None or y is None:
+            return (None, None)
+        if not local_coords and self.crs_uuid is not None:
+            a = np.array([[x, y, 0.0]])  # extra axis needed to keep global_to_local_crs happy
+            self.global_to_local_crs(a, crs_uuid = self.crs_uuid)
+            x = a[0, 0]
+            y = a[0, 1]
+        log.debug(f'find for local x: {x}; y: {y}')
+        if self.is_aligned:
+            i0 = maths.floor(x / self.block_dxyz_dkji[2, 0])
+            j0 = maths.floor(y / self.block_dxyz_dkji[1, 1])
+        else:
+            # TODO
+            raise NotImplementedError('finding cell for x,y in unaligned regular grid')
+            i0 = j0 = -1
+        log.debug(f'found j0: {j0}; i0: {i0}')
+        if 0 <= i0 < self.ni and 0 <= j0 < self.nj:
+            return (j0, i0)
+        return (None, None)
 
     def create_xml(self,
                    ext_uuid = None,
@@ -557,6 +602,10 @@ class RegularGrid(Grid):
                     self.property_collection.set_support(support = self)
                 self.property_collection.inherit_parts_from_other_collection(dpc)
 
+            if add_relationships and self.crs_uuid is not None:
+                self.model.create_reciprocal_relationship_uuids(self.uuid, 'destinationObject', self.crs_uuid,
+                                                                'sourceObject')
+
         return node
 
     def _set_is_aligned(self):
@@ -564,3 +613,38 @@ class RegularGrid(Grid):
         if self.block_dxyz_dkji is None:
             self.is_aligned = None
         self.is_aligned = (np.count_nonzero(self.block_dxyz_dkji * np.array([[1.0, 1, 0], [1, 0, 1], [0, 1, 1]])) == 0)
+
+    def aligned_dxyz(self):
+        """Returns triple float dx, dy, dz cell dimensions for aligned grids only."""
+        assert self.is_aligned
+        return (self.block_dxyz_dkji[2, 0], self.block_dxyz_dkji[1, 1], self.block_dxyz_dkji[0, 2])
+
+    def slice_points(self, axis = 0, ref_slice = 0, local = False):
+        """Returns a slice of points data for a layer or a cross section.
+
+        arguments:
+           axis (int, default 0): the axis of slicing 0 for K, 1 for J, 2 for I
+           ref_slice (int, default 0): the slice index in the direction of axis
+           local (bool, default False): if True, returned points are in the local crs; if False in global
+
+        returns:
+           numpy float array of points data of shape (Na, Nb, 3); (Na, Nb) are (NJ+1, NI+1), (NK+1, NI+1) or
+           (NK+1, NJ+1) for axis values of 0, 1, or 2 respectively
+        """
+        assert 0 <= axis < 3
+        assert 0 <= ref_slice <= self.extent_kji[axis]
+        other_axes = np.array([[1, 2], [0, 2], [0, 1]], dtype = int)[axis]
+        shape = (self.extent_kji[other_axes[0]] + 1, self.extent_kji[other_axes[1]] + 1, 3)
+        dxyz_da = self.block_dxyz_dkji[other_axes[0]]
+        dxyz_db = self.block_dxyz_dkji[other_axes[1]]
+        p = np.zeros(shape, dtype = float)
+        if ref_slice:
+            p[0, 0] = ref_slice * self.block_dxyz_dkji[axis]
+        for a in range(1, shape[0]):
+            p[a, 0] = p[0, 0] + a * dxyz_da
+        for b in range(1, shape[1]):
+            p[:, b] = p[:, 0] + b * dxyz_db
+        if not local:
+            assert self.crs is not None
+            self.crs.local_to_global_array(p)
+        return p

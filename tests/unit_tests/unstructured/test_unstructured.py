@@ -344,7 +344,8 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
     # create a very similar grid using explicit triangulation arguments
 
     # make the same Delauney triangulation
-    triangles = triangulation.dt(pentagon_points)
+    triangles = triangulation.dt(pentagon_points, algorithm = "scipy")
+    assert triangles.ndim == 2 and triangles.shape[1] == 3
 
     # slightly shrink pentagon points to be within area of surfaces
     for i in range(len(pentagon_points)):
@@ -373,8 +374,16 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
     # check similarity
     for attr in ('cell_shape', 'nk', 'cell_count', 'node_count', 'face_count'):
         assert getattr(grid, attr) == getattr(similar, attr)
-    for index_attr in ('nodes_per_face', 'nodes_per_face_cl', 'faces_per_cell', 'faces_per_cell_cl'):
-        assert np.all(getattr(grid, index_attr) == getattr(similar, index_attr))
+    # for index_attr in ('nodes_per_face', 'nodes_per_face_cl', 'faces_per_cell', 'faces_per_cell_cl'):
+    for i, (index_attr, index_attr_cl) in enumerate([('nodes_per_face', 'nodes_per_face_cl'),
+                                                     ('faces_per_cell', 'faces_per_cell_cl')]):
+        ga_cl = getattr(grid, index_attr_cl)
+        sa_cl = getattr(similar, index_attr_cl)
+        assert np.all(ga_cl == sa_cl)
+        ga = getattr(grid, index_attr)
+        sa = getattr(similar, index_attr)
+        ip = 0 if i == 0 else ga_cl[i - 1]
+        assert set(ga[ip:ga_cl[i]]) == set(sa[ip:ga_cl[i]])
     assert_allclose(grid.points_ref(), similar.points_ref(), atol = 2.0)
 
     # check that isotropic horizontal permeability is preserved

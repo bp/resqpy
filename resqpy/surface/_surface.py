@@ -1,6 +1,6 @@
 """_surface.py: surface class based on resqml standard."""
 
-version = '18th February 2022'
+version = '5th July 2022'
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -12,8 +12,10 @@ log = logging.getLogger(__name__)
 import numpy as np
 
 import resqpy.crs as rqc
+import resqpy.olio.intersection as meet
 import resqpy.olio.triangulation as triangulate
 import resqpy.olio.uuid as bu
+import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -100,6 +102,7 @@ class Surface(BaseSurface):
         self.points = None  # composite points (all patches)
         self.boundaries = None  # todo: read up on what this is for and look out for examples
         self.represented_interpretation_root = None
+        self.normal_vector = None  # a derived vector that is roughly normal to the surface
         self.title = title
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -157,6 +160,7 @@ class Surface(BaseSurface):
                 if not bu.matching_uuids(triangulated_patch.crs_uuid, self.crs_uuid):
                     log.warning('mixed coordinate reference systems in use within a surface')
             paired_list.append((patch_index, triangulated_patch))
+        assert len(paired_list), f'no triangulated patches found for surface: {self.title}'
         paired_list.sort()
         assert len(paired_list) and paired_list[0][0] == 0 and len(paired_list) == paired_list[-1][0] + 1
         for _, patch in paired_list:
@@ -221,12 +225,18 @@ class Surface(BaseSurface):
 
         old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         self.crs_uuid = required_crs.uuid
-        if bu.matching_uuids(old_crs.uuid, required_crs.uuid) or not self.patch_list:
+        if required_crs == old_crs or not self.patch_list:
+            log.debug(f'no crs change needed for {self.title}')
             return
+        log.debug(f'crs change needed for {self.title} from {old_crs.title} to {required_crs.title}')
         for patch in self.patch_list:
             patch.triangles_and_points()
             required_crs.convert_array_from(old_crs, patch.points)
+            patch.crs_uuid = self.crs_uuid
+        self.triangles = None  # clear cached arrays for surface
+        self.points = None
         self.uuid = bu.new_uuid()  # hope this doesn't cause problems
+        assert self.root is None
 
     def set_to_trimmed_surface(self, large_surface, xyz_box = None, xy_polygon = None):
         """Populate this (empty) surface with triangles and points which overlap with a trimming volume.
@@ -245,14 +255,21 @@ class Surface(BaseSurface):
         """
 
         assert xyz_box is not None or xy_polygon is not None
+        box = None
         if xyz_box is not None:
             assert xyz_box.shape == (2, 3)
+            # guard against reversed ranges in xyz_box
+            box = np.empty((2, 3), dtype = float)
+            box[0] = np.amin(xyz_box, axis = 0)
+            box[1] = np.amax(xyz_box, axis = 0)
         log.debug(f'trimming surface {large_surface.title} from {large_surface.triangle_count()} triangles')
+        if not self.title:
+            self.title = str(large_surface.title) + ' trimmed'
         self.crs_uuid = large_surface.crs_uuid
         self.patch_list = []
         for triangulated_patch in large_surface.patch_list:
             trimmed_patch = TriangulatedPatch(self.model, patch_index = len(self.patch_list), crs_uuid = self.crs_uuid)
-            trimmed_patch.set_to_trimmed_patch(triangulated_patch, xyz_box = xyz_box, xy_polygon = xy_polygon)
+            trimmed_patch.set_to_trimmed_patch(triangulated_patch, xyz_box = box, xy_polygon = xy_polygon)
             if trimmed_patch is not None and trimmed_patch.triangle_count > 0:
                 self.patch_list.append(trimmed_patch)
         if len(self.patch_list):
@@ -260,6 +277,61 @@ class Surface(BaseSurface):
         else:
             log.warning('surface does not intersect trimming volume')
         self.uuid = bu.new_uuid()
+
+    def set_to_split_surface(self, large_surface, line, delta_xyz):
+        """Populate this (empty) surface with a version of a larger surface split by an xy line.
+
+        arguments:
+            large_surface (Surface): the larger surface, a copy of which is to be split
+            line (numpy float array of shape (2, 3)): the end points of a line (z will be ignored)
+            delta_xyz (numpy float array of shape (2, 3)): an xyz offset to add to the points on the
+                right and left sides of the line repspectively
+
+        notes:
+            this method can be used to introduce a tear into a surface, typically to represent a horizon
+            being split by a planar fault with a throw
+        """
+
+        assert line.shape == (2, 3)
+        assert delta_xyz.shape == (2, 3)
+        t, p = large_surface.triangles_and_points()
+        assert p.ndim == 2 and p.shape[1] == 3
+        pp = np.concatenate((p, line), axis = 0)
+        tp = np.empty(p.shape, dtype = int)
+        tp[:, 0] = len(p)
+        tp[:, 1] = len(p) + 1
+        tp[:, 2] = np.arange(len(p), dtype = int)
+        cw = vec.clockwise_triangles(pp, tp)
+        pai = np.where(cw >= 0.0, True, False)  # bool mask over p
+        pbi = np.where(cw <= 0.0, True, False)  # bool mask over p
+        tap = pai[t]
+        tbp = pbi[t]
+        ta = np.any(tap, axis = 1)  # bool array over t
+        tb = np.any(tbp, axis = 1)  # bool array over t
+
+        # here we stick the two halves together into a single patch
+        # todo: keep as two patches as required by RESQML business rules
+        p_combo = np.empty((0, 3))
+        t_combo = np.empty((0, 3), dtype = int)
+        for i, tab in enumerate((ta, tb)):
+            p_keep = np.unique(t[tab])
+            # note new point index for each old point that is being kept
+            p_map = np.full(len(p), -1, dtype = int)
+            p_map[p_keep] = np.arange(len(p_keep))
+            # copy those unique points into a trimmed points array
+            points_trimmed = p[p_keep].copy()
+            # copy selected triangles, replacing p indices with compressed indices
+            t_trim = t[tab]
+            triangles_trimmed = p_map[t_trim].copy()
+            assert np.all(triangles_trimmed >= 0)
+            assert np.all(triangles_trimmed < len(points_trimmed))
+            points_trimmed += np.expand_dims(delta_xyz[i], axis = 0)
+            t_shift = len(p_combo)
+            p_combo = np.concatenate((p_combo, points_trimmed), axis = 0)
+            triangles_trimmed += t_shift
+            t_combo = np.concatenate((t_combo, triangles_trimmed), axis = 0)
+
+        self.set_from_triangles_and_points(t_combo, p_combo)
 
     def distinct_edges(self):
         """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles."""
@@ -281,7 +353,16 @@ class Surface(BaseSurface):
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
 
-    def set_from_point_set(self, point_set, convexity_parameter = 5.0):
+    def set_from_point_set(self,
+                           point_set,
+                           convexity_parameter = 5.0,
+                           reorient = False,
+                           reorient_max_dip = None,
+                           extend_with_flange = False,
+                           flange_point_count = 11,
+                           flange_radial_factor = 10.0,
+                           flange_radial_distance = None,
+                           make_clockwise = False):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -289,14 +370,104 @@ class Surface(BaseSurface):
            convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
               convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
               chance of even a slight concavity
+           reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
+              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+           reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
+              limited to this angle in degrees
+           extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
+              points before the triangulation, effectively extending the surface with a flange
+           flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
+              extend_with_flange is False
+           flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
+              factor of the maximum radial distance of the points themselves; ignored if extend_with_flange is False
+           flange_radial_distance (float, optional): if present, the minimum absolute distance of flange points from
+              centre of points; units are those of the crs
+           make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
+              viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
+              enforced in the reoriented space
+
+        returns:
+           if extend_with_flange is True, numpy bool array with a value per triangle indicating flange triangles;
+           if extent_with_flange is False, None
+
+        notes:
+           if extend_with_flange is True, then a boolean array is created for the surface, with a value per triangle,
+           set to False (zero) for non-flange triangles and True (one) for flange triangles; this array is
+           suitable for adding as a property for the surface, with indexable element 'faces';
+           when flange extension occurs, the radius is the greater of the values determined from the radial factor
+           and radial distance arguments
         """
 
         p = point_set.full_array_ref()
-        log.debug('number of points going into dt: ' + str(len(p)))
-        t = triangulate.dt(p[:, :2], container_size_factor = convexity_parameter)
+        if reorient:
+            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(p, max_dip = reorient_max_dip)
+        else:
+            p_xy = p
+        if extend_with_flange:
+            flange_points = triangulate.surrounding_xy_ring(p_xy,
+                                                            count = flange_point_count,
+                                                            radial_factor = flange_radial_factor,
+                                                            radial_distance = flange_radial_distance)
+            p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
+            if reorient:
+                # reorient back extenstion points into original p space
+                flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
+                p_e = np.concatenate((p, flange_points_reverse_oriented), axis = 0)
+            else:
+                p_e = p_xy_e
+        else:
+            p_xy_e = p_xy
+            p_e = p
+        log.debug('number of points going into dt: ' + str(len(p_xy_e)))
+        success = False
+        try:
+            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter, algorithm = "scipy")
+            success = True
+        except AssertionError:
+            pass
+        if not success:
+            log.warning('triangulation failed, trying again with tiny perturbation of points')
+            p_xy_e[:, :2] += (np.random.random((len(p_xy_e), 2)) - 0.5) * 0.001
+            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter * 1.1)
         log.debug('number of triangles: ' + str(len(t)))
+        if make_clockwise:
+            triangulate.make_all_clockwise_xy(t, p_e)  # modifies t in situ
         self.crs_uuid = point_set.crs_uuid
-        self.set_from_triangles_and_points(t, p)
+        self.set_from_triangles_and_points(t, p_e)
+        if extend_with_flange:
+            flange_array = np.zeros(len(t), dtype = bool)
+            flange_array[:] = np.where(np.any(t >= len(p), axis = 1), True, False)
+            return flange_array
+        return None
+
+    def make_all_clockwise_xy(self, reorient = False):
+        """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
+
+        note:
+           if reorient is set True, a copy of the points is first reoriented such that they lie roughly in
+           the xy plane, and the clockwise-ness of the triangles is effected in that space
+        """
+
+        _, p = self.triangles_and_points()
+        if reorient:
+            p_xy, self.normal_vector, _ = triangulate.reorient(p)
+        else:
+            p_xy = p
+        triangulate.make_all_clockwise_xy(self.triangles, p_xy)  # modifies t in situ
+        # assert np.all(vec.clockwise_triangles(p_xy, self.triangles) >= 0.0)
+
+    def normal(self):
+        """Returns a vector that is roughly normal to the surface.
+
+        notes:
+           the result becomes more meaningless the less planar the surface is;
+           even for a parfectly planar surface, the result is approximate
+        """
+
+        if self.normal_vector is None:
+            _, p = self.triangles_and_points()
+            _, self.normal_vector, _ = triangulate.reorient(p)
+        return self.normal_vector
 
     def set_from_irregular_mesh(self, mesh_xyz, quad_triangles = False):
         """Populate this (empty) Surface object from an untorn mesh array of shape (N, M, 3).
@@ -429,7 +600,7 @@ class Surface(BaseSurface):
         axis, polarity = divmod(remainder, 2)
         return cell_number, axis, polarity
 
-    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
+    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0, quad_triangles = False):
         """Populate this (empty) surface with a patch of two triangles.
         
         Triangles define a flat, horizontal plane at a given depth.
@@ -438,12 +609,13 @@ class Surface(BaseSurface):
             depth (float): z value to use in all points in the triangulated patch
             box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
             border (float): an optional border width added around the x,y area defined by box_xyz
+            quad_triangles (bool, default False): if True, 4 triangles are used instead of 2
 
         :meta common:
         """
 
         tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
-        tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border)
+        tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border, quad_triangles = quad_triangles)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
 
@@ -495,13 +667,25 @@ class Surface(BaseSurface):
         triangles, vertices = [], []
         with open(filename, 'r') as fl:
             lines = fl.readlines()
+            v_index = None
             for line in lines:
                 if "VRTX" in line:
-                    vertices.append(line.rstrip().split(" ")[2:])
+                    words = line.rstrip().split(" ")
+                    v_i = int(words[1])
+                    if v_index is None:
+                        v_index = v_i
+                        index_offset = v_index
+                    else:
+                        assert v_i == v_index + 1, 'Tsurf vertex indices out of sequence'
+                        v_index = v_i
+                    vertices.append(words[2:5])
                 elif "TRGL" in line:
-                    triangles.append(line.rstrip().split(" ")[1:])
-        triangles = np.array(triangles, dtype = int)
+                    triangles.append(line.rstrip().split(" ")[1:4])
+        assert len(vertices) >= 3, 'vertices missing'
+        assert len(triangles) > 0, 'triangles missing'
+        triangles = np.array(triangles, dtype = int) - index_offset
         vertices = np.array(vertices, dtype = float)
+        assert np.all(triangles >= 0) and np.all(triangles < len(vertices)), 'triangle vertex indices out of range'
         self.set_from_triangles_and_points(triangles = triangles, points = vertices)
 
     def set_from_zmap_file(self, filename, quad_triangles = False):
@@ -536,6 +720,17 @@ class Surface(BaseSurface):
         self.points = None
         for patch in self.patch_list:
             patch.vertical_rescale_points(ref_depth, scaling_factor)
+
+    def line_intersection(self, line_p, line_v, line_segment = False):
+        """Returns x,y,z of an intersection point of straight line with the surface, or None if no intersection found."""
+
+        t, p = self.triangles_and_points()
+        tp = p[t]
+        intersects = meet.line_triangles_intersects(line_p, line_v, tp, line_segment = line_segment)
+        indices = meet.intersects_indices(intersects)
+        if not indices or len(indices) == 0:
+            return None
+        return intersects[indices[0]]
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
@@ -691,3 +886,23 @@ class Surface(BaseSurface):
                                                           'externalPartProxyToMl')
 
         return tri_rep
+
+
+def distill_triangle_points(t, p):
+    """Returns a (triangles, points) pair with points distilled as only those used from p."""
+
+    assert np.all(t < len(p))
+    # find unique points used by triangles
+    p_keep = np.unique(t)
+    # note new point index for each old point that is being kept
+    p_map = np.full(len(p), -1, dtype = int)
+    p_map[p_keep] = np.arange(len(p_keep))
+    # copy those unique points into a trimmed points array
+    points_distilled = p[p_keep]
+    # copy triangles, replacing p indices with compressed indices
+    triangles_mapped = p_map[t]
+    assert triangles_mapped.shape == t.shape
+    assert np.all(triangles_mapped >= 0)
+    assert np.all(triangles_mapped < len(points_distilled))
+
+    return triangles_mapped, points_distilled

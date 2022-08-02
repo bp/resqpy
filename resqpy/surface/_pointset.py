@@ -77,8 +77,7 @@ class PointSet(BaseSurface):
         self.patch_count = None
         self.patch_ref_list = []  # ordered list of (patch hdf5 ext uuid, path in hdf5, point count)
         self.patch_array_list = []  # ordered list of numpy float arrays (or None before loading), each of shape (N, 3)
-        self.full_array = None
-        self.points = None  # composite points (all patches)
+        self.full_array = None  # composite points (all patches)
         self.represented_interpretation_root = None
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -263,6 +262,101 @@ class PointSet(BaseSurface):
 
         for patch_index in range(self.patch_count):
             self.single_patch_array_ref(patch_index)
+
+    def change_crs(self, required_crs):
+        """Changes the crs of the point set, also sets a new uuid if crs changed.
+
+        notes:
+           this method is usually used to change the coordinate system for a temporary resqpy object;
+           to add as a new part, call write_hdf5() and create_xml() methods
+        """
+
+        old_crs = rcrs.Crs(self.model, uuid = self.crs_uuid)
+        self.crs_uuid = required_crs.uuid
+        if required_crs == old_crs or not self.patch_ref_list:
+            log.debug(f'no crs change needed for {self.title}')
+            return
+        log.debug(f'crs change needed for {self.title} from {old_crs.title} to {required_crs.title}')
+        self.load_all_patches()
+        self.patch_ref_list = []
+        for patch_points in self.patch_array_list:
+            required_crs.convert_array_from(old_crs, patch_points)
+            self.patch_ref_list.append((None, None, len(patch_points)))
+        self.full_array = None  # clear cached full array for point set
+        self.uuid = bu.new_uuid()  # hope this doesn't cause problems
+
+    def trim_to_xyz_box(self, xyz_box):
+        """Converts point set to a single patch, holding only those points within the xyz box.
+
+        arguments:
+           xyz_box (numpy float array of shape (2, 3)): the minimum and maximum range to keep in x,y,z
+
+        notes:
+           usually used to reduce the point set volume for a temprary object; a new uuid is assigned;
+           to add as a new part, call write_hdf5() and create_xml() methods
+        """
+        points = self.full_array_ref()
+        keep_mask = np.where(
+            np.logical_and(np.all(points >= np.expand_dims(xyz_box[0], axis = 0), axis = -1),
+                           np.all(points <= np.expand_dims(xyz_box[1], axis = 0), axis = -1)))
+        self.patch_count = 0
+        self.patch_ref_list = []
+        self.patch_array_list = []
+        self.full_array = None
+        self.add_patch(points[keep_mask, :].copy())
+        self.uuid = bu.new_uuid()  # hope this doesn't cause problems
+
+    def trim_to_xy_polygon(self, xy_polygon):
+        """Converts point set to a single patch, holding only those points within the polygon when projected in xy.
+
+        arguments:
+           xy_polygon (closed convex resqpy.lines.Polyline): the polygon outlining the area in xy within which
+              points are kept
+
+        notes:
+           usually used to reduce the point set volume for a temprary object; a new uuid is assigned;
+           to add as a new part, call write_hdf5() and create_xml() methods
+        """
+        points = self.full_array_ref()
+        keep_mask = xy_polygon.points_are_inside_xy(points)
+        self.patch_count = 0
+        self.patch_ref_list = []
+        self.patch_array_list = []
+        self.full_array = None
+        self.add_patch(points[keep_mask, :].copy())
+        self.uuid = bu.new_uuid()  # hope this doesn't cause problems
+
+    def minimum_xy_area_rectangle(self, delta_theta = 5.0):
+        """Returns the xy projection rectangle of minimum area that contains the points.
+
+        arguments:
+           delta_theta (float, default 5.0): the incremental angle in degrees to test against
+
+        returns:
+           (d1, d2, r) where d1 and d2 are lengths of sides of an xy plane rectangle that just contains the
+           points, and d1 <= d2, and r is a bearing in degrees of a d2 (longer) side between 0.0 and 180.0
+        """
+
+        def try_angle(pset, theta):
+            p = pset.full_array_ref().copy()
+            m = vec.rotation_matrix_3d_axial(0, theta)
+            p = vec.rotate_array(m, p)[:, :2]
+            dxy = np.nanmax(p, axis = 0) - np.nanmin(p, axis = 0)
+            return dxy
+
+        assert self.patch_count > 0
+        theta = 0.0
+        min_dxy = try_angle(self, theta)
+        min_area = np.sum(min_dxy * min_dxy)
+        while theta < 180.0 - delta_theta:
+            theta += delta_theta
+            dxy = try_angle(self, theta)
+            area = np.sum(dxy * dxy)
+            if area < min_area:
+                min_dxy = dxy
+        if dxy[0] <= dxy[1]:
+            return dxy[0], dxy[1], theta
+        return dxy[1], dxy[0], theta + 90.0 if theta < 90.0 else theta - 90.0
 
     def full_array_ref(self):
         """Return a single numpy float array of shape (N, 3) containing all points from all patches.

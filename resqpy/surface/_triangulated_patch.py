@@ -2,9 +2,6 @@
 
 version = '18th February 2022'
 
-# RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
-# GOCAD is also a trademark of Emerson
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -48,13 +45,15 @@ class TriangulatedPatch:
             self.node_count = rqet.find_tag_int(patch_node, 'NodeCount')
             assert self.node_count is not None
             self.extract_crs_root_and_uuid()
+            assert self.crs_uuid is not None
 
     def extract_crs_root_and_uuid(self):
         """Caches uuid for coordinate reference system, as stored in geometry xml sub-tree."""
 
         if self.crs_uuid is None:
             crs_root = rqet.find_nested_tags(self.node, ['Geometry', 'LocalCrs'])
-            self.crs_uuid = self.model.uuid_for_root(crs_root)
+            assert crs_root is not None, 'failed to find crs reference in triangulated patch xml'
+            self.crs_uuid = bu.uuid_from_string(rqet.find_tag_text(crs_root, 'UUID'))
         else:
             crs_root = self.model.root_for_uuid(self.crs_uuid)
         return crs_root, self.crs_uuid
@@ -106,7 +105,7 @@ class TriangulatedPatch:
             raise
         return (self.triangles, self.points)
 
-    def set_to_trimmed_patch(self, larger_patch, xyz_box = None, xy_polygon = None):
+    def set_to_trimmed_patch(self, larger_patch, xyz_box = None, xy_polygon = None, internal = False):
         """Populate this (empty) patch with triangles and points that overlap with a trimming volume.
 
         arguments:
@@ -115,10 +114,13 @@ class TriangulatedPatch:
                against which to trim the patch
             xy_polygon (closed convex resqpy.lines.Polyline, optional): if present, an xy boundary
                against which to trim
+            internal (bool, default False): if True, only those triangles where all three vertices
+               are wtihin the trimming space are kept; if False, triangles with at least one vertex
+               within the space are kept
 
         notes:
             at least one of xyz_box or xy_polygon must be present; if both are present, a triangle
-            must have at least one point within both boundaries to survive the trimming;
+            must be within both boundaries to survive the trimming;
             xyz_box and xy_polygon must be in the same crs as the larger patch
         """
 
@@ -134,7 +136,7 @@ class TriangulatedPatch:
         log.debug(f'large surface max xyz: {np.max(large_p, axis = 0)}')
         # create bool per point indicating inclusion in box volume
         if xyz_box is None:
-            points_in = np.ones(large_p.shape, dtype = bool)
+            points_in = np.ones(large_p.shape[:-1], dtype = bool)
         else:
             points_in = np.logical_and(np.all(large_p >= np.expand_dims(xyz_box[0], axis = 0), axis = -1),
                                        np.all(large_p <= np.expand_dims(xyz_box[1], axis = 0), axis = -1))
@@ -143,7 +145,7 @@ class TriangulatedPatch:
             points_in = np.logical_and(points_in, xy_polygon.points_are_inside_xy(large_p))
         # find where in large_t uses those points
         tp_in = points_in[large_t]
-        t_in = np.any(tp_in, axis = -1)
+        t_in = np.all(tp_in, axis = -1) if internal else np.any(tp_in, axis = -1)
         # find unique points used by those triangles
         p_keep = np.unique(large_t[t_in])
         # note new point index for each old point that is being kept
@@ -156,37 +158,44 @@ class TriangulatedPatch:
         triangles_trimmed = p_map[t_trim]
         assert np.all(triangles_trimmed >= 0)
         assert np.all(triangles_trimmed < len(points_trimmed))
+        self.crs_uuid = larger_patch.crs_uuid
         self.points = points_trimmed
         self.node_count = len(self.points)
         self.triangles = triangles_trimmed
         self.triangle_count = len(self.triangles)
 
-    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0):
+    def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0, quad_triangles = False):
         """Populate this (empty) patch with two triangles defining a flat, horizontal plane at a given depth.
 
         arguments:
            depth (float): z value to use in all points in the triangulated patch
            box_xyz (float[2, 3]): the min, max values of x, y (&z) giving the area to be covered (z ignored)
            border (float): an optional border width added around the x,y area defined by box_xyz
+           quad_triangles (bool, default False): if True, 4 triangles are used instead of 2
         """
 
         # expand area by border
         box = box_xyz.copy()
         box[0, :2] -= border
         box[1, :2] += border
-        self.node_count = 4
-        self.points = np.empty((4, 3))
-        # set 2 points common to both triangles
+        self.node_count = 5 if quad_triangles else 4
+        self.points = np.empty((self.node_count, 3))
+        # set 4 points from corners of box
         self.points[0, :] = box[0, :]
         self.points[1, :] = box[1, :]
-        # and 2 others to form a rectangle aligned with x,y axes
         self.points[2, 0], self.points[2, 1] = box[0, 0], box[1, 1]  # min x, max y
         self.points[3, 0], self.points[3, 1] = box[1, 0], box[0, 1]  # max x, min y
+        if quad_triangles:
+            self.points[4] = np.mean(box, axis = 0)
         # set depth for all points
         self.points[:, 2] = depth
         # create pair of triangles
-        self.triangle_count = 2
-        self.triangles = np.array([[0, 1, 2], [0, 3, 1]], dtype = int)
+        if quad_triangles:
+            self.triangle_count = 4
+            self.triangles = np.array([[0, 2, 4], [2, 1, 4], [1, 3, 4], [3, 0, 4]], dtype = int)
+        else:
+            self.triangle_count = 2
+            self.triangles = np.array([[0, 1, 2], [0, 3, 1]], dtype = int)
 
     def set_to_triangle(self, corners):
         """Populate this (empty) patch with a single triangle."""

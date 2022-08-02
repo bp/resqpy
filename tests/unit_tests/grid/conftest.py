@@ -34,6 +34,11 @@ def basic_regular_grid(model_test: Model) -> Grid:
 
 
 @pytest.fixture
+def aligned_regular_grid(model_test: Model) -> Grid:
+    return grr.RegularGrid(model_test, extent_kji = (2, 3, 4), dxyz = (100.0, 50.0, 20.0))
+
+
+@pytest.fixture
 def example_model_with_properties(tmp_path) -> Model:
     """Model with a grid (5x5x3) and properties.
    Properties:

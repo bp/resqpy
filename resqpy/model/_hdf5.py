@@ -246,6 +246,7 @@ def _h5_array_element(model,
             else:
                 index = reshaped_index(index, required_shape, shape_tuple)
                 result = h5_root[h5_key_pair[1]][tuple(index)]
+        _h5_release(model)
         if dtype is None:
             return result
         if result.size == 1:
@@ -294,10 +295,10 @@ def _change_hdf5_uuid_in_hdf5_references(model, node, old_uuid, new_uuid):
                 count += 1
         except Exception:
             pass
-    if count == 1:
-        log.debug('one hdf5 reference modified')
-    else:
-        log.debug(str(count) + ' hdf5 references modified')
+    # if count == 1:
+    #     log.debug('one hdf5 reference modified')
+    # else:
+    #     log.debug(str(count) + ' hdf5 references modified')
     if count > 0:
         model.set_modified()
 

@@ -1,6 +1,6 @@
 """_add_surfaces.py: Module to import a list of surfaces into a RESQML model, as triangulatedsets or mesh objects."""
 
-version = '15th November 2021'
+version = '6th July 2022'
 
 # RMS and GOCAD are trademarks of Emerson
 
@@ -32,7 +32,7 @@ def add_surfaces(
     Arguments:
         epc_file (str): file name and path to an existing resqml model
         crs_uuid (uuid.UUID, default None): uuid for a coordinate reference system. Defaults to crs associated with model (usually the main grid crs)
-        ext_uuid (uuid.UUID, default None): uuid for h5 file. If None, uuid for hdf5 file holding main grid geometry will be used
+        ext_uuid (uuid.UUID, default None): DEPRECATED, not used
         surface_file_format (str, default 'zmap'): 'zmap', 'rms', 'roxar' or 'GOCAD-Tsurf'. The format of the input file
         rq_class (str, default 'surface'): 'surface' or 'mesh'. The class of object ot be
         surface_role (str, default 'map'): 'map' or 'pick'
@@ -47,14 +47,16 @@ def add_surfaces(
     assert surface_file_list, 'surface file list is empty or missing'
     assert surface_file_format in ['zmap', 'rms', 'roxar',
                                    'GOCAD-Tsurf'], 'unsupported surface file format: ' + str(surface_file_format)
+    if ext_uuid is not None:
+        log.warning('DEPRECATED: ext_uuid argument to add_surfaces() function')
 
     rq_class = _get_rq_class(rq_class)
 
-    model, crs_uuid, h5_mode, ext_uuid, hdf5_file = _get_model_details(epc_file, crs_uuid, ext_uuid)
+    model, crs_uuid = _get_model_details(epc_file, crs_uuid)
 
     for surf_file in surface_file_list:
         model = _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
-                                    rq_class, hdf5_file, h5_mode, make_horizon_interpretations_and_features, ext_uuid)
+                                    rq_class, make_horizon_interpretations_and_features)
 
     # mark model as modified
     model.set_modified()
@@ -67,7 +69,7 @@ def add_surfaces(
 
 
 def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid, rq_class,
-                        hdf5_file, h5_mode, make_horizon_interpretations_and_features, ext_uuid):
+                        make_horizon_interpretations_and_features):
     _, short_name = os.path.split(surf_file)
     dot = short_name.rfind('.')
     if dot > 0:
@@ -102,7 +104,7 @@ def _add_single_surface(model, surf_file, surface_file_format, surface_role, qua
     # NB. surface may be either a Surface object or a Mesh object
 
     log.debug('appending to hdf5 file for surface file: ' + surf_file)
-    surface.write_hdf5(hdf5_file, mode = h5_mode)
+    surface.write_hdf5()
 
     if make_horizon_interpretations_and_features:
         feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', feature_name = short_name)
@@ -111,8 +113,7 @@ def _add_single_surface(model, surf_file, surface_file_format, surface_role, qua
         interp_root = interp.create_xml()
         surface.set_represented_interpretation_root(interp_root)
 
-    surface.create_xml(ext_uuid,
-                       add_as_part = True,
+    surface.create_xml(add_as_part = True,
                        add_relationships = True,
                        title = short_name + ' sourced from ' + surf_file,
                        originator = None)
@@ -129,7 +130,7 @@ def _get_rq_class(rq_class):
     return rq_class
 
 
-def _get_model_details(epc_file, crs_uuid, ext_uuid):
+def _get_model_details(epc_file, crs_uuid):
     log.info('accessing existing resqml model from: ' + epc_file)
     model = rq.Model(epc_file = epc_file)
     assert model, 'failed to read existing resqml model from file: ' + epc_file
@@ -138,20 +139,4 @@ def _get_model_details(epc_file, crs_uuid, ext_uuid):
         assert model.crs_uuid is not None, 'no crs uuid given and no default in model'
         crs_uuid = model.crs_uuid
 
-    if ext_uuid is None:
-        ext_uuid = model.h5_uuid()
-    if ext_uuid is None:  # no pre-existing hdf5 part or references in model
-        hdf5_file = epc_file[:-4] + '.h5'
-        ext_node = model.create_hdf5_ext(file_name = hdf5_file)
-        ext_uuid = rqet.uuid_for_part_root(ext_node)
-        h5_mode = 'w'
-    else:
-        hdf5_file = model.h5_file_name(uuid = ext_uuid)
-        h5_mode = 'a'
-
-    assert ext_uuid is not None, 'failed to establish hdf5 uuid'
-
-    # append to hdf5 file using arrays from Surface object's patch(es)
-    log.info('will append to hdf5 file: ' + hdf5_file)
-
-    return model, crs_uuid, h5_mode, ext_uuid, hdf5_file
+    return model, crs_uuid

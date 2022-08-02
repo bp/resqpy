@@ -122,23 +122,13 @@ class Crs(BaseResqpy):
             assert self.time_units in wam.valid_uoms(quantity = 'time'), f'invalid CRS time units: {self.time_units}'
         assert self.axis_order in self.valid_axis_orders, 'invalid CRS axis order: ' + str(axis_order)
 
-        self.rotated = (not maths.isclose(self.rotation, 0.0, abs_tol = 1e-8) and
-                        not maths.isclose(self.rotation, 2.0 * maths.pi, abs_tol = 1e-8))
-        if self.rotated:
-            rotation_deg = wam.convert(self.rotation, self.rotation_units, 'dega', quantity = 'plane angle')
-            self.rotation_matrix = vec.rotation_matrix_3d_axial(2, -rotation_deg)
-            self.reverse_rotation_matrix = vec.rotation_matrix_3d_axial(2, rotation_deg)
-            if self.is_right_handed_xy():
-                self.rotation_matrix, self.reverse_rotation_matrix = self.reverse_rotation_matrix, self.rotation_matrix
-
-        self.null_transform = (maths.isclose(self.x_offset, 0.0, abs_tol = 1e-8) and
-                               maths.isclose(self.y_offset, 0.0, abs_tol = 1e-8) and
-                               maths.isclose(self.z_offset, 0.0, abs_tol = 1e-8) and not self.rotated)
+        self.set_rotation_matrices()
 
     def _load_from_xml(self):
         root_node = self.root
+        assert root_node is not None
         flavour = rqet.node_type(root_node)
-        assert flavour in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
+        assert flavour in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs'], f'bad crs node type: {flavour}'
         if flavour == 'obj_LocalTime3dCrs':
             self.time_units = rqet.find_tag_text(root_node, 'TimeUom')
             assert self.time_units
@@ -160,15 +150,34 @@ class Crs(BaseResqpy):
         else:
             self.epsg_code = None
 
+    def set_rotation_matrices(self):
+        """Sets the rotation matrices, and the rotated and null_transform flags, call after changing rotation."""
+
+        rotation_deg = wam.convert(self.rotation, self.rotation_units, 'dega', quantity = 'plane angle')
+        # log.debug(f'setting rotation matrices for dega: {rotation_deg}')
+        self.rotated = (not maths.isclose(rotation_deg, 0.0, abs_tol = 1e-8) and
+                        not maths.isclose(rotation_deg, 360.0, abs_tol = 1e-8))
+        if self.rotated:
+            self.rotation_matrix = vec.rotation_matrix_3d_axial(2, rotation_deg)
+            self.reverse_rotation_matrix = vec.rotation_matrix_3d_axial(2, -rotation_deg)
+            if self.is_right_handed_xy():
+                self.rotation_matrix, self.reverse_rotation_matrix = self.reverse_rotation_matrix, self.rotation_matrix
+        else:
+            self.rotation_matrix = None
+            self.reverse_rotation_matrix = None
+        self.null_transform = (maths.isclose(self.x_offset, 0.0, abs_tol = 1e-8) and
+                               maths.isclose(self.y_offset, 0.0, abs_tol = 1e-8) and
+                               maths.isclose(self.z_offset, 0.0, abs_tol = 1e-8) and not self.rotated)
+
     def is_right_handed_xy(self) -> bool:
         """Returns True if the xy axes are right handed when viewed from above; False if left handed."""
 
-        return self.axis_order in ["northing easting", "southing westing", "westing northing"]
+        return bool(self.axis_order in ["northing easting", "southing westing", "westing northing"])
 
     def is_right_handed_xyz(self) -> bool:
         """Returns True if the xyz axes are right handed; False if left handed."""
 
-        return self.is_right_handed_xy() == self.z_inc_down
+        return self.is_right_handed_xy() is bool(self.z_inc_down)
 
     def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
         """Convert a single xyz point from the parent coordinate reference system to this one."""
@@ -237,7 +246,7 @@ class Crs(BaseResqpy):
 
     def has_same_epsg_code(self, other_crs: 'Crs') -> bool:
         """Returns True if either of the crs'es has a null EPSG code, or if they are the same."""
-        return self.epsg_code is None or other_crs.epsg_code is None or self.epsg_code == other_crs.epsg_code
+        return not self.epsg_code or not other_crs.epsg_code or self.epsg_code == other_crs.epsg_code
 
     def is_equivalent(self, other_crs: 'Crs') -> bool:
         """Returns True if this crs is effectively the same as the other crs."""
@@ -262,6 +271,8 @@ class Crs(BaseResqpy):
             return False
         if not self.has_same_epsg_code(other_crs):
             return False
+        if not _matching_extra_metadata(self, other_crs):
+            return False
         if self.null_transform and other_crs.null_transform:
             return True
         if (maths.isclose(self.x_offset, other_crs.x_offset, abs_tol = 1e-4) and
@@ -281,7 +292,9 @@ class Crs(BaseResqpy):
         if self is other_crs:
             return _as_xyz_tuple(xyz)
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         xyz = self.local_to_global(xyz)
         # yapf: disable
         if self.resqml_type == 'LocalDepth3dCrs':
@@ -303,9 +316,11 @@ class Crs(BaseResqpy):
         """
 
         if self.is_equivalent(other_crs):
-            return
+            return xyz
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         self.local_to_global_array(xyz)
         if self.resqml_type == 'LocalDepth3dCrs':
             if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
@@ -328,7 +343,9 @@ class Crs(BaseResqpy):
         if self is other_crs:
             return _as_xyz_tuple(xyz)
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         xyz = other_crs.local_to_global(xyz)
         # yapf: disable
         if self.resqml_type == 'LocalDepth3dCrs':
@@ -350,9 +367,11 @@ class Crs(BaseResqpy):
         """
 
         if self.is_equivalent(other_crs):
-            return
+            return xyz
         assert self.resqml_type == other_crs.resqml_type
-        assert self.has_same_epsg_code(other_crs)
+        # assert self.has_same_epsg_code(other_crs)
+        if not self.has_same_epsg_code(other_crs):
+            log.warning("converting between crs'es with different epsg codes")
         other_crs.local_to_global_array(xyz)
         if self.resqml_type == 'LocalDepth3dCrs':
             if self.xy_units == self.z_units and other_crs.xy_units == other_crs.z_units:
@@ -481,3 +500,18 @@ def _as_xyz_tuple(xyz):
     """Coerce into 3-tuple of floats."""
 
     return tuple((float(xyz[0]), float(xyz[1]), float(xyz[2])))
+
+
+def _matching_extra_metadata(a, b):
+    if not hasattr(a, 'extra_metadata') and not hasattr(b, 'extra_metadata'):
+        return True
+    if not hasattr(a, 'extra_metadata') or not hasattr(b, 'extra_metadata'):
+        return False
+    if len(a.extra_metadata) != len(b.extra_metadata):
+        return False
+    if len(a.extra_metadata) == 0:
+        return True
+    for i in a.extra_metadata.items():
+        if i not in b.extra_metadata.items():
+            return False
+    return True

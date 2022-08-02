@@ -617,7 +617,7 @@ def coordinate_line_end_points(grid):
        numpy float array of shape (nj + 1, ni + 1, 2, 3)
     """
 
-    points = grid.points_ref(masked = False).reshape((grid.nk + 1, -1, 3))
+    points = grid.points_ref(masked = False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
     primary_pillar_count = (grid.nj + 1) * (grid.ni + 1)
     result = np.empty((grid.nj + 1, grid.ni + 1, 2, 3))
     result[:, :, 0, :] = points[0, :primary_pillar_count, :].reshape((grid.nj + 1, grid.ni + 1, 3))
@@ -1060,11 +1060,11 @@ def find_cell_for_point_xy(grid, x, y, k0 = 0, vertical_ref = 'top', local_coord
 
     # find minimum of manhatten distances from xy to each corner point
     # then check the four cells around that corner point
+    if x is None or y is None:
+        return (None, None)
     a = np.array([[x, y, 0.0]])  # extra axis needed to keep global_to_local_crs happy
     if not local_coords:
-        grid.global_to_local_crs(a)
-    if a is None:
-        return (None, None)
+        grid.global_to_local_crs(a, crs_uuid = grid.crs_uuid)
     a[0, 2] = 0.0  # discard z
     kp = 1 if vertical_ref == 'base' else 0
     (pillar_j0, pillar_i0) = grid.nearest_pillar(a[0, :2], ref_k0 = k0, kp = kp)

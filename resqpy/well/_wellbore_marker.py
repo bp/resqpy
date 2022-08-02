@@ -110,7 +110,8 @@ class WellboreMarker():
                 break
 
         wbm_gb_node = rqet.SubElement(wbm_node, ns['resqml2'] + boundary_kind)
-        wbm_gb_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
+        # wbm_gb_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
+        wbm_gb_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicBoundaryKind')
         wbm_gb_node.text = str(self.marker_type)
 
         if self.interpretation_uuid is not None:

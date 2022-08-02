@@ -17,10 +17,16 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
+import resqpy.surface as rqs
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.fault._gcs_functions import zero_base_cell_indices_in_faces_df,  \
-    standardize_face_indicator_in_faces_df, remove_external_faces_from_faces_df
+    standardize_face_indicator_in_faces_df, remove_external_faces_from_faces_df,  \
+    _triangulate_unsplit_grid_connection_set
+
+valid_interpretation_types = [
+    'obj_FaultInterpretation', 'obj_HorizonInterpretation', 'obj_GeobodyBoundaryInterpretation'
+]
 
 
 class GridConnectionSet(BaseResqpy):
@@ -31,6 +37,7 @@ class GridConnectionSet(BaseResqpy):
     def __init__(self,
                  parent_model,
                  uuid = None,
+                 cache_arrays = False,
                  find_properties = True,
                  grid = None,
                  ascii_load_format = None,
@@ -38,7 +45,11 @@ class GridConnectionSet(BaseResqpy):
                  k_faces = None,
                  j_faces = None,
                  i_faces = None,
+                 k_sides = None,
+                 j_sides = None,
+                 i_sides = None,
                  feature_name = None,
+                 feature_type = 'fault',
                  create_organizing_objects_where_needed = False,
                  create_transmissibility_multiplier_property = True,
                  fault_tmult_dict = None,
@@ -64,6 +75,10 @@ class GridConnectionSet(BaseResqpy):
                  must also be set
            k_faces, j_faces, i_faces (boolean arrays, optional): if present, these arrays are used to identify
                  which faces between logically neighbouring cells to include in the new grid connection set
+           k_sides, j_sides, i_sides (boolean arrays, optional): if present, and k_faces etc are present, these
+                 arrays are used to determine which side of the cell face should appear as the first in the pairing
+           feature_name (string, optional): the feature name to use when setting from faces
+           feature_type (string, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
            create_organizing_objects_where_needed (boolean, default False): if True when loading from ascii or
                  face masks, a fault interpretation object and tectonic boundary feature object will be created
                  for any named fault for which such objects do not exist; if False, missing organizational objects
@@ -167,10 +182,20 @@ class GridConnectionSet(BaseResqpy):
                 #                                      str(len(list_pair[0])) + ' j face cols; from ' + origin)
                 # note: grid structures assume curtain like set of kelp
             elif k_faces is not None or j_faces is not None or i_faces is not None:
-                self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name,
-                                               create_organizing_objects_where_needed)
-        elif find_properties:
-            self.extract_property_collection()
+                self.set_pairs_from_face_masks(k_faces,
+                                               j_faces,
+                                               i_faces,
+                                               feature_name,
+                                               create_organizing_objects_where_needed,
+                                               feature_type = feature_type,
+                                               k_sides = k_sides,
+                                               j_sides = j_sides,
+                                               i_sides = i_sides)
+        else:
+            if cache_arrays:
+                self.cache_arrays()
+            if find_properties:
+                self.extract_property_collection()
 
     def _load_from_xml(self):
         root = self.root
@@ -209,11 +234,12 @@ class GridConnectionSet(BaseResqpy):
             feature_uuid = bu.uuid_from_string(rqet.find_tag_text(child, 'UUID'))
             feature_title = rqet.find_tag_text(child, 'Title')
             # for now, only accept faults
-            assert feature_type in ['obj_FaultInterpretation', 'obj_HorizonInterpretation']
+            assert feature_type in valid_interpretation_types, \
+               f'unsupported type {feature_type} for gcs feature interpretation'
             self.feature_list.append((feature_type, feature_uuid, feature_title))
             log.debug('connection set references fault interpretation: ' + feature_title)
-        log.debug('number of faults referred to in connection set: ' + str(len(self.feature_list)))
-        assert len(self.feature_list) > 0, 'list of fault interpretation references is empty for connection set'
+        log.debug('number of features referred to in connection set: ' + str(len(self.feature_list)))
+        assert len(self.feature_list) > 0, 'list of interpretation references is empty for connection set'
         # leave feature indices till on-demand load
 
     def extract_property_collection(self):
@@ -223,7 +249,13 @@ class GridConnectionSet(BaseResqpy):
             self.property_collection = rqp.PropertyCollection(support = self)
         return self.property_collection
 
-    def set_pairs_from_kelp(self, kelp_0, kelp_1, feature_name, create_organizing_objects_where_needed, axis = 'K'):
+    def set_pairs_from_kelp(self,
+                            kelp_0,
+                            kelp_1,
+                            feature_name,
+                            create_organizing_objects_where_needed,
+                            axis = 'K',
+                            feature_type = 'fault'):
         """Set cell_index_pairs and face_index_pairs based on j and i face kelp strands.
         
         Uses simple no throw pairing.
@@ -291,15 +323,24 @@ class GridConnectionSet(BaseResqpy):
                 i_faces[:] = i_layer.reshape((grid.nk, 1, grid.ni - 1))
         else:
             i_faces = None
-        self.set_pairs_from_face_masks(k_faces, j_faces, i_faces, feature_name, create_organizing_objects_where_needed)
+        self.set_pairs_from_face_masks(k_faces,
+                                       j_faces,
+                                       i_faces,
+                                       feature_name,
+                                       create_organizing_objects_where_needed,
+                                       feature_type = feature_type)
 
-    def set_pairs_from_face_masks(self,
-                                  k_faces,
-                                  j_faces,
-                                  i_faces,
-                                  feature_name,
-                                  create_organizing_objects_where_needed,
-                                  feature_type = 'fault'):  # other feature_type values: 'horizon', 'geobody boundary'
+    def set_pairs_from_face_masks(
+            self,
+            k_faces,
+            j_faces,
+            i_faces,
+            feature_name,
+            create_organizing_objects_where_needed,
+            feature_type = 'fault',  # other feature_type values: 'horizon', 'geobody boundary'
+            k_sides = None,
+            j_sides = None,
+            i_sides = None):
         """Sets cell_index_pairs and face_index_pairs based on triple face masks, using simple no throw pairing."""
 
         assert feature_type in ['fault', 'horizon', 'geobody boundary']
@@ -319,11 +360,12 @@ class GridConnectionSet(BaseResqpy):
                 interpretation_flavour = 'GeobodyBoundaryInterpretation'
             # kind differentiates between horizon and geobody boundary
         fi_parts_list = self.model.parts_list_of_type(interpretation_flavour)
-        if fi_parts_list is None or len(fi_parts_list) == 0:
+        if (fi_parts_list is None or len(fi_parts_list) == 0) and not create_organizing_objects_where_needed:
             log.warning('no interpretation parts found in model for ' + feature_type)
         fi_uuid = None
         for fi_part in fi_parts_list:
-            if self.model.title_for_part(fi_part).split()[0].lower() == feature_name.lower():
+            fi_title = self.model.title_for_part(fi_part)
+            if fi_title == feature_name or fi_title.split()[0].lower() == feature_name.lower():
                 fi_uuid = self.model.uuid_for_part(fi_part)
                 break
         if fi_uuid is None:
@@ -331,7 +373,8 @@ class GridConnectionSet(BaseResqpy):
                 tbf_parts_list = self.model.parts_list_of_type(feature_flavour)
                 tbf = None
                 for tbf_part in tbf_parts_list:
-                    if feature_name.lower() == self.model.title_for_part(tbf_part).split()[0].lower():
+                    tbf_title = self.model.title_for_part(tbf_part)
+                    if feature_name == tbf_title or feature_name.lower() == tbf_title.split()[0].lower():
                         tbf_uuid = self.model.uuid_for_part(tbf_part)
                         if feature_type == 'fault':
                             tbf = rqo.TectonicBoundaryFeature(self.model, uuid = tbf_uuid)
@@ -344,6 +387,8 @@ class GridConnectionSet(BaseResqpy):
                     else:
                         tbf = rqo.GeneticBoundaryFeature(self.model, kind = feature_type, feature_name = feature_name)
                     tbf_root = tbf.create_xml()
+                else:
+                    tbf_root = tbf.root
                 if feature_type == 'fault':
                     fi = rqo.FaultInterpretation(
                         self.model, tectonic_boundary_feature = tbf,
@@ -358,25 +403,43 @@ class GridConnectionSet(BaseResqpy):
             else:
                 log.error('no interpretation found for feature: ' + feature_name)
                 return
-        self.feature_list = [('obj_FaultInterpretation', fi_uuid, str(feature_name))]
+        self.feature_list = [('obj_' + interpretation_flavour, fi_uuid, str(feature_name))]
         cell_pair_list = []
         face_pair_list = []
         nj_ni = grid.nj * grid.ni
         if k_faces is not None:
-            for cell_kji0 in np.stack(np.where(k_faces)).T:
+            if k_sides is None:
+                k_sides = np.zeros(k_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(k_faces)).T, k_sides[np.where(k_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + nj_ni))
-                face_pair_list.append((self.face_index_map[0, 1], self.face_index_map[0, 0]))
+                if flip:
+                    cell_pair_list.append((cell + nj_ni, cell))
+                    face_pair_list.append((self.face_index_map[0, 0], self.face_index_map[0, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + nj_ni))
+                    face_pair_list.append((self.face_index_map[0, 1], self.face_index_map[0, 0]))
         if j_faces is not None:
-            for cell_kji0 in np.stack(np.where(j_faces)).T:
+            if j_sides is None:
+                j_sides = np.zeros(j_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(j_faces)).T, j_sides[np.where(j_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + grid.ni))
-                face_pair_list.append((self.face_index_map[1, 1], self.face_index_map[1, 0]))
+                if flip:
+                    cell_pair_list.append((cell + grid.ni, cell))
+                    face_pair_list.append((self.face_index_map[1, 0], self.face_index_map[1, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + grid.ni))
+                    face_pair_list.append((self.face_index_map[1, 1], self.face_index_map[1, 0]))
         if i_faces is not None:
-            for cell_kji0 in np.stack(np.where(i_faces)).T:
+            if i_sides is None:
+                i_sides = np.zeros(i_faces.shape, dtype = bool)
+            for cell_kji0, flip in zip(np.stack(np.where(i_faces)).T, i_sides[np.where(i_faces)]):
                 cell = grid.natural_cell_index(cell_kji0)
-                cell_pair_list.append((cell, cell + 1))
-                face_pair_list.append((self.face_index_map[2, 1], self.face_index_map[2, 0]))
+                if flip:
+                    cell_pair_list.append((cell + 1, cell))
+                    face_pair_list.append((self.face_index_map[2, 0], self.face_index_map[2, 1]))
+                else:
+                    cell_pair_list.append((cell, cell + 1))
+                    face_pair_list.append((self.face_index_map[2, 1], self.face_index_map[2, 0]))
         self.cell_index_pairs = np.array(cell_pair_list, dtype = int)
         self.face_index_pairs = np.array(face_pair_list, dtype = int)
         self.count = len(self.cell_index_pairs)
@@ -393,8 +456,8 @@ class GridConnectionSet(BaseResqpy):
 
         arguments:
            faces (pandas.DataFrame): dataframe with columns 'name', 'face', 'i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult'
-           create_organizing_objects_where_needed (bool, default False): if True, FaultInterpretation and
-              TectonicBoundaryFeature objects are created (including xml creation) where needed
+           create_organizing_objects_where_needed (bool, default False): if True, interpretation and
+              feature objects are created (including xml creation) where needed
            create_mult_prop (bool, default True): if True, a transmissibility multiplier property is added to the
               collection for this grid connection set
            fault_tmult_dict (dict of str: float): optional dictionary mapping fault name to a transmissibility
@@ -402,8 +465,9 @@ class GridConnectionSet(BaseResqpy):
            one_based_indexing (bool, default True): if True, the i, j & k values in the dataframe are taken to be
               in simulator protocol and 1 is subtracted to yield the RESQML cell indices
 
-        note:
-           as a side effect, this method will set the cell indices in faces to be zero based
+        notes:
+           as a side effect, this method will set the cell indices in faces to be zero based;
+           this method currently assumes fault interpretation (not horizon or geobody boundary)
         """
 
         if len(self.grid_list) > 1:
@@ -682,7 +746,7 @@ class GridConnectionSet(BaseResqpy):
                                         array_attribute = 'fi_cl',
                                         dtype = 'uint32')
             assert self.fi_cl.shape == (
-                self.count,), 'connection set face pair(s) not assigned to exactly one fault'  # rough check
+                self.count,), 'connection set face pair(s) not assigned to exactly one feature'  # rough check
 
         # delattr(self, 'fi_cl')  # assumed to be one-to-one mapping, so cumulative length is discarded
 
@@ -861,11 +925,12 @@ class GridConnectionSet(BaseResqpy):
         self.property_collection.add_to_imported_list_sampling_other_collection(other.property_collection,
                                                                                 selected_indices)
 
-    def list_of_cell_face_pairs_for_feature_index(self, feature_index):
+    def list_of_cell_face_pairs_for_feature_index(self, feature_index = None):
         """Returns list of cell face pairs contributing to feature (fault) with given index.
 
         arguments:
-           feature_index (non-negative integer): the index into the ordered feature list (fault interpretation list)
+           feature_index (non-negative integer, optional): the index into the ordered feature list
+               (fault interpretation list); if None, all cell face pairs are returned
 
         returns:
            (cell_index_pairs, face_index_pairs) or (cell_index_pairs, face_index_pairs, grid_index_pairs)
@@ -879,9 +944,12 @@ class GridConnectionSet(BaseResqpy):
         """
 
         self.cache_arrays()
-        if self.feature_indices is None:
-            return None
-        pairs_tuple = self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
+        if feature_index is None:
+            pairs_tuple = (self.cell_index_pairs, self.face_index_pairs)
+        else:
+            if self.feature_indices is None:
+                return None
+            pairs_tuple = self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
         if len(self.grid_list) == 1:
             raw_cell_pairs, raw_face_pairs = pairs_tuple
             grid_pairs = None
@@ -912,10 +980,10 @@ class GridConnectionSet(BaseResqpy):
         """
 
         cell_pairs, face_pairs = self.list_of_cell_face_pairs_for_feature_index(feature_index)
-        simple_j_set = set(
-        )  # set of (j0, i0) pairs of column indices where J+ faces contribute, as 2 element numpy arrays
-        simple_i_set = set(
-        )  # set of (j0, i0) pairs of column indices where I+ faces contribute, as 2 element numpy arrays
+        # set of (j0, i0) pairs of column indices where J+ faces contribute, as 2 element numpy arrays
+        simple_j_set = set()
+        # set of (j0, i0) pairs of column indices where I+ faces contribute, as 2 element numpy arrays
+        simple_i_set = set()
         for i in range(cell_pairs.shape[0]):
             for ip in range(2):
                 cell_kji0 = cell_pairs[i, ip].copy()
@@ -1011,7 +1079,8 @@ class GridConnectionSet(BaseResqpy):
                    add_relationships = True,
                    write_new_properties = True,
                    title = None,
-                   originator = None):
+                   originator = None,
+                   extra_metadata = None):
         """Creates a Grid Connection Set (fault faces) xml node.
         
         Optionally adds to parts forest.
@@ -1027,7 +1096,10 @@ class GridConnectionSet(BaseResqpy):
         if not self.title and not title:
             title = 'ROOT'
 
-        gcs = super().create_xml(add_as_part = False, title = title, originator = originator)
+        gcs = super().create_xml(add_as_part = False,
+                                 title = title,
+                                 originator = originator,
+                                 extra_metadata = extra_metadata)
 
         c_node = rqet.SubElement(gcs, ns['resqml2'] + 'Count')
         c_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
@@ -1124,25 +1196,16 @@ class GridConnectionSet(BaseResqpy):
             # add feature interpretation reference node for each fault in list, NB: ordered list
             for (f_content_type, f_uuid, f_title) in self.feature_list:
 
-                # for now, only support connection sets for faults
-                if f_content_type == 'obj_FaultInterpretation':
-                    fi_part = rqet.part_name_for_object('obj_FaultInterpretation', f_uuid)
+                if f_content_type in valid_interpretation_types:
+                    fi_part = rqet.part_name_for_object(f_content_type, f_uuid)
                     fi_root = self.model.root_for_part(fi_part)
                     self.model.create_ref_node('FeatureInterpretation',
                                                self.model.title_for_root(fi_root),
                                                f_uuid,
-                                               content_type = 'obj_FaultInterpretation',
-                                               root = ci_node)
-                elif f_content_type == 'obj_HorizonInterpretation':
-                    fi_part = rqet.part_name_for_object('obj_HorizonInterpretation', f_uuid)
-                    fi_root = self.model.root_for_part(fi_part)
-                    self.model.create_ref_node('FeatureInterpretation',
-                                               self.model.title_for_root(fi_root),
-                                               f_uuid,
-                                               content_type = 'obj_HorizonInterpretation',
+                                               content_type = f_content_type,
                                                root = ci_node)
                 else:
-                    raise Exception('unsupported content type in grid connection set')
+                    raise Exception(f'unsupported content type {f_content_type} in grid connection set')
 
         for grid in self.grid_list:
             self.model.create_ref_node('Grid',
@@ -1159,7 +1222,8 @@ class GridConnectionSet(BaseResqpy):
                     for (obj_type, f_uuid, _) in self.feature_list:
                         fi_part = rqet.part_name_for_object(obj_type, f_uuid)
                         fi_root = self.model.root_for_part(fi_part)
-                        self.model.create_reciprocal_relationship(gcs, 'destinationObject', fi_root, 'sourceObject')
+                        if fi_root is not None:
+                            self.model.create_reciprocal_relationship(gcs, 'destinationObject', fi_root, 'sourceObject')
                 ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid, prefixed = False)
                 ext_node = self.model.root_for_part(ext_part)
                 self.model.create_reciprocal_relationship(gcs, 'mlToExternalPartProxy', ext_node,
@@ -1328,9 +1392,10 @@ class GridConnectionSet(BaseResqpy):
         returns:
            list of float being the list of property values for the list of features, in corresponding order
 
-        note:
+        notes:
            this method does not refer to property collection arrays, it simply looks for a constant extra metadata item
-           for each feature; where no such item is found, a NaN is added to the return list
+           for each feature; where no such item is found, a NaN is added to the return list;
+           currently assumes fault interpretation (not horizon or geobody boundary)
         """
 
         if feature_index_list is None:
@@ -1679,6 +1744,26 @@ class GridConnectionSet(BaseResqpy):
                                   self.face_index_pairs == self.face_index_pairs_null_value)
         combined = 6 * self.cell_index_pairs + self.face_index_pairs
         return np.where(null_mask, self.face_index_pairs_null_value, combined)
+
+    def surface(self, feature_index = None):
+        """Returns a Surface object representing the faces of the feature, for an unsplit grid.
+
+        note:
+           this method does not write the hdf5 data nor create the xml for the surface
+        """
+        t = _triangulate_unsplit_grid_connection_set(self, feature_index = feature_index)
+        if t is None:
+            return None
+        p = self.grid_list[0].points_cached.reshape((-1, 3))
+        assert p is not None
+        t, p = rqs.distill_triangle_points(t, p)
+        if feature_index is None:
+            feature_index = 0
+        title = self.feature_name_for_feature_index(feature_index)
+        surf = rqs.Surface(self.model, crs_uuid = self.grid_list[0].crs_uuid, title = title)
+        assert surf is not None
+        surf.set_from_triangles_and_points(t, p)
+        return surf
 
     def _create_multiplier_property(self, mult_list, const_mult):
         pc = self.extract_property_collection()
