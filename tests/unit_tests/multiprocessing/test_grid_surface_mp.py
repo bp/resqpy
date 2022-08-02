@@ -125,9 +125,9 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     assert len(model.uuids()) == 14
     assert len(uuid_list) == 11
 
-    
+
 def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small_grid_and_surface: Tuple[RegularGrid,
-                                                                                                  Surface]):
+                                                                                                         Surface]):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -148,7 +148,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small
         surface_epc,
         surface_uuid,
         name,
-        return_properties = return_properties, 
+        return_properties = return_properties,
         extend_fault_representation = True)
     model = Model(epc_file = epc_file)
     rm_tree("tmp_dir")
