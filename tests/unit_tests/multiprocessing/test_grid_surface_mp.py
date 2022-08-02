@@ -119,8 +119,8 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     assert len(model.uuids(obj_type = 'GridConnectionSetRepresentation')) == 1
     assert len(model.uuids(obj_type = 'FaultInterpretation')) == 1
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
-    assert len(model.uuids(obj_type = 'DiscreteProperty')) == 3
+    assert len(model.uuids(obj_type = 'DiscreteProperty')) == 2
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
     assert len(model.uuids(obj_type = 'PointsProperty')) == 1
-    assert len(model.uuids()) == 15
-    assert len(uuid_list) == 12
+    assert len(model.uuids()) == 14
+    assert len(uuid_list) == 11
