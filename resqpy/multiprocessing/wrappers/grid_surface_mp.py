@@ -136,7 +136,7 @@ def find_faces_to_represent_surface_regular_wrapper(
             )
         # triangulate point set to form a surface; set repr_uuid to that surface and switch repr_flavour to 'surface'
         surf = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
-        flange_bool = surf.set_from_point_set(pset, 
+        flange_bool = surf.set_from_point_set(pset,
                                               convexity_parameter = 2.0,
                                               reorient = True,
                                               extend_with_flange = extend_fault_representation,
@@ -154,12 +154,12 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                        keyword = 'flange bool property',
                                                        support_uuid = surface_uuid,
                                                        property_kind = 'discrete',
-                                                       indexable_element = 'faces', 
+                                                       indexable_element = 'faces',
                                                        discrete = True)
             flange_bool_property.write_hdf5()
             flange_bool_property.create_xml()
             uuid_list.append(flange_bool_property.uuid)
-            
+
     surface = Surface(parent_model = model, uuid = str(surface_uuid))
     surface.change_crs(grid.crs)
     if not trimmed and surface.triangle_count() > 100:
@@ -192,7 +192,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                    keyword = 'flange bool property',
                                                    support_uuid = surface_uuid,
                                                    property_kind = 'discrete',
-                                                   indexable_element = 'faces', 
+                                                   indexable_element = 'faces',
                                                    discrete = True)
         flange_bool_property.write_hdf5()
         flange_bool_property.create_xml()
