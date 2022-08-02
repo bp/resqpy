@@ -136,11 +136,11 @@ def find_faces_to_represent_surface_regular_wrapper(
         # triangulate point set to form a surface; set repr_uuid to that surface and switch repr_flavour to 'surface'
         surf = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
         flange_bool = surf.set_from_point_set(pset, 
-                                                       convexity_parameter = 2.0,
-                                                       reorient = True,
-                                                       extend_with_flange = extend_fault_representation,
-                                                       flange_radial_distance = flange_radius,
-                                                       make_clockwise = False)
+                                              convexity_parameter = 2.0,
+                                              reorient = True,
+                                              extend_with_flange = extend_fault_representation,
+                                              flange_radial_distance = flange_radius,
+                                              make_clockwise = False)
         extended = extend_fault_representation
         retriangulated = True
         surf.write_hdf5()
