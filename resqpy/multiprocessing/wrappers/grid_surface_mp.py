@@ -117,6 +117,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     assert repr_type in ['TriangulatedSetRepresentation', 'PointSetRepresentation']
     extended = False
     retriangulated = False
+    flange_bool = None
     if repr_type == 'PointSetRepresentation':
         # trim pointset to grid xyz box
         pset = PointSet(model, uuid = surface_uuid)
