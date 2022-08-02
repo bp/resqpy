@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from functools import partial
-print()
+
 import resqpy.crs as crs
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.uuid as bu
@@ -63,7 +63,8 @@ class BlockedWell(BaseResqpy):
                  represented_interp = None,
                  originator = None,
                  extra_metadata = None,
-                 add_wellspec_properties = False):
+                 add_wellspec_properties = False,
+                 usa_date_format = False):
         """Creates a new blocked well object and optionally loads it from xml, or trajectory, or Nexus wellspec file.
 
         arguments:
@@ -100,6 +101,8 @@ class BlockedWell(BaseResqpy):
               a wellspec file, the blocked well has its hdf5 data written and xml created and properties are
               fully created; if a list is provided the elements must be numerical wellspec column names;
               if True, all numerical columns other than the cell indices are added as properties
+           usa_date_format (boolean, optional): specifies whether MM/DD/YYYY (True) or DD/MM/YYYY (False) is used 
+              in wellspec file
 
         returns:
            the newly created blocked well object
@@ -174,7 +177,8 @@ class BlockedWell(BaseResqpy):
                             grid,
                             check_grid_name = check_grid_name,
                             use_face_centres = use_face_centres,
-                            add_properties = add_wellspec_properties),
+                            add_properties = add_wellspec_properties,
+                            usa_date_format = usa_date_format),
                 'cellio_file':
                     partial(self.__check_cellio_init_okay,
                             cellio_file = cellio_file,
@@ -565,7 +569,8 @@ class BlockedWell(BaseResqpy):
                              grid,
                              check_grid_name = False,
                              use_face_centres = False,
-                             add_properties = True):
+                             add_properties = True,
+                             usa_date_format = False):
         """Populates empty blocked well from Nexus WELLSPEC data; creates simulation trajectory and md datum.
 
         args:
@@ -599,7 +604,7 @@ class BlockedWell(BaseResqpy):
                                                                          grid = grid,
                                                                          col_list = col_list)
 
-        wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list)
+        wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list, usa_date_format = usa_date_format)
 
         assert len(wellspec_dict) == 1, 'no wellspec data found in file ' + wellspec_file + ' for well ' + well_name
 
