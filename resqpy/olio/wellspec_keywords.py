@@ -271,7 +271,7 @@ def load_wellspecs(
     selecting = bool(column_list)
 
     well_dict = {}
-    well_pointers = get_well_pointers(wellspec_file)
+    well_pointers = get_well_pointers(wellspec_file, usa_date_format = usa_date_format)
 
     if column_list is None:
         well_dict = dict.fromkeys(well_pointers, None)
