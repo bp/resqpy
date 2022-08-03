@@ -1741,14 +1741,17 @@ def find_faces_to_represent_surface_regular_optimised(
     return_bisector = False
     return_flange_bool = False
     if return_properties:
-        assert all([p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector', 'flange bool'] for p in return_properties])
+        assert all([
+            p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector', 'flange bool']
+            for p in return_properties
+        ])
         return_triangles = ('triangle' in return_properties)
         return_normal_vectors = ('normal vector' in return_properties)
         return_depths = ('depth' in return_properties)
         return_offsets = ('offset' in return_properties)
         return_bisector = ('grid bisector' in return_properties)
         return_flange_bool = ('flange bool' in return_properties)
-        if return_flange_bool: 
+        if return_flange_bool:
             return_triangles = True
 
     if title is None:
@@ -1927,14 +1930,14 @@ def find_faces_to_represent_surface_regular_optimised(
         all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
-    
+
     if return_flange_bool:
         all_flange = np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = bool)
-        flange_bool_uuid = surface.model.uuid(title='flange bool', 
-                                              obj_type='DiscreteProperty', 
-                                              related_uuid=surface.uuid)
+        flange_bool_uuid = surface.model.uuid(title = 'flange bool',
+                                              obj_type = 'DiscreteProperty',
+                                              related_uuid = surface.uuid)
         assert flange_bool_uuid is not None, f"No flange bool property found for surface: {surface.title}"
-        flange_bool = Property(surface.model,uuid=flange_bool_uuid)
+        flange_bool = Property(surface.model, uuid = flange_bool_uuid)
         flange_array = flange_bool.array_ref()
         all_flange = np.take(flange_array, all_tris)
         assert all_flange.shape == (gcs.count,)
