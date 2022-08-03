@@ -371,13 +371,14 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, ch
     return collection, well_frame
 
 
-def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
+def add_blocked_wells_from_wellspec(model, grid, wellspec_file, usa_date_format = False):
     """Add a blocked well for each well in a Nexus WELLSPEC file.
 
     arguments:
        model (model.Model object): model to which blocked wells are added
        grid (grid.Grid object): grid against which wellspec data will be interpreted
        wellspec_file (string): path of ascii file holding Nexus WELLSPEC keyword and data
+       usa_date_format (bool): mm/dd/yyyy (True) vs. dd/mm/yyyy (False)
 
     returns:
        int: count of number of blocked wells created
@@ -387,10 +388,11 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file):
        'simulation' trajectory and measured depth datum objects will also be created
     """
 
-    well_list_dict = wsk.load_wellspecs(wellspec_file, column_list = None)
+    well_list_dict = wsk.load_wellspecs(wellspec_file, column_list = None, usa_date_format = usa_date_format)
 
     count = 0
     for well in well_list_dict:
+        print('add_blocked_wells_from_wellspec',well,usa_date_format)
         log.info('processing well: ' + str(well))
         bw = BlockedWell(model,
                          grid = grid,
