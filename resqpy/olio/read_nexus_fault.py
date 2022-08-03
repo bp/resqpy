@@ -41,9 +41,6 @@ def load_nexus_fault_mult_table(file_name):
 
         return False
 
-    names = []
-    grids = []
-    faces = []
     dfs = []
 
     num_tables = 0
@@ -141,29 +138,12 @@ def load_nexus_fault_mult_table(file_name):
                         ISRECORD = False
                         chunks = []
 
-#     data = {
-#         'grid': grids,
-#         'name': names,
-#         'face': faces,
-#         'i1': [],
-#         'i2': [],
-#         'j1': [],
-#         'j2': [],
-#         'k1': [],
-#         'k2': [],
-#         'mult': []
-#     }
-#     for df in dfs:
-#         for col in df.columns:
-#             data[col].extend(df[col])
     fault_df = pd.concat(dfs).reset_index(drop=True)
-#     fault_df = pd.DataFrame(data)
 
     convert_dict = {'i1': int, 'i2': int, 'j1': int, 'j2': int, 'k1': int, 'k2': int, 'mult': float}
     fault_df = fault_df.astype(convert_dict)
 
     return fault_df
-
 
 def load_nexus_fault_mult_table_new(file_name):
     """Reads a Nexus (!) format file containing one or more MULT keywords and returns a dataframe with the MULT rows."""
