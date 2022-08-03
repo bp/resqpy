@@ -301,6 +301,17 @@ def find_faces_to_represent_surface_regular_wrapper(
                     realization = realisation,
                     indexable_element = "cells",
                 )
+            elif p_name == 'flange bool':
+                property_collection.add_cached_array_to_imported_list(
+                    array,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
+                    discrete = True,
+                    null_value = -1,
+                    property_kind = "discrete",
+                    realization = realisation,
+                    indexable_element = "faces",
+                )
             else:
                 raise ValueError(f'unrecognised property name {p_name}')
         property_collection.write_hdf5_for_imported_list()
