@@ -1932,7 +1932,6 @@ def find_faces_to_represent_surface_regular_optimised(
         assert all_offsets.shape == (gcs.count,)
 
     if return_flange_bool:
-        all_flange = np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = bool)
         flange_bool_uuid = surface.model.uuid(title = 'flange bool',
                                               obj_type = 'DiscreteProperty',
                                               related_uuid = surface.uuid)
