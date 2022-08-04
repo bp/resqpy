@@ -1940,7 +1940,6 @@ def find_faces_to_represent_surface_regular_optimised(
         flange_array = flange_bool.array_ref()
         all_flange = np.take(flange_array, all_tris)
         assert all_flange.shape == (gcs.count,)
-        assert min(all_flange) == 0, 'Not all triangles assigned'
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_normal_vectors:
