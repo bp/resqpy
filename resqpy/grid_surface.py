@@ -25,6 +25,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.surface as rqs
 import resqpy.well as rqw
+from resqpy.property import Property
 
 
 class GridSkin:
@@ -1738,13 +1739,20 @@ def find_faces_to_represent_surface_regular_optimised(
     return_depths = False
     return_offsets = False
     return_bisector = False
+    return_flange_bool = False
     if return_properties:
-        assert all([p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector'] for p in return_properties])
+        assert all([
+            p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector', 'flange bool']
+            for p in return_properties
+        ])
         return_triangles = ('triangle' in return_properties)
         return_normal_vectors = ('normal vector' in return_properties)
         return_depths = ('depth' in return_properties)
         return_offsets = ('offset' in return_properties)
         return_bisector = ('grid bisector' in return_properties)
+        return_flange_bool = ('flange bool' in return_properties)
+        if return_flange_bool:
+            return_triangles = True
 
     if title is None:
         title = name
@@ -1923,6 +1931,16 @@ def find_faces_to_represent_surface_regular_optimised(
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
 
+    if return_flange_bool:
+        flange_bool_uuid = surface.model.uuid(title = 'flange bool',
+                                              obj_type = 'DiscreteProperty',
+                                              related_uuid = surface.uuid)
+        assert flange_bool_uuid is not None, f"No flange bool property found for surface: {surface.title}"
+        flange_bool = Property(surface.model, uuid = flange_bool_uuid)
+        flange_array = flange_bool.array_ref()
+        all_flange = np.take(flange_array, all_tris)
+        assert all_flange.shape == (gcs.count,)
+
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_normal_vectors:
         k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[where_true(k_faces)]
@@ -1952,6 +1970,8 @@ def find_faces_to_represent_surface_regular_optimised(
             props_dict['normal vector'] = all_normals
         if return_bisector:
             props_dict['grid bisector'] = (bisector, is_curtain)
+        if return_flange_bool:
+            props_dict['flange bool'] = all_flange
         return (gcs, props_dict)
 
     return gcs
