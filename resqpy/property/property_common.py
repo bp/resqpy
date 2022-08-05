@@ -345,6 +345,8 @@ def _crs_m_or_ft(crs_node):  # NB. models not-so-rarely use metres for xy and fe
         return 'm'
     if xy_units == 'ft' and z_units == 'ft':
         return 'ft'
+    if xy_units == 'cm' and z_units == 'cm':
+        return 'cm'
     return None
 
 
