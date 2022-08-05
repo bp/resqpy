@@ -1499,7 +1499,7 @@ def test_property_kind_and_facet_from_keyword(keyword, kind, facet_type, facet):
                           ('mD.ft', 'ft', 'ft', 'permeability thickness', None, None, None, None),
                           ('mD.m', 'm', 'm', 'permeability length', None, None, None, None),
                           ('mD.ft', 'ft', 'ft', 'permeability length', None, None, None, None),
-                          (None, 'ft', 'm', 'permeability length', None, None, None, None),
+                          ('mD.m', 'ft', 'm', 'permeability length', None, None, None, None),
                           ('m3', 'm', 'm', 'fluid volume', None, None, None, None),
                           ('1000 ft3', 'ft', 'ft', 'fluid volume', None, None, 'what', 'gas'),
                           ('bbl', 'ft', 'ft', 'fluid volume', None, None, 'what', 'oil'),

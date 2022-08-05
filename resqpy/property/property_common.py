@@ -1,4 +1,7 @@
 """Module containing common methods for properties"""
+
+# Nexus is a trademark of Halliburton
+
 import warnings
 import resqpy.property
 
@@ -361,7 +364,8 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
     returns:
        a valid resqml unit of measure (uom) for the property_kind, or None
 
-    note:
+    notes:
+       this function is tailored towards Nexus unit systems;
        the resqml standard allows a property to have any number of facets; however,
        this module currently only supports zero or one facet per property
     """
@@ -378,7 +382,7 @@ def guess_uom(property_kind, minimum, maximum, support, facet_type = None, facet
     if property_kind == 'permeability rock' or property_kind == 'rock permeability':
         return 'mD'
     if property_kind in ['permeability thickness', 'permeability length']:
-        return _guess_uom_permeability(property_kind, crs_node, from_crs)
+        return _guess_uom_permeability_thickness(property_kind, crs_node, from_crs)
     if property_kind.endswith('transmissibility'):
         return _guess_uom_transmissibility(from_crs)
     if property_kind == 'pressure':
@@ -414,28 +418,23 @@ def _guess_uom_volume(property_kind, from_crs, facet_type, facet):
                 return '1000 ft3'  # todo: check units output by nexus for GIP
             else:
                 return 'bbl'  # todo: check whether nexus uses 10^3 or 10^6 units
+        if from_crs == 'cm':
+            return 'cm3'
         return None
     if from_crs is None:
         return None
     if from_crs == 'ft' and property_kind == 'pore volume':
         return 'bbl'  # seems to be Nexus 'ENGLISH' uom for pv out
-    return from_crs + '3'  # ie. m3 or ft3
+    return from_crs + '3'  # ie. m3 or ft3 or cm3
 
 
-def _guess_uom_permeability(property_kind, crs_node, from_crs):
-    if 'thickness' in property_kind:
-        z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
-        if z_units == 'm':
-            return 'mD.m'
-        if z_units == 'ft':
-            return 'mD.ft'
-        return None
-    else:
-        if from_crs is not None:
-            return f'mD.{from_crs}'
-        else:
-            return None
-        return None
+def _guess_uom_permeability_thickness(property_kind, crs_node, from_crs):
+    z_units = rqet.find_tag(crs_node, 'VerticalUom').text.lower()
+    if z_units in ['m', 'cm']:  # note: mD.cm is not a valid RESQML uom
+        return 'mD.m'
+    if z_units == 'ft':
+        return 'mD.ft'
+    return None
 
 
 def _guess_uom_ntg_por_sat(maximum, from_crs):
@@ -449,6 +448,8 @@ def _guess_uom_ntg_por_sat(maximum, from_crs):
         return 'm3/m3'
     if from_crs == 'ft':
         return 'ft3/ft3'
+    if from_crs == 'cm':
+        return 'cm3/cm3'
     return 'Euc'
 
 
@@ -458,13 +459,15 @@ def _guess_uom_transmissibility(from_crs):
         return 'm3.cP/(kPa.d)'  # NB: might actually be m3/(psi.d) or m3/(bar.d)
     if from_crs == 'ft':
         return 'bbl.cP/(psi.d)'  # gamble on barrels per day per psi; could be ft3/(psi.d)
+    if from_crs == 'cm':
+        return 'cm3.cP/(psi.d)'  # complete guess, though transmissibility probably not used in lab scale models
     return None
 
 
 def _guess_uom_pressure(from_crs, maximum):
     if from_crs == 'm':
         return 'kPa'  # NB: might actually be psi or bar
-    if from_crs == 'ft':
+    if from_crs in ['ft', 'cm']:  # note: Nexus uses psi for lab pressure units
         return 'psi'
     if maximum is not None:
         max_real = float(maximum)
@@ -487,6 +490,8 @@ def _guess_uom_gor_ogr(property_kind, from_crs):
             return '1000 ft3/bbl'
         else:
             return '0.001 bbl/ft3'
+    if from_crs == 'cm':
+        return 'cm3/cm3'
     return None
 
 

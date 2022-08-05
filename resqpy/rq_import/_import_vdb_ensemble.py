@@ -1,6 +1,6 @@
 """_import_vdb_ensemble.py: Module to import a vdb ensemble into resqml format."""
 
-version = '15th November 2021'
+version = '5th August 2022'
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -73,8 +73,10 @@ def import_vdb_ensemble(
           properties imported; only really useful to differentiate from other properties related to the grid
        extent_ijk (triple int, optional): this and remaining arguments are only used if existing_epc is False; the extent
           is only needed in case automatic determination of the extent fails
-       corp_xy_units (string, default 'm'): the units of x & y values in the vdb corp data; should be 'm' (metres) or 'ft' (feet)
-       corp_z_units (string, default 'm'): the units of z values in the vdb corp data; should be 'm' (metres) or 'ft' (feet)
+       corp_xy_units (string, default 'm'): the units of x & y values in the vdb corp data;
+          typically 'm' (metres), 'ft' (feet) or 'cm' (centimetres, for lab scale models)
+       corp_z_units (string, default 'm'): the units of z values in the vdb corp data;
+          typically 'm' (metres), 'ft' (feet) or 'cm' (centimetres, for lab scale models)
        corp_z_inc_down (boolean, default True): set to True if corp z values are depth; False if elevation
        ijk_handedness (string, default 'right'): set to the handedness of the IJK axes in the Nexus model; 'right' or 'left'
        geometry_defined_everywhere (boolean, default True): set to False if inactive cells do not have valid geometry;
@@ -82,9 +84,9 @@ def import_vdb_ensemble(
        treat_as_nan (string, optional): if not None, one of 'dots', 'ij_dots', 'inactive'; controls which inactive cells
           have their geometry set to undefined
        resqml_xy_units (string, default 'm'): the units of x & y values to use in the generated resqml grid;
-          should be 'm' (metres) or 'ft' (feet)
+          typically 'm' (metres), 'ft' (feet) or 'cm' (centimetres, for lab scale models)
        resqml_z_units (string, default 'm'): the units of z values to use in the generated resqml grid;
-          should be 'm' (metres) or 'ft' (feet)
+          typically 'm' (metres), 'ft' (feet) or 'cm' (centimetres, for lab scale models)
        resqml_z_inc_down (boolean, default True): set to True if resqml z values are to be depth; False for elevations
        shift_to_local (boolean, default True): if True, the resqml coordinate reference system will use a local origin
        local_origin_place (string, default 'centre'): where to place the local origin; 'centre' or 'minimum'; only
