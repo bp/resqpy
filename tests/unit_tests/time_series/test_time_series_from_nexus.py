@@ -1,5 +1,7 @@
+import os
 import datetime
 
+from resqpy.model import new_model
 from resqpy.time_series._from_nexus_summary import _process_summary_entries, time_series_from_nexus_summary
 
 
@@ -110,6 +112,16 @@ def test_time_series_from_nexus_summary_if_no_file():
     result = time_series_from_nexus_summary('')
     # assert
     assert result is None
+
+
+def test_time_series_from_nexus_summary_no_dates(test_data_path, tmp_path):
+    epc = os.path.join(tmp_path, 'time_series_test.epc')
+    summary_file = os.path.join(test_data_path, 'dateless_timeseries.sum')
+    model = new_model(epc)
+    ts = time_series_from_nexus_summary(summary_file, model, start_date = '2022-08-23')
+    assert ts is not None
+    assert len(ts.timestamps) == 22
+    assert ts.timestamps[-1] == '2022-08-24T12:00:00Z'
 
 
 # def test_time_series_from_nexus_summary_open_file(mocker):
