@@ -604,7 +604,10 @@ class BlockedWell(BaseResqpy):
                                                                          grid = grid,
                                                                          col_list = col_list)
 
-        wellspec_dict = wsk.load_wellspecs(wellspec_file, well = well_name, column_list = col_list, usa_date_format = usa_date_format)
+        wellspec_dict = wsk.load_wellspecs(wellspec_file,
+                                           well = well_name,
+                                           column_list = col_list,
+                                           usa_date_format = usa_date_format)
 
         assert len(wellspec_dict) == 1, 'no wellspec data found in file ' + wellspec_file + ' for well ' + well_name
 
