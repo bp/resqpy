@@ -399,7 +399,7 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file, usa_date_format 
                          well_name = well,
                          check_grid_name = True,
                          use_face_centres = True,
-			 usa_date_format = usa_date_format)
+                         usa_date_format = usa_date_format)
         if not bw.node_count:  # failed to load from wellspec, eg. because of no perforations in grid
             log.warning('no wellspec data loaded for well: ' + str(well))
             continue
