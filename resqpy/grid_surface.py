@@ -1517,10 +1517,10 @@ def where_true(data: np.ndarray):
 
 
 @njit(parallel = True)
-def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, points: np.ndarray, triangles: np.ndarray,
-                    grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool, normals: np.ndarray,
-                    return_depths: bool, depths: np.ndarray, return_offsets: bool, offsets: np.ndarray,
-                    return_triangles: bool,
+def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axis: int, points: np.ndarray,
+                    triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool,
+                    normals: np.ndarray, return_depths: bool, depths: np.ndarray, return_offsets: bool,
+                    offsets: np.ndarray, return_triangles: bool,
                     triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Finds the faces that intersect the surface in 3D.
 
@@ -1530,7 +1530,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
         index2 (int): the second index. Axis i is 1, j is 2, and k is 2.
         hits (np.ndarray): boolean array of grid centres that intersected the surface for the given
             axis.
-        n (int): number of cells in axis
+        n_axis (int): number of cells in the axis.
         points (np.ndarray): array of all the surface node points in 3D.
         triangles (np.ndarray): array of all the points indices creating each triangle.
         grid_dxyz (Tuple[float]): tuple of a cell's thickness in each axis.
@@ -1554,22 +1554,24 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
             corresponding cell face.
         - offsets (np.ndarray): array of the distance between the centre of the cell face and the
             intersection point of the inter-cell centre vector with a triangle in the surface.
-        - triangles (np.ndarray): array of triangle numbers
+        - triangle_per_face (np.ndarray): array of triangle numbers
     """
     n_faces = faces.shape[2 - axis]
     for i in numba.prange(len(hits)):
         tri, d1, d2 = hits[i]
 
-        ind0 = np.zeros(3, dtype = numba.float64) + grid_dxyz[axis] / 2
-        ind0[2 - index1] = (d1 + 0.5) * grid_dxyz[2 - index1]
-        ind0[2 - index2] = (d2 + 0.5) * grid_dxyz[2 - index2]
+        # Line start point in 3D which had a projection hit.
+        centre_point_start = np.zeros(3, dtype = numba.float64) + grid_dxyz[axis] / 2
+        centre_point_start[2 - index1] = (d1 + 0.5) * grid_dxyz[2 - index1]
+        centre_point_start[2 - index2] = (d2 + 0.5) * grid_dxyz[2 - index2]
 
-        ind1 = np.copy(ind0)
-        ind1[axis] = grid_dxyz[axis] * (n - 0.5)
+        # Line end point in 3D.
+        centre_point_end = np.copy(centre_point_start)
+        centre_point_end[axis] = grid_dxyz[axis] * (n_axis - 0.5)
 
         xyz = meet.line_triangle_intersect_numba(
-            ind0,
-            ind1 - ind0,
+            centre_point_start,
+            centre_point_end - centre_point_start,
             points[triangles[tri]],
             line_segment = True,
             t_tol = 1.0e-6,
@@ -1577,33 +1579,34 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
         if xyz is None:  # meeting point is outwith grid
             continue
 
-        face = int((xyz[axis] - ind0[axis]) / grid_dxyz[axis])
+        # The face corresponding to the grid and surface intersection at this point.
+        face = int((xyz[axis] - centre_point_start[axis]) / grid_dxyz[axis])
         if face == -1:  # handle rounding precision issues
             face = 0
         elif face == n_faces:
             face -= 1
         assert 0 <= face < n_faces
-        ind_face = np.zeros(3, dtype = np.int32)
-        ind_face[index1] = d1
-        ind_face[index2] = d2
-        ind_face[2 - axis] = face
 
-        faces[ind_face[0], ind_face[1], ind_face[2]] = True
+        face_idx = np.zeros(3, dtype = np.int32)
+        face_idx[index1] = d1
+        face_idx[index2] = d2
+        face_idx[2 - axis] = face
+
+        faces[face_idx[0], face_idx[1], face_idx[2]] = True
+
         if return_depths:
-            depths[ind_face[0], ind_face[1], ind_face[2]] = xyz[2]
-
-        ind2 = np.zeros(4, dtype = np.int32)
-        ind2[index2] = d2
-        ind2[-1] = axis
-
+            depths[face_idx[0], face_idx[1], face_idx[2]] = xyz[2]
         if return_offsets:
-            offsets[ind_face[0], ind_face[1], ind_face[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
+            offsets[face_idx[0], face_idx[1], face_idx[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
         if return_normal_vectors:
-            normals[ind_face[0], ind_face[1], ind_face[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
-            if normals[ind2[0], ind2[1], ind2[2], 2] > 0.0:
-                normals[ind_face[0], ind_face[1], ind_face[2]] = -normals[ind_face[0], ind_face[1], ind_face[2]]
+            normals[face_idx[0], face_idx[1], face_idx[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
+            normal_idx = np.zeros(3, dtype = np.int32)
+            normal_idx[index2] = d2
+            if normals[normal_idx[0], normal_idx[1], normal_idx[2], 2] > 0.0:
+                normals[face_idx[0], face_idx[1], face_idx[2]] = -normals[face_idx[0], face_idx[1], face_idx[2]]
         if return_triangles:
-            triangle_per_face[ind_face[0], ind_face[1], ind_face[2]] = tri
+            triangle_per_face[face_idx[0], face_idx[1], face_idx[2]] = tri
+
     return faces, normals, offsets, triangle_per_face
 
 
