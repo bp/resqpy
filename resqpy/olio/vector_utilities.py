@@ -389,6 +389,12 @@ def tilt_3d_matrix(azimuth, dip):
     return matrix
 
 
+def rotation_matrix_3d_vector(v):
+    """Returns a rotation matrix which will rotate points by inclination and azimuth of vector."""
+
+    return tilt_3d_matrix(azimuth(v), inclination(v))
+
+
 def tilt_points(pivot_xyz, azimuth, dip, points):
     """Modifies array of xyz points in situ to apply dip in direction of azimuth, about pivot point."""
 
