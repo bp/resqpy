@@ -15,6 +15,7 @@ import pandas as pd
 from functools import partial
 
 import resqpy.crs as crs
+import resqpy.grid as grr
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
@@ -509,7 +510,11 @@ class BlockedWell(BaseResqpy):
 
         # note: see also extract_box_for_well code
         assert trajectory is not None and grid is not None
-        if np.any(np.isnan(grid.points_ref(masked = False))):
+        flavour = grr.grid_flavour(grid.root)
+        if not flavour.startswith('Ijk'):
+            raise NotImplementedError('well blocking only implemented for IjkGridRepresentation')
+        is_regular = (flavour == 'IjkBlockGrid') and hasattr(grid, 'is_aligned') and grid.is_aligned
+        if not is_regular and np.any(np.isnan(grid.points_ref(masked = False))):
             log.warning('grid does not have geometry defined everywhere: attempting fill')
             import resqpy.derived_model as rqdm
             fill_grid = rqdm.copy_grid(grid)

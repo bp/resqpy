@@ -2308,7 +2308,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert len(cell_indices_list) == cell_count
     assert len(face_pairs_list) == cell_count
 
-    blocked_well.node_mds = np.array(node_mds_list)
+    blocked_well.node_mds = np.array(node_mds_list, dtype = float)
     blocked_well.node_count = node_count
     blocked_well.grid_indices = np.array(grid_indices_list, dtype = int)
     blocked_well.cell_indices = np.array(cell_indices_list, dtype = int)
