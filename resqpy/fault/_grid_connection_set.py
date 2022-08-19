@@ -1237,9 +1237,9 @@ class GridConnectionSet(BaseResqpy):
         return gcs
 
     def write_simulator(self,
-                        filename, 
+                        filename,
                         mode = 'w',
-                        simulator = 'nexus', 
+                        simulator = 'nexus',
                         include_both_sides = False,
                         use_minus = False,
                         trans_mult_uuid = None):
