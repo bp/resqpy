@@ -1236,14 +1236,22 @@ class GridConnectionSet(BaseResqpy):
 
         return gcs
 
-    def write_simulator(self, filename, mode = 'w', simulator = 'nexus', include_both_sides = False, use_minus = False, trans_mult_uuid = None):
+    def write_simulator(self,
+                        filename, 
+                        mode = 'w', 
+                        simulator = 'nexus', 
+                        include_both_sides = False, 
+                        use_minus = False, 
+                        trans_mult_uuid = None):
         """Creates a Nexus include file holding MULT keywords and data. trans_mult_uuid (optional) is the uuid of a property on the gcs containing transmissibility multiplier values. If not provided values of 1.0 will be used."""
         
         if trans_mult_uuid is not None:
-            assert self.property_collection.part_in_collection(self.model.part_for_uuid(trans_mult_uuid)), f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
+            assert self.property_collection.part_in_collection(self.model.part_for_uuid(
+                trans_mult_uuid)), f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
             tmult_array = self.property_collection.cached_part_array_ref(self.model.part_for_uuid(trans_mult_uuid))
             assert tmult_array is not None
-        else: tmult_array = None
+        else: 
+            tmult_array = None
 
         assert simulator == 'nexus'
 
@@ -1288,12 +1296,12 @@ class GridConnectionSet(BaseResqpy):
                     feature_mask = np.where(self.feature_indices == feature_index, 1, 0)
                     feat_mult_array = np.extract(feature_mask, tmult_array)
                 else:
-                    feat_mult_array = np.ones(shape=(cell_index_pairs.shape[0],), dtype = float)
+                    feat_mult_array = np.ones(shape = (cell_index_pairs.shape[0],), dtype = float)
                 for side in sides:
                     both = np.empty((cell_index_pairs.shape[0], 6), dtype = int)
                     both[:, :2] = face_index_pairs[:, side, :]  # axis, polarity
                     both[:, 2:-1] = cell_index_pairs[:, side, :]  # k, j, i
-                    both[:, -1:] = feat_mult_array.reshape(-1,1)
+                    both[:, -1:] = feat_mult_array.reshape(-1, 1)
                     df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i', 'tmult'])
                     df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k', 'tmult'])
                     both_sorted = np.empty(both.shape, dtype = int)
