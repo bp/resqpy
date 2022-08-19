@@ -1238,10 +1238,10 @@ class GridConnectionSet(BaseResqpy):
 
     def write_simulator(self,
                         filename, 
-                        mode = 'w', 
+                        mode = 'w',
                         simulator = 'nexus', 
-                        include_both_sides = False, 
-                        use_minus = False, 
+                        include_both_sides = False,
+                        use_minus = False,
                         trans_mult_uuid = None):
         """Creates a Nexus include file holding MULT keywords and data. trans_mult_uuid (optional) is the uuid of a property on the gcs containing transmissibility multiplier values. If not provided values of 1.0 will be used."""
         
@@ -1250,7 +1250,7 @@ class GridConnectionSet(BaseResqpy):
                 trans_mult_uuid)), f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
             tmult_array = self.property_collection.cached_part_array_ref(self.model.part_for_uuid(trans_mult_uuid))
             assert tmult_array is not None
-        else: 
+        else:
             tmult_array = None
 
         assert simulator == 'nexus'
