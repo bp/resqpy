@@ -390,9 +390,15 @@ def tilt_3d_matrix(azimuth, dip):
 
 
 def rotation_matrix_3d_vector(v):
-    """Returns a rotation matrix which will rotate points by inclination and azimuth of vector."""
+    """Returns a rotation matrix which will rotate points by inclination and azimuth of vector.
 
-    return tilt_3d_matrix(azimuth(v), inclination(v))
+    note:
+       the returned matrix will map a positive z axis vector onto v
+    """
+
+    m = tilt_3d_matrix(azimuth(v), inclination(v))
+    m[:2, :] = -m[:2, :]  # todo: should this change be in the tilt matrix?
+    return m
 
 
 def tilt_points(pivot_xyz, azimuth, dip, points):

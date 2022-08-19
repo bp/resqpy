@@ -136,6 +136,8 @@ class BlockedWell(BaseResqpy):
         self.wellbore_interpretation = None  #: associated wellbore interpretation object
         self.wellbore_feature = None  #: associated wellbore feature object
 
+        self.cell_interval_map = None  # maps from cell index to interval (ie. node) index; populated on demand
+
         #: All logs associated with the blockedwellbore; an instance of :class:`resqpy.property.WellIntervalPropertyCollection`
         self.logs = None
         self.cellind_null = None
@@ -408,6 +410,39 @@ class BlockedWell(BaseResqpy):
         for g in self.grid_list:
             uuid_list.append(g.uuid)
         return uuid_list
+
+    def interval_for_cell(self, cell_index):
+        """Returns the interval index for a given cell index (identical if there are no unblocked intervals)."""
+        assert 0 <= cell_index < self.cell_count
+        if self.node_count == self.cell_count + 1:
+            return cell_index
+        if self.cell_interval_map is None:
+            self._set_cell_interval_map()
+        return self.cell_interval_map[cell_index]
+
+    def entry_and_exit_mds(self, cell_index):
+        """Returns entry and exit measured depths for a blocked cell.
+
+        arguments:
+            cell_index (int): the index of the cell in the blocked cells list; 0 <= cell_index < cell_count
+
+        returns:
+            (float, float) being the entry and exit measured depths for the cell, along the trajectory;
+            uom is held in trajectory object
+        """
+        interval = self.interval_for_cell(cell_index)
+        return (self.node_mds[interval], self.node_mds[interval + 1])
+
+    def _set_cell_interval_map(self):
+        """Sets up an index mapping from blocked cell index to interval index, accounting for unblocked intervals."""
+        self.cell_interval_map = np.zeros(self.cell_count, dtype = int)
+        ci = 0
+        for ii in range(self.node_count - 1):
+            if self.grid_indices[ii] < 0:
+                continue
+            self.cell_interval_map[ci] = ii
+            ci += 1
+        assert ci == self.cell_count
 
     def cell_indices_kji0(self):
         """Returns a numpy int array of shape (N, 3) of cells visited by well, for a single grid situation.
