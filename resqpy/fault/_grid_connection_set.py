@@ -1244,7 +1244,6 @@ class GridConnectionSet(BaseResqpy):
                         use_minus = False,
                         trans_mult_uuid = None):
         """Creates a Nexus include file holding MULT keywords and data. trans_mult_uuid (optional) is the uuid of a property on the gcs containing transmissibility multiplier values. If not provided values of 1.0 will be used."""
-        
         if trans_mult_uuid is not None:
             assert self.property_collection.part_in_collection(self.model.part_for_uuid(
                 trans_mult_uuid)), f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
