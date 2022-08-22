@@ -1236,8 +1236,22 @@ class GridConnectionSet(BaseResqpy):
 
         return gcs
 
-    def write_simulator(self, filename, mode = 'w', simulator = 'nexus', include_both_sides = False, use_minus = False):
-        """Creates a Nexus include file holding MULT keywords and data."""
+    def write_simulator(self,
+                        filename,
+                        mode = 'w',
+                        simulator = 'nexus',
+                        include_both_sides = False,
+                        use_minus = False,
+                        trans_mult_uuid = None):
+        """Creates a Nexus include file holding MULT keywords and data. trans_mult_uuid (optional) is the uuid of a property on the gcs containing transmissibility multiplier values. If not provided values of 1.0 will be used."""
+        if trans_mult_uuid is not None:
+            self.extract_property_collection()
+            assert self.property_collection.part_in_collection(self.model.part_for_uuid(
+                trans_mult_uuid)), f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
+            tmult_array = self.property_collection.cached_part_array_ref(self.model.part_for_uuid(trans_mult_uuid))
+            assert tmult_array is not None
+        else:
+            tmult_array = None
 
         assert simulator == 'nexus'
 
@@ -1258,11 +1272,11 @@ class GridConnectionSet(BaseResqpy):
                 tm.log_nexus_tm('warning')
             active_nexus_head = (axis, polarity, fault_name, grid_name)
 
-        def write_row(gcs, fp, name, i, j, k1, k2, axis, polarity):
+        def write_row(gcs, fp, name, i, j, k1, k2, axis, polarity, tmult):
             nonlocal row_count
             write_nexus_header_lines(fp, axis, polarity, name)
-            fp.write('\t{0:1d}\t{1:1d}\t{2:1d}\t{3:1d}\t{4:1d}\t{5:1d}\t1.0\n'.format(
-                i + 1, i + 1, j + 1, j + 1, k1 + 1, k2 + 1))
+            fp.write('\t{0:1d}\t{1:1d}\t{2:1d}\t{3:1d}\t{4:1d}\t{5:1d}\t{6:.4f}\n'.format(
+                i + 1, i + 1, j + 1, j + 1, k1 + 1, k2 + 1, tmult))
             row_count += 1
 
         log.info('writing fault data in simulator format to file: ' + filename)
@@ -1278,17 +1292,24 @@ class GridConnectionSet(BaseResqpy):
             for feature_index in range(len(self.feature_list)):
                 feature_name = self.feature_list[feature_index][2].split()[0].upper()
                 cell_index_pairs, face_index_pairs = self.list_of_cell_face_pairs_for_feature_index(feature_index)
+                if tmult_array is not None:
+                    feature_mask = np.where(self.feature_indices == feature_index, 1, 0)
+                    feat_mult_array = np.extract(feature_mask, tmult_array)
+                else:
+                    feat_mult_array = np.ones(shape = (cell_index_pairs.shape[0],), dtype = float)
                 for side in sides:
-                    both = np.empty((cell_index_pairs.shape[0], 5), dtype = int)
+                    both = np.empty((cell_index_pairs.shape[0], 6), dtype = int)  # axis, polarity, k, j, i, tmult
                     both[:, :2] = face_index_pairs[:, side, :]  # axis, polarity
-                    both[:, 2:] = cell_index_pairs[:, side, :]  # k, j, i
-                    df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i'])
-                    df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k'])
+                    both[:, 2:-1] = cell_index_pairs[:, side, :]  # k, j, i
+                    both[:, -1] = feat_mult_array.flatten()
+                    df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i', 'tmult'])
+                    df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k', 'tmult'])
                     both_sorted = np.empty(both.shape, dtype = int)
                     both_sorted[:] = df
-                    cell_indices = both_sorted[:, 2:]
+                    cell_indices = both_sorted[:, 2:-1]
                     face_indices = np.empty((both_sorted.shape[0], 2), dtype = int)
                     face_indices[:, :] = both_sorted[:, :2]
+                    tmult_values = both_sorted[:, -1]
                     del both_sorted
                     del both
                     del df
@@ -1297,9 +1318,10 @@ class GridConnectionSet(BaseResqpy):
                     for row in range(cell_indices.shape[0]):
                         kp, jp, ip = cell_indices[row]
                         axis_p, polarity_p = face_indices[row]
+                        tmult = tmult_values[row]
                         if k is not None:
                             if axis_p != axis or polarity_p != polarity or ip != i or jp != j or kp != k2 + 1:
-                                write_row(self, fp, feature_name, i, j, k, k2, axis, polarity)
+                                write_row(self, fp, feature_name, i, j, k, k2, axis, polarity, tmult)
                                 k = None
                             else:
                                 k2 = kp
@@ -1310,7 +1332,7 @@ class GridConnectionSet(BaseResqpy):
                             axis = axis_p
                             polarity = polarity_p
                     if k is not None:
-                        write_row(self, fp, feature_name, i, j, k, k2, axis, polarity)
+                        write_row(self, fp, feature_name, i, j, k, k2, axis, polarity, tmult)
 
     def get_column_edge_list_for_feature(self, feature, gridindex = 0, min_k = 0, max_k = 0):
         """Extracts a list of cell faces for a given feature index, over a given range of layers in the grid.
