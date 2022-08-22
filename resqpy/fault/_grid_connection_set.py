@@ -1301,7 +1301,7 @@ class GridConnectionSet(BaseResqpy):
                     both = np.empty((cell_index_pairs.shape[0], 6), dtype = int)  # axis, polarity, k, j, i, tmult
                     both[:, :2] = face_index_pairs[:, side, :]  # axis, polarity
                     both[:, 2:-1] = cell_index_pairs[:, side, :]  # k, j, i
-                    both[:, -1:] = feat_mult_array.reshape(-1, 1)
+                    both[:, -1] = feat_mult_array.flatten()
                     df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i', 'tmult'])
                     df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k', 'tmult'])
                     both_sorted = np.empty(both.shape, dtype = int)
@@ -1309,7 +1309,7 @@ class GridConnectionSet(BaseResqpy):
                     cell_indices = both_sorted[:, 2:-1]
                     face_indices = np.empty((both_sorted.shape[0], 2), dtype = int)
                     face_indices[:, :] = both_sorted[:, :2]
-                    tmult_values = both_sorted[:, -1:]
+                    tmult_values = both_sorted[:, -1]
                     del both_sorted
                     del both
                     del df
@@ -1318,7 +1318,7 @@ class GridConnectionSet(BaseResqpy):
                     for row in range(cell_indices.shape[0]):
                         kp, jp, ip = cell_indices[row]
                         axis_p, polarity_p = face_indices[row]
-                        tmult = tmult_values[row][0]
+                        tmult = tmult_values[row]
                         if k is not None:
                             if axis_p != axis or polarity_p != polarity or ip != i or jp != j or kp != k2 + 1:
                                 write_row(self, fp, feature_name, i, j, k, k2, axis, polarity, tmult)
