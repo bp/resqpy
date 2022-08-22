@@ -1298,7 +1298,7 @@ class GridConnectionSet(BaseResqpy):
                 else:
                     feat_mult_array = np.ones(shape = (cell_index_pairs.shape[0],), dtype = float)
                 for side in sides:
-                    both = np.empty((cell_index_pairs.shape[0], 6), dtype = int) # axis, polarity, k, j, i, tmult
+                    both = np.empty((cell_index_pairs.shape[0], 6), dtype = int)  # axis, polarity, k, j, i, tmult
                     both[:, :2] = face_index_pairs[:, side, :]  # axis, polarity
                     both[:, 2:-1] = cell_index_pairs[:, side, :]  # k, j, i
                     both[:, -1:] = feat_mult_array.reshape(-1, 1)
