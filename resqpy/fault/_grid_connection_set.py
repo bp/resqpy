@@ -1301,7 +1301,7 @@ class GridConnectionSet(BaseResqpy):
                     both = np.empty((cell_index_pairs.shape[0], 6), dtype = int) # axis, polarity, k, j, i, tmult
                     both[:, :2] = face_index_pairs[:, side, :]  # axis, polarity
                     both[:, 2:-1] = cell_index_pairs[:, side, :]  # k, j, i
-                    both[:, -1] = feat_mult_array.reshape(-1, 1)
+                    both[:, -1:] = feat_mult_array.reshape(-1, 1)
                     df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i', 'tmult'])
                     df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k', 'tmult'])
                     both_sorted = np.empty(both.shape, dtype = int)
@@ -1309,7 +1309,7 @@ class GridConnectionSet(BaseResqpy):
                     cell_indices = both_sorted[:, 2:-1]
                     face_indices = np.empty((both_sorted.shape[0], 2), dtype = int)
                     face_indices[:, :] = both_sorted[:, :2]
-                    tmult_values = both_sorted[:, -1]
+                    tmult_values = both_sorted[:, -1:]
                     del both_sorted
                     del both
                     del df
