@@ -1245,6 +1245,7 @@ class GridConnectionSet(BaseResqpy):
                         trans_mult_uuid = None):
         """Creates a Nexus include file holding MULT keywords and data. trans_mult_uuid (optional) is the uuid of a property on the gcs containing transmissibility multiplier values. If not provided values of 1.0 will be used."""
         if trans_mult_uuid is not None:
+            self.extract_property_collection()
             assert self.property_collection.part_in_collection(self.model.part_for_uuid(
                 trans_mult_uuid)), f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
             tmult_array = self.property_collection.cached_part_array_ref(self.model.part_for_uuid(trans_mult_uuid))
@@ -1274,7 +1275,7 @@ class GridConnectionSet(BaseResqpy):
         def write_row(gcs, fp, name, i, j, k1, k2, axis, polarity, tmult):
             nonlocal row_count
             write_nexus_header_lines(fp, axis, polarity, name)
-            fp.write('\t{0:1d}\t{1:1d}\t{2:1d}\t{3:1d}\t{4:1d}\t{5:1d}\t{6:.2f}\n'.format(
+            fp.write('\t{0:1d}\t{1:1d}\t{2:1d}\t{3:1d}\t{4:1d}\t{5:1d}\t{6:.4f}\n'.format(
                 i + 1, i + 1, j + 1, j + 1, k1 + 1, k2 + 1, tmult))
             row_count += 1
 
@@ -1297,10 +1298,10 @@ class GridConnectionSet(BaseResqpy):
                 else:
                     feat_mult_array = np.ones(shape = (cell_index_pairs.shape[0],), dtype = float)
                 for side in sides:
-                    both = np.empty((cell_index_pairs.shape[0], 6), dtype = int)
+                    both = np.empty((cell_index_pairs.shape[0], 6), dtype = int) # axis, polarity, k, j, i, tmult
                     both[:, :2] = face_index_pairs[:, side, :]  # axis, polarity
                     both[:, 2:-1] = cell_index_pairs[:, side, :]  # k, j, i
-                    both[:, -1:] = feat_mult_array.reshape(-1, 1)
+                    both[:, -1] = feat_mult_array.reshape(-1, 1)
                     df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i', 'tmult'])
                     df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k', 'tmult'])
                     both_sorted = np.empty(both.shape, dtype = int)
@@ -1308,7 +1309,7 @@ class GridConnectionSet(BaseResqpy):
                     cell_indices = both_sorted[:, 2:-1]
                     face_indices = np.empty((both_sorted.shape[0], 2), dtype = int)
                     face_indices[:, :] = both_sorted[:, :2]
-                    tmult_values = both_sorted[:, -1:]
+                    tmult_values = both_sorted[:, -1]
                     del both_sorted
                     del both
                     del df
