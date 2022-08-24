@@ -8,6 +8,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import math as maths
 import numpy as np
 
 import resqpy.olio.uuid as bu
@@ -113,11 +114,17 @@ def _create_xml_property_min_max(collection, property_array, const_value, discre
         if min_value is not None:
             min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
             min_node.set(ns['xsi'] + 'type', ns['xsd'] + collection.xsd_type)
-            min_node.text = str(min_value)
+            if discrete:
+                min_node.text = str(maths.floor(min_value))
+            else:
+                min_node.text = str(min_value)
         if max_value is not None:
             max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
             max_node.set(ns['xsi'] + 'type', ns['xsd'] + collection.xsd_type)
-            max_node.text = str(max_value)
+            if discrete:
+                max_node.text = str(maths.ceil(max_value))
+            else:
+                max_node.text = str(max_value)
 
 
 def _create_xml_lookup_node(collection, p_node, string_lookup_uuid):
