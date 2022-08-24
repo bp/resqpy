@@ -110,7 +110,9 @@ def blocked_well_from_trajectory_batch(
         success_list (List[bool]): A boolean list of successful function calls.
     """
     n_uuids = len(trajectory_uuids)
-    trajectory_uuids_list = [trajectory_uuids[i * n_uuids // n_workers:(i + 1) * n_uuids // n_workers] for i in range(n_workers)]
+    trajectory_uuids_list = [
+        trajectory_uuids[i * n_uuids // n_workers:(i + 1) * n_uuids // n_workers] for i in range(n_workers)
+    ]
 
     kwargs_list = []
     for trajectory_uuids in trajectory_uuids_list:
