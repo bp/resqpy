@@ -47,7 +47,7 @@ def load_nexus_fault_mult_table(file_name):
     ISTABLE = False
     ISRECORD = False
     name = face = None
-    grid = 'ROOT' ## nexus default grid
+    grid = 'ROOT'  ## nexus default grid
 
     face_dict = {'TX': 'I', 'TY': 'J', 'TZ': 'K', 'TI': 'I', 'TJ': 'J', 'TK': 'K'}
 
@@ -138,12 +138,13 @@ def load_nexus_fault_mult_table(file_name):
                         ISRECORD = False
                         chunks = []
 
-    fault_df = pd.concat(dfs).reset_index(drop=True)
+    fault_df = pd.concat(dfs).reset_index(drop = True)
 
     convert_dict = {'i1': int, 'i2': int, 'j1': int, 'j2': int, 'k1': int, 'k2': int, 'mult': float}
     fault_df = fault_df.astype(convert_dict)
 
     return fault_df
+
 
 def load_nexus_fault_mult_table_new(file_name):
     """Reads a Nexus (!) format file containing one or more MULT keywords and returns a dataframe with the MULT rows."""
