@@ -58,17 +58,18 @@ def blocked_well_from_trajectory_wrapper(
 
     success = True
     for trajectory_uuid in trajectory_uuids:
+        model.copy_uuid_from_other_model(trajectory_model, uuid = trajectory_uuid)
         trajectory = Trajectory(
-            trajectory_model,
+            model,
             trajectory_uuid,
         )
 
         blocked_well = BlockedWell(
             model,
-            grid,
-            trajectory,
+            grid = grid,
+            trajectory = trajectory,
         )
-        if blocked_well is None:
+        if blocked_well is None or blocked_well.cell_count is None or blocked_well.node_count is None:
             success = False
             continue
         blocked_well.write_hdf5()
