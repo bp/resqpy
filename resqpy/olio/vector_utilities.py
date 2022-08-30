@@ -17,7 +17,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit
-from multiprocessing import Pool
+import multiprocessing as m_p
 
 
 def radians_from_degrees(deg):
@@ -745,7 +745,7 @@ def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points
             with each row being the polygon number, points y index, and points x index.
     """
     args = [(points, polygons[polygon_num], points_xlen, polygon_num) for polygon_num in range(len(polygons))]
-    with Pool() as p:
+    with m_p.Pool() as p:
         r = p.starmap(points_in_polygon, args)
 
     return np.vstack(r)

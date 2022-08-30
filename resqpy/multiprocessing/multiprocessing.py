@@ -5,8 +5,8 @@ import os
 import time
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
-from resqpy.model import Model, new_model
 from joblib import Parallel, delayed, parallel_backend  # type: ignore
+import resqpy.model as rq
 
 log = logging.getLogger(__name__)
 
@@ -92,9 +92,9 @@ def function_multiprocessing(function: Callable,
 
     epc_file = Path(str(recombined_epc))
     if epc_file.is_file():
-        model_recombined = Model(epc_file = str(epc_file))
+        model_recombined = rq.Model(epc_file = str(epc_file))
     else:
-        model_recombined = new_model(epc_file = str(epc_file))
+        model_recombined = rq.new_model(epc_file = str(epc_file))
 
     log.info("creating the recombined epc file")
     for i, epc in enumerate(epc_list):
@@ -113,7 +113,7 @@ def function_multiprocessing(function: Callable,
         while True:
             attempt += 1
             try:
-                model = Model(epc_file = epc)
+                model = rq.Model(epc_file = epc)
                 break
             except FileNotFoundError:
                 if attempt >= 10:
