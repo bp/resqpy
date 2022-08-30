@@ -45,7 +45,7 @@ def mesh_from_regular_grid_column_property_wrapper(
     uuid_list = []
     tmp_dir = Path("tmp_dir") / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
-    epc_file = tmp_dir / "wrapper.epc"
+    epc_file = str(tmp_dir / "wrapper.epc")
     model = new_model(epc_file = epc_file)
 
     g_model = Model(grid_epc)
