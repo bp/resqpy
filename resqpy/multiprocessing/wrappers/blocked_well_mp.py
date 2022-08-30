@@ -45,7 +45,7 @@ def blocked_well_from_trajectory_wrapper(
             - uuid_list (List[UUID/str]): list of UUIDs of relevant objects.
     """
     uuid_list = []
-    tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
+    tmp_dir = Path("tmp_dir") / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = f"{tmp_dir}/wrapper.epc"
     model = new_model(epc_file = epc_file)
