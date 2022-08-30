@@ -89,7 +89,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     """
     tmp_dir = Path("tmp_dir") / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
-    epc_file = f"{tmp_dir}/wrapper.epc"
+    epc_file = tmp_dir / "wrapper.epc"
     model = new_model(epc_file = epc_file)
     uuid_list = []
     g_model = Model(grid_epc)
