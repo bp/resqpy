@@ -87,7 +87,7 @@ def find_faces_to_represent_surface_regular_wrapper(
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
     """
-    tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
+    tmp_dir = Path("tmp_dir") / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = f"{tmp_dir}/wrapper.epc"
     model = new_model(epc_file = epc_file)
