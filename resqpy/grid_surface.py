@@ -1610,6 +1610,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
     return faces, normals, offsets, triangle_per_face
 
 
+@njit
 def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
                         i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
@@ -1632,8 +1633,8 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     assert len(grid_extent_kji) == 3
     # a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
     # c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
-    a = np.zeros(grid_extent_kji, dtype = bool)  # initialise to False
-    c = np.zeros(grid_extent_kji, dtype = bool)  # cells changing
+    a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
@@ -1641,7 +1642,8 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     a[0, 0, 0] = True
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
     # todo: check that following works when a dimension has extent 1
-    while True:
+    limit = grid_extent_kji[0] * grid_extent_kji[1] * grid_extent_kji[2]
+    for _ in range(limit):
         c[:] = False
         # k faces
         c[1:, :, :] = np.logical_and(a[:-1, :, :], open_k)
