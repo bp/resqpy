@@ -165,8 +165,15 @@ class Polyline(_BasePolyline):
         return polyline
 
     @classmethod
-    def from_trimmed_polyline(cls, original, start_seg, end_seg, start_xyz = None, end_xyz = None,
-                              title = None, originator = None, extra_metadata = None):
+    def from_trimmed_polyline(cls,
+                              original,
+                              start_seg,
+                              end_seg,
+                              start_xyz = None,
+                              end_xyz = None,
+                              title = None,
+                              originator = None,
+                              extra_metadata = None):
         """Returns a trimmed version of the original polyline.
 
         arguments:
@@ -199,7 +206,7 @@ class Polyline(_BasePolyline):
                        originator = originator if originator else original.originator,
                        extra_metadata = extra_metadata)
 
-        polyline.coordinates = original.coordinates[start_seg : end_seg + 2].copy()
+        polyline.coordinates = original.coordinates[start_seg:end_seg + 2].copy()
         if start_xyz is not None:
             polyline.coordinates[0] = start_xyz
         if end_xyz is not None:
@@ -508,7 +515,7 @@ class Polyline(_BasePolyline):
 
         crossings = []
         for i in range(len(other.coordinates) - 1):
-            xy_pair = other.coordinates[i:i+2, :2].copy()
+            xy_pair = other.coordinates[i:i + 2, :2].copy()
             while True:
                 seg, x, y = self.first_line_intersection(xy_pair[0, 0], xy_pair[0, 1], xy_pair[1, 0], xy_pair[1, 1])
                 if seg is None:
