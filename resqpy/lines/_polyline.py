@@ -130,7 +130,7 @@ class Polyline(_BasePolyline):
         """Returns a scaled version of the original polyline.
 
         arguments:
-           original (Polyline): the polyline from which the new polyline will be sporned
+           original (Polyline): the polyline from which the new polyline will be spawned
            scaling (float): the factor by which the original will be scaled
            title (str, optional): the citation title for the new polyline; inherited from
               original if None
@@ -160,6 +160,57 @@ class Polyline(_BasePolyline):
 
         o_centre = original.balanced_centre()
         polyline.coordinates = scaling * (original.coordinates - o_centre) + o_centre
+        polyline.nodepatch = (0, len(polyline.coordinates))
+
+        return polyline
+
+    @classmethod
+    def from_trimmed_polyline(cls,
+                              original,
+                              start_seg,
+                              end_seg,
+                              start_xyz = None,
+                              end_xyz = None,
+                              title = None,
+                              originator = None,
+                              extra_metadata = None):
+        """Returns a trimmed version of the original polyline.
+
+        arguments:
+           original (Polyline): the polyline from which the new polyline will be spawned
+           start_seg (int): the index of the first segment in original to be kept
+           end_seg (int): the index of the last segment in original to be kept
+           start_xyz (triple float, optional): the new start point; if None, start of start_seg is used
+           end_xyz (triple float, optional): the new end point; if None, end of end_seg is used
+           title (str, optional): the citation title for the new polyline; inherited from
+              original if None
+           originator (str, optional): the name of the person creating the polyline; inherited
+              from original if None
+           extra_metadata (dict, optional): extra metadata for the new polyline; inherited from
+              original if None
+
+        returns:
+           a new Polyline
+        """
+
+        assert 0 <= start_seg <= end_seg
+        assert end_seg < len(original.coordinates) - 1
+
+        if extra_metadata is None:
+            extra_metadata = original.extra_metadata
+
+        polyline = cls(original.model,
+                       set_crs = original.crs_uuid,
+                       set_bool = False,
+                       title = title if title else original.title,
+                       originator = originator if originator else original.originator,
+                       extra_metadata = extra_metadata)
+
+        polyline.coordinates = original.coordinates[start_seg:end_seg + 2].copy()
+        if start_xyz is not None:
+            polyline.coordinates[0] = start_xyz
+        if end_xyz is not None:
+            polyline.coordinates[-1] = end_xyz
         polyline.nodepatch = (0, len(polyline.coordinates))
 
         return polyline
@@ -458,6 +509,21 @@ class Polyline(_BasePolyline):
         if segment == len(self.coordinates) - 1:
             segment = -1
         return meet.point_snapped_to_line_segment_2d(p, self.coordinates[segment], self.coordinates[segment + 1])
+
+    def xy_crossings(self, other):
+        """Returns list of (x, y) pairs of crossing points with other polyline, in xy plane."""
+
+        crossings = []
+        for i in range(len(other.coordinates) - 1):
+            xy_pair = other.coordinates[i:i + 2, :2].copy()
+            while True:
+                seg, x, y = self.first_line_intersection(xy_pair[0, 0], xy_pair[0, 1], xy_pair[1, 0], xy_pair[1, 1])
+                if seg is None:
+                    break
+                crossings.append((x, y))
+                xy_pair[0, 0] = 0.99999 * x + 0.00001 * xy_pair[1, 0]
+                xy_pair[0, 1] = 0.99999 * y + 0.00001 * xy_pair[1, 1]
+        return crossings
 
     def normalised_xy(self, x, y, mode = 'square'):
         """Returns a normalised x',y' pair (in range 0..1) being point x,y under mapping from convex polygon.
