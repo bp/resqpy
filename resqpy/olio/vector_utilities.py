@@ -862,6 +862,62 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
     return triangles_points
 
 
+@njit
+def triangle_box(tri):
+    x_values = tri[:, 0]
+    y_values = tri[:, 1]
+
+    def min_max(x):
+        maximum = x[0]
+        minimum = x[0]
+        for i in x[1:]:
+            if i > maximum:
+                maximum = i
+            elif i < minimum:
+                minimum = i
+        return (minimum, maximum)
+
+    return min_max(x_values) + min_max(y_values)
+
+
+@njit
+def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
+    """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
+
+    arguments:
+        nx (int): number of points in x axis
+        ny (int): number of points in y axis
+        dx (float): spacing of points in x axis (first point is at half dx)
+        dy (float): spacing of points in y axis (first point is at half dy)
+        triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2).
+        points_xlen (int): the number of unique x coordinates.
+
+    returns:
+        triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
+            with each row being the triangle number, points y index, and points x index.
+    """
+    triangles_points = np.empty((0, 3), dtype = np.int32)
+    for triangle_num in range(len(triangles)):
+        triangle = triangles[triangle_num]
+        box_min_max = triangle_box(triangle)
+        grid_x = np.arange(dx/2, dx/2 + dx * nx, dx)
+        grid_y = np.arange(dy/2, dy/2 + dy * ny, dy)
+        x_values = grid_x[np.logical_and(grid_x>=box_min_max[0], grid_x<=box_min_max[1])]
+        y_values = grid_y[np.logical_and(grid_y>=box_min_max[2], grid_y<=box_min_max[3])]
+        for x in x_values:
+            ys = []
+            ys.append(np.interp(x, triangle[:2, 0], triangle[:2, 1]))
+            ys.append(np.interp(x, triangle[1:, 0], triangle[1:, 1]))
+            ys.append(np.interp(x, triangle[::2, 0], triangle[::2, 1]))
+            valid_y = y_values[np.logical_and(y_values>=min(ys), y_values<=max(ys))]
+            for y in valid_y:
+                x_idx = int(x/dx - 0.5)
+                y_idx = int(y/dy - 0.5)
+                triangles_points = np.append(triangles_points, np.array([[triangle_num, x_idx, y_idx]], dtype = np.int32), axis = 0)
+
+    return triangles_points
+
+
 def triangle_normal_vector(p3):
     """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
 
