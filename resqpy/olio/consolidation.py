@@ -48,33 +48,32 @@ class Consolidation:
     def equivalent_uuid_for_part(self, part, immigrant_model = None, ignore_identical_part = False):
         """Returns uuid of an equivalent part in resident model, or None if no equivalent found."""
 
-        #      log.debug('Looking for equivalent uuid for: ' + str(part))
+        # log.debug('Looking for equivalent uuid for: ' + str(part))
         if not part:
             return None
         if immigrant_model is None:
             immigrant_model = self.model
         immigrant_uuid = rqet.uuid_in_part_name(part)
-        #      log.debug('   immigrant uuid: ' + str(immigrant_uuid))
+        # log.debug('   immigrant uuid: ' + str(immigrant_uuid))
         if immigrant_uuid in self.map:
-            #         log.debug('   known to be equivalent to: ' + str(self.map[immigrant_uuid]))
+            # log.debug('   known to be equivalent to: ' + str(self.map[immigrant_uuid]))
             return self.map[immigrant_uuid]
         obj_type = immigrant_model.type_of_part(part, strip_obj = True)
         if obj_type is None or obj_type not in consolidatable_list:
             return None
-        #      log.debug('   object type is consolidatable')
+        # log.debug('   object type is consolidatable')
         resident_uuids = self.model.uuids(obj_type = obj_type)
         if resident_uuids is None or len(resident_uuids) == 0:
-            #         log.debug('   no resident parts found of type: ' + str(obj_type))
+            # log.debug('   no resident parts found of type: ' + str(obj_type))
             return None
-#      log.debug(f'   {len(resident_uuids)} resident parts of same class')
+        # log.debug(f'   {len(resident_uuids)} resident parts of same class')
         if not ignore_identical_part:
             for resident_uuid in resident_uuids:
                 if bu.matching_uuids(resident_uuid, immigrant_uuid):
-                    #               log.debug('   uuid already resident: ' + str(resident_uuid))
+                    # log.debug('   uuid already resident: ' + str(resident_uuid))
                     return resident_uuid
 
-
-#      log.debug('   preparing immigrant object')
+        # log.debug('   preparing immigrant object')
         if obj_type.endswith('Interpretation') or obj_type.endswith('Feature'):
             immigrant_obj = rqo.__dict__[obj_type](immigrant_model, uuid = immigrant_uuid)
         elif obj_type.endswith('Crs'):
@@ -89,7 +88,7 @@ class Consolidation:
             raise Exception('code failure')
         assert immigrant_obj is not None
         for resident_uuid in resident_uuids:
-            #         log.debug('   considering resident: ' + str(resident_uuid))
+            # log.debug('   considering resident: ' + str(resident_uuid))
             if ignore_identical_part and bu.matching_uuids(resident_uuid, immigrant_uuid):
                 continue
             if obj_type.endswith('Interpretation') or obj_type.endswith('Feature'):
@@ -105,13 +104,13 @@ class Consolidation:
             else:
                 raise Exception('code failure')
             assert resident_obj is not None
-            #         log.debug('   comparing with: ' + str(resident_obj.uuid))
+            # log.debug('   comparing with: ' + str(resident_obj.uuid))
             if immigrant_obj == resident_obj:  # note: == operator overloaded with equivalence method for these classes
                 while resident_uuid in self.map:
-                    #               log.debug('   following equivalence for: ' + str(resident_uuid))
+                    # log.debug('   following equivalence for: ' + str(resident_uuid))
                     resident_uuid = self.map[resident_uuid]
                 self.map[immigrant_uuid] = resident_uuid
-                #            log.debug('   new equivalence found with: ' + str(resident_uuid))
+                # log.debug('   new equivalence found with: ' + str(resident_uuid))
                 return resident_uuid
         return None
 
