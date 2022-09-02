@@ -16,6 +16,7 @@ import uuid
 
 def blocked_well_from_trajectory_wrapper(
     index: int,
+    parent_tmp_dir: str,
     grid_epc: str,
     grid_uuid: Union[UUID, str],
     trajectory_epc: str,
@@ -29,6 +30,7 @@ def blocked_well_from_trajectory_wrapper(
 
     Args:
         index (int): the index of the function call from the multiprocessing function.
+        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
         grid_epc (str): epc file path where the grid is saved.
         grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
         trajectory_epc (str): epc file path where the trajectories are saved.
@@ -45,7 +47,7 @@ def blocked_well_from_trajectory_wrapper(
             - uuid_list (List[UUID/str]): list of UUIDs of relevant objects.
     """
     uuid_list = []
-    tmp_dir = Path("tmp_dir") / f"{uuid.uuid4()}"
+    tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
     model = new_model(epc_file = epc_file)

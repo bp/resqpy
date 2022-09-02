@@ -19,6 +19,7 @@ def test_mesh_from_regular_grid_column_property_wrapper(small_grid_with_properti
         uuid_list,
     ) = mesh_mp.mesh_from_regular_grid_column_property_wrapper(
         input_index,
+        "tmp_dir",
         grid_epc,
         grid_uuid,
         prop_uuids,

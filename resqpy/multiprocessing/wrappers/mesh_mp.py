@@ -16,6 +16,7 @@ import uuid
 
 def mesh_from_regular_grid_column_property_wrapper(
     index: int,
+    parent_tmp_dir: str,
     grid_epc: str,
     grid_uuid: Union[UUID, str],
     prop_uuids: List[Union[UUID, str]],
@@ -28,6 +29,7 @@ def mesh_from_regular_grid_column_property_wrapper(
 
     Args:
         index (int): the index of the function call from the multiprocessing function.
+        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
         grid_epc (str): epc file path where the grid is saved.
         grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
         prop_uuids (List[UUID/str]): a list of the property uuids used to create each Mesh
@@ -43,7 +45,7 @@ def mesh_from_regular_grid_column_property_wrapper(
             - uuid_list (List[UUID/str]): list of UUIDs of relevant objects.
     """
     uuid_list = []
-    tmp_dir = Path("tmp_dir") / f"{uuid.uuid4()}"
+    tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
     model = new_model(epc_file = epc_file)

@@ -19,6 +19,7 @@ import uuid
 
 def find_faces_to_represent_surface_regular_wrapper(
     index: int,
+    parent_tmp_dir: str,
     use_index_as_realisation: bool,
     grid_epc: str,
     grid_uuid: Union[UUID, str],
@@ -45,6 +46,7 @@ def find_faces_to_represent_surface_regular_wrapper(
 
     Args:
         index (int): the index of the function call from the multiprocessing function.
+        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
         use_index_as_realisation (bool): if True, uses the index number as the realization number on
             the property collection.
         grid_epc (str): epc file path where the grid is saved.
@@ -87,7 +89,7 @@ def find_faces_to_represent_surface_regular_wrapper(
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
     """
-    tmp_dir = Path("tmp_dir") / f"{uuid.uuid4()}"
+    tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
     model = new_model(epc_file = epc_file)

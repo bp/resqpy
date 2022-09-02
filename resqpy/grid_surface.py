@@ -1516,7 +1516,7 @@ def where_true(data: np.ndarray):
     return np.where(data)
 
 
-@njit(parallel = True)
+@njit
 def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axis: int, points: np.ndarray,
                     triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool,
                     normals: np.ndarray, return_depths: bool, depths: np.ndarray, return_offsets: bool,
