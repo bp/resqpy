@@ -1834,6 +1834,15 @@ class Model():
                     m_f._force_consolidation_uuid_equivalence(self, immigrant_uuid, resident_uuid)
                     break
 
+    def remove_extra_metadata(self, uuid):
+        """Removes extra metadata from in memory xml for uuid.
+
+        note:
+            this method will not modify any resqpy objects already instantiated
+        """
+
+        rqet.cut_extra_metadata(self.root_for_uuid(uuid))
+
     def copy_part_from_other_model(self,
                                    other_model,
                                    part,
