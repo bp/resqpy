@@ -3,6 +3,7 @@
 import logging
 import os
 import time
+import uuid
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
 from joblib import Parallel, delayed, parallel_backend  # type: ignore
@@ -73,8 +74,10 @@ def function_multiprocessing(function: Callable,
     """
     log.info("multiprocessing function called with %s function.", function.__name__)
 
+    tmp_dir = f'tmp_{uuid.uuid4()}'
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
+        kwargs["parent_tmp_dir"] = tmp_dir
 
     with parallel_backend("dask"):
         results = Parallel()(delayed(function)(**kwargs) for kwargs in kwargs_list)
@@ -122,12 +125,12 @@ def function_multiprocessing(function: Callable,
         uuids = uuids_list[i]
         if uuids is None:
             uuids = model.uuids()
-        for uuid in uuids:
+        for u in uuids:
             attempt = 0
             while True:
                 attempt += 1
                 try:
-                    model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
+                    model_recombined.copy_uuid_from_other_model(model, uuid = u, consolidate = consolidate)
                     break
                 except BlockingIOError:
                     if attempt >= 5:
@@ -135,8 +138,8 @@ def function_multiprocessing(function: Callable,
                 time.sleep(1)
 
     # Deleting temporary directory.
-    log.debug("deleting the temporary directory")
-    rm_tree("tmp_dir")
+    log.debug(f"deleting the temporary directory {tmp_dir}")
+    rm_tree(tmp_dir)
 
     model_recombined.store_epc()
     model.h5_release()

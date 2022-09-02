@@ -19,6 +19,7 @@ def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface:
 
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(input_index,
+                                                                                          "tmp_dir",
                                                                                           use_index_as_realisation,
                                                                                           grid_epc,
                                                                                           grid_uuid,
@@ -58,6 +59,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_a
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
+        "tmp_dir",
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -100,6 +102,7 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
+        "tmp_dir",
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -142,6 +145,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
+        "tmp_dir",
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
