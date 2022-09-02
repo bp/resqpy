@@ -1799,7 +1799,7 @@ class Model():
 
         m_f._force_consolidation_uuid_equivalence(self, immigrant_uuid, resident_uuid)
 
-    def force_consolidation_uuid_equivalence_for_obj_type_ignoring_extra_metadata(self, other_model, resqpy_class):
+    def force_consolidation_equivalence_for_class_ignoring_extra_metadata(self, other_model, resqpy_class):
         """Force immigrant objects of type to be teated as equivalent where only extra metadata differs during consolidation.
 
         notes:
