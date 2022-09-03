@@ -208,9 +208,9 @@ class Polyline(_BasePolyline):
 
         polyline.coordinates = original.coordinates[start_seg:end_seg + 2].copy()
         if start_xyz is not None:
-            polyline.coordinates[0] = start_xyz
+            polyline.coordinates[0, :len(start_xyz)] = start_xyz
         if end_xyz is not None:
-            polyline.coordinates[-1] = end_xyz
+            polyline.coordinates[-1, :len(end_xyz)] = end_xyz
         polyline.nodepatch = (0, len(polyline.coordinates))
 
         return polyline
