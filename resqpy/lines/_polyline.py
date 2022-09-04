@@ -441,7 +441,11 @@ class Polyline(_BasePolyline):
         returns:
            segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline,
            or None, None, None if no intersection found
+
+        note:
+           'first' primariliy refers to the ordering of segments in this polyline
         """
+
         seg_count = len(self.coordinates) - 1
         if self.isclosed:
             seg_count += 1
@@ -513,16 +517,32 @@ class Polyline(_BasePolyline):
     def xy_crossings(self, other):
         """Returns list of (x, y) pairs of crossing points with other polyline, in xy plane."""
 
+        seg_count = len(self.coordinates) - 1
+        if self.isclosed:
+            seg_count += 1
+        other_seg_count = len(other.coordinates) - 1
+        if other.isclosed:
+            other_seg_count += 1
+
         crossings = []
-        for i in range(len(other.coordinates) - 1):
-            xy_pair = other.coordinates[i:i + 2, :2].copy()
-            while True:
-                seg, x, y = self.first_line_intersection(xy_pair[0, 0], xy_pair[0, 1], xy_pair[1, 0], xy_pair[1, 1])
-                if seg is None:
-                    break
-                crossings.append((x, y))
-                xy_pair[0, 0] = 0.99999 * x + 0.00001 * xy_pair[1, 0]
-                xy_pair[0, 1] = 0.99999 * y + 0.00001 * xy_pair[1, 1]
+        for i in range(seg_count):
+            ip = (i + 1) % len(self.coordinates)
+            for j in range(other_seg_count):
+                jp = (j + 1) % len(other.coordinates)
+                x, y = meet.line_line_intersect(self.coordinates[i, 0],
+                                                self.coordinates[i, 1],
+                                                self.coordinates[ip, 0],
+                                                self.coordinates[ip, 1],
+                                                other.coordinates[j, 0],
+                                                other.coordinates[j, 1],
+                                                other.coordinates[jp, 0],
+                                                other.coordinates[jp, 1],
+                                                line_segment = True,
+                                                half_segment = False)
+                if x is not None and (not crossings or
+                                      not (maths.isclose(x, crossings[-1][0]) and maths.isclose(y, crossings[-1][1]))):
+                    crossings.append((x, y))
+
         return crossings
 
     def normalised_xy(self, x, y, mode = 'square'):
