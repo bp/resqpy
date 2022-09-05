@@ -3163,10 +3163,10 @@ class BlockedWell(BaseResqpy):
         assert len(self.grid_list) == 1, "Only blocked wells with a single grid can be handled currently"
         grid = self.grid_list[0]
         parts = self.model.parts_list_filtered_by_supporting_uuid(part_list,
-                                                                  grid.uuid) # only those properties on the grid
+                                                                  grid.uuid)  # only those properties on the grid
         gridpc = grid.property_collection
         parts = [part for part in parts if gridpc.indexable_for_part(part) == 'cells'
-                ] # only 'cell' properties are handled
+                ]  # only 'cell' properties are handled
 
         if len(parts) > 0:
             bwpc = rqp.PropertyCollection(support = self)
