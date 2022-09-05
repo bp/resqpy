@@ -3172,7 +3172,7 @@ class BlockedWell(BaseResqpy):
             bwpc = rqp.PropertyCollection(support = self)
             if len(gridpc.time_series_uuid_list()) > 0:
                 time_dict = {}
-                for parts in parts:
+                for part in parts:
                     if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
                         time_dict[gridpc.time_series_uuid_for_part(
                             part)] = time_dict[gridpc.time_series_uuid_for_part(part)] + [part]
