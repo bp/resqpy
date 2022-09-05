@@ -3,6 +3,7 @@
 version = '30th July 2022'
 
 import logging
+from unicodedata import numeric
 
 log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
@@ -10,9 +11,11 @@ log.debug('grid_surface.py version ' + version)
 import math as maths
 import numpy as np
 import numba  # type: ignore
-from numba import njit
+from numba import njit, cuda
+from numba.cuda.cudadrv.devicearray import DeviceNDArray
 from typing import Tuple
 import warnings
+from pprint import pprint
 
 import resqpy.crs as rqc
 import resqpy.fault as rqf
@@ -1557,7 +1560,8 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
         - triangle_per_face (np.ndarray): array of triangle numbers
     """
     n_faces = faces.shape[2 - axis]
-    for i in numba.prange(len(hits)):
+    # for i in numba.prange(len(hits)):
+    for i in range(len(hits)):
         tri, d1, d2 = hits[i]
 
         # Line start point in 3D which had a projection hit.
@@ -1568,7 +1572,6 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
         # Line end point in 3D.
         centre_point_end = np.copy(centre_point_start)
         centre_point_end[axis] = grid_dxyz[axis] * (n_axis - 0.5)
-
         xyz = meet.line_triangle_intersect_numba(
             centre_point_start,
             centre_point_end - centre_point_start,
@@ -1578,7 +1581,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
         )
         if xyz is None:  # meeting point is outwith grid
             continue
-
+        
         # The face corresponding to the grid and surface intersection at this point.
         face = int((xyz[axis] - centre_point_start[axis]) / grid_dxyz[axis])
         if face == -1:  # handle rounding precision issues
@@ -1608,6 +1611,188 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
             triangle_per_face[face_idx[0], face_idx[1], face_idx[2]] = tri
 
     return faces, normals, offsets, triangle_per_face
+
+# cuda device wrappers for numpy functions
+@cuda.jit(device=True)
+def cross_d(A : DeviceNDArray, B : DeviceNDArray, c : DeviceNDArray):
+    c[0] = A[1] * B[2] - A[2] * B[1]
+    c[1] = A[2] * B[0] - A[0] * B[2]
+    c[2] = A[0] * B[1] - A[1] * B[0]
+    return
+
+@cuda.jit(device=True)
+def negative_d(v : DeviceNDArray, nv : DeviceNDArray):
+    for d in range(v.shape[0]):
+        nv[d] = numba.float32(-1)*v[d]
+    return
+
+@cuda.jit(device=True)
+def dot_d(v1 : DeviceNDArray, v2 : DeviceNDArray, prod : DeviceNDArray):
+    prod[0] = 0.0
+    for d in range(v1.shape[0]):
+        prod[0] += v1[d] * v2[d]
+    return
+
+@cuda.jit
+def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArray,
+                                 axis : int, index1 : int, index2 : int,
+                                 colx : int, coly : int,
+                                 nx : int, ny : int, nz : int,
+                                 dx : float, dy : float, dz : float,
+                                 l_tol : float, t_tol : float, info_array : DeviceNDArray):
+    """Maps the projection of a 3D polygon to 2D grid surfaces along a given axis
+    Args:
+        faces (DeviceNDArray.bool): boolean array of each cell face that can represent the surface.
+            nb. ordered k,j,i and sized (k,j,i)[axis] -= 1
+        triangles (DeviceNDArray.float): ntriangles x naxis array containing (x,y,z) coordinates of each traingle.
+        n_axis (int): number of cells in the axis.
+        axis (int): axis number. Axis i is 0, j is 1, and k is 2.
+        index1 (int): the first index. Axis i is 0, j is 0, and k is 1.
+        index2 (int): the second index. Axis i is 1, j is 2, and k is 2.
+        nx (int): number of points in x axis.
+        ny (int): number of points in y axis.
+        dx (float): cell's thickness along x-axis.
+        dy (float): cell's thickness along y-axis.
+        dz (float): cell's thickness along z-axis.
+        l_tol (float, default 0.0): a fraction of the line length to allow for an intersection to be found
+            just outside the segment.
+        t_tol (float, default 0.0): a fraction of the triangle size to allow for an intersection to be found
+            just outside the triangle.
+
+    Returns:
+        void: modified faces array (INTENT OUT).
+    """
+    
+
+    # define thread-local arrays used generally
+    grid_nxyz = numba.cuda.local.array(3, numba.int32)
+    grid_dxyz = numba.cuda.local.array(3, numba.float32)
+    grid_nxyz[0] = nx; grid_nxyz[1] = ny; grid_nxyz[2] = nz
+    grid_dxyz[0] = dx; grid_dxyz[1] = dy; grid_dxyz[2] = dz
+    # define thread-local arrays for section 3
+    line_p  = numba.cuda.local.array(3, numba.float32)
+    line_v  = numba.cuda.local.array(3, numba.float32)
+    p01     = numba.cuda.local.array(3, numba.float32)
+    p02     = numba.cuda.local.array(3, numba.float32)
+    lp_t0   = numba.cuda.local.array(3, numba.float32)
+    norm    = numba.cuda.local.array(3, numba.float32)
+    line_rv = numba.cuda.local.array(3, numba.float32)
+    tmp     = numba.cuda.local.array(3, numba.float32)
+    face_idx= numba.cuda.local.array(3, numba.int32)
+    xyz     = numba.cuda.local.array(3, numba.float32)
+    # scalars that must be returned from device functions must be mutable
+    # => make them arrays
+    u       = numba.cuda.local.array(1, numba.float32)
+    v       = numba.cuda.local.array(1, numba.float32)
+    denom   = numba.cuda.local.array(1, numba.float32)
+    t       = numba.cuda.local.array(1, numba.float32)
+
+    thread = 0
+    # extract useful dimension info
+    n_axis      = grid_nxyz[axis]        # get length of projection axis
+    n_faces     = faces.shape[2 - axis]  # n_faces == n_axis -1
+    ntriangles  = triangles.shape[0]
+
+    #  cuda.grid(1) gives the thread index (blockIdx.x*blockDim.x + threadIdx.x)
+    if cuda.grid(1) >= ntriangles:  # cuda.grid(1) evaluates to 1 int
+        return                      # this is actually unnecessary as the for-loop takes care of bounds
+
+    # we have a set number of threads in a grid, so process each thread's
+    # data and move it along to its next point in the array
+    # Array:                          * * * * * * * * * * * * * * * * * * * * * * * * * * * * *|
+    # > iteration 1- thread position: ^ ^ ^ ^ ^ ^ ^ ^                                          |        # cuda.grid(1)
+    # > iteration 2- thread position:                 ^ ^ ^ ^ ^ ^ ^ ^                          |        # cuda.grid(1) + 1*cuda.gridsize(1)
+    # > iteration 3- thread position:                                 ^ ^ ^ ^ ^ ^ ^ ^          |        # cuda.grid(1) + 2*cuda.gridsize(1)
+    # > iteration 4- thread position:                                                 ^ ^ ^ ^ ^|x x x   # cuda.grid(1) + 3*cuda.gridsize(1)
+    for triangle_num in range(cuda.grid(1), ntriangles, cuda.gridsize(1)):
+        # the number of threads spawned should be enough to cover all triangles in one iteration
+        # ...just imagine that this is the parallel section (like #pragma omp parallel)
+
+        # 1. find triangle bounding box in this projection
+        # 1a. get triangle under consideration
+        tp = triangles[triangle_num]
+        # 1b. convert triangle-points coordinate to index
+        for ver in range(3):  # for v in vertices
+            for dim in range(3): # for d in dimnensions
+                tp[ver, dim] /= grid_dxyz[dim]; tp[ver,dim] -= 0.5  # get index of each aligned triangle
+        # 1c. find triangle bounding box
+        min_tpx = max(maths.ceil( min(tp[0, colx], tp[1, colx], tp[2, colx])), 0)
+        max_tpx = min(maths.floor(max(tp[0, colx], tp[1, colx], tp[2, colx])), nx - 1)
+        if max_tpx < min_tpx:
+            continue # skip: triangle outside of grid
+        min_tpy = max(maths.ceil( min(tp[0, coly], tp[1, coly], tp[2, coly])), 0)
+        max_tpy = min(maths.floor(max(tp[0, coly], tp[1, coly], tp[2, coly])), ny - 1)
+        if max_tpy < min_tpy:
+            continue # skip: triangle outside of grid
+        
+        # 2. iterate over all points that fall within bounding box and 
+        # check whether points falls in triangle
+        for px in range(min_tpx, max_tpx+1, 1):
+            for py in range(min_tpy, max_tpy+1, 1):
+                # 2a. use cross-product to work out Barycentric weights
+                # this could be made prettier by refactoring a device function
+                w1  = (tp[0,colx]-px)*(tp[2,coly]-tp[0,coly]) + (py-tp[0,coly])*(tp[2,colx]-tp[0,colx])
+                w1 /= ((tp[1,coly]-tp[0,coly])*(tp[2,colx]-tp[0,colx]) - (tp[1,colx]-tp[0,colx])*(tp[2,coly]-tp[0,coly]))
+                w2  = py - tp[0,coly] - w1*(tp[1,coly] - tp[0,coly])
+                w2 /= (tp[2,coly] - tp[0,coly])
+                # 2b. the point is inside if Barycentric weights meet this condition
+                if (w1 >= 0. and w2 >= 0. and (w1 + w2) <= 1.): # inside
+                    # 3. find intersection point with column centre
+                    # 3a. Line start point in 3D which had a projection hit
+                    line_p[axis] = grid_dxyz[axis] / 2.
+                    line_p[2 - index2] = (px + 0.5) * grid_dxyz[2 - index1]  # kji / xyz & px=d2
+                    line_p[2 - index1] = (py + 0.5) * grid_dxyz[2 - index2]  # kji / xyz & py=d1
+                    # 3b. Line end point in 3D
+                    for dim in range(3):
+                        line_v[dim] = line_p[dim]
+                    line_v[axis] = grid_dxyz[axis] * (n_axis - 0.5) #!
+                    for dim in range(3):  # for d in dimensions
+                        line_v[dim] -= line_p[dim]
+                            
+                    # 3c.find depth intersection
+                    for dim in range(3): # for d in dimensions
+                        p01[dim] = (tp[1,dim] - tp[0,dim])*grid_dxyz[dim]
+                        p02[dim] = (tp[2,dim] - tp[0,dim])*grid_dxyz[dim]
+                    
+                    cross_d(p01, p02, norm)  # normal to plane
+                    negative_d(line_v, line_rv)
+                    dot_d(line_rv, norm, denom)
+                    if denom[0] == 0.0:
+                        continue  # line is parallel to plane
+
+                    for dim in range(3):
+                        lp_t0[dim] = line_p[dim] - (tp[0,dim]+0.5)*grid_dxyz[dim]
+
+                    dot_d(norm, lp_t0, t); t[0] /= denom[0]
+                    if (t[0] < 0.0 - l_tol or t[0] > 1.0 + l_tol):
+                        continue
+
+                    cross_d(p02, line_rv, tmp); dot_d(tmp, lp_t0, u); u[0] /= denom[0]
+                    if u[0] < 0.0 - t_tol or u[0] > 1.0 + t_tol:
+                        continue
+
+                    cross_d(line_rv, p01, tmp); dot_d(tmp, lp_t0, v); v[0] /= denom[0]
+                    if v[0] < 0.0 - t_tol or u[0] + v[0] > 1.0 + t_tol:
+                        continue
+
+                    for dim in range(3):  # for d in dimensions
+                        xyz[dim] = line_p[dim] + t[0] * line_v[dim]
+
+                    # 4. mark the face corresponding to the grid and surface intersection at this point.
+                    face = numba.int32((xyz[axis] - line_p[axis]) / grid_dxyz[axis])
+                    
+                    if face == -1:  # handle rounding precision issues
+                        face = 0
+                    elif face == n_faces:
+                        face -= 1
+                    assert 0 <= face < n_faces
+
+                    face_idx[index1] = py
+                    face_idx[index2] = px
+                    face_idx[2-axis] = face
+
+                    faces[face_idx[0], face_idx[1], face_idx[2]] = True
+    return
 
 
 def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
@@ -1767,11 +1952,16 @@ def find_faces_to_represent_surface_regular_optimised(
     log.debug(f'intersecting surface {surface.title} with regular grid {grid.title}')
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
+    # take the reverse diagonal for relationship between xyz & ijk
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
+    # extract polygons from surface
     triangles, points = surface.triangles_and_points()
     assert triangles is not None and points is not None, f'surface {surface.title} is empty'
+    print(f'trianges.shape = {triangles.shape}')
+    print(f'points.shape = {points.shape}')
+
     if agitate:
-        points += 1.0e-5 * (np.random.random(points.shape) - 0.5)
+        points += 1.0e-5 * (np.random.random(points.shape) - 0.5)   # +/- uniform err.
     # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
     # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
     # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
@@ -1792,12 +1982,21 @@ def find_faces_to_represent_surface_regular_optimised(
         k_depths = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
-        p_xy = np.delete(points, 2, 1)
+        p_xy = np.delete(points, 2, 1) # return array without z-axis
 
-        # k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
-        # k_hits = vec.points_in_triangles_njit(k_centres, p_xy[triangles], grid.ni)
+        # Returns 2D (list-like) array containing all points in each triangle
         k_hits = vec.points_in_triangles_aligned(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1], p_xy[triangles])
-
+        # [[[t1, yi, xi],
+        #   [t1, yi, xi],
+        #   [t1, yi, xi]],
+        #   
+        #  [[t2, yi, xi],
+        #   [t2, yi, xi],
+        #   [t2, yi, xi]],
+        #       ...
+        #  [[tn, yi, xi],
+        #   [tn, yi, xi],
+        #   [tn, yi, xi]],
         axis = 2
         index1 = 1
         index2 = 2
@@ -1807,6 +2006,7 @@ def find_faces_to_represent_surface_regular_optimised(
                             return_normal_vectors, k_normals,
                             return_depths, k_depths,
                             return_offsets, k_offsets, return_triangles, k_triangles)
+        exit(0)
         del k_hits
         del p_xy
         log.debug(f"k face count: {np.count_nonzero(k_faces)}")
@@ -1980,6 +2180,213 @@ def find_faces_to_represent_surface_regular_optimised(
 
     return gcs
 
+def find_faces_to_represent_surface_regular_cuda(
+    grid,
+    surface,
+    name,
+    title = None,
+    centres = None,  # DEPRECATED; TODO: remove this argument
+    agitate = False,
+    feature_type = 'fault',
+    progress_fn = None,
+    consistent_side = False,  # DEPRECATED; functionality no longer supported
+):
+    """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
+
+    Args:
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
+           must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
+        surface (Surface): the surface to be intersected with the grid
+        name (str): the feature name to use in the grid connection set
+        title (str, optional): the citation title to use for the grid connection set; defaults to name
+        centres (numpy float array of shape (nk, nj, ni, 3), optional): DEPRECATED, no longer used
+        agitate (bool, default False): if True, the points of the surface are perturbed by a small random
+           offset, which can help if the surface has been built from a regular mesh with a periodic resonance
+           with the grid
+        feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
+        progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
+           the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+        consistent_side (bool, default False): DEPRECATED; True will result in an assertion exception
+
+    Returns:
+        gcs  or  (gcs, gcs_props)
+        where gcs is a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created;
+        gcs_props is a dictionary mapping from requested return_properties string to numpy array
+
+    Notes:
+        this function is designed for aligned regular grids only;
+        this function can handle the surface and grid being in different coordinate reference systems, as
+        long as the implicit parent crs is shared;
+        no trimming of the surface is carried out here: for computational efficiency, it is recommended
+        to trim first;
+        organisational objects for the feature are created if needed
+    """
+
+    if centres is not None:
+        warnings.warn(
+            'DEPRECATED: centres aegument to find_faces_to_represent_surface_regular_optimised() should be removed')
+    assert not consistent_side, 'NO LONGER SUPPORTED: consistent side functionality has been removed from this function'
+
+    assert isinstance(grid, grr.RegularGrid)
+    assert grid.is_aligned
+
+    if title is None:
+        title = name
+
+    if progress_fn is not None:
+        progress_fn(0.0)
+    
+    print(f'intersecting surface {surface.title} with regular grid on a GPU{grid.title}')
+    # log.debug(f'grid extent kji: {grid.extent_kji}')
+
+    print(f'Accessing CUDA-enabled device information')
+    device = cuda.get_current_device()  # if no GPU present - this will throw an exception and fall back to CPU
+    print(f'Using {device.name}')
+    # get device attributes to calculate thread dimensions
+    nSMs         = device.MULTIPROCESSOR_COUNT                # number of SMs
+    maxBlockSize = device.MAX_BLOCK_DIM_X             # max number of threads per block in x-dim
+    gridSize     = 2 * nSMs                              # prefer 2*nSMs blocks for full occupancy
+    # take the reverse diagonal for relationship between xyz & ijk
+    grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
+    # extract polygons from surface
+    triangles, points = surface.triangles_and_points()
+    assert triangles is not None and points is not None, f'surface {surface.title} is empty'
+    print(f'trianges.shape = {triangles.shape}')
+    print(f'points.shape = {points.shape}')
+
+    if agitate:
+        points += 1.0e-5 * (np.random.random(points.shape) - 0.5)   # +/- uniform err.
+    # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
+    # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
+    # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
+    if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
+        log.debug('converting from surface crs to grid crs')
+        s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
+        s_crs.convert_array_to(grid.crs, points)
+        surface.crs_uuid = grid.crs.uuid
+        # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
+        # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
+        # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
+
+    # K direction (xy projection)
+    if grid.nk > 1:
+        log.debug("searching for k faces")
+        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
+        # p_xy    = np.delete(points, 2, 1) # return array without z-axis
+        p_xy    = points[triangles]      
+        triangles_d = cuda.to_device(p_xy)
+        k_faces_d   = cuda.to_device(k_faces)
+        colx = 0; coly = 1
+        axis = 2; index1 = 1; index2 = 2
+        info_array = np.zeros((1,3), dtype=float)
+        info_array = cuda.to_device(info_array)
+        blockSize    = (p_xy.shape[0] - 1) // (gridSize - 1) if (p_xy.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
+        print(f'Executing polygon-intersection GPU-kernel along k-axis using gridSize={gridSize}, blockSize={blockSize}')
+        project_polygons_to_surfaces[gridSize,blockSize](k_faces_d, triangles_d,
+                                                         axis, index1, index2, colx, coly,
+                                                         grid.ni, grid.nj, grid.nk,
+                                                         grid_dxyz[0], grid_dxyz[1], grid_dxyz[2],
+                                                         0.0, 0.0,
+                                                         info_array)
+        cuda.synchronize()
+        k_faces = k_faces_d.copy_to_host()
+        info_array = info_array.copy_to_host()
+        pprint(info_array)
+        del p_xy
+        del k_faces_d, triangles_d
+        print(f"k face count: {np.count_nonzero(k_faces)}")
+    else:
+        k_faces = None
+
+    if progress_fn is not None:
+        progress_fn(0.3)
+
+    j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+    i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+    # # J direction (xz projection)
+    # if grid.nj > 1:
+    #     log.debug("searching for j faces")
+    #     j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+    #     p_xz    = np.delete(points, 1, 1)
+    #     p_xz    = p_xz[triangles]
+    #     triangles_d = cuda.to_device(p_xz)
+    #     j_faces_d   = cuda.to_device(j_faces)
+    #     axis = 1
+    #     index1 = 0
+    #     index2 = 2
+    #     px, py = 0, 0
+    #     blockSize    = (p_xz.shape[0] - 1) // (gridSize - 1) if (p_xz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
+    #     log.debug(f'Executing polygon-intersection GPU-kernel along j-axis using gridSize={gridSize}, blockSize={blockSize}')
+    #     project_polygons_to_surfaces[gridSize,blockSize](j_faces_d, triangles_d,
+    #                                                      axis, index1, index2,
+    #                                                      grid.ni, grid.nj, grid.nk,
+    #                                                      grid_dxyz[0], grid_dxyz[1], grid_dxyz[2],
+    #                                                      0.0, 0.0,
+    #                                                      px, py)
+    #     cuda.synchronize()
+    #     j_faces = j_faces_d.copy_to_host()
+    #     print(f'px = {px}, py = {py}')
+    #     del p_xz
+    #     del j_faces_d, triangles_d
+    #     log.debug(f"j face count: {np.count_nonzero(j_faces)}")
+    # else:
+    #     j_faces = None
+
+    # if progress_fn is not None:
+    #     progress_fn(0.6)
+
+    # # I direction (yz projection)
+    # if grid.ni > 1:
+    #     log.debug("searching for i faces")
+    #     i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+    #     p_yz    = np.delete(points, 0, 1)
+    #     p_yz    = p_yz[triangles]
+    #     triangles_d = cuda.to_device(p_yz)
+    #     i_faces_d   = cuda.to_device(i_faces)
+    #     axis = 0
+    #     index1 = 0
+    #     index2 = 1
+    #     px, py = 0, 0
+    #     blockSize    = (p_yz.shape[0] - 1) // (gridSize - 1) if (p_yz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
+    #     log.debug(f'Executing polygon-intersection GPU-kernel along i-axis using gridSize={gridSize}, blockSize={blockSize}')
+    #     project_polygons_to_surfaces[gridSize,blockSize](i_faces_d, triangles_d,
+    #                                                      axis, index1, index2,
+    #                                                      grid.ni, grid.nj, grid.nk,
+    #                                                      grid_dxyz[0], grid_dxyz[1], grid_dxyz[2],
+    #                                                      0.0, 0.0,
+    #                                                      px, py)
+    #     cuda.synchronize()
+    #     i_faces = i_faces_d.copy_to_host()
+    #     print(f'px = {px}, py = {py}')
+    #     del p_yz
+    #     del i_faces_d, triangles_d
+    #     log.debug(f"i face count: {np.count_nonzero(i_faces)}")
+    # else:
+    #     i_faces = None
+
+    # if progress_fn is not None:
+    #     progress_fn(0.9)
+
+    log.debug("converting face sets into grid connection set")
+    gcs = rqf.GridConnectionSet(
+        grid.model,
+        grid = grid,
+        k_faces = k_faces,
+        j_faces = j_faces,
+        i_faces = i_faces,
+        k_sides = None,
+        j_sides = None,
+        i_sides = None,
+        feature_name = name,
+        feature_type = feature_type,
+        title = title,
+        create_organizing_objects_where_needed = True,
+    )
+
+    if progress_fn is not None:
+        progress_fn(1.0)
+
+    return gcs
 
 def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_type = 'fault', progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
@@ -2008,6 +2415,14 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
                                                                  name,
                                                                  feature_type = feature_type,
                                                                  progress_fn = progress_fn)
+
+    elif mode == 'regular_cuda':
+        return find_faces_to_represent_surface_regular_cuda(grid,
+                                                            surface,
+                                                            name,
+                                                            feature_type = feature_type,
+                                                            progress_fn = progress_fn)
+
     log.critical('unrecognised mode: ' + str(mode))
     return None
 
