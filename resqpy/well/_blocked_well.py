@@ -3169,14 +3169,15 @@ class BlockedWell(BaseResqpy):
 
         gridpc = grid.extract_property_collection()
         cell_parts = [part for part in parts if gridpc.indexable_for_part(part) == 'cells'
-                ]  # only 'cell' properties are handled
+                     ]  # only 'cell' properties are handled
         if len(cell_parts) < len(parts):
             log.warning(f"{len(parts)-len(cell_parts)} uuids ignored as they do not have indexableelement of cells")
 
         if len(cell_parts) > 0:
             bwpc = rqp.PropertyCollection(support = self)
             if len(gridpc.time_series_uuid_list()) > 0:
-                time_dict = {} # Dictionary with keys for time_series uuids and None for static properties. Values for each key are a list of property parts associated with that time_series_uuid, or None
+                time_dict = {
+                } # Dictionary with keys for time_series uuids and None for static properties. Values for each key are a list of property parts associated with that time_series_uuid, or None
                 for part in cell_parts:
                     if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
                         time_dict[gridpc.time_series_uuid_for_part(
