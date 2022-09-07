@@ -19,6 +19,7 @@ import uuid
 
 def find_faces_to_represent_surface_regular_wrapper(
     index: int,
+    parent_tmp_dir: str,
     use_index_as_realisation: bool,
     grid_epc: str,
     grid_uuid: Union[UUID, str],
@@ -45,6 +46,7 @@ def find_faces_to_represent_surface_regular_wrapper(
 
     Args:
         index (int): the index of the function call from the multiprocessing function.
+        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
         use_index_as_realisation (bool): if True, uses the index number as the realization number on
             the property collection.
         grid_epc (str): epc file path where the grid is saved.
@@ -87,9 +89,9 @@ def find_faces_to_represent_surface_regular_wrapper(
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[str]): list of UUIDs of relevant objects.
     """
-    tmp_dir = Path(f"tmp_dir/{uuid.uuid4()}")
+    tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
-    epc_file = f"{tmp_dir}/wrapper.epc"
+    epc_file = str(tmp_dir / "wrapper.epc")
     model = new_model(epc_file = epc_file)
     uuid_list = []
     g_model = Model(grid_epc)
@@ -300,6 +302,17 @@ def find_faces_to_represent_surface_regular_wrapper(
                     facet = 'vertical' if is_curtain else 'sloping',
                     realization = realisation,
                     indexable_element = "cells",
+                )
+            elif p_name == 'flange bool':
+                property_collection.add_cached_array_to_imported_list(
+                    array,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
+                    discrete = True,
+                    null_value = -1,
+                    property_kind = "discrete",
+                    realization = realisation,
+                    indexable_element = "faces",
                 )
             else:
                 raise ValueError(f'unrecognised property name {p_name}')

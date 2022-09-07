@@ -237,6 +237,7 @@ def load_wellspecs(
     keep_duplicate_cells: bool = False,
     keep_null_columns: bool = True,
     last_data_only: bool = True,
+    usa_date_format: bool = False,
 ) -> Dict[str, Union[pd.DataFrame, None]]:
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
@@ -255,6 +256,8 @@ def load_wellspecs(
             otherwise they are removed.
         last_data_only (bool): If True, only the last entry of well data in the file are used in the
             dataframe, otherwise all of the well data are used at different times.
+        usa_date_format (bool): If True, wellspec file is expected to contain date formats in MM/DD/YYYY.
+            if False, DD/MM/YYYY.
 
     Returns:
        well_dict (Dict[str, Union[pd.DataFrame, None]]): mapping each well name found in the
@@ -268,7 +271,7 @@ def load_wellspecs(
     selecting = bool(column_list)
 
     well_dict = {}
-    well_pointers = get_well_pointers(wellspec_file)
+    well_pointers = get_well_pointers(wellspec_file, usa_date_format = usa_date_format)
 
     if column_list is None:
         well_dict = dict.fromkeys(well_pointers, None)

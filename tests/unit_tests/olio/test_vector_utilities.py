@@ -206,3 +206,9 @@ def test_rotation():
     pp = vec.rotate_vector(m, p)
     ppp = vec.rotate_vector(rm, pp)
     assert_array_almost_equal(p, ppp)
+
+
+def test_vector_rotation():
+    v = vec.unit_vector((3.0, 4.0, 5.0))
+    m = vec.rotation_matrix_3d_vector(v)
+    assert_array_almost_equal(v, vec.rotate_vector(m, (0.0, 0.0, 1.0)))

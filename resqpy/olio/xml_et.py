@@ -280,6 +280,14 @@ def cut_nodes_of_types(root, types_to_be_cut):
             cut_nodes_of_types(child, types_to_be_cut)
 
 
+def cut_extra_metadata(root):
+    """Removes all the extra metadata children under root node."""
+
+    for child in root:
+        if child.tag == 'ExtraMetadata':
+            root.remove(child)
+
+
 def content_type(content_type_str):
     """Returns the actual type, as embedded in an xml ContentType attribute; application and version are disregarded."""
 

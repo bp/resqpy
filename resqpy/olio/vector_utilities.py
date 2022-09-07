@@ -17,7 +17,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit
-from multiprocessing import Pool
+import multiprocessing as m_p
 
 
 def radians_from_degrees(deg):
@@ -389,6 +389,18 @@ def tilt_3d_matrix(azimuth, dip):
     return matrix
 
 
+def rotation_matrix_3d_vector(v):
+    """Returns a rotation matrix which will rotate points by inclination and azimuth of vector.
+
+    note:
+       the returned matrix will map a positive z axis vector onto v
+    """
+
+    m = tilt_3d_matrix(azimuth(v), inclination(v))
+    m[:2, :] = -m[:2, :]  # todo: should this change be in the tilt matrix?
+    return m
+
+
 def tilt_points(pivot_xyz, azimuth, dip, points):
     """Modifies array of xyz points in situ to apply dip in direction of azimuth, about pivot point."""
 
@@ -733,7 +745,7 @@ def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points
             with each row being the polygon number, points y index, and points x index.
     """
     args = [(points, polygons[polygon_num], points_xlen, polygon_num) for polygon_num in range(len(polygons))]
-    with Pool() as p:
+    with m_p.Pool() as p:
         r = p.starmap(points_in_polygon, args)
 
     return np.vstack(r)

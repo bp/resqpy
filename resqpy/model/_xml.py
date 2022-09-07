@@ -296,7 +296,8 @@ def _create_hdf5_ext(model,
                      title = 'Hdf Proxy',
                      originator = None,
                      file_name = None,
-                     uuid = None):
+                     uuid = None,
+                     discard_path = True):
     """Creates an hdf5 external node and optionally adds as child of root and/or to parts forest."""
 
     ext = _new_obj_node('EpcExternalPartReference', name_space = 'eml')
@@ -325,6 +326,8 @@ def _create_hdf5_ext(model,
         if model.main_h5_uuid is None:
             model.main_h5_uuid = ext_uuid
         if model.rels_present and file_name:
+            if discard_path:  # NB. discard directory part of path; hdf5 must be in same directory as epc!
+                _, file_name = os.path.split(file_name)
             (uuid, rel_tree) = model.rels_forest[rqet.rels_part_name_for_part(
                 rqet.part_name_for_object('obj_EpcExternalPartReference', ext_uuid))]
             assert (bu.matching_uuids(uuid, ext_uuid))

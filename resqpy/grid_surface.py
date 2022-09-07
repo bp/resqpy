@@ -25,6 +25,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.surface as rqs
 import resqpy.well as rqw
+from resqpy.property import Property
 
 
 class GridSkin:
@@ -1515,11 +1516,11 @@ def where_true(data: np.ndarray):
     return np.where(data)
 
 
-@njit(parallel = True)
-def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, points: np.ndarray, triangles: np.ndarray,
-                    grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool, normals: np.ndarray,
-                    return_depths: bool, depths: np.ndarray, return_offsets: bool, offsets: np.ndarray,
-                    return_triangles: bool,
+@njit
+def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axis: int, points: np.ndarray,
+                    triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool,
+                    normals: np.ndarray, return_depths: bool, depths: np.ndarray, return_offsets: bool,
+                    offsets: np.ndarray, return_triangles: bool,
                     triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Finds the faces that intersect the surface in 3D.
 
@@ -1529,7 +1530,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
         index2 (int): the second index. Axis i is 1, j is 2, and k is 2.
         hits (np.ndarray): boolean array of grid centres that intersected the surface for the given
             axis.
-        n (int): number of cells in axis
+        n_axis (int): number of cells in the axis.
         points (np.ndarray): array of all the surface node points in 3D.
         triangles (np.ndarray): array of all the points indices creating each triangle.
         grid_dxyz (Tuple[float]): tuple of a cell's thickness in each axis.
@@ -1553,22 +1554,24 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
             corresponding cell face.
         - offsets (np.ndarray): array of the distance between the centre of the cell face and the
             intersection point of the inter-cell centre vector with a triangle in the surface.
-        - triangles (np.ndarray): array of triangle numbers
+        - triangle_per_face (np.ndarray): array of triangle numbers
     """
     n_faces = faces.shape[2 - axis]
     for i in numba.prange(len(hits)):
         tri, d1, d2 = hits[i]
 
-        ind0 = np.zeros(3, dtype = numba.float64) + grid_dxyz[axis] / 2
-        ind0[2 - index1] = (d1 + 0.5) * grid_dxyz[2 - index1]
-        ind0[2 - index2] = (d2 + 0.5) * grid_dxyz[2 - index2]
+        # Line start point in 3D which had a projection hit.
+        centre_point_start = np.zeros(3, dtype = numba.float64) + grid_dxyz[axis] / 2
+        centre_point_start[2 - index1] = (d1 + 0.5) * grid_dxyz[2 - index1]
+        centre_point_start[2 - index2] = (d2 + 0.5) * grid_dxyz[2 - index2]
 
-        ind1 = np.copy(ind0)
-        ind1[axis] = grid_dxyz[axis] * (n - 0.5)
+        # Line end point in 3D.
+        centre_point_end = np.copy(centre_point_start)
+        centre_point_end[axis] = grid_dxyz[axis] * (n_axis - 0.5)
 
         xyz = meet.line_triangle_intersect_numba(
-            ind0,
-            ind1 - ind0,
+            centre_point_start,
+            centre_point_end - centre_point_start,
             points[triangles[tri]],
             line_segment = True,
             t_tol = 1.0e-6,
@@ -1576,37 +1579,37 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n, po
         if xyz is None:  # meeting point is outwith grid
             continue
 
-        face = int((xyz[axis] - ind0[axis]) / grid_dxyz[axis])
+        # The face corresponding to the grid and surface intersection at this point.
+        face = int((xyz[axis] - centre_point_start[axis]) / grid_dxyz[axis])
         if face == -1:  # handle rounding precision issues
             face = 0
         elif face == n_faces:
             face -= 1
         assert 0 <= face < n_faces
-        ind_face = np.zeros(3, dtype = np.int32)
-        ind_face[index1] = d1
-        ind_face[index2] = d2
-        ind_face[2 - axis] = face
 
-        faces[ind_face[0], ind_face[1], ind_face[2]] = True
+        face_idx = np.zeros(3, dtype = np.int32)
+        face_idx[index1] = d1
+        face_idx[index2] = d2
+        face_idx[2 - axis] = face
+
+        faces[face_idx[0], face_idx[1], face_idx[2]] = True
+
         if return_depths:
-            depths[ind_face[0], ind_face[1], ind_face[2]] = xyz[2]
-
-        ind2 = np.zeros(4, dtype = np.int32)
-        ind2[index2] = d2
-        ind2[-1] = axis
-
+            depths[face_idx[0], face_idx[1], face_idx[2]] = xyz[2]
         if return_offsets:
-            offsets[ind_face[0], ind_face[1], ind_face[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
+            offsets[face_idx[0], face_idx[1], face_idx[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
         if return_normal_vectors:
-            normals[ind_face[0], ind_face[1], ind_face[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
-            if normals[ind2[0], ind2[1], ind2[2], 2] > 0.0:
-                normals[ind_face[0], ind_face[1], ind_face[2]] = -normals[ind_face[0], ind_face[1], ind_face[2]]
+            normals[face_idx[0], face_idx[1], face_idx[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
+            normal_idx = np.zeros(3, dtype = np.int32)
+            normal_idx[index2] = d2
+            if normals[normal_idx[0], normal_idx[1], normal_idx[2], 2] > 0.0:
+                normals[face_idx[0], face_idx[1], face_idx[2]] = -normals[face_idx[0], face_idx[1], face_idx[2]]
         if return_triangles:
-            triangle_per_face[ind_face[0], ind_face[1], ind_face[2]] = tri
+            triangle_per_face[face_idx[0], face_idx[1], face_idx[2]] = tri
+
     return faces, normals, offsets, triangle_per_face
 
 
-@njit
 def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
                         i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
@@ -1627,8 +1630,10 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
-    c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
+    # a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
+    # c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
+    a = np.zeros(grid_extent_kji, dtype = np.bool_)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = np.bool_)  # cells changing
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
@@ -1636,7 +1641,8 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     a[0, 0, 0] = True
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
     # todo: check that following works when a dimension has extent 1
-    while True:
+    limit = grid_extent_kji[0] * grid_extent_kji[1] * grid_extent_kji[2]
+    for _ in range(limit):
         c[:] = False
         # k faces
         c[1:, :, :] = np.logical_and(a[:-1, :, :], open_k)
@@ -1738,13 +1744,20 @@ def find_faces_to_represent_surface_regular_optimised(
     return_depths = False
     return_offsets = False
     return_bisector = False
+    return_flange_bool = False
     if return_properties:
-        assert all([p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector'] for p in return_properties])
+        assert all([
+            p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector', 'flange bool']
+            for p in return_properties
+        ])
         return_triangles = ('triangle' in return_properties)
         return_normal_vectors = ('normal vector' in return_properties)
         return_depths = ('depth' in return_properties)
         return_offsets = ('offset' in return_properties)
         return_bisector = ('grid bisector' in return_properties)
+        return_flange_bool = ('flange bool' in return_properties)
+        if return_flange_bool:
+            return_triangles = True
 
     if title is None:
         title = name
@@ -1923,6 +1936,16 @@ def find_faces_to_represent_surface_regular_optimised(
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
 
+    if return_flange_bool:
+        flange_bool_uuid = surface.model.uuid(title = 'flange bool',
+                                              obj_type = 'DiscreteProperty',
+                                              related_uuid = surface.uuid)
+        assert flange_bool_uuid is not None, f"No flange bool property found for surface: {surface.title}"
+        flange_bool = Property(surface.model, uuid = flange_bool_uuid)
+        flange_array = flange_bool.array_ref()
+        all_flange = np.take(flange_array, all_tris)
+        assert all_flange.shape == (gcs.count,)
+
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_normal_vectors:
         k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[where_true(k_faces)]
@@ -1952,6 +1975,8 @@ def find_faces_to_represent_surface_regular_optimised(
             props_dict['normal vector'] = all_normals
         if return_bisector:
             props_dict['grid bisector'] = (bisector, is_curtain)
+        if return_flange_bool:
+            props_dict['flange bool'] = all_flange
         return (gcs, props_dict)
 
     return gcs
@@ -2285,7 +2310,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert len(cell_indices_list) == cell_count
     assert len(face_pairs_list) == cell_count
 
-    blocked_well.node_mds = np.array(node_mds_list)
+    blocked_well.node_mds = np.array(node_mds_list, dtype = float)
     blocked_well.node_count = node_count
     blocked_well.grid_indices = np.array(grid_indices_list, dtype = int)
     blocked_well.cell_indices = np.array(cell_indices_list, dtype = int)

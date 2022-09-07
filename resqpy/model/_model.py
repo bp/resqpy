@@ -1799,6 +1799,50 @@ class Model():
 
         m_f._force_consolidation_uuid_equivalence(self, immigrant_uuid, resident_uuid)
 
+    def force_consolidation_equivalence_for_class_ignoring_extra_metadata(self, other_model, resqpy_class):
+        """Force immigrant objects of type to be teated as equivalent where only extra metadata differs during consolidation.
+
+        notes:
+            this method should be called prior to calling copy_part_from_other_model() or
+            copy_uuid_from_other_model() to override the more stringent equivalence checks which
+            include extra metadata; the resqpy class must have an is_equivalent() method which
+            supports the check_extra_metadata boolean argument;
+            typically used for organisational classes such as features and interpretations;
+            an exception is raised if more than one matching part already exists in this model, for a
+            particular immigrant title (for the object type)
+        """
+
+        obj_type = resqpy_class.resqml_type
+        resident_uuids = self.uuids(obj_type = obj_type)
+        if len(resident_uuids) == 0:
+            log.debug(f'no resident parts for class {resqpy_class}')
+            return
+        immigrant_uuids = other_model.uuids(obj_type = obj_type)
+        if len(immigrant_uuids) == 0:
+            log.debug(f'no immigrant parts for class {resqpy_class} object type {obj_type}')
+            return
+        resident_objects_dict = {}
+        for resident_uuid in resident_uuids:
+            resident_objects_dict[resident_uuid] = resqpy_class(self, uuid = resident_uuid)
+        for immigrant_uuid in immigrant_uuids:
+            immigrant_obj = resqpy_class(other_model, uuid = immigrant_uuid)
+            log.debug(f'looking for equivalent for {obj_type} {immigrant_obj.title}')
+            for resident_uuid in resident_uuids:
+                if resident_objects_dict[resident_uuid].is_equivalent(immigrant_obj, check_extra_metadata = False):
+                    log.debug(f'forcing equivalence between immigrant {immigrant_uuid} and resident {resident_uuid} ' +
+                              f'of class {resqpy_class} object type {obj_type}')
+                    m_f._force_consolidation_uuid_equivalence(self, immigrant_uuid, resident_uuid)
+                    break
+
+    def remove_extra_metadata(self, uuid):
+        """Removes extra metadata from in memory xml for uuid.
+
+        note:
+            this method will not modify any resqpy objects already instantiated
+        """
+
+        rqet.cut_extra_metadata(self.root_for_uuid(uuid))
+
     def copy_part_from_other_model(self,
                                    other_model,
                                    part,
