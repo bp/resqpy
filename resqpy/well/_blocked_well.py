@@ -3159,7 +3159,7 @@ class BlockedWell(BaseResqpy):
         """Add properties to blocked wells from a list of uuids for properties on the supporting grid."""
 
         part_list = [self.model.part_for_uuid(uuid) for uuid in uuid_list]
-    
+
         assert len(self.grid_list) == 1, "Only blocked wells with a single grid can be handled currently"
         grid = self.grid_list[0]
         parts = self.model.parts_list_filtered_by_supporting_uuid(part_list,
@@ -3177,7 +3177,7 @@ class BlockedWell(BaseResqpy):
             bwpc = rqp.PropertyCollection(support = self)
             if len(gridpc.time_series_uuid_list()) > 0:
                 time_dict = {
-                } # Dictionary with keys for time_series uuids and None for static properties. Values for each key are a list of property parts associated with that time_series_uuid, or None
+                }  # Dictionary with keys for time_series uuids and None for static properties. Values for each key are a list of property parts associated with that time_series_uuid, or None
                 for part in cell_parts:
                     if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
                         time_dict[gridpc.time_series_uuid_for_part(
