@@ -4,11 +4,13 @@ version = '30th July 2022'
 
 import logging
 from unicodedata import numeric
+from xml.etree.ElementTree import TreeBuilder
 
 log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
 
 import math as maths
+import time
 import numpy as np
 import numba  # type: ignore
 from numba import njit, cuda
@@ -1561,12 +1563,13 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
     """
     n_faces = faces.shape[2 - axis]
     for i in numba.prange(len(hits)):
-        tri, d1, d2 = hits[i]
 
+        tri, d1, d2 = hits[i]
         # Line start point in 3D which had a projection hit.
         centre_point_start = np.zeros(3, dtype = numba.float64) + grid_dxyz[axis] / 2
         centre_point_start[2 - index1] = (d1 + 0.5) * grid_dxyz[2 - index1]
         centre_point_start[2 - index2] = (d2 + 0.5) * grid_dxyz[2 - index2]
+
 
         # Line end point in 3D.
         centre_point_end = np.copy(centre_point_start)
@@ -1669,6 +1672,7 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
     grid_nxyz[0] = nx; grid_nxyz[1] = ny; grid_nxyz[2] = nz
     grid_dxyz[0] = dx; grid_dxyz[1] = dy; grid_dxyz[2] = dz
     # define thread-local arrays for section 3
+    tp      = numba.cuda.local.array((3,3), numba.float32)
     line_p  = numba.cuda.local.array(3, numba.float32)
     line_v  = numba.cuda.local.array(3, numba.float32)
     p01     = numba.cuda.local.array(3, numba.float32)
@@ -1686,7 +1690,6 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
     denom   = numba.cuda.local.array(1, numba.float32)
     t       = numba.cuda.local.array(1, numba.float32)
 
-    thread = 0
     # extract useful dimension info
     n_axis      = grid_nxyz[axis]        # get length of projection axis
     n_faces     = faces.shape[2 - axis]  # n_faces == n_axis -1
@@ -1709,18 +1712,18 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
 
         # 1. find triangle bounding box in this projection
         # 1a. get triangle under consideration
-        tp = triangles[triangle_num]
         # 1b. convert triangle-points coordinate to index
         for ver in range(3):  # for v in vertices
             for dim in range(3): # for d in dimnensions
-                tp[ver, dim] /= grid_dxyz[dim]; tp[ver,dim] -= 0.5  # get index of each aligned triangle
+                tp[ver,dim] = triangles[triangle_num][ver,dim] / grid_dxyz[dim] - 0.5  # get index of each aligned triangle
+
         # 1c. find triangle bounding box
         min_tpx = max(maths.ceil( min(tp[0, colx], tp[1, colx], tp[2, colx])), 0)
-        max_tpx = min(maths.floor(max(tp[0, colx], tp[1, colx], tp[2, colx])), nx - 1)
+        max_tpx = min(maths.floor(max(tp[0, colx], tp[1, colx], tp[2, colx])), grid_nxyz[colx] - 1)
         if max_tpx < min_tpx:
             continue # skip: triangle outside of grid
         min_tpy = max(maths.ceil( min(tp[0, coly], tp[1, coly], tp[2, coly])), 0)
-        max_tpy = min(maths.floor(max(tp[0, coly], tp[1, coly], tp[2, coly])), ny - 1)
+        max_tpy = min(maths.floor(max(tp[0, coly], tp[1, coly], tp[2, coly])), grid_nxyz[coly] - 1)
         if max_tpy < min_tpy:
             continue # skip: triangle outside of grid
         
@@ -1739,8 +1742,9 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
                     # 3. find intersection point with column centre
                     # 3a. Line start point in 3D which had a projection hit
                     line_p[axis] = grid_dxyz[axis] / 2.
-                    line_p[2 - index2] = (px + 0.5) * grid_dxyz[2 - index1]  # kji / xyz & px=d2
-                    line_p[2 - index1] = (py + 0.5) * grid_dxyz[2 - index2]  # kji / xyz & py=d1
+                    line_p[2 - index2] = (px + 0.5) * grid_dxyz[2 - index2]  # kji / xyz & px=d2
+                    line_p[2 - index1] = (py + 0.5) * grid_dxyz[2 - index1]  # kji / xyz & py=d1
+
                     # 3b. Line end point in 3D
                     for dim in range(3):
                         line_v[dim] = line_p[dim]
@@ -1861,7 +1865,34 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
         is_curtain = True
     return a, is_curtain
 
+def print_timings(timings):
+    
+        max_string_len = 0
+        extra_buffer = 3
+        data_col_buffers = 16
 
+        total_time = 0.
+        for t in timings:
+            total_time += t[1]
+            max_string_len = len(t[0]) if len(t[0]) > max_string_len else max_string_len
+        max_string_len += extra_buffer
+        total_width = int(max_string_len + 2*data_col_buffers)
+
+        for t in timings:
+            t.append(t[1]/total_time)
+        title_format = "{:<%d} {:<15} {:<15}" % max_string_len
+        row_format = "{:<%d} {:<15.2f} {:<15.2f}" % max_string_len
+        print("="*total_width)
+        print(title_format.format("Stage", "Time / s", "Proportion / %"))
+        print("-"*total_width)
+        for stage in timings:
+            n, t, prop = stage
+            print(row_format.format(n,t,prop*100))
+        print("="*total_width)
+        print(row_format.format("Total time", total_time, 100))
+        print("="*total_width)
+        return
+    
 def find_faces_to_represent_surface_regular_optimised(
     grid,
     surface,
@@ -1954,10 +1985,10 @@ def find_faces_to_represent_surface_regular_optimised(
     # take the reverse diagonal for relationship between xyz & ijk
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
     # extract polygons from surface
+    tassign0a = time.perf_counter()
     triangles, points = surface.triangles_and_points()
+    tassign0b = time.perf_counter()
     assert triangles is not None and points is not None, f'surface {surface.title} is empty'
-    print(f'trianges.shape = {triangles.shape}')
-    print(f'points.shape = {points.shape}')
 
     if agitate:
         points += 1.0e-5 * (np.random.random(points.shape) - 0.5)   # +/- uniform err.
@@ -1976,14 +2007,16 @@ def find_faces_to_represent_surface_regular_optimised(
     # K direction (xy projection)
     if grid.nk > 1:
         log.debug("searching for k faces")
+        tmemk0a = time.perf_counter()
         k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
         k_triangles = np.full((grid.nk - 1, grid.nj, grid.ni), -1, dtype = int)
         k_depths = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
         p_xy = np.delete(points, 2, 1) # return array without z-axis
-
+        tmemk0b = time.perf_counter()
         # Returns 2D (list-like) array containing all points in each triangle
+        tkernelk0a = time.perf_counter()
         k_hits = vec.points_in_triangles_aligned(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1], p_xy[triangles])
         # [[[t1, yi, xi],
         #   [t1, yi, xi],
@@ -1996,6 +2029,7 @@ def find_faces_to_represent_surface_regular_optimised(
         #  [[tn, yi, xi],
         #   [tn, yi, xi],
         #   [tn, yi, xi]],
+        tkernelk0b = time.perf_counter()
         axis = 2
         index1 = 1
         index2 = 2
@@ -2005,6 +2039,7 @@ def find_faces_to_represent_surface_regular_optimised(
                             return_normal_vectors, k_normals,
                             return_depths, k_depths,
                             return_offsets, k_offsets, return_triangles, k_triangles)
+        tkernelk0c = time.perf_counter()
         del k_hits
         del p_xy
         print(f"k face count: {np.count_nonzero(k_faces)}")
@@ -2021,17 +2056,20 @@ def find_faces_to_represent_surface_regular_optimised(
     # J direction (xz projection)
     if grid.nj > 1:
         log.debug("searching for j faces")
+        tmemj0a = time.perf_counter()
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
         j_triangles = np.full((grid.nk, grid.nj - 1, grid.ni), -1, dtype = int)
         j_depths = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_offsets = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_normals = (np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan))
         p_xz = np.delete(points, 1, 1)
+        tmemj0b = time.perf_counter()
 
+        tkernelj0a = time.perf_counter()
         # j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
         # j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
         j_hits = vec.points_in_triangles_aligned(grid.ni, grid.nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
-
+        tkernelj0b = time.perf_counter()
         axis = 1
         index1 = 0
         index2 = 2
@@ -2041,6 +2079,7 @@ def find_faces_to_represent_surface_regular_optimised(
                             return_normal_vectors, j_normals,
                             return_depths, j_depths,
                             return_offsets, j_offsets, return_triangles, j_triangles)
+        tkernelj0c = time.perf_counter()
         del j_hits
         del p_xz
         # log.debug(f"j face count: {np.count_nonzero(j_faces)}")
@@ -2058,17 +2097,20 @@ def find_faces_to_represent_surface_regular_optimised(
     # I direction (yz projection)
     if grid.ni > 1:
         log.debug("searching for i faces")
+        tmemi0a = time.perf_counter() 
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
         i_triangles = np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = int)
         i_depths = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_offsets = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_normals = (np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan))
         p_yz = np.delete(points, 0, 1)
+        tmemi0b = time.perf_counter()
 
+        tkerneli0a = time.perf_counter()
         # i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
         # i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
         i_hits = vec.points_in_triangles_aligned(grid.nj, grid.nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
-
+        tkerneli0b = time.perf_counter()
         axis = 0
         index1 = 0
         index2 = 1
@@ -2078,6 +2120,7 @@ def find_faces_to_represent_surface_regular_optimised(
                             return_normal_vectors, i_normals,
                             return_depths, i_depths,
                             return_offsets, i_offsets, return_triangles, i_triangles)
+        tkerneli0c = time.perf_counter()
         del i_hits
         del p_yz
         # log.debug(f"i face count: {np.count_nonzero(i_faces)}")
@@ -2093,6 +2136,7 @@ def find_faces_to_represent_surface_regular_optimised(
         progress_fn(0.9)
 
     log.debug("converting face sets into grid connection set")
+    tassign1a = time.perf_counter()
     gcs = rqf.GridConnectionSet(
         grid.model,
         grid = grid,
@@ -2107,6 +2151,7 @@ def find_faces_to_represent_surface_regular_optimised(
         title = title,
         create_organizing_objects_where_needed = True,
     )
+    tassign1b = time.perf_counter()
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
@@ -2161,6 +2206,19 @@ def find_faces_to_represent_surface_regular_optimised(
     if progress_fn is not None:
         progress_fn(1.0)
 
+    timings_list = [["extract polygons from surface", tassign0b-tassign0a],
+                    ["malloc: k_faces", tmemk0b-tmemk0a],
+                    ["kernel: points_in_triangles_aligned K-axis", tkernelk0b-tkernelk0a],
+                    ["kernel: intersect_numba K-axis", tkernelk0c-tkernelk0b],
+                    ["malloc: j_faces", tmemj0b-tmemj0a],
+                    ["kernel: points_in_triangles_aligned J-axis", tkernelj0b-tkernelj0a],
+                    ["kernel: intersect_numba J-axis", tkernelj0c-tkernelj0b],
+                    ["malloc: i_faces", tmemi0b-tmemi0a],
+                    ["kernel: points_in_triangles_aligned I-axis", tkerneli0b-tkerneli0a],
+                    ["kernel: intersect_numba I-axis", tkerneli0c-tkerneli0b],
+                    ["create grid-connection set", tassign1b-tassign1a]]
+    print_timings(timings_list)
+    
     # if returning properties, construct dictionary
     if return_properties:
         props_dict = {}
@@ -2236,20 +2294,22 @@ def find_faces_to_represent_surface_regular_cuda(
     if progress_fn is not None:
         progress_fn(0.0)
     
-    print(f'intersecting surface {surface.title} with regular grid on a GPU{grid.title}')
+    log.debug(f'intersecting surface {surface.title} with regular grid on a GPU{grid.title}')
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
-    print(f'Accessing CUDA-enabled device information')
+    log.debug(f'Accessing CUDA-enabled device information')
     device = cuda.get_current_device()  # if no GPU present - this will throw an exception and fall back to CPU
-    print(f'Using {device.name}')
+    log.debug(f'Using {device.name}')
     # get device attributes to calculate thread dimensions
-    nSMs         = device.MULTIPROCESSOR_COUNT                # number of SMs
-    maxBlockSize = device.MAX_BLOCK_DIM_X             # max number of threads per block in x-dim
-    gridSize     = 2 * nSMs                              # prefer 2*nSMs blocks for full occupancy
+    nSMs         = device.MULTIPROCESSOR_COUNT         # number of SMs
+    maxBlockSize = device.MAX_BLOCK_DIM_X/2            # max number of threads per block in x-dim
+    gridSize     = nSMs*2                              # prefer 2*nSMs blocks for full occupancy
     # take the reverse diagonal for relationship between xyz & ijk
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
     # extract polygons from surface
+    tassign0a = time.perf_counter()
     triangles, points = surface.triangles_and_points()
+    tassign0b = time.perf_counter()
     assert triangles is not None and points is not None, f'surface {surface.title} is empty'
 
     if agitate:
@@ -2266,25 +2326,33 @@ def find_faces_to_represent_surface_regular_cuda(
         # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
         # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
 
+    tmem0a = time.perf_counter()
     p_tri_xyz = points[triangles]
     triangles_d = cuda.to_device(p_tri_xyz)
+    tmem0b = time.perf_counter()
+    # n_rows = 7
 
     # K direction (xy projection)
     if grid.nk > 1:
         log.debug("searching for k faces")
-        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)   
+        tmemk0a = time.perf_counter()
+        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
         k_faces_d   = cuda.to_device(k_faces)
+        tmemk0b = time.perf_counter()
         colx = 0; coly = 1
         axis = 2; index1 = 1; index2 = 2
         blockSize    = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
-        print(f'Executing polygon-intersection GPU-kernel along k-axis using gridSize={gridSize}, blockSize={blockSize}')
+        log.debug(f'Executing polygon-intersection GPU-kernel along k-axis using gridSize={gridSize}, blockSize={blockSize}')
+        tkernelk0a = time.perf_counter()
         project_polygons_to_surfaces[gridSize,blockSize](k_faces_d, triangles_d,
                                                          axis, index1, index2, colx, coly,
                                                          grid.ni, grid.nj, grid.nk,
                                                          grid_dxyz[0], grid_dxyz[1], grid_dxyz[2],
                                                          0.0, 0.0)
-        cuda.synchronize()
+        tkernelk0b = time.perf_counter()
+        tmemk1a = time.perf_counter()
         k_faces = k_faces_d.copy_to_host()
+        tmemk1b = time.perf_counter()
         del k_faces_d
         print(f"k face count: {np.count_nonzero(k_faces)}")
     else:
@@ -2296,19 +2364,25 @@ def find_faces_to_represent_surface_regular_cuda(
     # J direction (xz projection)
     if grid.nj > 1:
         log.debug("searching for j faces")
+        tmemj0a = time.perf_counter()
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
+        log.debug(f'j_faces = {j_faces.shape}')
         j_faces_d   = cuda.to_device(j_faces)
+        tmemj0b = time.perf_counter()
         colx = 0; coly = 2
         axis = 1; index1 = 0; index2 = 2
         blockSize    = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
-        print(f'Executing polygon-intersection GPU-kernel along j-axis using gridSize={gridSize}, blockSize={blockSize}')
+        log.debug(f'Executing polygon-intersection GPU-kernel along j-axis using gridSize={gridSize}, blockSize={blockSize}')
+        tkernelj0a = time.perf_counter()
         project_polygons_to_surfaces[gridSize,blockSize](j_faces_d, triangles_d,
                                                          axis, index1, index2, colx, coly,
                                                          grid.ni, grid.nj, grid.nk,
                                                          grid_dxyz[0], grid_dxyz[1], grid_dxyz[2],
                                                          0.0, 0.0)
-        cuda.synchronize()
+        tkernelj0b = time.perf_counter()
+        tmemj1a = time.perf_counter()
         j_faces = j_faces_d.copy_to_host()
+        tmemj1b = time.perf_counter()
         del j_faces_d
         print(f"j face count: {np.count_nonzero(j_faces)}")
     else:
@@ -2316,23 +2390,29 @@ def find_faces_to_represent_surface_regular_cuda(
 
     if progress_fn is not None:
         progress_fn(0.6)
-
+    
     # I direction (yz projection)
     if grid.ni > 1:
         log.debug("searching for i faces")
+        tmemi0a = time.perf_counter() 
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
+        log.debug(f'i_faces = {i_faces.shape}') 
         i_faces_d   = cuda.to_device(i_faces)
+        tmemi0b = time.perf_counter()
         colx = 1; coly = 2
         axis = 0; index1 = 0; index2 = 1
         blockSize    = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
-        print(f'Executing polygon-intersection GPU-kernel along i-axis using gridSize={gridSize}, blockSize={blockSize}')
+        log.debug(f'Executing polygon-intersection GPU-kernel along i-axis using gridSize={gridSize}, blockSize={blockSize}')
+        tkerneli0a = time.perf_counter()
         project_polygons_to_surfaces[gridSize,blockSize](i_faces_d, triangles_d,
                                                          axis, index1, index2, colx, coly,
                                                          grid.ni, grid.nj, grid.nk,
                                                          grid_dxyz[0], grid_dxyz[1], grid_dxyz[2],
                                                          0.0, 0.0)
-        cuda.synchronize()
+        tkerneli0b = time.perf_counter()
+        tmemi1a = time.perf_counter()
         i_faces = i_faces_d.copy_to_host()
+        tmemi1b = time.perf_counter()
         del i_faces_d
         print(f"i face count: {np.count_nonzero(i_faces)}")
     else:
@@ -2342,6 +2422,7 @@ def find_faces_to_represent_surface_regular_cuda(
         progress_fn(0.9)
 
     log.debug("converting face sets into grid connection set")
+    tassign1a = time.perf_counter()
     gcs = rqf.GridConnectionSet(
         grid.model,
         grid = grid,
@@ -2356,9 +2437,24 @@ def find_faces_to_represent_surface_regular_cuda(
         title = title,
         create_organizing_objects_where_needed = True,
     )
+    tassign1b = time.perf_counter()
 
     if progress_fn is not None:
         progress_fn(1.0)
+
+    timings_list = [["extract polygons from surface", tassign0b-tassign0a],
+                    ["memcpy: points[triangles] H2D", tmem0b-tmem0a],
+                    ["memcpy: k_faces H2D", tmemk0b-tmemk0a],
+                    ["kernel: project_polygons_to_surfaces K-axis", tkernelk0b-tkernelk0a],
+                    ["memcpy: j_faces D2H", tmemk1b-tmemk1a],
+                    ["memcpy: j_faces H2D", tmemj0b-tmemj0a],
+                    ["kernel: project_polygons_to_surfaces J-axis", tkernelj0b-tkernelj0a],
+                    ["memcpy: j_faces D2H", tmemj1b-tmemj1a],
+                    ["memcpy: i_faces H2D", tmemi0b-tmemi0a],
+                    ["kernel: project_polygons_to_surfaces I-axis", tkerneli0b-tkerneli0a],
+                    ["memcpy: i_faces D2H", tmemi1b-tmemi1a],
+                    ["create grid-connection set", tassign1b-tassign1a]]
+    print_timings(timings_list)
 
     return gcs
 
