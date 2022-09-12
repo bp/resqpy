@@ -30,6 +30,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     agitate: bool = False,
     feature_type: str = 'fault',
     trimmed: bool = False,
+    is_curtain = False,
     extend_fault_representation: bool = False,
     retriangulate: bool = False,
     related_uuid = None,
@@ -60,6 +61,8 @@ def find_faces_to_represent_surface_regular_wrapper(
            with the grid
         feature_type (str, default 'fault'): one of 'fault', 'horizon', or 'geobody boundary'
         trimmed (bool, default True): if True the surface has already been trimmed
+        is_curtain (bool, default False): if True, only the top layer is intersected with the surface and bisector
+           is generated as a column property if requested
         extend_fault_representation (bool, default False): if True, the representation is extended with a flange
         retriangulate (bool, default False): if True, a retriangulation is performed even if not needed otherwise
         related_uuid (uuid, optional): if present, the uuid of an object to be softly related to the gcs (and to
@@ -209,6 +212,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         None,  # centres
         agitate,
         feature_type,
+        is_curtain,
         progress_fn,
         consistent_side,
         return_properties,
@@ -227,7 +231,17 @@ def find_faces_to_represent_surface_regular_wrapper(
         gcs.create_xml(extra_metadata = extra_metadata)
         model.copy_uuid_from_other_model(gcs.model, uuid = gcs.uuid)
         if related_uuid is not None:
-            model.create_reciprocal_relationship_uuids(gcs.uuid, 'sourceObject', related_uuid, 'destinationObject')
+            relative_found = (model.uuid(uuid = related_uuid) is not None)
+            if not relative_found:
+                for m in gcs.model, g_model, s_model:
+                    if m.uuid(uuid = related_uuid) is not None:
+                        model.copy_uuid_from_other_model(m, related_uuid)
+                        relative_found = True
+                        break
+            if relative_found:
+                model.create_reciprocal_relationship_uuids(gcs.uuid, 'sourceObject', related_uuid, 'destinationObject')
+            else:
+                log.warning(f'related uuid {related_uuid} not found; relationship dropped')
         uuid_list.append(gcs.uuid)
 
     if success and return_properties is not None and len(return_properties):
@@ -301,7 +315,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     facet_type = 'direction',
                     facet = 'vertical' if is_curtain else 'sloping',
                     realization = realisation,
-                    indexable_element = "cells",
+                    indexable_element = "columns" if is_curtain else "cells",
                 )
             elif p_name == 'flange bool':
                 property_collection.add_cached_array_to_imported_list(

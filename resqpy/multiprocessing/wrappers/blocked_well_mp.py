@@ -111,6 +111,10 @@ def blocked_well_from_trajectory_batch(
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
+
+    Note:
+        the returned success list contains one value per batch, set True if all blocked wells
+        were successfully created in the batch, False if one or more failed in the batch
     """
     n_uuids = len(trajectory_uuids)
     trajectory_uuids_list = [

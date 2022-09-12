@@ -518,7 +518,8 @@ def selective_version_of_collection(
         categorical = None,
         title = None,
         title_mode = None,
-        related_uuid = None):
+        related_uuid = None,
+        const_value = None):
     """Returns a new PropertyCollection with those parts which match all arguments that are not None.
 
     arguments:
@@ -534,6 +535,7 @@ def selective_version_of_collection(
 
     for each of these arguments: if None, then all members of collection pass this filter;
     if not None then only those members with the given value pass this filter;
+    special values: '*' any non-None value passes; 'none' only None passes
     finally, the filters for all the attributes must be passed for a given member
     to be included in the returned collection; title is a synonym for the citation_title argument;
     related_uuid will pass if a soft relationship exists
@@ -576,7 +578,8 @@ def selective_version_of_collection(
                                                          uom = uom,
                                                          string_lookup_uuid = string_lookup_uuid,
                                                          categorical = categorical,
-                                                         related_uuid = related_uuid)
+                                                         related_uuid = related_uuid,
+                                                         const_value = const_value)
     return view
 
 

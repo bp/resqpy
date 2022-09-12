@@ -95,9 +95,9 @@ class Polyline(_BasePolyline):
 
         self.title = rqet.citation_title_for_node(poly_root)
 
-        self.extra_metadata = rqet.load_metadata_from_xml(self.root)
+        self.extra_metadata = rqet.load_metadata_from_xml(poly_root)
 
-        self.isclosed = rqet.bool_from_text(rqet.node_text(rqet.find_tag(poly_root, 'IsClosed')))
+        self.isclosed = rqet.find_tag_bool(poly_root, 'IsClosed')
         assert self.isclosed is not None  # Required field
 
         patch_node = rqet.find_tag(poly_root, 'NodePatch')
