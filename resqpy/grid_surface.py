@@ -1679,8 +1679,7 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     return a, is_curtain
 
 
-def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndarray,
-                               i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndarray, i_faces: np.ndarray) -> np.ndarray:
     """Returns a numpy bool array denoting the bisection of the top layer of the grid by the curtain face sets.
 
     Args:
@@ -1689,14 +1688,13 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
             bisecting surface, shaped for a single layer
 
     Returns:
-        (numpy bool array of shape grid_extent_ji, bool) where the array is set True for cells on one side
-        of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
-        on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
+        numpy bool array of shape grid_extent_ji, set True for cells on one side of the face sets;
+        set False for cells on othe side
 
     Notes:
         the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
         any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
-        assigned to either the True or False part;
+        assigned to the False part;
         the resulting array is suitable for use as a grid property with indexable element of columns;
         the array is set True for the side of the curtain that contains cell [0, 0]
     """
