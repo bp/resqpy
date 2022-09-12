@@ -445,6 +445,7 @@ class PropertyCollection():
             string_lookup_uuid = None,
             categorical = None,
             related_uuid = None,
+            const_value = None,
             ignore_clashes = False):
         """Adds those parts from the other PropertyCollection which match all arguments that are not None.
 
@@ -482,7 +483,8 @@ class PropertyCollection():
             pcap._add_selected_part_from_other_dict(self, part, other, realization, support_uuid, uuid, continuous,
                                                     categorical, count, points, indexable, property_kind, facet_type,
                                                     facet, citation_title, citation_title_match_mode, time_series_uuid,
-                                                    time_index, string_lookup_uuid, related_uuid, ignore_clashes)
+                                                    time_index, string_lookup_uuid, related_uuid, const_value,
+                                                    ignore_clashes)
 
     def inherit_similar_parts_for_time_series_from_other_collection(self,
                                                                     other,
@@ -668,7 +670,8 @@ class PropertyCollection():
             string_lookup_uuid = None,
             categorical = None,
             related_uuid = None,
-            title = None):
+            title = None,
+            const_value = None):
         """Returns a list of parts filtered by those arguments which are not None.
 
         All arguments are optional.
@@ -713,7 +716,8 @@ class PropertyCollection():
                                                           uom = uom,
                                                           categorical = categorical,
                                                           related_uuid = related_uuid,
-                                                          string_lookup_uuid = string_lookup_uuid)
+                                                          string_lookup_uuid = string_lookup_uuid,
+                                                          const_value = const_value)
         parts_list = temp_collection.parts()
         return parts_list
 
@@ -740,7 +744,8 @@ class PropertyCollection():
             multiple_handling = 'exception',
             title = None,
             title_mode = None,
-            related_uuid = None):
+            related_uuid = None,
+            const_value = None):
         """Returns a single part selected by those arguments which are not None.
 
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
@@ -783,7 +788,8 @@ class PropertyCollection():
                                                           categorical = categorical,
                                                           title = title,
                                                           title_mode = title_mode,
-                                                          related_uuid = related_uuid)
+                                                          related_uuid = related_uuid,
+                                                          const_value = const_value)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
