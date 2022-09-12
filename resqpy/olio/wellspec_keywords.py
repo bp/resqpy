@@ -358,7 +358,8 @@ def get_well_pointers(
             assert len(words) >= 2, "Missing date after TIME keyword."
             date = words[1]
             if '(' in date:
-                date = date.split('(')[0]  ## sometimes user specifies (HH:MM:SS) along with date - can separate time from date with this check
+                # sometimes user specifies (HH:MM:SS) along with date - can separate time from date with this check
+                date = date.split('(')[0]
             try:
                 if usa_date_format:
                     date_obj = datetime.datetime.strptime(date, "%m/%d/%Y").date()
