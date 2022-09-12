@@ -2206,8 +2206,7 @@ def find_faces_to_represent_surface_regular_optimised(
     if progress_fn is not None:
         progress_fn(1.0)
 
-    timings_list = [["extract polygons from surface", tassign0b-tassign0a],
-                    ["malloc: k_faces", tmemk0b-tmemk0a],
+    timings_list = [["malloc: k_faces", tmemk0b-tmemk0a],
                     ["kernel: points_in_triangles_aligned K-axis", tkernelk0b-tkernelk0a],
                     ["kernel: intersect_numba K-axis", tkernelk0c-tkernelk0b],
                     ["malloc: j_faces", tmemj0b-tmemj0a],
@@ -2215,8 +2214,7 @@ def find_faces_to_represent_surface_regular_optimised(
                     ["kernel: intersect_numba J-axis", tkernelj0c-tkernelj0b],
                     ["malloc: i_faces", tmemi0b-tmemi0a],
                     ["kernel: points_in_triangles_aligned I-axis", tkerneli0b-tkerneli0a],
-                    ["kernel: intersect_numba I-axis", tkerneli0c-tkerneli0b],
-                    ["create grid-connection set", tassign1b-tassign1a]]
+                    ["kernel: intersect_numba I-axis", tkerneli0c-tkerneli0b]]
     print_timings(timings_list)
     
     # if returning properties, construct dictionary
@@ -2442,8 +2440,7 @@ def find_faces_to_represent_surface_regular_cuda(
     if progress_fn is not None:
         progress_fn(1.0)
 
-    timings_list = [["extract polygons from surface", tassign0b-tassign0a],
-                    ["memcpy: points[triangles] H2D", tmem0b-tmem0a],
+    timings_list = [["memcpy: points[triangles] H2D", tmem0b-tmem0a],
                     ["memcpy: k_faces H2D", tmemk0b-tmemk0a],
                     ["kernel: project_polygons_to_surfaces K-axis", tkernelk0b-tkernelk0a],
                     ["memcpy: j_faces D2H", tmemk1b-tmemk1a],
@@ -2452,8 +2449,7 @@ def find_faces_to_represent_surface_regular_cuda(
                     ["memcpy: j_faces D2H", tmemj1b-tmemj1a],
                     ["memcpy: i_faces H2D", tmemi0b-tmemi0a],
                     ["kernel: project_polygons_to_surfaces I-axis", tkerneli0b-tkerneli0a],
-                    ["memcpy: i_faces D2H", tmemi1b-tmemi1a],
-                    ["create grid-connection set", tassign1b-tassign1a]]
+                    ["memcpy: i_faces D2H", tmemi1b-tmemi1a]]
     print_timings(timings_list)
 
     return gcs
