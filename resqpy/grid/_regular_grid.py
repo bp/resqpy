@@ -20,7 +20,7 @@ always_write_cell_geometry_is_defined_array = False
 
 
 class RegularGrid(Grid):
-    """Class for completely regular block grids aligned with xyz axes."""
+    """Class for completely regular block grids, usually aligned with xyz axes."""
 
     # todo: use RESQML lattice like geometry specification
 
