@@ -48,9 +48,9 @@ def mesh_from_regular_grid_column_property_wrapper(
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
-    model = new_model(epc_file = epc_file)
+    model = new_model(epc_file = epc_file, quiet = True)
 
-    g_model = Model(grid_epc)
+    g_model = Model(grid_epc, quiet = True)
     g_crs_uuid = g_model.uuid(obj_type = "LocalDepth3dCrs",
                               related_uuid = grid_uuid)  # todo: check this relationship exists
 
@@ -75,7 +75,7 @@ def mesh_from_regular_grid_column_property_wrapper(
         uuid_list.append(mesh.uuid)
         model.create_reciprocal_relationship_uuids(mesh.uuid, "sourceObject", prop_uuid, "detinationObject")
 
-    model.store_epc()
+    model.store_epc(quiet = True)
 
     return index, success, epc_file, uuid_list
 

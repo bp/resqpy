@@ -95,11 +95,12 @@ def function_multiprocessing(function: Callable,
 
     epc_file = Path(str(recombined_epc))
     if epc_file.is_file():
-        model_recombined = rq.Model(epc_file = str(epc_file))
+        model_recombined = rq.Model(epc_file = str(epc_file), quiet = True)
+        log.info(f"updating the recombined epc file: {epc_file}")
     else:
         model_recombined = rq.new_model(epc_file = str(epc_file))
+        log.info(f"creating the recombined epc file: {epc_file}")
 
-    log.info("creating the recombined epc file")
     for i, epc in enumerate(epc_list):
         log.debug(f'recombining from mp instance {i} epc: {epc}')
         if epc is None:
@@ -116,7 +117,7 @@ def function_multiprocessing(function: Callable,
         while True:
             attempt += 1
             try:
-                model = rq.Model(epc_file = epc)
+                model = rq.Model(epc_file = epc, quiet = True)
                 break
             except FileNotFoundError:
                 if attempt >= 10:
@@ -141,9 +142,9 @@ def function_multiprocessing(function: Callable,
     log.debug(f"deleting the temporary directory {tmp_dir}")
     rm_tree(tmp_dir)
 
-    model_recombined.store_epc()
+    model_recombined.store_epc(quiet = True)
     model.h5_release()
 
-    log.info("recombined epc file complete")
+    log.debug(f"recombined epc file complete: {epc_file}")
 
     return success_list

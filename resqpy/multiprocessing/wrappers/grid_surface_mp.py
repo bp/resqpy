@@ -95,9 +95,9 @@ def find_faces_to_represent_surface_regular_wrapper(
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
-    model = new_model(epc_file = epc_file)
+    model = new_model(epc_file = epc_file, quiet = True)
     uuid_list = []
-    g_model = Model(grid_epc)
+    g_model = Model(grid_epc, quiet = True)
     g_crs_uuid = g_model.uuid(obj_type = 'LocalDepth3dCrs',
                               related_uuid = grid_uuid)  # todo: check this relationship exists
     if g_crs_uuid is not None:
@@ -116,7 +116,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     grid = RegularGrid(parent_model = model, uuid = grid_uuid)
     assert grid.is_aligned
     flange_radius = 5.0 * np.sum(np.array(grid.extent_kji, dtype = float) * np.array(grid.aligned_dxyz()))
-    s_model = Model(surface_epc)
+    s_model = Model(surface_epc, quiet = True)
     model.copy_uuid_from_other_model(s_model, uuid = str(surface_uuid))
     repr_type = model.type_of_part(model.part(uuid = surface_uuid), strip_obj = True)
     assert repr_type in ['TriangulatedSetRepresentation', 'PointSetRepresentation']
@@ -344,6 +344,6 @@ def find_faces_to_represent_surface_regular_wrapper(
     else:
         log.debug(f'{name} no requested properties')
 
-    model.store_epc()
+    model.store_epc(quiet = True)
 
     return index, success, epc_file, uuid_list
