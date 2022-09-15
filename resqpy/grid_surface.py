@@ -1883,7 +1883,7 @@ def find_faces_to_represent_surface_regular_optimised(
         j_faces, j_normals, j_offsets, j_triangles =  \
             intersect_numba(axis, index1, index2, j_hits, grid.nj, points,
                             triangles, grid_dxyz, j_faces,
-                            return_normal_vectors, j_normals,
+                            j_normals,
                             return_depths, j_depths,
                             return_offsets, j_offsets, return_triangles, j_triangles)
         del j_hits
