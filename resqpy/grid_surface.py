@@ -1518,9 +1518,9 @@ def where_true(data: np.ndarray):
 
 @njit
 def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axis: int, points: np.ndarray,
-                    triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray,
-                    normals: np.ndarray, return_depths: bool, depths: np.ndarray, return_offsets: bool,
-                    offsets: np.ndarray, return_triangles: bool,
+                    triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, normals: np.ndarray,
+                    return_depths: bool, depths: np.ndarray, return_offsets: bool, offsets: np.ndarray,
+                    return_triangles: bool,
                     triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Finds the faces that intersect the surface in 3D.
 
@@ -1788,10 +1788,7 @@ def find_faces_to_represent_surface_regular_optimised(
     return_bisector = False
     return_flange_bool = False
     if return_properties:
-        assert all([
-            p in ['triangle', 'depth', 'offset', 'grid bisector', 'flange bool']
-            for p in return_properties
-        ])
+        assert all([p in ['triangle', 'depth', 'offset', 'grid bisector', 'flange bool'] for p in return_properties])
         return_triangles = ('triangle' in return_properties)
         return_depths = ('depth' in return_properties)
         return_offsets = ('offset' in return_properties)
@@ -1839,7 +1836,8 @@ def find_faces_to_represent_surface_regular_optimised(
 
         # k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
         # k_hits = vec.points_in_triangles_njit(k_centres, p_xy[triangles], grid.ni)
-        k_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1], p_xy[triangles])
+        k_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1],
+                                                           p_xy[triangles])
 
         axis = 2
         index1 = 1
@@ -1875,7 +1873,8 @@ def find_faces_to_represent_surface_regular_optimised(
 
         # j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
         # j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
-        j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
+        j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nk, grid_dxyz[0], grid_dxyz[2],
+                                                           p_xz[triangles])
 
         axis = 1
         index1 = 0
@@ -1917,7 +1916,8 @@ def find_faces_to_represent_surface_regular_optimised(
 
         # i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
         # i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
-        i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, grid.nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
+        i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, grid.nk, grid_dxyz[1], grid_dxyz[2],
+                                                           p_yz[triangles])
 
         axis = 0
         index1 = 0
