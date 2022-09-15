@@ -9,7 +9,7 @@ some functions accept a tuple or list of 3 elements as an alternative to a numpy
 version = '28th July 2022'
 
 import logging
-from typing import Tuple
+from typing import Tuple, Optional
 
 log = logging.getLogger(__name__)
 
@@ -817,7 +817,6 @@ def meshgrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return xx, yy
 
 
-@njit
 def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
@@ -834,7 +833,7 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
             with each row being the triangle number, points y index, and points x index.
     """
     triangles_points = np.empty((0, 3), dtype = np.int32)
-    dx_dy = np.expand_dims(np.array([dx, dy], dtype = numba.float32), axis = 0)
+    dx_dy = np.expand_dims(np.array([dx, dy], dtype = np.float32), axis = 0)
     # for triangle_num in numba.prange(len(triangles)):
     for triangle_num in range(len(triangles)):
         tp = (triangles[triangle_num] / dx_dy) - 0.5
@@ -863,28 +862,52 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
 
 
 @njit
-def triangle_box(tri):
-    x_values = tri[:, 0]
-    y_values = tri[:, 1]
+def triangle_box(triangle: np.ndarray) -> Tuple[float, float, float, float]:
+    """Finds the minimum and maximum x and y values of a single traingle.
 
-    def min_max(x):
-        maximum = x[0]
-        minimum = x[0]
-        for i in x[1:]:
-            if i > maximum:
-                maximum = i
-            elif i < minimum:
-                minimum = i
-        return (minimum, maximum)
+    Args:
+        triangle (np.ndarray): array of the traingle's vertices' x and y coordinates.
 
-    return min_max(x_values) + min_max(y_values)
+    Returns:
+        Tuple containing:
+
+            - (float): minimum x value.
+            - (float): maximum x value.
+            - (float): minimum y value.
+            - (float): maximum y value.
+    """
+    x_values = triangle[:, 0]
+    y_values = triangle[:, 1]
+    return min(x_values), max(x_values), min(y_values), max(y_values)
+
+
+@njit
+def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> Optional[float]:
+    """Finds the y value of a straight line between two points at a given x.
+    
+    If the x value given is not within the x values of the points, returns None.
+
+    Args:
+        x (float): x value at which to determine the y value.
+        x_values (np.ndarray): the x coordinates of point 1 and point 2.
+        y_values (np.ndarray): the y coordinates of point 1 and point 2.
+
+    Returns:
+        y (Optional[float]): y value of the straight line between point 1 and point 2,
+            evaluated at x. If x is outside the x_values range, y is None.
+    """
+    if x >= min(x_values) and x <= max(x_values):
+        m = (y_values[1] - y_values[0])/(x_values[1] - x_values[0])
+        c = y_values[1] - m * x_values[1]
+        y = m * x + c
+        return y
 
 
 @njit
 def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
-    arguments:
+    Args:
         nx (int): number of points in x axis
         ny (int): number of points in y axis
         dx (float): spacing of points in x axis (first point is at half dx)
@@ -892,29 +915,33 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
         triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2).
         points_xlen (int): the number of unique x coordinates.
 
-    returns:
+    Returns:
         triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
             with each row being the triangle number, points y index, and points x index.
     """
-    triangles_points = np.empty((0, 3), dtype = np.int32)
+    grid_x = np.arange(dx/2, dx/2 + dx * nx, dx)
+    grid_y = np.arange(dy/2, dy/2 + dy * ny, dy)
+    triangles_points = []
     for triangle_num in range(len(triangles)):
         triangle = triangles[triangle_num]
-        box_min_max = triangle_box(triangle)
-        grid_x = np.arange(dx/2, dx/2 + dx * nx, dx)
-        grid_y = np.arange(dy/2, dy/2 + dy * ny, dy)
-        x_values = grid_x[np.logical_and(grid_x>=box_min_max[0], grid_x<=box_min_max[1])]
-        y_values = grid_y[np.logical_and(grid_y>=box_min_max[2], grid_y<=box_min_max[3])]
+        min_x, max_x, min_y, max_y = triangle_box(triangle)
+        x_values = grid_x[np.logical_and(grid_x>min_x, grid_x<max_x)]
+        y_values = grid_y[np.logical_and(grid_y>min_y, grid_y<max_y)]
         for x in x_values:
             ys = []
-            ys.append(np.interp(x, triangle[:2, 0], triangle[:2, 1]))
-            ys.append(np.interp(x, triangle[1:, 0], triangle[1:, 1]))
-            ys.append(np.interp(x, triangle[::2, 0], triangle[::2, 1]))
+            ys.append(vertical_intercept(x, triangle[1:, 0], triangle[1:, 1]))
+            ys.append(vertical_intercept(x, triangle[:2, 0], triangle[:2, 1]))
+            ys.append(vertical_intercept(x, triangle[::2, 0], triangle[::2, 1]))
+            ys = [x for x in ys if x is not None]
             valid_y = y_values[np.logical_and(y_values>=min(ys), y_values<=max(ys))]
-            for y in valid_y:
-                x_idx = int(x/dx - 0.5)
-                y_idx = int(y/dy - 0.5)
-                triangles_points = np.append(triangles_points, np.array([[triangle_num, x_idx, y_idx]], dtype = np.int32), axis = 0)
+            x_idx = int(x/dx - 0.5)
+            triangles_points.extend([[triangle_num, int(y/dy - 0.5), x_idx] for y in valid_y])
 
+    if len(triangles_points) == 0:
+        triangles_points = np.empty((0, 3), dtype = np.int32)
+        return triangles_points
+
+    triangles_points = np.array(triangles_points, dtype = np.int32)
     return triangles_points
 
 
