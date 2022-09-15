@@ -938,7 +938,7 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
             x_idx = int(x / dx - 0.5)
             triangles_points_list.extend([[triangle_num, int(y / dy - 0.5), x_idx] for y in valid_y])
 
-    if len(triangles_points) == 0:
+    if len(triangles_points_list) == 0:
         triangles_points = np.empty((0, 3), dtype = np.int32)
         return triangles_points
 
