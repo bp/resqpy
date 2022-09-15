@@ -233,11 +233,10 @@ class GridConnectionSet(BaseResqpy):
             feature_type = rqet.content_type(rqet.find_tag_text(child, 'ContentType'))
             feature_uuid = bu.uuid_from_string(rqet.find_tag_text(child, 'UUID'))
             feature_title = rqet.find_tag_text(child, 'Title')
-            # for now, only accept faults
             assert feature_type in valid_interpretation_types, \
                f'unsupported type {feature_type} for gcs feature interpretation'
             self.feature_list.append((feature_type, feature_uuid, feature_title))
-            log.debug('connection set references fault interpretation: ' + feature_title)
+            log.debug(f'connection set references interpretation: {feature_title}; of type: {feature_type}')
         log.debug('number of features referred to in connection set: ' + str(len(self.feature_list)))
         assert len(self.feature_list) > 0, 'list of interpretation references is empty for connection set'
         # leave feature indices till on-demand load

@@ -104,8 +104,10 @@ class FaultInterpretation(BaseResqpy):
             return False
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
+        if self.title != other.title:
+            return False
 
-        attr_list = ['tectonic_boundary_feature', 'root', 'maximum_throw', 'mean_azimuth', 'mean_dip']
+        attr_list = ['tectonic_boundary_feature', 'maximum_throw', 'mean_azimuth', 'mean_dip']
         one_none_attr_list = [(getattr(self, v) is None) != (getattr(other, v) is None) for v in attr_list]
         if any(one_none_attr_list):
             # If only one of self or other has a None attribute
@@ -115,21 +117,16 @@ class FaultInterpretation(BaseResqpy):
         non_none_attr_list = [a for a in attr_list if getattr(self, a) is not None]
 
         # Additional tests for attributes that are not None
-        check_dict = {
-            'tectonic_boundary_feature':
-                lambda: self.tectonic_boundary_feature.is_equivalent(other.tectonic_boundary_feature),
-            'root':
-                lambda: rqet.citation_title_for_node(self.root) != rqet.citation_title_for_node(other.root),
-            'maximum_throw':
-                lambda: maths.isclose(self.maximum_throw, other.maximum_throw, rel_tol = 1e-3),
-            'mean_azimuth':
-                lambda: maths.isclose(self.mean_azimuth, other.mean_azimuth, abs_tol = 0.5),
-            'mean_dip':
-                lambda: maths.isclose(self.mean_dip, other.mean_dip, abs_tol = 0.5)
-        }
-
-        check_outcomes = [check_dict[v]() for v in non_none_attr_list]
-        if not all(check_outcomes):  # If any of the Additional tests fail then self and other are not equivalent
+        if (self.tectonic_boundary_feature is not None and
+                not self.tectonic_boundary_feature.is_equivalent(other.tectonic_boundary_feature,
+                                                                 check_extra_metadata = check_extra_metadata)):
+            return False
+        if (self.maximum_throw is not None and
+                not maths.isclose(self.maximum_throw, other.maximum_throw, rel_tol = 1e-3)):
+            return False
+        if (self.mean_azimuth is not None and not maths.isclose(self.mean_azimuth, other.mean_azimuth, abs_tol = 0.5)):
+            return False
+        if (self.mean_dip is not None and not maths.isclose(self.mean_dip, other.mean_dip, abs_tol = 0.5)):
             return False
 
         if (not equivalent_chrono_pairs(self.main_has_occurred_during, other.main_has_occurred_during) or

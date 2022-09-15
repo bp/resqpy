@@ -76,7 +76,8 @@ class GeobodyInterpretation(BaseResqpy):
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
         if self.geobody_feature is not None:
-            if not self.geobody_feature.is_equivalent(other.geobody_feature):
+            if not self.geobody_feature.is_equivalent(other.geobody_feature,
+                                                      check_extra_metadata = check_extra_metadata):
                 return False
         elif other.geobody_feature is not None:
             return False

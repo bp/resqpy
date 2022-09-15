@@ -78,7 +78,8 @@ class WellboreInterpretation(BaseResqpy):
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
         if self.wellbore_feature is not None:
-            if not self.wellbore_feature.is_equivalent(other.wellbore_feature):
+            if not self.wellbore_feature.is_equivalent(other.wellbore_feature,
+                                                       check_extra_metadata = check_extra_metadata):
                 return False
         elif other.wellbore_feature is not None:
             return False

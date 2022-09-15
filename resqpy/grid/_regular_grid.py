@@ -20,7 +20,7 @@ always_write_cell_geometry_is_defined_array = False
 
 
 class RegularGrid(Grid):
-    """Class for completely regular block grids aligned with xyz axes."""
+    """Class for completely regular block grids, usually aligned with xyz axes."""
 
     # todo: use RESQML lattice like geometry specification
 
@@ -136,15 +136,18 @@ class RegularGrid(Grid):
                 dxi_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
                                                               facet = 'I',
-                                                              indexable = 'cells')
+                                                              indexable = 'cells',
+                                                              const_value = '*')
                 dyj_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
                                                               facet = 'J',
-                                                              indexable = 'cells')
+                                                              indexable = 'cells',
+                                                              const_value = '*')
                 dzk_part = self.property_collection.singleton(property_kind = 'cell length',
                                                               facet_type = 'direction',
                                                               facet = 'K',
-                                                              indexable = 'cells')
+                                                              indexable = 'cells',
+                                                              const_value = '*')
                 if dxi_part is not None and dyj_part is not None and dzk_part is not None:
                     dxi = self.property_collection.constant_value_for_part(dxi_part)
                     dyj = self.property_collection.constant_value_for_part(dyj_part)
@@ -558,13 +561,20 @@ class RegularGrid(Grid):
         :meta common:
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
-        if self.crs_uuid is not None:
-            extra_metadata['crs uuid'] = str(self.crs_uuid)
-
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
+
+        if extra_metadata is None:
+            extra_metadata = {}
+        else:
+            extra_metadata = extra_metadata.copy()
+
+        if write_geometry:
+            extra_metadata['grid_flavour'] = 'IjkGrid'
+            if 'crs uuid' in extra_metadata:
+                extra_metadata.pop('crs uuid')
+        elif self.crs_uuid is not None:
+            extra_metadata['crs uuid'] = str(self.crs_uuid)
 
         node = super().create_xml(ext_uuid = ext_uuid,
                                   add_as_part = add_as_part,
