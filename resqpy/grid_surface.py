@@ -1520,7 +1520,7 @@ def where_true(data: np.ndarray):
 def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axis: int, points: np.ndarray,
                     triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, return_depths: bool,
                     depths: np.ndarray, return_offsets: bool, offsets: np.ndarray, return_triangles: bool,
-                    triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                    triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Finds the faces that intersect the surface in 3D.
 
     Args:
