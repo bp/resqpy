@@ -1871,3 +1871,9 @@ class GridConnectionSet(BaseResqpy):
             #patch extra_metadata into xml for new fault interpretation object
             rqet.create_metadata_xml(fi_root, {"Transmissibility multiplier": str(fault_mult_value)})
         return True, const_mult
+
+    def face_surface_normal_vectors(self, triangle_per_face, surface_normal_vectors):
+        face_surface_normal_vectors = np.empty_like(triangle_per_face)
+        for index, tri in np.ndenumerate(triangle_per_face[np.where(triangle_per_face)]):
+            face_surface_normal_vectors[index] = surface_normal_vectors[tri]
+        return face_surface_normal_vectors

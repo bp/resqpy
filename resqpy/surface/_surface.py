@@ -732,6 +732,17 @@ class Surface(BaseSurface):
             return None
         return intersects[indices[0]]
 
+    def normal_vectors(self):
+        triangles, points = self.triangles_and_points()
+        n_triangles = len(triangles)
+        normal_vectors = np.array((n_triangles, 3))
+        for triangle_num in n_triangles:
+            normal_vector = vec.triangle_normal_vector_numba(points[triangles[triangle_num]])
+            if normal_vector[2] <= 0:
+                normal_vector *= -1
+            normal_vectors[triangle_num] = normal_vector
+        return normal_vectors
+
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
 
