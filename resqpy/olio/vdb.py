@@ -381,14 +381,22 @@ class KP():
     def key_list(self, filter = False):
         """Returns a list of keys."""
 
-        #      return Data(self.fp, self.k_head).c
+        # return Data(self.fp, self.k_head).c
         if not filter:
             return self.keywords
         filtered_list = []
         for key in self.keywords:
-            #        log.debug(f'key_list raw entry: {key}')
+            # log.debug(f'key_list raw entry: {key}')
             if key.isalnum():
                 filtered_list.append(key)
+            else:
+                reject = False
+                for c in key:
+                    if not c.isalnum() and c != '-':
+                        reject = True
+                        break
+                if not reject:
+                    filtered_list.append(key)
         return filtered_list
 
     def sub_key_list(self, keyword, filter = False):
