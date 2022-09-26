@@ -65,6 +65,8 @@ def _create_xml_get_basics(collection, discrete, points, const_value, facet_type
 
 def _create_xml_property_kind(collection, p_node, find_local_property_kinds, property_kind, uom, discrete,
                               property_kind_uuid):
+    if property_kind == 'permeability rock':
+        property_kind = 'rock permeability'
     p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
     p_kind_node.text = rqet.null_xml_text
     if find_local_property_kinds and property_kind not in supported_property_kind_list:

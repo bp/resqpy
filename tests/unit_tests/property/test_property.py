@@ -549,8 +549,8 @@ def test_part_str(example_model_with_prop_ts_rels):
     assert pc.part_str(part_disc, include_citation_title = False) == 'discrete'
     assert pc.part_str(part_cont) == 'saturation: water; timestep: 2 (SW)'
     assert pc.part_str(part_cont, include_citation_title = False) == 'saturation: water; timestep: 2'
-    assert pc.part_str(part_facet) == 'permeability rock: J (Perm)'
-    assert pc.part_str(part_facet, include_citation_title = False) == 'permeability rock: J'
+    assert pc.part_str(part_facet) == 'rock permeability: J (Perm)'
+    assert pc.part_str(part_facet, include_citation_title = False) == 'rock permeability: J'
 
 
 def test_part_filename(example_model_with_prop_ts_rels):
@@ -565,7 +565,7 @@ def test_part_filename(example_model_with_prop_ts_rels):
     # Act / Assert
     assert pc.part_filename(part_disc) == 'discrete'
     assert pc.part_filename(part_cont) == 'saturation_water_ts_2'
-    assert pc.part_filename(part_facet) == 'permeability_rock_J'
+    assert pc.part_filename(part_facet) == 'rock_permeability_J'
 
 
 def test_grid_for_part(example_model_with_properties):
@@ -1561,9 +1561,7 @@ def test_property_kind_list(example_model_with_properties):
     element = pc.property_kind_list()
 
     # Assert
-    assert element == [
-        'discrete', 'net to gross ratio', 'permeability rock', 'porosity', 'rock permeability', 'saturation'
-    ]
+    assert element == ['discrete', 'net to gross ratio', 'porosity', 'rock permeability', 'saturation']
 
 
 def test_indexable_list(example_model_with_properties):
