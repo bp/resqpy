@@ -954,8 +954,13 @@ class VDB():
             bad_key_indices = []
             for i in range(len(keyword_list)):
                 key = keyword_list[i]
-                if not key or not key.isalnum():
+                if not key:
                     bad_key_indices.append(i)
+                elif not key.isalnum():
+                    for c in key:
+                        if not c.isalnum() and c != '-':
+                            bad_key_indices.append(i)
+                            break
             if len(bad_key_indices):
                 log.warning(str(len(bad_key_indices)) + ' non-ascii keywords ignored in recurrent file ' + path)
                 bad_key_indices.reverse()
