@@ -18,6 +18,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.surface as rqs
+import resqpy.crs as rqc
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.fault._gcs_functions import zero_base_cell_indices_in_faces_df,  \
@@ -1872,8 +1873,22 @@ class GridConnectionSet(BaseResqpy):
             rqet.create_metadata_xml(fi_root, {"Transmissibility multiplier": str(fault_mult_value)})
         return True, const_mult
 
-    def face_surface_normal_vectors(self, triangle_per_face, surface_normal_vectors):
-        face_surface_normal_vectors = np.empty_like(triangle_per_face)
-        for index, tri in np.ndenumerate(triangle_per_face[np.where(triangle_per_face)]):
-            face_surface_normal_vectors[index] = surface_normal_vectors[tri]
-        return face_surface_normal_vectors
+    def face_surface_normal_vectors(self, triangle_per_face: np.ndarray, surface_normal_vectors: np.ndarray, add_as_property: bool = False, uom: str = 'm') -> np.ndarray:
+        """Returns an array of the surface normal vectors corresponding to each GCS face.
+
+        Args:
+            triangle_per_face (np.ndarray): an array of the surface triangle index corresponding to each face.
+            surface_normal_vectors (np.ndarray): an array of the normal vectors for each triangle in the surface.
+
+        Returns:
+            face_surface_normal_vectors (np.ndarray): the surface normal vectors corresponding to each GCS face.
+        """
+        face_surface_normal_vectors_array = np.empty((triangle_per_face.size, 3), dtype=float)
+        face_surface_normal_vectors_array[:] = surface_normal_vectors[triangle_per_face]
+        if add_as_property:
+            pc = rqp.PropertyCollection()
+            pc.set_support(support=self)
+            pc.add_cached_array_to_imported_list(face_surface_normal_vectors_array, "computed from surface", "normal vector", uom=uom, property_kind="continuous", indexable_element="faces", points=True)
+            pc.write_hdf5_for_imported_list()
+            pc.create_xml_for_imported_list_and_add_parts_to_model()
+        return face_surface_normal_vectors_array

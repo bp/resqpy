@@ -1950,6 +1950,9 @@ def find_faces_to_represent_surface_regular_optimised(
         k_tri_list = np.empty((0,)) if k_triangles is None else k_triangles[where_true(k_faces)]
         j_tri_list = np.empty((0,)) if j_triangles is None else j_triangles[where_true(j_faces)]
         i_tri_list = np.empty((0,)) if i_triangles is None else i_triangles[where_true(i_faces)]
+        print(k_tri_list)
+        print(j_tri_list)
+        print(i_tri_list)
         all_tris = np.concatenate((k_tri_list, j_tri_list, i_tri_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
         assert all_tris.shape == (gcs.count,)
