@@ -387,16 +387,8 @@ class KP():
         filtered_list = []
         for key in self.keywords:
             # log.debug(f'key_list raw entry: {key}')
-            if key.isalnum():
+            if not bad_keyword(key):
                 filtered_list.append(key)
-            else:
-                reject = False
-                for c in key:
-                    if not c.isalnum() and c != '-':
-                        reject = True
-                        break
-                if not reject:
-                    filtered_list.append(key)
         return filtered_list
 
     def sub_key_list(self, keyword, filter = False):
@@ -766,7 +758,7 @@ class VDB():
         """Loads a RECUR MAPDATA array from vdb; returns 3D numpy array coerced to dtype (if not None)."""
 
         try:
-            if not keyword or not keyword.isalnum():
+            if bad_keyword(keyword):
                 log.warning('ignoring attempt to load recurrent vdb mapdata for corrupt keyword')
                 return None
             if self.use_case is None:
@@ -962,13 +954,8 @@ class VDB():
             bad_key_indices = []
             for i in range(len(keyword_list)):
                 key = keyword_list[i]
-                if not key:
+                if bad_keyword(key):
                     bad_key_indices.append(i)
-                elif not key.isalnum():
-                    for c in key:
-                        if not c.isalnum() and c != '-':
-                            bad_key_indices.append(i)
-                            break
             if len(bad_key_indices):
                 log.warning(str(len(bad_key_indices)) + ' non-ascii keywords ignored in recurrent file ' + path)
                 bad_key_indices.reverse()
@@ -1055,3 +1042,15 @@ class VDB():
                     (no_tail or name.endswith(path_with_asterisk[star + 1:]))):
                     match_list.append(name)
         return match_list
+
+
+def bad_keyword(key):
+    """Return False if key is a valid keyword, otherwise True."""
+    if not key:
+        return True
+    if key.isalnum():
+        return False
+    for c in key:
+        if not c.isalnum() and c not in '-_':
+            return True
+    return False
