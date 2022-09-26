@@ -827,7 +827,6 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
         dx (float): spacing of points in x axis (first point is at half dx)
         dy (float): spacing of points in y axis (first point is at half dy)
         triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2).
-        points_xlen (int): the number of unique x coordinates.
 
     returns:
         triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
@@ -837,23 +836,22 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
     dx_dy = np.expand_dims(np.array([dx, dy], dtype = numba.float32), axis = 0)
     # for triangle_num in numba.prange(len(triangles)):
     for triangle_num in range(len(triangles)):
-        tp = (triangles[triangle_num] / dx_dy) - 0.5
+        tp = (triangles[triangle_num] / dx_dy) - 0.5  # get index of each aligned triangle
+
+        # draw bounding box around triangle being considered
         min_tpx = max(maths.ceil(min(tp[0, 0], tp[1, 0], tp[2, 0])), 0)
         max_tpx = min(maths.floor(max(tp[0, 0], tp[1, 0], tp[2, 0])), nx - 1)
         if max_tpx < min_tpx:
-            continue
+            continue # skip: triangle outside of grid
         min_tpy = max(maths.ceil(min(tp[0, 1], tp[1, 1], tp[2, 1])), 0)
         max_tpy = min(maths.floor(max(tp[0, 1], tp[1, 1], tp[2, 1])), ny - 1)
         if max_tpy < min_tpy:
-            continue
+            continue # skip: triangle outside of grid
+
         ntpx = max_tpx - min_tpx + 1
         ntpy = max_tpy - min_tpy + 1
-        # x = np.linspace(float(min_tpx), float(max_tpx), ntpx)
-        # y = np.linspace(float(min_tpy), float(max_tpy), ntpy)
-        # p = np.stack(meshgrid(x, y), axis = -1).reshape((-1, 2))
-        # triangle_points = points_in_triangle(p, tp, ntpx, triangle_num)
-        tp[:, 0] -= float(min_tpx)
-        tp[:, 1] -= float(min_tpy)
+        tp[:, 0] -= float(min_tpx)  # zero x-index
+        tp[:, 1] -= float(min_tpy)  # zero y-index
         triangle_points = mesh_points_in_triangle(tp, ntpx, ntpy, triangle_num)
         triangle_points[:, 1] += min_tpy
         triangle_points[:, 2] += min_tpx

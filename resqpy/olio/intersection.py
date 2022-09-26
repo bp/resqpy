@@ -113,6 +113,7 @@ def line_triangle_intersect_numba(
     denom = np.dot(line_rv, norm)
     if denom == 0.0:
         return None  # line is parallel to plane
+
     lp_t0 = line_p - triangle[0]
     t = np.dot(norm, lp_t0) / denom
     if line_segment and (t < 0.0 - l_tol or t > 1.0 + l_tol):
@@ -125,7 +126,6 @@ def line_triangle_intersect_numba(
         return None
 
     return line_p + t * line_v
-
 
 def line_triangles_intersects(line_p, line_v, triangles, line_segment = False):
     """Find the intersections of a line within each of a set of triangles in 3D space.
