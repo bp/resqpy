@@ -522,7 +522,7 @@ def import_nexus(
                 # for each property for this timestep, cache array and add to recur prop import collection for this time step
                 if recur_prop_list:
                     for keyword in recur_prop_list:
-                        if vdb.bad_keywword(keyword):
+                        if vdb.bad_keyword(keyword):
                             continue
                         prop_kind, facet_type, facet = rp.property_kind_and_facet_from_keyword(keyword)
                         step_import_collection.import_vdb_recurrent_property_to_cache(
