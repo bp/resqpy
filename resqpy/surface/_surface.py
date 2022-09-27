@@ -18,6 +18,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.property as rqp
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
 from ._base_surface import BaseSurface
@@ -731,6 +732,38 @@ class Surface(BaseSurface):
         if not indices or len(indices) == 0:
             return None
         return intersects[indices[0]]
+
+    def normal_vectors(self, add_as_property: bool = False) -> np.ndarray:
+        """Returns the normal vectors for each triangle in the surface.
+        
+        Args:
+            add_as_property (bool): if True, face_surface_normal_vectors_array is added as a property to the model.
+
+        Returns:
+            normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface.
+        """
+        triangles, points = self.triangles_and_points()
+        n_triangles = len(triangles)
+        normal_vectors_array = np.empty((n_triangles, 3))
+        for triangle_num in range(n_triangles):
+            normal_vector = vec.triangle_normal_vector_numba(points[triangles[triangle_num]])
+            if normal_vector[2] <= 0:
+                normal_vector *= -1
+            normal_vectors_array[triangle_num] = normal_vector
+        if add_as_property:
+            pc = rqp.PropertyCollection()
+            pc.set_support(support = self)
+            crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+            pc.add_cached_array_to_imported_list(normal_vectors_array,
+                                                 "computed from surface",
+                                                 "normal vector",
+                                                 uom = crs.xy_units,
+                                                 property_kind = "continuous",
+                                                 indexable_element = "faces",
+                                                 points = True)
+            pc.write_hdf5_for_imported_list()
+            pc.create_xml_for_imported_list_and_add_parts_to_model()
+        return normal_vectors_array
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
