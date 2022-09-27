@@ -142,15 +142,17 @@ def _tidy_up_forests(model, tidy_main_tree = True, tidy_others = False, remove_e
         del model.other_forest[part]
 
 
-def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = None):
+def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = None, quiet = False):
     """Load xml parts of model from epc file (HDF5 arrays are not loaded)."""
+
+    info_fn = log.debug if quiet else log.info
 
     if not epc_file.endswith('.epc'):
         epc_file += '.epc'
 
     _copy_dataset_if_requested(copy_from, epc_file)
 
-    log.info('loading resqml model from epc file ' + epc_file)
+    info_fn(f'loading resqml model from epc file: {epc_file}')
 
     if model.modified:
         log.warning('loading model from epc, discarding previous in-memory modifications')
@@ -262,11 +264,13 @@ def _load_relationships(epc, model, epc_subdir, names):
                 _fell_part(model, name)
 
 
-def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', only_if_modified = False):
+def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', only_if_modified = False, quiet = False):
     """Write xml parts of model to epc file (HDF5 arrays are not written here)."""
 
     # for prefix, uri in ns.items():
     #     et.register_namespace(prefix, uri)
+
+    info_fn = log.debug if quiet else log.info
 
     if not epc_file:
         epc_file = model.epc_file
@@ -275,7 +279,7 @@ def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', on
     if only_if_modified and not model.modified:
         return
 
-    log.info('storing resqml model to epc file ' + epc_file)
+    info_fn(f'storing resqml model to epc file: {epc_file}')
 
     assert model.main_tree is not None
     if model.main_root is None:

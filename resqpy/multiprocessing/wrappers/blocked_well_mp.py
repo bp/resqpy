@@ -50,9 +50,9 @@ def blocked_well_from_trajectory_wrapper(
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
-    model = new_model(epc_file = epc_file)
+    model = new_model(epc_file = epc_file, quiet = True)
 
-    trajectory_model = Model(trajectory_epc)
+    trajectory_model = Model(trajectory_epc, quiet = True)
     grid_model = Model(grid_epc)
     model.copy_uuid_from_other_model(grid_model, uuid = grid_uuid)
 
@@ -78,7 +78,7 @@ def blocked_well_from_trajectory_wrapper(
         blocked_well.create_xml()
         uuid_list.append(blocked_well.uuid)
 
-    model.store_epc()
+    model.store_epc(quiet = True)
 
     return index, success, epc_file, uuid_list
 
