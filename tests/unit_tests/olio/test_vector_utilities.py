@@ -212,3 +212,58 @@ def test_vector_rotation():
     v = vec.unit_vector((3.0, 4.0, 5.0))
     m = vec.rotation_matrix_3d_vector(v)
     assert_array_almost_equal(v, vec.rotate_vector(m, (0.0, 0.0, 1.0)))
+
+
+def test_points_in_triangles_aligned_optimised():
+    # Arrange
+    nx = ny = 20
+    dx = dy = 0.5
+    triangles = np.array([
+        [[4.271, 4.992], [1.295, 8.921], [7.201, 9.822]],
+        [[8.182, 0.832], [7.384, 5.939], [2.302, 2.039]],
+    ])
+
+    def sort_array(array):
+        array = array[array[:, 2].argsort()]
+        array = array[array[:, 1].argsort(kind = 'mergesort')]
+        array = array[array[:, 0].argsort(kind = 'mergesort')]
+        return array
+
+    # Act
+    triangles_points = vec.points_in_triangles_aligned(nx, ny, dx, dy, triangles)
+    triangles_points_optimised = vec.points_in_triangles_aligned_optimised(nx, ny, dx, dy, triangles)
+
+    # Assert
+    np.testing.assert_array_almost_equal(sort_array(triangles_points), sort_array(triangles_points_optimised))
+
+
+def test_points_in_triangles_aligned_optimised_point_on_triangle_side():
+    # Arrange
+    nx = ny = 10
+    dx = dy = 1
+    triangles = np.array([
+        [[1.0, 1.0], [2.0, 1.0], [2.0, 0.0]],
+        [[1.0, 1.0], [2.0, 1.0], [2.0, 2.0]],
+    ])
+
+    # Act
+    triangles_points = vec.points_in_triangles_aligned_optimised(nx, ny, dx, dy, triangles)
+
+    # Assert
+    np.testing.assert_array_almost_equal(triangles_points, np.array([[0, 0, 1], [1, 1, 1]]))
+
+
+def test_points_in_triangles_aligned_optimised_surface_outside_grid():
+    # Arrange
+    nx = ny = 10
+    dx = dy = 0.01
+    triangles = np.array([
+        [[1.0, 1.0], [2.0, 1.0], [2.0, 0.0]],
+        [[1.0, 1.0], [2.0, 1.0], [2.0, 2.0]],
+    ])
+
+    # Act
+    triangles_points = vec.points_in_triangles_aligned_optimised(nx, ny, dx, dy, triangles)
+
+    # Assert
+    np.testing.assert_array_almost_equal(triangles_points, np.empty((0, 3)))

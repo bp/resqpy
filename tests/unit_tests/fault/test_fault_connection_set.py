@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import pytest
 
 import resqpy.crs as rqc
 import resqpy.derived_model as rqdm
@@ -10,6 +9,7 @@ import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.transmission as rqtr
+import resqpy.grid_surface as rqgs
 
 
 def test_fault_connection_set(tmp_path):
@@ -1415,3 +1415,23 @@ def test_add_faults(tmp_path):
         extras = (cpm >= 16)
         assert np.count_nonzero(extras) == 7
         assert np.all(np.sort(np.unique(cpm)) == np.arange(21))
+
+
+def test_gcs_face_surface_normal_vectors(example_model_with_properties):
+    # Arrange
+    surface_normal_vectors = np.array([[-0.70710678, 0.0, 0.70710678], [0.0, 0.0, 1.0]])
+    face_surface_normal_vectors_expected = np.array([
+        [0., 0., 1.],
+        [0., 0., 1.],
+        [-0.70710678, 0., 0.70710678],
+        [-0.70710678, 0., 0.70710678],
+        [-0.70710678, 0., 0.70710678],
+        [-0.70710678, 0., 0.70710678],
+    ])
+
+    # Act
+    gcs = rqf.GridConnectionSet(example_model_with_properties)
+    face_surface_normal_vectors = gcs.face_surface_normal_vectors(np.array([1, 1, 0, 0, 0, 0]), surface_normal_vectors)
+
+    # Assert
+    np.testing.assert_array_almost_equal(face_surface_normal_vectors, face_surface_normal_vectors_expected)
