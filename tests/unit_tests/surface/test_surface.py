@@ -8,6 +8,7 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.organize
 import resqpy.surface
+import resqpy.olio.triangulation as tri
 
 import pytest
 
@@ -833,3 +834,18 @@ def test_tripatch_set_cellface_corp_quadfalse(example_model_and_crs):
     assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
     assert_array_almost_equal(tripatch.triangles[0], np.array([0, 3, 1]))
     assert_array_almost_equal(tripatch.triangles[-1], np.array([7, 1, 3]))
+
+
+def test_surface_normal_vectors(tmp_model):
+    # Arrange
+    points = np.array([[1.0, 1.0, 1.0], [2.0, 0.0, 1.0], [2.0, 2.0, 1.0], [3.0, 1.0, 2.0]])
+    triangles = tri.dt(points)
+    surface = resqpy.surface.Surface(tmp_model)
+    surface.set_from_triangles_and_points(triangles, points)
+    normal_vectors_expected = np.array([[-0.70710678, 0.0, 0.70710678], [0.0, 0.0, 1.0]])
+
+    # Act
+    normal_vectors = surface.normal_vectors()
+
+    # Assert
+    np.testing.assert_array_almost_equal(normal_vectors, normal_vectors_expected)
