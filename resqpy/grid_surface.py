@@ -15,6 +15,7 @@ import numpy as np
 import numba  # type: ignore
 from numba import njit, cuda
 from numba.cuda.cudadrv.devicearray import DeviceNDArray
+import cupy
 from typing import Tuple
 import warnings
 import math
@@ -1919,6 +1920,73 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
         is_curtain = True
     return a, is_curtain
 
+def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
+                        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+    """Returns a numpy bool array denoting the bisection of the grid by the face sets.
+
+    Args:
+        grid_extent_kji (triple int): the shape of the grid
+        k_faces, j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
+            bisecting surface
+
+    Returns:
+        (numpy bool array of shape grid_extent_kji, bool) where the array is set True for cells on one side
+        of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
+        on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
+
+    Notes:
+        the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
+        any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+        assigned to either the True or False part
+    """
+    assert len(grid_extent_kji) == 3
+    # a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
+    # c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
+    a = cupy.zeros(grid_extent_kji, dtype = bool)  # initialise to False
+    c = cupy.zeros(grid_extent_kji, dtype = bool)  # cells changing
+    open_k = cupy.logical_not(k_faces)
+    open_j = cupy.logical_not(j_faces)
+    open_i = cupy.logical_not(i_faces)
+    # set one or more seeds; todo: more seeds to improve performance if needed
+    a[0, 0, 0] = True
+    # repeatedly spread True values to neighbouring cells that are not the other side of a face
+    # todo: check that following works when a dimension has extent 1
+    while True:
+        c[:] = False
+        # k faces
+        c[1:, :, :] = cupy.logical_and(a[:-1, :, :], open_k)
+        c[:-1, :, :] = cupy.logical_or(c[:-1, :, :], cupy.logical_and(a[1:, :, :], open_k))
+        # j faces
+        c[:, 1:, :] = cupy.logical_or(c[:, 1:, :], cupy.logical_and(a[:, :-1, :], open_j))
+        c[:, :-1, :] = cupy.logical_or(c[:, :-1, :], cupy.logical_and(a[:, 1:, :], open_j))
+        # i faces
+        c[:, :, 1:] = cupy.logical_or(c[:, :, 1:], cupy.logical_and(a[:, :, :-1], open_i))
+        c[:, :, :-1] = cupy.logical_or(c[:, :, :-1], cupy.logical_and(a[:, :, 1:], open_i))
+        c[:] = cupy.logical_and(c, cupy.logical_not(a))
+        if cupy.count_nonzero(c) == 0:
+            break
+        a[:] = cupy.logical_or(a, c)
+    a_count = cupy.count_nonzero(a)
+    cell_count = a.size
+    assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
+    # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
+    layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
+    a_k_sum = 0
+    not_a_k_sum = 0
+    for k in range(grid_extent_kji[0]):
+        a_layer_count = cupy.count_nonzero(a[k])
+        a_k_sum += (k + 1) * a_layer_count
+        not_a_k_sum += (k + 1) * (layer_cell_count - a_layer_count)
+    a_mean_k = float(a_k_sum) / float(a_count)
+    not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
+    is_curtain = False
+    if a_mean_k > not_a_mean_k:
+        a[:] = cupy.logical_not(a)
+    elif abs(a_mean_k - not_a_mean_k) <= 0.01:
+        # log.warning('unable to determine which side of surface is shallower')
+        is_curtain = True
+    return cupy.asnumpy(a), is_curtain
+
 def print_timings(timings):
     
         max_string_len = 0
@@ -2336,7 +2404,7 @@ def find_faces_to_represent_surface_regular_cuda(
     if progress_fn is not None:
         progress_fn(0.0)
     
-    log.debug(f'intersecting surface {surface.title} with regular grid on a GPU{grid.title}')
+    log.debug(f'intersecting surface {surface.title} with regular grid {grid.title} on a GPU')
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
     log.debug(f'Accessing CUDA-enabled device information')
@@ -2367,11 +2435,11 @@ def find_faces_to_represent_surface_regular_cuda(
         # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
 
     p_tri_xyz   = points[triangles]      
-    p_tri_xyz_d = cuda.to_device(p_tri_xyz)
+    p_tri_xyz_d = cupy.asarray(p_tri_xyz)
 
     info_array = np.zeros((3,3))
     info_thread = 6
-    info_array = cuda.to_device(info_array)
+    info_array = cupy.asarray(info_array)
     # K direction (xy projection)
     if grid.nk > 1:
         log.debug("searching for k faces")
@@ -2380,11 +2448,11 @@ def find_faces_to_represent_surface_regular_cuda(
         k_depths    = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_offsets   = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
         k_normals   = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
-        k_faces_d     = cuda.to_device(k_faces)
-        k_triangles_d = cuda.to_device(k_triangles)
-        k_depths_d    = cuda.to_device(k_depths)
-        k_offsets_d   = cuda.to_device(k_offsets)
-        k_normals_d   = cuda.to_device(k_normals)
+        k_faces_d     = cupy.asarray(k_faces)
+        k_triangles_d = cupy.asarray(k_triangles)
+        k_depths_d    = cupy.asarray(k_depths)
+        k_offsets_d   = cupy.asarray(k_offsets)
+        k_normals_d   = cupy.asarray(k_normals)
         colx = 0; coly = 1
         axis = 2; index1 = 1; index2 = 2
         blockSize    = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
@@ -2401,12 +2469,13 @@ def find_faces_to_represent_surface_regular_cuda(
                                                          return_triangles, k_triangles_d,
                                                          info_array, info_thread)
         cuda.synchronize()
-        k_faces     = k_faces_d.copy_to_host();     del k_faces_d
-        k_triangles = k_triangles_d.copy_to_host(); del k_triangles_d
-        k_depths    = k_depths_d.copy_to_host();    del k_depths_d
-        k_offsets   = k_offsets_d.copy_to_host();   del k_offsets_d
-        k_normals   = k_normals_d.copy_to_host();   del k_normals_d
-        info_host = info_array.copy_to_host(); # pprint(info_host)
+        k_faces     = cupy.asnumpy(k_faces_d)
+        if not return_bisector: del k_faces_d
+        k_triangles = cupy.asnumpy(k_triangles_d); del k_triangles_d
+        k_depths    = cupy.asnumpy(k_depths_d);    del k_depths_d
+        k_offsets   = cupy.asnumpy(k_offsets_d);   del k_offsets_d
+        k_normals   = cupy.asnumpy(k_normals_d);   del k_normals_d
+        info_host = cupy.asnumpy(info_array); # pprint(info_host)
         print(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -2422,11 +2491,11 @@ def find_faces_to_represent_surface_regular_cuda(
         j_depths    = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_offsets   = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
         j_normals   = np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan)
-        j_faces_d     = cuda.to_device(j_faces)
-        j_triangles_d = cuda.to_device(j_triangles)
-        j_depths_d    = cuda.to_device(j_depths)
-        j_offsets_d   = cuda.to_device(j_offsets)
-        j_normals_d   = cuda.to_device(j_normals)
+        j_faces_d     = cupy.asarray(j_faces)
+        j_triangles_d = cupy.asarray(j_triangles)
+        j_depths_d    = cupy.asarray(j_depths)
+        j_offsets_d   = cupy.asarray(j_offsets)
+        j_normals_d   = cupy.asarray(j_normals)
         colx = 0; coly = 2
         axis = 1; index1 = 0; index2 = 2
         blockSize    = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
@@ -2443,12 +2512,13 @@ def find_faces_to_represent_surface_regular_cuda(
                                                          return_triangles, j_triangles_d,
                                                          info_array, info_thread)
         cuda.synchronize()
-        j_faces     = j_faces_d.copy_to_host();     del j_faces_d
-        j_triangles = j_triangles_d.copy_to_host(); del j_triangles_d
-        j_depths    = j_depths_d.copy_to_host();    del j_depths_d
-        j_offsets   = j_offsets_d.copy_to_host();   del j_offsets_d
-        j_normals   = j_normals_d.copy_to_host();   del j_normals_d  
-        info_host = info_array.copy_to_host(); # pprint(info_host)    
+        j_faces     = cupy.asnumpy(j_faces_d);     
+        if not return_bisector: del j_faces_d 
+        j_triangles = cupy.asnumpy(j_triangles_d); del j_triangles_d
+        j_depths    = cupy.asnumpy(j_depths_d);    del j_depths_d
+        j_offsets   = cupy.asnumpy(j_offsets_d);   del j_offsets_d
+        j_normals   = cupy.asnumpy(j_normals_d);   del j_normals_d  
+        info_host = cupy.asnumpy(info_array); # pprint(info_host)    
         print(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
@@ -2464,11 +2534,11 @@ def find_faces_to_represent_surface_regular_cuda(
         i_depths    = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_offsets   = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
         i_normals   = np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan)
-        i_faces_d     = cuda.to_device(i_faces)
-        i_triangles_d = cuda.to_device(i_triangles)
-        i_depths_d    = cuda.to_device(i_depths)
-        i_offsets_d   = cuda.to_device(i_offsets)
-        i_normals_d   = cuda.to_device(i_normals)
+        i_faces_d     = cupy.asarray(i_faces)
+        i_triangles_d = cupy.asarray(i_triangles)
+        i_depths_d    = cupy.asarray(i_depths)
+        i_offsets_d   = cupy.asarray(i_offsets)
+        i_normals_d   = cupy.asarray(i_normals)
         colx = 1; coly = 2
         axis = 0; index1 = 0; index2 = 1
         blockSize    = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64 # prefer factors of 32 (threads per warp)
@@ -2485,12 +2555,13 @@ def find_faces_to_represent_surface_regular_cuda(
                                                          return_triangles, i_triangles_d,
                                                          info_array, info_thread)
         cuda.synchronize()
-        i_faces     = i_faces_d.copy_to_host();     del i_faces_d
-        i_triangles = i_triangles_d.copy_to_host(); del i_triangles_d
-        i_depths    = i_depths_d.copy_to_host();    del i_depths_d
-        i_offsets   = i_offsets_d.copy_to_host();   del i_offsets_d
-        i_normals   = i_normals_d.copy_to_host();   del i_normals_d
-        info_host = info_array.copy_to_host(); # pprint(info_host)
+        i_faces     = cupy.asnumpy(i_faces_d)
+        if not return_bisector: del i_faces_d
+        i_triangles = cupy.asnumpy(i_triangles_d); del i_triangles_d
+        i_depths    = cupy.asnumpy(i_depths_d);    del i_depths_d
+        i_offsets   = cupy.asnumpy(i_offsets_d);   del i_offsets_d
+        i_normals   = cupy.asnumpy(i_normals_d);   del i_normals_d
+        info_host = cupy.asnumpy(info_array); # pprint(info_host)
         print(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
@@ -2564,7 +2635,7 @@ def find_faces_to_represent_surface_regular_cuda(
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
-        bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
+        bisector, is_curtain = bisector_from_faces_cuda(tuple(grid.extent_kji), k_faces_d, j_faces_d, i_faces_d)
 
     if progress_fn is not None:
         progress_fn(1.0)
