@@ -1606,7 +1606,9 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
         if return_offsets:
             offsets[face_idx[0], face_idx[1], face_idx[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
         if return_normal_vectors:
-            normals[face_idx[0], face_idx[1], face_idx[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]],tri)
+            normals[face_idx[0], face_idx[1], face_idx[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
+            # if tri==265625:
+            #     print(normals[face_idx[0], face_idx[1], face_idx[2]])
             normal_idx = np.zeros(3, dtype = np.int32)
             normal_idx[index2] = d2
             if normals[normal_idx[0], normal_idx[1], normal_idx[2], 2] > 0.0:
@@ -1641,7 +1643,7 @@ def dot_d(v1 : DeviceNDArray, v2 : DeviceNDArray, prod : DeviceNDArray):
 def norm_d(v : DeviceNDArray, n : DeviceNDArray):
     n[0] = 0.
     for dim in range(3):
-        n[0] += v[dim]**2
+        n[0] += v[dim]**2.
     n[0] = math.sqrt(n[0])
     return
 
@@ -1714,7 +1716,7 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
     #  cuda.grid(1) gives the thread index (blockIdx.x*blockDim.x + threadIdx.x)
     if cuda.grid(1) >= ntriangles:  # cuda.grid(1) evaluates to 1 int
         return                      # this is actually unnecessary as the for-loop takes care of bounds
-
+    
     # we have a set number of threads in a grid, so process each thread's
     # data and move it along to its next point in the array
     # Array:                          * * * * * * * * * * * * * * * * * * * * * * * * * * * * *|
@@ -1743,6 +1745,7 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
         if max_tpy < min_tpy:
             continue # skip: triangle outside of grid
 
+        i = 0
         # 2. iterate over all points that fall within bounding box and 
         # check whether points falls in triangle
         for py in range(min_tpy, max_tpy+1, 1):
@@ -1831,15 +1834,17 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
 
                     if return_normal_vectors:
                         for dim in range(3):
-                            line_p[dim] = (tp[0,dim]-tp[1,dim] + 0.5)*grid_dxyz[dim]
-                            line_v[dim] = (tp[0,dim]-tp[2,dim] + 0.5)*grid_dxyz[dim]
+                            line_p[dim] = (tp[0,dim]-tp[1,dim])*grid_dxyz[dim]
+                            line_v[dim] = (tp[0,dim]-tp[2,dim])*grid_dxyz[dim]
                         cross_d(line_p, line_v, tmp); norm_d(tmp, v)
                         for dim in range(3):
                             normals[face_idx[0], face_idx[1], face_idx[2], dim] = -1. * tmp[dim]/v[0]
+                            # if triangle_num==265625:
+                            #     info_array[0,dim] = normals[face_idx[0], face_idx[1], face_idx[2], dim]
                         norm_idx[index2] = int(px)
                         if normals[norm_idx[0], norm_idx[1], norm_idx[2], 2] > 0.0:
                             for dim in range(3):
-                                normals[face_idx[0], face_idx[1], face_idx[2], dim] = -1. * normals[face_idx[0], face_idx[1], face_idx[2], dim]
+                                normals[face_idx[0], face_idx[1], face_idx[2], dim] *= -1.
                     
                     if return_triangles:
                         triangle_per_face[face_idx[0], face_idx[1], face_idx[2]] = triangle_num
@@ -2364,7 +2369,7 @@ def find_faces_to_represent_surface_regular_cuda(
     p_tri_xyz   = points[triangles]      
     p_tri_xyz_d = cuda.to_device(p_tri_xyz)
 
-    info_array = np.zeros((2,3))
+    info_array = np.zeros((3,3))
     info_thread = 6
     info_array = cuda.to_device(info_array)
     # K direction (xy projection)
@@ -2401,7 +2406,7 @@ def find_faces_to_represent_surface_regular_cuda(
         k_depths    = k_depths_d.copy_to_host();    del k_depths_d
         k_offsets   = k_offsets_d.copy_to_host();   del k_offsets_d
         k_normals   = k_normals_d.copy_to_host();   del k_normals_d
-        info_host = info_array.copy_to_host(); pprint(info_host)
+        info_host = info_array.copy_to_host(); # pprint(info_host)
         print(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -2443,7 +2448,7 @@ def find_faces_to_represent_surface_regular_cuda(
         j_depths    = j_depths_d.copy_to_host();    del j_depths_d
         j_offsets   = j_offsets_d.copy_to_host();   del j_offsets_d
         j_normals   = j_normals_d.copy_to_host();   del j_normals_d  
-        info_host = info_array.copy_to_host(); pprint(info_host)    
+        info_host = info_array.copy_to_host(); # pprint(info_host)    
         print(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
@@ -2485,7 +2490,7 @@ def find_faces_to_represent_surface_regular_cuda(
         i_depths    = i_depths_d.copy_to_host();    del i_depths_d
         i_offsets   = i_offsets_d.copy_to_host();   del i_offsets_d
         i_normals   = i_normals_d.copy_to_host();   del i_normals_d
-        info_host = info_array.copy_to_host(); pprint(info_host)
+        info_host = info_array.copy_to_host(); # pprint(info_host)
         print(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
