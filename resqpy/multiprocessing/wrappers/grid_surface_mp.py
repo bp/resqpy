@@ -151,6 +151,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         retriangulated = True
         surf.write_hdf5()
         surf.create_xml()
+        inherit_interpretation_relationship(model, surface_uuid, surf.uuid)
         surface_uuid = surf.uuid
         if flange_bool is not None:
             flange_p = Property.from_array(parent_model = model,
@@ -168,7 +169,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     surface = Surface(parent_model = model, uuid = str(surface_uuid))
     surface.change_crs(grid.crs)
     if not trimmed and surface.triangle_count() > 100:
-        trimmed_surf = Surface(model, crs_uuid = grid.crs.uuid)
+        trimmed_surf = Surface(model, crs_uuid = grid.crs.uuid, title = surface.title + ' trimmed')
         # trimmed_surf.set_to_trimmed_surface(surf, xyz_box = xyz_box, xy_polygon = parent_seg.polygon)
         trimmed_surf.set_to_trimmed_surface(surface, xyz_box = grid.xyz_box(local = True))
         surface = trimmed_surf
@@ -176,7 +177,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     if extend_fault_representation and not extended or retriangulate and not retriangulated:
         _, p = surface.triangles_and_points()
         pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surface.title)
-        surface = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
+        surface = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title + ' extended')
         flange_bool = surface.set_from_point_set(pset,
                                                  convexity_parameter = 2.0,
                                                  reorient = True,
@@ -189,6 +190,10 @@ def find_faces_to_represent_surface_regular_wrapper(
     if not bu.matching_uuids(surface.uuid, surface_uuid):
         surface.write_hdf5()
         surface.create_xml()
+        # relate modified surface to original
+        model.create_reciprocal_relationship_uuids(surface.uuid, 'sourceObject', surface_uuid, 'destinationObject')
+        # inherit relationship to an interpretation object, if present for original surface
+        inherit_interpretation_relationship(model, surface_uuid, surface.uuid)
         surface_uuid = surface.uuid
     if flange_bool is not None:
         flange_p = Property.from_array(parent_model = model,
@@ -347,3 +352,15 @@ def find_faces_to_represent_surface_regular_wrapper(
     model.store_epc(quiet = True)
 
     return index, success, epc_file, uuid_list
+
+
+def inherit_interpretation_relationship(model, old_repr_uuid, new_repr_uuid):
+    """Inherit a relationship to an interpretation object if present for old representation."""
+    for obj_type in [
+            'HorizonInterpretation', 'FaultInterpretation', 'BoundaryFeatureInterpretation',
+            'GeobodyBoundaryInterpretation'
+    ]:
+        interp_uuid = model.uuid(obj_type = obj_type, related_uuid = old_repr_uuid)
+        if interp_uuid is not None:
+            model.create_reciprocal_relationship_uuids(new_repr_uuid, 'sourceObject', interp_uuid, 'destinationObject')
+            break

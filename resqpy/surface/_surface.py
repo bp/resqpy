@@ -103,7 +103,7 @@ class Surface(BaseSurface):
         self.points = None  # composite points (all patches)
         self.boundaries = None  # todo: read up on what this is for and look out for examples
         self.represented_interpretation_root = None
-        self.normal_vector = None  # a derived vector that is roughly normal to the surface
+        self.normal_vector = None  # a single derived vector that is roughly normal to the surface
         self.title = title
         super().__init__(model = parent_model,
                          uuid = uuid,
