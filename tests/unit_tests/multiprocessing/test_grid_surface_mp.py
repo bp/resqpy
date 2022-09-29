@@ -50,7 +50,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_a
     grid_epc = surface_epc = grid.model.epc_file
     grid_uuid = grid.uuid
     surface_uuid = surface.uuid
-    return_properties = ["normal vector", "triangle", "offset"]
+    return_properties = ["triangle", "offset"]
 
     name = "test"
     input_index = 0
@@ -81,9 +81,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_a
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 1
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
-    assert len(model.uuids(obj_type = 'PointsProperty')) == 1
-    assert len(model.uuids()) == 13
-    assert len(uuid_list) == 10
+    assert len(model.uuids()) == 12
+    assert len(uuid_list) == 9
 
 
 def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extended_surface: Tuple[RegularGrid,
@@ -93,7 +92,7 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     grid_epc = surface_epc = grid.model.epc_file
     grid_uuid = grid.uuid
     surface_uuid = surface.uuid
-    return_properties = ["normal vector", "triangle", "offset", "grid bisector"]
+    return_properties = ["triangle", "offset", "grid bisector"]
 
     name = "test"
     input_index = 0
@@ -124,9 +123,8 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 2
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
-    assert len(model.uuids(obj_type = 'PointsProperty')) == 1
-    assert len(model.uuids()) == 14
-    assert len(uuid_list) == 11
+    assert len(model.uuids()) == 13
+    assert len(uuid_list) == 10
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small_grid_and_surface: Tuple[RegularGrid,
@@ -136,7 +134,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small
     grid_epc = surface_epc = grid.model.epc_file
     grid_uuid = grid.uuid
     surface_uuid = surface.uuid
-    return_properties = ["normal vector", "triangle", "offset"]
+    return_properties = ["triangle", "offset"]
 
     name = "test"
     input_index = 0
@@ -168,6 +166,5 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 2
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
-    assert len(model.uuids(obj_type = 'PointsProperty')) == 1
-    assert len(model.uuids()) == 14
-    assert len(uuid_list) == 11
+    assert len(model.uuids()) == 13
+    assert len(uuid_list) == 10

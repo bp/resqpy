@@ -46,7 +46,8 @@ class Model():
                  new_epc: bool = False,
                  create_basics: Optional[bool] = None,
                  create_hdf5_ext: Optional[bool] = None,
-                 copy_from: Optional[str] = None):
+                 copy_from: Optional[str] = None,
+                 quiet = False):
         """Create an empty model; load it from epc_file if given.
 
         Note:
@@ -82,12 +83,15 @@ class Model():
               named in copy_from, together with its paired h5 file, are copied to epc_file (overwriting
               any previous instances) before epc_file is opened; this argument is primarily to facilitate
               repeated testing of code that modifies the resqml dataset, eg. by appending new parts
+           quiet (boolean, default False): if True, info logging message is emitted as debug
 
         Returns:
            The newly created Model object
 
         :meta common:
         """
+
+        info_fn = log.debug if quiet else log.info
 
         if epc_file and not epc_file.endswith('.epc'):
             epc_file += '.epc'
@@ -101,18 +105,22 @@ class Model():
             create_hdf5_ext = new_epc and not copy_from
         self.initialize()
         if epc_file and (copy_from or not new_epc):
-            self.load_epc(epc_file, full_load = full_load, epc_subdir = epc_subdir, copy_from = copy_from)
+            self.load_epc(epc_file,
+                          full_load = full_load,
+                          epc_subdir = epc_subdir,
+                          copy_from = copy_from,
+                          quiet = quiet)
         else:
             if epc_file and new_epc:
                 try:
                     h5_file = epc_file[:-4] + '.h5'
                     os.remove(h5_file)
-                    log.info('old hdf5 file deleted: ' + str(h5_file))
+                    info_fn('old hdf5 file deleted: ' + str(h5_file))
                 except Exception:
                     pass
                 try:
                     os.remove(epc_file)
-                    log.info('old epc file deleted: ' + str(epc_file))
+                    info_fn('old epc file deleted: ' + str(epc_file))
                 except Exception:
                     pass
             if epc_file:
@@ -567,19 +575,20 @@ class Model():
                              tidy_others = tidy_others,
                              remove_extended_core = remove_extended_core)
 
-    def load_epc(self, epc_file, full_load = True, epc_subdir = None, copy_from = None):
+    def load_epc(self, epc_file, full_load = True, epc_subdir = None, copy_from = None, quiet = False):
         """Load xml parts of model from epc file (HDF5 arrays are not loaded).
 
         Arguments:
            epc_file (string): the path of the epc file
-           full_load (boolean): if True (recommended), the xml for each part is parsed and stored
-              in a tree structure in memory; if False, only the list of parts is loaded
+           full_load (boolean, default True): if True (recommended), the xml for each part is parsed
+              and stored in a tree structure in memory; if False, only the list of parts is loaded
            epc_subdir (string or list of strings, optional): if present, only parts in the top
               level directory within the epc structure, or in the specified subdirectory(ies) are
               included in the load
            copy_from (string, optional): if present, the .epc and .h5 are copied from this source
               to epc_file (and paired .h5) prior to opening epc_file; any previous files named
               as epc_file will be overwritten
+           quiet (boolean, default False): if True, info logging message is emitted as debug
 
         Returns:
            None
@@ -591,7 +600,11 @@ class Model():
 
         m_f._load_epc(self, epc_file, full_load = full_load, epc_subdir = epc_subdir, copy_from = copy_from)
 
-    def store_epc(self, epc_file = None, main_xml_name = '[Content_Types].xml', only_if_modified = False):
+    def store_epc(self,
+                  epc_file = None,
+                  main_xml_name = '[Content_Types].xml',
+                  only_if_modified = False,
+                  quiet = False):
         """Write xml parts of model to epc file (HDF5 arrays are not written here).
 
         Arguments:
@@ -603,6 +616,7 @@ class Model():
               future versions of resqml)
            only_if_modified (boolean, default False): if True, the epc file is only written if the model
               is flagged as having been modified (at least one part added or removed)
+           quiet (boolean, default False): if True, info logging is emitted at debug level
 
         Returns:
            None
@@ -613,7 +627,11 @@ class Model():
         :meta common:
         """
 
-        m_f._store_epc(self, epc_file = epc_file, main_xml_name = main_xml_name, only_if_modified = only_if_modified)
+        m_f._store_epc(self,
+                       epc_file = epc_file,
+                       main_xml_name = main_xml_name,
+                       only_if_modified = only_if_modified,
+                       quiet = quiet)
 
     def parts_list_of_type(self, type_of_interest = None, uuid = None):
         """Returns a list of part names for parts of type of interest, optionally matching a uuid.
@@ -2106,7 +2124,7 @@ class Model():
         return m_c._as_graph(self, uuids_subset = uuids_subset)
 
 
-def new_model(epc_file) -> Model:
+def new_model(epc_file, quiet = False) -> Model:
     """Returns a new, empty Model object with basics and hdf5 ext part set up."""
 
-    return Model(epc_file = epc_file, new_epc = True, create_basics = True, create_hdf5_ext = True)
+    return Model(epc_file = epc_file, new_epc = True, create_basics = True, create_hdf5_ext = True, quiet = quiet)

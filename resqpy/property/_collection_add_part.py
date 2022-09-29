@@ -180,6 +180,8 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
     assert not points or not p_discrete
     if local_property_kind_uuid is None:
         local_property_kind_uuid = property_kind_uuid
+    if not p_discrete:
+        string_lookup_uuid = None
 
     property_kind = _process_imported_property_get_property_kind(collection, property_kind, local_property_kind_uuid,
                                                                  p_keyword, p_discrete, string_lookup_uuid, points)

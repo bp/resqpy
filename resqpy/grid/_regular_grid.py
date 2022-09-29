@@ -20,7 +20,7 @@ always_write_cell_geometry_is_defined_array = False
 
 
 class RegularGrid(Grid):
-    """Class for completely regular block grids aligned with xyz axes."""
+    """Class for completely regular block grids, usually aligned with xyz axes."""
 
     # WIP: use RESQML lattice like geometry specification
 
@@ -569,13 +569,25 @@ class RegularGrid(Grid):
         :meta common:
         """
 
+        if write_geometry is None:
+            write_geometry = (self.grid_representation == 'IjkGrid')
+
         if extra_metadata is None:
             extra_metadata = {}
+
         if self.grid_representation == 'IjkGrid':
             use_lattice = False
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
-        if self.crs_uuid is not None and not use_lattice and not write_geometry:
+        else:
+            extra_metadata = extra_metadata.copy()
+
+        if write_geometry and not use_lattice:
+            extra_metadata['grid_flavour'] = 'IjkGrid'
+        if write_geometry or use_lattice:
+            if 'crs uuid' in extra_metadata:
+                extra_metadata.pop('crs uuid')
+        elif self.crs_uuid is not None:
             extra_metadata['crs uuid'] = str(self.crs_uuid)
 
         node = super().create_xml(ext_uuid = ext_uuid,

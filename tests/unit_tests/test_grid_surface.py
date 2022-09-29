@@ -29,7 +29,7 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     grid = small_grid_and_surface[0]
     surface = small_grid_and_surface[1]
     name = "test"
-    return_properties = ["offset", "normal vector"]
+    return_properties = ["offset"]
 
     # Act
     gcs_normal, properties_dict = rqgs.find_faces_to_represent_surface_regular(grid,
@@ -39,7 +39,6 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     cip_normal = gcs_normal.cell_index_pairs
     fip_normal = gcs_normal.face_index_pairs
     offsets_normal = properties_dict["offset"]
-    normal_vectors_normal = properties_dict["normal vector"]
 
     return_properties.append("depth")
     return_properties.append("triangle")
@@ -55,13 +54,11 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     triangles_optimised = properties_optimised["triangle"]
     depths_optimised = properties_optimised["depth"]
     offsets_optimised = properties_optimised["offset"]
-    normal_vectors_optimised = properties_optimised["normal vector"]
 
     # Assert
     np.testing.assert_array_equal(cip_normal, cip_optimised)
     np.testing.assert_array_equal(fip_normal, fip_optimised)
     np.testing.assert_array_almost_equal(offsets_normal, offsets_optimised)
-    np.testing.assert_array_almost_equal(normal_vectors_normal, normal_vectors_optimised)
     assert depths_optimised.shape == offsets_optimised.shape
     assert np.all(depths_optimised > 0.0)
     assert triangles_optimised.shape == offsets_optimised.shape
@@ -88,7 +85,6 @@ def test_bisector_from_faces_flat_surface_k():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces)
-    print(a)
 
     # Assert
     np.testing.assert_array_almost_equal(
@@ -122,7 +118,6 @@ def test_bisector_from_faces_flat_surface_j():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces)
-    print(a)
 
     # Assert
     np.testing.assert_array_almost_equal(
@@ -156,7 +151,6 @@ def test_bisector_from_faces_flat_surface_i():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces)
-    print(a)
 
     # Assert
     np.testing.assert_array_almost_equal(
