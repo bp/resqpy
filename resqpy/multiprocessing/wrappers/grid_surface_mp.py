@@ -126,11 +126,14 @@ def find_faces_to_represent_surface_regular_wrapper(
     if repr_type == 'PointSetRepresentation':
         # trim pointset to grid xyz box
         pset = PointSet(model, uuid = surface_uuid)
+        surf_title = pset.title
         log.debug(f'point set {pset.title} raw point count: {len(pset.full_array_ref())}')
         pset.change_crs(grid.crs)
         if not trimmed:
             pset.trim_to_xyz_box(grid.xyz_box(local = True))
             trimmed = True
+            if 'trimmed' not in surf_title:
+                surf_title += ' trimmed'
         assert len(pset.full_array_ref()) >= 3,  \
             f'boundary {name} representation {pset.title} has no xyz overlap with grid'
         pset_points = pset.full_array_ref()
@@ -140,7 +143,9 @@ def find_faces_to_represent_surface_regular_wrapper(
                 f'trimmed point set {pset.title} has {len(pset_points)} points, which might take a while to triangulate'
             )
         # triangulate point set to form a surface; set repr_uuid to that surface and switch repr_flavour to 'surface'
-        surf = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
+        if extend_fault_representation and not surf_title.endswith(' extended'):
+            surf_title += ' extended'
+        surf = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surf.set_from_point_set(pset,
                                               convexity_parameter = 2.0,
                                               reorient = True,
@@ -166,17 +171,23 @@ def find_faces_to_represent_surface_regular_wrapper(
             uuid_list.append(flange_p.uuid)
 
     surface = Surface(parent_model = model, uuid = str(surface_uuid))
+    surf_title = surface.title
+    assert surf_title
     surface.change_crs(grid.crs)
     if not trimmed and surface.triangle_count() > 100:
-        trimmed_surf = Surface(model, crs_uuid = grid.crs.uuid)
+        if not surf_title.endswith('trimmed'):
+            surf_title += ' trimmed'
+        trimmed_surf = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         # trimmed_surf.set_to_trimmed_surface(surf, xyz_box = xyz_box, xy_polygon = parent_seg.polygon)
         trimmed_surf.set_to_trimmed_surface(surface, xyz_box = grid.xyz_box(local = True))
         surface = trimmed_surf
         trimmed = True
-    if extend_fault_representation and not extended or retriangulate and not retriangulated:
+    if (extend_fault_representation and not extended) or (retriangulate and not retriangulated):
         _, p = surface.triangles_and_points()
-        pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surface.title)
-        surface = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
+        pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surf_title)
+        if extend_fault_representation and not surf_title.endswith('extended'):
+            surf_title += ' extended'
+        surface = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surface.set_from_point_set(pset,
                                                  convexity_parameter = 2.0,
                                                  reorient = True,
@@ -184,7 +195,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                  flange_radial_distance = flange_radius,
                                                  make_clockwise = False)
         del pset
-        extended = True
+        extended = extend_fault_representation
         retriangulated = True
     if not bu.matching_uuids(surface.uuid, surface_uuid):
         surface.write_hdf5()

@@ -40,7 +40,7 @@ from ._points_functions import point_areally, point, points_ref, point_raw, unsp
     centre_point, z_corner_point_depths, coordinate_line_end_points, set_cached_points_from_property, \
     find_cell_for_point_xy, split_horizons_points
 
-from ._create_grid_xml import _create_grid_xml
+from ._create_grid_xml import _create_grid_xml, _add_pillar_points_xml
 
 from ._pillars import create_column_pillar_mapping, pillar_foursome, pillar_distances_sqr, nearest_pillar, nearest_rod
 from ._cell_properties import thickness, volume, pinched_out, cell_inactive, interface_length, interface_vector, \
@@ -2069,3 +2069,8 @@ class Grid(BaseResqpy):
            of the horizons points array
         """
         return split_horizons_points(self, min_k0 = min_k0, max_k0 = max_k0, masked = masked)
+
+    def _add_geom_points_xml(self, geom_node, ext_uuid):
+        """Generate geometry points node in xml, called during create_xml, overridden for RegularGrid."""
+        return _add_pillar_points_xml(self, geom_node, ext_uuid)
+

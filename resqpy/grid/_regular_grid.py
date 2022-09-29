@@ -22,7 +22,7 @@ always_write_cell_geometry_is_defined_array = False
 class RegularGrid(Grid):
     """Class for completely regular block grids aligned with xyz axes."""
 
-    # todo: use RESQML lattice like geometry specification
+    # WIP: use RESQML lattice like geometry specification
 
     def __init__(self,
                  parent_model,
@@ -548,7 +548,8 @@ class RegularGrid(Grid):
                    write_geometry = None,
                    extra_metadata = {},
                    expand_const_arrays = False,
-                   add_cell_length_properties = True):
+                   add_cell_length_properties = True,
+                   use_lattice = True):
         """Creates xml for this RegularGrid object; by default the explicit geometry is not included.
 
         see docstring for Grid.create_xml()
@@ -557,17 +558,25 @@ class RegularGrid(Grid):
            add_cell_length_properties (boolean, default True): if True, 3 constant property arrays with cells as
               indexable element are created to hold the lengths of the primary axes of the cells; the xml is
               created for the properties and they are added to the model (no hdf5 write needed)
+           use_lattice (boolean, default True): if True, a geometry node is created with a Point3dLatticeArray;
+
+        note:
+           if the regular grid has been instatiated using the as_irregular_grid mode, a lattice will not be used,
+           regardless of the use_lattice argument;
+           if using a lattice representation, the write_geomety argument is ignored and a lattice geometry will
+           be created
 
         :meta common:
         """
 
         if extra_metadata is None:
             extra_metadata = {}
-        if self.crs_uuid is not None:
-            extra_metadata['crs uuid'] = str(self.crs_uuid)
-
+        if self.grid_representation == 'IjkGrid':
+            use_lattice = False
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
+        if self.crs_uuid is not None and not use_lattice and not write_geometry:
+            extra_metadata['crs uuid'] = str(self.crs_uuid)
 
         node = super().create_xml(ext_uuid = ext_uuid,
                                   add_as_part = add_as_part,
@@ -576,8 +585,9 @@ class RegularGrid(Grid):
                                   title = title,
                                   originator = originator,
                                   write_active = write_active,
-                                  write_geometry = write_geometry,
+                                  write_geometry = write_geometry or use_lattice,
                                   extra_metadata = extra_metadata)
+        assert node is not None
 
         if add_cell_length_properties:
             axes_lengths_kji = self.axial_lengths_kji()
@@ -651,3 +661,20 @@ class RegularGrid(Grid):
             assert self.crs is not None
             self.crs.local_to_global_array(p)
         return p
+
+    def _add_geom_points_xml(self, geom_node, ext_uuid):
+        """RegularGrid override method using lattice representation, called from Grid.create_xml()."""
+        assert self.crs_uuid is not None
+
+        if self.grid_representation == 'IjkBlockGrid':
+
+            points_node = rqet.SubElement(geom_node, ns['resqml2'] + 'Points')
+            points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dLatticeArray')
+            points_node.text = '\n'
+
+            # TODO: create a lattice geometry node as a child of node
+            raise NotImplementedError
+
+        else:  # generate geometry as irregular grid
+
+            super()._add_geom_points_xml(geom_node, ext_uuid)
