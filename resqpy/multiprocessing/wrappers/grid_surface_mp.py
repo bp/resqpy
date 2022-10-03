@@ -162,8 +162,6 @@ def find_faces_to_represent_surface_regular_wrapper(
                                            property_kind = 'discrete',
                                            indexable_element = 'faces',
                                            discrete = True)
-            flange_p.write_hdf5()
-            flange_p.create_xml()
             uuid_list.append(flange_p.uuid)
 
     surface = Surface(parent_model = model, uuid = str(surface_uuid))
@@ -204,8 +202,6 @@ def find_faces_to_represent_surface_regular_wrapper(
                                        property_kind = 'discrete',
                                        indexable_element = 'faces',
                                        discrete = True)
-        flange_p.write_hdf5()
-        flange_p.create_xml()
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
@@ -335,20 +331,27 @@ def find_faces_to_represent_surface_regular_wrapper(
                 )
             else:
                 raise ValueError(f'unrecognised property name {p_name}')
-        property_collection.write_hdf5_for_imported_list()
-        uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model()
-        uuid_list.extend(uuids_properties)
-        if grid_pc is not None:
+        if property_collection.number_of_imports() > 0:
+            # log.debug('writing gcs property hdf5 data')
+            property_collection.write_hdf5_for_imported_list()
+            uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model()
+            uuid_list.extend(uuids_properties)
+        if grid_pc is not None and grid_pc.number_of_imports() > 0:
+            # log.debug('writing grid property (bisector) hdf5 data')
             grid_pc.write_hdf5_for_imported_list()
+            # log.debug('creating xml for grid property (bisector)')
             uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model()
+            assert uuids_properties
             uuid_list.extend(uuids_properties)
             if related_uuid is not None:
                 for p_uuid in uuids_properties:
+                    # log.debug(f'creating relationship between: {p_uuid} and {related_uuid}')
                     model.create_reciprocal_relationship_uuids(p_uuid, 'sourceObject', related_uuid,
                                                                'destinationObject')
     else:
         log.debug(f'{name} no requested properties')
 
+    # log.debug('find_faces_to_represent_surface_regular_wrapper() storing epc: {model.epc_file}')
     model.store_epc(quiet = True)
 
     return index, success, epc_file, uuid_list
