@@ -1699,7 +1699,6 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
     # todo: check that following works when a dimension has extent 1
     limit = grid_extent_ji[0] * grid_extent_ji[1]
-    log.debug(f'column_bisector_from_faces limit: {limit}')
     for _ in range(limit):
         c[:] = False
         # j faces
@@ -1714,7 +1713,7 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
         a[:] = np.logical_or(a, c)
     if np.all(a):
         log.warning('curtain is leaky or misses grid when setting column bisector')
-    log.debug(f'returning bisector with count: {np.count_nonzero(a)} of {a.size}; shape: {a.shape}')
+    # log.debug(f'returning bisector with count: {np.count_nonzero(a)} of {a.size}; shape: {a.shape}')
     return a
 
 
