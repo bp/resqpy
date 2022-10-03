@@ -162,8 +162,6 @@ def find_faces_to_represent_surface_regular_wrapper(
                                            property_kind = 'discrete',
                                            indexable_element = 'faces',
                                            discrete = True)
-            flange_p.write_hdf5()
-            flange_p.create_xml()
             uuid_list.append(flange_p.uuid)
 
     surface = Surface(parent_model = model, uuid = str(surface_uuid))
@@ -204,8 +202,6 @@ def find_faces_to_represent_surface_regular_wrapper(
                                        property_kind = 'discrete',
                                        indexable_element = 'faces',
                                        discrete = True)
-        flange_p.write_hdf5()
-        flange_p.create_xml()
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
