@@ -1687,6 +1687,9 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
         the array is set True for the side of the curtain that contains cell [0, 0]
     """
     assert len(grid_extent_ji) == 2
+    assert j_faces.ndim == 2 and i_faces.ndim == 2
+    assert j_faces.shape == (grid_extent_ji[0] - 1, grid_extent_ji[1])
+    assert i_faces.shape == (grid_extent_ji[0], grid_extent_ji[1] - 1)
     a = np.zeros(grid_extent_ji, dtype = np.bool_)  # initialise to False
     c = np.zeros(grid_extent_ji, dtype = np.bool_)  # cells changing
     open_j = np.logical_not(j_faces)
@@ -1696,6 +1699,7 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
     # todo: check that following works when a dimension has extent 1
     limit = grid_extent_ji[0] * grid_extent_ji[1]
+    log.debug(f'column_bisector_from_faces limit: {limit}')
     for _ in range(limit):
         c[:] = False
         # j faces
@@ -1710,6 +1714,7 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
         a[:] = np.logical_or(a, c)
     if np.all(a):
         log.warning('curtain is leaky or misses grid when setting column bisector')
+    log.debug(f'returning bisector with count: {np.count_nonzero(a)} of {a.size}; shape: {a.shape}')
     return a
 
 
@@ -1944,9 +1949,11 @@ def find_faces_to_represent_surface_regular_optimised(
         title = title,
         create_organizing_objects_where_needed = True,
     )
+    log.debug('finished coversion to gcs')
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
+        log.debug('preparing triangles array')
         k_tri_list = np.empty((0,)) if k_triangles is None else k_triangles[where_true(k_faces)]
         j_tri_list = np.empty((0,)) if j_triangles is None else j_triangles[where_true(j_faces)]
         i_tri_list = np.empty((0,)) if i_triangles is None else i_triangles[where_true(i_faces)]
@@ -1956,6 +1963,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
+        log.debug('preparing depths array')
         k_depths_list = np.empty((0,)) if k_depths is None else k_depths[where_true(k_faces)]
         j_depths_list = np.empty((0,)) if j_depths is None else j_depths[where_true(j_faces)]
         i_depths_list = np.empty((0,)) if i_depths is None else i_depths[where_true(i_faces)]
@@ -1965,6 +1973,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
+        log.debug('preparing offsets array')
         k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[where_true(k_faces)]
         j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[where_true(j_faces)]
         i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[where_true(i_faces)]
@@ -1973,6 +1982,7 @@ def find_faces_to_represent_surface_regular_optimised(
         assert all_offsets.shape == (gcs.count,)
 
     if return_flange_bool:
+        log.debug('preparing flange array')
         flange_bool_uuid = surface.model.uuid(title = 'flange bool',
                                               obj_type = 'DiscreteProperty',
                                               related_uuid = surface.uuid)
@@ -1985,14 +1995,19 @@ def find_faces_to_represent_surface_regular_optimised(
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
         if is_curtain:
+            log.debug('preparing columns bisector')
             bisector = column_bisector_from_faces((grid.nj, grid.ni), j_faces[0], i_faces[0])
+            log.debug('finished preparing columns bisector')
         else:
+            log.debug('preparing cells bisector')
             bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
-            if is_curtain:
+            if is_curtain:  # ie. other boundary happens to be a curtain
                 bosector = bisector[0]  # reduce to a columns property
 
     if progress_fn is not None:
         progress_fn(1.0)
+
+    log.debug(f'finishing find_faces_to_represent_surface_regular_optimised for {name}')
 
     # if returning properties, construct dictionary
     if return_properties:
