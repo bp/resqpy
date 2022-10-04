@@ -17,9 +17,11 @@ import resqpy.property as rprop
 
 from ._grid import Grid
 from ._grid_types import is_regular_grid
+from ._create_grid_xml import _add_constant_pillar_geometry_is_defined, _add_constant_cell_geometry_is_defined
 
-always_write_pillar_geometry_is_defined_array = False
-always_write_cell_geometry_is_defined_array = False
+# for a regular grid, the ...is_defined xml is created as a constant bool array, if the following set True
+always_write_pillar_geometry_is_defined = False
+always_write_cell_geometry_is_defined = False
 
 
 class RegularGrid(Grid):
@@ -639,17 +641,15 @@ class RegularGrid(Grid):
         :meta common:
         """
 
+        if extra_metadata is None:
+            extra_metadata = {}
+
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
 
         if self.grid_representation == 'IjkGrid':
             use_lattice = False
 
-        if extra_metadata is None:
-            extra_metadata = {}
-
-        if self.grid_representation == 'IjkGrid':
-            use_lattice = False
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
         else:
@@ -674,6 +674,15 @@ class RegularGrid(Grid):
                                   extra_metadata = extra_metadata,
                                   use_lattice = use_lattice)
         assert node is not None
+
+        # patch in constant ...is_defined arrays if required
+        if write_geometry or use_lattice:
+            geom = rqet.find_tag(node, 'Geometry')
+            assert geom is not None
+            if always_write_pillar_geometry_is_defined and rqet.find_tag(geom, 'PillarGeometryIsDefined') is None:
+                _add_constant_pillar_geometry_is_defined(geom, self.extent_kji)
+            if always_write_cell_geometry_is_defined and rqet.find_tag(geom, 'CellGeometryIsDefined') is None:
+                _add_constant_cell_geometry_is_defined(geom, self.extent_kji)
 
         if add_cell_length_properties:
             axes_lengths_kji = self.axial_lengths_kji()

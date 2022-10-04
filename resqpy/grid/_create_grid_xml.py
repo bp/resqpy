@@ -297,17 +297,7 @@ def _add_pillar_points_xml(grid, geom, ext_uuid):
 
     else:
 
-        pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
-        pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
-        pillar_def.text = '\n'
-
-        pd_value = rqet.SubElement(pillar_def, ns['resqml2'] + 'Value')
-        pd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-        pd_value.text = 'true'
-
-        pd_count = rqet.SubElement(pillar_def, ns['resqml2'] + 'Count')
-        pd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-        pd_count.text = str((grid.extent_kji[1] + 1) * (grid.extent_kji[2] + 1))
+        _add_constant_pillar_geometry_is_defined(geom, grid.extent_kji)
 
     if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(cache_array = True):
 
@@ -323,17 +313,7 @@ def _add_pillar_points_xml(grid, geom, ext_uuid):
 
     else:
 
-        cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
-        cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
-        cell_def.text = '\n'
-
-        cd_value = rqet.SubElement(cell_def, ns['resqml2'] + 'Value')
-        cd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-        cd_value.text = 'true'
-
-        cd_count = rqet.SubElement(cell_def, ns['resqml2'] + 'Count')
-        cd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-        cd_count.text = str(grid.nk * grid.nj * grid.ni)
+        _add_constant_cell_geometry_is_defined(geom, grid.extent_kji)
 
     if grid.has_split_coordinate_lines:
 
@@ -396,3 +376,33 @@ def _add_pillar_points_xml(grid, geom, ext_uuid):
                                            grid.uuid,
                                            'ColumnsPerSplitCoordinateLine/cumulativeLength',
                                            root = cl_values)
+
+
+def _add_constant_pillar_geometry_is_defined(geom, extent_kji):
+
+    pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
+    pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
+    pillar_def.text = '\n'
+
+    pd_value = rqet.SubElement(pillar_def, ns['resqml2'] + 'Value')
+    pd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+    pd_value.text = 'true'
+
+    pd_count = rqet.SubElement(pillar_def, ns['resqml2'] + 'Count')
+    pd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+    pd_count.text = str((extent_kji[1] + 1) * (extent_kji[2] + 1))
+
+
+def _add_constant_cell_geometry_is_defined(geom, extent_kji):
+
+    cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
+    cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
+    cell_def.text = '\n'
+
+    cd_value = rqet.SubElement(cell_def, ns['resqml2'] + 'Value')
+    cd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+    cd_value.text = 'true'
+
+    cd_count = rqet.SubElement(cell_def, ns['resqml2'] + 'Count')
+    cd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+    cd_count.text = str(extent_kji[0] * extent_kji[1] * extent_kji[2])
