@@ -421,10 +421,12 @@ class Mesh(BaseSurface):
     def __load_from_xml_regular(self, point_node):
         self.flavour = 'regular'
         origin_node = rqet.find_tag(point_node, 'Origin')
-        self.regular_origin = (rqet.find_tag_float(origin_node,
-                                                   'Coordinate1'), rqet.find_tag_float(origin_node, 'Coordinate2'),
+        assert origin_node is not None, 'origin missing in xml for regular mesh (lattice)'
+        # yapf: disable
+        self.regular_origin = (rqet.find_tag_float(origin_node, 'Coordinate1'),
+                               rqet.find_tag_float(origin_node, 'Coordinate2'),
                                rqet.find_tag_float(origin_node, 'Coordinate3'))
-        assert self.regular_origin is not None, 'origin missing in xml for regular mesh (lattice)'
+        # yapf: enable
         offset_nodes = rqet.list_of_tag(point_node, 'Offset')  # first occurrence for FastestAxis, ie. I; 2nd for J
         assert len(offset_nodes) == 2, 'missing (or too many) offset nodes in xml for regular mesh (lattice)'
         self.regular_dxyz_dij = np.empty((2, 3))

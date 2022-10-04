@@ -11,7 +11,10 @@ import resqpy.crs as rqc
 import resqpy.olio.transmission as rqtr
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
+import resqpy.olio.xml_et as rqet
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 import resqpy.property as rprop
+
 from ._grid import Grid
 from ._grid_types import is_regular_grid
 
@@ -103,6 +106,7 @@ class RegularGrid(Grid):
             self.is_aligned = None  #: boolean indicating alignment of IJK axes with +/- xyz respectively
 
         if uuid is None:
+
             assert extent_kji is not None and len(extent_kji) == 3
             super().__init__(parent_model, title = title, originator = originator, extra_metadata = extra_metadata)
             self.grid_representation = 'IjkGrid' if as_irregular_grid else 'IjkBlockGrid'
@@ -116,10 +120,59 @@ class RegularGrid(Grid):
             self.k_raw_index_array = None
             self.inactive = None
             self.all_inactive = None
-            self.geometry_defined_for_all_cells_cached = True
-            self.geometry_defined_for_all_pillars_cached = True
-            self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype = bool)
+
+            if mesh is not None:
+                assert mesh.flavour == 'regular'
+                assert dxyz is None and dxyz_dkji is None
+                origin = mesh.regular_origin
+                dxyz_dkji = np.empty((3, 3))
+                dxyz_dkji[0, :] = mesh_dz_dk
+                dxyz_dkji[1, :] = mesh.regular_dxyz_dij[1]  # J axis
+                dxyz_dkji[2, :] = mesh.regular_dxyz_dij[0]  # I axis
+                if crs_uuid is None:
+                    crs_uuid = mesh.crs_uuid
+                else:
+                    assert bu.matching_uuids(crs_uuid, mesh.crs_uuid)
+
+            assert dxyz is None or dxyz_dkji is None
+            if dxyz is None and dxyz_dkji is None:
+                dxyz = (1.0, 1.0, 1.0)
+            if dxyz_dkji is None:
+                dxyz_dkji = np.array([[0.0, 0.0, dxyz[2]], [0.0, dxyz[1], 0.0], [dxyz[0], 0.0, 0.0]])
+            self.block_origin = np.array(origin).copy() if uuid is None else np.zeros(3)
+            self.block_dxyz_dkji = np.array(dxyz_dkji).copy()
+            if self.is_aligned is None:
+                self._set_is_aligned()
+            if use_vertical and dxyz_dkji[0][0] == 0.0 and dxyz_dkji[0][1] == 0.0:  # ie. no x,y change with k
+                self.pillar_shape = 'vertical'
+            else:
+                self.pillar_shape = 'straight'
+
+            new_crs = None
+            shift_origin = np.any(origin != 0.0) and uuid is None and not as_irregular_grid
+            if crs_uuid is None and self.extra_metadata is not None:
+                crs_uuid = bu.uuid_from_string(self.extra_metadata.get('crs uuid'))
+                shift_origin = shift_origin and crs_uuid is None
+            if crs_uuid is None:
+                crs_uuid = parent_model.crs_uuid
+            if crs_uuid is None:
+                new_crs = rqc.Crs(parent_model, x_offset = origin[0], y_offset = origin[1], z_offset = origin[2])
+                shift_origin = False
+                new_crs.create_xml(reuse = True)
+                crs_uuid = new_crs.uuid
+            if shift_origin:
+                new_crs = rqc.Crs(parent_model, uuid = crs_uuid)
+                new_crs.uuid = bu.new_uuid()
+                new_crs.x_offset += origin[0]
+                new_crs.y_offset += origin[1]
+                new_crs.z_offset += origin[2]
+                new_crs.create_xml(reuse = True)
+                crs_uuid = new_crs.uuid
+            self.crs_uuid = crs_uuid
+            self.crs = rqc.Crs(parent_model, uuid = crs_uuid) if new_crs is None else new_crs
+
         else:
+
             assert bu.is_uuid(uuid)
             assert is_regular_grid(parent_model.root_for_uuid(uuid))
             super().__init__(parent_model,
@@ -129,87 +182,104 @@ class RegularGrid(Grid):
                              title = title,
                              originator = originator,
                              extra_metadata = extra_metadata)
-            self.grid_representation = 'IjkBlockGrid'
-            if dxyz is None and dxyz_dkji is None:
-                # find cell length properties and populate dxyz from those values
-                assert self.property_collection is not None
-                dxi_part = self.property_collection.singleton(property_kind = 'cell length',
-                                                              facet_type = 'direction',
-                                                              facet = 'I',
-                                                              indexable = 'cells',
-                                                              const_value = '*')
-                dyj_part = self.property_collection.singleton(property_kind = 'cell length',
-                                                              facet_type = 'direction',
-                                                              facet = 'J',
-                                                              indexable = 'cells',
-                                                              const_value = '*')
-                dzk_part = self.property_collection.singleton(property_kind = 'cell length',
-                                                              facet_type = 'direction',
-                                                              facet = 'K',
-                                                              indexable = 'cells',
-                                                              const_value = '*')
-                if dxi_part is not None and dyj_part is not None and dzk_part is not None:
-                    dxi = self.property_collection.constant_value_for_part(dxi_part)
-                    dyj = self.property_collection.constant_value_for_part(dyj_part)
-                    dzk = self.property_collection.constant_value_for_part(dzk_part)
-                    if dxi is not None and dyj is not None and dzk is not None:
-                        dxyz = (float(dxi), float(dyj), float(dzk))
 
-        if mesh is not None:
-            assert mesh.flavour == 'regular'
-            assert dxyz is None and dxyz_dkji is None
-            origin = mesh.regular_origin
-            dxyz_dkji = np.empty((3, 3))
-            dxyz_dkji[0, :] = mesh_dz_dk
-            dxyz_dkji[1, :] = mesh.regular_dxyz_dij[1]  # J axis
-            dxyz_dkji[2, :] = mesh.regular_dxyz_dij[0]  # I axis
-            if crs_uuid is None:
-                crs_uuid = mesh.crs_uuid
-            else:
-                assert bu.matching_uuids(crs_uuid, mesh.crs_uuid)
-
-        assert dxyz is None or dxyz_dkji is None
-        if dxyz is None and dxyz_dkji is None:
-            dxyz = (1.0, 1.0, 1.0)
-        if dxyz_dkji is None:
-            dxyz_dkji = np.array([[0.0, 0.0, dxyz[2]], [0.0, dxyz[1], 0.0], [dxyz[0], 0.0, 0.0]])
-        self.block_origin = np.array(origin).copy() if uuid is None else np.zeros(3)
-        self.block_dxyz_dkji = np.array(dxyz_dkji).copy()
-        if self.is_aligned is None:
-            self._set_is_aligned()
-        if use_vertical and dxyz_dkji[0][0] == 0.0 and dxyz_dkji[0][1] == 0.0:  # ie. no x,y change with k
-            self.pillar_shape = 'vertical'
-        else:
-            self.pillar_shape = 'straight'
+        self.geometry_defined_for_all_cells_cached = True
+        self.geometry_defined_for_all_pillars_cached = True
+        # self.array_cell_geometry_is_defined = np.full(tuple(self.extent_kji), True, dtype = bool)
+        self.array_cell_geometry_is_defined = None
 
         if set_points_cached:
             self.make_regular_points_cached()
 
-        new_crs = None
-        shift_origin = np.any(origin != 0.0) and uuid is None and not as_irregular_grid
-        if crs_uuid is None and self.extra_metadata is not None:
-            crs_uuid = bu.uuid_from_string(self.extra_metadata.get('crs uuid'))
-            shift_origin = shift_origin and crs_uuid is None
-        if crs_uuid is None:
-            crs_uuid = parent_model.crs_uuid
-        if crs_uuid is None:
-            new_crs = rqc.Crs(parent_model, x_offset = origin[0], y_offset = origin[1], z_offset = origin[2])
-            shift_origin = False
-            new_crs.create_xml(reuse = True)
-            crs_uuid = new_crs.uuid
-        if shift_origin:
-            new_crs = rqc.Crs(parent_model, uuid = crs_uuid)
-            new_crs.uuid = bu.new_uuid()
-            new_crs.x_offset += origin[0]
-            new_crs.y_offset += origin[1]
-            new_crs.z_offset += origin[2]
-            new_crs.create_xml(reuse = True)
-            crs_uuid = new_crs.uuid
-        self.crs_uuid = crs_uuid
-        self.crs = rqc.Crs(parent_model, uuid = crs_uuid) if new_crs is None else new_crs
-
         if self.uuid is None:
             self.uuid = bu.new_uuid()
+
+    def _load_regular_grid_from_xml(self):
+        """Load from xml, called from super() init."""
+
+        def get_point3d(node):
+            assert node is not None and rqet.node_type(node) == 'Point3d'
+            xyz = []
+            for c in '123':
+                xyz.append(rqet.find_tag_float(node, f'Coordinate{c}'))
+                assert xyz[-1] is not None
+            return tuple(xyz)
+
+        self.grid_representation = 'IjkBlockGrid'
+        self.is_aligned = True  # currently only aligned regular grids supported for lattice mode
+        self.geometry_defined_for_all_pillars_cached = True
+        self.geometry_defined_for_all_cells_cached = True
+        self.pillar_shape = 'vertical'
+        self.has_split_coordinate_lines = False
+        self.block_origin = np.zeros(3, dtype = float)
+        self.block_dxyz_dkji = np.zeros((3, 3), dtype = float)
+        if self.geometry_root is None:
+            log.debug('loading from xml without geometry node')
+            # find cell length properties and populate dxyz from those values
+            pc = self.extract_property_collection()
+            assert pc is not None
+            dxi_part = pc.singleton(property_kind = 'cell length',
+                                    facet_type = 'direction',
+                                    facet = 'I',
+                                    indexable = 'cells',
+                                    const_value = '*')
+            dyj_part = pc.singleton(property_kind = 'cell length',
+                                    facet_type = 'direction',
+                                    facet = 'J',
+                                    indexable = 'cells',
+                                    const_value = '*')
+            dzk_part = pc.singleton(property_kind = 'cell length',
+                                    facet_type = 'direction',
+                                    facet = 'K',
+                                    indexable = 'cells',
+                                    const_value = '*')
+            assert dxi_part is not None and dyj_part is not None and dzk_part is not None
+            dxi = self.property_collection.constant_value_for_part(dxi_part)
+            dyj = self.property_collection.constant_value_for_part(dyj_part)
+            dzk = self.property_collection.constant_value_for_part(dzk_part)
+            assert dxi is not None and dyj is not None and dzk is not None
+            self.block_dxyz_dkji[2, 0] = dxi
+            self.block_dxyz_dkji[1, 1] = dyj
+            self.block_dxyz_dkji[0, 2] = dzk
+        else:
+            log.debug('loading from xml with lattice geometry node')
+            p_node = rqet.find_tag(self.geometry_root, 'Points')
+            assert p_node is not None and rqet.node_type(p_node) == 'Point3dLatticeArray'
+            assert rqet.find_tag_bool(p_node, 'AllDimensionsAreOrthogonal',
+                                      must_exist = True), 'only aligned regular grids catered for'
+            origin_node = rqet.find_tag(p_node, 'Origin')
+            assert origin_node is not None, 'origin missing in xml for regular mesh (lattice)'
+            self.block_origin[:] = get_point3d(origin_node)
+            # following constraint is for aligned regular grids
+            assert np.all(self.block_origin == 0.0),  \
+                   'aligned regular grid origin must be coincident with local crs origin'
+            offset_nodes = rqet.list_of_tag(p_node, 'Offset')
+            assert len(offset_nodes) == 3, 'missing (or too many) offset nodes in xml for regular grid (lattice)'
+            for axis, main_o_node in enumerate(offset_nodes):  # order K, J, I; ie. z, y, x
+                d_xyz = get_point3d(rqet.find_tag(main_o_node, 'Offset'))
+                self.block_dxyz_dkji[axis] = d_xyz
+                # following constraint is for aligned regular grids
+                for ax in range(3):
+                    # note: these constraints allow for a negative cell length, ie. xyz axis reverse of IJK
+                    is_non_zero = not maths.isclose(d_xyz[2 - ax], 0.0)
+                    assert (ax == axis) == is_non_zero, 'unaligned lattice for regular grid not supported'
+                spacing_node = rqet.find_tag(main_o_node, 'Spacing')
+                assert spacing_node is not None
+                spacing_value = rqet.find_tag_float(spacing_node, 'Value')
+                assert spacing_value is not None and maths.isclose(spacing_value, 1.0)
+                spacing_count = rqet.find_tag_int(spacing_node, 'Count')
+                assert spacing_count is not None and spacing_count == self.extent_kji[axis]
+            log.debug(f'block dxyz_dkji from lattice: {self.block_dxyz_dkji}')
+
+    def cell_geometry_is_defined(self, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
+        """Override of Grid method indicating whether a cell has defined geometry, here always True."""
+
+        return True
+
+    def pillar_geometry_is_defined(self, pillar_ji0 = None, pillar_geometry_is_defined_root = None, cache_array = True):
+        """Override of Grid method indicating whether a pillar has defined geometry, here always True."""
+
+        return True
 
     def make_regular_points_cached(self, apply_origin_offset = True):
         """Set up the cached points array as an explicit representation of the regular grid geometry.
@@ -572,6 +642,9 @@ class RegularGrid(Grid):
         if write_geometry is None:
             write_geometry = (self.grid_representation == 'IjkGrid')
 
+        if self.grid_representation == 'IjkGrid':
+            use_lattice = False
+
         if extra_metadata is None:
             extra_metadata = {}
 
@@ -598,7 +671,8 @@ class RegularGrid(Grid):
                                   originator = originator,
                                   write_active = write_active,
                                   write_geometry = write_geometry or use_lattice,
-                                  extra_metadata = extra_metadata)
+                                  extra_metadata = extra_metadata,
+                                  use_lattice = use_lattice)
         assert node is not None
 
         if add_cell_length_properties:
@@ -675,17 +749,45 @@ class RegularGrid(Grid):
         return p
 
     def _add_geom_points_xml(self, geom_node, ext_uuid):
-        """RegularGrid override method using lattice representation, called from Grid.create_xml()."""
+        # RegularGrid override method using lattice representation, called from Grid.create_xml()
+
+        def make_axial_offset(model, p_node, axis, d, n):
+            dxyz = np.zeros(3, dtype = float)
+            dxyz[2 - axis] = d
+            o_node = rqet.SubElement(p_node, ns['resqml2'] + 'Offset')
+            o_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dOffset')
+            o_node.text = '\n'
+            model.create_solitary_point3d('Offset', o_node, dxyz)
+            space_node = rqet.SubElement(o_node, ns['resqml2'] + 'Spacing')
+            space_node.set(ns['xsi'] + 'type',
+                           ns['resqml2'] + 'DoubleConstantArray')  # nothing else catered for just now
+            space_node.text = '\n'
+            ov_node = rqet.SubElement(space_node, ns['resqml2'] + 'Value')
+            ov_node.set(ns['xsi'] + 'type', ns['xsd'] + 'double')
+            ov_node.text = '1'
+            oc_node = rqet.SubElement(space_node, ns['resqml2'] + 'Count')
+            oc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+            oc_node.text = str(n)
+
         assert self.crs_uuid is not None
 
         if self.grid_representation == 'IjkBlockGrid':
+
+            # todo: handle non aligned regular grids
+            assert self.is_aligned
 
             points_node = rqet.SubElement(geom_node, ns['resqml2'] + 'Points')
             points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dLatticeArray')
             points_node.text = '\n'
 
-            # TODO: create a lattice geometry node as a child of node
-            raise NotImplementedError
+            adao = rqet.SubElement(points_node, ns['resqml2'] + 'AllDimensionsAreOrthogonal')
+            adao.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+            adao.text = 'true'
+
+            self.model.create_solitary_point3d('Origin', points_node, (0.0, 0.0, 0.0))
+
+            for axis in range(3):  # note: 1st Offset is for K axis, 2nd for J, then I
+                make_axial_offset(self.model, points_node, axis, self.aligned_dxyz()[2 - axis], self.extent_kji[axis])
 
         else:  # generate geometry as irregular grid
 

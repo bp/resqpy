@@ -89,7 +89,7 @@ def pillar_geometry_is_defined(grid, pillar_ji0 = None, pillar_geometry_is_defin
 
     if grid.geometry_defined_for_all_pillars_cached:
         return True
-    if hasattr(grid, 'array_pillar_geometry_is_defined'):
+    if hasattr(grid, 'array_pillar_geometry_is_defined') and grid.array_pillar_geometry_is_defined is not None:
         if pillar_ji0 is None:
             return None  # this option allows caching of array without actually referring to any pillar
         return grid.array_pillar_geometry_is_defined[tuple(pillar_ji0)]

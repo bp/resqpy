@@ -118,7 +118,7 @@ def test_strata(tmp_path):
     # write the grid array data and create grid xml, including geometry
     # True is the default for the new stratigraphy argument anyway but included here for emphasis!
     grid.write_hdf5_from_caches(write_active = False, stratigraphy = True)
-    grid.create_xml(write_geometry = True, write_active = False)
+    grid.create_xml(write_geometry = True, write_active = False, use_lattice = False)
 
     # now write the epc
 

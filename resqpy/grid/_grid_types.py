@@ -14,10 +14,19 @@ def grid_flavour(grid_root):
     if flavour is None:
         node_type = rqet.node_type(grid_root, strip_obj = True)
         if node_type == 'IjkGridRepresentation':
-            if rqet.find_tag(grid_root, 'Geometry') is not None:
-                flavour = 'IjkGrid'
+            geom = rqet.find_tag(grid_root, 'Geometry')
+            if geom is None:
+                flavour = 'IjkBlockGrid'
             else:
-                flavour = 'IjkBlockGrid'  # this might cause issues
+                p_node = rqet.find_tag(geom, 'Points')
+                assert p_node is not None
+                p_type = rqet.node_type(p_node)
+                if p_type == 'Point3dLatticeArray':
+                    flavour = 'IjkBlockGrid'
+                elif p_type == 'Point3dHdf5Array':
+                    flavour = 'IjkGrid'
+                else:
+                    raise ValueError(f'grid geometry points type not supported: {p_type}')
         elif node_type == 'UnstructuredGridRepresentation':
             cell_shape = rqet.find_nested_tags_text(grid_root, ['Geometry', 'CellShape'])
             if cell_shape is None or cell_shape == 'polyhedral':

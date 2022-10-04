@@ -214,6 +214,8 @@ def _scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_lis
     if not hasattr(source_grid, 'pillars_for_column'):
         source_grid.create_column_pillar_mapping()
     grid.pillars_for_column = source_grid.pillars_for_column.copy()
+    no_cgid = (not hasattr(source_grid, 'array_cell_geometry_is_defined') or
+               source_grid.array_cell_geometry_is_defined is None)
     for zone_i in range(zone_count):
         zk0_min, zk0_max = zone_layer_range_list[zone_i][0:2]
         for j in range(grid.nj):
@@ -222,14 +224,14 @@ def _scan_columns_for_reference_geometry(source_grid, grid, zone_layer_range_lis
                     continue
                 if zone_i == 0:
                     for k in range(zk0_min, zk0_max + 1):
-                        if source_grid.array_cell_geometry_is_defined[k, j, i]:
+                        if no_cgid or source_grid.array_cell_geometry_is_defined[k, j, i]:
                             for jp in range(2):
                                 for ip in range(2):
                                     pillar = grid.pillars_for_column[j, i, jp, ip]
                                     grid.points_cached[0, pillar] = source_points[k, pillar]
                             break
                 for k in range(zk0_max + 1, zk0_min - 1, -1):
-                    if source_grid.array_cell_geometry_is_defined[k, j, i]:
+                    if no_cgid or source_grid.array_cell_geometry_is_defined[k, j, i]:
                         for jp in range(2):
                             for ip in range(2):
                                 pillar = grid.pillars_for_column[j, i, jp, ip]
@@ -264,7 +266,8 @@ def _process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zone
     # rework the grid geometry
     source_grid.cache_all_geometry_arrays()
     # determine cell geometry is defined
-    if hasattr(source_grid, 'array_cell_geometry_is_defined'):
+    if hasattr(source_grid,
+               'array_cell_geometry_is_defined') and source_grid.array_cell_geometry_is_defined is not None:
         grid.array_cell_geometry_is_defined = np.empty(grid.extent_kji, dtype = bool)
         if single_layer_mode:
             grid.array_cell_geometry_is_defined[0] = np.logical_and(source_grid.array_cell_geometry_is_defined[k0_min],
@@ -281,7 +284,8 @@ def _process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zone
         grid.geometry_defined_for_all_cells_cached = source_grid.geometry_defined_for_all_cells_cached
     # copy info for pillar geometry is defined
     grid.geometry_defined_for_all_pillars_cached = source_grid.geometry_defined_for_all_pillars_cached
-    if hasattr(source_grid, 'array_pillar_geometry_is_defined'):
+    if hasattr(source_grid,
+               'array_pillar_geometry_is_defined') and source_grid.array_pillar_geometry_is_defined is not None:
         grid.array_pillar_geometry_is_defined = source_grid.array_pillar_geometry_is_defined.copy()
     # get reference to points for source grid geometry
     source_points = source_grid.points_ref()
@@ -302,17 +306,19 @@ def _process_geometry(source_grid, grid, single_layer_mode, k0_min, k0_max, zone
     elif not grid.has_split_coordinate_lines:
         log.debug('scanning columns (unsplit pillars) for reference geometry')
         # fill in geometry: todo: replace with array operations if possible
+        no_cgid = (not hasattr(source_grid, 'array_cell_geometry_is_defined') or
+                   source_grid.array_cell_geometry_is_defined is None)
         for zone_i in range(zone_count):
             zk0_min, zk0_max = zone_layer_range_list[zone_i][0:2]
             for j in range(grid.nj):
                 for i in range(grid.ni):
                     if zone_i == 0:
                         for k in range(zk0_min, zk0_max + 1):
-                            if source_grid.array_cell_geometry_is_defined[k, j, i]:
+                            if no_cgid or source_grid.array_cell_geometry_is_defined[k, j, i]:
                                 grid.points_cached[0, j:j + 2, i:i + 2] = source_points[k, j:j + 2, i:i + 2]
                                 break
                     for k in range(zk0_max, zk0_min - 1, -1):
-                        if source_grid.array_cell_geometry_is_defined[k, j, i]:
+                        if no_cgid or source_grid.array_cell_geometry_is_defined[k, j, i]:
                             grid.points_cached[zone_i + 1, j:j + 2, i:i + 2] = source_points[k + 1, j:j + 2, i:i + 2]
                             grid.array_cell_geometry_is_defined[zone_i, j, i] = True
                             break

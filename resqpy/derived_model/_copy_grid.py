@@ -62,9 +62,11 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
     # take a copy of the grid geometry
     source_grid.cache_all_geometry_arrays()
     grid.geometry_defined_for_all_pillars_cached = source_grid.geometry_defined_for_all_pillars_cached
-    if hasattr(source_grid, 'array_pillar_geometry_is_defined'):
+    if hasattr(source_grid,
+               'array_pillar_geometry_is_defined') and source_grid.array_pillar_geometry_is_defined is not None:
         grid.array_pillar_geometry_is_defined = source_grid.array_pillar_geometry_is_defined.copy()
-    if hasattr(source_grid, 'array_cell_geometry_is_defined'):
+    if hasattr(source_grid,
+               'array_cell_geometry_is_defined') and source_grid.array_cell_geometry_is_defined is not None:
         grid.array_cell_geometry_is_defined = source_grid.array_cell_geometry_is_defined.copy()
     grid.geometry_defined_for_all_cells_cached = source_grid.geometry_defined_for_all_cells_cached
     grid.points_cached = source_grid.points_cached.copy()

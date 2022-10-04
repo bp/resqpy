@@ -18,7 +18,8 @@ def _create_grid_xml(grid,
                      add_as_part = True,
                      add_relationships = True,
                      write_active = True,
-                     write_geometry = True):
+                     write_geometry = True,
+                     use_lattice = False):
     """Function that returns an xml representation containing grid information"""
 
     if grid.grid_representation and not write_geometry:
@@ -184,7 +185,7 @@ def _create_grid_xml(grid,
         # todo: handle omit and cell overlap functionality as part of parent window refining or coarsening
 
     if write_geometry:
-        __add_geometry_xml(ext_uuid, grid, ijk)
+        __add_geometry_xml(ext_uuid, grid, ijk, use_lattice)
 
     if add_as_part:
         __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry)
@@ -230,7 +231,7 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
                                                       grid.model.root_for_uuid(grid.parent_grid_uuid), 'sourceObject')
 
 
-def __add_geometry_xml(ext_uuid, grid, ijk):
+def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice):
     geom = rqet.SubElement(ijk, ns['resqml2'] + 'Geometry')
     geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'IjkGridGeometry')
     geom.text = '\n'
@@ -249,7 +250,10 @@ def __add_geometry_xml(ext_uuid, grid, ijk):
     p_shape.set(ns['xsi'] + 'type', ns['resqml2'] + 'PillarShape')
     p_shape.text = grid.pillar_shape
 
-    grid._add_geom_points_xml(geom, ext_uuid)  # usually calls _add_pillar_points_xml(), below
+    if use_lattice:
+        grid._add_geom_points_xml(geom, ext_uuid)  # usually calls _add_pillar_points_xml(), below
+    else:
+        _add_pillar_points_xml(grid, geom, ext_uuid)
 
     if grid.time_index is not None:
 

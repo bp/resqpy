@@ -313,6 +313,8 @@ def extract_crs_uuid(grid):
         return grid.crs_uuid
     crs_root = grid.resolve_geometry_child('LocalCrs')
     uuid_str = rqet.find_tag_text(crs_root, 'UUID')
+    if not uuid_str and hasattr(grid, 'extra_metadata'):
+        uuid_str = grid.extra_metadata.get('crs uuid')
     if uuid_str:
         grid.crs_uuid = bu.uuid_from_string(uuid_str)
     return grid.crs_uuid

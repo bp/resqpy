@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
+import resqpy.grid as grr
 import resqpy.grid_surface as rqgs
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.uuid as bu
@@ -18,12 +19,13 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.crs as rqc
 from resqpy.olio.base import BaseResqpy
+
 from ._transmissibility import transmissibility, half_cell_transmissibility
 from ._extract_functions import extract_grid_parent, extract_extent_kji, extract_grid_is_right_handed, \
     extract_k_direction_is_down, extract_geometry_time_index, extract_crs_uuid, extract_k_gaps, \
     extract_pillar_shape, extract_has_split_coordinate_lines, extract_children, extract_stratigraphy, \
     extract_inactive_mask, extract_property_collection, set_k_direction_from_points
-
+from ._grid_types import grid_flavour
 from ._write_hdf5_from_caches import _write_hdf5_from_caches
 from ._write_nexus_corp import write_nexus_corp
 from ._defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defined, geometry_defined_for_all_cells, \
@@ -32,16 +34,13 @@ from ._defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defi
 from ._faults import find_faults, fault_throws, fault_throws_per_edge_per_column
 from ._face_functions import clear_face_sets, make_face_sets_from_pillar_lists, make_face_set_from_dataframe, \
     set_face_set_gcs_list_from_dict, is_split_column_face, split_column_faces, face_centre, face_centres_kji_01
-
 from ._points_functions import point_areally, point, points_ref, point_raw, unsplit_points_ref, corner_points, \
     invalidate_corner_points, interpolated_points, x_section_corner_points, split_x_section_points, \
     unsplit_x_section_points, uncache_points, horizon_points, split_horizon_points, \
     centre_point_list, interpolated_point, split_gap_x_section_points, \
     centre_point, z_corner_point_depths, coordinate_line_end_points, set_cached_points_from_property, \
     find_cell_for_point_xy, split_horizons_points
-
 from ._create_grid_xml import _create_grid_xml, _add_pillar_points_xml
-
 from ._pillars import create_column_pillar_mapping, pillar_foursome, pillar_distances_sqr, nearest_pillar, nearest_rod
 from ._cell_properties import thickness, volume, pinched_out, cell_inactive, interface_length, interface_vector, \
     interface_lengths_kji, interface_vectors_kji, poly_line_for_cell
@@ -154,35 +153,31 @@ class Grid(BaseResqpy):
         # Extract simple attributes from xml and set as attributes in this resqpy object
         grid_root = self.root
         assert grid_root is not None
-        self.grid_representation = 'IjkGrid'  # this attribute not much used
+        flavour = grid_flavour(grid_root)
+        assert flavour in ['IjkGrid', 'IjkBlockGrid'], 'attempt to initialise IjkGrid from xml for something else'
+        self.grid_representation = flavour  # this attribute not much used
         self.extract_extent_kji()
         self.nk = self.extent_kji[0]  # for convenience available as individual attribs as well as np triplet
         self.nj = self.extent_kji[1]
         self.ni = self.extent_kji[2]
         self.geometry_root = rqet.find_tag(grid_root, 'Geometry')
-        if self.geometry_root is None:
-            self.geometry_defined_for_all_pillars_cached = True
-            self.geometry_defined_for_all_cells_cached = True
-            self.pillar_shape = 'straight'
-            self.has_split_coordinate_lines = False
-            self.k_direction_is_down = True  # arbitrary, as 'down' is rather meaningless without a crs
-            if self.extra_metadata is not None:
-                crs_uuid = self.extra_metadata.get('crs uuid')
-                if crs_uuid is not None:
-                    self.set_crs(crs_uuid)
+        self.extract_crs_uuid()
+        self.set_crs()
+        if isinstance(self, grr.RegularGrid):
+            self._load_regular_grid_from_xml()
         else:
-            self.extract_crs_uuid()
-            self.set_crs()
+            geom_type = rqet.node_type(rqet.find_tag(self.geometry_root, 'Points'))
+            assert geom_type == 'Point3dHdf5Array'
             self.extract_has_split_coordinate_lines()
+            self.pillar_geometry_is_defined()  # note: if there is no geometry at all, resqpy sets this True
+            self.cell_geometry_is_defined()  # note: if there is no geometry at all, resqpy sets this True
+            self.extract_geometry_time_index()
+        if self.geometry_root is not None:
             self.extract_grid_is_right_handed()
-            pillar_geometry_is_defined(self)  # note: if there is no geometry at all, resqpy sets this True
-            cell_geometry_is_defined(self)  # note: if there is no geometry at all, resqpy sets this True
             self.extract_pillar_shape()
             self.extract_k_direction_is_down()
-            self.extract_geometry_time_index()
         self.extract_k_gaps()
-        if self.geometry_root is None:
-            assert not self.k_gaps, 'K gaps present in grid without geometry'
+        assert not self.k_gaps or flavour == 'IjkGrid', 'K gaps present in regular grid'
         self.extract_parent()
         self.extract_children()
         # self.create_column_pillar_mapping()  # mapping now created on demand in other methods
@@ -571,6 +566,7 @@ class Grid(BaseResqpy):
                    originator = None,
                    write_active = True,
                    write_geometry = True,
+                   use_lattice = False,
                    extra_metadata = {}):
         """Creates an IJK grid node from a grid object and optionally adds to parts forest.
 
@@ -590,6 +586,8 @@ class Grid(BaseResqpy):
            write_active (boolean, default True): if True, xml for an active cell property is also generated, but
               only if the active_property_uuid is set and no part exists in the model for that uuid
            write_geometry (boolean, default True): if False, the geometry node is omitted from the xml
+           use_lattice (boolean, default False): if True and write_geometry is True, a lattice representation is
+              used for the geometry (only for RegularGrid objects)
            extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
 
         returns:
@@ -615,7 +613,8 @@ class Grid(BaseResqpy):
 
         ijk = super().create_xml(add_as_part = False, originator = originator, extra_metadata = extra_metadata)
 
-        return _create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry)
+        return _create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry,
+                                use_lattice)
 
     def x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
         """Deprecated: please use `unsplit_x_section_points` instead."""
@@ -2073,4 +2072,3 @@ class Grid(BaseResqpy):
     def _add_geom_points_xml(self, geom_node, ext_uuid):
         """Generate geometry points node in xml, called during create_xml, overridden for RegularGrid."""
         return _add_pillar_points_xml(self, geom_node, ext_uuid)
-
