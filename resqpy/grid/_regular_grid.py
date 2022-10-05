@@ -271,7 +271,7 @@ class RegularGrid(Grid):
                 assert spacing_value is not None and maths.isclose(spacing_value, 1.0)
                 spacing_count = rqet.find_tag_int(spacing_node, 'Count')
                 assert spacing_count is not None and spacing_count == self.extent_kji[axis]
-            log.debug(f'block dxyz_dkji from lattice: {self.block_dxyz_dkji}')
+            # log.debug(f'block dxyz_dkji from lattice: {self.block_dxyz_dkji}')
 
     def cell_geometry_is_defined(self, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
         """Override of Grid method indicating whether a cell has defined geometry, here always True."""

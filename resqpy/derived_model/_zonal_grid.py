@@ -185,6 +185,7 @@ def _fetch_zone_array(grid, zone_title = None, zone_uuid = None, masked = True):
 
 def _empty_grid(model, source_grid, is_regular, k0_min, k0_max, zone_count):
     if is_regular:
+        assert zone_count == 1
         dxyz_dkji = source_grid.block_dxyz_dkji.copy()
         dxyz_dkji[0] *= k0_max - k0_min + 1
         grid = grr.RegularGrid(model,
