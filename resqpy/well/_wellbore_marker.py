@@ -157,10 +157,22 @@ class WellboreMarker():
             if found_tag_text is not None:
                 self.marker_type = found_tag_text
                 break
-        assert self.marker_type is not None
 
         self.interpretation_uuid = bu.uuid_from_string(
             rqet.find_nested_tags_text(root = marker_node, tag_list = ['Interpretation', 'UUID']))
+
         self.extra_metadata = rqet.load_metadata_from_xml(node = marker_node)
+
+        # patch to deduce a boundary kind from the interpretation object
+        if self.marker_type is None and self.interpretation_uuid is not None:
+            interp_type = self.model.type_of_uuid(self.interpretation_uuid, strip_obj = True)
+            if interp_type == 'HorizonInterpretation':
+                self.marker_type = 'horizon'
+            elif interp_type == 'FaultInterpretation':
+                self.marker_type = 'fault'
+            elif interp_type == 'GeobodyBoundaryInterpretation':
+                self.marker_type = 'geobody'
+
+        assert self.marker_type is not None, f'geologic boundary tyoe not determined for marker {self.title}'
 
         return True
