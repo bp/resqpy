@@ -31,7 +31,7 @@ def mesh_from_regular_grid_column_property_wrapper(
         index (int): the index of the function call from the multiprocessing function.
         parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
         grid_epc (str): epc file path where the grid is saved.
-        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
+        grid_uuid (UUID/str): UUID (universally unique identifier) of the regular grid object.
         prop_uuids (List[UUID/str]): a list of the property uuids used to create each Mesh
             and their relationship.
 

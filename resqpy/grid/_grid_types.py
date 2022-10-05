@@ -1,7 +1,9 @@
 """functions to handle different grid types"""
 
+import warnings
+
 import resqpy
-from resqpy.olio import xml_et as rqet
+import resqpy.olio.xml_et as rqet
 
 
 def grid_flavour(grid_root):
@@ -14,10 +16,19 @@ def grid_flavour(grid_root):
     if flavour is None:
         node_type = rqet.node_type(grid_root, strip_obj = True)
         if node_type == 'IjkGridRepresentation':
-            if rqet.find_tag(grid_root, 'Geometry') is not None:
-                flavour = 'IjkGrid'
+            geom = rqet.find_tag(grid_root, 'Geometry')
+            if geom is None:
+                flavour = 'IjkBlockGrid'
             else:
-                flavour = 'IjkBlockGrid'  # this might cause issues
+                p_node = rqet.find_tag(geom, 'Points')
+                assert p_node is not None
+                p_type = rqet.node_type(p_node)
+                if p_type == 'Point3dLatticeArray':
+                    flavour = 'IjkBlockGrid'
+                elif p_type == 'Point3dHdf5Array':
+                    flavour = 'IjkGrid'
+                else:
+                    raise ValueError(f'grid geometry points type not supported: {p_type}')
         elif node_type == 'UnstructuredGridRepresentation':
             cell_shape = rqet.find_nested_tags_text(grid_root, ['Geometry', 'CellShape'])
             if cell_shape is None or cell_shape == 'polyhedral':
@@ -39,13 +50,29 @@ def is_regular_grid(grid_root):
     return grid_flavour(grid_root) == 'IjkBlockGrid'
 
 
-def any_grid(parent_model, grid_root = None, uuid = None, find_properties = True):
-    """Returns a Grid or RegularGrid or UnstructuredGrid object depending on the extra metadata in the xml."""
+def any_grid(parent_model, uuid = None, grid_root = None, find_properties = True):
+    """Returns a Grid or RegularGrid or UnstructuredGrid object depending on the extra metadata in the xml.
+
+    arguments:
+        parent_model (Model): the model within which the grid exists
+        uuid (UUID): the uuid of the grid object to be instantiated
+        grid_root (lxml.Element, DEPRECATED): an alternative to passing the uuid
+        find_properties (bool, default True): passed onward to the instantiation method
+
+    note:
+        full list of resqpy grid class objects which could be returned:
+        Grid, RegularGrid, UnstructuredGrid, TetraGrid, HexaGrid, PyramidGrid, PrismGrid
+    """
 
     import resqpy.unstructured as rug
 
-    if uuid is None and grid_root is not None:
-        uuid = rqet.uuid_for_part_root(grid_root)
+    if grid_root is not None:
+        warnings.warn('Deprecated: use of grid_root arg to any_grid(); use uuid instead', DeprecationWarning)
+        if uuid is None:
+            uuid = rqet.uuid_for_part_root(grid_root)
+
+    assert uuid is not None
+
     flavour = grid_flavour(parent_model.root_for_uuid(uuid))
     if flavour is None:
         return None

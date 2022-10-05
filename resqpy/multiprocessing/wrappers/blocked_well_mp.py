@@ -6,7 +6,7 @@ log = logging.getLogger(__name__)
 
 from typing import Tuple, Union, List
 from resqpy.model import new_model, Model
-from resqpy.grid import RegularGrid
+from resqpy.grid import any_grid
 from resqpy.well import BlockedWell, Trajectory
 from resqpy.multiprocessing import function_multiprocessing
 from pathlib import Path
@@ -56,7 +56,7 @@ def blocked_well_from_trajectory_wrapper(
     grid_model = Model(grid_epc)
     model.copy_uuid_from_other_model(grid_model, uuid = grid_uuid)
 
-    grid = RegularGrid(grid_model, grid_uuid)
+    grid = any_grid(grid_model, uuid = grid_uuid)
 
     success = True
     for trajectory_uuid in trajectory_uuids:
@@ -93,7 +93,7 @@ def blocked_well_from_trajectory_batch(
     n_workers: int,
     require_success: bool = False,
 ) -> List[bool]:
-    """Creates BlockedWell objects from a common RegularGrid and a list of trajectories uuids in parallel.
+    """Creates BlockedWell objects from a common grid and a list of trajectories uuids in parallel.
 
     Args:
         grid_epc (str): epc file path where the grid is saved.

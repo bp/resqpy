@@ -2033,7 +2033,7 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
     log.debug('finding cell faces for surface')
     if mode == 'auto':
         if isinstance(grid, grr.RegularGrid) and grid.is_aligned:
-            mode = 'regular'
+            mode = 'regular_optimised'
         else:
             mode = 'staffa'
     if mode == 'staffa':

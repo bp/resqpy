@@ -23,7 +23,7 @@ def test_wellspec_properties(example_model_and_crs):
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
     source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9],
@@ -91,7 +91,7 @@ def test_derive_from_wellspec_check_grid_name(example_model_and_crs, check_grid_
                        title = 'Battleship',
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
     col_list_orig = ['IW', 'JW', 'L']
 
@@ -116,7 +116,7 @@ def test_set_for_column(example_model_and_crs):
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
     bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
 
@@ -142,7 +142,7 @@ def test_derive_from_cell_list(example_model_and_crs):
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
     cell_kji0_list = np.array([(1, 1, 1), (2, 2, 2), (3, 3, 3), (3, 3, 4)])
     bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
@@ -168,7 +168,7 @@ def test_grid_uuid_list(example_model_and_crs):
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     grid_uuid = grid.uuid
     well_name = 'DOGLEG'
     cell_kji0_list = np.array([(1, 1, 1), (2, 2, 2), (3, 3, 3), (3, 3, 4)])
@@ -196,7 +196,7 @@ def test_verify_grid_name(example_model_and_crs):
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
     source_df = pd.DataFrame(
         [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
@@ -228,7 +228,7 @@ def test_calculate_exit_and_entry(example_model_and_crs):
                        set_points_cached = True)
     cp = grid.corner_points(cell_kji0 = (2, 2, 1))
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
     source_df = pd.DataFrame(
         [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
@@ -260,7 +260,7 @@ def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
                        set_points_cached = True)
     cp_expected = grid.corner_points(cell_kji0 = (2, 2, 1))
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
     source_df = pd.DataFrame(
         [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
@@ -295,7 +295,7 @@ def test_import_from_cellio_file(example_model_and_crs):
                        set_points_cached = True)
 
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     grid_uuid = grid.uuid
     cellio_file = os.path.join(model.epc_directory, 'cellio.dat')
     well_name = 'Banoffee'
@@ -348,7 +348,7 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     perm_i_array = np.random.random(grid.extent_kji)
     ntg_array = np.ones(grid.extent_kji) * ntg_multiplier
     perm_i_prop = rqp.Property.from_array(model,
@@ -489,7 +489,7 @@ def test_write_wellspec(example_model_and_crs):
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     perm_array = np.random.random(grid.extent_kji)
     perm_prop = rqp.Property.from_array(model,
                                         perm_array,
