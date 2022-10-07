@@ -20,7 +20,7 @@ from ._grid_types import is_regular_grid
 from ._create_grid_xml import _add_constant_pillar_geometry_is_defined, _add_constant_cell_geometry_is_defined
 
 # for a regular grid, the ...is_defined xml is created as a constant bool array, if the following set True
-always_write_pillar_geometry_is_defined = False
+always_write_pillar_geometry_is_defined = True  # required True for Fesapi interoperability (xsd compliance)
 always_write_cell_geometry_is_defined = False
 
 

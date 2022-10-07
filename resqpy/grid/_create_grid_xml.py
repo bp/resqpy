@@ -8,6 +8,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
+# these booleans control expansion of constant arrays
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
 
