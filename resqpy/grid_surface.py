@@ -1523,8 +1523,7 @@ def where_true(data: np.ndarray):
     return np.where(data)
 
 
-# @njit(parallel = True)
-@njit
+@njit(parallel = True)
 def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axis: int, points: np.ndarray,
                     triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool,
                     normals: np.ndarray, return_depths: bool, depths: np.ndarray, return_offsets: bool,
@@ -1608,8 +1607,6 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
             offsets[face_idx[0], face_idx[1], face_idx[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
         if return_normal_vectors:
             normals[face_idx[0], face_idx[1], face_idx[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
-            # if tri==265625:
-            #     print(normals[face_idx[0], face_idx[1], face_idx[2]])
             normal_idx = np.zeros(3, dtype = np.int32)
             normal_idx[index2] = d2
             if normals[normal_idx[0], normal_idx[1], normal_idx[2], 2] > 0.0:
