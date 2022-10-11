@@ -12,6 +12,7 @@ log.debug('grid_surface.py version ' + version)
 import math as maths
 import time
 import numpy as np
+import threading; compiler_lock = threading.Lock() # Numba compiler is not threadsafe
 import numba  # type: ignore
 from numba import njit, cuda
 from numba.cuda.cudadrv.devicearray import DeviceNDArray
@@ -1645,6 +1646,16 @@ def norm_d(v : DeviceNDArray, n : DeviceNDArray):
     n[0] = math.sqrt(n[0])
     return
 
+# project_polygons_to_surfaces_signature = 'void(bool[:,:,:],float32[:,:,:],\
+#                                                int, int, int,\
+#                                                int, int,\
+#                                                int, int, int,\
+#                                                float32, float32, float32,\
+#                                                float32, float32,\
+#                                                bool, float32[:,:,:,:],\
+#                                                bool, float32[:,:,:],\
+#                                                bool, float32[:,:,:],\
+#                                                bool, int32[:,:,:])'
 @cuda.jit
 def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArray,
                                  axis : int, index1 : int, index2 : int,
@@ -1652,11 +1663,10 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
                                  nx : int, ny : int, nz : int,
                                  dx : float, dy : float, dz : float,
                                  l_tol : float, t_tol : float,
-                                 return_normal_vectors: bool, normals: np.ndarray,
-                                 return_depths: bool, depths: np.ndarray,
-                                 return_offsets: bool, offsets: np.ndarray, 
-                                 return_triangles: bool, triangle_per_face: np.ndarray,
-                                 info_array : DeviceNDArray, info_thread : int):
+                                 return_normal_vectors: bool, normals: DeviceNDArray,
+                                 return_depths: bool, depths: DeviceNDArray,
+                                 return_offsets: bool, offsets: DeviceNDArray, 
+                                 return_triangles: bool, triangle_per_face: DeviceNDArray):
     """Maps the projection of a 3D polygon to 2D grid surfaces along a given axis
     Args:
         faces (DeviceNDArray.bool): boolean array of each cell face that can represent the surface.
@@ -1743,7 +1753,6 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
         if max_tpy < min_tpy:
             continue # skip: triangle outside of grid
 
-        i = 0
         # 2. iterate over all points that fall within bounding box and 
         # check whether points falls in triangle
         for py in range(min_tpy, max_tpy+1, 1):
@@ -1837,8 +1846,6 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
                         cross_d(line_p, line_v, tmp); norm_d(tmp, v)
                         for dim in range(3):
                             normals[face_idx[0], face_idx[1], face_idx[2], dim] = -1. * tmp[dim]/v[0]
-                            # if triangle_num==265625:
-                            #     info_array[0,dim] = normals[face_idx[0], face_idx[1], face_idx[2], dim]
                         norm_idx[index2] = int(px)
                         if normals[norm_idx[0], norm_idx[1], norm_idx[2], 2] > 0.0:
                             for dim in range(3):
@@ -2325,9 +2332,9 @@ def find_faces_to_represent_surface_regular_optimised(
 
     return gcs
 
-def find_faces_to_represent_surface_regular_cuda(
+def find_faces_to_represent_surface_regular_cuda_sgpu(
     grid,
-    surface,
+    surfaces,
     name,
     title = None,
     centres = None,  # DEPRECATED; TODO: remove this argument
@@ -2336,13 +2343,17 @@ def find_faces_to_represent_surface_regular_cuda(
     progress_fn = None,
     consistent_side = False,  # DEPRECATED; functionality no longer supported
     return_properties = None,
+    iSurface = 0,
+    iGPU = 0,
+    gcs_list = None,
+    props_dict_list = None,
 ):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     Args:
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
            must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
-        surface (Surface): the surface to be intersected with the grid
+        surface (list(Surface)): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
         title (str, optional): the citation title to use for the grid connection set; defaults to name
         centres (numpy float array of shape (nk, nj, ni, 3), optional): DEPRECATED, no longer used
@@ -2401,12 +2412,16 @@ def find_faces_to_represent_surface_regular_cuda(
     if progress_fn is not None:
         progress_fn(0.0)
     
+    # prepare surfaces
+    surfaces = list(surfaces)       # make a list if it wasn't already
+    surface = surfaces[iSurface]    # get surface under consideration
     log.debug(f'intersecting surface {surface.title} with regular grid {grid.title} on a GPU')
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
-    log.debug(f'Accessing CUDA-enabled device information')
+    cuda.select_device(iGPU)        # bind device to thread
     device = cuda.get_current_device()  # if no GPU present - this will throw an exception and fall back to CPU
-    log.debug(f'Using {device.name}')
+    # print some information about the CUDA card
+    print(f'{device.name} | Device Controller {iGPU}, | CC {device.COMPUTE_CAPABILITY_MAJOR}.{device.COMPUTE_CAPABILITY_MINOR}')
     # get device attributes to calculate thread dimensions
     nSMs         = device.MULTIPROCESSOR_COUNT                # number of SMs
     maxBlockSize = device.MAX_BLOCK_DIM_X / 2             # max number of threads per block in x-dim
@@ -2434,9 +2449,11 @@ def find_faces_to_represent_surface_regular_cuda(
     p_tri_xyz   = points[triangles]      
     p_tri_xyz_d = cupy.asarray(p_tri_xyz)
 
-    info_array = np.zeros((3,3))
-    info_thread = 6
-    info_array = cupy.asarray(info_array)
+    # with compiler_lock:                        # lock the compiler
+    #     # prepare function for this thread
+    #     # the jitted CUDA kernel is loaded into the current context
+    #     project_polygons_to_surfaces_d = cuda.jit(project_polygons_to_surfaces_signature)(project_polygons_to_surfaces)
+
     # K direction (xy projection)
     if grid.nk > 1:
         log.debug("searching for k faces")
@@ -2463,16 +2480,13 @@ def find_faces_to_represent_surface_regular_cuda(
                                                          return_normal_vectors, k_normals_d,
                                                          return_depths, k_depths_d,
                                                          return_offsets, k_offsets_d,
-                                                         return_triangles, k_triangles_d,
-                                                         info_array, info_thread)
-        cuda.synchronize()
+                                                         return_triangles, k_triangles_d,)
         k_faces     = cupy.asnumpy(k_faces_d)
         if not return_bisector: del k_faces_d
         k_triangles = cupy.asnumpy(k_triangles_d); del k_triangles_d
         k_depths    = cupy.asnumpy(k_depths_d);    del k_depths_d
         k_offsets   = cupy.asnumpy(k_offsets_d);   del k_offsets_d
         k_normals   = cupy.asnumpy(k_normals_d);   del k_normals_d
-        info_host = cupy.asnumpy(info_array); # pprint(info_host)
         print(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -2506,16 +2520,13 @@ def find_faces_to_represent_surface_regular_cuda(
                                                          return_normal_vectors, j_normals_d,
                                                          return_depths, j_depths_d,
                                                          return_offsets, j_offsets_d,
-                                                         return_triangles, j_triangles_d,
-                                                         info_array, info_thread)
-        cuda.synchronize()
+                                                         return_triangles, j_triangles_d,)
         j_faces     = cupy.asnumpy(j_faces_d);     
         if not return_bisector: del j_faces_d 
         j_triangles = cupy.asnumpy(j_triangles_d); del j_triangles_d
         j_depths    = cupy.asnumpy(j_depths_d);    del j_depths_d
         j_offsets   = cupy.asnumpy(j_offsets_d);   del j_offsets_d
         j_normals   = cupy.asnumpy(j_normals_d);   del j_normals_d  
-        info_host = cupy.asnumpy(info_array); # pprint(info_host)    
         print(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
@@ -2549,27 +2560,24 @@ def find_faces_to_represent_surface_regular_cuda(
                                                          return_normal_vectors, i_normals_d,
                                                          return_depths, i_depths_d,
                                                          return_offsets, i_offsets_d,
-                                                         return_triangles, i_triangles_d,
-                                                         info_array, info_thread)
-        cuda.synchronize()
+                                                         return_triangles, i_triangles_d,)
         i_faces     = cupy.asnumpy(i_faces_d)
         if not return_bisector: del i_faces_d
         i_triangles = cupy.asnumpy(i_triangles_d); del i_triangles_d
         i_depths    = cupy.asnumpy(i_depths_d);    del i_depths_d
         i_offsets   = cupy.asnumpy(i_offsets_d);   del i_offsets_d
         i_normals   = cupy.asnumpy(i_normals_d);   del i_normals_d
-        info_host = cupy.asnumpy(info_array); # pprint(info_host)
         print(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
 
-    del p_tri_xyz_d,info_array
+    del p_tri_xyz_d
     
     if progress_fn is not None:
         progress_fn(0.9)
 
     log.debug("converting face sets into grid connection set")
-    gcs = rqf.GridConnectionSet(
+    gcs_list[iSurface] = rqf.GridConnectionSet(
         grid.model,
         grid = grid,
         k_faces = k_faces,
@@ -2584,14 +2592,14 @@ def find_faces_to_represent_surface_regular_cuda(
         create_organizing_objects_where_needed = True,
     )
 
-     # NB. following assumes faces have been added to gcs in a particular order!
+    # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
         k_tri_list = np.empty((0,)) if k_triangles is None else k_triangles[where_true(k_faces)]
         j_tri_list = np.empty((0,)) if j_triangles is None else j_triangles[where_true(j_faces)]
         i_tri_list = np.empty((0,)) if i_triangles is None else i_triangles[where_true(i_faces)]
         all_tris = np.concatenate((k_tri_list, j_tri_list, i_tri_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
-        assert all_tris.shape == (gcs.count,)
+        assert all_tris.shape == (gcs_list[iSurface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
@@ -2600,7 +2608,7 @@ def find_faces_to_represent_surface_regular_cuda(
         i_depths_list = np.empty((0,)) if i_depths is None else i_depths[where_true(i_faces)]
         all_depths = np.concatenate((k_depths_list, j_depths_list, i_depths_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
-        assert all_depths.shape == (gcs.count,)
+        assert all_depths.shape == (gcs_list[iSurface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
@@ -2609,17 +2617,17 @@ def find_faces_to_represent_surface_regular_cuda(
         i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[where_true(i_faces)]
         all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
-        assert all_offsets.shape == (gcs.count,)
+        assert all_offsets.shape == (gcs_list[iSurface].count,)
 
     if return_flange_bool:
         flange_bool_uuid = surface.model.uuid(title = 'flange bool',
-                                              obj_type = 'DiscreteProperty',
-                                              related_uuid = surface.uuid)
+                                            obj_type = 'DiscreteProperty',
+                                            related_uuid = surface.uuid)
         assert flange_bool_uuid is not None, f"No flange bool property found for surface: {surface.title}"
         flange_bool = Property(surface.model, uuid = flange_bool_uuid)
         flange_array = flange_bool.array_ref()
         all_flange = np.take(flange_array, all_tris)
-        assert all_flange.shape == (gcs.count,)
+        assert all_flange.shape == (gcs_list[iSurface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_normal_vectors:
@@ -2628,33 +2636,112 @@ def find_faces_to_represent_surface_regular_cuda(
         i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[where_true(i_faces)]
         all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
-        assert all_normals.shape == (gcs.count, 3)
+        assert all_normals.shape == (gcs_list[iSurface].count, 3)
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
         bisector, is_curtain = bisector_from_faces_cuda(tuple(grid.extent_kji), k_faces_d, j_faces_d, i_faces_d)
+        del k_faces_d, j_faces_d, i_faces_d
 
     if progress_fn is not None:
         progress_fn(1.0)
     
     # if returning properties, construct dictionary
     if return_properties:
-        props_dict = {}
+        props_dict_list[iSurface] = {}
         if return_triangles:
-            props_dict['triangle'] = all_tris
+            props_dict_list[iSurface]['triangle'] = all_tris
         if return_depths:
-            props_dict['depth'] = all_depths
+            props_dict_list[iSurface]['depth'] = all_depths
         if return_offsets:
-            props_dict['offset'] = all_offsets
+            props_dict_list[iSurface]['offset'] = all_offsets
         if return_normal_vectors:
-            props_dict['normal vector'] = all_normals
+            props_dict_list[iSurface]['normal vector'] = all_normals
         if return_bisector:
-            props_dict['grid bisector'] = (bisector, is_curtain)
+            props_dict_list[iSurface]['grid bisector'] = (bisector, is_curtain)
         if return_flange_bool:
-            props_dict['flange bool'] = all_flange
-        return (gcs, props_dict)
+            props_dict_list[iSurface]['flange bool'] = all_flange
 
-    return gcs
+    return
+
+def find_faces_to_represent_surface_regular_cuda_mgpu(
+    grid,
+    surfaces,
+    name,
+    title = None,
+    centres = None,  # DEPRECATED; TODO: remove this argument
+    agitate = False,
+    feature_type = 'fault',
+    progress_fn = None,
+    consistent_side = False,  # DEPRECATED; functionality no longer supported
+    return_properties = None,
+):
+    """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
+
+    Args:
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
+           must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
+        surface (list(Surface)): the surface to be intersected with the grid
+        name (str): the feature name to use in the grid connection set
+        title (str, optional): the citation title to use for the grid connection set; defaults to name
+        centres (numpy float array of shape (nk, nj, ni, 3), optional): DEPRECATED, no longer used
+        agitate (bool, default False): if True, the points of the surface are perturbed by a small random
+           offset, which can help if the surface has been built from a regular mesh with a periodic resonance
+           with the grid
+        feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
+        progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
+           the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+        consistent_side (bool, default False): DEPRECATED; True will result in an assertion exception
+
+    Returns:
+        gcs  or  (gcs, gcs_props)
+        where gcs is a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created;
+        gcs_props is a dictionary mapping from requested return_properties string to numpy array
+
+    Notes:
+        this function is designed for aligned regular grids only;
+        this function can handle the surface and grid being in different coordinate reference systems, as
+        long as the implicit parent crs is shared;
+        no trimming of the surface is carried out here: for computational efficiency, it is recommended
+        to trim first;
+        organisational objects for the feature are created if needed
+    """
+    surfaces = list(surfaces)
+    N_GPUs   = len(cuda.list_devices())
+    N_SURFS  = len(surfaces)
+    print("attempting to distribute %d between %d GPUs" % (N_SURFS, N_GPUs))
+    threads         = [None] * N_GPUs
+    gcs_list        = [None] * N_SURFS
+    props_dict_list = [None] * N_SURFS
+    for iSurface in range(N_SURFS):
+        threads[iSurface%N_GPUs] = threading.Thread(target=find_faces_to_represent_surface_regular_cuda_sgpu,
+                                                    args=(grid,
+                                                          surfaces,
+                                                          name,
+                                                          title,
+                                                          centres,  # DEPRECATED; TODO: remove this argument
+                                                          agitate,
+                                                          feature_type,
+                                                          progress_fn,
+                                                          consistent_side,  # DEPRECATED; functionality no longer supported
+                                                          return_properties,
+                                                          iSurface,
+                                                          iSurface%N_GPUs,
+                                                          gcs_list,
+                                                          props_dict_list,))
+        threads[iSurface%N_GPUs].start()  # start parallel run
+        # if this is the last GPU available or we're at the last array ...
+        if (iSurface+1) % N_GPUs == 0 or (iSurface+1) == N_SURFS:
+            # ... sync all the GPUs
+            for iGPU in range(N_GPUs):
+                threads[iGPU].join()  # rejoin the main thread (syncthreads)
+            continue
+        
+        if N_SURFS > 1:
+            return (gcs_list, props_dict_list) if return_properties else gcs_list
+        else:
+            return (gcs_list[0], props_dict_list[0]) if return_properties else gcs_list[0]
+
 
 def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_type = 'fault', progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
