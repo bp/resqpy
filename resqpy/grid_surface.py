@@ -2379,6 +2379,9 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         organisational objects for the feature are created if needed
     """
 
+    cuda.select_device(iGPU)        # bind device to thread
+    device = cuda.get_current_device()  # if no GPU present - this will throw an exception and fall back to CPU
+
     if centres is not None:
         warnings.warn(
             'DEPRECATED: centres aegument to find_faces_to_represent_surface_regular_optimised() should be removed')
@@ -2413,13 +2416,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         progress_fn(0.0)
     
     # prepare surfaces
-    surfaces = list(surfaces)       # make a list if it wasn't already
     surface = surfaces[iSurface]    # get surface under consideration
     log.debug(f'intersecting surface {surface.title} with regular grid {grid.title} on a GPU')
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
-    cuda.select_device(iGPU)        # bind device to thread
-    device = cuda.get_current_device()  # if no GPU present - this will throw an exception and fall back to CPU
     # print some information about the CUDA card
     print(f'{device.name} | Device Controller {iGPU}, | CC {device.COMPUTE_CAPABILITY_MAJOR}.{device.COMPUTE_CAPABILITY_MINOR}')
     # get device attributes to calculate thread dimensions
@@ -2458,10 +2458,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     if grid.nk > 1:
         log.debug("searching for k faces")
         k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
-        k_triangles = np.full((grid.nk - 1, grid.nj, grid.ni), -1, dtype = int)
-        k_depths    = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
-        k_offsets   = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
-        k_normals   = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
+        k_triangles = np.full((grid.nk - 1, grid.nj, grid.ni), -1, dtype = int) if return_triangles else np.full((1,1,1),-1,dtype=int)
+        k_depths    = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan) if return_depths else np.full((1,1,1), np.nan)
+        k_offsets   = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan) if return_offsets else np.full((1,1,1), np.nan)
+        k_normals   = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan) if return_normal_vectors else np.full((1,1,1,1), np.nan)
         k_faces_d     = cupy.asarray(k_faces)
         k_triangles_d = cupy.asarray(k_triangles)
         k_depths_d    = cupy.asarray(k_depths)
@@ -2498,10 +2498,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     if grid.nj > 1:
         log.debug("searching for j faces")
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
-        j_triangles = np.full((grid.nk, grid.nj - 1, grid.ni), -1, dtype = int)
-        j_depths    = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
-        j_offsets   = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
-        j_normals   = np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan)
+        j_triangles = np.full((grid.nk, grid.nj - 1, grid.ni), -1, dtype = int) if return_triangles else np.full((1,1,1),-1,dtype=int)
+        j_depths    = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan) if return_depths else np.full((1,1,1), np.nan)
+        j_offsets   = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan) if return_offsets else np.full((1,1,1), np.nan)
+        j_normals   = np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan) if return_normal_vectors else np.full((1,1,1,1), np.nan)
         j_faces_d     = cupy.asarray(j_faces)
         j_triangles_d = cupy.asarray(j_triangles)
         j_depths_d    = cupy.asarray(j_depths)
@@ -2538,10 +2538,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     if grid.ni > 1:
         log.debug("searching for i faces")
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
-        i_triangles = np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = int)
-        i_depths    = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
-        i_offsets   = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
-        i_normals   = np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan)
+        i_triangles = np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = int) if return_triangles else np.full((1,1,1),-1,dtype=int)
+        i_depths    = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan) if return_depths else np.full((1,1,1), np.nan)
+        i_offsets   = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan) if return_offsets else np.full((1,1,1), np.nan)
+        i_normals   = np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan) if return_normal_vectors else np.full((1,1,1,1), np.nan)
         i_faces_d     = cupy.asarray(i_faces)
         i_triangles_d = cupy.asarray(i_triangles)
         i_depths_d    = cupy.asarray(i_depths)
@@ -2666,7 +2666,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
 def find_faces_to_represent_surface_regular_cuda_mgpu(
     grid,
-    surfaces,
+    _surfaces,
     name,
     title = None,
     centres = None,  # DEPRECATED; TODO: remove this argument
@@ -2681,7 +2681,7 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
     Args:
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
            must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
-        surface (list(Surface)): the surface to be intersected with the grid
+        surface (Surface or list(Surface)): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
         title (str, optional): the citation title to use for the grid connection set; defaults to name
         centres (numpy float array of shape (nk, nj, ni, 3), optional): DEPRECATED, no longer used
@@ -2706,41 +2706,53 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
         to trim first;
         organisational objects for the feature are created if needed
     """
-    surfaces = list(surfaces)
-    N_GPUs   = len(cuda.list_devices())
+
+    compiler_lock = threading.Lock() # Numba compiler is not threadsafe
+
+    if not isinstance(_surfaces, list):  
+        surfaces = [_surfaces]
+    else:
+        surfaces = _surfaces
+
     N_SURFS  = len(surfaces)
-    print("attempting to distribute %d between %d GPUs" % (N_SURFS, N_GPUs))
-    threads         = [None] * N_GPUs
+    N_GPUs   = len(cuda.list_devices())
+    print("DISTRIBUTING %d SURFACES BETWEEN %d GPUs" % (N_SURFS, N_GPUs))
     gcs_list        = [None] * N_SURFS
     props_dict_list = [None] * N_SURFS
+    threads         = [None] * N_GPUs
     for iSurface in range(N_SURFS):
         threads[iSurface%N_GPUs] = threading.Thread(target=find_faces_to_represent_surface_regular_cuda_sgpu,
                                                     args=(grid,
                                                           surfaces,
                                                           name,
                                                           title,
-                                                          centres,  # DEPRECATED; TODO: remove this argument
+                                                          centres,
                                                           agitate,
                                                           feature_type,
                                                           progress_fn,
-                                                          consistent_side,  # DEPRECATED; functionality no longer supported
+                                                          consistent_side,
                                                           return_properties,
                                                           iSurface,
                                                           iSurface%N_GPUs,
                                                           gcs_list,
                                                           props_dict_list,))
+
+        print(f"\nSTARTING PROCESS ON GPU:{iSurface%N_GPUs} SURF:{iSurface}")
         threads[iSurface%N_GPUs].start()  # start parallel run
         # if this is the last GPU available or we're at the last array ...
         if (iSurface+1) % N_GPUs == 0 or (iSurface+1) == N_SURFS:
-            # ... sync all the GPUs
-            for iGPU in range(N_GPUs):
+            print(f"\nSYNCING GPUS (reached GPU:{iSurface%N_GPUs} SURF:{iSurface})\n")
+            # ... sync all the GPUs being used
+            for iGPU in range(iSurface%N_GPUs+1):
                 threads[iGPU].join()  # rejoin the main thread (syncthreads)
-            continue
-        
-        if N_SURFS > 1:
-            return (gcs_list, props_dict_list) if return_properties else gcs_list
-        else:
-            return (gcs_list[0], props_dict_list[0]) if return_properties else gcs_list[0]
+            print(f"\nDONE SYNCING GPUs")
+
+    
+
+    if N_SURFS > 1:
+        return (gcs_list, props_dict_list) if return_properties else gcs_list
+    else:
+        return (gcs_list[0], props_dict_list[0]) if return_properties else gcs_list[0]
 
 
 def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_type = 'fault', progress_fn = None):
@@ -2772,11 +2784,11 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
                                                                  progress_fn = progress_fn)
 
     elif mode == 'regular_cuda':
-        return find_faces_to_represent_surface_regular_cuda(grid,
-                                                            surface,
-                                                            name,
-                                                            feature_type = feature_type,
-                                                            progress_fn = progress_fn)
+        return find_faces_to_represent_surface_regular_cuda_mgpu(grid,
+                                                                surface,
+                                                                name,
+                                                                feature_type = feature_type,
+                                                                progress_fn = progress_fn)
 
     log.critical('unrecognised mode: ' + str(mode))
     return None
