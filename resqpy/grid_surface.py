@@ -35,6 +35,8 @@ import resqpy.surface as rqs
 import resqpy.well as rqw
 from resqpy.property import Property
 
+compiler_lock = threading.Lock() # Numba compiler is not threadsafe
+
 
 class GridSkin:
     """Class of object consisting of outer skin of grid (not a RESQML class in its own right)."""
@@ -2161,7 +2163,7 @@ def find_faces_to_represent_surface_regular_optimised(
                             return_offsets, k_offsets, return_triangles, k_triangles)
         del k_hits
         del p_xy
-        print(f"k face count: {np.count_nonzero(k_faces)}")
+        log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
         k_triangles = None
@@ -2197,7 +2199,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del j_hits
         del p_xz
         # log.debug(f"j face count: {np.count_nonzero(j_faces)}")
-        print(f"j face count: {np.count_nonzero(j_faces)}")
+        log.debug(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
         j_triangles = None
@@ -2233,7 +2235,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del i_hits
         del p_yz
         # log.debug(f"i face count: {np.count_nonzero(i_faces)}")
-        print(f"i face count: {np.count_nonzero(i_faces)}")
+        log.debug(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
         i_triangles = None
@@ -2332,6 +2334,15 @@ def find_faces_to_represent_surface_regular_optimised(
 
     return gcs
 
+@cuda.jit
+def increment(array):
+    I,J,K = array.shape
+    for k in range(cuda.grid(3)[2], K, cuda.gridsize(3)[2]):
+        for i in range(cuda.grid(3)[0], I, cuda.gridsize(3)[0]):
+            for j in range(cuda.grid(3)[1], J, cuda.gridsize(3)[1]):
+                array[i,j,k] = (k*I + i)*J + j
+    return
+    
 def find_faces_to_represent_surface_regular_cuda_sgpu(
     grid,
     surfaces,
@@ -2421,7 +2432,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
     # print some information about the CUDA card
-    print(f'{device.name} | Device Controller {iGPU}, | CC {device.COMPUTE_CAPABILITY_MAJOR}.{device.COMPUTE_CAPABILITY_MINOR}')
+    print(f'{device.name} | Device Controller {iGPU} | CC {device.COMPUTE_CAPABILITY_MAJOR}.{device.COMPUTE_CAPABILITY_MINOR} | Processing surface {iSurface}')
     # get device attributes to calculate thread dimensions
     nSMs         = device.MULTIPROCESSOR_COUNT                # number of SMs
     maxBlockSize = device.MAX_BLOCK_DIM_X / 2             # max number of threads per block in x-dim
@@ -2429,7 +2440,8 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     # take the reverse diagonal for relationship between xyz & ijk
     grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
     # extract polygons from surface
-    triangles, points = surface.triangles_and_points()
+    with compiler_lock: # HDF5 handles seem not to be threadsafe
+        triangles, points = surface.triangles_and_points()
     assert triangles is not None and points is not None, f'surface {surface.title} is empty'
 
     if agitate:
@@ -2448,12 +2460,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
     p_tri_xyz   = points[triangles]      
     p_tri_xyz_d = cupy.asarray(p_tri_xyz)
-
-    # with compiler_lock:                        # lock the compiler
-    #     # prepare function for this thread
-    #     # the jitted CUDA kernel is loaded into the current context
-    #     project_polygons_to_surfaces_d = cuda.jit(project_polygons_to_surfaces_signature)(project_polygons_to_surfaces)
-
+    
     # K direction (xy projection)
     if grid.nk > 1:
         log.debug("searching for k faces")
@@ -2487,7 +2494,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         k_depths    = cupy.asnumpy(k_depths_d);    del k_depths_d
         k_offsets   = cupy.asnumpy(k_offsets_d);   del k_offsets_d
         k_normals   = cupy.asnumpy(k_normals_d);   del k_normals_d
-        print(f"k face count: {np.count_nonzero(k_faces)}")
+        log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
 
@@ -2527,7 +2534,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         j_depths    = cupy.asnumpy(j_depths_d);    del j_depths_d
         j_offsets   = cupy.asnumpy(j_offsets_d);   del j_offsets_d
         j_normals   = cupy.asnumpy(j_normals_d);   del j_normals_d  
-        print(f"j face count: {np.count_nonzero(j_faces)}")
+        log.debug(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
 
@@ -2567,7 +2574,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         i_depths    = cupy.asnumpy(i_depths_d);    del i_depths_d
         i_offsets   = cupy.asnumpy(i_offsets_d);   del i_offsets_d
         i_normals   = cupy.asnumpy(i_normals_d);   del i_normals_d
-        print(f"i face count: {np.count_nonzero(i_faces)}")
+        log.debug(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
 
@@ -2736,18 +2743,12 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
                                                           iSurface%N_GPUs,
                                                           gcs_list,
                                                           props_dict_list,))
-
-        print(f"\nSTARTING PROCESS ON GPU:{iSurface%N_GPUs} SURF:{iSurface}")
         threads[iSurface%N_GPUs].start()  # start parallel run
         # if this is the last GPU available or we're at the last array ...
         if (iSurface+1) % N_GPUs == 0 or (iSurface+1) == N_SURFS:
-            print(f"\nSYNCING GPUS (reached GPU:{iSurface%N_GPUs} SURF:{iSurface})\n")
             # ... sync all the GPUs being used
-            for iGPU in range(iSurface%N_GPUs+1):
+            for iGPU in range(iSurface%N_GPUs+1): # up to the number of GPUs being used
                 threads[iGPU].join()  # rejoin the main thread (syncthreads)
-            print(f"\nDONE SYNCING GPUs")
-
-    
 
     if N_SURFS > 1:
         return (gcs_list, props_dict_list) if return_properties else gcs_list
