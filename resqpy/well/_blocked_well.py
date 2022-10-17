@@ -2467,7 +2467,7 @@ class BlockedWell(BaseResqpy):
         length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom,
                                                                                         extra = extra)
         uom_pk_discrete_dict = {
-            'ANGLA': ('dega', 'aximuth', False),
+            'ANGLA': ('dega', 'azimuth', False),
             'ANGLV': ('dega', 'inclination', False),
             'KH': (f'mD.{length_uom}', 'permeability length', False),
             'PPERF': (f'{length_uom}/{length_uom}', 'perforation fraction', False),
