@@ -842,7 +842,7 @@ def test_surface_normal_vectors(tmp_model):
     triangles = tri.dt(points)
     surface = resqpy.surface.Surface(tmp_model)
     surface.set_from_triangles_and_points(triangles, points)
-    normal_vectors_expected = np.array([[-0.70710678, 0.0, 0.70710678], [0.0, 0.0, 1.0]])
+    normal_vectors_expected = np.array([[0.70710678, 0.0, -0.70710678], [0.0, 0.0, -1.0]])
 
     # Act
     normal_vectors = surface.normal_vectors()

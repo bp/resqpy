@@ -742,13 +742,14 @@ class Surface(BaseSurface):
         Returns:
             normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface.
         """
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         triangles, points = self.triangles_and_points()
         n_triangles = len(triangles)
         normal_vectors_array = np.empty((n_triangles, 3))
         for triangle_num in range(n_triangles):
             normal_vector = vec.triangle_normal_vector_numba(points[triangles[triangle_num]])
-            if normal_vector[2] <= 0:
-                normal_vector *= -1
+            if (normal_vector[2] > 0.0) == crs.z_inc_down:
+                normal_vector *= -1.0
             normal_vectors_array[triangle_num] = normal_vector
         if add_as_property:
             pc = rqp.PropertyCollection()
