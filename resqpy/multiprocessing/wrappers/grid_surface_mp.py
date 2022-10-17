@@ -271,7 +271,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = False,
                     uom = "Euc",
-                    property_kind = "continuous",
+                    property_kind = "normal vector",
                     realization = realisation,
                     indexable_element = "faces",
                     points = True,
@@ -283,7 +283,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = True,
                     null_value = -1,
-                    property_kind = "discrete",
+                    property_kind = "triangle index",
                     realization = realisation,
                     indexable_element = "faces",
                 )
@@ -294,7 +294,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = False,
                     uom = grid.crs.z_units,
-                    property_kind = "continuous",
+                    property_kind = "offset",
                     realization = realisation,
                     indexable_element = "faces",
                 )
@@ -323,7 +323,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f"from find_faces function for {surface.title}",
                     f'{surface.title} {p_name}',
                     discrete = True,
-                    property_kind = "discrete",
+                    property_kind = "grid bisector",
                     facet_type = 'direction',
                     facet = 'vertical' if is_curtain else 'sloping',
                     realization = realisation,
@@ -336,7 +336,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = True,
                     null_value = -1,
-                    property_kind = "discrete",
+                    property_kind = "flange bool",
                     realization = realisation,
                     indexable_element = "faces",
                 )
@@ -345,13 +345,15 @@ def find_faces_to_represent_surface_regular_wrapper(
         if property_collection.number_of_imports() > 0:
             # log.debug('writing gcs property hdf5 data')
             property_collection.write_hdf5_for_imported_list()
-            uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model()
+            uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model(
+                find_local_property_kinds = True)
             uuid_list.extend(uuids_properties)
         if grid_pc is not None and grid_pc.number_of_imports() > 0:
             # log.debug('writing grid property (bisector) hdf5 data')
             grid_pc.write_hdf5_for_imported_list()
             # log.debug('creating xml for grid property (bisector)')
-            uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model()
+            uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(
+                find_local_property_kinds = True)
             assert uuids_properties
             uuid_list.extend(uuids_properties)
             if related_uuid is not None:
