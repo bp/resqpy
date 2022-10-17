@@ -341,7 +341,7 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
         model.store_epc()
 
         # check the number of parts in the sub model is as expected (includes crs and ext)
-        assert model.number_of_parts() == 6 + len(discrete_prop_uuid_list)
+        assert model.number_of_parts() == 6 + 2 * len(discrete_prop_uuid_list)
 
     # re-open all 3 models and see how they shape up
     full_model = rq.Model(full_epc_path)
@@ -356,7 +356,7 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
         # switch off hdf5 filename override
         model.h5_set_default_override('none')
         # check that the number of parts in the sub model is still as expected
-        assert model.number_of_parts() == 6 + len(discrete_prop_uuid_list)
+        assert model.number_of_parts() == 6 + 2 * len(discrete_prop_uuid_list)
         # check that all sub model uuids exist in the full model, and have the same type
         for uuid in model.uuids():
             found = False

@@ -759,11 +759,11 @@ class Surface(BaseSurface):
                                                  "computed from surface",
                                                  "normal vector",
                                                  uom = crs.xy_units,
-                                                 property_kind = "continuous",
+                                                 property_kind = "normal vector",
                                                  indexable_element = "faces",
                                                  points = True)
             pc.write_hdf5_for_imported_list()
-            pc.create_xml_for_imported_list_and_add_parts_to_model()
+            pc.create_xml_for_imported_list_and_add_parts_to_model(find_local_property_kinds = True)
         return normal_vectors_array
 
     def write_hdf5(self, file_name = None, mode = 'a'):

@@ -84,6 +84,7 @@ def _create_xml_property_kind(collection, p_node, find_local_property_kinds, pro
                                          property_kind_uuid,
                                          content_type = 'obj_PropertyKind',
                                          root = p_kind_node)
+    return property_kind_uuid
 
 
 def _create_xml_patch_node(collection, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid,
