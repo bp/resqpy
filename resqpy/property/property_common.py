@@ -24,10 +24,10 @@ import resqpy.weights_and_measures as bwam
 # see property_kind_and_facet_from_keyword() for simulator keyword to property kind and facet mapping
 
 supported_property_kind_list = [
-    'code', 'index', 'depth', 'rock volume', 'pore volume', 'volume', 'thickness', 'length', 'cell length',
-    'net to gross ratio', 'porosity', 'permeability thickness', 'permeability length', 'permeability rock',
-    'rock permeability', 'fluid volume', 'transmissibility', 'pressure', 'saturation', 'solution gas-oil ratio',
-    'vapor oil-gas ratio', 'property multiplier', 'thermodynamic temperature', 'continuous', 'discrete', 'categorical'
+    'continuous', 'discrete', 'categorical', 'code', 'index', 'depth', 'rock volume', 'pore volume', 'volume',
+    'thickness', 'length', 'cell length', 'area', 'net to gross ratio', 'porosity', 'permeability thickness',
+    'permeability length', 'permeability rock', 'rock permeability', 'fluid volume', 'transmissibility', 'pressure',
+    'saturation', 'solution gas-oil ratio', 'vapor oil-gas ratio', 'property multiplier', 'thermodynamic temperature'
 ]
 
 supported_local_property_kind_list = [
