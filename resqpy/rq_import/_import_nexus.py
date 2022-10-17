@@ -457,7 +457,7 @@ def import_nexus(
                                                                          uom = None,
                                                                          time_index = None,
                                                                          null_value = -1,
-                                                                         property_kind = 'discrete')
+                                                                         property_kind = 'cell index')
         log.info('writing ' + str(len(prop_import_collection.imported_list)) + ' properties to hdf5 file ' +
                  resqml_file_root + '.h5')
     elif not ensemble_case_dirs_root:

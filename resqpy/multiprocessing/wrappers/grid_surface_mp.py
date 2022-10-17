@@ -164,7 +164,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                            source_info = 'flange bool array',
                                            keyword = 'flange bool',
                                            support_uuid = surface_uuid,
-                                           property_kind = 'discrete',
+                                           property_kind = 'flange bool',
+                                           find_local_property_kind = True,
                                            indexable_element = 'faces',
                                            discrete = True)
             uuid_list.append(flange_p.uuid)
@@ -210,7 +211,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                        source_info = 'flange bool array',
                                        keyword = 'flange bool',
                                        support_uuid = surface_uuid,
-                                       property_kind = 'discrete',
+                                       property_kind = 'flange bool',
+                                       find_local_property_kind = True,
                                        indexable_element = 'faces',
                                        discrete = True)
         uuid_list.append(flange_p.uuid)
