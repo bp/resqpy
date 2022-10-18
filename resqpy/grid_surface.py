@@ -11,7 +11,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit
-from typing import Tuple
+from typing import Tuple, Optional, Dict
 import warnings
 
 import resqpy.crs as rqc
@@ -1667,6 +1667,154 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     return a, is_curtain
 
 
+def first_true(array: np.ndarray) -> Optional[int]:
+    """Returns the index + 1 of the first True value in the array."""
+    for idx, val in np.ndenumerate(array):
+        if val:
+            return idx[0] + 1
+
+
+def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray) -> Dict[str, int]:
+    """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
+    
+    Args:
+        k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension.
+        j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension.
+        i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension.
+
+    Returns:
+        boundary (Dict[str, int]): a dictionary of the indices that bound the surface.
+    """
+    boundary = {
+        "k_min": None,
+        "k_max": None,
+        "j_min": None,
+        "j_max": None,
+        "i_min": None,
+        "i_max": None,
+        }
+
+    indices = ['k', 'j', 'i']
+    values = [0, 1, 2]
+    for ind, faces in enumerate([k_faces, j_faces, i_faces]):
+        true_values = list(np.where(faces))
+        val = values.copy()
+        del val[ind]
+
+        ind_1 = indices[val[0]]
+        ind_2 = indices[val[1]]
+        dim_1 = true_values[val[0]]
+        dim_2 = true_values[val[1]]
+
+        if dim_1.size > 0 and dim_2.size > 0:
+            for ind, dim in zip([ind_1, ind_2], [dim_1, dim_2]):
+                if boundary[f"{ind}_min"] is None:
+                    boundary[f"{ind}_min"] = min(dim)
+                elif min(dim) < boundary[f"{ind}_min"]:
+                    boundary[f"{ind}_min"] = min(dim)
+                if boundary[f"{ind}_max"] is None:
+                    boundary[f"{ind}_max"] = max(dim)
+                elif min(dim) > boundary[f"{ind}_max"]:
+                    boundary[f"{ind}_max"] = max(dim)
+
+    for index in indices:
+        if boundary[f"{index}_min"] != 0:
+            boundary[f"{index}_min"] -= 1
+
+    return boundary
+
+
+def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
+                        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+    """Returns a numpy bool array denoting the bisection of the grid by the face sets.
+
+    Args:
+        grid_extent_kji (triple int): the shape of the grid
+        k_faces, j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
+            bisecting surface
+
+    Returns:
+        (numpy bool array of shape grid_extent_kji, bool) where the array is set True for cells on one side
+        of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
+        on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
+
+    Notes:
+        the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
+        any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+        assigned to either the True or False part
+    """
+    assert len(grid_extent_kji) == 3
+    boundary = get_boundary(k_faces, j_faces, i_faces)
+
+    a = np.zeros((boundary["k_max"]-boundary["k_min"]+1, boundary["j_max"]-boundary["j_min"]+1, boundary["i_max"]-boundary["i_min"]+1), dtype = np.bool_)  # initialise to False
+    a[1:first_true(k_faces[boundary["k_min"]+1:boundary["k_max"], boundary["j_min"]+1, boundary["i_min"]+1]), 1, 1] = True
+    a[1, 1:first_true(j_faces[boundary["k_min"]+1, boundary["j_min"]+1:boundary["j_max"], boundary["i_min"]+1]), 1] = True
+    a[1, 1, 1:first_true(i_faces[boundary["k_min"]+1, boundary["j_min"]+1, boundary["i_min"]+1:boundary["i_max"]])] = True
+    c = np.zeros_like(a, dtype = np.bool_)  # cells changing
+    
+    # repeatedly spread True values to neighbouring cells that are not the other side of a face
+    # todo: check that following works when a dimension has extent 1
+    open_k = np.logical_not(k_faces)[boundary["k_min"]:boundary["k_max"], boundary["j_min"]:boundary["j_max"]+1, boundary["i_min"]:boundary["i_max"]+1]
+    open_j = np.logical_not(j_faces)[boundary["k_min"]:boundary["k_max"]+1, boundary["j_min"]:boundary["j_max"], boundary["i_min"]:boundary["i_max"]+1]
+    open_i = np.logical_not(i_faces)[boundary["k_min"]:boundary["k_max"]+1, boundary["j_min"]:boundary["j_max"]+1, boundary["i_min"]:boundary["i_max"]]
+    while True:
+        c[:] = False
+
+        # k faces
+        c[1:, :, :] = np.logical_and(a[:-1, :, :], open_k)
+        c[:-1, :, :] = np.logical_or(c[:-1, :, :], np.logical_and(a[1:, :, :], open_k))
+
+        # j faces
+        c[:, 1:, :] = np.logical_or(c[:, 1:, :], np.logical_and(a[:, :-1, :], open_j))
+        c[:, :-1, :] = np.logical_or(c[:, :-1, :], np.logical_and(a[:, 1:, :], open_j))
+
+        # i faces
+        c[:, :, 1:] = np.logical_or(c[:, :, 1:], np.logical_and(a[:, :, :-1], open_i))
+        c[:, :, :-1] = np.logical_or(c[:, :, :-1], np.logical_and(a[:, :, 1:], open_i))
+
+        c[:] = np.logical_and(c, np.logical_not(a))
+        if np.count_nonzero(c) == 0:
+            break
+        a = np.logical_or(a, c)
+    array = np.zeros(grid_extent_kji, dtype = np.bool_)
+    array[boundary["k_min"]:boundary["k_max"]+1, boundary["j_min"]:boundary["j_max"]+1, boundary["i_min"]:boundary["i_max"]+1] = a
+
+    if boundary["k_max"] != grid_extent_kji[0]-1 and np.any(a[-1, :, :]):
+        array[boundary["k_max"]+1:, :, :] = True
+    if boundary["k_min"] != 0 and np.any(a[0, :, :]):
+        array[:boundary["k_min"], :, :] = True
+    if boundary["j_max"] != grid_extent_kji[1]-1 and np.any(a[:, -1, :]):
+        array[:, boundary["j_max"]+1:, :] = True
+    if boundary["j_min"] != 0 and np.any(a[:, 0, :]):
+        array[:, :boundary["j_min"], :] = True
+    if boundary["i_max"] != grid_extent_kji[2]-1 and np.any(a[:, :, -1]):
+        array[:, :, boundary["i_max"]+1:] = True
+    if boundary["i_min"] != 0 and np.any(a[:, :, 0]):
+        array[:, :, :boundary["i_min"]] = True
+
+    a_count = np.count_nonzero(array)
+    cell_count = array.size
+    assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
+    # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
+    layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
+    a_k_sum = 0
+    not_a_k_sum = 0
+    for k in range(grid_extent_kji[0]):
+        a_layer_count = np.count_nonzero(array[k])
+        a_k_sum += (k + 1) * a_layer_count
+        not_a_k_sum += (k + 1) * (layer_cell_count - a_layer_count)
+    a_mean_k = float(a_k_sum) / float(a_count)
+    not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
+    is_curtain = False
+    if a_mean_k > not_a_mean_k:
+        array[:] = np.logical_not(array)
+    elif abs(a_mean_k - not_a_mean_k) <= 0.01:
+        # log.warning('unable to determine which side of surface is shallower')
+        is_curtain = True
+
+    return array, is_curtain
+
+
 def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndarray, i_faces: np.ndarray) -> np.ndarray:
     """Returns a numpy bool array denoting the bisection of the top layer of the grid by the curtain face sets.
 
@@ -1989,7 +2137,7 @@ def find_faces_to_represent_surface_regular_optimised(
         else:
             bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
             if is_curtain:
-                bosector = bisector[0]  # reduce to a columns property
+                bisector = bisector[0]  # reduce to a columns property
 
     if progress_fn is not None:
         progress_fn(1.0)
