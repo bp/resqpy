@@ -1672,15 +1672,18 @@ def first_true(array: np.ndarray) -> Optional[int]:
     for idx, val in np.ndenumerate(array):
         if val:
             return idx[0] + 1
+    return
 
 
-def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, grid_extent_kji) -> Dict[str, int]:
+def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
+                 grid_extent_kji: Tuple[int, int, int]) -> Dict[str, Optional[int]]:
     """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
     
     Args:
         k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension.
         j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension.
         i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension.
+        grid_extent_kji (Tuple[int]): the shape of the grid.
 
     Returns:
         boundary (Dict[str, int]): a dictionary of the indices that bound the surface.
