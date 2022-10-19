@@ -17,7 +17,7 @@ import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .string_lookup import StringLookup
-from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection
+from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, check_and_warn_property_kind
 import resqpy.property._collection_create_xml as pcxml
 import resqpy.property._collection_get_attributes as pcga
 import resqpy.property._collection_support as pcs
@@ -471,9 +471,10 @@ class PropertyCollection():
            (or non-Categorical) properties
         """
 
-        #      log.debug('inheriting parts selectively')
+        # log.debug('inheriting parts selectively')
         pcs._set_support_and_model_from_collection(self, other, support_uuid, grid)
 
+        check_and_warn_property_kind(property_kind, 'selecting properties')
         if self.realization is not None and other.realization is not None:
             assert self.realization == other.realization
         if time_index is not None:
@@ -2273,6 +2274,8 @@ class PropertyCollection():
         assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
         assert not points or not discrete
         assert count > 0
+        check_and_warn_property_kind(property_kind, 'adding property to imported list')
+
         if self.imported_list is None:
             self.imported_list = []
 
