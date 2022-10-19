@@ -1460,7 +1460,7 @@ def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_
                                                            ('inactive', 'code', 'what', 'inactive'),
                                                            ('livecell', 'active', None, None),
                                                            ('act test', 'active', None, None),
-                                                           ('ireg', 'region initialization', None, None),
+                                                           ('ireg', 'region initialization', 'what', 'reg'),
                                                            ('region', 'region initialization', None, None),
                                                            ('cregion', 'region initialization', None, None),
                                                            ('uid', 'index', 'what', 'uid'),

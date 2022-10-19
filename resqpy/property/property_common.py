@@ -176,6 +176,9 @@ def property_kind_and_facet_from_keyword(keyword):
         property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
     elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
         property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
+        if lk[0] == 'i':
+            facet_type = 'what'
+            facet = lk[1:].lower()
     return property_kind, facet_type, facet
 
 
@@ -738,3 +741,10 @@ def write_hdf5_and_create_xml_for_active_property(model,
                                                  realization = realization,
                                                  find_local_property_kind = True)
     return active.uuid
+
+
+def check_and_warn_property_kind(pk, activity):
+    """Check property kind and warn if one of three main abstract kinds."""
+    if pk in ['continuous', 'discrete', 'categorical']:
+        warnings.warn(
+            f"abstract property kind '{pk}', whilst {activity}, will be or have been replaced by local property kind")
