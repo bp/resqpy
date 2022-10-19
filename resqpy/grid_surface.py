@@ -1692,7 +1692,7 @@ def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, 
         "j_max": None,
         "i_min": None,
         "i_max": None,
-        }
+    }
 
     indices = ['k', 'j', 'i']
     values = [0, 1, 2]
@@ -1727,7 +1727,7 @@ def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, 
 
 
 def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
-                        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+                            i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
 
     Args:
@@ -1748,17 +1748,25 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
     assert len(grid_extent_kji) == 3
     boundary = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
 
-    a = np.zeros((boundary["k_max"]-boundary["k_min"]+1, boundary["j_max"]-boundary["j_min"]+1, boundary["i_max"]-boundary["i_min"]+1), dtype = np.bool_)  # initialise to False
-    a[1:first_true(k_faces[boundary["k_min"]+1:boundary["k_max"], boundary["j_min"]+1, boundary["i_min"]+1]), 1, 1] = True
-    a[1, 1:first_true(j_faces[boundary["k_min"]+1, boundary["j_min"]+1:boundary["j_max"], boundary["i_min"]+1]), 1] = True
-    a[1, 1, 1:first_true(i_faces[boundary["k_min"]+1, boundary["j_min"]+1, boundary["i_min"]+1:boundary["i_max"]])] = True
+    a = np.zeros((boundary["k_max"] - boundary["k_min"] + 1, boundary["j_max"] - boundary["j_min"] + 1,
+                  boundary["i_max"] - boundary["i_min"] + 1),
+                 dtype = np.bool_)  # initialise to False
+    a[1:first_true(k_faces[boundary["k_min"] + 1:boundary["k_max"], boundary["j_min"] + 1, boundary["i_min"] + 1]), 1,
+      1] = True
+    a[1, 1:first_true(j_faces[boundary["k_min"] + 1, boundary["j_min"] + 1:boundary["j_max"], boundary["i_min"] + 1]),
+      1] = True
+    a[1, 1, 1:first_true(i_faces[boundary["k_min"] + 1, boundary["j_min"] + 1,
+                                 boundary["i_min"] + 1:boundary["i_max"]])] = True
     c = np.zeros_like(a, dtype = np.bool_)  # cells changing
-    
+
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
     # todo: check that following works when a dimension has extent 1
-    open_k = np.logical_not(k_faces)[boundary["k_min"]:boundary["k_max"], boundary["j_min"]:boundary["j_max"]+1, boundary["i_min"]:boundary["i_max"]+1]
-    open_j = np.logical_not(j_faces)[boundary["k_min"]:boundary["k_max"]+1, boundary["j_min"]:boundary["j_max"], boundary["i_min"]:boundary["i_max"]+1]
-    open_i = np.logical_not(i_faces)[boundary["k_min"]:boundary["k_max"]+1, boundary["j_min"]:boundary["j_max"]+1, boundary["i_min"]:boundary["i_max"]]
+    open_k = np.logical_not(k_faces)[boundary["k_min"]:boundary["k_max"], boundary["j_min"]:boundary["j_max"] + 1,
+                                     boundary["i_min"]:boundary["i_max"] + 1]
+    open_j = np.logical_not(j_faces)[boundary["k_min"]:boundary["k_max"] + 1, boundary["j_min"]:boundary["j_max"],
+                                     boundary["i_min"]:boundary["i_max"] + 1]
+    open_i = np.logical_not(i_faces)[boundary["k_min"]:boundary["k_max"] + 1, boundary["j_min"]:boundary["j_max"] + 1,
+                                     boundary["i_min"]:boundary["i_max"]]
     while True:
         c[:] = False
 
@@ -1779,18 +1787,19 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
             break
         a = np.logical_or(a, c)
     array = np.zeros(grid_extent_kji, dtype = np.bool_)
-    array[boundary["k_min"]:boundary["k_max"]+1, boundary["j_min"]:boundary["j_max"]+1, boundary["i_min"]:boundary["i_max"]+1] = a
+    array[boundary["k_min"]:boundary["k_max"] + 1, boundary["j_min"]:boundary["j_max"] + 1,
+          boundary["i_min"]:boundary["i_max"] + 1] = a
 
-    if boundary["k_max"] != grid_extent_kji[0]-1 and np.any(a[-1, :, :]):
-        array[boundary["k_max"]+1:, :, :] = True
+    if boundary["k_max"] != grid_extent_kji[0] - 1 and np.any(a[-1, :, :]):
+        array[boundary["k_max"] + 1:, :, :] = True
     if boundary["k_min"] != 0 and np.any(a[0, :, :]):
         array[:boundary["k_min"], :, :] = True
-    if boundary["j_max"] != grid_extent_kji[1]-1 and np.any(a[:, -1, :]):
-        array[:, boundary["j_max"]+1:, :] = True
+    if boundary["j_max"] != grid_extent_kji[1] - 1 and np.any(a[:, -1, :]):
+        array[:, boundary["j_max"] + 1:, :] = True
     if boundary["j_min"] != 0 and np.any(a[:, 0, :]):
         array[:, :boundary["j_min"], :] = True
-    if boundary["i_max"] != grid_extent_kji[2]-1 and np.any(a[:, :, -1]):
-        array[:, :, boundary["i_max"]+1:] = True
+    if boundary["i_max"] != grid_extent_kji[2] - 1 and np.any(a[:, :, -1]):
+        array[:, :, boundary["i_max"] + 1:] = True
     if boundary["i_min"] != 0 and np.any(a[:, :, 0]):
         array[:, :, :boundary["i_min"]] = True
 
