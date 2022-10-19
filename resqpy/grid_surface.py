@@ -1674,11 +1674,9 @@ def first_true(array: np.ndarray) -> Optional[int]:  # type: ignore
             return idx[0] + 1
 
 
-def get_boundary(
-        k_faces: np.ndarray,
-        j_faces: np.ndarray,
-        i_faces: np.ndarray,  # type: ignore
-        grid_extent_kji: Tuple[int, int, int]) -> Dict[str, int]:
+def get_boundary(  # type: ignore
+        k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, grid_extent_kji: Tuple[int, int,
+                                                                                              int]) -> Dict[str, int]:
     """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
     
     Args:
