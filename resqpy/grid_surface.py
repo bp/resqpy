@@ -1667,16 +1667,15 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     return a, is_curtain
 
 
-def first_true(array: np.ndarray) -> Optional[int]:
+def first_true(array: np.ndarray) -> Optional[int]:  # type: ignore
     """Returns the index + 1 of the first True value in the array."""
     for idx, val in np.ndenumerate(array):
         if val:
             return idx[0] + 1
-    return
 
 
 def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-                 grid_extent_kji: Tuple[int, int, int]) -> Dict[str, Optional[int]]:
+                 grid_extent_kji: Tuple[int, int, int]) -> Dict[str, int]:  # type: ignore
     """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
     
     Args:
@@ -1730,7 +1729,7 @@ def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
 
 
 def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
-                            i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+                            i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:  # type: ignore
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
 
     Args:
