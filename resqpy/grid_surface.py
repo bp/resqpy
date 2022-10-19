@@ -1674,7 +1674,7 @@ def first_true(array: np.ndarray) -> Optional[int]:
             return idx[0] + 1
 
 
-def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray) -> Dict[str, int]:
+def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, grid_extent_kji) -> Dict[str, int]:
     """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
     
     Args:
@@ -1717,9 +1717,11 @@ def get_boundary(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray) 
                 elif min(dim) > boundary[f"{ind}_max"]:
                     boundary[f"{ind}_max"] = max(dim)
 
-    for index in indices:
+    for i, index in enumerate(indices):
         if boundary[f"{index}_min"] != 0:
             boundary[f"{index}_min"] -= 1
+        if boundary[f"{index}_max"] != grid_extent_kji[i] - 1:
+            boundary[f"{index}_max"] += 1
 
     return boundary
 
@@ -1744,7 +1746,7 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    boundary = get_boundary(k_faces, j_faces, i_faces)
+    boundary = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
 
     a = np.zeros((boundary["k_max"]-boundary["k_min"]+1, boundary["j_max"]-boundary["j_min"]+1, boundary["i_max"]-boundary["i_min"]+1), dtype = np.bool_)  # initialise to False
     a[1:first_true(k_faces[boundary["k_min"]+1:boundary["k_max"], boundary["j_min"]+1, boundary["i_min"]+1]), 1, 1] = True
