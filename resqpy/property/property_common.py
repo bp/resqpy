@@ -748,3 +748,4 @@ def check_and_warn_property_kind(pk, activity):
     if pk in ['continuous', 'discrete', 'categorical']:
         warnings.warn(
             f"abstract property kind '{pk}', whilst {activity}, will be or have been replaced by local property kind")
+        # raise ValueError

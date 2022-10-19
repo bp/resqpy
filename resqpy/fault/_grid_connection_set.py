@@ -1898,7 +1898,7 @@ class GridConnectionSet(BaseResqpy):
                                                  "computed from surface",
                                                  "normal vector",
                                                  uom = uom,
-                                                 property_kind = "continuous",
+                                                 property_kind = "normal vector",
                                                  indexable_element = "faces",
                                                  points = True)
             pc.write_hdf5_for_imported_list()
