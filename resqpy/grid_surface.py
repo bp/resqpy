@@ -1710,7 +1710,7 @@ def get_boundary(  # type: ignore
         dim_2 = true_values[val[1]]
 
         if dim_1.size > 0 and dim_2.size > 0:
-            for ind, dim in zip([ind_1, ind_2], [dim_1, dim_2]):
+            for ind, dim in zip([ind_1, ind_2], [dim_1, dim_2]):  # type: ignore
                 if boundary[f"{ind}_min"] is None:
                     boundary[f"{ind}_min"] = min(dim)
                 elif min(dim) < boundary[f"{ind}_min"]:
@@ -1722,11 +1722,11 @@ def get_boundary(  # type: ignore
 
     for i, index in enumerate(indices):
         if boundary[f"{index}_min"] != 0:
-            boundary[f"{index}_min"] -= 1
+            boundary[f"{index}_min"] -= 1  # type: ignore
         if boundary[f"{index}_max"] != grid_extent_kji[i] - 1:
-            boundary[f"{index}_max"] += 1
+            boundary[f"{index}_max"] += 1  # type: ignore
 
-    return boundary
+    return boundary  # type: ignore
 
 
 def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
