@@ -126,11 +126,14 @@ def find_faces_to_represent_surface_regular_wrapper(
     if repr_type == 'PointSetRepresentation':
         # trim pointset to grid xyz box
         pset = PointSet(model, uuid = surface_uuid)
+        surf_title = pset.title
         log.debug(f'point set {pset.title} raw point count: {len(pset.full_array_ref())}')
         pset.change_crs(grid.crs)
         if not trimmed:
             pset.trim_to_xyz_box(grid.xyz_box(local = True))
             trimmed = True
+            if 'trimmed' not in surf_title:
+                surf_title += ' trimmed'
         assert len(pset.full_array_ref()) >= 3,  \
             f'boundary {name} representation {pset.title} has no xyz overlap with grid'
         pset_points = pset.full_array_ref()
@@ -140,7 +143,9 @@ def find_faces_to_represent_surface_regular_wrapper(
                 f'trimmed point set {pset.title} has {len(pset_points)} points, which might take a while to triangulate'
             )
         # triangulate point set to form a surface; set repr_uuid to that surface and switch repr_flavour to 'surface'
-        surf = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title)
+        if extend_fault_representation and not surf_title.endswith(' extended'):
+            surf_title += ' extended'
+        surf = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surf.set_from_point_set(pset,
                                               convexity_parameter = 2.0,
                                               reorient = True,
@@ -159,25 +164,30 @@ def find_faces_to_represent_surface_regular_wrapper(
                                            source_info = 'flange bool array',
                                            keyword = 'flange bool',
                                            support_uuid = surface_uuid,
-                                           property_kind = 'discrete',
+                                           property_kind = 'flange bool',
+                                           find_local_property_kind = True,
                                            indexable_element = 'faces',
                                            discrete = True)
-            flange_p.write_hdf5()
-            flange_p.create_xml()
             uuid_list.append(flange_p.uuid)
 
     surface = Surface(parent_model = model, uuid = str(surface_uuid))
+    surf_title = surface.title
+    assert surf_title
     surface.change_crs(grid.crs)
     if not trimmed and surface.triangle_count() > 100:
-        trimmed_surf = Surface(model, crs_uuid = grid.crs.uuid, title = surface.title + ' trimmed')
+        if not surf_title.endswith('trimmed'):
+            surf_title += ' trimmed'
+        trimmed_surf = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         # trimmed_surf.set_to_trimmed_surface(surf, xyz_box = xyz_box, xy_polygon = parent_seg.polygon)
         trimmed_surf.set_to_trimmed_surface(surface, xyz_box = grid.xyz_box(local = True))
         surface = trimmed_surf
         trimmed = True
-    if extend_fault_representation and not extended or retriangulate and not retriangulated:
+    if (extend_fault_representation and not extended) or (retriangulate and not retriangulated):
         _, p = surface.triangles_and_points()
-        pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surface.title)
-        surface = Surface(model, crs_uuid = grid.crs.uuid, title = pset.title + ' extended')
+        pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surf_title)
+        if extend_fault_representation and not surf_title.endswith('extended'):
+            surf_title += ' extended'
+        surface = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surface.set_from_point_set(pset,
                                                  convexity_parameter = 2.0,
                                                  reorient = True,
@@ -185,7 +195,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                  flange_radial_distance = flange_radius,
                                                  make_clockwise = False)
         del pset
-        extended = True
+        extended = extend_fault_representation
         retriangulated = True
     if not bu.matching_uuids(surface.uuid, surface_uuid):
         surface.write_hdf5()
@@ -201,11 +211,10 @@ def find_faces_to_represent_surface_regular_wrapper(
                                        source_info = 'flange bool array',
                                        keyword = 'flange bool',
                                        support_uuid = surface_uuid,
-                                       property_kind = 'discrete',
+                                       property_kind = 'flange bool',
+                                       find_local_property_kind = True,
                                        indexable_element = 'faces',
                                        discrete = True)
-        flange_p.write_hdf5()
-        flange_p.create_xml()
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
@@ -264,7 +273,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = False,
                     uom = "Euc",
-                    property_kind = "continuous",
+                    property_kind = "normal vector",
                     realization = realisation,
                     indexable_element = "faces",
                     points = True,
@@ -276,7 +285,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = True,
                     null_value = -1,
-                    property_kind = "discrete",
+                    property_kind = "triangle index",
                     realization = realisation,
                     indexable_element = "faces",
                 )
@@ -287,7 +296,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = False,
                     uom = grid.crs.z_units,
-                    property_kind = "continuous",
+                    property_kind = "offset",
                     realization = realisation,
                     indexable_element = "faces",
                 )
@@ -316,7 +325,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f"from find_faces function for {surface.title}",
                     f'{surface.title} {p_name}',
                     discrete = True,
-                    property_kind = "discrete",
+                    property_kind = "grid bisector",
                     facet_type = 'direction',
                     facet = 'vertical' if is_curtain else 'sloping',
                     realization = realisation,
@@ -329,26 +338,35 @@ def find_faces_to_represent_surface_regular_wrapper(
                     f'{surface.title} {p_name}',
                     discrete = True,
                     null_value = -1,
-                    property_kind = "discrete",
+                    property_kind = "flange bool",
                     realization = realisation,
                     indexable_element = "faces",
                 )
             else:
                 raise ValueError(f'unrecognised property name {p_name}')
-        property_collection.write_hdf5_for_imported_list()
-        uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model()
-        uuid_list.extend(uuids_properties)
-        if grid_pc is not None:
+        if property_collection.number_of_imports() > 0:
+            # log.debug('writing gcs property hdf5 data')
+            property_collection.write_hdf5_for_imported_list()
+            uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model(
+                find_local_property_kinds = True)
+            uuid_list.extend(uuids_properties)
+        if grid_pc is not None and grid_pc.number_of_imports() > 0:
+            # log.debug('writing grid property (bisector) hdf5 data')
             grid_pc.write_hdf5_for_imported_list()
-            uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model()
+            # log.debug('creating xml for grid property (bisector)')
+            uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(
+                find_local_property_kinds = True)
+            assert uuids_properties
             uuid_list.extend(uuids_properties)
             if related_uuid is not None:
                 for p_uuid in uuids_properties:
+                    # log.debug(f'creating relationship between: {p_uuid} and {related_uuid}')
                     model.create_reciprocal_relationship_uuids(p_uuid, 'sourceObject', related_uuid,
                                                                'destinationObject')
     else:
         log.debug(f'{name} no requested properties')
 
+    # log.debug('find_faces_to_represent_surface_regular_wrapper() storing epc: {model.epc_file}')
     model.store_epc(quiet = True)
 
     return index, success, epc_file, uuid_list

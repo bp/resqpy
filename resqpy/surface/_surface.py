@@ -742,13 +742,14 @@ class Surface(BaseSurface):
         Returns:
             normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface.
         """
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         triangles, points = self.triangles_and_points()
         n_triangles = len(triangles)
         normal_vectors_array = np.empty((n_triangles, 3))
         for triangle_num in range(n_triangles):
             normal_vector = vec.triangle_normal_vector_numba(points[triangles[triangle_num]])
-            if normal_vector[2] <= 0:
-                normal_vector *= -1
+            if (normal_vector[2] > 0.0) == crs.z_inc_down:
+                normal_vector *= -1.0
             normal_vectors_array[triangle_num] = normal_vector
         if add_as_property:
             pc = rqp.PropertyCollection()
@@ -758,11 +759,11 @@ class Surface(BaseSurface):
                                                  "computed from surface",
                                                  "normal vector",
                                                  uom = crs.xy_units,
-                                                 property_kind = "continuous",
+                                                 property_kind = "normal vector",
                                                  indexable_element = "faces",
                                                  points = True)
             pc.write_hdf5_for_imported_list()
-            pc.create_xml_for_imported_list_and_add_parts_to_model()
+            pc.create_xml_for_imported_list_and_add_parts_to_model(find_local_property_kinds = True)
         return normal_vectors_array
 
     def write_hdf5(self, file_name = None, mode = 'a'):

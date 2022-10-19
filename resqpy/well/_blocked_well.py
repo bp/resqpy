@@ -2453,7 +2453,8 @@ class BlockedWell(BaseResqpy):
                 null_value = null_value,
             )
         extra_pc.write_hdf5_for_imported_list()
-        extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid)
+        extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid,
+                                                                     find_local_property_kinds = True)
 
     def __set_uom_pk_discrete_for_df_properties(self, extra, length_uom, temperature_uom = None):
         """Set the property kind and unit of measure for all properties in the dataframe."""
@@ -2466,24 +2467,24 @@ class BlockedWell(BaseResqpy):
         length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom,
                                                                                         extra = extra)
         uom_pk_discrete_dict = {
-            'ANGLA': ('dega', 'plane angle', False),
-            'ANGLV': ('dega', 'plane angle', False),
+            'ANGLA': ('dega', 'azimuth', False),
+            'ANGLV': ('dega', 'inclination', False),
             'KH': (f'mD.{length_uom}', 'permeability length', False),
-            'PPERF': (f'{length_uom}/{length_uom}', 'continuous', False),
-            'STAT': (None, 'discrete', True),
+            'PPERF': (f'{length_uom}/{length_uom}', 'perforation fraction', False),
+            'STAT': (None, 'well connection status', True),
             'LENGTH': length_uom_pk_discrete,
             'MD': length_uom_pk_discrete,
             'X': length_uom_pk_discrete,
             'Y': length_uom_pk_discrete,
-            'DEPTH': length_uom_pk_discrete,
-            'RADW': length_uom_pk_discrete,
-            'RADB': length_uom_pk_discrete,
+            'DEPTH': (length_uom, 'depth', False),
+            'RADW': (length_uom, 'wellbore radius', False),
+            'RADB': (length_uom, 'cell equivalent radius', False),
             'RADBP': length_uom_pk_discrete,
             'RADWP': length_uom_pk_discrete,
-            'FM': (f'{length_uom}/{length_uom}', 'continuous', False),
-            'IRELPM': (None, 'discrete', True),
-            'SECT': (None, 'discrete', True),
-            'LAYER': (None, 'discrete', True),
+            'FM': (f'{length_uom}/{length_uom}', 'matrix fraction', False),
+            'IRELPM': (None, 'relative permeability index', True),
+            'SECT': (None, 'wellbore section index', True),
+            'LAYER': (None, 'layer index', True),
             'ANGLE': ('dega', 'plane angle', False),
             'TEMP': (temperature_uom, 'thermodynamic temperature', False),
             'MDCON': length_uom_pk_discrete,
@@ -2491,8 +2492,8 @@ class BlockedWell(BaseResqpy):
             'DZ': (length_uom, 'cell length', False),
             'DTOP': (length_uom, 'depth', False),
             'DBOT': (length_uom, 'depth', False),
-            'SKIN': ('Euc', 'continuous', False),
-            'WI': ('Euc', 'continuous', False),
+            'SKIN': ('Euc', 'skin', False),
+            'WI': ('Euc', 'well connection index', False),
         }
         return uom_pk_discrete_dict.get(extra, ('Euc', 'continuous', False))
 

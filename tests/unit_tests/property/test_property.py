@@ -545,8 +545,8 @@ def test_part_str(example_model_with_prop_ts_rels):
     part_facet = pc.parts()[4]
 
     # Act / Assert
-    assert pc.part_str(part_disc) == 'discrete (Zone)'
-    assert pc.part_str(part_disc, include_citation_title = False) == 'discrete'
+    assert pc.part_str(part_disc) == 'Zone (Zone)'
+    assert pc.part_str(part_disc, include_citation_title = False) == 'Zone'
     assert pc.part_str(part_cont) == 'saturation: water; timestep: 2 (SW)'
     assert pc.part_str(part_cont, include_citation_title = False) == 'saturation: water; timestep: 2'
     assert pc.part_str(part_facet) == 'rock permeability: J (Perm)'
@@ -563,7 +563,7 @@ def test_part_filename(example_model_with_prop_ts_rels):
     part_facet = pc.parts()[4]
 
     # Act / Assert
-    assert pc.part_filename(part_disc) == 'discrete'
+    assert pc.part_filename(part_disc) == 'Zone'
     assert pc.part_filename(part_cont) == 'saturation_water_ts_2'
     assert pc.part_filename(part_facet) == 'rock_permeability_J'
 
@@ -1460,7 +1460,7 @@ def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_
                                                            ('inactive', 'code', 'what', 'inactive'),
                                                            ('livecell', 'active', None, None),
                                                            ('act test', 'active', None, None),
-                                                           ('ireg', 'region initialization', None, None),
+                                                           ('ireg', 'region initialization', 'what', 'reg'),
                                                            ('region', 'region initialization', None, None),
                                                            ('cregion', 'region initialization', None, None),
                                                            ('uid', 'index', 'what', 'uid'),
@@ -1561,7 +1561,9 @@ def test_property_kind_list(example_model_with_properties):
     element = pc.property_kind_list()
 
     # Assert
-    assert element == ['discrete', 'net to gross ratio', 'porosity', 'rock permeability', 'saturation']
+    assert element == [
+        'Facies', 'Fault block', 'VPC', 'Zone', 'net to gross ratio', 'porosity', 'rock permeability', 'saturation'
+    ]
 
 
 def test_indexable_list(example_model_with_properties):
@@ -1984,7 +1986,7 @@ def test_import_ab_properties(example_model_with_properties, test_data_path):
     facies = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_facies'][0]
     facies_array = pc.cached_part_array_ref(facies)
     assert not pc.continuous_for_part(facies)
-    assert pc.property_kind_for_part(facies) == 'discrete'
+    assert pc.property_kind_for_part(facies) == 'ab_facies'  # local property kind now automatically generated
     assert np.min(facies_array) == 0
     assert np.max(facies_array) == 5
     assert np.sum(facies_array) == 170

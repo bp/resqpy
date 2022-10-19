@@ -1,7 +1,5 @@
 """Submodule containing functions for supporting properties for a property collection."""
 
-version = '1st December 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging

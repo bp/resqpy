@@ -15,7 +15,8 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
        the copy will be a resqpy Grid even if the source grid is a RegularGrid
     """
 
-    assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
+    grid_flavour = grr.grid_flavour(source_grid.root)
+    assert grid_flavour in ['IjkGrid', 'IjkBlockGrid']
 
     model = source_grid.model
     if target_model is None:
@@ -24,13 +25,13 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
         copy_crs = False
 
     # if the source grid is a RegularGrid, ensure that it has explicit points
-    if source_grid.grid_representation == 'IjkBlockGrid':
+    if grid_flavour == 'IjkBlockGrid':
         source_grid.make_regular_points_cached()
 
     # create empty grid object (with new uuid)
     grid = grr.Grid(target_model)
 
-    # inherit attributes from source grid
+    # inherit attributes from source grid (but a RegularGrid is copied to a Grid)
     grid.grid_representation = 'IjkGrid'
     grid.extent_kji = np.array(source_grid.extent_kji, dtype = 'int')
     grid.nk, grid.nj, grid.ni = source_grid.nk, source_grid.nj, source_grid.ni
@@ -62,9 +63,11 @@ def copy_grid(source_grid, target_model = None, copy_crs = True):
     # take a copy of the grid geometry
     source_grid.cache_all_geometry_arrays()
     grid.geometry_defined_for_all_pillars_cached = source_grid.geometry_defined_for_all_pillars_cached
-    if hasattr(source_grid, 'array_pillar_geometry_is_defined'):
+    if hasattr(source_grid,
+               'array_pillar_geometry_is_defined') and source_grid.array_pillar_geometry_is_defined is not None:
         grid.array_pillar_geometry_is_defined = source_grid.array_pillar_geometry_is_defined.copy()
-    if hasattr(source_grid, 'array_cell_geometry_is_defined'):
+    if hasattr(source_grid,
+               'array_cell_geometry_is_defined') and source_grid.array_cell_geometry_is_defined is not None:
         grid.array_cell_geometry_is_defined = source_grid.array_cell_geometry_is_defined.copy()
     grid.geometry_defined_for_all_cells_cached = source_grid.geometry_defined_for_all_cells_cached
     grid.points_cached = source_grid.points_cached.copy()

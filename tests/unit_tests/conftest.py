@@ -150,7 +150,8 @@ def example_model_with_properties(tmp_path):
     grid.create_xml(ext_uuid = model.h5_uuid(),
                     title = 'grid',
                     write_geometry = True,
-                    add_cell_length_properties = False)
+                    add_cell_length_properties = False,
+                    use_lattice = False)
     model.store_epc()
 
     zone = np.ones(shape = (5, 5))
@@ -237,7 +238,8 @@ def example_model_with_prop_ts_rels(tmp_path):
     grid.create_xml(ext_uuid = model.h5_uuid(),
                     title = 'grid',
                     write_geometry = True,
-                    add_cell_length_properties = False)
+                    add_cell_length_properties = False,
+                    use_lattice = False)
     model.store_epc()
 
     zone = np.ones(shape = (5, 5), dtype = 'int')
@@ -373,7 +375,7 @@ def example_model_and_cellio(example_model_and_crs, tmp_path):
                            set_points_cached = True)
 
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     grid_uuid = grid.uuid
     cellio_file = os.path.join(model.epc_directory, 'cellio.dat')
     well_name = 'Banoffee'
@@ -412,7 +414,8 @@ def example_fine_coarse_model(example_model_and_crs):
     coarse_grid.create_xml(ext_uuid = model.h5_uuid(),
                            title = 'Coarse',
                            write_geometry = True,
-                           add_cell_length_properties = True)
+                           add_cell_length_properties = True,
+                           use_lattice = False)
 
     fine_grid = grr.RegularGrid(parent_model = model,
                                 origin = (0, 0, 0),
@@ -424,7 +427,8 @@ def example_fine_coarse_model(example_model_and_crs):
     fine_grid.create_xml(ext_uuid = model.h5_uuid(),
                          title = 'Fine',
                          write_geometry = True,
-                         add_cell_length_properties = True)
+                         add_cell_length_properties = True,
+                         use_lattice = False)
 
     model.store_epc()
     model = Model(model.epc_file)

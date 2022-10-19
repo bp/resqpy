@@ -290,7 +290,7 @@ def degrees_difference(a, b):
 
 
 def rotation_matrix_3d_axial(axis, angle):
-    """Returns a rotation matrix which will rotate points about axis (0, 1, or 2) by angle in degrees."""
+    """Returns a rotation matrix which will rotate points about axis (0: x, 1: y, or 2: z) by angle in degrees."""
 
     axis_a = (axis + 1) % 3
     axis_b = (axis_a + 1) % 3

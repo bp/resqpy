@@ -18,10 +18,10 @@ def test_default_args(tmp_path):
     ensemble_dir = f'{base_folder}/test_data/wren'
     epc_file = f'{tmp_path}/test.epc'
     parts_expected = [('ContinuousProperty', 123), ('DiscreteProperty', 15), ('EpcExternalPartReference', 1),
-                      ('IjkGridRepresentation', 1), ('LocalDepth3dCrs', 1), ('PropertyKind', 1), ('PropertySet', 7),
+                      ('IjkGridRepresentation', 1), ('LocalDepth3dCrs', 1), ('PropertyKind', 2), ('PropertySet', 7),
                       ('TimeSeries', 1)]
     pk_list_expected = [
-        'cell length', 'code', 'continuous', 'depth', 'fluid volume', 'index', 'permeability thickness', 'pore volume',
+        'TNSC', 'cell length', 'code', 'depth', 'fluid volume', 'index', 'permeability thickness', 'pore volume',
         'pressure', 'region initialization', 'rock volume', 'saturation', 'thickness', 'transmissibility'
     ]
     pc_titles_expected = {
@@ -89,7 +89,7 @@ def test_existing_epc_true(tmp_path):
     model = rq.Model(epc_file)
 
     # Assert
-    assert model.number_of_parts() == 150
+    assert model.number_of_parts() == 151
 
 
 def test_keyword_list(tmp_path):

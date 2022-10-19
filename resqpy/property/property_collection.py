@@ -17,7 +17,7 @@ import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 from .string_lookup import StringLookup
-from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection
+from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, check_and_warn_property_kind
 import resqpy.property._collection_create_xml as pcxml
 import resqpy.property._collection_get_attributes as pcga
 import resqpy.property._collection_support as pcs
@@ -471,9 +471,10 @@ class PropertyCollection():
            (or non-Categorical) properties
         """
 
-        #      log.debug('inheriting parts selectively')
+        # log.debug('inheriting parts selectively')
         pcs._set_support_and_model_from_collection(self, other, support_uuid, grid)
 
+        check_and_warn_property_kind(property_kind, 'selecting properties')
         if self.realization is not None and other.realization is not None:
             assert self.realization == other.realization
         if time_index is not None:
@@ -2273,6 +2274,8 @@ class PropertyCollection():
         assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
         assert not points or not discrete
         assert count > 0
+        check_and_warn_property_kind(property_kind, 'adding property to imported list')
+
         if self.imported_list is None:
             self.imported_list = []
 
@@ -2504,7 +2507,10 @@ class PropertyCollection():
               standard property kind
            find_local_property_kinds (boolean, default True): if True and property_kind is not in standard supported
               property kind list and property_kind_uuid is None, the citation titles of PropertyKind objects in the
-              model are compared with property_kind and if a match is found, that local property kind is used
+              model are compared with property_kind and if a match is found, that local property kind is used;
+              if no match is found, a new local property kind is created; the same logic is applied if the specified
+              property kind is abstract ('continuous', 'discrete', 'categorical') in which case the property title
+              is also used as the property kind title
            indexable_element (string, optional): if present, is used as the indexable element in the property node;
               if None, 'cells' are used for grid properties and 'nodes' for wellbore frame properties
            count (int, default 1): the number of values per indexable element; if greater than one then this axis
@@ -2528,6 +2534,8 @@ class PropertyCollection():
            between the properties and the supporting representation
         """
 
+        assert title, 'missing title when creating xml for property'
+
         #      log.debug('creating property node for ' + title)
         # currently assumes discrete properties to be 32 bit integers and continuous to be 64 bit reals
         # also assumes property_kind is one of the standard resqml property kinds; todo: allow local p kind node as optional arg
@@ -2547,6 +2555,9 @@ class PropertyCollection():
         #    uom are valid units for property_kind
         assert property_kind, 'missing property kind when creating xml for property'
 
+        if find_local_property_kinds and property_kind in ['continuous', 'discrete', 'categorical']:
+            property_kind = title
+
         pcga._get_property_type_details(self, discrete, string_lookup_uuid, points)
         p_node, p_uuid = pcxml._create_xml_get_p_node(self, p_uuid)
 
@@ -2556,8 +2567,8 @@ class PropertyCollection():
         pcxml._create_xml_realization_node(realization, p_node)
         related_time_series_node = pcxml._create_xml_time_series_node(self, time_series_uuid, time_index, p_node,
                                                                       support_uuid, support_type, support_root)
-        pcxml._create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind, uom, discrete,
-                                        property_kind_uuid)
+        property_kind_uuid = pcxml._create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind,
+                                                             uom, discrete, property_kind_uuid)
         pcxml._create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid,
                                      expand_const_arrays)
         pcxml._create_xml_facet_node(facet_type, facet, p_node)

@@ -1837,6 +1837,9 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
         the array is set True for the side of the curtain that contains cell [0, 0]
     """
     assert len(grid_extent_ji) == 2
+    assert j_faces.ndim == 2 and i_faces.ndim == 2
+    assert j_faces.shape == (grid_extent_ji[0] - 1, grid_extent_ji[1])
+    assert i_faces.shape == (grid_extent_ji[0], grid_extent_ji[1] - 1)
     a = np.zeros(grid_extent_ji, dtype = np.bool_)  # initialise to False
     c = np.zeros(grid_extent_ji, dtype = np.bool_)  # cells changing
     open_j = np.logical_not(j_faces)
@@ -1860,6 +1863,7 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
         a[:] = np.logical_or(a, c)
     if np.all(a):
         log.warning('curtain is leaky or misses grid when setting column bisector')
+    # log.debug(f'returning bisector with count: {np.count_nonzero(a)} of {a.size}; shape: {a.shape}')
     return a
 
 
@@ -1969,7 +1973,7 @@ def find_faces_to_represent_surface_regular_optimised(
     nk = 1 if is_curtain else grid.nk
     # K direction (xy projection)
     if nk > 1:
-        log.debug("searching for k faces")
+        # log.debug("searching for k faces")
         k_faces = np.zeros((nk - 1, grid.nj, grid.ni), dtype = bool)
         k_triangles = np.full((nk - 1, grid.nj, grid.ni), -1, dtype = int)
         k_depths = np.full((nk - 1, grid.nj, grid.ni), np.nan)
@@ -2003,7 +2007,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # J direction (xz projection)
     if grid.nj > 1:
-        log.debug("searching for j faces")
+        # log.debug("searching for j faces")
         j_faces = np.zeros((nk, grid.nj - 1, grid.ni), dtype = bool)
         j_triangles = np.full((nk, grid.nj - 1, grid.ni), -1, dtype = int)
         j_depths = np.full((nk, grid.nj - 1, grid.ni), np.nan)
@@ -2012,8 +2016,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
         # j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
         # j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
-        j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nk, grid_dxyz[0], grid_dxyz[2],
-                                                           p_xz[triangles])
+        j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
 
         axis = 1
         index1 = 0
@@ -2042,7 +2045,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # I direction (yz projection)
     if grid.ni > 1:
-        log.debug("searching for i faces")
+        # log.debug("searching for i faces")
         i_faces = np.zeros((nk, grid.nj, grid.ni - 1), dtype = bool)
         i_triangles = np.full((nk, grid.nj, grid.ni - 1), -1, dtype = int)
         i_depths = np.full((nk, grid.nj, grid.ni - 1), np.nan)
@@ -2051,12 +2054,13 @@ def find_faces_to_represent_surface_regular_optimised(
 
         # i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
         # i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
-        i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, grid.nk, grid_dxyz[1], grid_dxyz[2],
-                                                           p_yz[triangles])
+        # log.debug('calling points_in_triangles_aligned_optimised()')
+        i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
 
         axis = 0
         index1 = 0
         index2 = 1
+        # log.debug('calling intersect_numba()')
         i_faces, i_offsets, i_triangles =  \
             intersect_numba(axis, index1, index2, i_hits, grid.ni, points,
                             triangles, grid_dxyz, i_faces,
@@ -2065,6 +2069,7 @@ def find_faces_to_represent_surface_regular_optimised(
         del i_hits
         del p_yz
         if is_curtain and grid.nk > 1:  # expand arrays to all layers
+            # log.debug('expanding curtain faces')
             i_faces = np.repeat(i_faces, grid.nk, axis = 0)
             i_triangles = np.repeat(i_triangles, grid.nk, axis = 0)
             i_depths = np.repeat(i_depths, grid.nk, axis = 0)
@@ -2094,9 +2099,11 @@ def find_faces_to_represent_surface_regular_optimised(
         title = title,
         create_organizing_objects_where_needed = True,
     )
+    # log.debug('finished coversion to gcs')
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
+        # log.debug('preparing triangles array')
         k_tri_list = np.empty((0,)) if k_triangles is None else k_triangles[where_true(k_faces)]
         j_tri_list = np.empty((0,)) if j_triangles is None else j_triangles[where_true(j_faces)]
         i_tri_list = np.empty((0,)) if i_triangles is None else i_triangles[where_true(i_faces)]
@@ -2106,6 +2113,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
+        # log.debug('preparing depths array')
         k_depths_list = np.empty((0,)) if k_depths is None else k_depths[where_true(k_faces)]
         j_depths_list = np.empty((0,)) if j_depths is None else j_depths[where_true(j_faces)]
         i_depths_list = np.empty((0,)) if i_depths is None else i_depths[where_true(i_faces)]
@@ -2115,6 +2123,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
+        # log.debug('preparing offsets array')
         k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[where_true(k_faces)]
         j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[where_true(j_faces)]
         i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[where_true(i_faces)]
@@ -2123,6 +2132,7 @@ def find_faces_to_represent_surface_regular_optimised(
         assert all_offsets.shape == (gcs.count,)
 
     if return_flange_bool:
+        # log.debug('preparing flange array')
         flange_bool_uuid = surface.model.uuid(title = 'flange bool',
                                               obj_type = 'DiscreteProperty',
                                               related_uuid = surface.uuid)
@@ -2135,14 +2145,19 @@ def find_faces_to_represent_surface_regular_optimised(
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
         if is_curtain:
+            log.debug('preparing columns bisector')
             bisector = column_bisector_from_faces((grid.nj, grid.ni), j_faces[0], i_faces[0])
+            # log.debug('finished preparing columns bisector')
         else:
+            log.debug('preparing cells bisector')
             bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
     if progress_fn is not None:
         progress_fn(1.0)
+
+    log.debug(f'finishing find_faces_to_represent_surface_regular_optimised for {name}')
 
     # if returning properties, construct dictionary
     if return_properties:
@@ -2168,7 +2183,7 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
     log.debug('finding cell faces for surface')
     if mode == 'auto':
         if isinstance(grid, grr.RegularGrid) and grid.is_aligned:
-            mode = 'regular'
+            mode = 'regular_optimised'
         else:
             mode = 'staffa'
     if mode == 'staffa':
