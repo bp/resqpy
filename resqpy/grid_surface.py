@@ -1760,19 +1760,21 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
 
     # Setting up the bisector array for the bounding box.
     bounding_array = np.zeros((boundary["k_max"] - boundary["k_min"] + 1, boundary["j_max"] - boundary["j_min"] + 1,
-                  boundary["i_max"] - boundary["i_min"] + 1),
-                 dtype = np.bool_)
+                               boundary["i_max"] - boundary["i_min"] + 1),
+                              dtype = np.bool_)
 
     # Seeding the bisector array from (0, 0, 0) up to the first faces that represent the surface.
     boundary_values = tuple(boundary.values())
-    bounding_array, first_k, first_j, first_i = seed_array((0, 0, 0), k_faces, j_faces, i_faces, boundary_values, bounding_array)
+    bounding_array, first_k, first_j, first_i = seed_array((0, 0, 0), k_faces, j_faces, i_faces, boundary_values,
+                                                           bounding_array)
     points = set()
     for dimension, first_true in enumerate([first_k, first_j, first_i]):
         for dimension_value in range(1, first_true):
             point = [0, 0, 0]
             point[dimension] = dimension_value
             point = tuple(point)
-            bounding_array, first_k_sub, first_j_sub, first_i_sub = seed_array(point, k_faces, j_faces, i_faces, boundary_values, bounding_array)
+            bounding_array, first_k_sub, first_j_sub, first_i_sub = seed_array(point, k_faces, j_faces, i_faces,
+                                                                               boundary_values, bounding_array)
             for sub_dimension, first_true_sub in enumerate([first_k_sub, first_j_sub, first_i_sub]):
                 if dimension != sub_dimension:
                     for sub_dimension_value in range(1, first_true_sub):
@@ -1782,7 +1784,8 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
                         point = tuple(point)
                         if point not in points:
                             points.add(point)
-                            bounding_array, _, _, _ = seed_array(point, k_faces, j_faces, i_faces, boundary_values, bounding_array)
+                            bounding_array, _, _, _ = seed_array(point, k_faces, j_faces, i_faces, boundary_values,
+                                                                 bounding_array)
 
     # Setting up the array for the changing values.
     changing_array = np.zeros_like(bounding_array, dtype = np.bool_)
@@ -1799,15 +1802,20 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
 
         # k faces
         changing_array[1:, :, :] = np.logical_and(bounding_array[:-1, :, :], open_k)
-        changing_array[:-1, :, :] = np.logical_or(changing_array[:-1, :, :], np.logical_and(bounding_array[1:, :, :], open_k))
+        changing_array[:-1, :, :] = np.logical_or(changing_array[:-1, :, :],
+                                                  np.logical_and(bounding_array[1:, :, :], open_k))
 
         # j faces
-        changing_array[:, 1:, :] = np.logical_or(changing_array[:, 1:, :], np.logical_and(bounding_array[:, :-1, :], open_j))
-        changing_array[:, :-1, :] = np.logical_or(changing_array[:, :-1, :], np.logical_and(bounding_array[:, 1:, :], open_j))
+        changing_array[:, 1:, :] = np.logical_or(changing_array[:, 1:, :],
+                                                 np.logical_and(bounding_array[:, :-1, :], open_j))
+        changing_array[:, :-1, :] = np.logical_or(changing_array[:, :-1, :],
+                                                  np.logical_and(bounding_array[:, 1:, :], open_j))
 
         # i faces
-        changing_array[:, :, 1:] = np.logical_or(changing_array[:, :, 1:], np.logical_and(bounding_array[:, :, :-1], open_i))
-        changing_array[:, :, :-1] = np.logical_or(changing_array[:, :, :-1], np.logical_and(bounding_array[:, :, 1:], open_i))
+        changing_array[:, :, 1:] = np.logical_or(changing_array[:, :, 1:],
+                                                 np.logical_and(bounding_array[:, :, :-1], open_i))
+        changing_array[:, :, :-1] = np.logical_or(changing_array[:, :, :-1],
+                                                  np.logical_and(bounding_array[:, :, 1:], open_i))
 
         changing_array[:] = np.logical_and(changing_array, np.logical_not(bounding_array))
         if np.count_nonzero(changing_array) == 0:
@@ -1837,7 +1845,7 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
     true_count = np.count_nonzero(array)
     cell_count = array.size
     assert 0 < true_count < cell_count, 'Face set for surface is leaky or empty (surface does not intersect grid).'
-    
+
     # Negate the array if it minimises the mean k and determine if the surface is a curtain.
     layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
     array_k_sum = 0
@@ -1859,7 +1867,8 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
 
 
 @njit
-def seed_array(point: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, boundary: Tuple[int, int, int, int, int, int], array: np.ndarray) -> Tuple[np.ndarray, int, int, int]:
+def seed_array(point: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
+               boundary: Tuple[int, int, int, int, int, int], array: np.ndarray) -> Tuple[np.ndarray, int, int, int]:
     """Sets values of the array True up until a face is hit in each direction.
     
     Args:
