@@ -1731,8 +1731,9 @@ def get_boundary(  # type: ignore
     return boundary  # type: ignore
 
 
-def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
-                            i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:  # type: ignore
+def bisector_from_faces_new(  # type: ignore
+        grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
+        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
     Args:
@@ -1772,7 +1773,7 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
         for dimension_value in range(1, first_true):
             point = [0, 0, 0]
             point[dimension] = dimension_value
-            point = tuple(point)
+            point = tuple(point)  # type: ignore
             bounding_array, first_k_sub, first_j_sub, first_i_sub = seed_array(point, k_faces, j_faces, i_faces,
                                                                                boundary_values, bounding_array)
             for sub_dimension, first_true_sub in enumerate([first_k_sub, first_j_sub, first_i_sub]):
@@ -1781,7 +1782,7 @@ def bisector_from_faces_new(grid_extent_kji: Tuple[int, int, int], k_faces: np.n
                         point = [0, 0, 0]
                         point[dimension] = dimension_value
                         point[sub_dimension] = sub_dimension_value
-                        point = tuple(point)
+                        point = tuple(point)  # type: ignore
                         if point not in points:
                             points.add(point)
                             bounding_array, _, _, _ = seed_array(point, k_faces, j_faces, i_faces, boundary_values,
