@@ -2229,8 +2229,6 @@ def find_faces_to_represent_surface_regular_optimised(
         all_flange = np.take(flange_array, all_tris)
         assert all_flange.shape == (gcs.count,)
 
-    return k_faces, j_faces, i_faces
-
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
         if is_curtain:
