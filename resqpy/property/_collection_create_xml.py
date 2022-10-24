@@ -17,6 +17,7 @@ import resqpy.time_series as rts
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .property_common import supported_property_kind_list, guess_uom
 import resqpy.property._collection_get_attributes as pcga
+import resqpy.weights_and_measures as wam
 
 
 def _create_xml_add_as_part(collection, add_as_part, p_uuid, p_node, add_relationships, support_root,
@@ -150,7 +151,11 @@ def _create_xml_uom_node(collection, p_node, uom, property_kind, min_value, max_
         if not uom:
             uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
             log.warning(f'uom set to Euc for property {title} of kind {property_kind}')
-    collection.model.uom_node(p_node, uom)
+    if uom in wam.valid_uoms():
+        collection.model.uom_node(p_node, uom)
+    else:
+        collection.model.uom_node(p_node, 'Euc')
+        rqet.create_metadata_xml(p_node, {'uom': uom})
 
 
 def _create_xml_add_relationships(collection, p_node, support_root, property_kind_uuid, related_time_series_node,
