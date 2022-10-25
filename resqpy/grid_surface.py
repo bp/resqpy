@@ -1950,12 +1950,44 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
         is_curtain = True
     return a, is_curtain
 
-@cuda.jit
-def diffuse_closed_faces(a, k_faces, j_faces, i_faces, maxidz):
+# @cuda.jit
+# def diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis):
 
+#     tidx, tidy       = cuda.grid(2)
+#     stridex, stridey = cuda.gridsize(2)
+#     maxidx, maxidy, maxidz = a.shape[index1], a.shape[index2], a.shape[axis]
+#     indices = numba.cuda.local.array(3, numba.int32)
+#     for D1 in range(tidx, maxidx, stridex): # k vectorized
+#         for D2 in range(tidy, maxidy, stridey): # j vectorized
+#             for D3 in range(maxidz): # iterate along i in kj-planes
+#                 state = a[D1,D2,D3]
+#                 interior_top   = D1 > 0; interior_bottom = D1 < maxidx - 1
+#                 interior_left  = D2 > 0; interior_right  = D2 < maxidy - 1
+#                 interior_front = D3 > 0; interior_back   = D3 < maxidz - 1
+#                 if state:
+#                     # k-direction
+#                     if interior_top:
+#                         a[D1-1,D2,D3] = (not k_faces[D1-1,D2,D3])
+#                     if interior_bottom:
+#                         a[D1+1,D2,D3] = (not k_faces[D1,D2,D3])
+#                     # j-direction
+#                     if interior_left:
+#                         a[D1,D2-1,D3] = (not j_faces[D1,D2-1,D3])
+#                     if interior_right:
+#                         a[D1,D2+1,D3] = (not j_faces[D1,D2,D3])
+#                     # i-direction
+#                     if interior_front:
+#                         a[D1,D2,D3-1] = (not i_faces[D1,D2,D3-1])
+#                     if interior_back:
+#                         a[D1,D2,D3+1] = (not i_faces[D1,D2,D3])
+#                 cuda.syncthreads()
+#     return
+
+@cuda.jit
+def diffuse_closed_faces(a, k_faces, j_faces, i_faces):
     tidx, tidy       = cuda.grid(2)
     stridex, stridey = cuda.gridsize(2)
-    maxidx, maxidy   = a.shape[0], a.shape[1]
+    maxidx, maxidy, maxidz   = a.shape
     for D1 in range(tidx, maxidx, stridex): # k vectorized
         for D2 in range(tidy, maxidy, stridey): # j vectorized
             for D3 in range(maxidz): # iterate along i in kj-planes
@@ -2002,30 +2034,29 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    a = cupy.zeros(grid_extent_kji,dtype=bool)
-    a[0, 0, 0] = True
+    a_d = cupy.zeros(grid_extent_kji,dtype=bool)
+    a_d[0, 0, 0] = True
     blockSize = (16,16)
     gridSize =  (32,32)
     # gridSize  = ((a.shape[0] + blockSize[0] - 1) // blockSize[0], (a.shape[1] + blockSize[1] - 1) // blockSize[1])
-    len_in_i = 1
     iteration = 0
-    a_count = cupy.count_nonzero(a)
+    a_count = cupy.count_nonzero(a_d)
     a_count_before = a_count
     print(f'Beginning iterations - A-nonzero = {a_count}, trying to find bisectors in shape {grid_extent_kji}')
     while True:
-        len_in_i = min(len_in_i+1, grid_extent_kji[-1])
-        diffuse_closed_faces[gridSize,blockSize](a, k_faces, j_faces, i_faces, len_in_i)
-        a_count = cupy.count_nonzero(a)
+        diffuse_closed_faces[gridSize,blockSize](a_d, k_faces, j_faces, i_faces)
+        a_count = cupy.count_nonzero(a_d)
         if iteration % 10 == 0:
             print(f'Iteration {iteration} - A-nonzero = {a_count}')
         if a_count == a_count_before or iteration > 2000:
             break
         a_count_before = a_count
         iteration += 1
-    a_count =  cupy.count_nonzero(a)
+    a_count = cupy.count_nonzero(a_d)
+    a       = cupy.asnumpy(a_d)
     cell_count = a.size
     assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
-    a = cupy.asarray(a)
+    
     # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
     layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
     a_k_sum = 0
