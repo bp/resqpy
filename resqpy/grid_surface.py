@@ -1,10 +1,10 @@
-"""Functions relating to intsection of resqml grid with surface or trajectory objects."""
+"""Functions relating to intersection of resqml grid with surface or trajectory objects."""
 
 version = '30th July 2022'
 
 import logging
 from unicodedata import numeric
-from xml.etree.ElementTree import TreeBuilder
+from xml.etree.ElementTree import TreeBuilder 
 
 log = logging.getLogger(__name__)
 log.debug('grid_surface.py version ' + version)
@@ -1857,6 +1857,31 @@ def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArra
                         
     return
 
+# @cuda.jit
+# def check_surface_for_leaks(bisectors, faces, axis, index1, index2):
+
+#     # define thread-local arrays
+#     face_index_store     = numba.cuda.local.array(3, numba.int32)
+#     bisector_index_store = numba.cuda.local.array(3, numba.int32)
+#     # get thread's location in the plane
+#     D1,D2 = cuda.grid(2)
+#     # get depth of this axis
+#     NA    = faces.shape[axis]
+#     bisector_index_store[index1] = D1
+#     bisector_index_store[index2] = D2
+#     bisector_index_store[axis]   = 0
+#     # get starting state
+#     INOUT = bisectors[bisector_index_store[0],bisector_index_store[1],bisector_index_store[2]]
+#     for D1 in range(cuda.grid(2)[0], faces.shape[index1], cuda.gridsize(2)[0]): # vectorized
+#         for D2 in range(cuda.grid(2)[1], faces.shape[index2], cuda.gridsize(2)[1]): # vectorized
+#             for D3 in range(NA):
+#                 face_index_store[index1] = D1; bisector_index_store[index1] = D1
+#                 face_index_store[index2] = D2; bisector_index_store[index2] = D2
+#                 face_index_store[axis]   = D3; bisector_index_store[axis]   = D3+1
+#                 if faces[face_index_store[0],face_index_store[1],face_index_store[2]]:
+#                     INOUT = not INOUT # reverse sense
+#                 bisectors[bisector_index_store[0],bisector_index_store[1],bisector_index_store[2]] = INOUT
+#     return
 
 def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
                         i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
@@ -1925,6 +1950,38 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
         is_curtain = True
     return a, is_curtain
 
+@cuda.jit
+def diffuse_closed_faces(a, k_faces, j_faces, i_faces, maxidz):
+
+    tidx, tidy       = cuda.grid(2)
+    stridex, stridey = cuda.gridsize(2)
+    maxidx, maxidy   = a.shape[0], a.shape[1]
+    for D1 in range(tidx, maxidx, stridex): # k vectorized
+        for D2 in range(tidy, maxidy, stridey): # j vectorized
+            for D3 in range(maxidz): # iterate along i in kj-planes
+                state = a[D1,D2,D3]
+                interior_top   = D1 > 0; interior_bottom = D1 < maxidx - 1
+                interior_left  = D2 > 0; interior_right  = D2 < maxidy - 1
+                interior_front = D3 > 0; interior_back   = D3 < maxidz - 1
+                if state:
+                    # k-direction
+                    if interior_top:
+                        a[D1-1,D2,D3] = (not k_faces[D1-1,D2,D3])
+                    if interior_bottom:
+                        a[D1+1,D2,D3] = (not k_faces[D1,D2,D3])
+                    # j-direction
+                    if interior_left:
+                        a[D1,D2-1,D3] = (not j_faces[D1,D2-1,D3])
+                    if interior_right:
+                        a[D1,D2+1,D3] = (not j_faces[D1,D2,D3])
+                    # i-direction
+                    if interior_front:
+                        a[D1,D2,D3-1] = (not i_faces[D1,D2,D3-1])
+                    if interior_back:
+                        a[D1,D2,D3+1] = (not i_faces[D1,D2,D3])
+                cuda.syncthreads()
+    return
+
 def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
                         i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
@@ -1945,52 +2002,48 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    # a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
-    # c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
-    a = cupy.zeros(grid_extent_kji, dtype = bool)  # initialise to False
-    c = cupy.zeros(grid_extent_kji, dtype = bool)  # cells changing
-    open_k = cupy.logical_not(k_faces)
-    open_j = cupy.logical_not(j_faces)
-    open_i = cupy.logical_not(i_faces)
-    # set one or more seeds; todo: more seeds to improve performance if needed
+    a = cupy.zeros(grid_extent_kji,dtype=bool)
     a[0, 0, 0] = True
-    # repeatedly spread True values to neighbouring cells that are not the other side of a face
-    # todo: check that following works when a dimension has extent 1
-    while True:
-        c[:] = False
-        # k faces
-        c[1:, :, :] = cupy.logical_and(a[:-1, :, :], open_k)
-        c[:-1, :, :] = cupy.logical_or(c[:-1, :, :], cupy.logical_and(a[1:, :, :], open_k))
-        # j faces
-        c[:, 1:, :] = cupy.logical_or(c[:, 1:, :], cupy.logical_and(a[:, :-1, :], open_j))
-        c[:, :-1, :] = cupy.logical_or(c[:, :-1, :], cupy.logical_and(a[:, 1:, :], open_j))
-        # i faces
-        c[:, :, 1:] = cupy.logical_or(c[:, :, 1:], cupy.logical_and(a[:, :, :-1], open_i))
-        c[:, :, :-1] = cupy.logical_or(c[:, :, :-1], cupy.logical_and(a[:, :, 1:], open_i))
-        c[:] = cupy.logical_and(c, cupy.logical_not(a))
-        if cupy.count_nonzero(c) == 0:
-            break
-        a[:] = cupy.logical_or(a, c)
+    blockSize = (16,16)
+    gridSize =  (32,32)
+    # gridSize  = ((a.shape[0] + blockSize[0] - 1) // blockSize[0], (a.shape[1] + blockSize[1] - 1) // blockSize[1])
+    len_in_i = 1
+    iteration = 0
     a_count = cupy.count_nonzero(a)
+    a_count_before = a_count
+    print(f'Beginning iterations - A-nonzero = {a_count}, trying to find bisectors in shape {grid_extent_kji}')
+    while True:
+        len_in_i = min(len_in_i+1, grid_extent_kji[-1])
+        diffuse_closed_faces[gridSize,blockSize](a, k_faces, j_faces, i_faces, len_in_i)
+        a_count = cupy.count_nonzero(a)
+        if iteration % 10 == 0:
+            print(f'Iteration {iteration} - A-nonzero = {a_count}')
+        if a_count == a_count_before or iteration > 2000:
+            break
+        a_count_before = a_count
+        iteration += 1
+    a_count =  cupy.count_nonzero(a)
     cell_count = a.size
     assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
+    a = cupy.asarray(a)
     # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
     layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
     a_k_sum = 0
     not_a_k_sum = 0
     for k in range(grid_extent_kji[0]):
-        a_layer_count = cupy.count_nonzero(a[k])
+        a_layer_count = np.count_nonzero(a[k])
         a_k_sum += (k + 1) * a_layer_count
         not_a_k_sum += (k + 1) * (layer_cell_count - a_layer_count)
     a_mean_k = float(a_k_sum) / float(a_count)
     not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
     is_curtain = False
     if a_mean_k > not_a_mean_k:
-        a[:] = cupy.logical_not(a)
+        a[:] = np.logical_not(a)
     elif abs(a_mean_k - not_a_mean_k) <= 0.01:
         # log.warning('unable to determine which side of surface is shallower')
         is_curtain = True
-    return cupy.asnumpy(a), is_curtain
+
+    return a, is_curtain
 
 def print_timings(timings):
     
