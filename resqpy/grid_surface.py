@@ -1927,32 +1927,6 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     return a, is_curtain
 
 @cuda.jit
-def check_surface_for_leaks(bisectors, faces, axis, index1, index2):
-
-    # define thread-local arrays
-    face_index_store     = numba.cuda.local.array(3, numba.int32)
-    bisector_index_store = numba.cuda.local.array(3, numba.int32)
-    # get thread's location in the plane
-    D1,D2 = cuda.grid(2)
-    # get depth of this axis
-    NA    = faces.shape[axis]
-    bisector_index_store[index1] = D1
-    bisector_index_store[index2] = D2
-    bisector_index_store[axis]   = 0
-    # get starting state
-    INOUT = bisectors[bisector_index_store[0],bisector_index_store[1],bisector_index_store[2]]
-    for D1 in range(cuda.grid(2)[0], faces.shape[index1], cuda.gridsize(2)[0]): # vectorized
-        for D2 in range(cuda.grid(2)[1], faces.shape[index2], cuda.gridsize(2)[1]): # vectorized
-            for D3 in range(NA):
-                face_index_store[index1] = D1; bisector_index_store[index1] = D1
-                face_index_store[index2] = D2; bisector_index_store[index2] = D2
-                face_index_store[axis]   = D3; bisector_index_store[axis]   = D3+1
-                if faces[face_index_store[0],face_index_store[1],face_index_store[2]]:
-                    INOUT = not INOUT # reverse sense
-                bisectors[bisector_index_store[0],bisector_index_store[1],bisector_index_store[2]] = INOUT
-    return
-
-@cuda.jit
 def diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis, start, stop, inc):
 
     tidx, tidy = cuda.grid(2)
@@ -2005,19 +1979,12 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
     a_count = cupy.count_nonzero(a)
     a_count_before = a_count
 
-    # gridSize_k  = ((grid_extent_kji[1] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
-    # gridSize_j  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
-    # gridSize_i  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1], (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1])
+    gridSize_k  = ((grid_extent_kji[1] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
+    gridSize_j  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
+    gridSize_i  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1], (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1])
 
-    gridSize_k = gridSize_j = gridSize_i = (16,16)
-    print(f'Trying to find bisectors in shape {grid_extent_kji} using:')
-    print(f'K: gridSize={gridSize_k} and blockSize={blockSize}')
-    print(f'J: gridSize={gridSize_j} and blockSize={blockSize}')
-    print(f'I: gridSize={gridSize_i} and blockSize={blockSize}')   
-
-    iteration = 0
     while True:
-        # forward sweeps                                                                  |
+        # forward sweeps
         diffuse_closed_faces[gridSize_k,blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, 0, grid_extent_kji[0], 1)  # k-direction
         diffuse_closed_faces[gridSize_j,blockSize](a, k_faces, j_faces, i_faces, 0, 2, 1, 0, grid_extent_kji[1], 1)  # j-direction 
         diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, 0, grid_extent_kji[2], 1)  # i-direction
@@ -2027,13 +1994,10 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, grid_extent_kji[2]-1, -1, -1)  # i-direction
 
         a_count = cupy.count_nonzero(a)
-        # if iteration % 10 == 0:
-        print(f'Iteration {iteration} - A-nonzero = {a_count}')
         if a_count == a_count_before:
             break
 
         a_count_before = a_count
-        iteration += 1
 
     a_count = cupy.count_nonzero(a)
     a       = cupy.asnumpy(a[1:-1,1:-1,1:-1])
@@ -2704,7 +2668,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
+        t1 = time.perf_counter()
         bisector, is_curtain = bisector_from_faces_cuda(tuple(grid.extent_kji), k_faces_d, j_faces_d, i_faces_d)
+        t2 = time.perf_counter()
+        print(f'bisector_from_faces_cuda completed in {t2-t1:,.3f}')
         del k_faces_d, j_faces_d, i_faces_d
 
     if progress_fn is not None:
