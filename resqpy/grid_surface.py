@@ -35,6 +35,8 @@ import resqpy.surface as rqs
 import resqpy.well as rqw
 from resqpy.property import Property
 
+import matplotlib.pyplot as plt
+
 compiler_lock = threading.Lock() # Numba compiler is not threadsafe
 
 class GridSkin:
@@ -1955,35 +1957,24 @@ def diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis, sta
 
     tidx, tidy = cuda.grid(2)
     stridex, stridey = cuda.gridsize(2)
-    maxidx, maxidy, maxidz = a.shape[index1], a.shape[index2], a.shape[axis]
+    maxidx, maxidy   = a.shape[index1]-2, a.shape[index2]-2
     indices = numba.cuda.local.array(3, numba.int32)
     for D1 in range(tidx, maxidx, stridex): # k vectorized
         for D2 in range(tidy, maxidy, stridey): # j vectorized
-            indices[index1] = D1
-            indices[index2] = D2
+            indices[index1] = D1 + 1
+            indices[index2] = D2 + 1
             for D3 in range(start, stop, inc): # iterate along i in kj-planes
-                indices[axis] = D3
+                indices[axis] = D3 + 1
                 i,j,k = indices[:]
-                state = a[i,j,k]
-                interior_top   = i > 0; interior_bottom = i < maxidx - 1
-                interior_left  = j > 0; interior_right  = j < maxidy - 1
-                interior_front = k > 0; interior_back   = k < maxidz - 1
-                if state:
-                    # k-direction
-                    if interior_top:
-                        a[i-1,j,k] = (not k_faces[i-1,j,k])
-                    if interior_bottom:
-                        a[i+1,j,k] = (not k_faces[i,j,k])
-                    # j-direction
-                    if interior_left:
-                        a[i,j-1,k] = (not j_faces[i,j-1,k])
-                    if interior_right:
-                        a[i,j+1,k] = (not j_faces[i,j,k])
-                    # i-direction
-                    if interior_front:
-                        a[i,j,k-1] = (not i_faces[i,j,k-1])
-                    if interior_back:
-                        a[i,j,k+1] = (not i_faces[i,j,k])
+                iF,jF,kF = i-1,j-1,k-1 # faces arrays aren't padded
+                fault_above  = k_faces[iF-1,jF,kF]; fault_below = k_faces[iF,jF,kF]
+                fault_left   = j_faces[iF,jF-1,kF]; fault_right = j_faces[iF,jF,kF]
+                fault_behind = i_faces[iF,jF,kF-1]; fault_back  = i_faces[iF,jF,kF]
+                cuda.syncthreads()
+                a[i,j,k] = (a[i-1,j,k] and (not fault_above))  or (a[i+1,j,k] and (not fault_below)) \
+                        or (a[i,j-1,k] and (not fault_left))   or (a[i,j+1,k] and (not fault_right)) \
+                        or (a[i,j,k-1] and (not fault_behind)) or (a[i,j,k+1] and (not fault_back)) \
+                        or a[i,j,k] # already closed
                 cuda.syncthreads()
     return
 
@@ -2007,42 +1998,45 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    a = cupy.zeros(grid_extent_kji,dtype=bool)
-    a[0, 0, 0] = True
-    blockSize = (28,28)
+    padded_extent_kji = (grid_extent_kji[0]+2, grid_extent_kji[1]+2, grid_extent_kji[2]+2)
+    a = cupy.zeros(padded_extent_kji,dtype=bool)
+    a[1, 1, 1] = True
+    blockSize = (16,16)
     a_count = cupy.count_nonzero(a)
     a_count_before = a_count
 
-    gridSize_k  = ((a.shape[1] + blockSize[0] - 1) // blockSize[0], (a.shape[2] + blockSize[1] - 1) // blockSize[1])
-    gridSize_j  = ((a.shape[0] + blockSize[0] - 1) // blockSize[0], (a.shape[2] + blockSize[1] - 1) // blockSize[1])
-    gridSize_i  = ((a.shape[0] + blockSize[0] - 1) // blockSize[1], (a.shape[1] + blockSize[1] - 1) // blockSize[1])
+    # gridSize_k  = ((grid_extent_kji[1] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
+    # gridSize_j  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
+    # gridSize_i  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1], (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1])
 
+    gridSize_k = gridSize_j = gridSize_i = (16,16)
     print(f'Trying to find bisectors in shape {grid_extent_kji} using:')
-    print(f'I: gridSize={gridSize_i} and blockSize={blockSize}')
-    print(f'J: gridSize={gridSize_j} and blockSize={blockSize}')
     print(f'K: gridSize={gridSize_k} and blockSize={blockSize}')
+    print(f'J: gridSize={gridSize_j} and blockSize={blockSize}')
+    print(f'I: gridSize={gridSize_i} and blockSize={blockSize}')   
 
     iteration = 0
     while True:
-        # k-direction                                                                  |
-        diffuse_closed_faces[gridSize_k,blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, 0, grid_extent_kji[0], 1)
-        diffuse_closed_faces[gridSize_k,blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, grid_extent_kji[0]-1, -1 ,-1)
-        # j-direction                                                                  |
-        diffuse_closed_faces[gridSize_j,blockSize](a, k_faces, j_faces, i_faces, 0, 2, 1, 0, grid_extent_kji[1], 1)
-        diffuse_closed_faces[gridSize_j,blockSize](a, k_faces, j_faces, i_faces, 0, 2, 1, grid_extent_kji[1]-1, -1, -1)
-        # i-direction                                                                  |
-        diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, 0, grid_extent_kji[2], 1)
-        diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, grid_extent_kji[2]-1, -1, -1)
+        # forward sweeps                                                                  |
+        diffuse_closed_faces[gridSize_k,blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, 0, grid_extent_kji[0], 1)  # k-direction
+        diffuse_closed_faces[gridSize_j,blockSize](a, k_faces, j_faces, i_faces, 0, 2, 1, 0, grid_extent_kji[1], 1)  # j-direction 
+        diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, 0, grid_extent_kji[2], 1)  # i-direction
+        # reverse sweeps
+        diffuse_closed_faces[gridSize_k,blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, grid_extent_kji[0]-1, -1 ,-1)  # k-direction
+        diffuse_closed_faces[gridSize_j,blockSize](a, k_faces, j_faces, i_faces, 0, 2, 1, grid_extent_kji[1]-1, -1, -1)  # j-direction
+        diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, grid_extent_kji[2]-1, -1, -1)  # i-direction
 
         a_count = cupy.count_nonzero(a)
-        if iteration % 10 == 0:
-            print(f'Iteration {iteration} - A-nonzero = {a_count}')
+        # if iteration % 10 == 0:
+        print(f'Iteration {iteration} - A-nonzero = {a_count}')
         if a_count == a_count_before:
             break
+
         a_count_before = a_count
         iteration += 1
+
     a_count = cupy.count_nonzero(a)
-    a       = cupy.asnumpy(a)
+    a       = cupy.asnumpy(a[1:-1,1:-1,1:-1])
     cell_count = a.size
     assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
     
