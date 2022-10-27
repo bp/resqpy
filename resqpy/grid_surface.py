@@ -1649,16 +1649,6 @@ def norm_d(v : DeviceNDArray, n : DeviceNDArray):
     n[0] = math.sqrt(n[0])
     return
 
-# project_polygons_to_surfaces_signature = 'void(bool[:,:,:],float32[:,:,:],\
-#                                                int, int, int,\
-#                                                int, int,\
-#                                                int, int, int,\
-#                                                float32, float32, float32,\
-#                                                float32, float32,\
-#                                                bool, float32[:,:,:,:],\
-#                                                bool, float32[:,:,:],\
-#                                                bool, float32[:,:,:],\
-#                                                bool, int32[:,:,:])'
 @cuda.jit
 def project_polygons_to_surfaces(faces : DeviceNDArray, triangles : DeviceNDArray,
                                  axis : int, index1 : int, index2 : int,
@@ -1975,14 +1965,15 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
     padded_extent_kji = (grid_extent_kji[0]+2, grid_extent_kji[1]+2, grid_extent_kji[2]+2)
     a = cupy.zeros(padded_extent_kji,dtype=bool)
     a[1, 1, 1] = True
-    blockSize = (16,16)
-    a_count = cupy.count_nonzero(a)
-    a_count_before = a_count
 
+    a_count = a_count_before = 0
+    blockSize = (16,16)
     gridSize_k  = ((grid_extent_kji[1] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
     gridSize_j  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[0], (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
     gridSize_i  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1], (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1])
 
+    iteration = 0
+    t1 = time.perf_counter()
     while True:
         # forward sweeps
         diffuse_closed_faces[gridSize_k,blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, 0, grid_extent_kji[0], 1)  # k-direction
@@ -1994,13 +1985,14 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, grid_extent_kji[2]-1, -1, -1)  # i-direction
 
         a_count = cupy.count_nonzero(a)
+        t2 = time.perf_counter(); print(f'\tIteration {iteration} - non-zero = {a_count}, completed in {t2 - t1:,.2f}s'); t1 = t2
+
         if a_count == a_count_before:
             break
-
         a_count_before = a_count
+        iteration += 1
 
-    a_count = cupy.count_nonzero(a)
-    a       = cupy.asnumpy(a[1:-1,1:-1,1:-1])
+    a = cupy.asnumpy(a[1:-1,1:-1,1:-1])
     cell_count = a.size
     assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
     
