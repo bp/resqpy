@@ -65,6 +65,8 @@ def _create_xml_get_basics(collection, discrete, points, const_value, facet_type
 
 def _create_xml_property_kind(collection, p_node, find_local_property_kinds, property_kind, uom, discrete,
                               property_kind_uuid):
+    if property_kind == 'permeability rock':
+        property_kind = 'rock permeability'
     p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
     p_kind_node.text = rqet.null_xml_text
     if find_local_property_kinds and property_kind not in supported_property_kind_list:
@@ -82,6 +84,7 @@ def _create_xml_property_kind(collection, p_node, find_local_property_kinds, pro
                                          property_kind_uuid,
                                          content_type = 'obj_PropertyKind',
                                          root = p_kind_node)
+    return property_kind_uuid
 
 
 def _create_xml_patch_node(collection, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid,
@@ -107,7 +110,7 @@ def _create_xml_patch_node(collection, p_node, points, const_value, indexable_el
 
 def _create_xml_property_min_max(collection, property_array, const_value, discrete, add_min_max, p_node, min_value,
                                  max_value, categorical, null_value):
-    if add_min_max:
+    if add_min_max and not categorical:
         # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
         min_value, max_value = pcga._get_property_array_min_max_value(collection, property_array, const_value, discrete,
                                                                       min_value, max_value, categorical, null_value)

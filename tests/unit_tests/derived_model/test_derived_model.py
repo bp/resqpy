@@ -63,7 +63,7 @@ def test_add_zone_by_layer_property(tmp_path):
     # create a basic block grid
     grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'In The Zone', set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     grid_uuid = grid.uuid
 
     model.store_epc()
@@ -168,7 +168,7 @@ def test_single_layer_grid(tmp_path):
                            set_points_cached = True,
                            as_irregular_grid = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     grid_uuid = grid.uuid
     model.store_epc()
 
@@ -211,7 +211,7 @@ def test_extract_box_for_well(tmp_path):
                            set_points_cached = True,
                            as_irregular_grid = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True)
+    grid.create_xml(write_geometry = True, use_lattice = False)
     grid_uuid = grid.uuid
     model.store_epc()
 
@@ -352,7 +352,7 @@ def test_add_grid_points_property(tmp_path):
                            title = 'the grid',
                            set_points_cached = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    grid.create_xml(write_geometry = True, add_cell_length_properties = False, use_lattice = False)
     grid_uuid = grid.uuid
 
     # store grid
@@ -449,7 +449,7 @@ def test_add_one_blocked_well_property(example_model_with_well):
                            set_points_cached = True,
                            as_irregular_grid = True)
     grid.write_hdf5()
-    grid.create_xml(write_geometry = True, add_cell_length_properties = False)
+    grid.create_xml(add_cell_length_properties = False)
     # create a blocked well
     bw = rqw.BlockedWell(model, grid = grid, trajectory = traj)
     bw.write_hdf5()
@@ -829,7 +829,7 @@ def test_add_faults(tmp_path):
         model = rq.new_model(epc)
         grid = grr.RegularGrid(model, extent_kji = (1, 3, 3), set_points_cached = True)
         grid.write_hdf5()
-        grid.create_xml(write_geometry = True)
+        grid.create_xml(write_geometry = True, use_lattice = False)
         crs = rqc.Crs(model, uuid = grid.crs_uuid)
         model.store_epc()
 

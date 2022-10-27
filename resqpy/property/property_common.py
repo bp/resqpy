@@ -24,10 +24,10 @@ import resqpy.weights_and_measures as bwam
 # see property_kind_and_facet_from_keyword() for simulator keyword to property kind and facet mapping
 
 supported_property_kind_list = [
-    'code', 'index', 'depth', 'rock volume', 'pore volume', 'volume', 'thickness', 'length', 'cell length',
-    'net to gross ratio', 'porosity', 'permeability thickness', 'permeability length', 'permeability rock',
-    'rock permeability', 'fluid volume', 'transmissibility', 'pressure', 'saturation', 'solution gas-oil ratio',
-    'vapor oil-gas ratio', 'property multiplier', 'thermodynamic temperature', 'continuous', 'discrete', 'categorical'
+    'continuous', 'discrete', 'categorical', 'code', 'index', 'depth', 'rock volume', 'pore volume', 'volume',
+    'thickness', 'length', 'cell length', 'area', 'net to gross ratio', 'porosity', 'permeability thickness',
+    'permeability length', 'permeability rock', 'rock permeability', 'fluid volume', 'transmissibility', 'pressure',
+    'saturation', 'solution gas-oil ratio', 'vapor oil-gas ratio', 'property multiplier', 'thermodynamic temperature'
 ]
 
 supported_local_property_kind_list = [
@@ -176,6 +176,9 @@ def property_kind_and_facet_from_keyword(keyword):
         property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
     elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
         property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
+        if lk[0] == 'i':
+            facet_type = 'what'
+            facet = lk[1:].lower()
     return property_kind, facet_type, facet
 
 
@@ -518,7 +521,8 @@ def selective_version_of_collection(
         categorical = None,
         title = None,
         title_mode = None,
-        related_uuid = None):
+        related_uuid = None,
+        const_value = None):
     """Returns a new PropertyCollection with those parts which match all arguments that are not None.
 
     arguments:
@@ -534,6 +538,7 @@ def selective_version_of_collection(
 
     for each of these arguments: if None, then all members of collection pass this filter;
     if not None then only those members with the given value pass this filter;
+    special values: '*' any non-None value passes; 'none' only None passes
     finally, the filters for all the attributes must be passed for a given member
     to be included in the returned collection; title is a synonym for the citation_title argument;
     related_uuid will pass if a soft relationship exists
@@ -576,7 +581,8 @@ def selective_version_of_collection(
                                                          uom = uom,
                                                          string_lookup_uuid = string_lookup_uuid,
                                                          categorical = categorical,
-                                                         related_uuid = related_uuid)
+                                                         related_uuid = related_uuid,
+                                                         const_value = const_value)
     return view
 
 
@@ -735,3 +741,11 @@ def write_hdf5_and_create_xml_for_active_property(model,
                                                  realization = realization,
                                                  find_local_property_kind = True)
     return active.uuid
+
+
+def check_and_warn_property_kind(pk, activity):
+    """Check property kind and warn if one of three main abstract kinds."""
+    if pk in ['continuous', 'discrete', 'categorical']:
+        warnings.warn(
+            f"abstract property kind '{pk}', whilst {activity}, will be or have been replaced by local property kind")
+        # raise ValueError

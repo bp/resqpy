@@ -41,15 +41,13 @@ def load_nexus_fault_mult_table(file_name):
 
         return False
 
-    names = []
-    grids = []
-    faces = []
     dfs = []
 
     num_tables = 0
     ISTABLE = False
     ISRECORD = False
-    grid = name = face = None
+    name = face = None
+    grid = 'ROOT'  ## nexus default grid
 
     face_dict = {'TX': 'I', 'TY': 'J', 'TZ': 'K', 'TI': 'I', 'TJ': 'J', 'TK': 'K'}
 
@@ -80,9 +78,9 @@ def load_nexus_fault_mult_table(file_name):
                                 for column in df.columns:
                                     df[column] = pd.to_numeric(df[column], errors = 'ignore')
                                 df.columns = ['i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult']
-                                grids.append(grid)
-                                names.append(name)
-                                faces.append(face)
+                                df['grid'] = grid
+                                df['name'] = name
+                                df['face'] = face
                                 dfs.append(df)
                                 num_tables += 1
 
@@ -130,10 +128,9 @@ def load_nexus_fault_mult_table(file_name):
                         for column in df.columns:
                             df[column] = pd.to_numeric(df[column], errors = 'ignore')
                         df.columns = ['i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult']
-
-                        grids.append(grid)
-                        names.append(name)
-                        faces.append(face)
+                        df['grid'] = grid
+                        df['name'] = name
+                        df['face'] = face
                         dfs.append(df)
                         num_tables += 1
 
@@ -141,22 +138,7 @@ def load_nexus_fault_mult_table(file_name):
                         ISRECORD = False
                         chunks = []
 
-    data = {
-        'grid': grids,
-        'name': names,
-        'face': faces,
-        'i1': [],
-        'i2': [],
-        'j1': [],
-        'j2': [],
-        'k1': [],
-        'k2': [],
-        'mult': []
-    }
-    for df in dfs:
-        for col in df.columns:
-            data[col].extend(df[col])
-    fault_df = pd.DataFrame(data)
+    fault_df = pd.concat(dfs).reset_index(drop = True)
 
     convert_dict = {'i1': int, 'i2': int, 'j1': int, 'j2': int, 'k1': int, 'k2': int, 'mult': float}
     fault_df = fault_df.astype(convert_dict)

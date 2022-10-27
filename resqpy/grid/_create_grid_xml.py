@@ -8,6 +8,7 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
+# these booleans control expansion of constant arrays
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
 
@@ -18,7 +19,8 @@ def _create_grid_xml(grid,
                      add_as_part = True,
                      add_relationships = True,
                      write_active = True,
-                     write_geometry = True):
+                     write_geometry = True,
+                     use_lattice = False):
     """Function that returns an xml representation containing grid information"""
 
     if grid.grid_representation and not write_geometry:
@@ -184,7 +186,7 @@ def _create_grid_xml(grid,
         # todo: handle omit and cell overlap functionality as part of parent window refining or coarsening
 
     if write_geometry:
-        __add_geometry_xml(ext_uuid, grid, ijk)
+        __add_geometry_xml(ext_uuid, grid, ijk, use_lattice)
 
     if add_as_part:
         __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry)
@@ -230,7 +232,7 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
                                                       grid.model.root_for_uuid(grid.parent_grid_uuid), 'sourceObject')
 
 
-def __add_geometry_xml(ext_uuid, grid, ijk):
+def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice):
     geom = rqet.SubElement(ijk, ns['resqml2'] + 'Geometry')
     geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'IjkGridGeometry')
     geom.text = '\n'
@@ -248,6 +250,32 @@ def __add_geometry_xml(ext_uuid, grid, ijk):
     p_shape = rqet.SubElement(geom, ns['resqml2'] + 'PillarShape')
     p_shape.set(ns['xsi'] + 'type', ns['resqml2'] + 'PillarShape')
     p_shape.text = grid.pillar_shape
+
+    if use_lattice:
+        grid._add_geom_points_xml(geom, ext_uuid)  # usually calls _add_pillar_points_xml(), below
+    else:
+        _add_pillar_points_xml(grid, geom, ext_uuid)
+
+    if grid.time_index is not None:
+
+        assert grid.time_series_uuid is not None
+
+        ti_node = rqet.SubElement(geom, ns['resqml2'] + 'TimeIndex')
+        ti_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'TimeIndex')
+        ti_node.text = '\n'
+
+        index_node = rqet.SubElement(ti_node, ns['resqml2'] + 'Index')
+        index_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
+        index_node.text = str(grid.time_index)
+
+        grid.model.create_ref_node('TimeSeries',
+                                   grid.model.title(uuid = grid.time_series_uuid),
+                                   grid.time_series_uuid,
+                                   content_type = 'obj_TimeSeries',
+                                   root = ti_node)
+
+
+def _add_pillar_points_xml(grid, geom, ext_uuid):
     points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
     points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
     points_node.text = '\n'
@@ -255,6 +283,7 @@ def __add_geometry_xml(ext_uuid, grid, ijk):
     coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
     coords.text = '\n'
     grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'Points', root = coords)
+
     if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(cache_array = True):
 
         pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
@@ -269,17 +298,8 @@ def __add_geometry_xml(ext_uuid, grid, ijk):
 
     else:
 
-        pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
-        pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
-        pillar_def.text = '\n'
+        _add_constant_pillar_geometry_is_defined(geom, grid.extent_kji)
 
-        pd_value = rqet.SubElement(pillar_def, ns['resqml2'] + 'Value')
-        pd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-        pd_value.text = 'true'
-
-        pd_count = rqet.SubElement(pillar_def, ns['resqml2'] + 'Count')
-        pd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-        pd_count.text = str((grid.extent_kji[1] + 1) * (grid.extent_kji[2] + 1))
     if always_write_cell_geometry_is_defined_array or not grid.geometry_defined_for_all_cells(cache_array = True):
 
         cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
@@ -294,18 +314,10 @@ def __add_geometry_xml(ext_uuid, grid, ijk):
 
     else:
 
-        cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
-        cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
-        cell_def.text = '\n'
+        _add_constant_cell_geometry_is_defined(geom, grid.extent_kji)
 
-        cd_value = rqet.SubElement(cell_def, ns['resqml2'] + 'Value')
-        cd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-        cd_value.text = 'true'
-
-        cd_count = rqet.SubElement(cell_def, ns['resqml2'] + 'Count')
-        cd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-        cd_count.text = str(grid.nk * grid.nj * grid.ni)
     if grid.has_split_coordinate_lines:
+
         scl = rqet.SubElement(geom, ns['resqml2'] + 'SplitCoordinateLines')
         scl.set(ns['xsi'] + 'type', ns['resqml2'] + 'ColumnLayerSplitCoordinateLines')
         scl.text = '\n'
@@ -365,19 +377,33 @@ def __add_geometry_xml(ext_uuid, grid, ijk):
                                            grid.uuid,
                                            'ColumnsPerSplitCoordinateLine/cumulativeLength',
                                            root = cl_values)
-    if grid.time_index is not None:
-        assert grid.time_series_uuid is not None
 
-        ti_node = rqet.SubElement(geom, ns['resqml2'] + 'TimeIndex')
-        ti_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'TimeIndex')
-        ti_node.text = '\n'
 
-        index_node = rqet.SubElement(ti_node, ns['resqml2'] + 'Index')
-        index_node.set(ns['xsi'] + 'type', ns['xsd'] + 'nonNegativeInteger')
-        index_node.text = str(grid.time_index)
+def _add_constant_pillar_geometry_is_defined(geom, extent_kji):
 
-        grid.model.create_ref_node('TimeSeries',
-                                   grid.model.title(uuid = grid.time_series_uuid),
-                                   grid.time_series_uuid,
-                                   content_type = 'obj_TimeSeries',
-                                   root = ti_node)
+    pillar_def = rqet.SubElement(geom, ns['resqml2'] + 'PillarGeometryIsDefined')
+    pillar_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
+    pillar_def.text = '\n'
+
+    pd_value = rqet.SubElement(pillar_def, ns['resqml2'] + 'Value')
+    pd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+    pd_value.text = 'true'
+
+    pd_count = rqet.SubElement(pillar_def, ns['resqml2'] + 'Count')
+    pd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+    pd_count.text = str((extent_kji[1] + 1) * (extent_kji[2] + 1))
+
+
+def _add_constant_cell_geometry_is_defined(geom, extent_kji):
+
+    cell_def = rqet.SubElement(geom, ns['resqml2'] + 'CellGeometryIsDefined')
+    cell_def.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
+    cell_def.text = '\n'
+
+    cd_value = rqet.SubElement(cell_def, ns['resqml2'] + 'Value')
+    cd_value.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
+    cd_value.text = 'true'
+
+    cd_count = rqet.SubElement(cell_def, ns['resqml2'] + 'Count')
+    cd_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+    cd_count.text = str(extent_kji[0] * extent_kji[1] * extent_kji[2])

@@ -70,7 +70,8 @@ class HorizonInterpretation(BaseResqpy):
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
         if self.genetic_boundary_feature is not None:
-            if not self.genetic_boundary_feature.is_equivalent(other.genetic_boundary_feature):
+            if not self.genetic_boundary_feature.is_equivalent(other.genetic_boundary_feature,
+                                                               check_extra_metadata = check_extra_metadata):
                 return False
         elif other.genetic_boundary_feature is not None:
             return False

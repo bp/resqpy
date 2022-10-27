@@ -95,9 +95,9 @@ class Polyline(_BasePolyline):
 
         self.title = rqet.citation_title_for_node(poly_root)
 
-        self.extra_metadata = rqet.load_metadata_from_xml(self.root)
+        self.extra_metadata = rqet.load_metadata_from_xml(poly_root)
 
-        self.isclosed = rqet.bool_from_text(rqet.node_text(rqet.find_tag(poly_root, 'IsClosed')))
+        self.isclosed = rqet.find_tag_bool(poly_root, 'IsClosed')
         assert self.isclosed is not None  # Required field
 
         patch_node = rqet.find_tag(poly_root, 'NodePatch')
@@ -130,7 +130,7 @@ class Polyline(_BasePolyline):
         """Returns a scaled version of the original polyline.
 
         arguments:
-           original (Polyline): the polyline from which the new polyline will be sporned
+           original (Polyline): the polyline from which the new polyline will be spawned
            scaling (float): the factor by which the original will be scaled
            title (str, optional): the citation title for the new polyline; inherited from
               original if None
@@ -160,6 +160,57 @@ class Polyline(_BasePolyline):
 
         o_centre = original.balanced_centre()
         polyline.coordinates = scaling * (original.coordinates - o_centre) + o_centre
+        polyline.nodepatch = (0, len(polyline.coordinates))
+
+        return polyline
+
+    @classmethod
+    def from_trimmed_polyline(cls,
+                              original,
+                              start_seg,
+                              end_seg,
+                              start_xyz = None,
+                              end_xyz = None,
+                              title = None,
+                              originator = None,
+                              extra_metadata = None):
+        """Returns a trimmed version of the original polyline.
+
+        arguments:
+           original (Polyline): the polyline from which the new polyline will be spawned
+           start_seg (int): the index of the first segment in original to be kept
+           end_seg (int): the index of the last segment in original to be kept
+           start_xyz (triple float, optional): the new start point; if None, start of start_seg is used
+           end_xyz (triple float, optional): the new end point; if None, end of end_seg is used
+           title (str, optional): the citation title for the new polyline; inherited from
+              original if None
+           originator (str, optional): the name of the person creating the polyline; inherited
+              from original if None
+           extra_metadata (dict, optional): extra metadata for the new polyline; inherited from
+              original if None
+
+        returns:
+           a new Polyline
+        """
+
+        assert 0 <= start_seg <= end_seg
+        assert end_seg < len(original.coordinates) - 1
+
+        if extra_metadata is None:
+            extra_metadata = original.extra_metadata
+
+        polyline = cls(original.model,
+                       set_crs = original.crs_uuid,
+                       set_bool = False,
+                       title = title if title else original.title,
+                       originator = originator if originator else original.originator,
+                       extra_metadata = extra_metadata)
+
+        polyline.coordinates = original.coordinates[start_seg:end_seg + 2].copy()
+        if start_xyz is not None:
+            polyline.coordinates[0, :len(start_xyz)] = start_xyz
+        if end_xyz is not None:
+            polyline.coordinates[-1, :len(end_xyz)] = end_xyz
         polyline.nodepatch = (0, len(polyline.coordinates))
 
         return polyline
@@ -390,7 +441,11 @@ class Polyline(_BasePolyline):
         returns:
            segment number & x, y of first intersection of (half) bounded line x,y 1 to 2 with polyline,
            or None, None, None if no intersection found
+
+        note:
+           'first' primariliy refers to the ordering of segments in this polyline
         """
+
         seg_count = len(self.coordinates) - 1
         if self.isclosed:
             seg_count += 1
@@ -458,6 +513,37 @@ class Polyline(_BasePolyline):
         if segment == len(self.coordinates) - 1:
             segment = -1
         return meet.point_snapped_to_line_segment_2d(p, self.coordinates[segment], self.coordinates[segment + 1])
+
+    def xy_crossings(self, other):
+        """Returns list of (x, y) pairs of crossing points with other polyline, in xy plane."""
+
+        seg_count = len(self.coordinates) - 1
+        if self.isclosed:
+            seg_count += 1
+        other_seg_count = len(other.coordinates) - 1
+        if other.isclosed:
+            other_seg_count += 1
+
+        crossings = []
+        for i in range(seg_count):
+            ip = (i + 1) % len(self.coordinates)
+            for j in range(other_seg_count):
+                jp = (j + 1) % len(other.coordinates)
+                x, y = meet.line_line_intersect(self.coordinates[i, 0],
+                                                self.coordinates[i, 1],
+                                                self.coordinates[ip, 0],
+                                                self.coordinates[ip, 1],
+                                                other.coordinates[j, 0],
+                                                other.coordinates[j, 1],
+                                                other.coordinates[jp, 0],
+                                                other.coordinates[jp, 1],
+                                                line_segment = True,
+                                                half_segment = False)
+                if x is not None and (not crossings or
+                                      not (maths.isclose(x, crossings[-1][0]) and maths.isclose(y, crossings[-1][1]))):
+                    crossings.append((x, y))
+
+        return crossings
 
     def normalised_xy(self, x, y, mode = 'square'):
         """Returns a normalised x',y' pair (in range 0..1) being point x,y under mapping from convex polygon.

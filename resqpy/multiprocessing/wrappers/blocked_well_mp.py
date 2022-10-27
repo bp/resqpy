@@ -1,4 +1,4 @@
-"""Multiprocessing wrapper functions for the surface/Mesh class."""
+"""Multiprocessing wrapper functions for the well/BlockedWell class."""
 
 import logging
 
@@ -6,22 +6,23 @@ log = logging.getLogger(__name__)
 
 from typing import Tuple, Union, List
 from resqpy.model import new_model, Model
-from resqpy.grid import RegularGrid
-from resqpy.surface import Mesh
+from resqpy.grid import any_grid
+from resqpy.well import BlockedWell, Trajectory
 from resqpy.multiprocessing import function_multiprocessing
 from pathlib import Path
 from uuid import UUID
 import uuid
 
 
-def mesh_from_regular_grid_column_property_wrapper(
+def blocked_well_from_trajectory_wrapper(
     index: int,
     parent_tmp_dir: str,
     grid_epc: str,
     grid_uuid: Union[UUID, str],
-    prop_uuids: List[Union[UUID, str]],
+    trajectory_epc: str,
+    trajectory_uuids: List[Union[UUID, str]],
 ) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
-    """Wrapper function of the Mesh from_regular_grid_column_property method.
+    """Wrapper function of the BlockedWell initialisation from a Trajectory.
 
     Used for multiprocessing to create a new model that is saved in a temporary epc file
     and returns the required values, which are used in the multiprocessing function to
@@ -31,15 +32,16 @@ def mesh_from_regular_grid_column_property_wrapper(
         index (int): the index of the function call from the multiprocessing function.
         parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
         grid_epc (str): epc file path where the grid is saved.
-        grid_uuid (UUID/str): UUID (universally unique identifier) of the regular grid object.
-        prop_uuids (List[UUID/str]): a list of the property uuids used to create each Mesh
-            and their relationship.
+        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
+        trajectory_epc (str): epc file path where the trajectories are saved.
+        trajectory_uuids (List[UUID/str]): a list of the trajectory uuids used to create each
+            Trajectory object.
 
     Returns:
         Tuple containing:
 
             - index (int): the index passed to the function.
-            - success (bool): True if all the Mesh objects could be created, False
+            - success (bool): True if all the BlockedWell objects could be created, False
               otherwise.
             - epc_file (str): the epc file path where the objects are stored.
             - uuid_list (List[UUID/str]): list of UUIDs of relevant objects.
@@ -50,52 +52,55 @@ def mesh_from_regular_grid_column_property_wrapper(
     epc_file = str(tmp_dir / "wrapper.epc")
     model = new_model(epc_file = epc_file, quiet = True)
 
-    g_model = Model(grid_epc, quiet = True)
-    g_crs_uuid = g_model.uuid(obj_type = "LocalDepth3dCrs",
-                              related_uuid = grid_uuid)  # todo: check this relationship exists
+    trajectory_model = Model(trajectory_epc, quiet = True)
+    grid_model = Model(grid_epc)
+    model.copy_uuid_from_other_model(grid_model, uuid = grid_uuid)
 
-    if g_crs_uuid is not None:
-        model.copy_uuid_from_other_model(g_model, g_crs_uuid)
-        uuid_list.append(g_crs_uuid)
-    model.copy_uuid_from_other_model(g_model, uuid = grid_uuid)
-
-    for prop_uuid in prop_uuids:
-        model.copy_uuid_from_other_model(g_model, uuid = prop_uuid)
-
-    grid = RegularGrid(parent_model = model, uuid = grid_uuid)
+    grid = any_grid(grid_model, uuid = grid_uuid)
 
     success = True
-    for prop_uuid in prop_uuids:
-        mesh = Mesh.from_regular_grid_column_property(model, grid.uuid, prop_uuid)
-        if mesh is None:
+    for trajectory_uuid in trajectory_uuids:
+        model.copy_uuid_from_other_model(trajectory_model, uuid = trajectory_uuid)
+        trajectory = Trajectory(
+            model,
+            trajectory_uuid,
+        )
+
+        blocked_well = BlockedWell(
+            model,
+            grid = grid,
+            trajectory = trajectory,
+        )
+        if blocked_well is None or blocked_well.cell_count is None or blocked_well.node_count is None:
             success = False
             continue
-        mesh.write_hdf5()
-        mesh.create_xml()
-        uuid_list.append(mesh.uuid)
-        model.create_reciprocal_relationship_uuids(mesh.uuid, "sourceObject", prop_uuid, "detinationObject")
+        blocked_well.write_hdf5()
+        blocked_well.create_xml()
+        uuid_list.append(blocked_well.uuid)
 
     model.store_epc(quiet = True)
 
     return index, success, epc_file, uuid_list
 
 
-def mesh_from_regular_grid_column_property_batch(
+def blocked_well_from_trajectory_batch(
     grid_epc: str,
     grid_uuid: Union[UUID, str],
-    prop_uuids: List[Union[UUID, str]],
+    trajectory_epc: str,
+    trajectory_uuids: List[Union[UUID, str]],
     recombined_epc: str,
     cluster,
     n_workers: int,
     require_success: bool = False,
 ) -> List[bool]:
-    """Creates Mesh objects from a list of property uuids in parallel.
+    """Creates BlockedWell objects from a common grid and a list of trajectories uuids in parallel.
 
     Args:
         grid_epc (str): epc file path where the grid is saved.
         grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
-        prop_uuids (List[UUID/str]): a list of the column property uuids used to create each Mesh
-            and their relationship.
+        trajectory_epc (str): epc file path where the trajectories are saved.
+        trajectory_uuids (List[UUID/str]): a list of the trajectory uuids used to create each
+            Trajectory object.
         recombined_epc (Path/str): A pathlib Path or path string of
             where the combined epc will be saved.
         cluster (LocalCluster/JobQueueCluster): a LocalCluster is a Dask cluster on a
@@ -106,20 +111,27 @@ def mesh_from_regular_grid_column_property_batch(
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
+
+    Note:
+        the returned success list contains one value per batch, set True if all blocked wells
+        were successfully created in the batch, False if one or more failed in the batch
     """
-    n_uuids = len(prop_uuids)
-    prop_uuids_list = [prop_uuids[i * n_uuids // n_workers:(i + 1) * n_uuids // n_workers] for i in range(n_workers)]
+    n_uuids = len(trajectory_uuids)
+    trajectory_uuids_list = [
+        trajectory_uuids[i * n_uuids // n_workers:(i + 1) * n_uuids // n_workers] for i in range(n_workers)
+    ]
 
     kwargs_list = []
-    for prop_uuids in prop_uuids_list:
+    for trajectory_uuids in trajectory_uuids_list:
         d = {
             "grid_epc": grid_epc,
             "grid_uuid": grid_uuid,
-            "prop_uuids": prop_uuids,
+            "trajectory_epc": trajectory_epc,
+            "trajectory_uuids": trajectory_uuids,
         }
         kwargs_list.append(d)
 
-    success_list = function_multiprocessing(mesh_from_regular_grid_column_property_wrapper,
+    success_list = function_multiprocessing(blocked_well_from_trajectory_wrapper,
                                             kwargs_list,
                                             recombined_epc,
                                             cluster,

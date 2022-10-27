@@ -1,7 +1,5 @@
 """Transmissibility functions for grids."""
 
-version = '14th October 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging

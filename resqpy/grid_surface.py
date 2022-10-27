@@ -17,7 +17,7 @@ import numba  # type: ignore
 from numba import njit, cuda
 from numba.cuda.cudadrv.devicearray import DeviceNDArray
 import cupy
-from typing import Tuple
+from typing import Tuple, Optional, Dict
 import warnings
 import math
 from pprint import pprint
@@ -1527,12 +1527,11 @@ def where_true(data: np.ndarray):
     return np.where(data)
 
 
-@njit(parallel = True)
+@njit
 def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axis: int, points: np.ndarray,
-                    triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, return_normal_vectors: bool,
-                    normals: np.ndarray, return_depths: bool, depths: np.ndarray, return_offsets: bool,
-                    offsets: np.ndarray, return_triangles: bool,
-                    triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                    triangles: np.ndarray, grid_dxyz: Tuple[float], faces: np.ndarray, return_depths: bool,
+                    depths: np.ndarray, return_offsets: bool, offsets: np.ndarray, return_triangles: bool,
+                    triangle_per_face: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Finds the faces that intersect the surface in 3D.
 
     Args:
@@ -1546,9 +1545,6 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
         triangles (np.ndarray): array of all the points indices creating each triangle.
         grid_dxyz (Tuple[float]): tuple of a cell's thickness in each axis.
         faces (np.ndarray): boolean array of each cell face that can represent the surface.
-        return_normal_vectors (bool): if True, an array of normal vectors is calculated.
-        normals (np.ndarray): array of normal vectors to the surface at the centre of its
-            corresponding cell face.
         return_depths (bool): if True, an array of the depths is populated.
         depths (np.ndarray): array of the z values of the
             intersection point of the inter-cell centre vector with a triangle in the surface.
@@ -1561,8 +1557,6 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
         Tuple containing:
 
         - faces (np.ndarray): boolean array of each cell face that can represent the surface.
-        - normals (np.ndarray): array of normal vectors to the surface at the centre of its
-            corresponding cell face.
         - offsets (np.ndarray): array of the distance between the centre of the cell face and the
             intersection point of the inter-cell centre vector with a triangle in the surface.
         - triangle_per_face (np.ndarray): array of triangle numbers
@@ -1572,7 +1566,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
 
         tri, d1, d2 = hits[i]
         # Line start point in 3D which had a projection hit.
-        centre_point_start = np.zeros(3, dtype = numba.float64) + grid_dxyz[axis] / 2
+        centre_point_start = np.zeros(3, dtype = np.float64) + grid_dxyz[axis] / 2
         centre_point_start[2 - index1] = (d1 + 0.5) * grid_dxyz[2 - index1]
         centre_point_start[2 - index2] = (d2 + 0.5) * grid_dxyz[2 - index2]
 
@@ -1609,16 +1603,10 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
             depths[face_idx[0], face_idx[1], face_idx[2]] = xyz[2]
         if return_offsets:
             offsets[face_idx[0], face_idx[1], face_idx[2]] = xyz[axis] - ((face + 1) * grid_dxyz[axis])
-        if return_normal_vectors:
-            normals[face_idx[0], face_idx[1], face_idx[2]] = -vec.triangle_normal_vector_numba(points[triangles[tri]])
-            normal_idx = np.zeros(3, dtype = np.int32)
-            normal_idx[index2] = d2
-            if normals[normal_idx[0], normal_idx[1], normal_idx[2], 2] > 0.0:
-                normals[face_idx[0], face_idx[1], face_idx[2]] = -normals[face_idx[0], face_idx[1], face_idx[2]]
         if return_triangles:
             triangle_per_face[face_idx[0], face_idx[1], face_idx[2]] = tri
 
-    return faces, normals, offsets, triangle_per_face
+    return faces, offsets, triangle_per_face
 
 # cuda device wrappers for numpy functions
 @cuda.jit(device=True)
@@ -1871,8 +1859,8 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     assert len(grid_extent_kji) == 3
     # a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
     # c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
-    a = np.zeros(grid_extent_kji, dtype = bool)  # initialise to False
-    c = np.zeros(grid_extent_kji, dtype = bool)  # cells changing
+    a = np.zeros(grid_extent_kji, dtype = np.bool_)  # initialise to False
+    c = np.zeros(grid_extent_kji, dtype = np.bool_)  # cells changing
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
@@ -1880,7 +1868,8 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     a[0, 0, 0] = True
     # repeatedly spread True values to neighbouring cells that are not the other side of a face
     # todo: check that following works when a dimension has extent 1
-    while True:
+    limit = grid_extent_kji[0] * grid_extent_kji[1] * grid_extent_kji[2]
+    for _ in range(limit):
         c[:] = False
         # k faces
         c[1:, :, :] = np.logical_and(a[:-1, :, :], open_k)
@@ -2043,6 +2032,303 @@ def print_timings(timings):
         print("="*total_width)
         return
     
+@njit
+def first_true(array: np.ndarray) -> Optional[int]:  # type: ignore
+    """Returns the index + 1 of the first True value in the array."""
+    for idx, val in np.ndenumerate(array):
+        if val:
+            return idx[0] + 1
+    return array.size
+
+
+def get_boundary(  # type: ignore
+        k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, grid_extent_kji: Tuple[int, int,
+                                                                                              int]) -> Dict[str, int]:
+    """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
+    
+    Args:
+        k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension.
+        j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension.
+        i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension.
+        grid_extent_kji (Tuple[int, int, int]): the shape of the grid.
+
+    Returns:
+        boundary (Dict[str, int]): a dictionary of the indices that bound the surface.
+    """
+    boundary = {
+        "k_min": None,
+        "k_max": None,
+        "j_min": None,
+        "j_max": None,
+        "i_min": None,
+        "i_max": None,
+    }
+
+    indices = ['k', 'j', 'i']
+    values = [0, 1, 2]
+    for i, faces in enumerate([k_faces, j_faces, i_faces]):
+        true_values = list(where_true(faces))
+        val = values.copy()
+        del val[i]
+
+        index_1 = indices[val[0]]
+        index_2 = indices[val[1]]
+        true_values_dim1 = true_values[val[0]]
+        true_values_dim2 = true_values[val[1]]
+
+        if true_values_dim1.size > 0 and true_values_dim2.size > 0:
+            for index, dim in zip([index_1, index_2], [true_values_dim1, true_values_dim2]):  # type: ignore
+                if boundary[f"{index}_min"] is None:
+                    boundary[f"{index}_min"] = min(dim)
+                elif min(dim) < boundary[f"{index}_min"]:
+                    boundary[f"{index}_min"] = min(dim)
+                if boundary[f"{index}_max"] is None:
+                    boundary[f"{index}_max"] = max(dim)
+                elif max(dim) > boundary[f"{index}_max"]:
+                    boundary[f"{index}_max"] = max(dim)
+
+    for i, index in enumerate(indices):
+        if boundary[f"{index}_min"] != 0:
+            boundary[f"{index}_min"] -= 1  # type: ignore
+        if boundary[f"{index}_max"] != grid_extent_kji[i] - 1:
+            boundary[f"{index}_max"] += 1  # type: ignore
+
+    return boundary  # type: ignore
+
+
+def bisector_from_faces_new(  # type: ignore
+        grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
+        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+    """Creates a boolean array denoting the bisection of the grid by the face sets.
+
+    Args:
+        grid_extent_kji (Tuple[int, int, int]): the shape of the grid.
+        k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension.
+        j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension.
+        i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension.
+
+    Returns:
+        Tuple containing:
+
+        - array (np.ndarray): boolean bisectors array where values are True for cells on the side
+            of the surface that has a lower mean k index on average and False for cells on the other side.
+        - is_curtain (bool): True if the surface is a curtain (vertical), otherwise False.
+
+    Notes:
+        The face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid).
+        Any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+        assigned to either the True or False part.
+    """
+    assert len(grid_extent_kji) == 3
+
+    # Finding the surface boundary.
+    boundary = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
+
+    # Setting up the bisector array for the bounding box.
+    bounding_array = np.zeros((boundary["k_max"] - boundary["k_min"] + 1, boundary["j_max"] - boundary["j_min"] + 1,
+                               boundary["i_max"] - boundary["i_min"] + 1),
+                              dtype = np.bool_)
+
+    # Seeding the bisector array from (0, 0, 0) up to the first faces that represent the surface.
+    boundary_values = tuple(boundary.values())
+    bounding_array, first_k, first_j, first_i = seed_array((0, 0, 0), k_faces, j_faces, i_faces, boundary_values,
+                                                           bounding_array)
+    points = set()
+    for dimension, first_true in enumerate([first_k, first_j, first_i]):
+        for dimension_value in range(1, first_true):
+            point = [0, 0, 0]
+            point[dimension] = dimension_value
+            point = tuple(point)  # type: ignore
+            bounding_array, first_k_sub, first_j_sub, first_i_sub = seed_array(point, k_faces, j_faces, i_faces,
+                                                                               boundary_values, bounding_array)
+            for sub_dimension, first_true_sub in enumerate([first_k_sub, first_j_sub, first_i_sub]):
+                if dimension != sub_dimension:
+                    for sub_dimension_value in range(1, first_true_sub):
+                        point = [0, 0, 0]
+                        point[dimension] = dimension_value
+                        point[sub_dimension] = sub_dimension_value
+                        point = tuple(point)  # type: ignore
+                        if point not in points:
+                            points.add(point)
+                            bounding_array, _, _, _ = seed_array(point, k_faces, j_faces, i_faces, boundary_values,
+                                                                 bounding_array)
+
+    # Setting up the array for the changing values.
+    changing_array = np.zeros_like(bounding_array, dtype = np.bool_)
+
+    # Repeatedly spreading True values to neighbouring cells that are not the other side of a face.
+    open_k = np.logical_not(k_faces)[boundary["k_min"]:boundary["k_max"], boundary["j_min"]:boundary["j_max"] + 1,
+                                     boundary["i_min"]:boundary["i_max"] + 1]
+    open_j = np.logical_not(j_faces)[boundary["k_min"]:boundary["k_max"] + 1, boundary["j_min"]:boundary["j_max"],
+                                     boundary["i_min"]:boundary["i_max"] + 1]
+    open_i = np.logical_not(i_faces)[boundary["k_min"]:boundary["k_max"] + 1, boundary["j_min"]:boundary["j_max"] + 1,
+                                     boundary["i_min"]:boundary["i_max"]]
+    while True:
+        changing_array[:] = False
+
+        # k faces
+        changing_array[1:, :, :] = np.logical_and(bounding_array[:-1, :, :], open_k)
+        changing_array[:-1, :, :] = np.logical_or(changing_array[:-1, :, :],
+                                                  np.logical_and(bounding_array[1:, :, :], open_k))
+
+        # j faces
+        changing_array[:, 1:, :] = np.logical_or(changing_array[:, 1:, :],
+                                                 np.logical_and(bounding_array[:, :-1, :], open_j))
+        changing_array[:, :-1, :] = np.logical_or(changing_array[:, :-1, :],
+                                                  np.logical_and(bounding_array[:, 1:, :], open_j))
+
+        # i faces
+        changing_array[:, :, 1:] = np.logical_or(changing_array[:, :, 1:],
+                                                 np.logical_and(bounding_array[:, :, :-1], open_i))
+        changing_array[:, :, :-1] = np.logical_or(changing_array[:, :, :-1],
+                                                  np.logical_and(bounding_array[:, :, 1:], open_i))
+
+        changing_array[:] = np.logical_and(changing_array, np.logical_not(bounding_array))
+        if np.count_nonzero(changing_array) == 0:
+            break
+        bounding_array = np.logical_or(bounding_array, changing_array)
+
+    # Setting up the full bisectors array and assigning the bounding box values.
+    array = np.zeros(grid_extent_kji, dtype = np.bool_)
+    array[boundary["k_min"]:boundary["k_max"] + 1, boundary["j_min"]:boundary["j_max"] + 1,
+          boundary["i_min"]:boundary["i_max"] + 1] = bounding_array
+
+    # Setting values outside of the bounding box.
+    if boundary["k_max"] != grid_extent_kji[0] - 1 and np.any(bounding_array[-1, :, :]):
+        array[boundary["k_max"] + 1:, :, :] = True
+    if boundary["k_min"] != 0:
+        array[:boundary["k_min"], :, :] = True
+    if boundary["j_max"] != grid_extent_kji[1] - 1 and np.any(bounding_array[:, -1, :]):
+        array[:, boundary["j_max"] + 1:, :] = True
+    if boundary["j_min"] != 0:
+        array[:, :boundary["j_min"], :] = True
+    if boundary["i_max"] != grid_extent_kji[2] - 1 and np.any(bounding_array[:, :, -1]):
+        array[:, :, boundary["i_max"] + 1:] = True
+    if boundary["i_min"] != 0:
+        array[:, :, :boundary["i_min"]] = True
+
+    # Check all array elements are not the same.
+    true_count = np.count_nonzero(array)
+    cell_count = array.size
+    assert 0 < true_count < cell_count, 'Face set for surface is leaky or empty (surface does not intersect grid).'
+
+    # Negate the array if it minimises the mean k and determine if the surface is a curtain.
+    layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
+    array_k_sum = 0
+    array_opposite_k_sum = 0
+    is_curtain = False
+    for k in range(grid_extent_kji[0]):
+        array_layer_count = np.count_nonzero(array[k])
+        array_k_sum += (k + 1) * array_layer_count
+        array_opposite_k_sum += (k + 1) * (layer_cell_count - array_layer_count)
+    array_mean_k = float(array_k_sum) / float(true_count)
+    array_opposite_mean_k = float(array_opposite_k_sum) / float(cell_count - true_count)
+    if array_mean_k > array_opposite_mean_k:
+        array[:] = np.logical_not(array)
+    elif abs(array_mean_k - array_opposite_mean_k) <= 0.01:
+        # log.warning('unable to determine which side of surface is shallower')
+        is_curtain = True
+
+    return array, is_curtain
+
+
+@njit
+def seed_array(point: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
+               boundary: Tuple[int, int, int, int, int, int], array: np.ndarray) -> Tuple[np.ndarray, int, int, int]:
+    """Sets values of the array True up until a face is hit in each direction.
+    
+    Args:
+        point (Tuple[int, int, int]): coordinates of the initial seed point.
+        k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension.
+        j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension.
+        i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension.
+        boundary (Tuple[int, int, int, int, int, int]): the boundaries of the surface given in the order
+            (minimum k, maximum k, minimum j, maximum j, minimum i, maximum i).
+        array (np.ndarray): boolean array that will be seeded.
+    
+    Returns:
+        Tuple containing:
+
+        - array (np.ndarray): boolean array that has been seeded.
+        - first_k (int): the index of the first k face in the k direction from the seed point or the
+            array size in the k direction if there are no k faces.
+        - first_j (int): the index of the first j face in the j direction from the seed point or the
+            array size in the j direction if there are no j faces.
+        - first_i (int): the index of the first i face in the i direction from the seed point or the
+            array size in the i direction if there are no i faces.
+    """
+    k = point[0]
+    j = point[1]
+    i = point[2]
+
+    first_k = 0
+    if k == 0:
+        first_k = first_true(k_faces[boundary[0]:boundary[1], boundary[2] + j, boundary[4] + i])
+        array[:first_k, j, i] = True
+
+    first_j = 0
+    if j == 0:
+        first_j = first_true(j_faces[boundary[0] + k, boundary[2]:boundary[3], boundary[4] + i])
+        array[k, :first_j, i] = True
+
+    first_i = 0
+    if i == 0:
+        first_i = first_true(i_faces[boundary[0] + k, boundary[2] + j, boundary[4]:boundary[5]])
+        array[k, j, :first_i] = True
+
+    return array, first_k, first_j, first_i
+
+
+def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndarray, i_faces: np.ndarray) -> np.ndarray:
+    """Returns a numpy bool array denoting the bisection of the top layer of the grid by the curtain face sets.
+
+    Args:
+        grid_extent_ji (pair of int): the shape of a layer of the grid
+        j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
+            bisecting surface, shaped for a single layer
+
+    Returns:
+        numpy bool array of shape grid_extent_ji, set True for cells on one side of the face sets;
+        set False for cells on othe side
+
+    Notes:
+        the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
+        any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+        assigned to the False part;
+        the resulting array is suitable for use as a grid property with indexable element of columns;
+        the array is set True for the side of the curtain that contains cell [0, 0]
+    """
+    assert len(grid_extent_ji) == 2
+    assert j_faces.ndim == 2 and i_faces.ndim == 2
+    assert j_faces.shape == (grid_extent_ji[0] - 1, grid_extent_ji[1])
+    assert i_faces.shape == (grid_extent_ji[0], grid_extent_ji[1] - 1)
+    a = np.zeros(grid_extent_ji, dtype = np.bool_)  # initialise to False
+    c = np.zeros(grid_extent_ji, dtype = np.bool_)  # cells changing
+    open_j = np.logical_not(j_faces)
+    open_i = np.logical_not(i_faces)
+    # set one or more seeds; todo: more seeds to improve performance if needed
+    a[0, 0] = True
+    # repeatedly spread True values to neighbouring cells that are not the other side of a face
+    # todo: check that following works when a dimension has extent 1
+    limit = grid_extent_ji[0] * grid_extent_ji[1]
+    for _ in range(limit):
+        c[:] = False
+        # j faces
+        c[1:, :] = np.logical_or(c[1:, :], np.logical_and(a[:-1, :], open_j))
+        c[:-1, :] = np.logical_or(c[:-1, :], np.logical_and(a[1:, :], open_j))
+        # i faces
+        c[:, 1:] = np.logical_or(c[:, 1:], np.logical_and(a[:, :-1], open_i))
+        c[:, :-1] = np.logical_or(c[:, :-1], np.logical_and(a[:, 1:], open_i))
+        c[:] = np.logical_and(c, np.logical_not(a))
+        if np.count_nonzero(c) == 0:  # no more changes
+            break
+        a[:] = np.logical_or(a, c)
+    if np.all(a):
+        log.warning('curtain is leaky or misses grid when setting column bisector')
+    # log.debug(f'returning bisector with count: {np.count_nonzero(a)} of {a.size}; shape: {a.shape}')
+    return a
+
+
 def find_faces_to_represent_surface_regular_optimised(
     grid,
     surface,
@@ -2051,6 +2337,7 @@ def find_faces_to_represent_surface_regular_optimised(
     centres = None,  # DEPRECATED; TODO: remove this argument
     agitate = False,
     feature_type = 'fault',
+    is_curtain = False,
     progress_fn = None,
     consistent_side = False,  # DEPRECATED; functionality no longer supported
     return_properties = None,
@@ -2068,17 +2355,18 @@ def find_faces_to_represent_surface_regular_optimised(
            offset, which can help if the surface has been built from a regular mesh with a periodic resonance
            with the grid
         feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
+        is_curtain (bool, default False): if True, only the top layer of the grid is processed and the bisector
+           property, if requested, is generated with indexable element columns
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool, default False): DEPRECATED; True will result in an assertion exception
         return_properties (List[str]): if present, a list of property arrays to calculate and
-           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset', 'normal vector',
+           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset',
            or 'grid bisector';
            triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
            the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
            offset is a measure of the distance between the centre of the cell face and the intersection point;
-           normal vector is a unit vector normal to the surface triangle; each array has an entry for each face
-           in the gcs; grid bisector is a grid cell boolean property holding True for the set of cells on one
+           grid bisector is a grid cell boolean property holding True for the set of cells on one
            side of the surface, deemed to be shallower;
            the returned dictionary has the passed strings as keys and numpy arrays as values.
 
@@ -2104,18 +2392,13 @@ def find_faces_to_represent_surface_regular_optimised(
     assert isinstance(grid, grr.RegularGrid)
     assert grid.is_aligned
     return_triangles = False
-    return_normal_vectors = False
     return_depths = False
     return_offsets = False
     return_bisector = False
     return_flange_bool = False
     if return_properties:
-        assert all([
-            p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector', 'flange bool']
-            for p in return_properties
-        ])
+        assert all([p in ['triangle', 'depth', 'offset', 'grid bisector', 'flange bool'] for p in return_properties])
         return_triangles = ('triangle' in return_properties)
-        return_normal_vectors = ('normal vector' in return_properties)
         return_depths = ('depth' in return_properties)
         return_offsets = ('offset' in return_properties)
         return_bisector = ('grid bisector' in return_properties)
@@ -2152,35 +2435,27 @@ def find_faces_to_represent_surface_regular_optimised(
         # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
         # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
 
+    nk = 1 if is_curtain else grid.nk
     # K direction (xy projection)
-    if grid.nk > 1:
-        log.debug("searching for k faces")
-        k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
-        k_triangles = np.full((grid.nk - 1, grid.nj, grid.ni), -1, dtype = int)
-        k_depths = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
-        k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan)
-        k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan)
-        p_xy = np.delete(points, 2, 1) # return array without z-axis
-        # Returns 2D (list-like) array containing all points in each triangle
-        k_hits = vec.points_in_triangles_aligned(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1], p_xy[triangles])
-        # [[[t1, yi, xi],
-        #   [t1, yi, xi],
-        #   [t1, yi, xi]],
-        #   
-        #  [[t2, yi, xi],
-        #   [t2, yi, xi],
-        #   [t2, yi, xi]],
-        #       ...
-        #  [[tn, yi, xi],
-        #   [tn, yi, xi],
-        #   [tn, yi, xi]],
+    if nk > 1:
+        # log.debug("searching for k faces")
+        k_faces = np.zeros((nk - 1, grid.nj, grid.ni), dtype = bool)
+        k_triangles = np.full((nk - 1, grid.nj, grid.ni), -1, dtype = int)
+        k_depths = np.full((nk - 1, grid.nj, grid.ni), np.nan)
+        k_offsets = np.full((nk - 1, grid.nj, grid.ni), np.nan)
+        p_xy = np.delete(points, 2, 1)
+
+        # k_hits = vec.points_in_polygons(k_centres, p_xy[triangles], grid.ni)
+        # k_hits = vec.points_in_triangles_njit(k_centres, p_xy[triangles], grid.ni)
+        k_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1],
+                                                           p_xy[triangles])
+
         axis = 2
         index1 = 1
         index2 = 2
-        k_faces, k_normals, k_offsets, k_triangles =  \
-            intersect_numba(axis, index1, index2, k_hits, grid.nk, points,
+        k_faces, k_offsets, k_triangles =  \
+            intersect_numba(axis, index1, index2, k_hits, nk, points,
                             triangles, grid_dxyz, k_faces,
-                            return_normal_vectors, k_normals,
                             return_depths, k_depths,
                             return_offsets, k_offsets, return_triangles, k_triangles)
         del k_hits
@@ -2191,79 +2466,85 @@ def find_faces_to_represent_surface_regular_optimised(
         k_triangles = None
         k_depths = None
         k_offsets = None
-        k_normals = None
 
     if progress_fn is not None:
         progress_fn(0.3)
 
     # J direction (xz projection)
     if grid.nj > 1:
-        log.debug("searching for j faces")
-        j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
-        j_triangles = np.full((grid.nk, grid.nj - 1, grid.ni), -1, dtype = int)
-        j_depths = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
-        j_offsets = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan)
-        j_normals = (np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan))
+        # log.debug("searching for j faces")
+        j_faces = np.zeros((nk, grid.nj - 1, grid.ni), dtype = bool)
+        j_triangles = np.full((nk, grid.nj - 1, grid.ni), -1, dtype = int)
+        j_depths = np.full((nk, grid.nj - 1, grid.ni), np.nan)
+        j_offsets = np.full((nk, grid.nj - 1, grid.ni), np.nan)
         p_xz = np.delete(points, 1, 1)
 
         # j_hits = vec.points_in_polygons(j_centres, p_xz[triangles], grid.ni)
         # j_hits = vec.points_in_triangles_njit(j_centres, p_xz[triangles], grid.ni)
-        j_hits = vec.points_in_triangles_aligned(grid.ni, grid.nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
+        j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
+
         axis = 1
         index1 = 0
         index2 = 2
-        j_faces, j_normals, j_offsets, j_triangles =  \
+        j_faces, j_offsets, j_triangles =  \
             intersect_numba(axis, index1, index2, j_hits, grid.nj, points,
                             triangles, grid_dxyz, j_faces,
-                            return_normal_vectors, j_normals,
                             return_depths, j_depths,
                             return_offsets, j_offsets, return_triangles, j_triangles)
         del j_hits
         del p_xz
-        # log.debug(f"j face count: {np.count_nonzero(j_faces)}")
-        print(f"j face count: {np.count_nonzero(j_faces)}")
+        if is_curtain and grid.nk > 1:  # expand arrays to all layers
+            j_faces = np.repeat(j_faces, grid.nk, axis = 0)
+            j_triangles = np.repeat(j_triangles, grid.nk, axis = 0)
+            j_depths = np.repeat(j_depths, grid.nk, axis = 0)
+            j_offsets = np.repeat(j_offsets, grid.nk, axis = 0)
+        log.debug(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
         j_triangles = None
         j_depths = None
         j_offsets = None
-        j_normals = None
 
     if progress_fn is not None:
         progress_fn(0.6)
 
     # I direction (yz projection)
     if grid.ni > 1:
-        log.debug("searching for i faces")
-        i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
-        i_triangles = np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = int)
-        i_depths = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
-        i_offsets = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan)
-        i_normals = (np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan))
+        # log.debug("searching for i faces")
+        i_faces = np.zeros((nk, grid.nj, grid.ni - 1), dtype = bool)
+        i_triangles = np.full((nk, grid.nj, grid.ni - 1), -1, dtype = int)
+        i_depths = np.full((nk, grid.nj, grid.ni - 1), np.nan)
+        i_offsets = np.full((nk, grid.nj, grid.ni - 1), np.nan)
         p_yz = np.delete(points, 0, 1)
 
         # i_hits = vec.points_in_polygons(i_centres, p_yz[triangles], grid.nj)
         # i_hits = vec.points_in_triangles_njit(i_centres, p_yz[triangles], grid.nj)
-        i_hits = vec.points_in_triangles_aligned(grid.nj, grid.nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
+        # log.debug('calling points_in_triangles_aligned_optimised()')
+        i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
+
         axis = 0
         index1 = 0
         index2 = 1
-        i_faces, i_normals, i_offsets, i_triangles =  \
+        # log.debug('calling intersect_numba()')
+        i_faces, i_offsets, i_triangles =  \
             intersect_numba(axis, index1, index2, i_hits, grid.ni, points,
                             triangles, grid_dxyz, i_faces,
-                            return_normal_vectors, i_normals,
                             return_depths, i_depths,
                             return_offsets, i_offsets, return_triangles, i_triangles)
         del i_hits
         del p_yz
-        # log.debug(f"i face count: {np.count_nonzero(i_faces)}")
-        print(f"i face count: {np.count_nonzero(i_faces)}")
+        if is_curtain and grid.nk > 1:  # expand arrays to all layers
+            # log.debug('expanding curtain faces')
+            i_faces = np.repeat(i_faces, grid.nk, axis = 0)
+            i_triangles = np.repeat(i_triangles, grid.nk, axis = 0)
+            i_depths = np.repeat(i_depths, grid.nk, axis = 0)
+            i_offsets = np.repeat(i_offsets, grid.nk, axis = 0)
+        log.debug(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
         i_triangles = None
         i_depths = None
         i_offsets = None
-        i_normals = None
 
     if progress_fn is not None:
         progress_fn(0.9)
@@ -2283,9 +2564,11 @@ def find_faces_to_represent_surface_regular_optimised(
         title = title,
         create_organizing_objects_where_needed = True,
     )
+    # log.debug('finished coversion to gcs')
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
+        # log.debug('preparing triangles array')
         k_tri_list = np.empty((0,)) if k_triangles is None else k_triangles[where_true(k_faces)]
         j_tri_list = np.empty((0,)) if j_triangles is None else j_triangles[where_true(j_faces)]
         i_tri_list = np.empty((0,)) if i_triangles is None else i_triangles[where_true(i_faces)]
@@ -2295,6 +2578,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
+        # log.debug('preparing depths array')
         k_depths_list = np.empty((0,)) if k_depths is None else k_depths[where_true(k_faces)]
         j_depths_list = np.empty((0,)) if j_depths is None else j_depths[where_true(j_faces)]
         i_depths_list = np.empty((0,)) if i_depths is None else i_depths[where_true(i_faces)]
@@ -2304,6 +2588,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
+        # log.debug('preparing offsets array')
         k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[where_true(k_faces)]
         j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[where_true(j_faces)]
         i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[where_true(i_faces)]
@@ -2312,6 +2597,7 @@ def find_faces_to_represent_surface_regular_optimised(
         assert all_offsets.shape == (gcs.count,)
 
     if return_flange_bool:
+        # log.debug('preparing flange array')
         flange_bool_uuid = surface.model.uuid(title = 'flange bool',
                                               obj_type = 'DiscreteProperty',
                                               related_uuid = surface.uuid)
@@ -2321,22 +2607,21 @@ def find_faces_to_represent_surface_regular_optimised(
         all_flange = np.take(flange_array, all_tris)
         assert all_flange.shape == (gcs.count,)
 
-    # NB. following assumes faces have been added to gcs in a particular order!
-    if return_normal_vectors:
-        k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[where_true(k_faces)]
-        j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[where_true(j_faces)]
-        i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[where_true(i_faces)]
-        all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
-        # log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
-        assert all_normals.shape == (gcs.count, 3)
-
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
-        bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
+        if is_curtain:
+            log.debug('preparing columns bisector')
+            bisector = column_bisector_from_faces((grid.nj, grid.ni), j_faces[0], i_faces[0])
+            # log.debug('finished preparing columns bisector')
+        else:
+            log.debug('preparing cells bisector')
+            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
+            if is_curtain:
+                bisector = bisector[0]  # reduce to a columns property
 
     if progress_fn is not None:
         progress_fn(1.0)
-    
+
     # if returning properties, construct dictionary
     if return_properties:
         props_dict = {}
@@ -2346,8 +2631,6 @@ def find_faces_to_represent_surface_regular_optimised(
             props_dict['depth'] = all_depths
         if return_offsets:
             props_dict['offset'] = all_offsets
-        if return_normal_vectors:
-            props_dict['normal vector'] = all_normals
         if return_bisector:
             props_dict['grid bisector'] = (bisector, is_curtain)
         if return_flange_bool:
@@ -2773,7 +3056,7 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
     log.debug('finding cell faces for surface')
     if mode == 'auto':
         if isinstance(grid, grr.RegularGrid) and grid.is_aligned:
-            mode = 'regular'
+            mode = 'regular_optimised'
         else:
             mode = 'staffa'
     if mode == 'staffa':

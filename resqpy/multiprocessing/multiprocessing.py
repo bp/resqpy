@@ -3,6 +3,7 @@
 import logging
 import os
 import time
+import uuid
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
 from joblib import Parallel, delayed, parallel_backend  # type: ignore
@@ -29,12 +30,14 @@ def rm_tree(path: Union[Path, str]) -> None:
     path.rmdir()
 
 
-def function_multiprocessing(function: Callable,
-                             kwargs_list: List[Dict[str, Any]],
-                             recombined_epc: Union[Path, str],
-                             cluster,
-                             consolidate: bool = True,
-                             require_success = False) -> List[bool]:
+def function_multiprocessing(
+    function: Callable,
+    kwargs_list: List[Dict[str, Any]],
+    recombined_epc: Union[Path, str],
+    cluster,
+    consolidate: bool = True,
+    require_success = False,
+) -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
     A multiprocessing pool is used to call the function multiple times in parallel. Once
@@ -71,13 +74,27 @@ def function_multiprocessing(function: Callable,
         project. More info can be found at 
         https://resqpy.readthedocs.io/en/latest/tutorial/multiprocessing.html
     """
-    log.info("multiprocessing function called with %s function.", function.__name__)
+    log.info("multiprocessing function called with %s function, %s entries.", function.__name__, len(kwargs_list))
 
+    tmp_dir = f'tmp_{uuid.uuid4()}'
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
+        kwargs["parent_tmp_dir"] = tmp_dir
 
-    with parallel_backend("dask"):
-        results = Parallel()(delayed(function)(**kwargs) for kwargs in kwargs_list)
+    if cluster is None:
+
+        results = []
+        for i, kwargs in enumerate(kwargs_list):
+            log.debug(f'calling function for entry {i}; name: {kwargs.get("name")}')
+            one_r = function(**kwargs)
+            results.append(one_r)
+            log.debug(f'completed entry: {one_r[0]}; success: {one_r[1]}; epc: {one_r[2]}')
+            log.debug(f'uuid list: {one_r[3]}')
+
+    else:
+
+        with parallel_backend("dask"):
+            results = Parallel()(delayed(function)(**kwargs) for kwargs in kwargs_list)
 
     # Sorting the results by the original kwargs_list index.
     results = list(sorted(results, key = lambda x: x[0]))
@@ -92,11 +109,12 @@ def function_multiprocessing(function: Callable,
 
     epc_file = Path(str(recombined_epc))
     if epc_file.is_file():
-        model_recombined = rq.Model(epc_file = str(epc_file))
+        model_recombined = rq.Model(epc_file = str(epc_file), quiet = True)
+        log.info(f"updating the recombined epc file: {epc_file}")
     else:
         model_recombined = rq.new_model(epc_file = str(epc_file))
+        log.info(f"creating the recombined epc file: {epc_file}")
 
-    log.info("creating the recombined epc file")
     for i, epc in enumerate(epc_list):
         log.debug(f'recombining from mp instance {i} epc: {epc}')
         if epc is None:
@@ -113,7 +131,7 @@ def function_multiprocessing(function: Callable,
         while True:
             attempt += 1
             try:
-                model = rq.Model(epc_file = epc)
+                model = rq.Model(epc_file = epc, quiet = True)
                 break
             except FileNotFoundError:
                 if attempt >= 10:
@@ -122,12 +140,12 @@ def function_multiprocessing(function: Callable,
         uuids = uuids_list[i]
         if uuids is None:
             uuids = model.uuids()
-        for uuid in uuids:
+        for u in uuids:
             attempt = 0
             while True:
                 attempt += 1
                 try:
-                    model_recombined.copy_uuid_from_other_model(model, uuid = uuid, consolidate = consolidate)
+                    model_recombined.copy_uuid_from_other_model(model, uuid = u, consolidate = consolidate)
                     break
                 except BlockingIOError:
                     if attempt >= 5:
@@ -135,12 +153,12 @@ def function_multiprocessing(function: Callable,
                 time.sleep(1)
 
     # Deleting temporary directory.
-    log.debug("deleting the temporary directory")
-    rm_tree("tmp_dir")
+    log.debug(f"deleting the temporary directory {tmp_dir}")
+    rm_tree(tmp_dir)
 
-    model_recombined.store_epc()
+    model_recombined.store_epc(quiet = True)
     model.h5_release()
 
-    log.info("recombined epc file complete")
+    log.debug(f"recombined epc file complete: {epc_file}")
 
     return success_list
