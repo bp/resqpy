@@ -20,7 +20,6 @@ import cupy
 from typing import Tuple, Optional, Dict
 import warnings
 import math
-from pprint import pprint
 
 import resqpy.crs as rqc
 import resqpy.fault as rqf
@@ -1962,7 +1961,6 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
     gridSize_i  = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1], (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1])
 
     iteration = 0
-    t1 = time.perf_counter()
     while True:
         # forward sweeps
         diffuse_closed_faces[gridSize_k,blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, 0, grid_extent_kji[0], 1)  # k-direction
@@ -1974,7 +1972,6 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         diffuse_closed_faces[gridSize_i,blockSize](a, k_faces, j_faces, i_faces, 0, 1, 2, grid_extent_kji[2]-1, -1, -1)  # i-direction
 
         a_count = cupy.count_nonzero(a)
-        t2 = time.perf_counter(); print(f'\tIteration {iteration} - non-zero = {a_count}, completed in {t2 - t1:,.2f}s'); t1 = t2
 
         if a_count == a_count_before:
             break
@@ -2211,7 +2208,7 @@ def bisector_from_faces_new(  # type: ignore
     true_count = np.count_nonzero(array)
     cell_count = array.size
     assert 0 < true_count < cell_count, 'Face set for surface is leaky or empty (surface does not intersect grid).'
-
+    
     # Negate the array if it minimises the mean k and determine if the surface is a curtain.
     layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
     array_k_sum = 0
@@ -2435,6 +2432,7 @@ def find_faces_to_represent_surface_regular_optimised(
         # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
         # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
 
+
     nk = 1 if is_curtain else grid.nk
     # K direction (xy projection)
     if nk > 1:
@@ -2460,7 +2458,7 @@ def find_faces_to_represent_surface_regular_optimised(
                             return_offsets, k_offsets, return_triangles, k_triangles)
         del k_hits
         del p_xy
-        print(f"k face count: {np.count_nonzero(k_faces)}")
+        log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
         k_triangles = None
@@ -2615,7 +2613,7 @@ def find_faces_to_represent_surface_regular_optimised(
             # log.debug('finished preparing columns bisector')
         else:
             log.debug('preparing cells bisector')
-            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
+            bisector, is_curtain = bisector_from_faces_new(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
@@ -2790,7 +2788,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         k_depths    = cupy.asnumpy(k_depths_d);    del k_depths_d
         k_offsets   = cupy.asnumpy(k_offsets_d);   del k_offsets_d
         k_normals   = cupy.asnumpy(k_normals_d);   del k_normals_d
-        print(f"k face count: {np.count_nonzero(k_faces)}")
+        log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
 
@@ -2830,7 +2828,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         j_depths    = cupy.asnumpy(j_depths_d);    del j_depths_d
         j_offsets   = cupy.asnumpy(j_offsets_d);   del j_offsets_d
         j_normals   = cupy.asnumpy(j_normals_d);   del j_normals_d  
-        print(f"j face count: {np.count_nonzero(j_faces)}")
+        log.debug(f"j face count: {np.count_nonzero(j_faces)}")
     else:
         j_faces = None
 
@@ -2870,7 +2868,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         i_depths    = cupy.asnumpy(i_depths_d);    del i_depths_d
         i_offsets   = cupy.asnumpy(i_offsets_d);   del i_offsets_d
         i_normals   = cupy.asnumpy(i_normals_d);   del i_normals_d
-        print(f"i face count: {np.count_nonzero(i_faces)}")
+        log.debug(f"i face count: {np.count_nonzero(i_faces)}")
     else:
         i_faces = None
 
@@ -2943,10 +2941,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
-        t1 = time.perf_counter()
         bisector, is_curtain = bisector_from_faces_cuda(tuple(grid.extent_kji), k_faces_d, j_faces_d, i_faces_d)
-        t2 = time.perf_counter()
-        print(f'bisector_from_faces_cuda completed in {t2-t1:,.3f}')
         del k_faces_d, j_faces_d, i_faces_d
 
     if progress_fn is not None:
