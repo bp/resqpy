@@ -157,7 +157,7 @@ def fault_throws_per_edge_per_column(grid, mode = 'maximum', simple_z = False, a
 
     assert mode in ['maximum', 'mean', 'minimum']
     if not simple_z:
-        assert grid.z_units() == grid.xy_units()
+        assert grid.z_units() == grid.xy_units(), 'differing xy and z units not supported for non-simple-z fault throws'
 
     log.debug('computing fault throws per edge per column based on corner point geometry')
     if not grid.has_split_coordinate_lines:  # note: no NaNs returned in this situation

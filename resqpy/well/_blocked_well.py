@@ -24,7 +24,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
-import resqpy.weights_and_measures as bwam
+import resqpy.weights_and_measures as wam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
@@ -577,7 +577,7 @@ class BlockedWell(BaseResqpy):
         else:
             assert bw is self
 
-    def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True):
+    def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True, length_uom = None):
         """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md
 
         datum.
@@ -601,7 +601,7 @@ class BlockedWell(BaseResqpy):
             data['L'].extend([k0 + 1])
         df = pd.DataFrame(data, columns = col_list)
 
-        return self.derive_from_dataframe(df, self.well_name, grid, use_face_centres = True)
+        return self.derive_from_dataframe(df, self.well_name, grid, use_face_centres = True, length_uom = length_uom)
 
     def derive_from_wellspec(self,
                              wellspec_file,
@@ -610,7 +610,8 @@ class BlockedWell(BaseResqpy):
                              check_grid_name = False,
                              use_face_centres = False,
                              add_properties = True,
-                             usa_date_format = False):
+                             usa_date_format = False,
+                             length_uom = None):
         """Populates empty blocked well from Nexus WELLSPEC data; creates simulation trajectory and md datum.
 
         args:
@@ -627,6 +628,10 @@ class BlockedWell(BaseResqpy):
            add_properties (bool or list of str, default True): if True, WELLSPEC columns (other than IW, JW, L & GRID)
               are added as property parts for the blocked well; if a list is passed, it must contain a subset of the
               columns in the WELLSPEC data
+           usa_date_format (bool, default False): if True, dates in the WELLSPEC file are interpreted as being in USA
+              format (MM/DD/YYYY); otherwise European format (DD/MM/YYYY)
+           length_uom (str, optional): if present, the target length units for MD data in generated objects; if None,
+              will default to z units of grid crs
 
         returns:
            self if successful; None otherwise
@@ -660,7 +665,8 @@ class BlockedWell(BaseResqpy):
                                           grid,
                                           grid_name_to_check = name_for_check,
                                           use_face_centres = use_face_centres,
-                                          add_as_properties = add_properties)
+                                          add_as_properties = add_properties,
+                                          length_uom = length_uom)
 
     def __derive_from_wellspec_check_well_name(self, well_name):
         """ Set the well name to be used in the wellspec file."""
@@ -670,7 +676,7 @@ class BlockedWell(BaseResqpy):
             well_name = self.well_name
         return well_name
 
-    def derive_from_cell_list(self, cell_kji0_list, well_name, grid):
+    def derive_from_cell_list(self, cell_kji0_list, well_name, grid, length_uom = None):
         """Populate empty blocked well from numpy int array of shape (N, 3) being list of cells."""
 
         df = pd.DataFrame(columns = ['IW', 'JW', 'L'])
@@ -678,7 +684,7 @@ class BlockedWell(BaseResqpy):
         df['JW'] = cell_kji0_list[:, 1] + 1
         df['L'] = cell_kji0_list[:, 0] + 1
 
-        return self.derive_from_dataframe(df, well_name, grid, use_face_centres = True)
+        return self.derive_from_dataframe(df, well_name, grid, use_face_centres = True, length_uom = length_uom)
 
     def derive_from_dataframe(self,
                               df,
@@ -686,7 +692,8 @@ class BlockedWell(BaseResqpy):
                               grid,
                               grid_name_to_check = None,
                               use_face_centres = True,
-                              add_as_properties = False):
+                              add_as_properties = False,
+                              length_uom = None):
         """Populate empty blocked well from WELLSPEC-like dataframe; first columns must be IW, JW, L (i, j, k).
 
         note:
@@ -701,8 +708,9 @@ class BlockedWell(BaseResqpy):
 
         assert len(df) > 0, 'empty dataframe for blocked well ' + str(well_name)
 
-        length_uom = grid.z_units()
-        assert grid.xy_units() == length_uom, 'mixed length units in grid crs'
+        if not length_uom:
+            length_uom = grid.z_units()
+        # assert grid.xy_units() == length_uom, 'mixed length units in grid crs'
 
         previous_xyz = None
         trajectory_mds = []
@@ -752,7 +760,9 @@ class BlockedWell(BaseResqpy):
                 i = i,
                 cell_kji0 = cell_kji0,
                 blocked_cells_kji0 = blocked_cells_kji0,
-                use_face_centres = use_face_centres)
+                use_face_centres = use_face_centres,
+                xy_units = grid.crs.xy_units,
+                z_units = grid.crs.z_units)
             log.debug(
                 f'cell: {cell_kji0}; entry axis: {entry_axis}; polarity {entry_polarity}; exit axis: {exit_axis}; polarity {exit_polarity}'
             )
@@ -770,7 +780,10 @@ class BlockedWell(BaseResqpy):
                 trajectory_points = trajectory_points,
                 blocked_intervals = blocked_intervals,
                 blocked_cells_kji0 = blocked_cells_kji0,
-                blocked_face_pairs = blocked_face_pairs)
+                blocked_face_pairs = blocked_face_pairs,
+                xy_units = grid.crs.xy_units,
+                z_units = grid.crs.z_units,
+                length_uom = length_uom)
 
         blocked_count = len(blocked_cells_kji0)
         BlockedWell.__check_number_of_blocked_well_intervals(blocked_cells_kji0 = blocked_cells_kji0,
@@ -823,10 +836,11 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __calculate_entry_and_exit_axes_polarities_and_points(angles_present, row, cp, well_name, df, i, cell_kji0,
-                                                              blocked_cells_kji0, use_face_centres):
+                                                              blocked_cells_kji0, use_face_centres, xy_units, z_units):
         if angles_present:
-            entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz = BlockedWell.__calculate_entry_and_exit_axes_polarities_and_points_using_angles(
-                row = row, cp = cp, well_name = well_name)
+            entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz =  \
+            BlockedWell.__calculate_entry_and_exit_axes_polarities_and_points_using_angles(
+                row = row, cp = cp, well_name = well_name, xy_units = xy_units, z_units = z_units)
         else:
             # fabricate entry and exit axes and polarities based on indices alone
             # note: could use geometry but here a cheap rough-and-ready approach is used
@@ -845,17 +859,20 @@ class BlockedWell(BaseResqpy):
         return entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz
 
     @staticmethod
-    def __calculate_entry_and_exit_axes_polarities_and_points_using_angles(row, cp, well_name):
+    def __calculate_entry_and_exit_axes_polarities_and_points_using_angles(row, cp, well_name, xy_units, z_units):
         """ Calculate entry and exit axes, polarities and points using azimuth and inclination angles."""
 
         angla = row['ANGLA']
         inclination = row['ANGLV']
-        if inclination < 0.1:
+        if inclination < 0.01:
             azimuth = 0.0
         else:
             i_vector = np.sum(cp[:, :, 1] - cp[:, :, 0], axis = (0, 1))
             azimuth = vec.azimuth(i_vector) - angla  # see Nexus keyword reference doc
         well_vector = vec.unit_vector_from_azimuth_and_inclination(azimuth, inclination) * 10000.0
+        if xy_units != z_units:
+            well_vector[2] = wam.convert_lengths(well_vector[2], xy_units, z_units)
+            well_vector = vec.unit_vector(well_vector)
         # todo: the following might be producing NaN's when vector passes precisely through an edge
         (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity,
          exit_xyz) = find_entry_and_exit(cp, -well_vector, well_vector, well_name)
@@ -939,7 +956,7 @@ class BlockedWell(BaseResqpy):
     @staticmethod
     def __add_interval(previous_xyz, entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz,
                        cell_kji0, trajectory_mds, trajectory_points, blocked_intervals, blocked_cells_kji0,
-                       blocked_face_pairs):
+                       blocked_face_pairs, xy_units, z_units, length_uom):
         if previous_xyz is None:  # first entry
             log.debug('adding mean sea level trajectory start')
             previous_xyz = entry_xyz.copy()
@@ -949,13 +966,14 @@ class BlockedWell(BaseResqpy):
         if not vec.isclose(previous_xyz, entry_xyz, tolerance = 0.05):  # add an unblocked interval
             log.debug('adding unblocked interval')
             trajectory_points.append(entry_xyz)
-            new_md = trajectory_mds[-1] + vec.naive_length(entry_xyz - previous_xyz)  # assumes x, y & z units are same
+            new_md = trajectory_mds[-1] + BlockedWell._md_length(entry_xyz - previous_xyz, xy_units, z_units,
+                                                                 length_uom)
             trajectory_mds.append(new_md)
             blocked_intervals.append(-1)  # unblocked interval
             previous_xyz = entry_xyz
         log.debug('adding blocked interval for cell kji0: ' + str(cell_kji0))
         trajectory_points.append(exit_xyz)
-        new_md = trajectory_mds[-1] + vec.naive_length(exit_xyz - previous_xyz)  # assumes x, y & z units are same
+        new_md = trajectory_mds[-1] + BlockedWell._md_length(exit_xyz - previous_xyz, xy_units, z_units, length_uom)
         trajectory_mds.append(new_md)
         blocked_intervals.append(0)  # blocked interval
         previous_xyz = exit_xyz
@@ -963,6 +981,15 @@ class BlockedWell(BaseResqpy):
         blocked_face_pairs.append(((entry_axis, entry_polarity), (exit_axis, exit_polarity)))
 
         return previous_xyz, trajectory_mds, trajectory_points, blocked_intervals, blocked_cells_kji0, blocked_face_pairs
+
+    @staticmethod
+    def _md_length(xyz_vector, xy_units, z_units, length_uom):
+        if length_uom == xy_units and length_uom == z_units:
+            return vec.naive_length(xyz_vector)
+        x = wam.convert_lengths(xyz_vector[0], xy_units, length_uom)
+        y = wam.convert_lengths(xyz_vector[1], xy_units, length_uom)
+        z = wam.convert_lengths(xyz_vector[2], z_units, length_uom)
+        return vec.naive_length((x, y, z))
 
     @staticmethod
     def __add_tail_to_trajectory_if_necessary(blocked_count, exit_axis, exit_polarity, cell_kji0, grid,
@@ -1997,14 +2024,14 @@ class BlockedWell(BaseResqpy):
         if length_mode == 'MD':
             length = self.node_mds[interval + 1] - self.node_mds[interval]
             if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
-                length = bwam.convert_lengths(length, self.trajectory.md_uom, length_uom)
+                length = wam.convert_lengths(length, self.trajectory.md_uom, length_uom)
         else:  # use straight line length between entry and exit
             length = vec.naive_length(np.array(exit_xyz) -
                                       np.array(entry_xyz))  # trajectory crs, unless use_face_centres!
             if length_uom is not None:
-                length = bwam.convert_lengths(length, ee_crs.z_units, length_uom)
+                length = wam.convert_lengths(length, ee_crs.z_units, length_uom)
             elif self.trajectory is not None:
-                length = bwam.convert_lengths(length, ee_crs.z_units, self.trajectory.md_uom)
+                length = wam.convert_lengths(length, ee_crs.z_units, self.trajectory.md_uom)
         if perforation_list is not None:
             length *= part_perf_fraction
         if min_length is not None and length < min_length:
@@ -2324,13 +2351,13 @@ class BlockedWell(BaseResqpy):
         if length_mode == 'MD' and self.trajectory is not None:
             xyz = self.trajectory.xyz_for_md(md)
             if length_uom is not None and length_uom != self.trajectory.md_uom:
-                bwam.convert_lengths(xyz, traj_crs.z_units, length_uom)
+                wam.convert_lengths(xyz, traj_crs.z_units, length_uom)
             if depth_inc_down and traj_z_inc_down is False:
                 xyz[2] = -xyz[2]
         else:
             xyz = 0.5 * (np.array(exit_xyz) + np.array(entry_xyz))
             if length_uom is not None and length_uom != ee_crs.z_units:
-                bwam.convert_lengths(xyz, ee_crs.z_units, length_uom)
+                wam.convert_lengths(xyz, ee_crs.z_units, length_uom)
             if depth_inc_down and ee_crs.z_inc_down is False:
                 xyz[2] = -xyz[2]
 
@@ -2343,7 +2370,7 @@ class BlockedWell(BaseResqpy):
         """
 
         if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
-            md = bwam.convert_lengths(md, self.trajectory.md_uom, length_uom)
+            md = wam.convert_lengths(md, self.trajectory.md_uom, length_uom)
         if 'MD' in pc_titles:
             md = pc.single_array_ref(citation_title = 'MD')[ci]
 
@@ -2461,8 +2488,8 @@ class BlockedWell(BaseResqpy):
         if length_uom not in ['m', 'ft']:
             raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
         if extra == 'TEMP' and (temperature_uom is None or
-                                temperature_uom not in bwam.valid_uoms('thermodynamic temperature')):
-            raise ValueError(f"The temperature_uom must be in {bwam.valid_uoms('thermodynamic temperature')}.")
+                                temperature_uom not in wam.valid_uoms('thermodynamic temperature')):
+            raise ValueError(f"The temperature_uom must be in {wam.valid_uoms('thermodynamic temperature')}.")
 
         length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom,
                                                                                         extra = extra)

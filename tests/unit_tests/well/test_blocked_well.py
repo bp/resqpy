@@ -239,7 +239,7 @@ def test_calculate_exit_and_entry(example_model_and_crs):
 
     # --------- Act ----------
     (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) = bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
-        (row = row, cp = cp, well_name = well_name)
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
     print((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
 
     # --------- Assert ----------

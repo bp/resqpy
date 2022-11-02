@@ -500,6 +500,7 @@ class Grid(BaseResqpy):
                          global_xy_units = None,
                          global_z_units = None,
                          global_z_increasing_downward = True,
+                         nexus_unit_system = None,
                          write_nx_ny_nz = False,
                          write_units_keyword = False,
                          write_rh_keyword_if_needed = False,
@@ -507,7 +508,29 @@ class Grid(BaseResqpy):
                          use_binary = False,
                          binary_only = False,
                          nan_substitute_value = None):
-        """Write grid geometry to file in Nexus CORP ordering."""
+        """Write grid geometry to file in Nexus CORP ordering.
+
+        arguments:
+            file_name (str): the path of the file to generate
+            local_coords (bool, default False): if True, CORP data is written in local coordinates
+            global_xy_units (str, optional): RESQML length uom to use for global xy coords;
+                required if local_coords is False
+            global_z_units (str, optional): RESQML length uom to use for global z coords;
+                required if local_coords is False
+            global_z_increasing_downward (bool, default True): whether global z values increase downwards;
+                ignored if local_coords is True
+            nexus_unit_system (str, optional): the target Nexus unit system for the CORP data; if present,
+                one of: 'METRIC', 'METBAR', 'METKG/CM2', 'LAB' or 'ENGLISH'; if None, will be guessed
+                based on local or global z units
+            write_nx_ny_nz (bool, default False): if True, NX NY NZ keywords and values are written
+            write_units_keyword (bool, default False): if True, the Nexus unit system keyword is written
+            write_rh_keyword_if_needed (bool, default False): if True, the RIGHTHANDED keyword is written
+                if needed based on xyz and IJK handedness
+            write_corp_keyword (bool, default False): if True, the CORP keyword is written before the values
+            use_binary (bool, default False): if True, a pure binary file with the corp array is written
+            binary_only (bool, default False): if True, no ascii file is created, only a pure binary file
+            nan_substitute_value (float, optional): if present, a value to use in place of NaNs
+        """
 
         write_nexus_corp(self,
                          file_name,
@@ -515,6 +538,7 @@ class Grid(BaseResqpy):
                          global_xy_units = global_xy_units,
                          global_z_units = global_z_units,
                          global_z_increasing_downward = global_z_increasing_downward,
+                         nexus_unit_system = nexus_unit_system,
                          write_nx_ny_nz = write_nx_ny_nz,
                          write_units_keyword = write_units_keyword,
                          write_rh_keyword_if_needed = write_rh_keyword_if_needed,

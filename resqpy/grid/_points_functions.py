@@ -12,6 +12,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
+import resqpy.weights_and_measures as wam
 from ._defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defined, geometry_defined_for_all_cells, \
     geometry_defined_for_all_pillars
 
@@ -85,11 +86,19 @@ def set_cached_points_from_property(grid,
     # check for compatibility and overwrite cached points for grid
     points = rprop.Property(grid.model, uuid = points_property_uuid)
     assert points is not None and points.is_points() and points.indexable_element() == 'nodes'
-    assert points.uom() == grid.xy_units() and grid.z_units() == grid.xy_units()
     points_array = points.array_ref(masked = False)
     assert points_array is not None
     assert points_array.shape == grid.points_cached.shape
-    grid.points_cached = points_array
+
+    if points.uom() == grid.xy_units() and grid.z_units() == grid.xy_units():
+        grid.points_cached = points_array
+    else:
+        grid.points_cached = points_array.copy()
+        if grid.z_units() == grid.xy_units():
+            wam.convert_lengths(grid.points_cached, points.uom(), grid.xy_units())
+        else:
+            wam.convert_lengths(grid.points_cached[..., :2], points.uom(), grid.xy_units())
+            wam.convert_lengths(grid.points_cached[..., 2], points.uom(), grid.z_units())
 
     # set grid's time index and series, if requested
     if set_grid_time_index:

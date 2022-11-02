@@ -181,7 +181,8 @@ def _fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_thro
 
     if full_pillar_list is None or len(full_pillar_list) < 3:
         return
-    assert grid.z_units() == grid.xy_units()
+    assert grid.z_units() == grid.xy_units(),  \
+        'crs used by grid has differing xy and z units – mix not supported when adding faults'
     grid.cache_all_geometry_arrays()
     assert hasattr(grid, 'points_cached')
     # make grid into a faulted grid if hitherto unfaulted
