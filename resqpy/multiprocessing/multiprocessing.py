@@ -22,12 +22,13 @@ def rm_tree(path: Union[Path, str]) -> None:
         None.
     """
     path = Path(path)
-    for child in path.iterdir():
-        if child.is_file():
-            child.unlink()
-        else:
-            rm_tree(child)
-    path.rmdir()
+    if os.path.isdir(path):
+        for child in path.iterdir():
+            if child.is_file():
+                child.unlink()
+            else:
+                rm_tree(child)
+        path.rmdir()
 
 
 def function_multiprocessing(
@@ -115,6 +116,7 @@ def function_multiprocessing(
         model_recombined = rq.new_model(epc_file = str(epc_file))
         log.info(f"creating the recombined epc file: {epc_file}")
 
+    model = None
     for i, epc in enumerate(epc_list):
         log.debug(f'recombining from mp instance {i} epc: {epc}')
         if epc is None:
@@ -157,7 +159,8 @@ def function_multiprocessing(
     rm_tree(tmp_dir)
 
     model_recombined.store_epc(quiet = True)
-    model.h5_release()
+    if model is not None:
+        model.h5_release()
 
     log.debug(f"recombined epc file complete: {epc_file}")
 
