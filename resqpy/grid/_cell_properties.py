@@ -8,6 +8,7 @@ import numpy as np
 
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.volume as vol
+import resqpy.weights_and_measures as wam
 
 from ._defined_geometry import cell_geometry_is_defined
 
@@ -133,7 +134,8 @@ def volume(grid,
            cache_cp_array = False,
            cache_centre_array = False,
            cache_volume_array = True,
-           property_collection = None):
+           property_collection = None,
+           required_uom = None):
     """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
 
     arguments:
@@ -150,6 +152,9 @@ def volume(grid,
                              is probed for a suitable volume property which is used preferentially
                              to calculating volume; if no suitable property is found,
                              the calculation is made as if the collection were None
+       required_uom (str, optional): if present, the RESQML unit of measure (for quantity volume) that
+                             the volumes will be returned (and cached) in; if None, the grid's CRS
+                             z units cubed will be used
 
     returns:
        float, being the volume of cell identified by cell_kji0;
@@ -159,60 +164,74 @@ def volume(grid,
        the function can be used to find the volume of a single cell, or cache volumes for all cells, or both;
        if property_collection is not None, a suitable volume property will be used if present;
        if calculated, volume is computed using 6 tetras each with a non-planar bilinear base face;
-       at present, grid's coordinate reference system must use same units in z as xy (projected);
-       units of result are implicitly those of coordinates in grid's coordinate reference system, or units of
-       measure of property array if the result is based on a suitable property
 
     :meta common:
     """
 
-    def __load_from_property(collection):
-        if collection is None:
-            return None
-        parts = collection.selective_parts_list(property_kind = 'rock volume', facet_type = 'netgross', facet = 'gross')
-        if len(parts) == 1:
-            return collection.cached_part_array_ref(parts[0])
-        parts = collection.selective_parts_list(property_kind = 'rock volume')
-        if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
-            return collection.cached_part_array_ref(parts[0])
-        return None
-
     # note: this function optionally looks for a suitable volume property, otherwise calculates from geometry
-    # todo: modify z units if needed, to match xy units
     # todo: give control over source with optional arguments
     # todo: cache uom
+
+    def __load_vol_from_property(collection):  # returns array and uom
+        if collection is None:
+            return (None, None)
+        parts = collection.selective_parts_list(property_kind = 'rock volume', facet_type = 'netgross', facet = 'gross')
+        if len(parts) == 1:
+            return (collection.cached_part_array_ref(parts[0]), collection.uom_for_part(parts[0]))
+        parts = collection.selective_parts_list(property_kind = 'rock volume')
+        if len(parts) == 1 and collection.facet_for_part(parts[0]) is None:
+            return (collection.cached_part_array_ref(parts[0]), collection.uom_for_part(parts[0]))
+        return (None, None)
+
     assert (cache_volume_array is not None) or (cell_kji0 is not None)
 
+    required_uom = _get_volume_uom(grid, required_uom)
+
     if hasattr(grid, 'array_volume'):
+        if required_uom != grid.array_volume_uom:
+            grid.array_volume = wam.convert_volumes(grid.array_volume, grid.array_volume_uom, required_uom)
+            grid.array_volume_uom = required_uom
         if cell_kji0 is None:
             return grid.array_volume
         return grid.array_volume[tuple(cell_kji0)]  # could check for nan here and return None
 
-    vol_array = __load_from_property(property_collection)
+    vol_array, vol_uom = __load_vol_from_property(property_collection)
     if vol_array is not None:
+        if (cache_volume_array or cell_kji0 is None) and (vol_uom != required_uom):
+            vol_array = vol_array.copy()
+            wam.convert_volumes(vol_array, vol_uom, required_uom)
+            vol_uom = required_uom
         if cache_volume_array:
-            grid.array_volume = vol_array.copy()
+            grid.array_volume = vol_array
+            grid.array_volume_uom = vol_uom
         if cell_kji0 is None:
             return vol_array
-        return vol_array[tuple(cell_kji0)]  # could check for nan here and return None
+        if vol_uom == required_uom:
+            return vol_array[tuple(cell_kji0)]  # could check for nan here and return None
+        return wam.convert(vol_array[tuple(cell_kji0)], vol_uom, required_uom)
 
     cache_cp_array = cache_cp_array or cell_kji0 is None
     cache_volume_array = cache_volume_array or cell_kji0 is None
 
     off_hand = grid.off_handed()
 
+    conversion_factor = _get_volume_conversion_factor(grid, required_uom)
+
     points_root = grid.resolve_geometry_child('Points', child_node = points_root)
     if points_root is None:
         return None  # geometry not present
     centre_array = None
-    if cache_volume_array or cell_kji0 is None:
+    if cache_volume_array:
         grid.corner_points(points_root = points_root, cache_cp_array = True)
         if cache_centre_array:
             grid.centre_point(cache_centre_array = True)
             centre_array = grid.array_centre_point
         vol_array = vol.tetra_volumes(grid.array_corner_points, centres = centre_array, off_hand = off_hand)
+        if conversion_factor is not None:
+            vol_array *= conversion_factor
         if cache_volume_array:
             grid.array_volume = vol_array
+            grid.array_volume_uom = required_uom
         if cell_kji0 is None:
             return vol_array
         return vol_array[tuple(cell_kji0)]  # could check for nan here and return None
@@ -223,7 +242,32 @@ def volume(grid,
                             cache_cp_array = cache_cp_array)
     if cp is None:
         return None
-    return vol.tetra_cell_volume(cp, off_hand = off_hand)
+    v = vol.tetra_cell_volume(cp, off_hand = off_hand)
+    return v if conversion_factor is None else conversion_factor * v
+
+
+def _get_volume_uom(grid, required_uom):
+    if required_uom:
+        assert required_uom in wam.valid_uoms(quantity = 'volume'), f'invalid volume unit of measure: {required_uom}'
+    else:
+        linear_uom = grid.crs.z_units
+        if linear_uom.startswith('ft'):
+            linear_uom = 'ft'
+        required_uom = linear_uom + '3'
+        if required_uom not in wam.valid_uoms(quantity = 'volume'):
+            required_uom = 'm3'
+    return required_uom
+
+
+def _get_volume_conversion_factor(grid, required_uom):
+    conversion_factor = None
+    if grid.crs.xy_units != grid.crs.z_units or required_uom != grid.crs.z_units + '3':
+        conversion_factor = wam.convert(1.0, grid.crs.xy_units, 'm')
+        conversion_factor *= conversion_factor
+        conversion_factor *= wam.convert(1.0, grid.crs.z_units, 'm')
+        if required_uom != 'm3':
+            conversion_factor *= wam.convert(1.0, 'm3', required_uom)
+    return conversion_factor
 
 
 def pinched_out(grid,
