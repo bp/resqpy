@@ -795,7 +795,10 @@ class PropertyCollection():
         if len(parts_list) == 0:
             return None
         if len(parts_list) > 1 and multiple_handling != 'exception' and support is not None:
-            parts_list = [support.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
+            if support is not None:
+                parts_list = [support.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
+            elif self.model is not None:
+                parts_list = [self.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
         assert len(parts_list) == 1, 'More than one property part matches selection criteria'
         return parts_list[0]
 
