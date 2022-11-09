@@ -30,16 +30,14 @@ def rm_tree(path: Union[Path, str]) -> None:
     path.rmdir()
 
 
-def function_multiprocessing(
-    function: Callable,
-    kwargs_list: List[Dict[str, Any]],
-    recombined_epc: Union[Path, str],
-    cluster,
-    consolidate: bool = True,
-    require_success = False,
-    tmp_dir_path: str = '.',
-    backend: str = 'dask'
-) -> List[bool]:
+def function_multiprocessing(function: Callable,
+                             kwargs_list: List[Dict[str, Any]],
+                             recombined_epc: Union[Path, str],
+                             cluster,
+                             consolidate: bool = True,
+                             require_success = False,
+                             tmp_dir_path: str = '.',
+                             backend: str = 'dask') -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
     A multiprocessing pool is used to call the function multiple times in parallel. Once
