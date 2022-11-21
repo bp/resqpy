@@ -30,14 +30,14 @@ def rm_tree(path: Union[Path, str]) -> None:
     path.rmdir()
 
 
-def function_multiprocessing(
-    function: Callable,
-    kwargs_list: List[Dict[str, Any]],
-    recombined_epc: Union[Path, str],
-    cluster,
-    consolidate: bool = True,
-    require_success = False,
-) -> List[bool]:
+def function_multiprocessing(function: Callable,
+                             kwargs_list: List[Dict[str, Any]],
+                             recombined_epc: Union[Path, str],
+                             cluster,
+                             consolidate: bool = True,
+                             require_success = False,
+                             tmp_dir_path: Union[Path, str] = '.',
+                             backend: str = 'dask') -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
     A multiprocessing pool is used to call the function multiple times in parallel. Once
@@ -56,33 +56,36 @@ def function_multiprocessing(
             used when calling the function.
         recombined_epc (Path/str): A pathlib Path or path string of
             where the combined epc will be saved.
-        cluster (LocalCluster/JobQueueCluster): a LocalCluster is a Dask cluster on a
+        cluster: if using the Dask backend, a LocalCluster is a Dask cluster on a
             local machine. If using a job queing system, a JobQueueCluster can be used
             such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
         consolidate (bool): if True and an equivalent part already exists in
             a model, it is not duplicated and the uuids are noted as equivalent.
         require_success (bool): if True and any instance fails, then an exception is
             raised
+        tmp_dir_path (str): path where the temporary directory is saved. Defaults to
+            the calling code directory.
+        backend (str): the joblib parallel backend used. Dask is used by default
+            so a Dask cluster must be passed to the cluster argument.
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
 
     Note:
-        This function uses the Dask backend to run the given function in parallel, so a
-        Dask cluster must be setup and passed as an argument. Dask will need to be
-        installed in the Python environment because it is not a dependency of the
-        project. More info can be found at 
+        This function uses the Dask backend by default to run the given function in
+        parallel, so a Dask cluster must be setup and passed as an argument if Dask is
+        used. Dask will need to be installed in the Python environment because it is not
+        a dependency of the project. More info can be found at 
         https://resqpy.readthedocs.io/en/latest/tutorial/multiprocessing.html
     """
     log.info("multiprocessing function called with %s function, %s entries.", function.__name__, len(kwargs_list))
 
-    tmp_dir = f'tmp_{uuid.uuid4()}'
+    tmp_dir = Path(tmp_dir_path) / f'tmp_{uuid.uuid4()}'
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
-        kwargs["parent_tmp_dir"] = tmp_dir
+        kwargs["parent_tmp_dir"] = str(tmp_dir)
 
     if cluster is None:
-
         results = []
         for i, kwargs in enumerate(kwargs_list):
             log.debug(f'calling function for entry {i}; name: {kwargs.get("name")}')
@@ -90,10 +93,8 @@ def function_multiprocessing(
             results.append(one_r)
             log.debug(f'completed entry: {one_r[0]}; success: {one_r[1]}; epc: {one_r[2]}')
             log.debug(f'uuid list: {one_r[3]}')
-
     else:
-
-        with parallel_backend("dask"):
+        with parallel_backend(backend):
             results = Parallel()(delayed(function)(**kwargs) for kwargs in kwargs_list)
 
     # Sorting the results by the original kwargs_list index.
