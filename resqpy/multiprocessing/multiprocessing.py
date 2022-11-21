@@ -36,7 +36,7 @@ def function_multiprocessing(function: Callable,
                              cluster,
                              consolidate: bool = True,
                              require_success = False,
-                             tmp_dir_path: str = '.',
+                             tmp_dir_path: Union[Path, str] = '.',
                              backend: str = 'dask') -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
@@ -80,10 +80,10 @@ def function_multiprocessing(function: Callable,
     """
     log.info("multiprocessing function called with %s function, %s entries.", function.__name__, len(kwargs_list))
 
-    tmp_dir = f'{tmp_dir_path}/tmp_{uuid.uuid4()}'
+    tmp_dir = Path(tmp_dir_path) / f'tmp_{uuid.uuid4()}'
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
-        kwargs["parent_tmp_dir"] = tmp_dir
+        kwargs["parent_tmp_dir"] = str(tmp_dir)
 
     if cluster is None:
         results = []
