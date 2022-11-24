@@ -318,7 +318,7 @@ class Trajectory(BaseResqpy):
         self.md_datum = survey.md_datum
 
     def __calculate_trajectory_from_inclination_and_azimuth(self, survey):
-        """ Calculate well trajectory from inclination and azimuth data."""
+        """Calculate well trajectory from inclination and azimuth data."""
 
         for sp in range(1, self.knot_count):
             i1 = survey.inclinations[sp - 1]
@@ -328,8 +328,7 @@ class Trajectory(BaseResqpy):
             delta_md = survey.measured_depths[sp] - survey.measured_depths[sp - 1]
             assert delta_md > 0.0
             if i1 == i2 and az1 == az2:
-                matrix = vec.rotation_3d_matrix((180.0 - i1, -az1, 0.0))  # TODO: check sign of az1
-                delta_v = vec.rotate_vector(matrix, np.array([0.0, delta_md, 0.0]))
+                delta_v = delta_md * vec.unit_vector_from_azimuth_and_inclination(az1, i1)
             else:
                 i1 = maths.radians(i1)
                 i2 = maths.radians(i2)

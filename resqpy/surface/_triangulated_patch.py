@@ -229,8 +229,8 @@ class TriangulatedPatch:
         """Populate this (empty) patch with triangles for a big triangle wrapped on a sphere."""
 
         def sail_point(centre, radius, a, d):
-            #        m = vec.rotation_3d_matrix((d, 0.0, 90.0 - a))
-            #        m = vec.tilt_3d_matrix(a, d)
+            # m = vec.rotation_3d_matrix((d, 0.0, 90.0 - a))
+            # m = vec.tilt_3d_matrix(a, d)
             v = np.array((0.0, radius, 0.0))
             m = vec.rotation_matrix_3d_axial(0, d)
             v = vec.rotate_vector(m, v)
