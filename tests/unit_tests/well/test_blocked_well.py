@@ -1,4 +1,5 @@
 import logging
+
 log = logging.getLogger(__name__)
 
 import os
@@ -30,9 +31,13 @@ def test_wellspec_properties(example_model_and_crs):
     grid.create_xml(write_geometry = True, use_lattice = False)
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
-    source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9],
-                              [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9]],
+    # yapf: disable
+    source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9],
+                              [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9],
+                              [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9],
+                              [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9]],
                              columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF'])
+    # yapf: enable
     with open(wellspec_file, 'w') as fp:
         fp.write(F'WELLSPEC {well_name}\n')
         for col in source_df.columns:
@@ -263,9 +268,9 @@ def test_calculate_exit_and_entry(example_model_and_crs):
         (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
     log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
     # --------- Assert ----------
-    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (1, 0, 1, 1)
-    assert_array_almost_equal(entry_xyz, (75.0, -50.0, 175.0))
-    assert_array_almost_equal(exit_xyz, (75.0, -100.0, 175.0))
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (1, 1, 1, 0)
+    assert_array_almost_equal(entry_xyz, (75.0, -100.0, 175.0))
+    assert_array_almost_equal(exit_xyz, (75.0, -50.0, 175.0))
     # --------- Act ----------
     cp = grid.corner_points(cell_kji0 = (1, 2, 1))
     row = source_df.iloc[2]

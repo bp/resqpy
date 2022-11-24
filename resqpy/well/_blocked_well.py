@@ -1998,8 +1998,8 @@ class BlockedWell(BaseResqpy):
         if doing_entry_exit:
             assert self.trajectory is not None
             if use_face_centres:
-                entry_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[ci, 0, 0],
-                                             self.face_pair_indices[ci, 0, 1])
+                entry_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[ci, 0, 0], self.face_pair_indices[ci, 0,
+                                                                                                                 1])
                 if self.face_pair_indices[ci, 1, 0] >= 0:
                     exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[ci, 1, 0],
                                                 self.face_pair_indices[ci, 1, 1])

@@ -290,7 +290,12 @@ def degrees_difference(a, b):
 
 
 def rotation_matrix_3d_axial(axis, angle):
-    """Returns a rotation matrix which will rotate points about axis (0: x, 1: y, or 2: z) by angle in degrees."""
+    """Returns a rotation matrix which will rotate points about axis (0: x, 1: y, or 2: z) by angle in degrees.
+
+    note:
+       this function follows the mathematical convention: a positive angle results in anti-clockwise rotation
+       when viewed in direction of positive axis
+    """
 
     axis_a = (axis + 1) % 3
     axis_b = (axis_a + 1) % 3
@@ -378,7 +383,7 @@ def unit_vector_from_azimuth_and_inclination(azimuth, inclination):
        assumes a left handed coordinate system with y axis north and x axis east
     """
 
-    matrix = rotation_3d_matrix((inclination, azimuth, 0.0))
+    matrix = rotation_3d_matrix((inclination, 180.0 - azimuth, 0.0))
     return rotate_vector(matrix, np.array((0.0, 0.0, 1.0)))
 
 
