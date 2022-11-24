@@ -296,6 +296,80 @@ def test_calculate_exit_and_entry(example_model_and_crs):
     assert_array_almost_equal(exit_xyz, (150.0, -125.0, 175.0 + delta_z))
 
 
+def test_calculate_exit_and_entry_mixed_units(example_model_and_mixed_units_crs):
+    # has xy units of 'm'; z units 'ft'
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_mixed_units_crs
+    grid = RegularGrid(model,
+                       extent_kji = (3, 4, 3),
+                       dxyz = (50.0, -50.0, 50.0),
+                       origin = (0.0, 0.0, 100.0),
+                       crs_uuid = crs.uuid,
+                       set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, use_lattice = False)
+    assert grid.crs.xy_units == 'm' and grid.crs.z_units == 'ft'
+    well_name = 'DOGLEG'
+    # todo: check sign of ANGLA relative to I axis
+    # yapf: disable
+    source_df = pd.DataFrame(
+                  [[2,    2,    1,    0.0,     0.0,     0.0,   0.25,   0.9,    'grid_1'],
+                   [2,    2,    2,   90.0,    90.0,     2.5,   0.25,   0.9,    'grid_1'],
+                   [2,    3,    2,    0.0,     0.0,     1.0,   0.20,   0.9,    'grid_1'],
+                   [2,    3,    3,   60.0,     0.0,    -0.5,   0.20,   0.9,    'grid_1']],
+        columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
+    # yapf: enable
+    bw = resqpy.well.BlockedWell(model, well_name = well_name)
+
+    # --------- Act ----------
+    cp = grid.corner_points(cell_kji0 = (0, 1, 1))
+    row = source_df.iloc[0]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+    # --------- Assert ----------
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (0, 0, 0, 1)
+    assert_array_almost_equal(entry_xyz, (75.0, -75.0, 100.0))
+    assert_array_almost_equal(exit_xyz, (75.0, -75.0, 150.0))
+    # --------- Act ----------
+    cp = grid.corner_points(cell_kji0 = (1, 1, 1))
+    row = source_df.iloc[1]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+    # --------- Assert ----------
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (1, 1, 1, 0)
+    assert_array_almost_equal(entry_xyz, (75.0, -100.0, 175.0))
+    assert_array_almost_equal(exit_xyz, (75.0, -50.0, 175.0))
+    # --------- Act ----------
+    cp = grid.corner_points(cell_kji0 = (1, 2, 1))
+    row = source_df.iloc[2]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+    # --------- Assert ----------
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (0, 0, 0, 1)
+    assert_array_almost_equal(entry_xyz, (75.0, -125.0, 150.0))
+    assert_array_almost_equal(exit_xyz, (75.0, -125.0, 200.0))
+    # --------- Act ----------
+    cp = grid.corner_points(cell_kji0 = (1, 2, 2))
+    row = source_df.iloc[3]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+    # --------- Assert ----------
+    # assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (2, 0, 2, 1)
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (0, 0, 0, 1)
+    delta_x = 25.0 * 0.3048 * maths.tan(maths.pi / 3.0)
+    assert_array_almost_equal(entry_xyz, (125.0 - delta_x, -125.0, 150.0))
+    assert_array_almost_equal(exit_xyz, (125.0 + delta_x, -125.0, 200.0))
+
+
 def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
 
     # --------- Arrange ----------

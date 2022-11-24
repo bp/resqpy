@@ -872,7 +872,7 @@ class BlockedWell(BaseResqpy):
         well_vector = vec.unit_vector_from_azimuth_and_inclination(azimuth, inclination) * 10000.0
         if xy_units != z_units:
             well_vector[2] = wam.convert_lengths(well_vector[2], xy_units, z_units)
-            well_vector = vec.unit_vector(well_vector)
+            well_vector = vec.unit_vector(well_vector) * 10000.0
         # todo: the following might be producing NaN's when vector passes precisely through an edge
         (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
             find_entry_and_exit(cp, -well_vector, well_vector, well_name)
