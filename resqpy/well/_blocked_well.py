@@ -2133,23 +2133,28 @@ class BlockedWell(BaseResqpy):
         vector = vec.unit_vector(np.array(exit_xyz) - np.array(entry_xyz))  # nominal wellbore vector for interval
         if traj_z_inc_down is not None and traj_z_inc_down != grid_crs.z_inc_down:
             vector[2] = -vector[2]
+        if grid.crs.xy_units == grid.crs.z_units:
+            unit_adjusted_vector = vector
+        else:
+            unit_adjusted_vector = vector.copy()
+            unit_adjusted_vector[2] = wam.convert_lengths(unit_adjusted_vector[2], grid.crs.z_units, grid.crs.xy_units)
         v_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, anglv_ref)
-        #           log.debug('v ref vector: ' + str(v_ref_vector))
+        # log.debug('v ref vector: ' + str(v_ref_vector))
         if angla_plane_ref == anglv_ref:
             a_ref_vector = v_ref_vector
         else:
             a_ref_vector = BlockedWell.__get_ref_vector(grid, grid_crs, cell_kji0, angla_plane_ref)
-        #           log.debug('a ref vector: ' + str(a_ref_vector))
+        # log.debug('a ref vector: ' + str(a_ref_vector))
         if anglv is not None:
             anglv_rad = vec.radians_from_degrees(anglv)
             cosine_anglv = maths.cos(anglv_rad)
             sine_anglv = maths.sin(anglv_rad)
         else:
-            cosine_anglv = min(max(vec.dot_product(vector, v_ref_vector), -1.0), 1.0)
+            cosine_anglv = min(max(vec.dot_product(unit_adjusted_vector, v_ref_vector), -1.0), 1.0)
             anglv_rad = maths.acos(cosine_anglv)
             sine_anglv = maths.sin(anglv_rad)
             anglv = vec.degrees_from_radians(anglv_rad)
-        #           log.debug('anglv: ' + str(anglv))
+        # log.debug('anglv: ' + str(anglv))
 
         return anglv, sine_anglv, cosine_anglv, vector, a_ref_vector
 
