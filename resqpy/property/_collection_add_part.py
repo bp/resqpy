@@ -105,9 +105,9 @@ def _add_part_to_dict_get_support_uuid(collection, part):
 
 
 def _add_part_to_dict_get_uom(collection, part, continuous, xml_node, trust_uom, property_kind, minimum, maximum, facet,
-                              facet_type):
+                              facet_type, points):
     uom = None
-    if continuous:
+    if continuous and not points:
         uom_node = rqet.find_tag(xml_node, 'UOM')
         if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
             uom = uom_node.text

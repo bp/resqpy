@@ -1,4 +1,8 @@
+import logging
+log = logging.getLogger(__name__)
+
 import os
+import math as maths
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_almost_equal
@@ -57,7 +61,7 @@ def test_wellspec_properties(example_model_and_crs):
     assert skin_prop is not None
     assert_array_almost_equal(skin_prop.array_ref(), [0.0, 2.5, 1.0, -0.5])
     model.store_epc()
-    print(model.grid().property_collection.titles())
+    log.debug(model.grid().property_collection.titles())
     # re-open model from persistent storage
     model = Model(model.epc_file)
     bw2_uuid = model.uuid(obj_type = 'BlockedWellboreRepresentation', title = 'DOGLEG')
@@ -226,26 +230,65 @@ def test_calculate_exit_and_entry(example_model_and_crs):
                        origin = (0.0, 0.0, 100.0),
                        crs_uuid = crs.uuid,
                        set_points_cached = True)
-    cp = grid.corner_points(cell_kji0 = (2, 2, 1))
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
+    # todo: check sign of ANGLA relative to I axis
+    # yapf: disable
     source_df = pd.DataFrame(
-        [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
-         [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9, 'grid_1'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9, 'grid_1']],
+                  [[2,    2,    1,    0.0,     0.0,     0.0,   0.25,   0.9,    'grid_1'],
+                   [2,    2,    2,   90.0,    90.0,     2.5,   0.25,   0.9,    'grid_1'],
+                   [2,    3,    2,    0.0,     0.0,     1.0,   0.20,   0.9,    'grid_1'],
+                   [2,    3,    3,   60.0,     0.0,    -0.5,   0.20,   0.9,    'grid_1']],
         columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
-    row = source_df.iloc[0]
-    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True)
+    # yapf: enable
+    bw = resqpy.well.BlockedWell(model, well_name = well_name)
 
     # --------- Act ----------
-    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) = bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+    cp = grid.corner_points(cell_kji0 = (0, 1, 1))
+    row = source_df.iloc[0]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
         (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
-    print((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
-
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
     # --------- Assert ----------
-    # TODO: less trivial assertion
-    for value in (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz):
-        assert value is not None
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (0, 0, 0, 1)
+    assert_array_almost_equal(entry_xyz, (75.0, -75.0, 100.0))
+    assert_array_almost_equal(exit_xyz, (75.0, -75.0, 150.0))
+    # --------- Act ----------
+    cp = grid.corner_points(cell_kji0 = (1, 1, 1))
+    row = source_df.iloc[1]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+    # --------- Assert ----------
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (1, 0, 1, 1)
+    assert_array_almost_equal(entry_xyz, (75.0, -50.0, 175.0))
+    assert_array_almost_equal(exit_xyz, (75.0, -100.0, 175.0))
+    # --------- Act ----------
+    cp = grid.corner_points(cell_kji0 = (1, 2, 1))
+    row = source_df.iloc[2]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+    # --------- Assert ----------
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (0, 0, 0, 1)
+    assert_array_almost_equal(entry_xyz, (75.0, -125.0, 150.0))
+    assert_array_almost_equal(exit_xyz, (75.0, -125.0, 200.0))
+    # --------- Act ----------
+    cp = grid.corner_points(cell_kji0 = (1, 2, 2))
+    row = source_df.iloc[3]
+    (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+        bw._BlockedWell__calculate_entry_and_exit_axes_polarities_and_points_using_angles\
+        (row = row, cp = cp, well_name = well_name, xy_units = grid.crs.xy_units, z_units = grid.crs.z_units)
+    log.debug((entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz))
+    # --------- Assert ----------
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (2, 0, 2, 1)
+    delta_z = 25.0 / maths.tan(maths.pi / 3.0)
+    assert_array_almost_equal(entry_xyz, (100.0, -125.0, 175.0 - delta_z))
+    assert_array_almost_equal(exit_xyz, (150.0, -125.0, 175.0 + delta_z))
 
 
 def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
@@ -375,10 +418,16 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
     ntg_uuid = ntg_prop.uuid
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
+    # yapf: disable
     source_df = pd.DataFrame(
-        [[2, 2, 1, 0.0, 0.0, 0.0, 0.25], [2, 2, 2, 45, -90.0, 2.5, 0.25], [2, 3, 2, 45, -90.0, 1.0, 0.20],
-         [2, 3, 3, 45, -90.0, -0.5, 0.20], [2, 3, 4, 45, -90.0, 1.1, 0.20], [2, 3, 5, 0.0, 0.0, 1.0, 0.20]],
+        [[2, 2, 1, 0.0, 0.0, 0.0, 0.25],
+         [2, 2, 2, 45, -90.0, 2.5, 0.25],
+         [2, 3, 2, 45, -90.0, 1.0, 0.20],
+         [2, 3, 3, 45, -90.0, -0.5, 0.20],
+         [2, 3, 4, 45, -90.0, 1.1, 0.20],
+         [2, 3, 5, 0.0, 0.0, 1.0, 0.20]],
         columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW'])
+    # yapf: enable
     with open(wellspec_file, 'w') as fp:
         fp.write(F'WELLSPEC {well_name}\n')
         for col in source_df.columns:
@@ -401,6 +450,16 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
     # --------- Act ----------
     df = bw.dataframe(extra_columns_list = ['X', 'Y', 'DEPTH', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI', 'WBC'],
                       add_as_properties = True,
+                      perm_i_uuid = perm_i_uuid,
+                      perm_j_uuid = perm_i_uuid,
+                      ntg_uuid = ntg_uuid,
+                      stat = status,
+                      use_face_centres = True,
+                      length_uom = 'm',
+                      length_mode = length_mode)
+    # switch off adding properties when creating filtered dataframe
+    df = bw.dataframe(extra_columns_list = ['X', 'Y', 'DEPTH', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI', 'WBC'],
+                      add_as_properties = False,
                       perforation_list = [(125, 320)],
                       max_depth = 500,
                       perm_i_uuid = perm_i_uuid,
@@ -415,7 +474,7 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
                       length_mode = length_mode)
 
     # --------- Assert ----------
-    # print(df)
+    # log.debug(df)
     assert all(df['KH'])  # successfully added a KH column as an i-direction permeability array was specified
     assert set(df['STAT']) == {status}
     assert all(df['WI'])

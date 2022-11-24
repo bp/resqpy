@@ -864,7 +864,7 @@ class BlockedWell(BaseResqpy):
 
         angla = row['ANGLA']
         inclination = row['ANGLV']
-        if inclination < 0.01:
+        if inclination < 0.001:
             azimuth = 0.0
         else:
             i_vector = np.sum(cp[:, :, 1] - cp[:, :, 0], axis = (0, 1))
@@ -874,8 +874,8 @@ class BlockedWell(BaseResqpy):
             well_vector[2] = wam.convert_lengths(well_vector[2], xy_units, z_units)
             well_vector = vec.unit_vector(well_vector)
         # todo: the following might be producing NaN's when vector passes precisely through an edge
-        (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity,
-         exit_xyz) = find_entry_and_exit(cp, -well_vector, well_vector, well_name)
+        (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
+            find_entry_and_exit(cp, -well_vector, well_vector, well_name)
         return entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz
 
     def __calculate_entry_and_exit_axes_polarities_and_points_using_indices(df, i, cell_kji0, blocked_cells_kji0):
@@ -1250,7 +1250,7 @@ class BlockedWell(BaseResqpy):
                   preferential_perforation = True,
                   add_as_properties = False,
                   use_properties = False):
-        """Returns a pandas data frame containing WELLSPEC style data.
+        """Returns a pandas data frame containing Nexus WELLSPEC style data.
 
         arguments:
            i_col (string, default 'IW'): the column name to use for cell I index values
@@ -1421,7 +1421,7 @@ class BlockedWell(BaseResqpy):
         k_face_check_end = k_face_check.copy()
         k_face_check_end[1] = -1  # entry through K-, terminating (TD) within cell
 
-        traj_crs, traj_z_inc_down = self.__get_trajectory_crs_and_z_inclination()
+        traj_crs, traj_z_inc_down = self.__get_trajectory_crs_and_z_inc_down()
 
         df = pd.DataFrame(columns = column_list)
         df = df.astype({i_col: int, j_col: int, k_col: int})
@@ -1431,8 +1431,10 @@ class BlockedWell(BaseResqpy):
         interval_count = self.__get_interval_count()
 
         for interval in range(interval_count):
+
             if self.grid_indices[interval] < 0:
                 continue  # unblocked interval
+
             ci += 1
             row_dict = {}
             grid = self.grid_list[self.grid_indices[interval]]
@@ -1474,6 +1476,7 @@ class BlockedWell(BaseResqpy):
                 grid = grid,
                 cell_kji0 = cell_kji0,
                 interval = interval,
+                ci = ci,
                 grid_crs = grid_crs,
                 traj_crs = traj_crs)
 
@@ -1503,6 +1506,7 @@ class BlockedWell(BaseResqpy):
                 k_face_check_end = k_face_check_end,
                 entry_xyz = entry_xyz,
                 exit_xyz = exit_xyz,
+                ee_crs = ee_crs,
                 traj_z_inc_down = traj_z_inc_down,
                 grid = grid,
                 grid_crs = grid_crs,
@@ -1574,19 +1578,19 @@ class BlockedWell(BaseResqpy):
                                                                                   length_uom = length_uom,
                                                                                   column_list = column_list)
 
-            xyz = self.__get_xyz_arrays_for_interval(doing_xyz = doing_xyz,
-                                                     length_mode = length_mode,
-                                                     length_uom = length_uom,
-                                                     md = md,
-                                                     traj_crs = traj_crs,
-                                                     depth_inc_down = depth_inc_down,
-                                                     traj_z_inc_down = traj_z_inc_down,
-                                                     entry_xyz = entry_xyz,
-                                                     exit_xyz = exit_xyz,
-                                                     ee_crs = ee_crs,
-                                                     pc = pc,
-                                                     pc_titles = pc_titles,
-                                                     ci = ci)
+            xyz = self.__get_xyz_for_interval(doing_xyz = doing_xyz,
+                                              length_mode = length_mode,
+                                              length_uom = length_uom,
+                                              md = md,
+                                              traj_crs = traj_crs,
+                                              depth_inc_down = depth_inc_down,
+                                              traj_z_inc_down = traj_z_inc_down,
+                                              entry_xyz = entry_xyz,
+                                              exit_xyz = exit_xyz,
+                                              ee_crs = ee_crs,
+                                              pc = pc,
+                                              pc_titles = pc_titles,
+                                              ci = ci)
 
             md = self.__get_md_array_in_correct_units_for_interval(md = md,
                                                                    length_uom = length_uom,
@@ -1897,21 +1901,15 @@ class BlockedWell(BaseResqpy):
         for grid in self.grid_list:
             grid_crs = crs.Crs(self.model, uuid = grid.crs_uuid)
             grid_crs_list.append(grid_crs)
-            if grid_crs.z_units != grid_crs.xy_units and (len(column_list) > 1 or
-                                                          (len(column_list) == 1 and
-                                                           column_list[0] != 'GRID')) is not None:
-                log.error('grid ' + str(rqet.citation_title_for_node(grid.root_node)) +
-                          ' has z units different to xy units: some WELLSPEC data likely to be wrong')
         return grid_crs_list
 
-    def __get_trajectory_crs_and_z_inclination(self):
+    def __get_trajectory_crs_and_z_inc_down(self):
 
         if self.trajectory is None or self.trajectory.crs_uuid is None:
             traj_crs = None
             traj_z_inc_down = None
         else:
             traj_crs = crs.Crs(self.trajectory.model, uuid = self.trajectory.crs_uuid)
-            assert traj_crs.xy_units == traj_crs.z_units
             traj_z_inc_down = traj_crs.z_inc_down
 
         return traj_crs, traj_z_inc_down
@@ -1942,14 +1940,14 @@ class BlockedWell(BaseResqpy):
         out_of_bounds_layer_1 = (min_k0 is not None and cell_kji0[0] < min_k0) or (max_k0 is not None and
                                                                                    cell_kji0[0] > max_k0)
         out_of_bounds_layer_2 = k0_list is not None and cell_kji0[0] not in k0_list
-        out_of_bounds_region = region_list is not None and BlockedWell.__prop_array(region_uuid,
-                                                                                    grid)[tuple_kji0] not in region_list
-        saturation_limit_exceeded_1 = max_satw is not None and BlockedWell.__prop_array(satw_uuid,
-                                                                                        grid)[tuple_kji0] > max_satw
-        saturation_limit_exceeded_2 = min_sato is not None and BlockedWell.__prop_array(sato_uuid,
-                                                                                        grid)[tuple_kji0] < min_sato
-        saturation_limit_exceeded_3 = max_satg is not None and BlockedWell.__prop_array(satg_uuid,
-                                                                                        grid)[tuple_kji0] > max_satg
+        out_of_bounds_region = (region_list is not None and
+                                BlockedWell.__prop_array(region_uuid, grid)[tuple_kji0] not in region_list)
+        saturation_limit_exceeded_1 = (max_satw is not None and
+                                       BlockedWell.__prop_array(satw_uuid, grid)[tuple_kji0] > max_satw)
+        saturation_limit_exceeded_2 = (min_sato is not None and
+                                       BlockedWell.__prop_array(sato_uuid, grid)[tuple_kji0] < min_sato)
+        saturation_limit_exceeded_3 = (max_satg is not None and
+                                       BlockedWell.__prop_array(satg_uuid, grid)[tuple_kji0] > max_satg)
         skip_interval = any([
             max_depth_exceeded, inactive_grid, out_of_bounds_layer_1, out_of_bounds_layer_2, out_of_bounds_region,
             saturation_limit_exceeded_1, saturation_limit_exceeded_2, saturation_limit_exceeded_3
@@ -1988,7 +1986,7 @@ class BlockedWell(BaseResqpy):
         return skip_interval, part_perf_fraction
 
     def __get_entry_exit_xyz_and_crs_for_interval(self, doing_entry_exit, use_face_centres, grid, cell_kji0, interval,
-                                                  grid_crs, traj_crs):
+                                                  ci, grid_crs, traj_crs):
         """Calculate the entry and exit points for the interval and set the entry and exit
 
         coordinate reference system.
@@ -2000,14 +1998,14 @@ class BlockedWell(BaseResqpy):
         if doing_entry_exit:
             assert self.trajectory is not None
             if use_face_centres:
-                entry_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 0, 0],
-                                             self.face_pair_indices[interval, 0, 1])
-                if self.face_pair_indices[interval, 1, 0] >= 0:
-                    exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 1, 0],
-                                                self.face_pair_indices[interval, 1, 1])
+                entry_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[ci, 0, 0],
+                                             self.face_pair_indices[ci, 0, 1])
+                if self.face_pair_indices[ci, 1, 0] >= 0:
+                    exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[ci, 1, 0],
+                                                self.face_pair_indices[ci, 1, 1])
                 else:
-                    exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[interval, 0, 0],
-                                                1 - self.face_pair_indices[interval, 0, 1])
+                    exit_xyz = grid.face_centre(cell_kji0, self.face_pair_indices[ci, 0, 0],
+                                                1 - self.face_pair_indices[ci, 0, 1])
                 ee_crs = grid_crs
             else:
                 entry_xyz = self.trajectory.xyz_for_md(self.node_mds[interval])
@@ -2026,8 +2024,8 @@ class BlockedWell(BaseResqpy):
             if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
                 length = wam.convert_lengths(length, self.trajectory.md_uom, length_uom)
         else:  # use straight line length between entry and exit
-            length = vec.naive_length(np.array(exit_xyz) -
-                                      np.array(entry_xyz))  # trajectory crs, unless use_face_centres!
+            entry_xyz, exit_xyz = BlockedWell._single_uom_entry_exit_xyz(entry_xyz, exit_xyz, ee_crs)
+            length = vec.naive_length(exit_xyz - entry_xyz)
             if length_uom is not None:
                 length = wam.convert_lengths(length, ee_crs.z_units, length_uom)
             elif self.trajectory is not None:
@@ -2039,9 +2037,24 @@ class BlockedWell(BaseResqpy):
 
         return skip_interval, length
 
+    @staticmethod
+    def _single_uom_xyz(xyz, crs, required_uom):
+        xyz = np.array(xyz, dtype = float)
+        if crs.xy_units != required_uom:
+            xyz[0] = wam.convert_lengths(xyz[0], crs.xy_units, required_uom)
+            xyz[1] = wam.convert_lengths(xyz[1], crs.xy_units, required_uom)
+        if crs.z_units != required_uom:
+            xyz[2] = wam.convert_lengths(xyz[2], crs.z_units, required_uom)
+        return xyz
+
+    @staticmethod
+    def _single_uom_entry_exit_xyz(entry_xyz, exit_xyz, ee_crs):
+        return (BlockedWell._single_uom_xyz(entry_xyz, ee_crs, ee_crs.z_units),
+                BlockedWell._single_uom_xyz(exit_xyz, ee_crs, ee_crs.z_units))
+
     def __get_angles_for_interval(self, pc, pc_titles, doing_angles, set_k_face_intervals_vertical, ci, k_face_check,
-                                  k_face_check_end, entry_xyz, exit_xyz, traj_z_inc_down, grid, grid_crs, cell_kji0,
-                                  anglv_ref, angla_plane_ref):
+                                  k_face_check_end, entry_xyz, exit_xyz, ee_crs, traj_z_inc_down, grid, grid_crs,
+                                  cell_kji0, anglv_ref, angla_plane_ref):
         """Calculate angla, anglv and related trigonometirc transforms for the interval."""
 
         sine_anglv = sine_angla = 0.0
@@ -2056,6 +2069,7 @@ class BlockedWell(BaseResqpy):
                 anglv = anglv,
                 entry_xyz = entry_xyz,
                 exit_xyz = exit_xyz,
+                ee_crs = ee_crs,
                 traj_z_inc_down = traj_z_inc_down,
                 grid = grid,
                 grid_crs = grid_crs,
@@ -2086,10 +2100,10 @@ class BlockedWell(BaseResqpy):
         if a_ref_vector is not None:  # project vector and i axis onto a plane
             vector -= vec.dot_product(vector, a_ref_vector) * a_ref_vector
             vector = vec.unit_vector(vector)
-            #                 log.debug('i axis unit vector: ' + str(i_axis))
+            # log.debug('i axis unit vector: ' + str(i_axis))
             i_axis -= vec.dot_product(i_axis, a_ref_vector) * a_ref_vector
             i_axis = vec.unit_vector(i_axis)
-        #                 log.debug('i axis unit vector in reference plane: ' + str(i_axis))
+        # log.debug('i axis unit vector in reference plane: ' + str(i_axis))
         if angla is not None:
             angla_rad = vec.radians_from_degrees(angla)
             cosine_angla = maths.cos(angla_rad)
@@ -2106,15 +2120,16 @@ class BlockedWell(BaseResqpy):
                 angla_rad = -angla_rad  ## as angle_rad before --> typo?
                 sine_angla = -sine_angla
 
-        #              log.debug('angla: ' + str(angla))
+        # log.debug('angla: ' + str(angla))
 
         return angla, sine_angla, cosine_angla
 
     @staticmethod
-    def __get_anglv_for_interval(anglv, entry_xyz, exit_xyz, traj_z_inc_down, grid, grid_crs, cell_kji0, anglv_ref,
-                                 angla_plane_ref):
+    def __get_anglv_for_interval(anglv, entry_xyz, exit_xyz, ee_crs, traj_z_inc_down, grid, grid_crs, cell_kji0,
+                                 anglv_ref, angla_plane_ref):
         """Get anglv and related trigonometric transforms for the interval."""
 
+        entry_xyz, exit_xyz = BlockedWell._single_uom_entry_exit_xyz(entry_xyz, exit_xyz, ee_crs)
         vector = vec.unit_vector(np.array(exit_xyz) - np.array(entry_xyz))  # nominal wellbore vector for interval
         if traj_z_inc_down is not None and traj_z_inc_down != grid_crs.z_inc_down:
             vector[2] = -vector[2]
@@ -2231,7 +2246,7 @@ class BlockedWell(BaseResqpy):
             length = pc.single_array_ref(citation_title = 'LENGTH')[ci]
         if 'RADW' in pc_titles:
             radw = pc.single_array_ref(citation_title = 'RADW')[ci]
-        assert radw > 0.0
+        assert radw > 0.0  # todo: allow zero for inactive intervals?
         if 'SKIN' in pc_titles:
             skin = pc.single_array_ref(citation_title = 'SKIN')[ci]
         radb = wi = wbc = None
@@ -2282,6 +2297,8 @@ class BlockedWell(BaseResqpy):
             if wi is None:
                 wi = 0.0 if radb <= 0.0 else 2.0 * maths.pi / (maths.log(radb / radw) + skin)
             if 'WBC' in column_list and wbc is None:
+                assert length_uom == 'm' or length_uom.startswith(
+                    'ft'), 'WBC only calculable for length uom of m or ft*'
                 conversion_constant = 8.5270171e-5 if length_uom == 'm' else 0.006328286
                 wbc = conversion_constant * kh * wi  # note: pperf aleady accounted for in kh
 
@@ -2323,9 +2340,9 @@ class BlockedWell(BaseResqpy):
 
         return radb_e
 
-    def __get_xyz_arrays_for_interval(self, doing_xyz, length_mode, length_uom, md, traj_crs, depth_inc_down,
-                                      traj_z_inc_down, entry_xyz, exit_xyz, ee_crs, pc, pc_titles, ci):
-        """ Get the x, y and z arrays for the interval."""
+    def __get_xyz_for_interval(self, doing_xyz, length_mode, length_uom, md, traj_crs, depth_inc_down, traj_z_inc_down,
+                               entry_xyz, exit_xyz, ee_crs, pc, pc_titles, ci):
+        """Get the x, y and z location of the midpoint of the interval."""
 
         xyz = (np.NaN, np.NaN, np.NaN)
         if doing_xyz:
@@ -2357,22 +2374,19 @@ class BlockedWell(BaseResqpy):
         else:
             xyz = 0.5 * (np.array(exit_xyz) + np.array(entry_xyz))
             if length_uom is not None and length_uom != ee_crs.z_units:
-                wam.convert_lengths(xyz, ee_crs.z_units, length_uom)
-            if depth_inc_down and ee_crs.z_inc_down is False:
+                xyz[2] = wam.convert_lengths(xyz[2], ee_crs.z_units, length_uom)
+            if depth_inc_down != ee_crs.z_inc_down:
                 xyz[2] = -xyz[2]
 
         return xyz
 
     def __get_md_array_in_correct_units_for_interval(self, md, length_uom, pc, pc_titles, ci):
-        """Convert the measurd depth valeus to the correct units and get the measured depths property collection
+        """Convert the measured depth to the correct units or get the measured depth from the property collection."""
 
-        array.
-        """
-
-        if length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
-            md = wam.convert_lengths(md, self.trajectory.md_uom, length_uom)
         if 'MD' in pc_titles:
             md = pc.single_array_ref(citation_title = 'MD')[ci]
+        elif length_uom is not None and self.trajectory is not None and length_uom != self.trajectory.md_uom:
+            md = wam.convert_lengths(md, self.trajectory.md_uom, length_uom)
 
         return md
 
@@ -2443,6 +2457,9 @@ class BlockedWell(BaseResqpy):
 
         Returns:
             None
+
+        note:
+            dataframe rows must be in the same order as the cells in the blocked well
         """
         # todo: rewrite to add separate property objects for each grid references by the blocked well
         assert len(self.grid_list) == 1
@@ -2452,17 +2469,21 @@ class BlockedWell(BaseResqpy):
             length_uom = self.trajectory.md_uom
         extra_pc = rqp.PropertyCollection()
         extra_pc.set_support(support = self)
-        missing_cells_nan_array = np.zeros(self.cell_count - len(df)) + np.nan
+        assert len(df) == self.cell_count
 
         for column in columns:
             extra = column.upper()
             uom, pk, discrete = self.__set_uom_pk_discrete_for_df_properties(extra = extra, length_uom = length_uom)
             if discrete:
                 null_value = -1
+                na_value = -1
+                dtype = np.int32
             else:
                 null_value = None
+                na_value = np.NaN
+                dtype = float
             # 'SKIN': use defaults for now; todo: create local property kind for skin
-            expanded = np.append(df[column].to_numpy(), missing_cells_nan_array)
+            expanded = df[column].to_numpy(dtype = dtype, copy = True, na_value = na_value)
             extra_pc.add_cached_array_to_imported_list(
                 expanded,
                 'blocked well dataframe',

@@ -55,7 +55,7 @@ def set_cached_points_from_property(grid,
        official points array for the grid;
        note that the shape of the points array is quite different between grids with split
        pillars and those without;
-       the uom of the points property must be a length uom and match that used by the grid's crs;
+       the points property values must be in the grid's crs;
        the inactive mask of the grid will only be updated if the set_inactive argument is True;
        if points_property_uuid has been provided, and set_inactive is True, the active property
        must be identified with the active_property_uuid argument;
@@ -90,15 +90,8 @@ def set_cached_points_from_property(grid,
     assert points_array is not None
     assert points_array.shape == grid.points_cached.shape
 
-    if points.uom() == grid.xy_units() and grid.z_units() == grid.xy_units():
-        grid.points_cached = points_array
-    else:
-        grid.points_cached = points_array.copy()
-        if grid.z_units() == grid.xy_units():
-            wam.convert_lengths(grid.points_cached, points.uom(), grid.xy_units())
-        else:
-            wam.convert_lengths(grid.points_cached[..., :2], points.uom(), grid.xy_units())
-            wam.convert_lengths(grid.points_cached[..., 2], points.uom(), grid.z_units())
+    # todo: handle optional points crs and convert to grid crs
+    grid.points_cached = points_array
 
     # set grid's time index and series, if requested
     if set_grid_time_index:

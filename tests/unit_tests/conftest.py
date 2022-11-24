@@ -52,6 +52,20 @@ def example_model_and_crs(tmp_model):
 
 
 @pytest.fixture
+def example_model_and_mixed_units_crs(tmp_model):
+    """Returns a fresh RESQML Model and mixed units Crs, in a temporary directory."""
+
+    xy_uom = 'm'
+    z_uom = 'ft'
+
+    # Create a model with a coordinate reference system
+    crs = Crs(parent_model = tmp_model, z_inc_down = True, xy_units = xy_uom, z_units = z_uom)
+    crs.create_xml()
+
+    return tmp_model, crs
+
+
+@pytest.fixture
 def example_model_with_well(example_model_and_crs):
     """ Model with a single well with a vertical trajectory """
 

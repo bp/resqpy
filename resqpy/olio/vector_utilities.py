@@ -317,11 +317,14 @@ def no_rotation_matrix():
 def rotation_3d_matrix(xzy_axis_angles):
     """Returns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
 
-    matrix = np.zeros((3, 3))
-    for axis in range(3):
-        matrix[axis, axis] = 1.0
-    for axis in range(3):
-        matrix = np.dot(matrix, rotation_matrix_3d_axial(axis, xzy_axis_angles[axis]))
+    # matrix = np.zeros((3, 3))
+    # for axis in range(3):
+    #     matrix[axis, axis] = 1.0
+    # for axis in range(3):
+    #     matrix = np.dot(matrix, rotation_matrix_3d_axial(axis, xzy_axis_angles[axis]))
+    matrix = rotation_matrix_3d_axial(1, xzy_axis_angles[2])  # about y axis
+    matrix = np.dot(matrix, rotation_matrix_3d_axial(2, xzy_axis_angles[1]))  # about z axis
+    matrix = np.dot(matrix, rotation_matrix_3d_axial(0, xzy_axis_angles[0]))  # about x axis
     return matrix
 
 
@@ -369,7 +372,11 @@ def rotate_xyz_array_around_z_axis(a, target_xy_vector):
 
 
 def unit_vector_from_azimuth_and_inclination(azimuth, inclination):
-    """Returns unit vector with compass bearing of azimuth and inclination off +z axis."""
+    """Returns unit vector with compass bearing of azimuth and inclination off +z axis.
+
+    note:
+       assumes a left handed coordinate system with y axis north and x axis east
+    """
 
     matrix = rotation_3d_matrix((inclination, azimuth, 0.0))
     return rotate_vector(matrix, np.array((0.0, 0.0, 1.0)))

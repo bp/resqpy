@@ -98,7 +98,7 @@ def find_entry_and_exit(cp, entry_vector, exit_vector, well_name):
     exit_axis = exit_polarity = None
     for t in range(24):
         if not np.any(np.isnan(exit_points[t])):
-            exit_xyz = entry_points[t]
+            exit_xyz = exit_points[t]
             exit_axis = t // 8
             exit_polarity = (t - 8 * exit_axis) // 4
             break

@@ -277,7 +277,7 @@ class PropertyCollection():
         minimum, maximum = pcap._add_part_to_dict_get_minmax(xml_node)
         support_uuid = pcap._add_part_to_dict_get_support_uuid(self, part)
         uom = pcap._add_part_to_dict_get_uom(self, part, continuous, xml_node, trust_uom, property_kind, minimum,
-                                             maximum, facet, facet_type)
+                                             maximum, facet, facet_type, points)
         null_value, const_value = pcap._add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points)
 
         self.dict[part] = (realization, support_uuid, uuid, xml_node, continuous, count, indexable, property_kind,
@@ -2577,12 +2577,13 @@ class PropertyCollection():
         pcxml._create_xml_facet_node(facet_type, facet, p_node)
 
         pcxml._create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                           max_value, string_lookup_uuid is not None, null_value)
+                                           max_value, string_lookup_uuid is not None, null_value, points)
 
         if discrete:
             sl_root = pcxml._create_xml_lookup_node(self, p_node, string_lookup_uuid)
         else:  # continuous
-            pcxml._create_xml_uom_node(self, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title)
+            pcxml._create_xml_uom_node(self, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title,
+                                       points)
             sl_root = None
         pcxml._create_xml_add_as_part(self, add_as_part, p_uuid, p_node, add_relationships, support_root,
                                       property_kind_uuid, related_time_series_node, sl_root, discrete,
