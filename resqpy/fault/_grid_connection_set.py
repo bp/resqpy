@@ -1888,6 +1888,10 @@ class GridConnectionSet(BaseResqpy):
 
         Returns:
             face_surface_normal_vectors_array (np.ndarray): the surface normal vectors corresponding to each GCS face.
+
+        note:
+            returned vectors are sampled from the normal vectors for the surface triangles, which are true
+            normals, accounting for any difference between xy & z units for the surface crs
         """
         face_surface_normal_vectors_array = np.empty((triangle_per_face.size, 3), dtype = float)
         face_surface_normal_vectors_array[:] = surface_normal_vectors[triangle_per_face]

@@ -1,7 +1,5 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
 
-version = '21st June 2022'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -746,6 +744,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
 
     notes:
        the original points array is not modified by this function;
+       implicit xy & z units for points are assumed to be the same;
        the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
        determine the triangulation;
        the numpy linear algebra option seems to be memory intensive

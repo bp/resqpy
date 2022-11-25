@@ -80,20 +80,25 @@ class TetraGrid(UnstructuredGrid):
         start = 0 if face_index == 0 else self.nodes_per_face_cl[face_index - 1]
         return np.mean(self.points_cached[self.nodes_per_face[start:start + 3]], axis = 0)
 
-    def volume(self, cell):
+    def volume(self, cell, required_uom = None):
         """Returns the volume of a single cell.
 
         arguments:
            cell (int): the index of the cell for which the volume is required
 
         returns:
-           float being the volume of the tetrahedral cell; units of measure is implied by crs units
+           float being the volume of the tetrahedral cell
+
+        note:
+            if required_uom is not specified, returned units will be cube of crs units if xy & z are the same
+            and either 'm' or 'ft', otherwise 'm3' will be used
         """
 
         self.cache_all_geometry_arrays()
         abcd = self.points_cached[self.distinct_node_indices_for_cell(cell)]
         assert abcd.shape == (4, 3)
-        return vol.tetrahedron_volume(abcd[0], abcd[1], abcd[2], abcd[3])
+        v = vol.tetrahedron_volume(abcd[0], abcd[1], abcd[2], abcd[3])
+        return self.adjusted_volume(v, required_uom = required_uom)
 
     def grid_volume(self):
         """Returns the sum of the volumes of all the cells in the grid.

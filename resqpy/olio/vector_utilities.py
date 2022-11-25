@@ -424,7 +424,11 @@ def tilt_points(pivot_xyz, azimuth, dip, points):
 
 
 def project_points_onto_plane(plane_xyz, normal_vector, points):
-    """Modifies array of xyz points in situ to project onto a plane defined by a point and normal vector."""
+    """Modifies array of xyz points in situ to project onto a plane defined by a point and normal vector.
+
+    note:
+       implicit xy & z units must be the same
+    """
 
     az = azimuth(normal_vector)
     incl = inclination(normal_vector)
@@ -959,7 +963,12 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
 
 
 def triangle_normal_vector(p3):
-    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
+    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle.
+
+    note:
+        resulting vector implicitly assumes that xy & z units are the same; if this is not the case, adjust vector
+        afterwards as required
+    """
 
     # todo: handle degenerate triangles
     return unit_vector(cross_product(p3[0] - p3[1], p3[0] - p3[2]))
@@ -967,7 +976,12 @@ def triangle_normal_vector(p3):
 
 @njit
 def triangle_normal_vector_numba(points):
-    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
+    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle.
+
+    note:
+        resulting vector implicitly assumes that xy & z units are the same; if this is not the case, adjust vector
+        afterwards as required
+    """
     v = np.cross(points[0] - points[1], points[0] - points[2])
     return v / np.linalg.norm(v)
 

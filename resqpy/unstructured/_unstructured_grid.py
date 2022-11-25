@@ -1,7 +1,5 @@
 """unstructured_grid.py: resqpy UnstructuredGrid class module."""
 
-version = '24th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -15,6 +13,8 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
+import resqpy.weights_and_measures as wam
+
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
@@ -639,12 +639,18 @@ class UnstructuredGrid(BaseResqpy):
         note:
            in the case of a degenerate face, a zero length vector is returned;
            the direction of the normal will be into or out of the cell depending on the handedness of the
-           cell face
+           cell face;
+           the direction of the vector is a true normal, accounting for any difference in xy & z units
         """
 
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         self.cache_all_geometry_arrays()
         vertices = self.points_cached[self.node_indices_for_face(face_index)]
         centre = self.face_centre_point(face_index)
+        if crs.xy_units != crs.z_units:
+            vertices = vertices.copy()
+            wam.convert_lengths(vertices[:, 2], crs.z_units, crs.xy_units)
+            centre[2] = wam.convert_lengths(centre[2], crs.z_units, crs.xy_units)
         normal_sum = np.zeros(3)
 
         for e in range(len(vertices)):
@@ -672,20 +678,27 @@ class UnstructuredGrid(BaseResqpy):
            N nodes of the original face, in the same order
         """
 
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         self.cache_all_geometry_arrays()
         face_centre = self.face_centre_point(face_index)
+        z_centre = face_centre[2]
         assert np.all(self.node_indices_for_face(face_index) >= 0)  # debug
         assert np.all(self.node_indices_for_face(face_index) < self.node_count)  # debug
         face_points = self.points_cached[self.node_indices_for_face(face_index), :].copy()
+        if crs.xy_units != crs.z_units:
+            wam.convert_lengths(face_points[:, 2], crs.z_units, crs.xy_units)
+            face_centre[2] = wam.convert_lengths(face_centre[2], crs.z_units, crs.xy_units)
         normal = self.face_normal(face_index)
         az = vec.azimuth(normal)
         incl = vec.inclination(normal)
         vec.tilt_points(face_centre, az, -incl, face_points)  # modifies face_points in situ
-        if xy_plane:
-            face_points[..., 2] = 0.0
-        else:
-            face_points[..., 2] = face_centre[2]
+        face_points[..., 2] = 0.0
+        if not xy_plane:
+            face_centre[2] = 0.0
             vec.tilt_points(face_centre, az, incl, face_points)  # tilt back to original average normal
+            if crs.xy_units != crs.z_units:
+                wam.convert_lengths(face_points[:, 2], crs.xy_units, crs.z_units)
+            face_points[..., 2] += z_centre
         return face_points
 
     def face_triangulation(self, face_index, local_nodes = False):
@@ -851,6 +864,27 @@ class UnstructuredGrid(BaseResqpy):
         """
 
         return rqet.find_tag(self._crs_root(), 'VerticalUom').text
+
+    def adjusted_volume(self, v, required_uom = None):
+        """Returns volume adjusted for differing xy & z units in crs, and/or converted to required uom.
+
+        note:
+            if required_uom is not specified, units of returned value will be cube of crs units if xy & z are
+            the same and either 'm' or 'ft', otherwise 'm3' will be used
+        """
+
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+        if not required_uom:
+            if crs.z_units in ['m', 'ft'] and crs.xy_units == crs.z_units:
+                return v
+            required_uom = 'm3'
+        factor = 1.0
+        if crs.xy_units != 'm':
+            factor = wam.convert_lengths(1.0, crs.xy_units, 'm')
+            factor *= factor
+        if crs.z_units != 'm':
+            factor = wam.convert_lengths(factor, crs.z_units, 'm')
+        return wam.convert_volumes(v * factor, 'm3', required_uom)
 
     def write_hdf5(self, file = None, geometry = True, imported_properties = None, write_active = None):
         """Write to an hdf5 file the datasets for the grid geometry and optionally properties from cached arrays.

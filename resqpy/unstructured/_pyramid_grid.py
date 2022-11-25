@@ -10,6 +10,7 @@ import numpy as np
 
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
+
 from resqpy.unstructured._unstructured_grid import UnstructuredGrid
 
 
@@ -145,14 +146,18 @@ class PyramidGrid(UnstructuredGrid):
                 h_result[0] = handednesses[f]
         return f_result, h_result
 
-    def volume(self, cell):
+    def volume(self, cell, required_uom = None):
         """Returns the volume of a single cell.
 
         arguments:
            cell (int): the index of the cell for which the volume is required
 
         returns:
-           float being the volume of the pyramidal cell; units of measure is implied by crs units
+           float being the volume of the pyramidal cell
+
+        note:
+            if required_uom is not specified, returned units will be cube of crs units if xy & z are the same
+            and either 'm' or 'ft', otherwise 'm3' will be used
         """
 
         self._set_crs_handedness()
@@ -169,11 +174,13 @@ class PyramidGrid(UnstructuredGrid):
         apex = self.points_cached[apex_node]
         abcd = self.points_cached[base_nodes]
 
-        return vol.pyramid_volume(apex,
-                                  abcd[0],
-                                  abcd[1],
-                                  abcd[2],
-                                  abcd[3],
-                                  crs_is_right_handed = (self.crs_is_right_handed == hands[0]))
+        v = vol.pyramid_volume(apex,
+                               abcd[0],
+                               abcd[1],
+                               abcd[2],
+                               abcd[3],
+                               crs_is_right_handed = (self.crs_is_right_handed == hands[0]))
+
+        return self.adjusted_volume(v, required_uom = required_uom)
 
     # todo: add pyramidal specific method for centre_point()

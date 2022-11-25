@@ -1648,28 +1648,12 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __get_ref_vector(grid, grid_crs, cell_kji0, mode):
+        # returns unit vector with true direction, ie. accounts for differing xy & z units in grid's crs
         # gravity = np.array((0.0, 0.0, 1.0))
         if mode == 'normal well i+':
             return None  # ANGLA only: option for no projection onto a plane
         ref_vector = None
         # options for anglv or angla reference: 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down'
-        cell_axial_vectors = None
-        if not mode.startswith('z'):
-            cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
-        ref_vector = BlockedWell.__get_ref_vector_when_mode_not_normal_well_i(mode = mode,
-                                                                              grid_crs = grid_crs,
-                                                                              cell_axial_vectors = cell_axial_vectors,
-                                                                              grid = grid)
-        if ref_vector is None or ref_vector[2] == 0.0:
-            if grid_crs.z_inc_down:
-                ref_vector = np.array((0.0, 0.0, 1.0))
-            else:
-                ref_vector = np.array((0.0, 0.0, -1.0))
-        return ref_vector
-
-    @staticmethod
-    def __get_ref_vector_when_mode_not_normal_well_i(mode, grid_crs, cell_axial_vectors, grid):
-
         if mode == 'z+':
             ref_vector = np.array((0.0, 0.0, 1.0))
         elif mode == 'z down':
@@ -1677,20 +1661,28 @@ class BlockedWell(BaseResqpy):
                 ref_vector = np.array((0.0, 0.0, 1.0))
             else:
                 ref_vector = np.array((0.0, 0.0, -1.0))
-        elif mode in ['k+', 'k down']:
-            ref_vector = vec.unit_vector(cell_axial_vectors[0])
-            if mode == 'k down' and not grid.k_direction_is_down:
-                ref_vector = -ref_vector
-        else:  # normal to plane of ij axes
-            ref_vector = vec.unit_vector(vec.cross_product(cell_axial_vectors[1], cell_axial_vectors[2]))
-            if mode == 'normal ij down':
+        else:
+            cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
+            if grid_crs.xy_units != grid_crs.z_units:
+                wam.convert_lengths(cell_axial_vectors[..., 2], grid_crs.z_units, grid_crs.xy_units)
+            if mode in ['k+', 'k down']:
+                ref_vector = vec.unit_vector(cell_axial_vectors[0])
+                if mode == 'k down' and not grid.k_direction_is_down:
+                    ref_vector = -ref_vector
+            else:  # normal to plane of ij axes
+                ref_vector = vec.unit_vector(vec.cross_product(cell_axial_vectors[1], cell_axial_vectors[2]))
+                if mode == 'normal ij down':
+                    if grid_crs.z_inc_down:
+                        if ref_vector[2] < 0.0:
+                            ref_vector = -ref_vector
+                    else:
+                        if ref_vector[2] > 0.0:
+                            ref_vector = -ref_vector
+            if ref_vector is None or ref_vector[2] == 0.0:
                 if grid_crs.z_inc_down:
-                    if ref_vector[2] < 0.0:
-                        ref_vector = -ref_vector
+                    ref_vector = np.array((0.0, 0.0, 1.0))
                 else:
-                    if ref_vector[2] > 0.0:
-                        ref_vector = -ref_vector
-
+                    ref_vector = np.array((0.0, 0.0, -1.0))
         return ref_vector
 
     @staticmethod
@@ -2096,6 +2088,8 @@ class BlockedWell(BaseResqpy):
 
         # project well vector and i-axis vector onto plane defined by normal vector a_ref_vector
         i_axis = grid.interface_vector(cell_kji0, 2)
+        if grid.crs.xy_units != grid.crs.z_units:
+            i_axis[2] = wam.convert_lengths(i_axis[2], grid.crs.z_units, grid.crs.xy_units)
         i_axis = vec.unit_vector(i_axis)
         if a_ref_vector is not None:  # project vector and i axis onto a plane
             vector -= vec.dot_product(vector, a_ref_vector) * a_ref_vector
@@ -2222,6 +2216,8 @@ class BlockedWell(BaseResqpy):
     def __get_kh_if_doing_kh(isotropic_perm, ntg_is_one, length, perm_i_uuid, grid, tuple_kji0, k_i, k_j, k_k, anglv,
                              sine_anglv, cosine_anglv, sine_angla, cosine_angla):
 
+        # note: this is believed to return required value even when grid crs has mixed xy & z units;
+        # angles are true angles accounting for any mixed units
         if isotropic_perm and ntg_is_one:
             kh = length * BlockedWell.__prop_array(perm_i_uuid, grid)[tuple_kji0]
         else:
@@ -2270,6 +2266,8 @@ class BlockedWell(BaseResqpy):
                                                   wi, wbc, skin, kh, length_uom, column_list):
 
         if do_well_inflow:
+            if not length_uom:
+                length_uom = grid.crs.z_units
             k_ei, k_ej, k_ek, radw_e = BlockedWell.__calculate_ke_and_radw_e(isotropic_perm = isotropic_perm,
                                                                              ntg_is_one = ntg_is_one,
                                                                              radw = radw,
@@ -2282,6 +2280,8 @@ class BlockedWell(BaseResqpy):
                                                                              cosine_angla = cosine_angla)
 
             cell_axial_vectors = grid.interface_vectors_kji(cell_kji0)
+            wam.convert_lengths(cell_axial_vectors[..., :2], grid.crs.xy_units, length_uom)
+            wam.convert_lengths(cell_axial_vectors[..., 2], grid.crs.z_units, length_uom)
             d2 = np.empty(3)
             for axis in range(3):
                 d2[axis] = np.sum(cell_axial_vectors[axis] * cell_axial_vectors[axis])
@@ -2302,8 +2302,8 @@ class BlockedWell(BaseResqpy):
             if wi is None:
                 wi = 0.0 if radb <= 0.0 else 2.0 * maths.pi / (maths.log(radb / radw) + skin)
             if 'WBC' in column_list and wbc is None:
-                assert length_uom == 'm' or length_uom.startswith(
-                    'ft'), 'WBC only calculable for length uom of m or ft*'
+                assert length_uom == 'm' or length_uom.startswith('ft'),  \
+                    'WBC only calculable for length uom of m or ft*'
                 conversion_constant = 8.5270171e-5 if length_uom == 'm' else 0.006328286
                 wbc = conversion_constant * kh * wi  # note: pperf aleady accounted for in kh
 

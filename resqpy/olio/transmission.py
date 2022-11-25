@@ -495,11 +495,12 @@ def fault_connection_set(grid, skip_inactive = False):
        count is the number of cell face pairs in the connection set
 
     notes:
-       the current algorithm is designed for faults where slip has occurred along pillars (fault sticks) – sideways
-       slip will currently cause erroneous results; inaccuracies may also arise as pillars become less straight, less
+       the current algorithm is designed for faults where slip has occurred along pillars – sideways slip (strike-slip)
+       will currently cause erroneous results; inaccuracies may also arise as pillars become less straight, less
        co-planar or less parallel; the combination of non-parallel pillars and layers of non-uniform thickness can
        produce inaccuracies in some situations; if the grid does not have split pillars (ie. is unfaulted), or if
-       there are no qualifying connections across faults, then (None, None) will be returned
+       there are no qualifying connections across faults, then (None, None) will be returned;
+       as fractional areas are returned, the results are applicable whether xy & z units are the same or differ
     """
 
     def all_nan(pillar):

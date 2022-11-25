@@ -332,7 +332,12 @@ def cell_inactive(grid, cell_kji0, pv_array = None, pv_tol = 0.01):
 
 
 def interface_vector(grid, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-    """Returns an xyz vector between centres of an opposite pair of faces of the cell (or vectors for all cells)."""
+    """Returns an xyz vector between centres of an opposite pair of faces of the cell (or vectors for all cells).
+
+    note:
+        units are implicitly those of the grid's crs; differing xy & z units would imply that the direction of the
+        vector is not a true direction
+    """
 
     face_0_centre = grid.face_centre(cell_kji0,
                                      axis,
@@ -349,24 +354,39 @@ def interface_vector(grid, cell_kji0, axis, points_root = None, cache_resqml_arr
     return face_1_centre - face_0_centre
 
 
-def interface_length(grid, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+def interface_length(grid,
+                     cell_kji0,
+                     axis,
+                     points_root = None,
+                     cache_resqml_array = True,
+                     cache_cp_array = False,
+                     required_uom = None):
     """Returns the length between centres of an opposite pair of faces of the cell.
 
     note:
-       assumes that x,y and z units are the same
+       if required_uom is not specified, units of returned length are the grid's crs xy units
     """
 
     assert cell_kji0 is not None
-    return vec.naive_length(
-        grid.interface_vector(cell_kji0,
+    v = grid.interface_vector(cell_kji0,
                               axis,
                               points_root = points_root,
                               cache_resqml_array = cache_resqml_array,
-                              cache_cp_array = cache_cp_array))
+                              cache_cp_array = cache_cp_array)
+    if grid.crs.xy_units != grid.crs.z_units:
+        v[2] = wam.convert_lengths(v[2], grid.crs.z_units, grid.crs.xy_units)
+    if required_uom:
+        wam.convert_lengths(v, grid.crs.xy_units, required_uom)
+    return vec.naive_length(v)
 
 
 def interface_vectors_kji(grid, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-    """Returns 3 interface centre point difference vectors for axes k, j, i."""
+    """Returns 3 interface centre point difference vectors for axes k, j, i.
+
+    note:
+        units are implicitly those of the grid's crs; differing xy & z units would imply that the direction of the
+        vectors are not true directions
+    """
 
     result = np.zeros((3, 3))
     for axis in range(3):
@@ -378,11 +398,16 @@ def interface_vectors_kji(grid, cell_kji0, points_root = None, cache_resqml_arra
     return result
 
 
-def interface_lengths_kji(grid, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+def interface_lengths_kji(grid,
+                          cell_kji0,
+                          points_root = None,
+                          cache_resqml_array = True,
+                          cache_cp_array = False,
+                          required_uom = None):
     """Returns 3 interface centre point separation lengths for axes k, j, i.
 
     note:
-       assumes that x,y and z units are the same
+       if required_uom is not specified, units of returned lengths are the grid's crs xy units
     """
     result = np.zeros(3)
     for axis in range(3):
@@ -390,7 +415,8 @@ def interface_lengths_kji(grid, cell_kji0, points_root = None, cache_resqml_arra
                                              axis,
                                              points_root = points_root,
                                              cache_resqml_array = cache_resqml_array,
-                                             cache_cp_array = cache_cp_array)
+                                             cache_cp_array = cache_cp_array,
+                                             required_uom = required_uom)
     return result
 
 

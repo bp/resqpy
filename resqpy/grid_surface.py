@@ -25,6 +25,8 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.surface as rqs
 import resqpy.well as rqw
+import resqpy.weights_and_measures as wam
+
 from resqpy.property import Property
 
 
@@ -1225,7 +1227,6 @@ def find_faces_to_represent_surface_regular(grid,
                                             progress_fn = None,
                                             consistent_side = False,
                                             return_properties = None):
-    # return_normal_vectors = False):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     arguments:
@@ -1262,7 +1263,9 @@ def find_faces_to_represent_surface_regular(grid,
         this function can handle the surface and grid being in different coordinate reference systems, as
         long as the implicit parent crs is shared; no trimming of the surface is carried out here: for
         computational efficiency, it is recommended to trim first;
-        organisational objects for the feature are created if needed
+        organisational objects for the feature are created if needed;
+        if grid has differing xy & z units, this is accounted for here when generating normal vectors, ie.
+        true normal unit vectors are returned
     """
 
     assert isinstance(grid, grr.RegularGrid)
@@ -1494,6 +1497,9 @@ def find_faces_to_represent_surface_regular(grid,
         all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
         log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
         assert all_normals.shape == (gcs.count, 3)
+        if grid.crs.xy_units != grid.crs.z_units:
+            wam.convert_lengths(all_normals[:, 2], grid.crs.z_units, grid.crs.xy_units)
+            all_normals = vec.unit_vectors(all_normals)
 
     if progress_fn is not None:
         progress_fn(1.0)

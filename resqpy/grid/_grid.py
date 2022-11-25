@@ -1687,41 +1687,64 @@ class Grid(BaseResqpy):
         """
         return poly_line_for_cell(self, cell_kji0, vertical_ref = vertical_ref)
 
-    def interface_lengths_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+    def interface_lengths_kji(self,
+                              cell_kji0,
+                              points_root = None,
+                              cache_resqml_array = True,
+                              cache_cp_array = False,
+                              required_uom = None):
         """Returns 3 interface centre point separation lengths for axes k, j, i.
 
         note:
-           assumes that x,y and z units are the same
+           if required_uom is not specified, units of returned length are the grid's crs xy units
         """
         return interface_lengths_kji(self,
                                      cell_kji0,
                                      points_root = points_root,
                                      cache_resqml_array = cache_resqml_array,
-                                     cache_cp_array = cache_cp_array)
+                                     cache_cp_array = cache_cp_array,
+                                     required_uom = required_uom)
 
     def interface_vectors_kji(self, cell_kji0, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-        """Returns 3 interface centre point difference vectors for axes k, j, i."""
+        """Returns 3 interface centre point difference vectors for axes k, j, i.
+
+        note:
+            units are implicitly those of the grid's crs; differing xy & z units would imply that the direction of the
+            vectors are not true directions
+        """
         return interface_vectors_kji(self,
                                      cell_kji0,
                                      points_root = points_root,
                                      cache_resqml_array = cache_resqml_array,
                                      cache_cp_array = cache_cp_array)
 
-    def interface_length(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
+    def interface_length(self,
+                         cell_kji0,
+                         axis,
+                         points_root = None,
+                         cache_resqml_array = True,
+                         cache_cp_array = False,
+                         required_uom = None):
         """Returns the length between centres of an opposite pair of faces of the cell.
 
         note:
-           assumes that x,y and z units are the same
+           if required_uom is not specified, units of returned length are the grid's crs xy units
         """
         return interface_length(self,
                                 cell_kji0,
                                 axis,
                                 points_root = points_root,
                                 cache_resqml_array = cache_resqml_array,
-                                cache_cp_array = cache_cp_array)
+                                cache_cp_array = cache_cp_array,
+                                required_uom = required_uom)
 
     def interface_vector(self, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):
-        """Returns an xyz vector between centres of an opposite pair of faces of the cell (or vectors for all cells)."""
+        """Returns an xyz vector between centres of an opposite pair of faces of the cell (or vectors for all cells).
+
+        note:
+            units are implicitly those of the grid's crs; differing xy & z units would imply that the direction of the
+            vector is not a true direction
+        """
         return interface_vector(self,
                                 cell_kji0,
                                 axis,

@@ -423,6 +423,7 @@ def line_line_intersect(x1, y1, x2, y2, x3, y3, x4, y4, line_segment = False, ha
 def point_projected_to_line_2d(p, l1, l2):
     """Return the point on the unbounded line passing through l1 & l2 which is closest to point p, in xy plane."""
 
+    # note: result should be at closest point even in the presence of mixed xy & z units (?)
     # create normal vector to l1, l2
     v = l2 - l1
     n = np.array((-v[1], v[0]))
