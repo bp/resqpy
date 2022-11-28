@@ -19,17 +19,25 @@ from .property_kind import PropertyKind
 
 def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, discrete):
     collection.__dict__[cached_name] = cached_array
-    zorro = collection.masked_array(cached_array, exclude_value = null_value)
-    if (zorro is None or zorro.size == 0 or zorro.dtype in [bool, np.int8] or
-        (not discrete and np.all(np.isnan(zorro))) or (discrete and np.all(zorro == null_value))):
-        min_value = max_value = None
+    if discrete:
+        if null_value is None:
+            min_value = np.min(cached_array)
+            max_value = np.max(cached_array)
+        else:
+            zorro = collection.masked_array(cached_array, exclude_value = null_value)
+            min_value = np.min(zorro)
+            max_value = np.max(zorro)
+            if min_value is ma.masked:
+                min_value = None
+            if max_value is ma.masked:
+                max_value = None
     else:
-        min_value = np.nanmin(zorro)
-        max_value = np.nanmax(zorro)
-    if min_value is ma.masked or min_value == np.NaN:
-        min_value = None
-    if max_value is ma.masked or max_value == np.NaN:
-        max_value = None
+        min_value = np.nanmin(cached_array)
+        max_value = np.nanmax(cached_array)
+        if min_value == np.NaN:
+            min_value = None
+        if max_value == np.NaN:
+            max_value = None
     return min_value, max_value
 
 

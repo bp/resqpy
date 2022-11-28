@@ -290,7 +290,12 @@ def degrees_difference(a, b):
 
 
 def rotation_matrix_3d_axial(axis, angle):
-    """Returns a rotation matrix which will rotate points about axis (0: x, 1: y, or 2: z) by angle in degrees."""
+    """Returns a rotation matrix which will rotate points about axis (0: x, 1: y, or 2: z) by angle in degrees.
+
+    note:
+       this function follows the mathematical convention: a positive angle results in anti-clockwise rotation
+       when viewed in direction of positive axis
+    """
 
     axis_a = (axis + 1) % 3
     axis_b = (axis_a + 1) % 3
@@ -317,11 +322,14 @@ def no_rotation_matrix():
 def rotation_3d_matrix(xzy_axis_angles):
     """Returns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
 
-    matrix = np.zeros((3, 3))
-    for axis in range(3):
-        matrix[axis, axis] = 1.0
-    for axis in range(3):
-        matrix = np.dot(matrix, rotation_matrix_3d_axial(axis, xzy_axis_angles[axis]))
+    # matrix = np.zeros((3, 3))
+    # for axis in range(3):
+    #     matrix[axis, axis] = 1.0
+    # for axis in range(3):
+    #     matrix = np.dot(matrix, rotation_matrix_3d_axial(axis, xzy_axis_angles[axis]))
+    matrix = rotation_matrix_3d_axial(1, xzy_axis_angles[2])  # about y axis
+    matrix = np.dot(matrix, rotation_matrix_3d_axial(2, xzy_axis_angles[1]))  # about z axis
+    matrix = np.dot(matrix, rotation_matrix_3d_axial(0, xzy_axis_angles[0]))  # about x axis
     return matrix
 
 
@@ -369,9 +377,13 @@ def rotate_xyz_array_around_z_axis(a, target_xy_vector):
 
 
 def unit_vector_from_azimuth_and_inclination(azimuth, inclination):
-    """Returns unit vector with compass bearing of azimuth and inclination off +z axis."""
+    """Returns unit vector with compass bearing of azimuth and inclination off +z axis.
 
-    matrix = rotation_3d_matrix((inclination, azimuth, 0.0))
+    note:
+       assumes a left handed coordinate system with y axis north and x axis east
+    """
+
+    matrix = rotation_3d_matrix((inclination, 180.0 - azimuth, 0.0))
     return rotate_vector(matrix, np.array((0.0, 0.0, 1.0)))
 
 
@@ -412,7 +424,11 @@ def tilt_points(pivot_xyz, azimuth, dip, points):
 
 
 def project_points_onto_plane(plane_xyz, normal_vector, points):
-    """Modifies array of xyz points in situ to project onto a plane defined by a point and normal vector."""
+    """Modifies array of xyz points in situ to project onto a plane defined by a point and normal vector.
+
+    note:
+       implicit xy & z units must be the same
+    """
 
     az = azimuth(normal_vector)
     incl = inclination(normal_vector)
@@ -947,7 +963,12 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
 
 
 def triangle_normal_vector(p3):
-    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
+    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle.
+
+    note:
+        resulting vector implicitly assumes that xy & z units are the same; if this is not the case, adjust vector
+        afterwards as required
+    """
 
     # todo: handle degenerate triangles
     return unit_vector(cross_product(p3[0] - p3[1], p3[0] - p3[2]))
@@ -955,7 +976,12 @@ def triangle_normal_vector(p3):
 
 @njit
 def triangle_normal_vector_numba(points):
-    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle."""
+    """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle.
+
+    note:
+        resulting vector implicitly assumes that xy & z units are the same; if this is not the case, adjust vector
+        afterwards as required
+    """
     v = np.cross(points[0] - points[1], points[0] - points[2])
     return v / np.linalg.norm(v)
 

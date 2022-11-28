@@ -12,6 +12,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
+import resqpy.weights_and_measures as wam
 from ._defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defined, geometry_defined_for_all_cells, \
     geometry_defined_for_all_pillars
 
@@ -54,7 +55,7 @@ def set_cached_points_from_property(grid,
        official points array for the grid;
        note that the shape of the points array is quite different between grids with split
        pillars and those without;
-       the uom of the points property must be a length uom and match that used by the grid's crs;
+       the points property values must be in the grid's crs;
        the inactive mask of the grid will only be updated if the set_inactive argument is True;
        if points_property_uuid has been provided, and set_inactive is True, the active property
        must be identified with the active_property_uuid argument;
@@ -85,10 +86,11 @@ def set_cached_points_from_property(grid,
     # check for compatibility and overwrite cached points for grid
     points = rprop.Property(grid.model, uuid = points_property_uuid)
     assert points is not None and points.is_points() and points.indexable_element() == 'nodes'
-    assert points.uom() == grid.xy_units() and grid.z_units() == grid.xy_units()
     points_array = points.array_ref(masked = False)
     assert points_array is not None
     assert points_array.shape == grid.points_cached.shape
+
+    # todo: handle optional points crs and convert to grid crs
     grid.points_cached = points_array
 
     # set grid's time index and series, if requested

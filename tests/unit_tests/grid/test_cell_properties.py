@@ -148,13 +148,17 @@ def test_volume_array_volume_already_set(basic_regular_grid: Grid):
     # Arrange
     extent = basic_regular_grid.extent_kji
     array_volume = np.random.random(extent)
-    basic_regular_grid.array_volume = array_volume  # type: ignore
+    basic_regular_grid.array_volume = array_volume.copy()  # type: ignore
+    basic_regular_grid.array_volume_uom = 'm3'
 
     # Act
-    volume = cp.volume(basic_regular_grid)
+    volume = cp.volume(basic_regular_grid, required_uom = 'm3').copy()
+    vol_ft3 = cp.volume(basic_regular_grid, required_uom = 'ft3')
 
     # Assert
     np.testing.assert_array_almost_equal(volume, array_volume)
+    factor = 1.0 / (0.3048 * 0.3048 * 0.3048)
+    np.testing.assert_array_almost_equal(vol_ft3, array_volume * factor)
 
 
 def test_volume_array_volume_already_set_cell_kji0(basic_regular_grid: Grid):
@@ -162,10 +166,11 @@ def test_volume_array_volume_already_set_cell_kji0(basic_regular_grid: Grid):
     extent = basic_regular_grid.extent_kji
     array_volume = np.random.random(extent)
     basic_regular_grid.array_volume = array_volume  # type: ignore
+    basic_regular_grid.array_volume_uom = 'm3'
     cell_kji0 = (1, 1, 1)
 
     # Act
-    volume = cp.volume(basic_regular_grid, cell_kji0 = cell_kji0)
+    volume = cp.volume(basic_regular_grid, cell_kji0 = cell_kji0, required_uom = 'm3')
 
     # Assert
     assert volume == array_volume[cell_kji0]

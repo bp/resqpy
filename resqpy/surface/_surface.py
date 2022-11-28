@@ -19,8 +19,11 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
+import resqpy.weights_and_measures as wam
+
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
+
 from ._base_surface import BaseSurface
 from ._triangulated_patch import TriangulatedPatch
 
@@ -103,7 +106,7 @@ class Surface(BaseSurface):
         self.points = None  # composite points (all patches)
         self.boundaries = None  # todo: read up on what this is for and look out for examples
         self.represented_interpretation_root = None
-        self.normal_vector = None  # a single derived vector that is roughly normal to the surface
+        self.normal_vector = None  # a single derived vector that is roughly (true) normal to the surface
         self.title = title
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -399,11 +402,18 @@ class Surface(BaseSurface):
            and radial distance arguments
         """
 
+        crs = rqc.Crs(self.model, uuid = point_set.crs_uuid)
         p = point_set.full_array_ref()
-        if reorient:
-            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(p, max_dip = reorient_max_dip)
+        if crs.xy_units == crs.z_units or not reorient:
+            unit_adjusted_p = p
         else:
-            p_xy = p
+            unit_adjusted_p = p.copy()
+            wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
+        if reorient:
+            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p,
+                                                                             max_dip = reorient_max_dip)
+        else:
+            p_xy = unit_adjusted_p
         if extend_with_flange:
             flange_points = triangulate.surrounding_xy_ring(p_xy,
                                                             count = flange_point_count,
@@ -413,12 +423,12 @@ class Surface(BaseSurface):
             if reorient:
                 # reorient back extenstion points into original p space
                 flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
-                p_e = np.concatenate((p, flange_points_reverse_oriented), axis = 0)
+                p_e = np.concatenate((unit_adjusted_p, flange_points_reverse_oriented), axis = 0)
             else:
                 p_e = p_xy_e
         else:
             p_xy_e = p_xy
-            p_e = p
+            p_e = unit_adjusted_p
         log.debug('number of points going into dt: ' + str(len(p_xy_e)))
         success = False
         try:
@@ -433,6 +443,8 @@ class Surface(BaseSurface):
         log.debug('number of triangles: ' + str(len(t)))
         if make_clockwise:
             triangulate.make_all_clockwise_xy(t, p_e)  # modifies t in situ
+        if crs.xy_units != crs.z_units and reorient:
+            wam.convert_lengths(p_e[:, 2], crs.xy_units, crs.z_units)
         self.crs_uuid = point_set.crs_uuid
         self.set_from_triangles_and_points(t, p_e)
         if extend_with_flange:
@@ -451,22 +463,35 @@ class Surface(BaseSurface):
 
         _, p = self.triangles_and_points()
         if reorient:
-            p_xy, self.normal_vector, _ = triangulate.reorient(p)
+            unit_adjusted_p = self.unit_adjusted_points()
+            p_xy, self.normal_vector, _ = triangulate.reorient(unit_adjusted_p)
         else:
             p_xy = p
         triangulate.make_all_clockwise_xy(self.triangles, p_xy)  # modifies t in situ
         # assert np.all(vec.clockwise_triangles(p_xy, self.triangles) >= 0.0)
+
+    def unit_adjusted_points(self):
+        """Returns cached points or copy thereof with z values adjusted to xy units."""
+
+        _, p = self.triangles_and_points()
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+        if crs.xy_units == self.z_units:
+            return p
+        unit_adjusted_p = p.copy()
+        wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
+        return unit_adjusted_p
 
     def normal(self):
         """Returns a vector that is roughly normal to the surface.
 
         notes:
            the result becomes more meaningless the less planar the surface is;
-           even for a parfectly planar surface, the result is approximate
+           even for a parfectly planar surface, the result is approximate;
+           true normal vector is found when xy & z units differ
         """
 
         if self.normal_vector is None:
-            _, p = self.triangles_and_points()
+            p = self.unit_adjusted_points()
             _, self.normal_vector, _ = triangulate.reorient(p)
         return self.normal_vector
 
@@ -744,6 +769,9 @@ class Surface(BaseSurface):
         """
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         triangles, points = self.triangles_and_points()
+        if crs.xy_units != crs.z_units:
+            points = points.copy()
+            wam.convert_lengths(points[:, 2], crs.z_units, crs.xy_units)
         n_triangles = len(triangles)
         normal_vectors_array = np.empty((n_triangles, 3))
         for triangle_num in range(n_triangles):
@@ -755,13 +783,14 @@ class Surface(BaseSurface):
             pc = rqp.PropertyCollection()
             pc.set_support(support = self)
             crs = rqc.Crs(self.model, uuid = self.crs_uuid)
-            pc.add_cached_array_to_imported_list(normal_vectors_array,
-                                                 "computed from surface",
-                                                 "normal vector",
-                                                 uom = crs.xy_units,
-                                                 property_kind = "normal vector",
-                                                 indexable_element = "faces",
-                                                 points = True)
+            pc.add_cached_array_to_imported_list(
+                normal_vectors_array,
+                "computed from surface",
+                "normal vector",
+                uom = None,  # uom not used for points properties
+                property_kind = "normal vector",
+                indexable_element = "faces",
+                points = True)
             pc.write_hdf5_for_imported_list()
             pc.create_xml_for_imported_list_and_add_parts_to_model(find_local_property_kinds = True)
         return normal_vectors_array

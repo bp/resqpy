@@ -1,4 +1,5 @@
 import numpy as np
+import math as maths
 
 
 def test_half_cell_transmissibility_already_set(basic_regular_grid):
@@ -41,6 +42,25 @@ def test_volume(basic_regular_grid):
 
     # Assert
     np.testing.assert_array_almost_equal(volume, 100000.0)
+
+
+def test_volume_mixed_units_default(aligned_regular_grid_mixed_units):
+    cell_vol = aligned_regular_grid_mixed_units.volume(cell_kji0 = (0, 1, 2))
+    expected_cell_vol = np.product(aligned_regular_grid_mixed_units.aligned_dxyz())
+    # following assumes mixed units are 'm' for xy, 'ft' for z
+    expected_cell_vol *= 1.0 / (0.3048 * 0.3048)
+    assert maths.isclose(cell_vol, expected_cell_vol)
+
+
+def test_volume_mixed_units_required_uom(aligned_regular_grid_mixed_units):
+    cell_vol_ft3 = aligned_regular_grid_mixed_units.volume(cell_kji0 = (1, 1, 1), required_uom = 'ft3')
+    cell_vol_m3 = aligned_regular_grid_mixed_units.volume(cell_kji0 = (1, 1, 1), required_uom = 'm3')
+    expected_cell_vol = np.product(aligned_regular_grid_mixed_units.aligned_dxyz())
+    # following assumes mixed units are 'm' for xy, 'ft' for z
+    expected_cell_vol_ft3 = expected_cell_vol / (0.3048 * 0.3048)
+    expected_cell_vol_m3 = 0.3048 * expected_cell_vol
+    assert maths.isclose(cell_vol_ft3, expected_cell_vol_ft3)
+    assert maths.isclose(cell_vol_m3, expected_cell_vol_m3)
 
 
 def test_volume_cell_kji0(basic_regular_grid):

@@ -115,7 +115,8 @@ class Crs(BaseResqpy):
                          extra_metadata = extra_metadata)
 
         assert self.xy_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS xy units: {self.xy_units}'
-        assert self.z_units in wam.valid_uoms(quantity = 'length'), f'invalid CRS z units: {self.z_units}'
+        assert self.z_units == self.xy_units or self.z_units in wam.valid_uoms(
+            quantity = 'length'), f'invalid CRS z units: {self.z_units}'
         assert self.rotation_units in wam.valid_uoms(quantity='plane angle'), \
             f'invalid CRS rotation units: {self.rotation_units}'
         if self.time_units:

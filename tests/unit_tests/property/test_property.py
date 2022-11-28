@@ -449,7 +449,7 @@ def test_points_properties(tmp_path):
     ti = time_series_size // 2
     p = nc.singleton(realization = r, time_index = ti)
     assert p is not None
-    assert nc.uom_for_part(p) == 'm'
+    assert nc.uom_for_part(p) is None
     a = nc.single_array_ref(realization = r, time_index = ti)
     grid.set_cached_points_from_property(property_collection = nc,
                                          realization = r,

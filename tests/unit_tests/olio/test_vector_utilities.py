@@ -267,3 +267,22 @@ def test_points_in_triangles_aligned_optimised_surface_outside_grid():
 
     # Assert
     np.testing.assert_array_almost_equal(triangles_points, np.empty((0, 3)))
+
+
+def test_unit_vector_from_azimuth_and_inclination():
+    one_over_root_two = 1.0 / maths.sqrt(2.0)
+    root_three_over_two = maths.sqrt(3.0) / 2.0
+    v = vec.unit_vector_from_azimuth_and_inclination(0.0, 0.0)
+    assert_array_almost_equal(v, (0.0, 0.0, 1.0))
+    v = vec.unit_vector_from_azimuth_and_inclination(220.0, 0.0)
+    assert_array_almost_equal(v, (0.0, 0.0, 1.0))
+    v = vec.unit_vector_from_azimuth_and_inclination(0.0, 45.0)
+    assert_array_almost_equal(v, (0.0, one_over_root_two, one_over_root_two))
+    v = vec.unit_vector_from_azimuth_and_inclination(90.0, 45.0)
+    assert_array_almost_equal(v, (one_over_root_two, 0.0, one_over_root_two))
+    v = vec.unit_vector_from_azimuth_and_inclination(180.0, 45.0)
+    assert_array_almost_equal(v, (0.0, -one_over_root_two, one_over_root_two))
+    v = vec.unit_vector_from_azimuth_and_inclination(270.0, 60.0)
+    assert_array_almost_equal(v, (-root_three_over_two, 0.0, 0.5))
+    v = vec.unit_vector_from_azimuth_and_inclination(45.0, 90.0)
+    assert_array_almost_equal(v, (one_over_root_two, one_over_root_two, 0.0))

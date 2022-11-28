@@ -1,7 +1,5 @@
 """hexa_grid.py: resqpy HexaGrid class module."""
 
-version = '24th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -11,6 +9,7 @@ import numpy as np
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
 import resqpy.property as rqp
+
 from resqpy.unstructured._unstructured_grid import UnstructuredGrid
 
 
@@ -263,20 +262,25 @@ class HexaGrid(UnstructuredGrid):
         self.cache_all_geometry_arrays()
         return self.points_cached[self.distinct_node_indices_for_cell(cell)]
 
-    def volume(self, cell):
+    def volume(self, cell, required_uom = None):
         """Returns the volume of a single cell.
 
         arguments:
            cell (int): the index of the cell for which the volume is required
 
         returns:
-           float being the volume of the hexahedral cell; units of measure is implied by crs units
+           float being the volume of the hexahedral cell
+
+        note:
+            if required_uom is not specified, returned units will be cube of crs units if xy & z are the same
+            and either 'm' or 'ft', otherwise 'm3' will be used
         """
 
         self._set_crs_handedness()
         apex = self.cell_centre_point(cell)
         v = 0.0
         faces, handednesses = self.face_indices_and_handedness_for_cell(cell)
+
         for face_index, handedness in zip(faces, handednesses):
             nodes = self.node_indices_for_face(face_index)
             abcd = self.points_cached[nodes]
@@ -287,7 +291,8 @@ class HexaGrid(UnstructuredGrid):
                                     abcd[2],
                                     abcd[3],
                                     crs_is_right_handed = (self.crs_is_right_handed == handedness))
-        return v
+
+        return self.adjusted_volume(v, required_uom = required_uom)
 
     # todo: add hexahedral specific method for centre_point()?
     # todo: also add other methods equivalent to those in Grid class

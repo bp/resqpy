@@ -247,6 +247,46 @@ class Polyline(_BasePolyline):
 
         return polyline
 
+    @classmethod
+    def convex_hull_from_closed_polyline(cls, original, title, mode = 'crossing'):
+        """Returns a new closed convex polyline being the convex hull of an original closed polyline."""
+
+        assert original.isclosed
+        assert len(original.coordinates) >= 3
+        if not title:
+            title = f'{original.title} convex hull'
+
+        if len(original.coordinates) == 3 or original.is_convex():
+            coords = original.coordinates
+        else:
+            oc = original.coordinates
+            while True:
+                ol = len(oc)
+                assert ol >= 3
+                hull_mask = np.zeros(ol, dtype = bool)
+                for i in range(ol):
+                    if i == 0:
+                        coords = oc[1:]
+                    elif i == ol - 1:
+                        coords = oc[:-1]
+                    else:
+                        coords = np.concatenate((oc[:i], oc[i + 1:]))
+                    if mode == 'crossing':
+                        inside = pip.pip_cn(oc[i], coords)
+                    else:
+                        inside = pip.pip_wn(oc[i], coords)
+                    hull_mask[i] = not inside
+                if np.all(hull_mask):
+                    coords = oc
+                    break
+                oc = oc[hull_mask]
+            assert len(coords) >= 3
+
+        polyline = cls(original.model, set_bool = True, set_coord = coords, set_crs = original.crs_uuid, title = title)
+        assert polyline.is_convex(trust_metadata = False)
+
+        return polyline
+
     def is_convex(self, trust_metadata = True):
         """Returns True if the polyline is closed and convex in the xy plane, otherwise False."""
 

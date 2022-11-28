@@ -357,6 +357,20 @@ def test_closest_segment_and_distance_to_point_xy(example_model_and_crs):
         assert maths.isclose(m_d, d, rel_tol = 1.0e-6)
 
 
+def test_hull(example_model_and_crs):
+    model, crs = example_model_and_crs
+    coords = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 10.0, 0.0], [5.0, 5.0, 0.0], [7.0, 9.0, 0.0],
+                       [10.0, 10.0, 0.0], [11.0, 5.0, 0.0], [10.0, 0.0, 0.0], [3.0, 1.0, 0.0]],
+                      dtype = float)
+    plo = resqpy.lines.Polyline(model, set_bool = True, set_coord = coords, set_crs = crs.uuid, title = 'plo')
+    plo.write_hdf5()
+    plo.create_xml()
+    hull = resqpy.lines.Polyline.convex_hull_from_closed_polyline(plo, 'hull')
+    expected = np.array([[0.0, 0.0, 0.0], [0.0, 10.0, 0.0], [10.0, 10.0, 0.0], [11.0, 5.0, 0.0], [10.0, 0.0, 0.0]],
+                        dtype = float)
+    assert_array_almost_equal(hull.coordinates, expected)
+
+
 def __zig_zag(model, crs):
     title = 'zig_zag'
     coords = np.array([(4.0, 5.0, 10.0), (1.0, 8.0, 13.0), (5.0, 8.0, 14.0), (1.0, 12.0, 10.0), (5.0, 12.0, 10.0)])

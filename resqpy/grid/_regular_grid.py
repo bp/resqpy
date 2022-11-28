@@ -466,12 +466,15 @@ class RegularGrid(Grid):
         centres += self.block_origin[:2] + 0.5 * np.sum(self.block_dxyz_dkji[1:, :2], axis = 0)
         return centres
 
-    def volume(self, cell_kji0 = None):
+    def volume(self, cell_kji0 = None, required_uom = None):
         """Returns bulk rock volume of cell or numpy array of bulk rock volumes for all cells.
 
         arguments:
            cell_kji0 (optional): if present, the (k, j, i) indices of the individual cell for which the
                                  volume is required; zero based indexing
+           required_uom (str, optional): if present, the RESQML unit of measure (for quantity volume) that
+                                 the volumes will be returned in; if None, the grid's CRS z units cubed
+                                 will be used
 
         returns:
            float, being the volume of cell identified by cell_kji0;
@@ -479,12 +482,14 @@ class RegularGrid(Grid):
 
         notes:
            the function can be used to find the volume of a single cell, or all cells;
-           grid's coordinate reference system must use same units in z as xy (projected);
-           units of result are implicitly determined by coordinates in grid's coordinate reference system;
            the method currently assumes that the primary i, j, k axes are mutually orthogonal
         """
 
+        required_uom = self.get_volume_uom(required_uom)
+        conversion_factor = self.get_volume_conversion_factor(required_uom)
         vol = np.product(vec.naive_lengths(self.block_dxyz_dkji))
+        if conversion_factor is not None:
+            vol *= conversion_factor
         if cell_kji0 is not None:
             return vol
         return np.full((self.nk, self.nj, self.ni), vol)

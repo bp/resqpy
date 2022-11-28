@@ -17,6 +17,7 @@ import resqpy.time_series as rts
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from .property_common import supported_property_kind_list, guess_uom
 import resqpy.property._collection_get_attributes as pcga
+import resqpy.weights_and_measures as wam
 
 
 def _create_xml_add_as_part(collection, add_as_part, p_uuid, p_node, add_relationships, support_root,
@@ -109,8 +110,8 @@ def _create_xml_patch_node(collection, p_node, points, const_value, indexable_el
 
 
 def _create_xml_property_min_max(collection, property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                 max_value, categorical, null_value):
-    if add_min_max and not categorical:
+                                 max_value, categorical, null_value, points):
+    if add_min_max and not categorical and not points:
         # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
         min_value, max_value = pcga._get_property_array_min_max_value(collection, property_array, const_value, discrete,
                                                                       min_value, max_value, categorical, null_value)
@@ -144,13 +145,20 @@ def _create_xml_lookup_node(collection, p_node, string_lookup_uuid):
     return sl_root
 
 
-def _create_xml_uom_node(collection, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title):
+def _create_xml_uom_node(collection, p_node, uom, property_kind, min_value, max_value, facet_type, facet, title,
+                         points):
+    if points:
+        return
     if not uom:
         uom = guess_uom(property_kind, min_value, max_value, collection.support, facet_type = facet_type, facet = facet)
         if not uom:
             uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
             log.warning(f'uom set to Euc for property {title} of kind {property_kind}')
-    collection.model.uom_node(p_node, uom)
+    if uom in wam.valid_uoms():
+        collection.model.uom_node(p_node, uom)
+    else:
+        collection.model.uom_node(p_node, 'Euc')
+        rqet.create_metadata_xml(p_node, {'uom': uom})
 
 
 def _create_xml_add_relationships(collection, p_node, support_root, property_kind_uuid, related_time_series_node,

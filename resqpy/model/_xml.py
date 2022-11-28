@@ -455,7 +455,7 @@ def _create_patch(p_uuid,
     outer_values_node.set(ns['xsi'] + 'type', ns['resqml2'] + hdf5_type)  # may also be constant array type
     outer_values_node.text = rqet.null_xml_text
 
-    if discrete:
+    if discrete and const_value is None:
         if null_value is None:
             if str(xsd_type).startswith('u'):
                 null_value = 4294967295  # 2^32 - 1, used as default even for 64 bit data!

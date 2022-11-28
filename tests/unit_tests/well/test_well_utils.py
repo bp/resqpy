@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from numpy.testing import assert_array_almost_equal
 
 import resqpy.olio.xml_et as rqet
 import resqpy.well
@@ -111,19 +112,20 @@ def test_find_entry_and_exit(example_model_and_crs):
     bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1, 1))
     cp = grid.corner_points(cell_kji0 = (1, 1, 1))
     cell_centre = np.mean(cp, axis = (0, 1, 2))
-    entry_xyz = np.array([25, -25, 125])
-    exit_xyz = np.array([75, -50, 175])
-    entry_vector = 100.0 * (entry_xyz - cell_centre)
-    exit_vector = 100.0 * (exit_xyz - cell_centre)
+    assert_array_almost_equal(cell_centre, (75.0, -75.0, 175.0))
+    e_entry_xyz = np.array([75, -75, 150], dtype = float)
+    e_exit_xyz = np.array([75, -100, 175], dtype = float)
+    entry_vector = 100.0 * (e_entry_xyz - cell_centre)
+    exit_vector = 100.0 * (e_exit_xyz - cell_centre)
 
     # --------- Act ----------
     (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =\
-        find_entry_and_exit(cp=cp, entry_vector=entry_vector, exit_vector=exit_vector, well_name=well_name)
+        find_entry_and_exit(cp = cp, entry_vector = entry_vector, exit_vector = exit_vector, well_name = well_name)
 
     # --------- Assert ----------
-    # TODO: less trivial assertion statement, understand the math behind the calcs
-    for result in (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz):
-        assert result is not None
+    assert (entry_axis, entry_polarity, exit_axis, exit_polarity) == (0, 0, 1, 1)
+    assert_array_almost_equal(entry_xyz, e_entry_xyz)
+    assert_array_almost_equal(exit_xyz, e_exit_xyz)
 
 
 def test_as_optional_array():
