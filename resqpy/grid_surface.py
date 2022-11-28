@@ -1485,7 +1485,7 @@ def find_faces_to_represent_surface_regular(grid,
         k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[np.where(k_faces)]
         j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[np.where(j_faces)]
         i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[np.where(i_faces)]
-        all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
+        all_offsets = _all_offsets(grid.crs, k_offsets_list, j_offsets_list, i_offsets_list)
         log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
 
@@ -2022,7 +2022,8 @@ def find_faces_to_represent_surface_regular_optimised(
         long as the implicit parent crs is shared;
         no trimming of the surface is carried out here: for computational efficiency, it is recommended
         to trim first;
-        organisational objects for the feature are created if needed
+        organisational objects for the feature are created if needed;
+        if the offset return property is requested, the implicit units will be the z units of the grid's crs
     """
 
     if centres is not None:
@@ -2230,7 +2231,7 @@ def find_faces_to_represent_surface_regular_optimised(
         k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[where_true(k_faces)]
         j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[where_true(j_faces)]
         i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[where_true(i_faces)]
-        all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
+        all_offsets = _all_offsets(grid.crs, k_offsets_list, j_offsets_list, i_offsets_list)
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
 
@@ -2937,6 +2938,14 @@ def __trajectory_init(blocked_well, grid, grid_crs):
         )
         # note: any represented interpretation object will not be present in the temporary model
     return trajectory
+
+
+def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
+    if crs.xy_units == crs.z_units:
+        return np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
+    ji_offsets = np.concatenate((j_offsets_list, i_offsets_list), axis = 0)
+    wam.convert_lengths(ji_offsets, crs.xy_units, crs.z_units)
+    return np.concatenate((k_offsets_list, ji_offsets), axis = 0)
 
 
 def __pl(n, use_es = False):
