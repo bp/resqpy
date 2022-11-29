@@ -141,7 +141,7 @@ class BlockedWell(BaseResqpy):
         #: All logs associated with the blockedwellbore; an instance of :class:`resqpy.property.WellIntervalPropertyCollection`
         self.logs = None
         self.cellind_null = None
-        self.gridind_null = None
+        self.gridind_null = -1
         self.facepair_null = None
 
         # face_index_map maps from (axis, p01) to face index value in range 0..5
@@ -3093,6 +3093,8 @@ class BlockedWell(BaseResqpy):
         gis_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
         gis_node.text = rqet.null_xml_text
 
+        if self.gridind_null is None:
+            self.gridind_null = -1
         gnull_node = rqet.SubElement(gis_node, ns['resqml2'] + 'NullValue')
         gnull_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
         gnull_node.text = str(self.gridind_null)
