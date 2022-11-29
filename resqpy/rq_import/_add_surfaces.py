@@ -81,13 +81,15 @@ def _add_single_surface(model, surf_file, surface_file_format, surface_role, qua
             surface = rqs.Surface(model,
                                   tsurf_file = surf_file,
                                   surface_role = surface_role,
-                                  quad_triangles = quad_triangles)
+                                  quad_triangles = quad_triangles,
+                                  crs_uuid = crs_uuid)
         else:
             surface = rqs.Surface(model,
                                   mesh_file = surf_file,
                                   mesh_format = surface_file_format,
                                   surface_role = surface_role,
-                                  quad_triangles = quad_triangles)
+                                  quad_triangles = quad_triangles,
+                                  crs_uuid = crs_uuid)
     elif rq_class == 'mesh':
         if surface_file_format == 'GOCAD-Tsurf':
             log.info(f"Cannot convert a GOCAD-Tsurf to mesh, only to TriangulatedSurface - skipping file {surf_file}")
