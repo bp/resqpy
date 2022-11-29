@@ -39,7 +39,7 @@ include = ["data/*.json"]
 #   - https://semver.org/
 # See here for "caret" style dependency specifications:
 #   - https://python-poetry.org/docs/dependency-specification/
-python = ">= 3.8, < 3.11"
+python = ">= 3.8, < 3.12"
 numpy = "^1.22"
 pandas = "^1.1"
 h5py = "^3.2"
