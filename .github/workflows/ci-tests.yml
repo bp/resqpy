@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
         with:
-          python-version: 3.10
+          python-version: "3.10"
 
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
