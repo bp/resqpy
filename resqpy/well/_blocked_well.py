@@ -140,9 +140,9 @@ class BlockedWell(BaseResqpy):
 
         #: All logs associated with the blockedwellbore; an instance of :class:`resqpy.property.WellIntervalPropertyCollection`
         self.logs = None
-        self.cellind_null = None
+        self.cellind_null = -1
         self.gridind_null = -1
-        self.facepair_null = None
+        self.facepair_null = -1
 
         # face_index_map maps from (axis, p01) to face index value in range 0..5
         # this is the default as indicated on page 139 (but not p. 180) of the RESQML Usage Gude v2.0.1
@@ -3081,6 +3081,8 @@ class BlockedWell(BaseResqpy):
         cis_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
         cis_node.text = rqet.null_xml_text
 
+        if self.cellind_null is None:
+            self.cellind_null = -1
         cnull_node = rqet.SubElement(cis_node, ns['resqml2'] + 'NullValue')
         cnull_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
         cnull_node.text = str(self.cellind_null)
@@ -3107,6 +3109,8 @@ class BlockedWell(BaseResqpy):
         fis_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
         fis_node.text = rqet.null_xml_text
 
+        if self.facepair_null is None:
+            self.facepair_null = -1
         fnull_node = rqet.SubElement(fis_node, ns['resqml2'] + 'NullValue')
         fnull_node.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
         fnull_node.text = str(self.facepair_null)
