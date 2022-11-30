@@ -34,9 +34,9 @@ def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, 
     else:
         min_value = np.nanmin(cached_array)
         max_value = np.nanmax(cached_array)
-        if min_value == np.NaN:
+        if np.isnan(min_value):
             min_value = None
-        if max_value == np.NaN:
+        if np.isnan(max_value):
             max_value = None
     return min_value, max_value
 
