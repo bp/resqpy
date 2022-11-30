@@ -1,4 +1,5 @@
 """_binary_contact_interpretation.py: RESQML low level BinaryContactInterpretation class."""
+from typing import Optional
 
 version = '24th November 2021'
 
@@ -22,8 +23,8 @@ class BinaryContactInterpretation:
             model,
             existing_xml_node = None,
             index = None,
-            contact_relationship: str = None,
-            verb: str = None,
+            contact_relationship: Optional[str] = None,
+            verb: Optional[str] = None,
             subject_uuid = None,
             direct_object_uuid = None,
             subject_contact_side = None,  # optional
