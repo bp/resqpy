@@ -41,7 +41,7 @@ class PolylineSet(_BasePolyline):
             polylines (optional): list of polyline objects from which to build the polylineset
             irap_file (str, optional): the name of a file in irap format from which to import the polyline set
             charisma_file (str, optional): the name of a file in charisma format from which to import the polyline set
-            crs_uuid (UUID, optional): required if loading from a file; ignored if uuid is not None
+            crs_uuid (UUID, optional): required if loading from an IRAP or Charisma file
             title (str, optional): the citation title to use for a new polyline set;
                 ignored if uuid is not None
             originator (str, optional): the name of the person creating the polyline set, defaults to login id;
