@@ -58,7 +58,7 @@ def load_nexus_fault_mult_table(file_name):
                 if len(line.strip()):
                     if (not line.strip()[0] == '!') & (not line.strip()[0] == 'C'):
                         line = line.partition('!')[0]  # removing trailing comments
-                        # line = line.partition('C')[0]  # removing trailing comments
+                        line = line.partition('C')[0]  # removing trailing comments
                         tokens = line.split()
                         if ISTABLE:
                             if is_number(tokens[0]):
