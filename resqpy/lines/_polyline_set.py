@@ -28,6 +28,7 @@ class PolylineSet(_BasePolyline):
                  polylines = None,
                  irap_file = None,
                  charisma_file = None,
+                 crs_uuid = None,
                  title = None,
                  originator = None,
                  extra_metadata = None):
@@ -40,6 +41,7 @@ class PolylineSet(_BasePolyline):
             polylines (optional): list of polyline objects from which to build the polylineset
             irap_file (str, optional): the name of a file in irap format from which to import the polyline set
             charisma_file (str, optional): the name of a file in charisma format from which to import the polyline set
+            crs_uuid (UUID, optional): required if loading from an IRAP or Charisma file
             title (str, optional): the citation title to use for a new polyline set;
                 ignored if uuid is not None
             originator (str, optional): the name of the person creating the polyline set, defaults to login id;
@@ -49,6 +51,10 @@ class PolylineSet(_BasePolyline):
 
         returns:
             the newly instantiated PolylineSet object
+
+        note:
+            this initialiser does not perform any conversion between CRSes; if loading from a list of Polylines,
+            they must all share a common CRS (which must also match crs_uuid if supplied)
 
         :meta common:
         """
@@ -61,7 +67,7 @@ class PolylineSet(_BasePolyline):
         self.save_polys = False
         self.boolnotconstant = None
         self.boolvalue = None
-        self.crs_uuid = None
+        self.crs_uuid = crs_uuid
 
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -73,10 +79,11 @@ class PolylineSet(_BasePolyline):
             return
 
         if polylines is not None:  # Create from list of polylines
-            crs_list = []
+            crs_list = [] if crs_uuid is None else [bu.uuid_from_string(crs_uuid)]
             for poly in polylines:
                 crs_list.append(poly.crs_uuid)
             crs_set = set(crs_list)
+            # following assumes consistent use of UUID or str
             assert len(crs_set) == 1, 'More than one CRS found in input polylines for polyline set'
             for crs_uuid in crs_set:
                 self.crs_uuid = crs_uuid
@@ -90,9 +97,13 @@ class PolylineSet(_BasePolyline):
                 self.title = polylines[0].title
 
         elif irap_file is not None:  # Create from an input IRAP file
+            if crs_uuid is None:
+                log.warning(f'applying generic model CRS when loading polylines from IRAP file: {irap_file}')
             self._set_from_irap(irap_file)
 
         elif charisma_file is not None:
+            if crs_uuid is None:
+                log.warning(f'applying generic model CRS when loading polylines from Charisma file: {charisma_file}')
             self._set_from_charisma(charisma_file)
 
     def _load_from_xml(self):
@@ -110,8 +121,11 @@ class PolylineSet(_BasePolyline):
 
             crs_root = self.model.referenced_node(rqet.find_tag(geometry_node, 'LocalCrs'))
             assert crs_root is not None  # Required field
-            self.crs_uuid = rqet.uuid_for_part_root(crs_root)
-            assert self.crs_uuid is not None  # Required field
+            uuid = rqet.uuid_for_part_root(crs_root)
+            assert uuid is not None  # Required field
+            if self.crs_uuid is not None:
+                assert bu.matching_uuids(self.crs_uuid, uuid), 'mixed CRS uuids in use in PolylineSet'
+            self.crs_uuid = uuid
 
             closed_node = rqet.find_tag(patch_node, 'ClosedPolylines')
             assert closed_node is not None  # Required field
