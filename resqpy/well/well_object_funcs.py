@@ -1,7 +1,5 @@
 """well_object_funcs.py: resqpy well module for functions that impact well objects"""
 
-version = '10th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
@@ -22,12 +20,7 @@ import resqpy.property as rqp
 import resqpy.weights_and_measures as bwam
 import resqpy.olio.wellspec_keywords as wsk
 
-from ._md_datum import MdDatum
-from ._wellbore_frame import WellboreFrame
-from ._wellbore_marker_frame import WellboreMarkerFrame
-from ._blocked_well import BlockedWell
-from ._trajectory import Trajectory
-from ._deviation_survey import DeviationSurvey
+import resqpy.well as rqw
 
 
 def add_wells_from_ascii_file(model,
@@ -122,12 +115,12 @@ def add_wells_from_ascii_file(model,
         # create a measured depth datum for the well and add as part
         first_row = well_df.iloc[0]
         if first_row[md_col] == 0.0:
-            md_datum = MdDatum(model,
-                               crs_uuid = crs_uuid,
-                               location = (first_row[x_col], first_row[y_col], first_row[z_col]))
+            md_datum = rqw.MdDatum(model,
+                                   crs_uuid = crs_uuid,
+                                   location = (first_row[x_col], first_row[y_col], first_row[z_col]))
         else:
-            md_datum = MdDatum(model, crs_uuid = crs_uuid,
-                               location = (first_row[x_col], first_row[y_col], 0.0))  # sea level datum
+            md_datum = rqw.MdDatum(model, crs_uuid = crs_uuid,
+                                   location = (first_row[x_col], first_row[y_col], 0.0))  # sea level datum
         md_datum.create_xml(title = str(well_name))
         md_datum_list.append(md_datum)
 
@@ -142,13 +135,13 @@ def add_wells_from_ascii_file(model,
         interpretation_list.append(interpretation)
 
         # create trajectory, write arrays to hdf5 and add as part
-        trajectory = Trajectory(model,
-                                md_datum = md_datum,
-                                data_frame = well_df,
-                                length_uom = length_uom,
-                                md_domain = md_domain,
-                                represented_interp = interpretation,
-                                well_name = well_name)
+        trajectory = rqw.Trajectory(model,
+                                    md_datum = md_datum,
+                                    data_frame = well_df,
+                                    length_uom = length_uom,
+                                    md_domain = md_domain,
+                                    represented_interp = interpretation,
+                                    well_name = well_name)
         trajectory.write_hdf5()
         trajectory.create_xml(title = well_name)
         trajectory_list.append(trajectory)
@@ -231,28 +224,28 @@ def well_name(well_object, model = None):
             obj_root = well_object
             obj_type = rqet.node_type(obj_root)
             obj_uuid = rqet.uuid_for_part_root(obj_root)
-        elif isinstance(well_object, Trajectory):
+        elif isinstance(well_object, rqw.Trajectory):
             obj_type = 'WellboreTrajectoryRepresentation'
             traj_root = well_object.root
         elif isinstance(well_object, rqo.WellboreFeature):
             obj_type = 'WellboreFeature'
         elif isinstance(well_object, rqo.WellboreInterpretation):
             obj_type = 'WellboreInterpretation'
-        elif isinstance(well_object, BlockedWell):
+        elif isinstance(well_object, rqw.BlockedWell):
             obj_type = 'BlockedWellboreRepresentation'
             if well_object.trajectory is not None:
                 traj_root = well_object.trajectory.root
-        elif isinstance(well_object, WellboreMarkerFrame):  # note: trajectory might be None
+        elif isinstance(well_object, rqw.WellboreMarkerFrame):  # note: trajectory might be None
             obj_type = 'WellboreMarkerFrameRepresentation'
             if well_object.trajectory is not None:
                 traj_root = well_object.trajectory.root
-        elif isinstance(well_object, WellboreFrame):  # note: trajectory might be None
+        elif isinstance(well_object, rqw.WellboreFrame):  # note: trajectory might be None
             obj_type = 'WellboreFrameRepresentation'
             if well_object.trajectory is not None:
                 traj_root = well_object.trajectory.root
-        elif isinstance(well_object, DeviationSurvey):
+        elif isinstance(well_object, rqw.DeviationSurvey):
             obj_type = 'DeviationSurveyRepresentation'
-        elif isinstance(well_object, MdDatum):
+        elif isinstance(well_object, rqw.MdDatum):
             obj_type = 'MdDatum'
 
         assert obj_type is not None, 'argument type not recognized for well_name'
@@ -343,7 +336,7 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, ch
     bwam.convert_lengths(depth_values, from_units = las_depth_uom, to_units = trajectory.md_uom)
     assert len(depth_values) > 0
 
-    well_frame = WellboreFrame(
+    well_frame = rqw.WellboreFrame(
         parent_model = model,
         trajectory = trajectory,
         mds = depth_values,
@@ -393,13 +386,13 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file, usa_date_format 
     count = 0
     for well in well_list_dict:
         log.info('processing well: ' + str(well))
-        bw = BlockedWell(model,
-                         grid = grid,
-                         wellspec_file = wellspec_file,
-                         well_name = well,
-                         check_grid_name = True,
-                         use_face_centres = True,
-                         usa_date_format = usa_date_format)
+        bw = rqw.BlockedWell(model,
+                             grid = grid,
+                             wellspec_file = wellspec_file,
+                             well_name = well,
+                             check_grid_name = True,
+                             use_face_centres = True,
+                             usa_date_format = usa_date_format)
         if not bw.node_count:  # failed to load from wellspec, eg. because of no perforations in grid
             log.warning('no wellspec data loaded for well: ' + str(well))
             continue
@@ -421,7 +414,7 @@ def add_logs_from_cellio(blockedwell, cellio):
            must contain columns i_index, j_index and k_index, plus additional columns for logs to be imported
     """
     # Get the initial variables from the blocked well
-    assert isinstance(blockedwell, BlockedWell), 'Not a blocked wellbore object'
+    assert isinstance(blockedwell, rqw.BlockedWell), 'Not a blocked wellbore object'
     collection = rqp.WellIntervalPropertyCollection(frame = blockedwell)
     well_name = blockedwell.trajectory.title.split(" ")[0]
     grid = blockedwell.model.grid()
