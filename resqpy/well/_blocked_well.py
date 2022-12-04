@@ -28,10 +28,10 @@ import resqpy.weights_and_measures as wam
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
+import resqpy.well as rqw
+
 from .well_utils import _pl, find_entry_and_exit, load_hdf5_array, _derive_from_wellspec_check_grid_name, \
     _derive_from_wellspec_verify_col_list
-from ._trajectory import Trajectory
-from ._md_datum import MdDatum
 
 
 class BlockedWell(BaseResqpy):
@@ -135,6 +135,7 @@ class BlockedWell(BaseResqpy):
         self.grid_list = []  #: list of grid objects indexed by grid_indices
         self.wellbore_interpretation = None  #: associated wellbore interpretation object
         self.wellbore_feature = None  #: associated wellbore feature object
+        self.well_name = None  #: name of well to import from ascii file formats
 
         self.cell_interval_map = None  # maps from cell index to interval (ie. node) index; populated on demand
 
@@ -289,7 +290,7 @@ class BlockedWell(BaseResqpy):
         trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
         assert trajectory_uuid is not None, 'blocked well trajectory reference not found in xml'
         if self.trajectory is None:
-            self.trajectory = Trajectory(self.model, uuid = trajectory_uuid)
+            self.trajectory = rqw.Trajectory(self.model, uuid = trajectory_uuid)
         else:
             assert bu.matching_uuids(self.trajectory.uuid, trajectory_uuid), 'blocked well trajectory uuid mismatch'
 
@@ -563,7 +564,9 @@ class BlockedWell(BaseResqpy):
 
         self.trajectory = trajectory
         if not self.well_name:
-            self.well_name = trajectory.title
+            self.well_name = rqw.well_name(trajectory)
+        if not self.title:
+            self.title = self.well_name
         bw = rgs.populate_blocked_well_from_trajectory(self,
                                                        grid,
                                                        active_only = active_only,
@@ -674,6 +677,8 @@ class BlockedWell(BaseResqpy):
             self.well_name = well_name
         else:
             well_name = self.well_name
+        if not self.title:
+            self.title = well_name
         return well_name
 
     def derive_from_cell_list(self, cell_kji0_list, well_name, grid, length_uom = None):
@@ -1049,6 +1054,8 @@ class BlockedWell(BaseResqpy):
             self.well_name = well_name
         else:
             well_name = self.well_name
+        if not self.title:
+            self.title = well_name
 
         grid_name = rqet.citation_title_for_node(grid.root)
         length_uom = grid.z_units()
@@ -2913,10 +2920,12 @@ class BlockedWell(BaseResqpy):
                 if traj_feature_uuid is not None:
                     self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, uuid = traj_feature_uuid)
         if self.wellbore_feature is None:
-            self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, feature_name = self.trajectory.title)
+            self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model,
+                                                        feature_name = rqw.well_name(self.trajectory))
             self.feature_to_be_written = True
         if self.wellbore_interpretation is None:
             self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model,
+                                                                      title = self.wellbore_feature.title,
                                                                       wellbore_feature = self.wellbore_feature)
             if self.trajectory.wellbore_interpretation is None and shared_interpretation:
                 self.trajectory.wellbore_interpretation = self.wellbore_interpretation
@@ -2937,14 +2946,17 @@ class BlockedWell(BaseResqpy):
            not usually called directly; used by import methods
         """
 
+        if not well_name:
+            well_name = self.title
+
         # create md datum node for synthetic trajectory, using crs for grid
         datum_location = trajectory_points[0].copy()
         if set_depth_zero:
             datum_location[2] = 0.0
-        datum = MdDatum(self.model,
-                        crs_uuid = grid.crs_uuid,
-                        location = datum_location,
-                        md_reference = 'mean sea level')
+        datum = rqw.MdDatum(self.model,
+                            crs_uuid = grid.crs_uuid,
+                            location = datum_location,
+                            md_reference = 'mean sea level')
 
         # create synthetic trajectory object, using crs for grid
         trajectory_mds_array = np.array(trajectory_mds)
@@ -2955,12 +2967,12 @@ class BlockedWell(BaseResqpy):
             'Y': trajectory_xyz_array[..., 1],
             'Z': trajectory_xyz_array[..., 2]
         })
-        self.trajectory = Trajectory(self.model,
-                                     md_datum = datum,
-                                     data_frame = trajectory_df,
-                                     length_uom = length_uom,
-                                     well_name = well_name,
-                                     set_tangent_vectors = set_tangent_vectors)
+        self.trajectory = rqw.Trajectory(self.model,
+                                         md_datum = datum,
+                                         data_frame = trajectory_df,
+                                         length_uom = length_uom,
+                                         well_name = well_name,
+                                         set_tangent_vectors = set_tangent_vectors)
         self.trajectory_to_be_written = True
 
         if create_feature_and_interp:
@@ -2990,7 +3002,8 @@ class BlockedWell(BaseResqpy):
         if title:
             self.title = title
         if not self.title:
-            self.title = 'blocked well'
+            self.title = self.well_name
+        title = self.title
 
         self.__create_wellbore_feature_and_interpretation_xml_if_needed(add_as_part = add_as_part,
                                                                         add_relationships = add_relationships,
