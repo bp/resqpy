@@ -216,7 +216,7 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
                 for fname in fault_incl:
                     with open(fname) as infile:
                         for line in infile:
-                            outfile.write(line.strip() + '\n')
+                            outfile.write(line.rstrip() + '\n')
         else:
             temp_faults = fault_incl[0]
     else:
