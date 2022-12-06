@@ -452,7 +452,7 @@ def example_fine_coarse_model(example_model_and_crs):
 
     fc = rqfc.FineCoarse(fine_extent_kji = (6, 10, 10), coarse_extent_kji = (3, 5, 5))
     fc.set_all_ratios_constant()
-    fc.set_all_proprtions_equal()
+    fc.set_all_proportions_equal()
 
     return model, coarse, fine, fc
 

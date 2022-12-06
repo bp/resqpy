@@ -267,7 +267,7 @@ class FineCoarse:
         self.equal_proportions[axis] = True
         self.vector_proportions[axis] = None
 
-    def set_all_proprtions_equal(self):
+    def set_all_proportions_equal(self):
         """Sets proportions equal in all 3 axes."""
 
         for axis in range(3):
