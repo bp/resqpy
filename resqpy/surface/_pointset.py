@@ -141,12 +141,13 @@ class PointSet(BaseSurface):
             charisma_file: a charisma 3d interpretation file
         """
         with open(charisma_file, 'r') as surf:
-            for i, line in enumerate(surf.readlines()):
-                if i == 0:
-                    cpoints = np.array([[float(x) for x in line.split()[6:]]])
-                else:
-                    curr = np.array([[float(x) for x in line.split()[6:]]])
-                    cpoints = np.concatenate((cpoints, curr))
+            cpoints = np.loadtxt(surf, usecols = (6,7,8))
+            #for i, line in enumerate(surf.readlines()):
+            #    if i == 0:
+            #        cpoints = np.array([[float(x) for x in line.split()[6:]]])
+            #    else:
+            #        curr = np.array([[float(x) for x in line.split()[6:]]])
+            #        cpoints = np.concatenate((cpoints, curr))
         self.add_patch(cpoints)
         assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from charisma file'
         if not self.title:
