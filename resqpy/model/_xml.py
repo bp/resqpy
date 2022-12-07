@@ -272,11 +272,13 @@ def _create_crs_reference(model, root = None, crs_uuid = None):
     assert crs_uuid is not None
     crs_root = model.root_for_uuid(crs_uuid)
     assert crs_root is not None
+    crs_type = model.type_of_uuid(crs_uuid)
+    assert crs_type in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
 
     return _create_ref_node('LocalCrs',
                             rqet.find_nested_tags_text(crs_root, ['Citation', 'Title']),
                             crs_uuid,
-                            content_type = 'obj_LocalDepth3dCrs',
+                            content_type = crs_type,
                             root = root)
 
 
