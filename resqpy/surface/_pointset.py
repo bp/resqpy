@@ -141,7 +141,7 @@ class PointSet(BaseSurface):
             charisma_file: a charisma 3d interpretation file
         """
         with open(charisma_file, 'r') as surf:
-            cpoints = np.loadtxt(surf, usecols = (6, 7, 8))
+            cpoints = np.loadtxt(surf, usecols = (6, 7, 8), encoding = 'uft-8')
         self.add_patch(cpoints)
         assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from charisma file'
         if not self.title:
@@ -154,7 +154,7 @@ class PointSet(BaseSurface):
             irap_file: a IRAP classic points format file
         """
         with open(irap_file, 'r') as points:
-            cpoints = np.loadtxt(points)
+            cpoints = np.loadtxt(points, encoding = 'uft-8')
             # for i, line in enumerate(points.readlines()):
             #     if i == 0:
             #         cpoints = np.array([[float(x) for x in line.split(" ")]])
