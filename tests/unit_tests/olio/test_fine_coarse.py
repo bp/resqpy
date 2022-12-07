@@ -18,7 +18,7 @@ def test_fine_coarse():
     fc2 = rqfc.FineCoarse((9, 16, 10), (3, 4, 5))
     assert fc2 is not None
     fc2.set_all_ratios_constant()
-    fc2.set_all_proprtions_equal()
+    fc2.set_all_proportions_equal()
     fc2.assert_valid()
     assert fc2.ratios((2, 2, 2)) == (3, 4, 2)
 

@@ -213,7 +213,7 @@ def _refined_unfaulted_grid(model, source_grid, fine_coarse):
     # inherit the coordinate reference system used by the grid geometry
     grid.crs_uuid = source_grid.crs_uuid
     if source_grid.model is not model:
-        model.duplicate_node(source_grid.model.root_for_uuid(source_grid, grid.crs_uuid), add_as_part = True)
+        model.duplicate_node(source_grid.model.root_for_uuid(grid.crs_uuid), add_as_part = True)
     grid.crs = rqc.Crs(model, uuid = grid.crs_uuid)
 
     refined_points = np.empty((grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3))
@@ -316,6 +316,11 @@ def _refined_unfaulted_grid(model, source_grid, fine_coarse):
 
 def _inherit_properties(source_grid, grid, fine_coarse, inherit_realization, inherit_all_realizations):
     source_collection = source_grid.extract_property_collection()
+    source_collection = rqp.selective_version_of_collection(source_collection,
+                                                            indexable = 'cells',
+                                                            count = 1,
+                                                            points = False)
+    # todo: support other indexable elements, especially columns
     collection = None
     if source_collection is not None:
         #  do not inherit the inactive property array by this mechanism
