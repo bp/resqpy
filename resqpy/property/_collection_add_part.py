@@ -174,7 +174,7 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
                                extra_metadata, expand_const_arrays):
     (p_uuid, p_file_name, p_keyword, p_cached_name, p_discrete, p_uom, p_time_index, p_null_value, p_min_value,
      p_max_value, property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
-     const_value, points) = attributes
+     const_value, points, p_time_series_uuid) = attributes
 
     log.debug('processing imported property ' + str(p_keyword))
     assert not points or not p_discrete
@@ -204,7 +204,7 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
         facet_type = facet_type,
         facet = facet,
         discrete = p_discrete,  # todo: time series bits
-        time_series_uuid = time_series_uuid,
+        time_series_uuid = time_series_uuid if p_time_series_uuid is None else p_time_series_uuid,
         time_index = p_time_index,
         uom = p_uom,
         null_value = p_null_value,

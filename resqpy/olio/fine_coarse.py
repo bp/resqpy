@@ -248,9 +248,10 @@ class FineCoarse:
         assert isinstance(vector, np.ndarray) and vector.ndim == 1
         assert str(vector.dtype).startswith('int')
         assert len(vector) == self.coarse_extent_kji[axis],  \
-               'length of vector of refinement ratios does not match coarse extent'
+               f'length of vector {len(vector)} of refinement ratios ' +  \
+               f'does not match coarse extent {self.coarse_extent_kji[axis]}'
         assert np.sum(vector) == self.fine_extent_kji[axis],  \
-               'sum of refinement ratios in vector does not match fine extent'
+               f'sum of refinement ratios {np.sum(vector)} in vector does not match fine extent'
         minimum = np.min(vector)
         assert minimum > 0
         if minimum == np.max(vector):

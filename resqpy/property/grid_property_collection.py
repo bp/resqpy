@@ -13,17 +13,17 @@ import os
 
 import numpy as np
 
+import resqpy.property as rqp
 import resqpy.olio.ab_toolbox as abt
 import resqpy.olio.box_utilities as bxu
 import resqpy.olio.load_data as ld
 import resqpy.olio.write_data as wd
 import resqpy.olio.xml_et as rqet
 
-from .property_collection import PropertyCollection
 from .property_common import selective_version_of_collection
 
 
-class GridPropertyCollection(PropertyCollection):
+class GridPropertyCollection(rqp.PropertyCollection):
     """Class for RESQML Property collection for an IJK Grid, inheriting from PropertyCollection."""
 
     def __init__(self, grid = None, property_set_root = None, realization = None):
@@ -878,7 +878,8 @@ def _add_to_imported(collection, a, title, info, null_value = None, const_value 
         facet = info[9],
         realization = info[0],
         const_value = const_value,
-        points = info[21])
+        points = info[21],
+        time_series_uuid = info[11])
 
 
 def _extend_imported_initial_assertions(other, box, refinement, coarsening):
@@ -1066,8 +1067,13 @@ def _extend_imported_coarsen_lengths(other, box, collection, realization, uncach
         if not copy_all_realizations and info[0] != realization:
             continue
         fine_cl_array = _array_box(other, part, box = box, uncache_other_arrays = uncache_other_arrays)
-        assert info[5] == 1 and info[8] == 'direction'
-        axis = 'KJI'.index(info[9][0].upper())
+        assert info[5] == 1  # count
+        facet_type = info[8]
+        facet = info[9]
+        if not facet_type:
+            (_, facet_type, facet) = rqp.property_kind_and_facet_from_keyword(info[10])
+        assert facet_type == 'direction'
+        axis = 'KJI'.index(facet[0].upper())
         coarse_cl_array = _coarsening_sum(coarsening, fine_cl_array, axis = axis)
         _add_to_imported(collection, coarse_cl_array, 'coarsened from grid ' + str(other.support.uuid), info)
 
@@ -1135,7 +1141,8 @@ def _extend_imported_no_coarsening_single(source_collection, part, info, collect
         facet = info[9],
         realization = info[0],
         const_value = const_value,
-        points = info[21])
+        points = info[21],
+        time_series_uuid = info[11])
 
 
 def _extend_imported_no_coarsening_single_resampling(a, info, collection, refinement):

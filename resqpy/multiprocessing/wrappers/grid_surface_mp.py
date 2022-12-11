@@ -18,27 +18,27 @@ import uuid
 
 
 def find_faces_to_represent_surface_regular_wrapper(
-    index: int,
-    parent_tmp_dir: str,
-    use_index_as_realisation: bool,
-    grid_epc: str,
-    grid_uuid: Union[UUID, str],
-    surface_epc: str,
-    surface_uuid: Union[UUID, str],
-    name: str,
-    title: Optional[str] = None,
-    agitate: bool = False,
-    feature_type: str = 'fault',
-    trimmed: bool = False,
-    is_curtain = False,
-    extend_fault_representation: bool = False,
-    retriangulate: bool = False,
-    related_uuid = None,
-    progress_fn: Optional[Callable] = None,
-    consistent_side: bool = False,
-    extra_metadata = None,
-    return_properties: Optional[List[str]] = None,
-) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
+        index: int,
+        parent_tmp_dir: str,
+        use_index_as_realisation: bool,
+        grid_epc: str,
+        grid_uuid: Union[UUID, str],
+        surface_epc: str,
+        surface_uuid: Union[UUID, str],
+        name: str,
+        title: Optional[str] = None,
+        agitate: bool = False,
+        feature_type: str = 'fault',
+        trimmed: bool = False,
+        is_curtain = False,
+        extend_fault_representation: bool = False,
+        retriangulate: bool = False,
+        related_uuid = None,
+        progress_fn: Optional[Callable] = None,
+        consistent_side: bool = False,
+        extra_metadata = None,
+        return_properties: Optional[List[str]] = None,
+        raw_bisector: bool = False) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Wrapper function of find_faces_to_represent_surface_regular_optimised.
 
     Used for multiprocessing to create a new model that is saved in a temporary epc file
@@ -81,7 +81,9 @@ def find_faces_to_represent_surface_regular_wrapper(
            normal vector is a unit vector normal to the surface triangle; each array has an entry for each face
            in the gcs; grid bisector is a grid cell boolean property holding True for the set of cells on one
            side of the surface, deemed to be shallower;
-           the returned dictionary has the passed strings as keys and numpy arrays as values.
+           the returned dictionary has the passed strings as keys and numpy arrays as values
+        raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
+           form without assessing which side is shallower (True values indicate same side as origin cell)
 
     Returns:
         Tuple containing:
@@ -230,7 +232,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         progress_fn,
         consistent_side,
         return_properties,
-    )
+        raw_bisector = raw_bisector)
 
     success = False
 
@@ -327,7 +329,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                     discrete = True,
                     property_kind = "grid bisector",
                     facet_type = 'direction',
-                    facet = 'vertical' if is_curtain else 'sloping',
+                    facet = 'raw' if raw_bisector else ('vertical' if is_curtain else 'sloping'),
                     realization = realisation,
                     indexable_element = "columns" if is_curtain else "cells",
                 )

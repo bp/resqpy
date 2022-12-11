@@ -84,7 +84,7 @@ def test_bisector_from_faces_flat_surface_k():
     ])
 
     # Act
-    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces)
+    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
     # Assert
     np.testing.assert_array_almost_equal(
@@ -117,7 +117,7 @@ def test_bisector_from_faces_flat_surface_j():
     ])
 
     # Act
-    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces)
+    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
     # Assert
     np.testing.assert_array_almost_equal(
@@ -150,7 +150,7 @@ def test_bisector_from_faces_flat_surface_i():
     ])
 
     # Act
-    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces)
+    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
     # Assert
     np.testing.assert_array_almost_equal(
@@ -184,4 +184,4 @@ def test_bisector_from_faces_flat_surface_k_hole():
 
     # Act & Assert
     with pytest.raises(AssertionError):
-        rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces)
+        rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)

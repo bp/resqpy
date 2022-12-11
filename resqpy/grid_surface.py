@@ -1,11 +1,8 @@
 """Functions relating to intsection of resqml grid with surface or trajectory objects."""
 
-version = '30th July 2022'
-
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('grid_surface.py version ' + version)
 
 import math as maths
 import numpy as np
@@ -1605,7 +1602,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
 
 
 def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
-                        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+                        i_faces: np.ndarray, raw_bisector: bool) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets.
 
     Args:
@@ -1665,11 +1662,11 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     a_mean_k = float(a_k_sum) / float(a_count)
     not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
     is_curtain = False
-    if a_mean_k > not_a_mean_k:
-        a[:] = np.logical_not(a)
-    elif abs(a_mean_k - not_a_mean_k) <= 0.01:
+    if abs(a_mean_k - not_a_mean_k) <= 0.001:
         # log.warning('unable to determine which side of surface is shallower')
         is_curtain = True
+    elif a_mean_k > not_a_mean_k and not raw_bisector:
+        a[:] = np.logical_not(a)
     return a, is_curtain
 
 
@@ -1738,8 +1735,8 @@ def get_boundary(  # type: ignore
 
 
 def bisector_from_faces_new(  # type: ignore
-        grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
-        i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+        grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
+        raw_bisector: bool) -> Tuple[np.ndarray, bool]:
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
     Args:
@@ -1864,9 +1861,9 @@ def bisector_from_faces_new(  # type: ignore
         array_opposite_k_sum += (k + 1) * (layer_cell_count - array_layer_count)
     array_mean_k = float(array_k_sum) / float(true_count)
     array_opposite_mean_k = float(array_opposite_k_sum) / float(cell_count - true_count)
-    if array_mean_k > array_opposite_mean_k:
+    if array_mean_k > array_opposite_mean_k and not raw_bisector:
         array[:] = np.logical_not(array)
-    elif abs(array_mean_k - array_opposite_mean_k) <= 0.01:
+    if abs(array_mean_k - array_opposite_mean_k) <= 0.001:
         # log.warning('unable to determine which side of surface is shallower')
         is_curtain = True
 
@@ -1971,18 +1968,18 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
 
 
 def find_faces_to_represent_surface_regular_optimised(
-    grid,
-    surface,
-    name,
-    title = None,
-    centres = None,  # DEPRECATED; TODO: remove this argument
-    agitate = False,
-    feature_type = 'fault',
-    is_curtain = False,
-    progress_fn = None,
-    consistent_side = False,  # DEPRECATED; functionality no longer supported
-    return_properties = None,
-):
+        grid,
+        surface,
+        name,
+        title = None,
+        centres = None,  # DEPRECATED; TODO: remove this argument
+        agitate = False,
+        feature_type = 'fault',
+        is_curtain = False,
+        progress_fn = None,
+        consistent_side = False,  # DEPRECATED; functionality no longer supported
+        return_properties = None,
+        raw_bisector = False):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     Args:
@@ -2009,7 +2006,9 @@ def find_faces_to_represent_surface_regular_optimised(
            offset is a measure of the distance between the centre of the cell face and the intersection point;
            grid bisector is a grid cell boolean property holding True for the set of cells on one
            side of the surface, deemed to be shallower;
-           the returned dictionary has the passed strings as keys and numpy arrays as values.
+           the returned dictionary has the passed strings as keys and numpy arrays as values
+        raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
+           form without assessing which side is shallower (True values indicate same side as origin cell)
 
     Returns:
         gcs  or  (gcs, gcs_props)
@@ -2254,7 +2253,7 @@ def find_faces_to_represent_surface_regular_optimised(
             # log.debug('finished preparing columns bisector')
         else:
             log.debug('preparing cells bisector')
-            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces)
+            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces, raw_bisector)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
