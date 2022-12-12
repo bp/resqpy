@@ -133,6 +133,7 @@ class Grid(BaseResqpy):
         self.stratigraphic_units = None  #: optional array of unit indices (one per layer or K gap)
         self.time_index = None  #: optional time index for dynamic geometry
         self.time_series_uuid = None  #: optional time series for dynamic geometry
+        self.represented_interpretation_uuid = None  #: optional represented interpretation uuid for the grid - EarthModelInterpretation object expected
 
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -183,6 +184,7 @@ class Grid(BaseResqpy):
         # self.create_column_pillar_mapping()  # mapping now created on demand in other methods
         self.extract_inactive_mask()
         self.extract_stratigraphy()
+        self.get_represented_interpretation()
 
     def set_modified(self, update_xml = False, update_hdf5 = False):
         """Assigns a new uuid to this grid; also calls set_modified() for parent model.
@@ -956,6 +958,11 @@ class Grid(BaseResqpy):
             crs_uuid = self.extract_crs_uuid()
         assert crs_uuid is not None
         self.crs = rqc.Crs(self.model, uuid = crs_uuid)
+
+    def get_represented_interpretation(self):
+        """Establishes the represented interpretation uuid, as stored in the xml tree, if present"""
+        self.represented_interpretation_uuid = rqet.find_nested_tags_text(self.root,
+                                                                          ['RepresentedInterpretation', 'UUID'])
 
     def extract_pillar_shape(self):
         """Returns string indicating whether whether pillars are curved, straight, or vertical as stored in xml.
