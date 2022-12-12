@@ -27,7 +27,8 @@ def _create_grid_xml(grid,
         rqet.create_metadata_xml(node = ijk, extra_metadata = {'grid_flavour': grid.grid_representation})
 
     if grid.represented_interpretation_uuid is not None:
-        interp_title = grid.model.citation_title_for_part(grid.model.part_for_uuid(grid.represented_interpretation_uuid))
+        interp_title = grid.model.citation_title_for_part(grid.model.part_for_uuid(
+            grid.represented_interpretation_uuid))
         grid.model.create_ref_node('RepresentedInterpretation',
                                    interp_title,
                                    grid.represented_interpretation_uuid,
@@ -241,7 +242,8 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
 
         if grid.represented_interpretation_uuid is not None:
             grid.model.create_reciprocal_relationship(ijk, 'destinationObject',
-                                                      grid.model.root_for_uuid(grid.represented_interpretation_uuid), 'sourceObject')
+                                                      grid.model.root_for_uuid(grid.represented_interpretation_uuid),
+                                                      'sourceObject')
 
 
 def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice):
