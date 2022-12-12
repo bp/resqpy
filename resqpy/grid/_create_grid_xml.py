@@ -26,6 +26,14 @@ def _create_grid_xml(grid,
     if grid.grid_representation and not write_geometry:
         rqet.create_metadata_xml(node = ijk, extra_metadata = {'grid_flavour': grid.grid_representation})
 
+    if grid.represented_interpretation_uuid is not None:
+        interp_title = grid.model.citation_title_for_part(grid.model.part_for_uuid(grid.represented_interpretation_uuid))
+        grid.model.create_ref_node('RepresentedInterpretation',
+                                   interp_title,
+                                   grid.represented_interpretation_uuid,
+                                   content_type = grid.model.type_of_uuid(grid.represented_interpretation_uuid),
+                                   root = ijk)
+
     ni_node = rqet.SubElement(ijk, ns['resqml2'] + 'Ni')
     ni_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
     ni_node.text = str(grid.extent_kji[2])
@@ -230,6 +238,10 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
         if grid.parent_window is not None and grid.parent_grid_uuid is not None:
             grid.model.create_reciprocal_relationship(ijk, 'destinationObject',
                                                       grid.model.root_for_uuid(grid.parent_grid_uuid), 'sourceObject')
+
+        if grid.represented_interpretation_uuid is not None:
+            grid.model.create_reciprocal_relationship(ijk, 'destinationObject',
+                                                      grid.model.root_for_uuid(grid.represented_interpretation_uuid), 'sourceObject')
 
 
 def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice):
