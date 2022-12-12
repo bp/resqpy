@@ -961,7 +961,8 @@ class Grid(BaseResqpy):
 
     def get_represented_interpretation(self):
         """Establishes the represented interpretation uuid, as stored in the xml tree, if present"""
-        self.represented_interpretation_uuid = rqet.find_nested_tags_text(self.root, ['RepresentedInterpretation','UUID'])
+        self.represented_interpretation_uuid = rqet.find_nested_tags_text(self.root,
+                                                                          ['RepresentedInterpretation','UUID'])
 
     def extract_pillar_shape(self):
         """Returns string indicating whether whether pillars are curved, straight, or vertical as stored in xml.
