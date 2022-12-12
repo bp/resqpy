@@ -8,6 +8,7 @@ import resqpy.fault as rqf
 import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq
+import resqpy.property as rqp
 import resqpy.olio.transmission as rqtr
 import resqpy.grid_surface as rqgs
 
@@ -126,6 +127,31 @@ def test_fault_connection_set(tmp_path):
 
     assert g2_fcs.count == 2
     assert np.all(np.isclose(g2_fa, 1.0, atol = 0.01))
+
+    # check grid faces property array generation
+    g2_fcs.write_hdf5()
+    g2_fcs.create_xml()
+    gcs_p_a = np.array((37, 51), dtype = int)
+    p = rqp.Property.from_array(model,
+                                gcs_p_a,
+                                'test',
+                                'juxtapose',
+                                g2_fcs.uuid,
+                                property_kind = 'discrete',
+                                indexable_element = 'faces',
+                                discrete = True,
+                                null_value = -1)
+    for lazy in [True, False]:
+        pk, pj, pi = g2_fcs.grid_face_arrays(property_uuid = p.uuid,
+                                             default_value = p.null_value(),
+                                             feature_index = None,
+                                             lazy = lazy)
+
+        assert pk is not None and pj is not None and pi is not None
+        assert np.all(pk == -1)
+        assert np.all(pi == -1)
+        assert np.count_nonzero(pj > 0) == 2 if lazy else 4
+        assert tuple(np.unique(pj)) == (-1, 37, 51)
 
     # I face split with full juxtaposition of kji0 (1, *, 0) with (0, *, 1)
     # pattern 4, 4 (or 3, 3) diagram 1

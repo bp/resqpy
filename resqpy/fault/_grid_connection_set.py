@@ -1908,3 +1908,65 @@ class GridConnectionSet(BaseResqpy):
             pc.write_hdf5_for_imported_list()
             pc.create_xml_for_imported_list_and_add_parts_to_model()
         return face_surface_normal_vectors_array
+
+    def grid_face_arrays(self, property_uuid, default_value = None, feature_index = None, lazy = False):
+        """Creates a triplet of grid face numpy arrays populated from a property for this gcs.
+
+        arguments:
+            property_uuid (UUID): the uuid of the gcs property
+            default_value (float or int, optional): the value to use in the grid property
+                on faces that do not appear in the grid connection set; will default to
+                np.NaN for continuous properties, -1 for categorical or discrete
+            feature_index (int, optional): if present, only faces for this feature are used
+            lazy (bool, default False): if True, only the first cell & face of a pair is
+                used when setting values in the arrays; if False, both left and right are
+                used
+
+        returns:
+            triple numpy arrays: identifying the K, J & I direction grid face property values;
+                shapes are (nk + 1, nj, ni), (nk, nj + 1, ni), (nk, nj, ni + 1) respectively
+
+        notes:
+            can only be used on single grid gcs; gcs property must have indexable of faces;
+            at present generates grid properties with indexable 'faces' not 'faces per cell',
+            which might not be appropriate for grids with split pillars (structural faults);
+            resulting properties are fully processed, ie. data written to hdf5 and xml created;
+            points properties not currently supported; count must be 1
+        """
+
+        assert self.number_of_grids() == 1
+        (nk, nj, ni) = self.grid_list[0].extent_kji
+        gcs_prop = rqp.Property(self.model, uuid = property_uuid)
+        assert gcs_prop is not None
+        assert bu.matching_uuids(gcs_prop.collection.support_uuid, self.uuid)
+        assert gcs_prop.count() == 1
+        assert not gcs_prop.is_points()
+        dtype = float if gcs_prop.is_continuous() else int
+        if default_value is None:
+            default_value = -1 if dtype is int else np.NaN
+        gcs_prop_array = gcs_prop.array_ref()
+
+        # note that following arrays include external faces, in line with grid properties for 'faces'
+        ak = np.full((nk + 1, nj, ni), default_value, dtype = dtype)
+        aj = np.full((nk, nj + 1, ni), default_value, dtype = dtype)
+        ai = np.full((nk, nj, ni + 1), default_value, dtype = dtype)
+
+        # populate arrays from faces of gcs, optionally filtered by feature index
+        cip, fip = self.list_of_cell_face_pairs_for_feature_index(feature_index)
+        assert len(cip) == len(fip)
+        assert gcs_prop_array.shape == (len(cip),)
+
+        for fi in range(len(cip)):
+            for side in ([0] if lazy else [0, 1]):
+                cell_kji0 = cip[fi, side]
+                axis, polarity = fip[fi, side]
+                assert 0 <= axis <= 2
+                cell_kji0[axis] += polarity
+                if axis == 0:
+                    ak[tuple(cell_kji0)] = gcs_prop_array[fi]
+                elif axis == 1:
+                    aj[tuple(cell_kji0)] = gcs_prop_array[fi]
+                else:
+                    ai[tuple(cell_kji0)] = gcs_prop_array[fi]
+
+        return (ak, aj, ai)
