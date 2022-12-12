@@ -148,6 +148,7 @@ def test_fault_connection_set(tmp_path):
                                              lazy = lazy)
 
         assert pk is not None and pj is not None and pi is not None
+        assert pk.shape == (3, 2, 2) and pj.shape == (2, 3, 2) and pi.shape == (2, 2, 3)
         assert np.all(pk == -1)
         assert np.all(pi == -1)
         assert np.count_nonzero(pj > 0) == 2 if lazy else 4
