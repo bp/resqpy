@@ -2141,7 +2141,8 @@ class Grid(BaseResqpy):
                                                    realization = None,
                                                    merge_mode = 'minimum',
                                                    sided = None,
-                                                   fill_value = 1.0):
+                                                   fill_value = 1.0,
+                                                   active_only = True):
         """Add triplet of transmissibility multiplier properties by combining gcs properties.
 
         arguments:
@@ -2155,6 +2156,8 @@ class Grid(BaseResqpy):
                 will default to False if merge mode is multiply, True otherwise
             fill_value (float, optional, default 1.0): the value to use for grid faces not present in any of
                 the gcs'es; if None, NaN will be used
+            active_only (bool, default True): if True and an active property exists for a grid connection set,
+                then only active faces are used when combining to make the grid face properties
 
         returns:
             list of 3 uuids, one for each of the newly created transmissibility multiplier properties
@@ -2188,7 +2191,8 @@ class Grid(BaseResqpy):
                                                                   tr_mult_uuid_list,
                                                                   merge_mode = merge_mode,
                                                                   sided = sided,
-                                                                  fill_value = fill_value)
+                                                                  fill_value = fill_value,
+                                                                  active_only = active_only)
         assert trm_k is not None and trm_j is not None and trm_i is not None
         pc = self.extract_property_collection()
 

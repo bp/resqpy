@@ -360,7 +360,8 @@ def combined_tr_mult_from_gcs_mults(model,
                                     gcs_tr_mult_uuid_list,
                                     merge_mode = 'minimum',
                                     sided = None,
-                                    fill_value = 1.0):
+                                    fill_value = 1.0,
+                                    active_only = True):
     """Returns a triplet of transmissibility multiplier arrays over grid faces by combining those from gcs'es.
 
     arguments:
@@ -373,6 +374,8 @@ def combined_tr_mult_from_gcs_mults(model,
             default to False if merge mode is multiply, True otherwise
         fill_value (float, optional): the value to use for grid faces not present in any of the gcs'es;
             if None, NaN will be used
+        active_only (bool, default True): if True and an active property exists for a grid connection set,
+            then only active faces are used when combining to make the grid face arrays
 
     returns:
         triple numpy float arrays being transmissibility multipliers for K, J, and I grid faces; arrays have
@@ -412,7 +415,10 @@ def combined_tr_mult_from_gcs_mults(model,
             assert bu.matching_uuids(gcs.grid_list[0].uuid, grid.uuid)
 
         # get gcs tr mult data in form of triplet of grid faces arrays
-        gcs_trm_k, gcs_trm_j, gcs_trm_i = gcs.grid_face_arrays(tr_mult_uuid, default_value = np.NaN, lazy = not sided)
+        gcs_trm_k, gcs_trm_j, gcs_trm_i = gcs.grid_face_arrays(tr_mult_uuid,
+                                                               default_value = np.NaN,
+                                                               active_only = active_only,
+                                                               lazy = not sided)
         assert all([trm is not None for trm in (gcs_trm_k, gcs_trm_j, gcs_trm_i)])
 
         # merge in each of the three directional face arrays for this gcs with combined arrays

@@ -1909,7 +1909,12 @@ class GridConnectionSet(BaseResqpy):
             pc.create_xml_for_imported_list_and_add_parts_to_model()
         return face_surface_normal_vectors_array
 
-    def grid_face_arrays(self, property_uuid, default_value = None, feature_index = None, lazy = False):
+    def grid_face_arrays(self,
+                         property_uuid,
+                         default_value = None,
+                         feature_index = None,
+                         active_only = True,
+                         lazy = False):
         """Creates a triplet of grid face numpy arrays populated from a property for this gcs.
 
         arguments:
@@ -1918,6 +1923,9 @@ class GridConnectionSet(BaseResqpy):
                 on faces that do not appear in the grid connection set; will default to
                 np.NaN for continuous properties, -1 for categorical or discrete
             feature_index (int, optional): if present, only faces for this feature are used
+            active_only (bool, default True): if True and an active property exists for the
+                grid connection set, then only active faces are used when populating the
+                grid face arrays
             lazy (bool, default False): if True, only the first cell & face of a pair is
                 used when setting values in the arrays; if False, both left and right are
                 used
@@ -1936,6 +1944,12 @@ class GridConnectionSet(BaseResqpy):
 
         assert self.number_of_grids() == 1
         (nk, nj, ni) = self.grid_list[0].extent_kji
+        active_mask = None
+        if active_only:
+            pc = self.extract_property_collection()
+            active_mask = pc.single_array_ref(property_kind = 'active')
+            if active_mask is not None:
+                assert active_mask.shape == (self.count,)
         gcs_prop = rqp.Property(self.model, uuid = property_uuid)
         assert gcs_prop is not None
         assert bu.matching_uuids(gcs_prop.collection.support_uuid, self.uuid)
@@ -1953,10 +1967,12 @@ class GridConnectionSet(BaseResqpy):
 
         # populate arrays from faces of gcs, optionally filtered by feature index
         cip, fip = self.list_of_cell_face_pairs_for_feature_index(feature_index)
-        assert len(cip) == len(fip)
-        assert gcs_prop_array.shape == (len(cip),)
+        assert len(cip) == self.count and len(fip) == self.count
+        assert gcs_prop_array.shape == (self.count,)
 
-        for fi in range(len(cip)):
+        for fi in range(self.count):
+            if active_mask is not None and not active_mask[fi]:
+                continue
             for side in ([0] if lazy else [0, 1]):
                 cell_kji0 = cip[fi, side]
                 axis, polarity = fip[fi, side]
