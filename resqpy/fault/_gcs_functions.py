@@ -438,7 +438,7 @@ def combined_tr_mult_from_gcs_mults(model,
     # for each of the 3 combined tr mult arrays, replace unused values with the default fill value
     # also check that any set values are non-negative
     for combo_trm in (combo_trm_k, combo_trm_j, combo_trm_i):
-        if not np.isnan(fill_value):
+        if fill_value is not None and not np.isnan(fill_value):
             combo_trm[:] = np.where(np.isnan(combo_trm), fill_value, combo_trm)
             assert np.all(combo_trm >= 0.0)
         else:
