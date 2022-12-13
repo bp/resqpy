@@ -28,7 +28,7 @@ def coarsened_grid(epc_file,
                    infill_missing_geometry = True,
                    new_grid_title = None,
                    new_epc_file = None):
-    """Generates a coarsened version of an unsplit source grid, todo: optionally inheriting properties.
+    """Generates a coarsened version of an unsplit source grid, optionally inheriting properties.
 
     arguments:
        epc_file (string): file name to rewrite the model's xml to; if source grid is None, model is loaded from this file

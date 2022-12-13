@@ -1,7 +1,5 @@
 """Class handling collections of RESQML properties for grids, wellbore frames, grid connection sets etc."""
 
-version = '30th June 2022'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -11,17 +9,17 @@ log = logging.getLogger(__name__)
 import numpy as np
 import numpy.ma as ma
 
-import resqpy.olio.uuid as bu
-import resqpy.olio.write_hdf5 as rwh5
-import resqpy.olio.xml_et as rqet
-from resqpy.olio.xml_namespaces import curly_namespace as ns
-
-from .string_lookup import StringLookup
-from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, check_and_warn_property_kind
 import resqpy.property._collection_create_xml as pcxml
 import resqpy.property._collection_get_attributes as pcga
 import resqpy.property._collection_support as pcs
 import resqpy.property._collection_add_part as pcap
+from .string_lookup import StringLookup
+from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, check_and_warn_property_kind
+
+import resqpy.olio.uuid as bu
+import resqpy.olio.write_hdf5 as rwh5
+import resqpy.olio.xml_et as rqet
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 class PropertyCollection():
@@ -88,7 +86,8 @@ class PropertyCollection():
         self.imported_list = []
         # above is list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
         #                   min_value, max_value, property_kind, facet_type, facet, realization,
-        #                   indexable_element, count, local_property_kind_uuid, const_value, points)
+        #                   indexable_element, count, local_property_kind_uuid, const_value, points,
+        #                   time_series_uuid)
         self.guess_warning = False
         if support is not None:
             self.model = support.model
@@ -421,7 +420,8 @@ class PropertyCollection():
                                                    indexable_element = info[6],
                                                    count = info[5],
                                                    const_value = info[20],
-                                                   points = info[21])
+                                                   points = info[21],
+                                                   time_series_uuid = info[11])
 
     def inherit_parts_selectively_from_other_collection(
             self,
@@ -2232,7 +2232,8 @@ class PropertyCollection():
                                           indexable_element = None,
                                           count = 1,
                                           const_value = None,
-                                          points = False):
+                                          points = False,
+                                          time_series_uuid = None):
         """Caches array and adds to the list of imported properties (but not to the collection dict).
 
         arguments:
@@ -2259,6 +2260,8 @@ class PropertyCollection():
            const_value (int, float or bool, optional): the value with which a constant array is filled;
               required if cached_array is None, must be None otherwise
            points (bool, default False): if True, this is a points property with an extra dimension of extent 3
+           time_series_uuid (UUID, optional): should be provided if time_index is not None, though can alternatively
+              be provided when writing hdf5 and creating xml for the imported list
 
         returns:
            uuid of nascent property object
@@ -2291,9 +2294,10 @@ class PropertyCollection():
                 min_value = max_value = None
             else:
                 min_value = max_value = const_value
-        self.imported_list.append((uuid, source_info, keyword, cached_name, discrete, uom, time_index, null_value,
-                                   min_value, max_value, property_kind, facet_type, facet, realization,
-                                   indexable_element, count, local_property_kind_uuid, const_value, points))
+        self.imported_list.append(
+            (uuid, source_info, keyword, cached_name, discrete, uom, time_index, null_value, min_value, max_value,
+             property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
+             const_value, points, time_series_uuid))
         return uuid
 
     def remove_cached_imported_arrays(self):

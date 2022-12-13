@@ -13,6 +13,8 @@ import numpy as np
 
 import resqpy.grid as grr
 import resqpy.grid_surface as rqgs
+import resqpy.fault as rqf
+import resqpy.property as rqp
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
@@ -2140,6 +2142,82 @@ class Grid(BaseResqpy):
            of the horizons points array
         """
         return split_horizons_points(self, min_k0 = min_k0, max_k0 = max_k0, masked = masked)
+
+    def combined_tr_mult_properties_from_gcs_mults(self,
+                                                   gcs_uuid_list = None,
+                                                   realization = None,
+                                                   merge_mode = 'minimum',
+                                                   sided = None,
+                                                   fill_value = 1.0,
+                                                   active_only = True):
+        """Add triplet of transmissibility multiplier properties by combining gcs properties.
+
+        arguments:
+            gcs_uuid_list (list of UUID, optional): if None, all grid connection sets related to this grid will
+                be used
+            realization (int, optional): if present, is used to filter tranmissibility multiplier input
+                properties and is added to the output properties
+            merge_mode (str, default 'minimum'): one of 'minimum', 'multiply', 'maximum', 'exception'; how to
+                handle multiple values applicable to the same grid face
+            sided (bool, optional): whether to apply values on both sides of each gcs cell-face pair; if None,
+                will default to False if merge mode is multiply, True otherwise
+            fill_value (float, optional, default 1.0): the value to use for grid faces not present in any of
+                the gcs'es; if None, NaN will be used
+            active_only (bool, default True): if True and an active property exists for a grid connection set,
+                then only active faces are used when combining to make the grid face properties
+
+        returns:
+            list of 3 uuids, one for each of the newly created transmissibility multiplier properties
+
+        notes:
+            each grid connection set must refer to this grid only;
+            the generated properties have indexable element 'faces', not 'faces per cell', so may not be
+            suitable for faulted grids
+        """
+
+        if not gcs_uuid_list:
+            gcs_uuid_list = self.model.uuids(obj_type = 'GridConnectionSet', related_uuid = self.uuid)
+        assert gcs_uuid_list, 'no grid connections sets identified for transmissibility multiplier combining'
+
+        tr_mult_uuid_list = []
+        for gcs_uuid in gcs_uuid_list:
+            gcs_pc = rqp.PropertyCollection(support_uuid = gcs_uuid)
+            assert gcs_pc is not None
+            tr_mult_part = gcs_pc.singleton(property_kind = 'transmissibility multiplier',
+                                            realization = realization,
+                                            continuous = True,
+                                            indexable = 'faces')
+            if tr_mult_part is None:
+                log.warning(f'no transmissibility multiplier found for gcs uuid: {gcs_uuid}')
+            else:
+                tr_mult_uuid_list = self.model.uuid_for_part(tr_mult_part)
+        log.info(f'{len(tr_mult_uuid_list)} gcs transmissibility multiplier sets being combined')
+        assert len(tr_mult_uuid_list) > 0, 'no gcs multipliers found for combining'
+
+        trm_k, trm_j, trm_i = rqf.combined_tr_mult_from_gcs_mults(self.model,
+                                                                  tr_mult_uuid_list,
+                                                                  merge_mode = merge_mode,
+                                                                  sided = sided,
+                                                                  fill_value = fill_value,
+                                                                  active_only = active_only)
+        assert trm_k is not None and trm_j is not None and trm_i is not None
+        pc = self.extract_property_collection()
+
+        for axis, trm in enumerate((trm_k, trm_j, trm_i)):
+            axis_ch = 'KJI'[axis]
+            pc.add_cached_array_to_imported_list(trm,
+                                                 'combined from gcs tr mults',
+                                                 'TMULT' + axis_ch,
+                                                 discrete = False,
+                                                 uom = 'Euc',
+                                                 property_kind = 'transmissibility multiplier',
+                                                 facet_type = 'direction',
+                                                 facet = axis_ch,
+                                                 realization = realization,
+                                                 indexable_element = 'faces')
+
+        pc.write_hdf5_for_imported_list()
+        return pc.create_xml_for_imported_list_and_add_parts_to_model()
 
     def _add_geom_points_xml(self, geom_node, ext_uuid):
         """Generate geometry points node in xml, called during create_xml, overridden for RegularGrid."""

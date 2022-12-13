@@ -119,10 +119,10 @@ def _local_to_global_crs(grid,
 
     crs = rqc.Crs(grid.model, uuid = crs_uuid)
 
-    if crs.rotated:
-        a[:] = vec.rotate_array(crs.rotation_matrix, a)
-
     flat_a = a.reshape((-1, 3))  # flattened view of array a as vector of (x, y, z) points, in situ
+
+    if crs.rotated:
+        flat_a[:] = vec.rotate_array(crs.rotation_matrix, flat_a)
 
     # note: here negation is made in local crs; if z_offset is not zero, this might not be what is intended
     if global_z_increasing_downward is not None:
@@ -140,7 +140,8 @@ def _local_to_global_crs(grid,
     if global_z_units is not None:
         bwam.convert_lengths(flat_a[:, 2], crs.z_units, global_z_units)  # z
 
-    return flat_a.reshape(a.shape)
+    a[:] = flat_a.reshape(a.shape)  # probably not needed
+    return a
 
 
 def z_inc_down(grid):
@@ -191,7 +192,8 @@ def _global_to_local_crs(grid,
     if crs.rotated:
         flat_a[:] = vec.rotate_array(crs.reverse_rotation_matrix, flat_a)
 
-    return flat_a.reshape(a.shape)
+    a[:] = flat_a.reshape(a.shape)  # probably not needed
+    return a
 
 
 def check_top_and_base_cell_edge_directions(grid):
