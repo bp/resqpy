@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 
 import resqpy.crs as rqc
 import resqpy.derived_model as rqdm
@@ -141,18 +142,41 @@ def test_fault_connection_set(tmp_path):
                                 indexable_element = 'faces',
                                 discrete = True,
                                 null_value = -1)
+    gcs_trm_a = np.array((0.1, 0.5), dtype = float)
+    trm_p = rqp.Property.from_array(model,
+                                    gcs_trm_a,
+                                    'test',
+                                    'trmult',
+                                    g2_fcs.uuid,
+                                    property_kind = 'transmissibility multiplier',
+                                    indexable_element = 'faces',
+                                    discrete = False,
+                                    uom = 'Euc')
     for lazy in [True, False]:
         pk, pj, pi = g2_fcs.grid_face_arrays(property_uuid = p.uuid,
                                              default_value = p.null_value(),
                                              feature_index = None,
                                              lazy = lazy)
-
         assert pk is not None and pj is not None and pi is not None
         assert pk.shape == (3, 2, 2) and pj.shape == (2, 3, 2) and pi.shape == (2, 2, 3)
         assert np.all(pk == -1)
         assert np.all(pi == -1)
         assert np.count_nonzero(pj > 0) == 2 if lazy else 4
         assert tuple(np.unique(pj)) == (-1, 37, 51)
+    for merge_mode in ['minimum', 'maximum', 'multiply']:
+        for sided in ([False] if merge_mode == 'multiply' else [False, True]):
+            c_trm_k,  c_trm_j,  c_trm_i =  \
+                rqf.combined_tr_mult_from_gcs_mults(model,
+                                                    [trm_p.uuid],
+                                                    merge_mode = merge_mode,
+                                                    sided = sided,
+                                                    fill_value = 1.0)
+            assert all([a is not None for a in (c_trm_k, c_trm_j, c_trm_i)])
+            assert c_trm_k.shape == (3, 2, 2) and c_trm_j.shape == (2, 3, 2) and c_trm_i.shape == (2, 2, 3)
+            assert_array_almost_equal(c_trm_k, 1.0)
+            assert_array_almost_equal(c_trm_i, 1.0)
+            assert np.count_nonzero(c_trm_j < 0.9) == 2 if lazy else 4
+            assert not np.any(np.isnan(c_trm_j))
 
     # I face split with full juxtaposition of kji0 (1, *, 0) with (0, *, 1)
     # pattern 4, 4 (or 3, 3) diagram 1
@@ -1461,4 +1485,4 @@ def test_gcs_face_surface_normal_vectors(example_model_with_properties):
     face_surface_normal_vectors = gcs.face_surface_normal_vectors(np.array([1, 1, 0, 0, 0, 0]), surface_normal_vectors)
 
     # Assert
-    np.testing.assert_array_almost_equal(face_surface_normal_vectors, face_surface_normal_vectors_expected)
+    assert_array_almost_equal(face_surface_normal_vectors, face_surface_normal_vectors_expected)

@@ -356,6 +356,97 @@ def grid_columns_property_from_gcs_property(model,
     return new_uuids[0]
 
 
+def combined_tr_mult_from_gcs_mults(model,
+                                    gcs_tr_mult_uuid_list,
+                                    merge_mode = 'minimum',
+                                    sided = None,
+                                    fill_value = 1.0):
+    """Returns a triplet of transmissibility multiplier arrays over grid faces by combining those from gcs'es.
+
+    arguments:
+        model (Model): the model containing all the relevant objects
+        gcs_tr_mult_uuid_list (list of UUID): uuids of the individual grid connection set transmissibility
+            multiplier properties to be combined
+        merge_mode (str, default 'minimum'): one of 'minimum', 'multiply', 'maximum', 'exception'; how to
+            handle multiple values applicable to the same grid face
+        sided (bool, optional): whether to apply values on both sides of each gcs cell-face pair; if None, will
+            default to False if merge mode is multiply, True otherwise
+        fill_value (float, optional): the value to use for grid faces not present in any of the gcs'es;
+            if None, NaN will be used
+
+    returns:
+        triple numpy float arrays being transmissibility multipliers for K, J, and I grid faces; arrays have
+            shapes (nk + 1, nj, ni), (nk, nj + 1, ni), and (nk, nj, ni + 1) respectively
+
+    notes:
+        each gcs, which is the supporting representation for each input tr mult property, must be for a single
+        grid and that grid must be the same for all the gcs'es
+    """
+
+    assert merge_mode in ['minimum', 'multiply', 'maximum', 'exception']
+    assert gcs_tr_mult_uuid_list is not None and len(gcs_tr_mult_uuid_list) > 0
+    if sided is None:
+        sided = (merge_mode != 'multiply')
+    elif sided and merge_mode == 'multiply':
+        log.error('using a gcs transmissibility multiplier merge mode of multiply is not compatible with sided True')
+        # carry on anyway!
+
+    grid = None
+
+    for tr_mult_uuid in gcs_tr_mult_uuid_list:
+
+        tr_mult = rqp.Property(model, uuid = tr_mult_uuid)
+        assert tr_mult is not None
+        gcs_uuid = tr_mult.collection.support_uuid
+        assert gcs_uuid is not None
+        gcs = rqf.GridConnectionSet(model, uuid = gcs_uuid)
+        assert gcs is not None
+        assert gcs.number_of_grids() == 1
+
+        if grid is None:  # first gcs: grab grid and initialise combined tr mult arrays
+            grid = gcs.grid_list[0]
+            combo_trm_k = np.full((grid.nk + 1, grid.nj, grid.ni), np.NaN, dtype = float)
+            combo_trm_j = np.full((grid.nk, grid.nj + 1, grid.ni), np.NaN, dtype = float)
+            combo_trm_i = np.full((grid.nk, grid.nj, grid.ni + 1), np.NaN, dtype = float)
+        else:  # check same grid is referenced by this gcs
+            assert bu.matching_uuids(gcs.grid_list[0].uuid, grid.uuid)
+
+        # get gcs tr mult data in form of triplet of grid faces arrays
+        gcs_trm_k, gcs_trm_j, gcs_trm_i = gcs.grid_face_arrays(tr_mult_uuid, default_value = np.NaN, lazy = not sided)
+        assert all([trm is not None for trm in (gcs_trm_k, gcs_trm_j, gcs_trm_i)])
+
+        # merge in each of the three directional face arrays for this gcs with combined arrays
+        for combo_trm, gcs_trm in zip((combo_trm_k, combo_trm_j, combo_trm_i), (gcs_trm_k, gcs_trm_j, gcs_trm_i)):
+            mask = np.logical_not(np.isnan(gcs_trm))  # true where this tr mult is present
+            clash_mask = np.logical_and(mask, np.logical_not(np.isnan(combo_trm)))  # true where combined value clashes
+            if np.any(clash_mask):
+                if merge_mode == 'exception':
+                    raise ValueError('gcs transmissibility multiplier conflict when merging')
+                if merge_mode == 'minimum':
+                    combo_trm[:] = np.where(clash_mask, np.minimum(combo_trm, gcs_trm), combo_trm)
+                elif merge_mode == 'maximum':
+                    combo_trm[:] = np.where(clash_mask, np.maximum(combo_trm, gcs_trm), combo_trm)
+                elif merge_mode == 'multiply':
+                    combo_trm[:] = np.where(clash_mask, combo_trm * gcs_trm, combo_trm)
+                else:
+                    raise Exception(f'code failure with unrecognised merge mode {merge_mode}')
+                mask = np.logical_and(mask,
+                                      np.logical_not(clash_mask))  # remove clash faces from mask (already handled)
+            if np.any(mask):
+                combo_trm[:] = np.where(mask, gcs_trm, combo_trm)  # update combined array from individual array
+
+    # for each of the 3 combined tr mult arrays, replace unused values with the default fill value
+    # also check that any set values are non-negative
+    for combo_trm in (combo_trm_k, combo_trm_j, combo_trm_i):
+        if not np.isnan(fill_value):
+            combo_trm[:] = np.where(np.isnan(combo_trm), fill_value, combo_trm)
+            assert np.all(combo_trm >= 0.0)
+        else:
+            assert np.all(np.logical_or(np.isnan(combo_trm), combo_trm >= 0.0))
+
+    return (combo_trm_k, combo_trm_j, combo_trm_i)
+
+
 # fault face table pandas dataframe functions
 # these functions are for processing dataframes that have been read from (or to be written to) simulator ascii files
 
