@@ -2190,7 +2190,7 @@ class Grid(BaseResqpy):
             if tr_mult_part is None:
                 log.warning(f'no transmissibility multiplier found for gcs uuid: {gcs_uuid}')
             else:
-                tr_mult_uuid_list = self.model.uuid_for_part(tr_mult_part)
+                tr_mult_uuid_list.append(self.model.uuid_for_part(tr_mult_part))
         log.info(f'{len(tr_mult_uuid_list)} gcs transmissibility multiplier sets being combined')
         assert len(tr_mult_uuid_list) > 0, 'no gcs multipliers found for combining'
 
