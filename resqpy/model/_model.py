@@ -598,7 +598,12 @@ class Model():
            regardless of the epc_subdir setting which only affects the subsequent load into memory
         """
 
-        m_f._load_epc(self, epc_file, full_load = full_load, epc_subdir = epc_subdir, copy_from = copy_from)
+        m_f._load_epc(self,
+                      epc_file,
+                      full_load = full_load,
+                      epc_subdir = epc_subdir,
+                      copy_from = copy_from,
+                      quiet = quiet)
 
     def store_epc(self,
                   epc_file = None,
