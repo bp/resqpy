@@ -167,11 +167,13 @@ def property_kind_and_facet_from_keyword(keyword):
         property_kind = 'permeability rock'
         (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
     elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
-        property_kind = 'transmissibility'
-        (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
-
-
-#   elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
+        if 'mult' in lk:
+            property_kind = 'transmissibility multiplier'
+        else:
+            property_kind = 'transmissibility'
+        if lk != 'transmissibility':
+            (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
+    # elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
     elif lk == 'livecell' or lk.startswith('act'):
         property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
     elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
