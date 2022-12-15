@@ -2181,7 +2181,7 @@ class Grid(BaseResqpy):
 
         tr_mult_uuid_list = []
         for gcs_uuid in gcs_uuid_list:
-            gcs_pc = rqp.PropertyCollection(support_uuid = gcs_uuid)
+            gcs_pc = rqp.PropertyCollection(support = rqf.GridConnectionSet(self.model, uuid = gcs_uuid))
             assert gcs_pc is not None
             tr_mult_part = gcs_pc.singleton(property_kind = 'transmissibility multiplier',
                                             realization = realization,
@@ -2190,7 +2190,7 @@ class Grid(BaseResqpy):
             if tr_mult_part is None:
                 log.warning(f'no transmissibility multiplier found for gcs uuid: {gcs_uuid}')
             else:
-                tr_mult_uuid_list = self.model.uuid_for_part(tr_mult_part)
+                tr_mult_uuid_list.append(self.model.uuid_for_part(tr_mult_part))
         log.info(f'{len(tr_mult_uuid_list)} gcs transmissibility multiplier sets being combined')
         assert len(tr_mult_uuid_list) > 0, 'no gcs multipliers found for combining'
 
