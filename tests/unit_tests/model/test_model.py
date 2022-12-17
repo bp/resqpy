@@ -42,6 +42,9 @@ def test_model(tmp_path):
     p1 = model.uuid_part_dict[bu.uuid_as_int(datum_uuid_1)]
     p2 = model.uuid_part_dict[bu.uuid_as_int(datum_uuid_2)]
     assert p1 == datum_part_1 and p2 == datum_part_2
+    assert model.uuid_is_present(datum_uuid_1)
+    assert model.uuid_is_present(datum_uuid_2)
+    assert not model.uuid_is_present(bu.new_uuid())
 
 
 def test_model_iterators(example_model_with_well):

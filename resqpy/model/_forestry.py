@@ -660,6 +660,12 @@ def _copy_all_parts_from_other_model(model, other_model, realization = None, con
         model.consolidation.check_map_integrity()
 
 
+def _uuid_is_present(model, uuid):
+    """Returns True if the uuid is present in the model's catalogue, False otherwise."""
+
+    return bu.uuid_as_int(uuid) in model.uuid_part_dict.keys()
+
+
 def _set_uuid_to_part(model, part_name):
     """Adds an entry to the dictionary mapping from uuid to part name."""
 
