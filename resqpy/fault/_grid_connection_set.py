@@ -1938,7 +1938,6 @@ class GridConnectionSet(BaseResqpy):
             can only be used on single grid gcs; gcs property must have indexable of faces;
             at present generates grid properties with indexable 'faces' not 'faces per cell',
             which might not be appropriate for grids with split pillars (structural faults);
-            resulting properties are fully processed, ie. data written to hdf5 and xml created;
             points properties not currently supported; count must be 1
         """
 
@@ -1959,30 +1958,57 @@ class GridConnectionSet(BaseResqpy):
         if default_value is None:
             default_value = -1 if dtype is int else np.NaN
         gcs_prop_array = gcs_prop.array_ref()
+        log.debug(f'preparing grid face arrays from gcs property: {gcs_prop.title}; from gcs:{self.title}')
 
         # note that following arrays include external faces, in line with grid properties for 'faces'
         ak = np.full((nk + 1, nj, ni), default_value, dtype = dtype)
         aj = np.full((nk, nj + 1, ni), default_value, dtype = dtype)
         ai = np.full((nk, nj, ni + 1), default_value, dtype = dtype)
+        # mk = np.zeros((nk + 1, nj, ni), dtype = bool)
+        # mj = np.zeros((nk, nj + 1, ni), dtype = bool)
+        # mi = np.zeros((nk, nj, ni + 1), dtype = bool)
 
         # populate arrays from faces of gcs, optionally filtered by feature index
-        cip, fip = self.list_of_cell_face_pairs_for_feature_index(feature_index)
+        cip, fip = self.list_of_cell_face_pairs_for_feature_index(None)
         assert len(cip) == self.count and len(fip) == self.count
         assert gcs_prop_array.shape == (self.count,)
+        if feature_index is None:
+            indices = np.arange(self.count, dtype = int)
+        else:
+            indices = self.indices_for_feature_index(feature_index)
 
-        for fi in range(self.count):
+        # opposing_count = 0
+        side_list = ([0] if lazy else [0, 1])
+        for fi in indices:
+            # fi = int(i)
             if active_mask is not None and not active_mask[fi]:
                 continue
-            for side in ([0] if lazy else [0, 1]):
-                cell_kji0 = cip[fi, side]
+            for side in side_list:
+                cell_kji0 = cip[fi, side].copy()
+                # opposing = cell_kji0.copy()
                 axis, polarity = fip[fi, side]
-                assert 0 <= axis <= 2
+                assert 0 <= axis <= 2 and 0 <= polarity <= 1
                 cell_kji0[axis] += polarity
+                # opposing[axis] += (1 - polarity)
                 if axis == 0:
                     ak[tuple(cell_kji0)] = gcs_prop_array[fi]
+                    # mk[tuple(cell_kji0)] = True
+                    # if mk[tuple(opposing)]:
+                    #     opposing_count += 1
                 elif axis == 1:
                     aj[tuple(cell_kji0)] = gcs_prop_array[fi]
+                    # mj[tuple(cell_kji0)] = True
+                    # if mj[tuple(opposing)]:
+                    #     opposing_count += 1
                 else:
                     ai[tuple(cell_kji0)] = gcs_prop_array[fi]
+                    # mi[tuple(cell_kji0)] = True
+                    # if mi[tuple(opposing)]:
+                    #     opposing_count += 1
+
+        # if opposing_count:
+        #     log.warning(f'{opposing_count} suspicious opposing faces of {len(indices)} detected in gcs: {self.title}')
+        # else:
+        #     log.debug(f'no suspicious opposing faces detected in gcs: {self.title}')
 
         return (ak, aj, ai)

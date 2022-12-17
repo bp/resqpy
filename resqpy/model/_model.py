@@ -1,7 +1,5 @@
 """model.py: Main resqml interface module handling epc packing & unpacking and xml structures."""
 
-version = '15th December 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -238,6 +236,11 @@ class Model():
                           related_uuid = related_uuid,
                           epc_subdir = epc_subdir,
                           sort_by = sort_by)
+
+    def uuid_is_present(self, uuid):
+        """Returns True if the uuid is present in the model's catalogue, False otherwise."""
+
+        return m_f._uuid_is_present(self, uuid)
 
     def part(self,
              parts_list = None,
