@@ -422,7 +422,7 @@ def combined_tr_mult_from_gcs_mults(model,
         assert all([trm is not None for trm in (gcs_trm_k, gcs_trm_j, gcs_trm_i)])
 
         # merge in each of the three directional face arrays for this gcs with combined arrays
-        for combo_trm, gcs_trm in zip((combo_trm_k, combo_trm_j, combo_trm_i), (gcs_trm_k, gcs_trm_j, gcs_trm_i)):
+        for (combo_trm, gcs_trm) in [(combo_trm_k, gcs_trm_k), (combo_trm_j, gcs_trm_j), (combo_trm_i, gcs_trm_i)]:
             mask = np.logical_not(np.isnan(gcs_trm))  # true where this tr mult is present
             clash_mask = np.logical_and(mask, np.logical_not(np.isnan(combo_trm)))  # true where combined value clashes
             if np.any(clash_mask):
