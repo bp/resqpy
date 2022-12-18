@@ -1,4 +1,4 @@
-"""hexa_grid.py: resqpy HexaGrid class module."""
+"""HexaGrid class module."""
 
 import logging
 
@@ -9,11 +9,11 @@ import numpy as np
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
 import resqpy.property as rqp
+import resqpy.unstructured
+import resqpy.unstructured._unstructured_grid as rug
 
-from resqpy.unstructured._unstructured_grid import UnstructuredGrid
 
-
-class HexaGrid(UnstructuredGrid):
+class HexaGrid(rug.UnstructuredGrid):
     """Class for unstructured grids where every cell is hexahedral (faces may be degenerate)."""
 
     def __init__(self,

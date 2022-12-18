@@ -1,7 +1,5 @@
 """read_nexus_fault.py: functions for reading Nexus fault definition data from an ascii file."""
 
-version = '15th January 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -11,16 +9,8 @@ log = logging.getLogger(__name__)
 import os
 import re
 import unicodedata
-
 import numpy as np
 import pandas as pd
-
-######################################################################################################
-# load_nexus_fault_mult_table():
-# function to load fault data for cell faces from nexus input deck format ascii file
-# returns a pandas dataframe
-#    compatible with that returned by load_table_from_file()
-# this version written by Qiang
 
 
 def load_nexus_fault_mult_table(file_name):

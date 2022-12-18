@@ -1,6 +1,4 @@
-"""class_dict.py:  a simple dictionary mapping resqml class names to more readable names."""
-
-version = '17th December 2020'
+"""A simple dictionary mapping resqml class names to more readable names."""
 
 class_dict = {
     'obj_LocalDepth3dCrs': 'Coordinate Reference System (z is length)',

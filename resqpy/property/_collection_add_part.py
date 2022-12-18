@@ -8,10 +8,11 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
+import resqpy.property
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
-from .property_common import same_property_kind, guess_uom, property_kind_and_facet_from_keyword
+import resqpy.property.property_common as rqp_c
 import resqpy.property._collection_get_attributes as pcga
 
 
@@ -35,7 +36,7 @@ def _add_selected_part_from_other_dict(collection, part, other, realization, sup
         return
     if _check_not_none_and_not_equals(indexable, other.indexable_for_part, part):
         return
-    if property_kind is not None and not same_property_kind(other.property_kind_for_part(part), property_kind):
+    if property_kind is not None and not rqp_c.same_property_kind(other.property_kind_for_part(part), property_kind):
         return
     if _check_not_none_and_not_equals(facet_type, other.facet_type_for_part, part):
         return
@@ -115,7 +116,12 @@ def _add_part_to_dict_get_uom(collection, part, continuous, xml_node, trust_uom,
             if not collection.guess_warning:
                 collection.guess_warning = True
                 log.warning("Guessing unit of measure for one or more properties")
-            uom = guess_uom(property_kind, minimum, maximum, collection.support, facet_type = facet_type, facet = facet)
+            uom = rqp_c.guess_uom(property_kind,
+                                  minimum,
+                                  maximum,
+                                  collection.support,
+                                  facet_type = facet_type,
+                                  facet = facet)
     return uom
 
 
@@ -239,7 +245,7 @@ def _process_imported_property_get_property_kind(collection, property_kind, loca
             property_kind = collection.model.title(uuid = local_property_kind_uuid)
         else:
             # todo: only if None in ab_property_list
-            (property_kind, facet_type, facet) = property_kind_and_facet_from_keyword(p_keyword)
+            (property_kind, facet_type, facet) = rqp_c.property_kind_and_facet_from_keyword(p_keyword)
     if property_kind is None:
         # todo: the following are abstract standard property kinds, which shouldn't really have data directly associated with them
         if p_discrete:
@@ -275,7 +281,7 @@ def _add_part_to_dict_get_count_and_indexable(xml_node):
 
 def _add_part_to_dict_get_property_kind(xml_node, citation_title):
     perm_synonyms = ['permeability rock', 'rock permeability']
-    (p_kind_from_keyword, facet_type, facet) = property_kind_and_facet_from_keyword(citation_title)
+    (p_kind_from_keyword, facet_type, facet) = rqp_c.property_kind_and_facet_from_keyword(citation_title)
     prop_kind_node = rqet.find_tag(xml_node, 'PropertyKind')
     assert (prop_kind_node is not None)
     kind_node = rqet.find_tag(prop_kind_node, 'Kind')

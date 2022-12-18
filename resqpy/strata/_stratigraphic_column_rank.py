@@ -1,6 +1,4 @@
-"""_stratigraphic_column_rank.py: RESQML StratigraphicColumnRankInterpretation class."""
-
-version = '24th November 2021'
+"""RESQML StratigraphicColumnRankInterpretation class."""
 
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 # RMS is a registered trademark of Roxar Software Solutions AS, an Emerson company
@@ -12,11 +10,12 @@ log = logging.getLogger(__name__)
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
+import resqpy.strata
+import resqpy.strata._strata_common as rqstc
+import resqpy.strata._binary_contact_interpretation as rqsbc
+import resqpy.strata._stratigraphic_unit_interpretation as rqsui
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata._strata_common import valid_domains, _index_attr
-from resqpy.strata._binary_contact_interpretation import BinaryContactInterpretation
-from resqpy.strata._stratigraphic_unit_interpretation import StratigraphicUnitInterpretation
 
 
 class StratigraphicColumnRank(BaseResqpy):
@@ -86,11 +85,11 @@ class StratigraphicColumnRank(BaseResqpy):
             unit_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(su_node, ['Unit', 'UUID']))
             assert index is not None and unit_uuid is not None
             assert self.model.type_of_uuid(unit_uuid, strip_obj = True) == 'StratigraphicUnitInterpretation'
-            self.units.append((index, StratigraphicUnitInterpretation(self.model, uuid = unit_uuid)))
+            self.units.append((index, rqsui.StratigraphicUnitInterpretation(self.model, uuid = unit_uuid)))
         self._sort_units()
         self.contacts = []
         for contact_node in rqet.list_of_tag(root_node, 'ContactInterpretation'):
-            self.contacts.append(BinaryContactInterpretation(self.model, existing_xml_node = contact_node))
+            self.contacts.append(rqsbc.BinaryContactInterpretation(self.model, existing_xml_node = contact_node))
         self._sort_contacts()
 
     def set_units(self, strata_uuid_list):
@@ -104,7 +103,7 @@ class StratigraphicColumnRank(BaseResqpy):
         self.units = []
         for i, uuid in enumerate(strata_uuid_list):
             assert self.model.type_of_uuid(uuid, strip_obj = True) == 'StratigraphicUnitInterpretation'
-            self.units.append((i, StratigraphicUnitInterpretation(self.model, uuid = uuid)))
+            self.units.append((i, rqsui.StratigraphicUnitInterpretation(self.model, uuid = uuid)))
 
     def _sort_units(self):
         """Sorts units list, in situ, into increasing order of index values."""
@@ -112,7 +111,7 @@ class StratigraphicColumnRank(BaseResqpy):
 
     def _sort_contacts(self):
         """Sorts contacts list, in situ, into increasing order of index values."""
-        self.contacts.sort(key = _index_attr)
+        self.contacts.sort(key = rqstc._index_attr)
 
     def set_contacts_from_horizons(self, horizon_uuids, older_contact_mode = None, younger_contact_mode = None):
         """Sets the list of contacts from an ordered list of horizons, of length one less than the number of units.
@@ -138,17 +137,18 @@ class StratigraphicColumnRank(BaseResqpy):
         assert len(horizon_uuids) == len(self.units) - 1
         for i, horizon_uuid in enumerate(horizon_uuids):
             assert self.model.type_of_uuid(horizon_uuid, strip_obj = True) == 'HorizonInterpretation'
-            contact = BinaryContactInterpretation(self.model,
-                                                  index = i,
-                                                  contact_relationship = 'stratigraphic unit to stratigraphic unit',
-                                                  verb = 'stops at',
-                                                  subject_uuid = self.units[i][1].uuid,
-                                                  direct_object_uuid = self.units[i + 1][1].uuid,
-                                                  subject_contact_side = 'older',
-                                                  subject_contact_mode = older_contact_mode,
-                                                  direct_object_contact_side = 'younger',
-                                                  direct_object_contact_mode = younger_contact_mode,
-                                                  part_of_uuid = horizon_uuid)
+            contact = rqsbc.BinaryContactInterpretation(
+                self.model,
+                index = i,
+                contact_relationship = 'stratigraphic unit to stratigraphic unit',
+                verb = 'stops at',
+                subject_uuid = self.units[i][1].uuid,
+                direct_object_uuid = self.units[i + 1][1].uuid,
+                subject_contact_side = 'older',
+                subject_contact_mode = older_contact_mode,
+                direct_object_contact_side = 'younger',
+                direct_object_contact_mode = younger_contact_mode,
+                part_of_uuid = horizon_uuid)
             self.contacts.append(contact)
 
     def iter_units(self):
@@ -209,7 +209,7 @@ class StratigraphicColumnRank(BaseResqpy):
                                    content_type = 'OrganizationFeature',
                                    root = scri)
 
-        assert self.domain in valid_domains, 'illegal domain value for stratigraphic column rank interpretation'
+        assert self.domain in rqstc.valid_domains, 'illegal domain value for stratigraphic column rank interpretation'
         dom_node = rqet.SubElement(scri, ns['resqml2'] + 'Domain')
         dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
         dom_node.text = self.domain

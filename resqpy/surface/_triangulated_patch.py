@@ -1,6 +1,4 @@
-"""_triangulated_patch.py: surface class based on resqml standard."""
-
-version = '18th February 2022'
+"""TriangulatedPatch class used by Surface class."""
 
 import logging
 

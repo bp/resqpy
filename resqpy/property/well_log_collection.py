@@ -1,27 +1,25 @@
 """Class for a collection of well logs"""
 
-version = '24th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
 
-from datetime import datetime
-
-import lasio
 import numpy as np
 import pandas as pd
+import lasio
+from datetime import datetime
 
+import resqpy.property
 import resqpy.weights_and_measures as bwam
 
-from .property_collection import PropertyCollection
-from .property_common import infer_property_kind
-from .well_log import WellLog
+import resqpy.property.property_collection as rqp_pc
+import resqpy.property.property_common as rqp_c
+import resqpy.property.well_log as rqp_wl
 
 
-class WellLogCollection(PropertyCollection):
+class WellLogCollection(rqp_pc.PropertyCollection):
     """Class for RESQML Property collection for a Wellbore Frame (ie well logs), inheriting from PropertyCollection."""
 
     def __init__(self, frame = None, property_set_root = None, realization = None):
@@ -80,7 +78,7 @@ class WellLogCollection(PropertyCollection):
         # Infer valid RESQML properties
         # TODO: Store orginal unit somewhere if it's not a valid RESQML unit
         uom = bwam.rq_uom(unit)
-        property_kind, facet_type, facet = infer_property_kind(title, uom)
+        property_kind, facet_type, facet = rqp_c.infer_property_kind(title, uom)
 
         # Add to the "import list"
         self.add_cached_array_to_imported_list(
@@ -113,7 +111,7 @@ class WellLogCollection(PropertyCollection):
               print(log.title)
         """
 
-        return (WellLog(collection = self, uuid = uuid) for uuid in self.uuids())
+        return (rqp_wl.WellLog(collection = self, uuid = uuid) for uuid in self.uuids())
 
     def to_df(self, include_units = False):
         """Return pandas dataframe of log data.

@@ -1,18 +1,16 @@
 """Containing resqml property class"""
 
-version = '27th June 2022'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
 
+import resqpy.property
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.property.property_collection as rqp_pc
 from resqpy.olio.base import BaseResqpy
-
-from .property_collection import PropertyCollection
 
 
 class Property(BaseResqpy):
@@ -46,7 +44,7 @@ class Property(BaseResqpy):
            new resqpy Property object
         """
 
-        self.collection = PropertyCollection()
+        self.collection = rqp_pc.PropertyCollection()
         super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
         if support_uuid is not None:
             if self.collection.support_uuid is None:
@@ -60,7 +58,7 @@ class Property(BaseResqpy):
         part = self.part
         assert part is not None
         if self.collection is None:
-            self.collection = PropertyCollection()
+            self.collection = rqp_pc.PropertyCollection()
         if self.collection.model is None:
             self.collection.model = self.model
         self.collection.add_part_to_dict(part)
@@ -72,7 +70,7 @@ class Property(BaseResqpy):
         assert self.collection.number_of_parts() == 1
 
     @classmethod
-    def from_singleton_collection(cls, property_collection: PropertyCollection):
+    def from_singleton_collection(cls, property_collection: rqp_pc.PropertyCollection):
         """Populates a new Property from a PropertyCollection containing just one part.
 
         arguments:

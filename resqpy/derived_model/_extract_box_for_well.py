@@ -8,14 +8,15 @@ import os
 import numpy as np
 
 import resqpy.crs as rqc
+import resqpy.derived_model
 import resqpy.grid_surface as rgs
 import resqpy.model as rq
 import resqpy.olio.box_utilities as bx
 import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
-from resqpy.derived_model._add_one_grid_property_array import add_one_grid_property_array
-from resqpy.derived_model._extract_box import extract_box
+import resqpy.derived_model._add_one_grid_property_array as rqdm_aogp
+import resqpy.derived_model._extract_box as rqdm_eb
 
 
 def extract_box_for_well(epc_file = None,
@@ -177,16 +178,16 @@ def extract_box_for_well(epc_file = None,
     new_grid_title = _invent_title(new_grid_title, trajectory, blocked_well, column_ji0)
 
     # perform the main grid extraction
-    grid = extract_box(epc_file,
-                       source_grid = source_grid,
-                       box = box,
-                       box_inactive = box_inactive,
-                       inherit_properties = inherit_properties,
-                       inherit_realization = inherit_realization,
-                       inherit_all_realizations = inherit_all_realizations,
-                       set_parent_window = set_parent_window,
-                       new_grid_title = new_grid_title,
-                       new_epc_file = new_epc_file)
+    grid = rqdm_eb.extract_box(epc_file,
+                               source_grid = source_grid,
+                               box = box,
+                               box_inactive = box_inactive,
+                               inherit_properties = inherit_properties,
+                               inherit_realization = inherit_realization,
+                               inherit_all_realizations = inherit_all_realizations,
+                               set_parent_window = set_parent_window,
+                               new_grid_title = new_grid_title,
+                               new_epc_file = new_epc_file)
 
     # inherit well if requested
     if inherit_well and new_epc_file:
@@ -306,13 +307,13 @@ def _add_outer_mask_property(epc_file, new_epc_file, outer_inactive_mask, source
     else:
         outer_epc = epc_file
     # todo: make local property kind, or reuse active local property kind?
-    add_one_grid_property_array(outer_epc,
-                                outer_inactive_mask,
-                                'discrete',
-                                grid_uuid = source_grid.uuid,
-                                source_info = 'extract box for well outer radius',
-                                title = 'distant mask for well ' + str(well_name),
-                                discrete = True)
+    rqdm_aogp.add_one_grid_property_array(outer_epc,
+                                          outer_inactive_mask,
+                                          'discrete',
+                                          grid_uuid = source_grid.uuid,
+                                          source_info = 'extract box for well outer radius',
+                                          title = 'distant mask for well ' + str(well_name),
+                                          discrete = True)
 
 
 def _inherit_well(new_epc_file, grid, traj_model, well_name, trajectory, blocked_well, column_ji0, box):

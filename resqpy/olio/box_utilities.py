@@ -1,4 +1,4 @@
-"""Simple functions relating to cartesian grid boxes
+"""Simple functions relating to cartesian grid boxes.
 
 A box is a logical cuboid subset of the cells of a cartesian grid.
 A box is defined by a small numpy array: [[min_k, min_j, min_i], [max_k, max_j, max_i]].
@@ -6,8 +6,6 @@ The cells identified by the max indices are included in the box (not following t
 The ordering of the i,j & k indices might be reversed - identifier names then have a suffix of _ijk instead of _kji.
 The indices can be in simulator convention, starting at 1, or python convention, starting at 0, indicated by suffix of 0 or 1
 """
-
-version = '13th July 2021'
 
 import logging
 

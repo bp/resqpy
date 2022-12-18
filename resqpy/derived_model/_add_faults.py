@@ -8,6 +8,7 @@ import os
 import numpy as np
 
 import resqpy.crs as rqc
+import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq
@@ -15,9 +16,8 @@ import resqpy.olio.grid_functions as gf
 import resqpy.olio.simple_lines as sl
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
-
-from resqpy.derived_model._common import _prepare_simple_inheritance, _write_grid, _establish_model_and_source_grid
-from resqpy.derived_model._copy_grid import copy_grid
+import resqpy.derived_model._common as rqdm_c
+import resqpy.derived_model._copy_grid as rqdm_cg
 
 
 def add_faults(epc_file,
@@ -87,14 +87,14 @@ def add_faults(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = rqdm_c._establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']  # unstructured grids not catered for
     assert model is not None
     assert len([arg for arg in (polylines, lines_file_list, full_pillar_list_dict) if arg is not None]) == 1
 
     # take a copy of the resqpy grid object, without writing to hdf5 or creating xml
     # the copy will be a Grid, even if the source is a RegularGrid
-    grid = copy_grid(source_grid, model)
+    grid = rqdm_cg.copy_grid(source_grid, model)
     grid.crs_uuid = source_grid.crs_uuid
     if source_grid.model is not model:
         model.duplicate_node(source_grid.model.root_for_uuid(grid.crs_uuid), add_as_part = True)
@@ -118,8 +118,8 @@ def add_faults(epc_file,
 
     _process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict)
 
-    collection = _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                             inherit_all_realizations)
+    collection = rqdm_c._prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
+                                                    inherit_all_realizations)
     # todo: recompute depth properties (and volumes, cell lengths etc. if being strict)
 
     if new_grid_title is None or len(new_grid_title) == 0:
@@ -127,16 +127,20 @@ def add_faults(epc_file,
 
     # write model
     if new_epc_file:
-        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        rqdm_c._write_grid(new_epc_file,
+                           grid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'w')
     else:
         ext_uuid = model.h5_uuid()
 
-        _write_grid(epc_file,
-                    grid,
-                    ext_uuid = ext_uuid,
-                    property_collection = collection,
-                    grid_title = new_grid_title,
-                    mode = 'a')
+        rqdm_c._write_grid(epc_file,
+                           grid,
+                           ext_uuid = ext_uuid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'a')
 
     # create grid connection set if requested
     _create_gcs_if_requested(create_gcs, composite_face_set_dict, new_epc_file, grid)

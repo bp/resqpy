@@ -1,6 +1,4 @@
-"""_surface.py: surface class based on resqml standard."""
-
-version = '5th July 2022'
+"""Surface class based on RESQML TriangulatedSetRepresentation class."""
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -19,16 +17,16 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
+import resqpy.surface
+import resqpy.surface._base_surface as rqsb
+import resqpy.surface._triangulated_patch as rqstp
 import resqpy.weights_and_measures as wam
 
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
 
-from ._base_surface import BaseSurface
-from ._triangulated_patch import TriangulatedPatch
 
-
-class Surface(BaseSurface):
+class Surface(rqsb.BaseSurface):
     """Class for RESQML triangulated set surfaces."""
 
     resqml_type = 'TriangulatedSetRepresentation'
@@ -156,7 +154,7 @@ class Surface(BaseSurface):
                 continue
             patch_index = rqet.find_tag_int(child, 'PatchIndex')
             assert patch_index is not None
-            triangulated_patch = TriangulatedPatch(self.model, patch_index = patch_index, patch_node = child)
+            triangulated_patch = rqstp.TriangulatedPatch(self.model, patch_index = patch_index, patch_node = child)
             assert triangulated_patch is not None
             if self.crs_uuid is None:
                 self.crs_uuid = triangulated_patch.crs_uuid
@@ -272,7 +270,9 @@ class Surface(BaseSurface):
         self.crs_uuid = large_surface.crs_uuid
         self.patch_list = []
         for triangulated_patch in large_surface.patch_list:
-            trimmed_patch = TriangulatedPatch(self.model, patch_index = len(self.patch_list), crs_uuid = self.crs_uuid)
+            trimmed_patch = rqstp.TriangulatedPatch(self.model,
+                                                    patch_index = len(self.patch_list),
+                                                    crs_uuid = self.crs_uuid)
             trimmed_patch.set_to_trimmed_patch(triangulated_patch, xyz_box = box, xy_polygon = xy_polygon)
             if trimmed_patch is not None and trimmed_patch.triangle_count > 0:
                 self.patch_list.append(trimmed_patch)
@@ -352,7 +352,7 @@ class Surface(BaseSurface):
     def set_from_triangles_and_points(self, triangles, points):
         """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
 
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_from_triangles_and_points(triangles, points)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -508,7 +508,7 @@ class Surface(BaseSurface):
 
         mesh_shape = mesh_xyz.shape
         assert len(mesh_shape) == 3 and mesh_shape[2] == 3
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_from_irregular_mesh(mesh_xyz, quad_triangles = quad_triangles)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -522,7 +522,7 @@ class Surface(BaseSurface):
 
         mesh_shape = mesh_xyz.shape
         assert len(mesh_shape) == 3 and mesh_shape[2] == 3
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_from_sparse_mesh(mesh_xyz)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -553,7 +553,7 @@ class Surface(BaseSurface):
 
         mesh_shape = mesh_xyz.shape
         assert len(mesh_shape) == 5 and mesh_shape[2:] == (2, 2, 3)
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_from_torn_mesh(mesh_xyz, quad_triangles = quad_triangles)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -585,7 +585,7 @@ class Surface(BaseSurface):
         """Populates this (empty) surface to represent faces of a cell, from corner points of shape (2, 2, 2, 3)."""
 
         assert cp.size == 24
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_to_cell_faces_from_corner_points(cp, quad_triangles = quad_triangles)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -600,7 +600,7 @@ class Surface(BaseSurface):
         self.patch_list = []
         p_index = 0
         for cell_cp in cp:
-            tri_patch = TriangulatedPatch(self.model, patch_index = p_index, crs_uuid = self.crs_uuid)
+            tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = p_index, crs_uuid = self.crs_uuid)
             tri_patch.set_to_cell_faces_from_corner_points(cell_cp, quad_triangles = quad_triangles)
             self.patch_list.append(tri_patch)
             p_index += 1
@@ -640,7 +640,7 @@ class Surface(BaseSurface):
         :meta common:
         """
 
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_to_horizontal_plane(depth, box_xyz, border = border, quad_triangles = quad_triangles)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -648,7 +648,7 @@ class Surface(BaseSurface):
     def set_to_triangle(self, corners):
         """Populate this (empty) surface with a patch of one triangle."""
 
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_to_triangle(corners)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -660,7 +660,7 @@ class Surface(BaseSurface):
             corners (numpy float array of shape [2, 2, 3] or [4, 3]): 4 corners in logical ordering
         """
 
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_to_triangle_pair(corners.reshape((4, 3)))
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
@@ -668,7 +668,7 @@ class Surface(BaseSurface):
     def set_to_sail(self, n, centre, radius, azimuth, delta_theta):
         """Populate this (empty) surface with a patch representing a triangle wrapped on a sphere."""
 
-        tri_patch = TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
+        tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = 0, crs_uuid = self.crs_uuid)
         tri_patch.set_to_sail(n, centre, radius, azimuth, delta_theta)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()

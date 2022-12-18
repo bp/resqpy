@@ -1,6 +1,4 @@
-"""Miscellaneous functions relating to grids"""
-
-version = '15 December 2021'
+"""Miscellaneous functions relating to grids."""
 
 # Nexus is a registered trademark of the Halliburton Company
 
@@ -9,8 +7,8 @@ import logging
 log = logging.getLogger(__name__)
 
 import math as maths
-import random
 import numpy as np
+import random
 
 import resqpy.olio.factors as factors
 import resqpy.olio.vector_utilities as vec

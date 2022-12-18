@@ -1,17 +1,14 @@
-"""_mesh.py: surface class based on resqml standard."""
-
-version = '27th June 2022'
+"""Mesh class based on RESQML Grid2dRepresentation class."""
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
 
 import logging
-import warnings
 
 log = logging.getLogger(__name__)
 
+import warnings
 import math as maths
-
 import numpy as np
 
 import resqpy.crs as rqc
@@ -22,13 +19,14 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.weights_and_measures as wam
+import resqpy.surface
+import resqpy.surface._base_surface as rqsb
+import resqpy.surface._surface as rqss
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.zmap_reader import read_mesh
-from ._base_surface import BaseSurface
-from ._surface import Surface
 
 
-class Mesh(BaseSurface):
+class Mesh(rqsb.BaseSurface):
     """Class covering meshes (lattices: surfaces where points form a 2D grid; RESQML obj_Grid2dRepresentation)."""
 
     resqml_type = 'Grid2dRepresentation'
@@ -236,7 +234,7 @@ class Mesh(BaseSurface):
     def surface(self, quad_triangles = False):
         """Returns a surface object generated from this mesh."""
 
-        return Surface(self.model, crs_uuid = self.crs_uuid, mesh = self, quad_triangles = quad_triangles)
+        return rqss.Surface(self.model, crs_uuid = self.crs_uuid, mesh = self, quad_triangles = quad_triangles)
 
     def write_hdf5(self, file_name = None, mode = 'a', use_xy_only = False):
         """Create or append to an hdf5 file, writing datasets for the mesh depending on flavour."""

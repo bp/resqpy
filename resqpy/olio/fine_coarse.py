@@ -1,7 +1,5 @@
 """fine_coarse.py: Module providing support for grid refinement and coarsening."""
 
-version = '20th October 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 # todo: cater for parallel to top & parallel to base style refinement proportions in k

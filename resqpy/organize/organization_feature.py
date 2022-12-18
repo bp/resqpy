@@ -1,8 +1,9 @@
 """Class for generic RESQML Organization Feature objects."""
 
-from ._utils import alias_for_attribute, equivalent_extra_metadata
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
@@ -11,7 +12,7 @@ class OrganizationFeature(BaseResqpy):
     """Class for generic RESQML Organization Feature objects."""
 
     resqml_type = "OrganizationFeature"
-    feature_name = alias_for_attribute("title")
+    feature_name = ou.alias_for_attribute("title")
 
     def __init__(self,
                  parent_model,
@@ -37,7 +38,7 @@ class OrganizationFeature(BaseResqpy):
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
         return (self.feature_name == other.feature_name and self.organization_kind == other.organization_kind and
-                ((not check_extra_metadata) or equivalent_extra_metadata(self, other)))
+                ((not check_extra_metadata) or ou.equivalent_extra_metadata(self, other)))
 
     def _load_from_xml(self):
         self.organization_kind = rqet.find_tag_text(self.root, 'OrganizationKind')

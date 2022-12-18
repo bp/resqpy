@@ -1,10 +1,7 @@
 """Module providing wrapper for random number generator seeding functions."""
 
-version = '6th November 2020'
-
-import random
-
 import numpy
+import random
 
 
 def seed(seed, package = 'all'):

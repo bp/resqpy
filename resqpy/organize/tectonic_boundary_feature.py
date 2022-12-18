@@ -1,10 +1,9 @@
 """Class for RESQML Tectonic Boundary Feature (fault) organizational objects."""
 
-from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                     equivalent_chrono_pairs, create_xml_has_occurred_during)
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
@@ -13,7 +12,7 @@ class TectonicBoundaryFeature(BaseResqpy):
     """Class for RESQML Tectonic Boundary Feature (fault) organizational objects."""
 
     resqml_type = "TectonicBoundaryFeature"
-    feature_name = alias_for_attribute("title")
+    feature_name = ou.alias_for_attribute("title")
     valid_kinds = ('fault', 'fracture')
 
     def __init__(self, parent_model, uuid = None, kind = None, feature_name = None, extra_metadata = None):
@@ -32,7 +31,7 @@ class TectonicBoundaryFeature(BaseResqpy):
             return False
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         return self.feature_name == other.feature_name and self.kind == other.kind
 

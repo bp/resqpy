@@ -1,13 +1,12 @@
 """Class for RESQML Geobody Interpretation objects."""
 
-from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                     equivalent_chrono_pairs, create_xml_has_occurred_during)
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize.geobody_feature as ogf
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .geobody_feature import GeobodyFeature
 
 
 class GeobodyInterpretation(BaseResqpy):
@@ -60,10 +59,10 @@ class GeobodyInterpretation(BaseResqpy):
         assert interp_feature_ref_node is not None
         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
         if self.feature_root is not None:
-            self.geobody_feature = GeobodyFeature(self.model,
-                                                  uuid = self.feature_root.attrib['uuid'],
-                                                  feature_name = self.model.title_for_root(self.feature_root))
-        self.has_occurred_during = extract_has_occurred_during(root_node)
+            self.geobody_feature = ogf.GeobodyFeature(self.model,
+                                                      uuid = self.feature_root.attrib['uuid'],
+                                                      feature_name = self.model.title_for_root(self.feature_root))
+        self.has_occurred_during = ou.extract_has_occurred_during(root_node)
         self.composition = rqet.find_tag_text(root_node, 'GeologicUnitComposition')
         self.implacement = rqet.find_tag_text(root_node, 'GeologicUnitMaterialImplacement')
         self.geobody_shape = rqet.find_tag_text(root_node, 'Geobody3dShape')
@@ -86,10 +85,10 @@ class GeobodyInterpretation(BaseResqpy):
                 return False
         elif self.root is not None or other.root is not None:
             return False
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         return (self.domain == other.domain and
-                equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during) and
+                ou.equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during) and
                 self.composition == other.composition and self.implacement == other.implacement and
                 self.geobody_shape == other.geobody_shape)
 
@@ -122,7 +121,7 @@ class GeobodyInterpretation(BaseResqpy):
             if geobody_feature_root is None:
                 geobody_feature_root = self.feature_root
             assert geobody_feature_root is not None
-            self.geobody_feature = GeobodyFeature(self.model, uuid = geobody_feature_root.attrib['uuid'])
+            self.geobody_feature = ogf.GeobodyFeature(self.model, uuid = geobody_feature_root.attrib['uuid'])
         self.feature_root = geobody_feature_root
 
         assert self.domain in self.valid_domains, 'illegal domain value for geobody interpretation'
@@ -130,7 +129,7 @@ class GeobodyInterpretation(BaseResqpy):
         dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
         dom_node.text = self.domain
 
-        create_xml_has_occurred_during(self.model, gi, self.has_occurred_during)
+        ou.create_xml_has_occurred_during(self.model, gi, self.has_occurred_during)
 
         if self.composition:
             assert self.composition in self.valid_compositions

@@ -4,18 +4,16 @@ The module includes a dictionary of nexus WELLSPEC column keywords, functionalit
 read WELLSPEC files and transform the well data into Pandas DataFrames.
 """
 
-version = "19th April 2022"
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
-from typing import Any, Dict, Tuple, Type, Optional, List, Union, TextIO
 
 log = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
 import datetime
+from typing import Any, Dict, Tuple, Type, Optional, List, Union, TextIO
 
 import resqpy.olio.keyword_files as kf
 

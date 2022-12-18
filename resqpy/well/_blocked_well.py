@@ -1,4 +1,4 @@
-"""_blocked_well.py: resqpy well module providing blocked well class"""
+"""BlockedWell class."""
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -8,10 +8,8 @@ import logging
 log = logging.getLogger(__name__)
 
 import math as maths
-
 import numpy as np
 import pandas as pd
-
 from functools import partial
 
 import resqpy.crs as crs
@@ -25,13 +23,10 @@ import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.weights_and_measures as wam
+import resqpy.well as rqw
+import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-
-import resqpy.well as rqw
-
-from .well_utils import _pl, find_entry_and_exit, load_hdf5_array, _derive_from_wellspec_check_grid_name, \
-    _derive_from_wellspec_verify_col_list
 
 
 class BlockedWell(BaseResqpy):
@@ -246,7 +241,7 @@ class BlockedWell(BaseResqpy):
 
         mds_node = rqet.find_tag(node, 'NodeMd')
         assert mds_node is not None, 'blocked well node measured depths hdf5 reference not found in xml'
-        load_hdf5_array(self, mds_node, 'node_mds')
+        rqwu.load_hdf5_array(self, mds_node, 'node_mds')
 
         # Statement below has no effect, is this a bug?
         self.node_mds is not None and self.node_mds.ndim == 1 and self.node_mds.size == self.node_count
@@ -299,7 +294,7 @@ class BlockedWell(BaseResqpy):
 
         ci_node = rqet.find_tag(node, 'CellIndices')
         assert ci_node is not None, 'blocked well cell indices hdf5 reference not found in xml'
-        load_hdf5_array(self, ci_node, 'cell_indices', dtype = int)
+        rqwu.load_hdf5_array(self, ci_node, 'cell_indices', dtype = int)
         assert (self.cell_indices is not None and self.cell_indices.ndim == 1 and
                 self.cell_indices.size == self.cell_count), 'mismatch in number of cell indices for blocked well'
         self.cellind_null = rqet.find_tag_int(ci_node, 'NullValue')
@@ -311,7 +306,7 @@ class BlockedWell(BaseResqpy):
 
         fi_node = rqet.find_tag(node, 'LocalFacePairPerCellIndices')
         assert fi_node is not None, 'blocked well face indices hdf5 reference not found in xml'
-        load_hdf5_array(self, fi_node, 'raw_face_indices', dtype = 'int')
+        rqwu.load_hdf5_array(self, fi_node, 'raw_face_indices', dtype = 'int')
         assert self.raw_face_indices is not None, 'failed to load face indices for blocked well'
         assert self.raw_face_indices.size == 2 * self.cell_count, 'mismatch in number of cell faces for blocked well'
         if self.raw_face_indices.ndim > 1:
@@ -331,7 +326,7 @@ class BlockedWell(BaseResqpy):
 
         gi_node = rqet.find_tag(node, 'GridIndices')
         assert gi_node is not None, 'blocked well grid indices hdf5 reference not found in xml'
-        load_hdf5_array(self, gi_node, 'grid_indices', dtype = 'int')
+        rqwu.load_hdf5_array(self, gi_node, 'grid_indices', dtype = 'int')
         assert self.grid_indices is not None and self.grid_indices.ndim == 1 and self.grid_indices.size == self.node_count - 1
         unique_grid_indices = np.unique(self.grid_indices)  # sorted list of unique values
         self.gridind_null = rqet.find_tag_int(gi_node, 'NullValue')
@@ -646,11 +641,11 @@ class BlockedWell(BaseResqpy):
 
         well_name = self.__derive_from_wellspec_check_well_name(well_name = well_name)
 
-        col_list = _derive_from_wellspec_verify_col_list(add_properties = add_properties)
+        col_list = rqwu._derive_from_wellspec_verify_col_list(add_properties = add_properties)
 
-        name_for_check, col_list = _derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
-                                                                         grid = grid,
-                                                                         col_list = col_list)
+        name_for_check, col_list = rqwu._derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
+                                                                              grid = grid,
+                                                                              col_list = col_list)
 
         wellspec_dict = wsk.load_wellspecs(wellspec_file,
                                            well = well_name,
@@ -726,7 +721,7 @@ class BlockedWell(BaseResqpy):
         blocked_face_pairs = []  # same length as blocked_cells_kji0
         # blocked_face_pairs is list of ((entry axis, entry polarity), (exit axis, exit polarity))
 
-        log.debug('wellspec dataframe for well ' + str(well_name) + ' has ' + str(len(df)) + ' row' + _pl(len(df)))
+        log.debug('wellspec dataframe for well ' + str(well_name) + ' has ' + str(len(df)) + ' row' + rqwu._pl(len(df)))
 
         skipped_warning_grid = None
 
@@ -880,7 +875,7 @@ class BlockedWell(BaseResqpy):
             well_vector = vec.unit_vector(well_vector) * 10000.0
         # todo: the following might be producing NaN's when vector passes precisely through an edge
         (entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz) =  \
-            find_entry_and_exit(cp, -well_vector, well_vector, well_name)
+            rqwu.find_entry_and_exit(cp, -well_vector, well_vector, well_name)
         return entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz
 
     def __calculate_entry_and_exit_axes_polarities_and_points_using_indices(df, i, cell_kji0, blocked_cells_kji0):
@@ -1095,7 +1090,7 @@ class BlockedWell(BaseResqpy):
 
                     # let's hope everything is in the same coordinate reference system!
                     (entry_axis, entry_polarity, facial_entry_xyz, exit_axis, exit_polarity,
-                     facial_exit_xyz) = find_entry_and_exit(cp, entry_vector, exit_vector, well_name)
+                     facial_exit_xyz) = rqwu.find_entry_and_exit(cp, entry_vector, exit_vector, well_name)
 
                     if previous_xyz is None:  # first entry
                         previous_xyz = entry_xyz.copy()
@@ -1215,7 +1210,7 @@ class BlockedWell(BaseResqpy):
                         f"{f' {grid_name}' if grid_name is not None else ''}.")
             return None
         else:
-            log.info(f"{blocked_count} interval{_pl(blocked_count)} blocked for well {well_name} in"
+            log.info(f"{blocked_count} interval{rqwu._pl(blocked_count)} blocked for well {well_name} in"
                      f" grid{f' {grid_name}' if grid_name is not None else ''}.")
 
     def dataframe(self,

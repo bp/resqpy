@@ -9,13 +9,13 @@ log = logging.getLogger(__name__)
 import numpy as np
 import numpy.ma as ma
 
+import resqpy.property
 import resqpy.property._collection_create_xml as pcxml
 import resqpy.property._collection_get_attributes as pcga
 import resqpy.property._collection_support as pcs
 import resqpy.property._collection_add_part as pcap
-from .string_lookup import StringLookup
-from .property_common import dtype_flavour, _cache_name, _cache_name_for_uuid, selective_version_of_collection, check_and_warn_property_kind
-
+import resqpy.property.string_lookup as rqp_sl
+import resqpy.property.property_common as rqp_c
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
@@ -474,7 +474,7 @@ class PropertyCollection():
         # log.debug('inheriting parts selectively')
         pcs._set_support_and_model_from_collection(self, other, support_uuid, grid)
 
-        check_and_warn_property_kind(property_kind, 'selecting properties')
+        rqp_c.check_and_warn_property_kind(property_kind, 'selecting properties')
         if self.realization is not None and other.realization is not None:
             assert self.realization == other.realization
         if time_index is not None:
@@ -700,25 +700,25 @@ class PropertyCollection():
         if title and not citation_title:
             citation_title = title
 
-        temp_collection = selective_version_of_collection(self,
-                                                          realization = realization,
-                                                          support_uuid = support_uuid,
-                                                          continuous = continuous,
-                                                          points = points,
-                                                          count = count,
-                                                          indexable = indexable,
-                                                          property_kind = property_kind,
-                                                          facet_type = facet_type,
-                                                          facet = facet,
-                                                          citation_title = citation_title,
-                                                          title_mode = title_mode,
-                                                          time_series_uuid = time_series_uuid,
-                                                          time_index = time_index,
-                                                          uom = uom,
-                                                          categorical = categorical,
-                                                          related_uuid = related_uuid,
-                                                          string_lookup_uuid = string_lookup_uuid,
-                                                          const_value = const_value)
+        temp_collection = rqp_c.selective_version_of_collection(self,
+                                                                realization = realization,
+                                                                support_uuid = support_uuid,
+                                                                continuous = continuous,
+                                                                points = points,
+                                                                count = count,
+                                                                indexable = indexable,
+                                                                property_kind = property_kind,
+                                                                facet_type = facet_type,
+                                                                facet = facet,
+                                                                citation_title = citation_title,
+                                                                title_mode = title_mode,
+                                                                time_series_uuid = time_series_uuid,
+                                                                time_index = time_index,
+                                                                uom = uom,
+                                                                categorical = categorical,
+                                                                related_uuid = related_uuid,
+                                                                string_lookup_uuid = string_lookup_uuid,
+                                                                const_value = const_value)
         parts_list = temp_collection.parts()
         return parts_list
 
@@ -770,27 +770,27 @@ class PropertyCollection():
         if support_uuid is None and support is not None:
             support_uuid = support.uuid
 
-        temp_collection = selective_version_of_collection(self,
-                                                          realization = realization,
-                                                          support_uuid = support_uuid,
-                                                          uuid = uuid,
-                                                          continuous = continuous,
-                                                          points = points,
-                                                          count = count,
-                                                          indexable = indexable,
-                                                          property_kind = property_kind,
-                                                          facet_type = facet_type,
-                                                          facet = facet,
-                                                          citation_title = citation_title,
-                                                          time_series_uuid = time_series_uuid,
-                                                          time_index = time_index,
-                                                          uom = uom,
-                                                          string_lookup_uuid = string_lookup_uuid,
-                                                          categorical = categorical,
-                                                          title = title,
-                                                          title_mode = title_mode,
-                                                          related_uuid = related_uuid,
-                                                          const_value = const_value)
+        temp_collection = rqp_c.selective_version_of_collection(self,
+                                                                realization = realization,
+                                                                support_uuid = support_uuid,
+                                                                uuid = uuid,
+                                                                continuous = continuous,
+                                                                points = points,
+                                                                count = count,
+                                                                indexable = indexable,
+                                                                property_kind = property_kind,
+                                                                facet_type = facet_type,
+                                                                facet = facet,
+                                                                citation_title = citation_title,
+                                                                time_series_uuid = time_series_uuid,
+                                                                time_index = time_index,
+                                                                uom = uom,
+                                                                string_lookup_uuid = string_lookup_uuid,
+                                                                categorical = categorical,
+                                                                title = title,
+                                                                title_mode = title_mode,
+                                                                related_uuid = related_uuid,
+                                                                const_value = const_value)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
@@ -1471,7 +1471,7 @@ class PropertyCollection():
         sl_uuid = self.string_lookup_uuid_for_part(part)
         if sl_uuid is None:
             return None
-        return StringLookup(self.model, uuid = sl_uuid)
+        return rqp_sl.StringLookup(self.model, uuid = sl_uuid)
 
     def string_lookup_uuid_list(self, sort_list = True):
         """Returns a list of unique string lookup uuids found amongst the parts of the collection."""
@@ -1785,7 +1785,7 @@ class PropertyCollection():
         """
 
         model = self.model
-        cached_array_name = _cache_name(part)
+        cached_array_name = rqp_c._cache_name(part)
         if cached_array_name is None:
             return None
 
@@ -1842,7 +1842,7 @@ class PropertyCollection():
         h5_key_pair = self.h5_key_pair_for_part(part)
         assert h5_key_pair is not None
         self.model.h5_overwrite_array_slice(h5_key_pair, slice_tuple, array_slice)
-        cached_array_name = _cache_name(part)
+        cached_array_name = rqp_c._cache_name(part)
         if cached_array_name is None:
             return
         if hasattr(self, cached_array_name):
@@ -1855,7 +1855,7 @@ class PropertyCollection():
         """Returns shape tuple and element type of cached or hdf5 array for part."""
 
         model = self.model
-        cached_array_name = _cache_name(part)
+        cached_array_name = rqp_c._cache_name(part)
         if cached_array_name is None:
             return None, None
 
@@ -1922,7 +1922,7 @@ class PropertyCollection():
         if indexable_element is None:
             indexable_element = self.indexable_for_part(self.parts()[0])
 
-        dtype = dtype_flavour(continuous, use_32_bit)
+        dtype = rqp_c.dtype_flavour(continuous, use_32_bit)
         shape_list = self.supporting_shape(indexable_element = indexable_element)
         shape_list.insert(0, facet_count)
 
@@ -1974,7 +1974,7 @@ class PropertyCollection():
             indexable_element = self.indexable_for_part(self.parts()[0])
 
         r_extent = pcga._realizations_array_ref_get_r_extent(fill_missing, r_list)
-        dtype = dtype_flavour(continuous, use_32_bit)
+        dtype = rqp_c.dtype_flavour(continuous, use_32_bit)
         # todo: handle direction dependent shapes
 
         shape_list = pcga._realizations_array_ref_get_shape_list(self, indexable_element, r_extent)
@@ -2029,7 +2029,7 @@ class PropertyCollection():
         else:
             ti_extent = len(ti_list)
 
-        dtype = dtype_flavour(continuous, use_32_bit)
+        dtype = rqp_c.dtype_flavour(continuous, use_32_bit)
         # todo: handle direction dependent shapes
         shape_list = self.supporting_shape(indexable_element = indexable_element)
         shape_list.insert(0, ti_extent)
@@ -2212,7 +2212,7 @@ class PropertyCollection():
            array are released
         """
 
-        cached_array_name = _cache_name(part)
+        cached_array_name = rqp_c._cache_name(part)
         if cached_array_name is not None and hasattr(self, cached_array_name):
             delattr(self, cached_array_name)
 
@@ -2280,13 +2280,13 @@ class PropertyCollection():
         assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
         assert not points or not discrete
         assert count > 0
-        check_and_warn_property_kind(property_kind, 'adding property to imported list')
+        rqp_c.check_and_warn_property_kind(property_kind, 'adding property to imported list')
 
         if self.imported_list is None:
             self.imported_list = []
 
         uuid = bu.new_uuid()
-        cached_name = _cache_name_for_uuid(uuid)
+        cached_name = rqp_c._cache_name_for_uuid(uuid)
         if cached_array is not None:
             min_value, max_value = pcga._min_max_of_cached_array(self, cached_name, cached_array, null_value, discrete)
         else:
@@ -2343,7 +2343,7 @@ class PropertyCollection():
                 if not expand_const_arrays:
                     continue  # constant array – handled entirely in xml
                 uuid = entry[0]
-                cached_name = _cache_name_for_uuid(uuid)
+                cached_name = rqp_c._cache_name_for_uuid(uuid)
                 assert self.support is not None
                 #  note: will not handle direction dependent shapes or points
                 shape = self.supporting_shape(indexable_element = entry[14])
@@ -2701,7 +2701,9 @@ class PropertyCollection():
         ntg_part = pcga._find_single_part(self, 'net to gross ratio', realization)
         poro_part = pcga._find_single_part(self, 'porosity', realization)
 
-        perms = selective_version_of_collection(self, realization = realization, property_kind = 'permeability rock')
+        perms = rqp_c.selective_version_of_collection(self,
+                                                      realization = realization,
+                                                      property_kind = 'permeability rock')
         if perms is None or perms.number_of_parts() == 0:
             log.error('no rock permeabilities present')
         else:

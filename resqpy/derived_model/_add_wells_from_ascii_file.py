@@ -7,11 +7,12 @@ log = logging.getLogger(__name__)
 import os
 
 import resqpy.crs as rqc
+import resqpy.derived_model
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
-from resqpy.derived_model._common import _pl
+import resqpy.derived_model._common as rqdm_c
 
 
 def add_wells_from_ascii_file(epc_file,
@@ -99,7 +100,8 @@ def add_wells_from_ascii_file(epc_file,
     assert len(feature_list) == len(interpretation_list) == len(trajectory_list) == len(md_datum_list)
     count = len(feature_list)
 
-    log.info('features, interpretations, trajectories and md data added for ' + str(count) + ' well' + _pl(count))
+    log.info('features, interpretations, trajectories and md data added for ' + str(count) + ' well' +
+             rqdm_c._pl(count))
 
     # write or re-write model
     model.h5_release()

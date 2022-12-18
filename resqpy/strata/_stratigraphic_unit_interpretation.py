@@ -1,7 +1,5 @@
 """_stratigraphic_unit_interpretation.py: RESQML StratigraphicUnitInterpretation class."""
 
-version = '24th November 2021'
-
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 
 import logging
@@ -10,14 +8,15 @@ log = logging.getLogger(__name__)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.strata
+import resqpy.strata._strata_common as rqstc
+import resqpy.strata._geologic_unit_interpretation as rqsgui
+import resqpy.strata._stratigraphic_unit_feature as rqsui
 import resqpy.weights_and_measures as wam
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata._strata_common import valid_deposition_modes
-from resqpy.strata._geologic_unit_interpretation import GeologicUnitInterpretation
-from resqpy.strata._stratigraphic_unit_feature import StratigraphicUnitFeature
 
 
-class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
+class StratigraphicUnitInterpretation(rqsgui.GeologicUnitInterpretation):
     """Class for RESQML Stratigraphic Unit Interpretation objects.
 
     RESQML documentation:
@@ -91,7 +90,7 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
                          material_implacement = material_implacement,
                          extra_metadata = extra_metadata)
         if self.deposition_mode is not None:
-            assert self.deposition_mode in valid_deposition_modes
+            assert self.deposition_mode in rqstc.valid_deposition_modes
         if self.min_thickness is not None or self.max_thickness is not None:
             assert self.thickness_uom in wam.valid_uoms(quantity = 'length')
 
@@ -108,9 +107,9 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
         assert root_node is not None
         feature_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(root_node, ['InterpretedFeature', 'UUID']))
         if feature_uuid is not None:
-            self.geologic_unit_feature = StratigraphicUnitFeature(self.model,
-                                                                  uuid = feature_uuid,
-                                                                  title = self.model.title(uuid = feature_uuid))
+            self.geologic_unit_feature = rqsui.StratigraphicUnitFeature(self.model,
+                                                                        uuid = feature_uuid,
+                                                                        title = self.model.title(uuid = feature_uuid))
         # load deposition mode and min & max thicknesses (& uom), if present
         self.deposition_mode = rqet.find_tag_text(root_node, 'DepositionMode')
         for min_max in ['Min', 'Max']:
@@ -170,8 +169,8 @@ class StratigraphicUnitInterpretation(GeologicUnitInterpretation):
         assert sui is not None
 
         if self.deposition_mode is not None:
-            assert self.deposition_mode in valid_deposition_modes,  \
-               f'invalid deposition mode {self.deposition_mode} for stratigraphic unit interpretation'
+            assert self.deposition_mode in rqstc.valid_deposition_modes,  \
+                f'invalid deposition mode {self.deposition_mode} for stratigraphic unit interpretation'
             dm_node = rqet.SubElement(sui, ns['resqml2'] + 'DepositionMode')
             dm_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'DepositionMode')
             dm_node.text = self.deposition_mode

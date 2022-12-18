@@ -1,7 +1,5 @@
 """simple_lines.py: functions for handling simple lines in relation to a resqml grid."""
 
-version = '19th January 2021'
-
 # line is represented as 2D numpy array of shape (NP, 3): [point index, xyz]
 
 import logging

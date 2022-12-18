@@ -4,14 +4,15 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import uuid
 from typing import Tuple, Union, List
-from resqpy.model import new_model, Model
-from resqpy.grid import any_grid
-from resqpy.well import BlockedWell, Trajectory
-from resqpy.multiprocessing import function_multiprocessing
 from pathlib import Path
 from uuid import UUID
-import uuid
+
+import resqpy.model as rq
+import resqpy.grid as grr
+import resqpy.well as rqw
+import resqpy.multiprocessing as rqmp
 
 
 def blocked_well_from_trajectory_wrapper(
@@ -50,27 +51,19 @@ def blocked_well_from_trajectory_wrapper(
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
-    model = new_model(epc_file = epc_file, quiet = True)
+    model = rq.new_model(epc_file = epc_file, quiet = True)
 
-    trajectory_model = Model(trajectory_epc, quiet = True)
-    grid_model = Model(grid_epc)
+    trajectory_model = rq.Model(trajectory_epc, quiet = True)
+    grid_model = rq.Model(grid_epc)
     model.copy_uuid_from_other_model(grid_model, uuid = grid_uuid)
 
-    grid = any_grid(grid_model, uuid = grid_uuid)
+    grid = grr.any_grid(grid_model, uuid = grid_uuid)
 
     success = True
     for trajectory_uuid in trajectory_uuids:
         model.copy_uuid_from_other_model(trajectory_model, uuid = trajectory_uuid)
-        trajectory = Trajectory(
-            model,
-            trajectory_uuid,
-        )
-
-        blocked_well = BlockedWell(
-            model,
-            grid = grid,
-            trajectory = trajectory,
-        )
+        trajectory = rqw.Trajectory(model, trajectory_uuid)
+        blocked_well = rqw.BlockedWell(model, grid = grid, trajectory = trajectory)
         if blocked_well is None or blocked_well.cell_count is None or blocked_well.node_count is None:
             success = False
             continue
@@ -131,10 +124,10 @@ def blocked_well_from_trajectory_batch(
         }
         kwargs_list.append(d)
 
-    success_list = function_multiprocessing(blocked_well_from_trajectory_wrapper,
-                                            kwargs_list,
-                                            recombined_epc,
-                                            cluster,
-                                            require_success = require_success)
+    success_list = rqmp.function_multiprocessing(blocked_well_from_trajectory_wrapper,
+                                                 kwargs_list,
+                                                 recombined_epc,
+                                                 cluster,
+                                                 require_success = require_success)
 
     return success_list

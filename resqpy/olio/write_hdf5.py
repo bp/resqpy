@@ -1,10 +1,7 @@
 """write_hdf5.py: Class to write a resqml hdf5 file and functions for copying hdf5 data."""
 
-version = '26th August 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
-# write_hdf5.py
 # approach is to register the datasets (arrays) to be written; then write everything in a separate, single function call
 
 import logging
@@ -12,7 +9,6 @@ import logging
 log = logging.getLogger(__name__)
 
 import os
-
 import h5py
 import numpy as np
 

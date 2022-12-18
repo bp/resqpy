@@ -18,9 +18,8 @@ import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.weights_and_measures as bwam
-import resqpy.olio.wellspec_keywords as wsk
-
 import resqpy.well as rqw
+import resqpy.olio.wellspec_keywords as wsk
 
 
 def add_wells_from_ascii_file(model,

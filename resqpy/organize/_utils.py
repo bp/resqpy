@@ -1,7 +1,5 @@
 """Helper functions for RESQML Feature and Interpretation classes."""
 
-version = '9th August 2021'
-
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 

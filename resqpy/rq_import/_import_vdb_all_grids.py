@@ -1,7 +1,5 @@
 """_import_vdb_all_grids.py: Module to import a vdb into resqml format."""
 
-version = '15th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -9,9 +7,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import resqpy.olio.vdb as vdb
-# import resqpy.olio.grid_functions as gf
-
-from resqpy.rq_import import import_nexus
+import resqpy.rq_import as rqi
 
 
 def import_vdb_all_grids(
@@ -83,7 +79,7 @@ def import_vdb_all_grids(
             log.warning('vdb import skipping small grids')
             continue
         log.debug('importing vdb data for grid ' + str(grid_name))
-        import_nexus(
+        rqi.import_nexus(
             resqml_file_root,
             extent_ijk = extent_ijk if grid_name == 'ROOT' else None,  # 3 element numpy vector applicable to ROOT
             vdb_file = vdb_file,

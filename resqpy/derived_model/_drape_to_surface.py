@@ -9,13 +9,14 @@ import numpy as np
 import copy
 
 import resqpy.crs as rqc
+import resqpy.derived_model
 import resqpy.grid_surface as rgs
 import resqpy.model as rq
 import resqpy.olio.intersection as meet
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._common import _displacement_properties, _prepare_simple_inheritance, _write_grid, _establish_model_and_source_grid
-from resqpy.derived_model._copy_grid import copy_grid
+import resqpy.derived_model._common as rqdm_c
+import resqpy.derived_model._copy_grid as rqdm_cg
 
 
 def drape_to_surface(epc_file,
@@ -88,7 +89,7 @@ def drape_to_surface(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = rqdm_c._establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation == 'IjkGrid'
     assert model is not None
 
@@ -118,7 +119,7 @@ def drape_to_surface(epc_file,
 
     # take a copy of the grid
     log.debug('copying grid')
-    grid = copy_grid(source_grid, model)
+    grid = rqdm_cg.copy_grid(source_grid, model)
     grid.cache_all_geometry_arrays()  # probably already cached anyway
 
     # todo: handle pillars with no geometry defined, and cells without geometry defined
@@ -168,12 +169,12 @@ def drape_to_surface(epc_file,
     # build cell displacement property array(s)
     if store_displacement:
         log.debug('generating cell displacement property arrays')
-        displacement_collection = _displacement_properties(grid, source_grid)
+        displacement_collection = rqdm_c._displacement_properties(grid, source_grid)
     else:
         displacement_collection = None
 
-    collection = _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                             inherit_all_realizations)
+    collection = rqdm_c._prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
+                                                    inherit_all_realizations)
     if collection is None:
         collection = displacement_collection
     elif displacement_collection is not None:
@@ -185,16 +186,20 @@ def drape_to_surface(epc_file,
     # write model
     model.h5_release()
     if new_epc_file:
-        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        rqdm_c._write_grid(new_epc_file,
+                           grid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        _write_grid(epc_file,
-                    grid,
-                    ext_uuid = ext_uuid,
-                    property_collection = collection,
-                    grid_title = new_grid_title,
-                    mode = 'a')
+        rqdm_c._write_grid(epc_file,
+                           grid,
+                           ext_uuid = ext_uuid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'a')
 
     return grid
 

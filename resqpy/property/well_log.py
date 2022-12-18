@@ -1,14 +1,13 @@
 """Class for a welllog, representing resqml properties for well logs"""
 
-version = '24th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
 
-from .property_collection import PropertyCollection
+import resqpy.property
+import resqpy.property.property_collection as rqp_pc
 
 
 class WellLog:
@@ -17,7 +16,7 @@ class WellLog:
     def __init__(self, collection, uuid):
         """Create a well log from a part name."""
 
-        self.collection: PropertyCollection = collection
+        self.collection: rqp_pc.PropertyCollection = collection
         self.model = collection.model
         self.uuid = uuid
 

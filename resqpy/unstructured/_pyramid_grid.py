@@ -1,6 +1,4 @@
-"""pyramid_grid.py: resqpy PyramidGrid class module."""
-
-version = '24th November 2021'
+"""PyramidGrid class module."""
 
 import logging
 
@@ -10,11 +8,11 @@ import numpy as np
 
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
+import resqpy.unstructured
+import resqpy.unstructured._unstructured_grid as rug
 
-from resqpy.unstructured._unstructured_grid import UnstructuredGrid
 
-
-class PyramidGrid(UnstructuredGrid):
+class PyramidGrid(rug.UnstructuredGrid):
     """Class for unstructured grids where every cell is a quadrilateral pyramid."""
 
     def __init__(self,

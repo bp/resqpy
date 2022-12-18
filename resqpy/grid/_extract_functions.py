@@ -8,8 +8,9 @@ import resqpy.olio.fine_coarse as fc
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
-from ._intervals_info import IntervalsInfo
-from ._defined_geometry import cell_geometry_is_defined_ref
+import resqpy.grid
+import resqpy.grid._intervals_info as grr_ii
+import resqpy.grid._defined_geometry as grr_dg
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +149,7 @@ def __process_axis(axis, child_count_list_list, child_weight_list_list, grid, in
         child_count_list_list.append(np.array(grid.extent_kji[axis], dtype = int))
         child_weight_list_list.append(None)
     else:
-        intervals_info = IntervalsInfo()
+        intervals_info = grr_ii.IntervalsInfo()
         intervals_count = rqet.find_tag_int(intervals_node, 'IntervalCount')
         assert intervals_count is not None and intervals_count > 0
         pcpi_node = rqet.find_tag(intervals_node, 'ParentCountPerInterval')
@@ -497,12 +498,12 @@ def extract_inactive_mask(grid, check_pinchout = False):
 
     if grid.inactive is not None and not check_pinchout:
         return grid.inactive
-    geom_defined = cell_geometry_is_defined_ref(grid)
+    geom_defined = grr_dg.cell_geometry_is_defined_ref(grid)
     if grid.inactive is None:
         if geom_defined is None or geom_defined is True:
             grid.inactive = np.zeros(tuple(grid.extent_kji))  # ie. all active
         else:
-            grid.inactive = np.logical_not(cell_geometry_is_defined_ref(grid))
+            grid.inactive = np.logical_not(grr_dg.cell_geometry_is_defined_ref(grid))
     if check_pinchout:
         grid.inactive = np.logical_or(grid.inactive, grid.pinched_out())
     gpc = grid.extract_property_collection()

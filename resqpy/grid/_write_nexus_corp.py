@@ -4,9 +4,9 @@
 
 import logging
 
-import numpy as np
-
 log = logging.getLogger(__name__)
+
+import numpy as np
 
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.xml_et as rqet

@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 import os
 from typing import Optional
 
+import resqpy.model
 from resqpy.model import Model, new_model
 
 

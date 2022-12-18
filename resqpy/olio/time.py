@@ -1,7 +1,5 @@
 """time.py: A very thin wrapper around python datetime functionality, to meet resqml standard."""
 
-version = '9th April 2020'
-
 import datetime as dt
 
 

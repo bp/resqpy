@@ -1,7 +1,5 @@
 """_stratigraphic_column.py: RESQML StratigraphicColumn class."""
 
-version = '24th November 2021'
-
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 
 import logging
@@ -11,9 +9,10 @@ log = logging.getLogger(__name__)
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
+import resqpy.strata
+import resqpy.strata._strata_common as rqstc
+import resqpy.strata._stratigraphic_column_rank as rqscr
 from resqpy.olio.base import BaseResqpy
-from resqpy.strata._strata_common import _index_attr
-from resqpy.strata._stratigraphic_column_rank import StratigraphicColumnRank
 
 
 class StratigraphicColumn(BaseResqpy):
@@ -52,7 +51,7 @@ class StratigraphicColumn(BaseResqpy):
 
         if self.root is None and rank_uuid_list:
             for rank_uuid in rank_uuid_list:
-                rank = StratigraphicColumnRank(self.model, uuid = rank_uuid)
+                rank = rqscr.StratigraphicColumnRank(self.model, uuid = rank_uuid)
                 self.add_rank(rank)
 
     def _load_from_xml(self):
@@ -60,7 +59,7 @@ class StratigraphicColumn(BaseResqpy):
         rank_node_list = rqet.list_of_tag(self.root, 'Ranks')
         assert rank_node_list is not None, 'no stratigraphic column ranks in xml for stratigraphic column'
         for rank_node in rank_node_list:
-            rank = StratigraphicColumnRank(self.model, uuid = rqet.find_tag_text(rank_node, 'UUID'))
+            rank = rqscr.StratigraphicColumnRank(self.model, uuid = rqet.find_tag_text(rank_node, 'UUID'))
             self.add_rank(rank)
 
     def iter_ranks(self):
@@ -85,7 +84,7 @@ class StratigraphicColumn(BaseResqpy):
 
     def _sort_ranks(self):
         """Sort the list of ranks, in situ, by their index values."""
-        self.ranks.sort(key = _index_attr)
+        self.ranks.sort(key = rqstc._index_attr)
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this interpretation is essentially the same as the other; otherwise False.

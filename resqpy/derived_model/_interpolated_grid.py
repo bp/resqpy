@@ -8,11 +8,12 @@ import os
 import numpy as np
 
 import resqpy.crs as rqc
+import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._common import _prepare_simple_inheritance, _write_grid
+import resqpy.derived_model._common as rqdm_c
 
 
 def interpolated_grid(epc_file,
@@ -101,24 +102,28 @@ def interpolated_grid(epc_file,
     else:
         _interpolate_points_cached_from_cp(grid, grid_a, grid_b, a_weight, b_weight, split_tolerance)
 
-    collection = _prepare_simple_inheritance(grid, grid_a, inherit_properties, inherit_realization,
-                                             inherit_all_realizations)
+    collection = rqdm_c._prepare_simple_inheritance(grid, grid_a, inherit_properties, inherit_realization,
+                                                    inherit_all_realizations)
 
     if new_grid_title is None or len(new_grid_title) == 0:
         new_grid_title = 'interpolated between two grids with factor: ' + str(a_to_b_0_to_1)
 
     model.h5_release()
     if new_epc_file:
-        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        rqdm_c._write_grid(new_epc_file,
+                           grid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(grid_a.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        _write_grid(epc_file,
-                    grid,
-                    ext_uuid = ext_uuid,
-                    property_collection = collection,
-                    grid_title = new_grid_title,
-                    mode = 'a')
+        rqdm_c._write_grid(epc_file,
+                           grid,
+                           ext_uuid = ext_uuid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'a')
 
     return grid
 

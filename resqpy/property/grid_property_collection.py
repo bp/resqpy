@@ -1,16 +1,12 @@
 """Class for a collection of grid properties"""
 
-version = '24th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
-log.debug('property.py version ' + version)
 
 import os
-
 import numpy as np
 
 import resqpy.property as rqp
@@ -19,8 +15,7 @@ import resqpy.olio.box_utilities as bxu
 import resqpy.olio.load_data as ld
 import resqpy.olio.write_data as wd
 import resqpy.olio.xml_et as rqet
-
-from .property_common import selective_version_of_collection
+import resqpy.property.property_common as rqp_c
 
 
 class GridPropertyCollection(rqp.PropertyCollection):
@@ -938,11 +933,15 @@ def _extend_imported_with_coarsening(collection, other, box, coarsening, realiza
 
 def _extend_imported_get_fine_collections(other, realization):
     # look for properties by kind, process in order: rock volume, net to gross ratio, porosity, permeability, saturation
-    source_rv = selective_version_of_collection(other, realization = realization, property_kind = 'rock volume')
-    source_ntg = selective_version_of_collection(other, realization = realization, property_kind = 'net to gross ratio')
-    source_poro = selective_version_of_collection(other, realization = realization, property_kind = 'porosity')
-    source_sat = selective_version_of_collection(other, realization = realization, property_kind = 'saturation')
-    source_perm = selective_version_of_collection(other, realization = realization, property_kind = 'permeability rock')
+    source_rv = rqp_c.selective_version_of_collection(other, realization = realization, property_kind = 'rock volume')
+    source_ntg = rqp_c.selective_version_of_collection(other,
+                                                       realization = realization,
+                                                       property_kind = 'net to gross ratio')
+    source_poro = rqp_c.selective_version_of_collection(other, realization = realization, property_kind = 'porosity')
+    source_sat = rqp_c.selective_version_of_collection(other, realization = realization, property_kind = 'saturation')
+    source_perm = rqp_c.selective_version_of_collection(other,
+                                                        realization = realization,
+                                                        property_kind = 'permeability rock')
     # todo: add kh and some other property kinds
 
     return source_rv, source_ntg, source_poro, source_sat, source_perm
@@ -1060,9 +1059,9 @@ def _extend_imported_coarsen_perm(source_perm, other, box, collection, realizati
 def _extend_imported_coarsen_lengths(other, box, collection, realization, uncache_other_arrays, coarsening,
                                      copy_all_realizations):
     # cell lengths
-    source_cell_lengths = selective_version_of_collection(other,
-                                                          realization = realization,
-                                                          property_kind = 'cell length')
+    source_cell_lengths = rqp_c.selective_version_of_collection(other,
+                                                                realization = realization,
+                                                                property_kind = 'cell length')
     for (part, info) in source_cell_lengths.dict.items():
         if not copy_all_realizations and info[0] != realization:
             continue
@@ -1105,7 +1104,7 @@ def _extend_imported_no_coarsening(collection, other, box, refinement, realizati
     if realization is None:
         source_collection = other
     else:
-        source_collection = selective_version_of_collection(other, realization = realization)
+        source_collection = rqp_c.selective_version_of_collection(other, realization = realization)
 
     for (part, info) in source_collection.dict.items():
         _extend_imported_no_coarsening_single(source_collection, part, info, collection, other, box, refinement,

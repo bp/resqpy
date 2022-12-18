@@ -1,7 +1,5 @@
 """vdb.py: Module providing functions for reading from VDB datasets."""
 
-version = '15th March 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -11,9 +9,8 @@ log = logging.getLogger(__name__)
 import glob
 import os
 import zipfile as zf
-from struct import unpack
-
 import numpy as np
+from struct import unpack
 
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.xml_et as rqet

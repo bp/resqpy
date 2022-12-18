@@ -1,20 +1,19 @@
 """Submodule containing functions for attribute extraction for a property collection."""
 
-version = '1st December 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
 
-import resqpy
 import numpy as np
 import numpy.ma as ma
+
+import resqpy
+import resqpy.property
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
-from .property_common import property_kind_and_facet_from_keyword
-from .property_kind import PropertyKind
+import resqpy.property.property_kind as rqpk
 
 
 def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, discrete):
@@ -50,10 +49,10 @@ def _get_property_kind_uuid(collection, property_kind_uuid, property_kind, uom, 
                 break
         if property_kind_uuid is None:
             # create local property kind object and fetch uuid
-            lpk = PropertyKind(collection.model,
-                               title = property_kind,
-                               example_uom = uom,
-                               parent_property_kind = 'discrete' if discrete else 'continuous')
+            lpk = rqpk.PropertyKind(collection.model,
+                                    title = property_kind,
+                                    example_uom = uom,
+                                    parent_property_kind = 'discrete' if discrete else 'continuous')
             lpk.create_xml()
             property_kind_uuid = lpk.uuid
     return property_kind_uuid

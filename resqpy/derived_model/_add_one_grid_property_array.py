@@ -8,7 +8,7 @@ import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model._common import _write_grid
+import resqpy.derived_model._common as rqdm_c
 
 
 def add_one_grid_property_array(epc_file,
@@ -130,24 +130,24 @@ def add_one_grid_property_array(epc_file,
     model.h5_release()
     if new_epc_file:
         grid_title = rqet.citation_title_for_node(grid.root)
-        uuid_list = _write_grid(new_epc_file,
-                                grid,
-                                property_collection = gpc,
-                                grid_title = grid_title,
-                                mode = 'w',
-                                time_series_uuid = time_series_uuid,
-                                string_lookup_uuid = string_lookup_uuid,
-                                extra_metadata = extra_metadata)
+        uuid_list = rqdm_c._write_grid(new_epc_file,
+                                       grid,
+                                       property_collection = gpc,
+                                       grid_title = grid_title,
+                                       mode = 'w',
+                                       time_series_uuid = time_series_uuid,
+                                       string_lookup_uuid = string_lookup_uuid,
+                                       extra_metadata = extra_metadata)
     else:
         # add arrays to hdf5 file holding source grid geometry
-        uuid_list = _write_grid(epc_file,
-                                grid,
-                                property_collection = gpc,
-                                mode = 'a',
-                                geometry = False,
-                                time_series_uuid = time_series_uuid,
-                                string_lookup_uuid = string_lookup_uuid,
-                                extra_metadata = extra_metadata)
+        uuid_list = rqdm_c._write_grid(epc_file,
+                                       grid,
+                                       property_collection = gpc,
+                                       mode = 'a',
+                                       geometry = False,
+                                       time_series_uuid = time_series_uuid,
+                                       string_lookup_uuid = string_lookup_uuid,
+                                       extra_metadata = extra_metadata)
 
     if uuid_list is None or len(uuid_list) == 0:
         return None

@@ -2,7 +2,8 @@
 
 import warnings
 
-import resqpy
+import resqpy.grid as grr
+import resqpy.unstructured as rug
 import resqpy.olio.xml_et as rqet
 
 
@@ -64,8 +65,6 @@ def any_grid(parent_model, uuid = None, grid_root = None, find_properties = True
         Grid, RegularGrid, UnstructuredGrid, TetraGrid, HexaGrid, PyramidGrid, PrismGrid
     """
 
-    import resqpy.unstructured as rug
-
     if grid_root is not None:
         warnings.warn('Deprecated: use of grid_root arg to any_grid(); use uuid instead', DeprecationWarning)
         if uuid is None:
@@ -77,9 +76,9 @@ def any_grid(parent_model, uuid = None, grid_root = None, find_properties = True
     if flavour is None:
         return None
     if flavour == 'IjkGrid':
-        return resqpy.grid.Grid(parent_model, uuid = uuid, find_properties = find_properties)
+        return grr.Grid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'IjkBlockGrid':
-        return resqpy.grid.RegularGrid(parent_model, extent_kji = None, uuid = uuid, find_properties = find_properties)
+        return grr.RegularGrid(parent_model, extent_kji = None, uuid = uuid, find_properties = find_properties)
     if flavour == 'UnstructuredGrid':
         return rug.UnstructuredGrid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'TetraGrid':

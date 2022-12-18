@@ -11,13 +11,14 @@ log = logging.getLogger(__name__)
 import math as maths
 import numpy as np
 
+import resqpy.property
+import resqpy.time_series as rts
+import resqpy.weights_and_measures as wam
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.time_series as rts
-from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .property_common import supported_property_kind_list, guess_uom
 import resqpy.property._collection_get_attributes as pcga
-import resqpy.weights_and_measures as wam
+import resqpy.property.property_common as rqp_c
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 def _create_xml_add_as_part(collection, add_as_part, p_uuid, p_node, add_relationships, support_root,
@@ -70,7 +71,7 @@ def _create_xml_property_kind(collection, p_node, find_local_property_kinds, pro
         property_kind = 'rock permeability'
     p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
     p_kind_node.text = rqet.null_xml_text
-    if find_local_property_kinds and property_kind not in supported_property_kind_list:
+    if find_local_property_kinds and property_kind not in rqp_c.supported_property_kind_list:
         property_kind_uuid = pcga._get_property_kind_uuid(collection, property_kind_uuid, property_kind, uom, discrete)
 
     if property_kind_uuid is None:
@@ -150,7 +151,12 @@ def _create_xml_uom_node(collection, p_node, uom, property_kind, min_value, max_
     if points:
         return
     if not uom:
-        uom = guess_uom(property_kind, min_value, max_value, collection.support, facet_type = facet_type, facet = facet)
+        uom = rqp_c.guess_uom(property_kind,
+                              min_value,
+                              max_value,
+                              collection.support,
+                              facet_type = facet_type,
+                              facet = facet)
         if not uom:
             uom = 'Euc'  # todo: put RESQML base uom for quantity class here, instead of Euc
             log.warning(f'uom set to Euc for property {title} of kind {property_kind}')

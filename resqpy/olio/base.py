@@ -1,13 +1,14 @@
 """Base class for generic resqml objects."""
 
 import logging
+
+logger = logging.getLogger(__name__)
+
 import warnings
 from abc import ABCMeta, abstractmethod
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-
-logger = logging.getLogger(__name__)
 
 
 class BaseResqpy(metaclass = ABCMeta):

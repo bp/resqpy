@@ -1,4 +1,4 @@
-"""unstructured_grid.py: resqpy UnstructuredGrid class module."""
+"""UnstructuredGrid class module."""
 
 import logging
 

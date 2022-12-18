@@ -1,7 +1,5 @@
 """_stratigraphic_unit_feature.py: RESQML StratigraphicUnitFeature class."""
 
-version = '24th November 2021'
-
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 
 import logging

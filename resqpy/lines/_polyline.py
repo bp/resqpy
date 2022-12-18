@@ -8,16 +8,17 @@ import math as maths
 import numpy as np
 
 import resqpy.olio.intersection as meet
-from resqpy.lines._common import _BasePolyline, load_hdf5_array, tangents, spline
+import resqpy.lines
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.lines._common as rql_c
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
-class Polyline(_BasePolyline):
+class Polyline(rql_c._BasePolyline):
     """Class for RESQML polyline representation."""
 
     resqml_type = 'PolylineRepresentation'
@@ -111,7 +112,7 @@ class Polyline(_BasePolyline):
 
         points_node = rqet.find_tag(geometry_node, 'Points')
         assert points_node is not None  # Required field
-        load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
+        rql_c.load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
 
         self.nodepatch = (rqet.find_tag_int(patch_node, 'PatchIndex'), rqet.find_tag_int(patch_node, 'Count'))
         assert not any(map(lambda x: x is None, self.nodepatch))  # Required fields - assert neither are None
@@ -729,7 +730,7 @@ class Polyline(_BasePolyline):
     def tangent_vectors(self):
         """Returns a numpy array of unit length tangent vectors, one for each coordinate in the line."""
 
-        return tangents(self.coordinates)
+        return rql_c.tangents(self.coordinates)
 
     def splined(self,
                 tangent_weight = 'square',
@@ -743,12 +744,12 @@ class Polyline(_BasePolyline):
         :meta common:
         """
 
-        spline_coords = spline(self.coordinates,
-                               tangent_weight = tangent_weight,
-                               min_subdivisions = min_subdivisions,
-                               max_segment_length = max_segment_length,
-                               max_degrees_per_knot = max_degrees_per_knot,
-                               closed = self.isclosed)
+        spline_coords = rql_c.spline(self.coordinates,
+                                     tangent_weight = tangent_weight,
+                                     min_subdivisions = min_subdivisions,
+                                     max_segment_length = max_segment_length,
+                                     max_degrees_per_knot = max_degrees_per_knot,
+                                     closed = self.isclosed)
 
         if not title:
             title = self.title

@@ -1,7 +1,5 @@
 """_add_ab_properties.py: Module to add binary grid properties to an existing RESQMl grid object."""
 
-version = '15th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -13,16 +11,18 @@ import resqpy.olio.xml_et as rqet
 import resqpy.property as rp
 
 
-def add_ab_properties(
-    epc_file,  # existing resqml model
-    grid_uuid = None,  # optional grid uuid, required if more than one grid in model; todo: handle list of grids?
-    ext_uuid = None,  # if None, hdf5 file holding grid geometry will be used
-    ab_property_list = None
-):  # list of (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value,
-    #          discrete, realization)
-    """Process a list of pure binary property array files.
+def add_ab_properties(epc_file, grid_uuid = None, ext_uuid = None, ab_property_list = None):
+    """Import a list of pure binary property array files as grid properties.
 
-    Adds as parts of model, related to grid (hdf5 file is appended to).
+    arguments:
+        epc_file (str): path of existing resqml epc to be added to
+        grid_uuid (UUID, optional): the uuid of the grid to receive the properties; required if more than one grid present
+        ext_uuid (UUID, optional): the uuid of the hdf5 extension part to use for the arrays; recommended to leave as None
+        ab_property_list (list of tuples): each entry contains:
+            (file_name, keyword, property_kind, facet_type, facet, uom, time_index, null_value, discrete, realization)
+
+    returns:
+        Model, with the new properties added, with hdf5 and epc fully updated
     """
 
     assert ab_property_list, 'property list is empty or missing'

@@ -3,11 +3,6 @@
 # NB: at present the code does not enforce multiprocessor safe generation of unique identifiers
 # it calls uuid.uuid1() to generate new uuids, ie. using version 1 of the iso standard options
 
-version = '25th August 2021'
-
-# import logging
-# log = logging.getLogger(__name__)
-
 import uuid
 
 test_mode = False

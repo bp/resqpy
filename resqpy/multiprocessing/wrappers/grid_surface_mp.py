@@ -5,16 +5,17 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
-from typing import Tuple, Union, List, Optional, Callable
-import resqpy.grid_surface as rqgs
-from resqpy.model import new_model, Model
-from resqpy.grid import RegularGrid
-from resqpy.surface import Surface, PointSet
-from resqpy.property import PropertyCollection, Property
-from pathlib import Path
-import resqpy.olio.uuid as bu
-from uuid import UUID
 import uuid
+from typing import Tuple, Union, List, Optional, Callable
+from pathlib import Path
+from uuid import UUID
+
+import resqpy.grid_surface as rqgs
+import resqpy.model as rq
+import resqpy.grid as grr
+import resqpy.property as rqp
+import resqpy.surface as rqs
+import resqpy.olio.uuid as bu
 
 
 def find_faces_to_represent_surface_regular_wrapper(
@@ -97,9 +98,9 @@ def find_faces_to_represent_surface_regular_wrapper(
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
-    model = new_model(epc_file = epc_file, quiet = True)
+    model = rq.new_model(epc_file = epc_file, quiet = True)
     uuid_list = []
-    g_model = Model(grid_epc, quiet = True)
+    g_model = rq.Model(grid_epc, quiet = True)
     g_crs_uuid = g_model.uuid(obj_type = 'LocalDepth3dCrs',
                               related_uuid = grid_uuid)  # todo: check this relationship exists
     if g_crs_uuid is not None:
@@ -115,10 +116,10 @@ def find_faces_to_represent_surface_regular_wrapper(
             uuid_list.append(prop_uuid)
         else:
             log.warning(f'grid cell length property {prop_title} NOT found')
-    grid = RegularGrid(parent_model = model, uuid = grid_uuid)
+    grid = grr.RegularGrid(parent_model = model, uuid = grid_uuid)
     assert grid.is_aligned
     flange_radius = 5.0 * np.sum(np.array(grid.extent_kji, dtype = float) * np.array(grid.aligned_dxyz()))
-    s_model = Model(surface_epc, quiet = True)
+    s_model = rq.Model(surface_epc, quiet = True)
     model.copy_uuid_from_other_model(s_model, uuid = str(surface_uuid))
     repr_type = model.type_of_part(model.part(uuid = surface_uuid), strip_obj = True)
     assert repr_type in ['TriangulatedSetRepresentation', 'PointSetRepresentation']
@@ -127,7 +128,7 @@ def find_faces_to_represent_surface_regular_wrapper(
     flange_bool = None
     if repr_type == 'PointSetRepresentation':
         # trim pointset to grid xyz box
-        pset = PointSet(model, uuid = surface_uuid)
+        pset = rqs.PointSet(model, uuid = surface_uuid)
         surf_title = pset.title
         log.debug(f'point set {pset.title} raw point count: {len(pset.full_array_ref())}')
         pset.change_crs(grid.crs)
@@ -147,7 +148,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         # triangulate point set to form a surface; set repr_uuid to that surface and switch repr_flavour to 'surface'
         if extend_fault_representation and not surf_title.endswith(' extended'):
             surf_title += ' extended'
-        surf = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
+        surf = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surf.set_from_point_set(pset,
                                               convexity_parameter = 2.0,
                                               reorient = True,
@@ -161,35 +162,35 @@ def find_faces_to_represent_surface_regular_wrapper(
         inherit_interpretation_relationship(model, surface_uuid, surf.uuid)
         surface_uuid = surf.uuid
         if flange_bool is not None:
-            flange_p = Property.from_array(parent_model = model,
-                                           cached_array = flange_bool,
-                                           source_info = 'flange bool array',
-                                           keyword = 'flange bool',
-                                           support_uuid = surface_uuid,
-                                           property_kind = 'flange bool',
-                                           find_local_property_kind = True,
-                                           indexable_element = 'faces',
-                                           discrete = True)
+            flange_p = rqp.Property.from_array(parent_model = model,
+                                               cached_array = flange_bool,
+                                               source_info = 'flange bool array',
+                                               keyword = 'flange bool',
+                                               support_uuid = surface_uuid,
+                                               property_kind = 'flange bool',
+                                               find_local_property_kind = True,
+                                               indexable_element = 'faces',
+                                               discrete = True)
             uuid_list.append(flange_p.uuid)
 
-    surface = Surface(parent_model = model, uuid = str(surface_uuid))
+    surface = rqs.Surface(parent_model = model, uuid = str(surface_uuid))
     surf_title = surface.title
     assert surf_title
     surface.change_crs(grid.crs)
     if not trimmed and surface.triangle_count() > 100:
         if not surf_title.endswith('trimmed'):
             surf_title += ' trimmed'
-        trimmed_surf = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
+        trimmed_surf = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         # trimmed_surf.set_to_trimmed_surface(surf, xyz_box = xyz_box, xy_polygon = parent_seg.polygon)
         trimmed_surf.set_to_trimmed_surface(surface, xyz_box = grid.xyz_box(local = True))
         surface = trimmed_surf
         trimmed = True
     if (extend_fault_representation and not extended) or (retriangulate and not retriangulated):
         _, p = surface.triangles_and_points()
-        pset = PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surf_title)
+        pset = rqs.PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surf_title)
         if extend_fault_representation and not surf_title.endswith('extended'):
             surf_title += ' extended'
-        surface = Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
+        surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surface.set_from_point_set(pset,
                                                  convexity_parameter = 2.0,
                                                  reorient = True,
@@ -208,15 +209,15 @@ def find_faces_to_represent_surface_regular_wrapper(
         inherit_interpretation_relationship(model, surface_uuid, surface.uuid)
         surface_uuid = surface.uuid
     if flange_bool is not None:
-        flange_p = Property.from_array(parent_model = model,
-                                       cached_array = flange_bool,
-                                       source_info = 'flange bool array',
-                                       keyword = 'flange bool',
-                                       support_uuid = surface_uuid,
-                                       property_kind = 'flange bool',
-                                       find_local_property_kind = True,
-                                       indexable_element = 'faces',
-                                       discrete = True)
+        flange_p = rqp.Property.from_array(parent_model = model,
+                                           cached_array = flange_bool,
+                                           source_info = 'flange bool array',
+                                           keyword = 'flange bool',
+                                           support_uuid = surface_uuid,
+                                           property_kind = 'flange bool',
+                                           find_local_property_kind = True,
+                                           indexable_element = 'faces',
+                                           discrete = True)
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
@@ -264,7 +265,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         log.debug(f'{name} requested properties: {return_properties}')
         properties = returns[1]
         realisation = index if use_index_as_realisation else None
-        property_collection = PropertyCollection(support = gcs)
+        property_collection = rqp.PropertyCollection(support = gcs)
         grid_pc = None
         for p_name, array in properties.items():
             log.debug(f'{name} found property {p_name}')
@@ -320,7 +321,7 @@ def find_faces_to_represent_surface_regular_wrapper(
             elif p_name == 'grid bisector':
                 array, is_curtain = array
                 if grid_pc is None:
-                    grid_pc = PropertyCollection()
+                    grid_pc = rqp.PropertyCollection()
                     grid_pc.set_support(support = grid)
                 grid_pc.add_cached_array_to_imported_list(
                     array,

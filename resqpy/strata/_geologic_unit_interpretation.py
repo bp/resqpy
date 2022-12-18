@@ -1,6 +1,4 @@
-"""_geologic_unit_interpretation.py: RESQML GeologicUnitInterpretation class."""
-
-version = '24th November 2021'
+"""RESQML GeologicUnitInterpretation class."""
 
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 
@@ -11,9 +9,10 @@ log = logging.getLogger(__name__)
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
+import resqpy.strata
+import resqpy.strata._strata_common as rqstc
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata._strata_common import valid_compositions, valid_implacements, valid_domains
 
 
 class GeologicUnitInterpretation(BaseResqpy):
@@ -75,11 +74,11 @@ class GeologicUnitInterpretation(BaseResqpy):
         self.material_implacement = material_implacement  # optional RESQML item
         super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
         if self.composition:
-            assert self.composition in valid_compositions,  \
+            assert self.composition in rqstc.valid_compositions,  \
                f'invalid composition {self.composition} for geological unit interpretation'
             self.composition = self.composition.strip()
         if self.material_implacement:
-            assert self.material_implacement in valid_implacements,  \
+            assert self.material_implacement in rqstc.valid_implacements,  \
                f'invalid material implacement {self.material_implacement} for geological unit interpretation'
 
     def _load_from_xml(self):
@@ -157,7 +156,7 @@ class GeologicUnitInterpretation(BaseResqpy):
         guf_root = self.geologic_unit_feature.root
         assert guf_root is not None, 'interpreted feature not established for geologic unit interpretation'
 
-        assert self.domain in valid_domains, 'illegal domain value for geologic unit interpretation'
+        assert self.domain in rqstc.valid_domains, 'illegal domain value for geologic unit interpretation'
         dom_node = rqet.SubElement(gu, ns['resqml2'] + 'Domain')
         dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
         dom_node.text = self.domain
@@ -171,16 +170,17 @@ class GeologicUnitInterpretation(BaseResqpy):
         rqo.create_xml_has_occurred_during(self.model, gu, self.has_occurred_during)
 
         if self.composition is not None:
-            assert self.composition in valid_compositions, f'invalid composition {self.composition} for geologic unit interpretation'
+            assert self.composition in rqstc.valid_compositions,  \
+                f'invalid composition {self.composition} for geologic unit interpretation'
             comp_node = rqet.SubElement(gu, ns['resqml2'] + 'GeologicUnitComposition')
             comp_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitComposition')
             comp_node.text = self.composition
-            if self.composition + ' ' in valid_compositions:  # RESQML xsd has spurious trailing space for two compositions
+            if self.composition + ' ' in rqstc.valid_compositions:  # RESQML xsd has spurious trailing space for two compositions
                 comp_node.text += ' '
 
         if self.material_implacement is not None:
-            assert self.material_implacement in valid_implacements,  \
-               f'invalid material implacement {self.material_implacement} for geologic unit interpretation'
+            assert self.material_implacement in rqstc.valid_implacements,  \
+                f'invalid material implacement {self.material_implacement} for geologic unit interpretation'
             mi_node = rqet.SubElement(gu, ns['resqml2'] + 'GeologicUnitMaterialImplacement')
             mi_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'GeologicUnitMaterialImplacement')
             mi_node.text = self.material_implacement

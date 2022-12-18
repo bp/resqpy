@@ -6,11 +6,13 @@ log = logging.getLogger(__name__)
 
 import datetime as dt
 import warnings
-from ._any_time_series import AnyTimeSeries
-from ._time_duration import TimeDuration
+
+import resqpy.time_series
+import resqpy.time_series._any_time_series as ats
+import resqpy.time_series._time_duration as td
 
 
-class TimeSeries(AnyTimeSeries):
+class TimeSeries(ats.AnyTimeSeries):
     """Class for RESQML Time Series without year offsets.
 
     notes:
@@ -90,10 +92,10 @@ class TimeSeries(AnyTimeSeries):
         super_equivalence = super().is_equivalent(other_ts)
         if super_equivalence is not None:
             return super_equivalence
-        tolerance = TimeDuration(seconds = tol_seconds)
+        tolerance = td.TimeDuration(seconds = tol_seconds)
         for t_index in range(self.number_of_timestamps()):
-            diff = TimeDuration(earlier_timestamp = self.timestamps[t_index],
-                                later_timestamp = other_ts.timestamps[t_index])
+            diff = td.TimeDuration(earlier_timestamp = self.timestamps[t_index],
+                                   later_timestamp = other_ts.timestamps[t_index])
             if abs(diff.duration) > tolerance.duration:
                 return False
         return True
@@ -135,8 +137,8 @@ class TimeSeries(AnyTimeSeries):
         if before == len(self.timestamps) - 1 or self.timestamps[before] == timestamp:
             return before
         after = before + 1
-        early_delta = TimeDuration(earlier_timestamp = self.timestamps[before], later_timestamp = timestamp)
-        later_delta = TimeDuration(earlier_timestamp = timestamp, later_timestamp = self.timestamps[after])
+        early_delta = td.TimeDuration(earlier_timestamp = self.timestamps[before], later_timestamp = timestamp)
+        later_delta = td.TimeDuration(earlier_timestamp = timestamp, later_timestamp = self.timestamps[after])
         return before if early_delta.duration <= later_delta.duration else after
 
     def duration_between_timestamps(self, earlier_index, later_index):
@@ -146,8 +148,8 @@ class TimeSeries(AnyTimeSeries):
         """
         if earlier_index < 0 or later_index >= len(self.timestamps) or later_index < earlier_index:
             return None
-        return TimeDuration(earlier_timestamp = self.timestamps[earlier_index],
-                            later_timestamp = self.timestamps[later_index])
+        return td.TimeDuration(earlier_timestamp = self.timestamps[earlier_index],
+                               later_timestamp = self.timestamps[later_index])
 
     def days_between_timestamps(self, earlier_index, later_index):
         """Returns the number of whole days between a pair of timestamps, as an integer."""
@@ -212,7 +214,7 @@ class TimeSeries(AnyTimeSeries):
 
     def extend_by_days(self, days):
         """Adds a timestamp to the end of the series, at a duration of days beyond the last timestamp."""
-        duration = TimeDuration(days = days)
+        duration = td.TimeDuration(days = days)
         self.extend_by_duration(duration)
 
     def datetimes(self):
