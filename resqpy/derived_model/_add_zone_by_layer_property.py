@@ -2,12 +2,13 @@
 
 import numpy as np
 
+import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.property.property_kind as pk
 import resqpy.model as rq
 
-from resqpy.derived_model._add_one_grid_property_array import add_one_grid_property_array
-from resqpy.derived_model._zone_layer_ranges_from_array import zone_layer_ranges_from_array
+import resqpy.derived_model._add_one_grid_property_array as rqdm_aogp
+import resqpy.derived_model._zone_layer_ranges_from_array as rqdm_zlr
 
 
 def add_zone_by_layer_property(epc_file,
@@ -70,7 +71,8 @@ def add_zone_by_layer_property(epc_file,
         zone_by_cell_array = pc.single_array_ref(uuid = zone_by_cell_property_uuid)
         assert zone_by_cell_array is not None, 'zone by cell property array not found for uuid: ' + str(
             zone_by_cell_property_uuid)
-        zone_range_list = zone_layer_ranges_from_array(zone_by_cell_array, use_dominant_zone = use_dominant_zone)
+        zone_range_list = rqdm_zlr.zone_layer_ranges_from_array(zone_by_cell_array,
+                                                                use_dominant_zone = use_dominant_zone)
         assert zone_range_list is not None and len(
             zone_range_list) > 0, 'failed to convert zone by cell to zone by layer'
         zone_by_layer = np.full((grid.nk,), null_value, dtype = int)
@@ -93,17 +95,17 @@ def add_zone_by_layer_property(epc_file,
 
     model.h5_release()
 
-    property_uuid = add_one_grid_property_array(epc_file,
-                                                zone_by_layer,
-                                                property_kind,
-                                                grid_uuid = grid.uuid,
-                                                source_info = 'zone defined by layer',
-                                                title = title,
-                                                discrete = True,
-                                                null_value = null_value,
-                                                indexable_element = 'layers',
-                                                realization = realization,
-                                                local_property_kind_uuid = local_property_kind_uuid,
-                                                extra_metadata = extra_metadata)
+    property_uuid = rqdm_aogp.add_one_grid_property_array(epc_file,
+                                                          zone_by_layer,
+                                                          property_kind,
+                                                          grid_uuid = grid.uuid,
+                                                          source_info = 'zone defined by layer',
+                                                          title = title,
+                                                          discrete = True,
+                                                          null_value = null_value,
+                                                          indexable_element = 'layers',
+                                                          realization = realization,
+                                                          local_property_kind_uuid = local_property_kind_uuid,
+                                                          extra_metadata = extra_metadata)
 
     return zone_by_layer, property_uuid

@@ -1,7 +1,5 @@
 """volume.py: Functions to calculate volumes of hexahedral cells; assumes consistent length units."""
 
-version = '31st August 2021'
-
 import numpy as np
 
 

@@ -1,6 +1,4 @@
-"""_pointset.py: pointset class based on resqml standard."""
-
-version = '18th February 2022'
+"""PointSet class based on RESQML standard."""
 
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 # GOCAD is also a trademark of Emerson
@@ -16,11 +14,12 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.surface
+import resqpy.surface._base_surface as rqsb
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from ._base_surface import BaseSurface
 
 
-class PointSet(BaseSurface):
+class PointSet(rqsb.BaseSurface):
     """Class for RESQML Point Set Representation within resqpy model object."""  # TODO: Work in Progress
 
     resqml_type = 'PointSetRepresentation'

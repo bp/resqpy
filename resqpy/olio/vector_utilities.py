@@ -1,4 +1,4 @@
-""" Utilities for working with 3D vectors in cartesian space.
+"""Utilities for working with 3D vectors in cartesian space.
 
 note: some of these functions are redundant as they are provided by built-in numpy operations.
 
@@ -6,18 +6,16 @@ a vector is a one dimensional numpy array with 3 elements: x, y, z.
 some functions accept a tuple or list of 3 elements as an alternative to a numpy array.
 """
 
-version = '28th July 2022'
-
 import logging
-from typing import Tuple, Optional
 
 log = logging.getLogger(__name__)
 
 import math as maths
 import numpy as np
+import multiprocessing as m_p
 import numba  # type: ignore
 from numba import njit
-import multiprocessing as m_p
+from typing import Tuple, Optional
 
 
 def radians_from_degrees(deg):

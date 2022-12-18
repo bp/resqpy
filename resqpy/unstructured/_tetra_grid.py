@@ -1,6 +1,4 @@
-"""tetra_grid.py: resqpy TetraGrid class module."""
-
-version = '24th November 2021'
+"""TetraGrid class module."""
 
 import logging
 
@@ -10,10 +8,11 @@ import numpy as np
 
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
-from resqpy.unstructured._unstructured_grid import UnstructuredGrid, valid_cell_shapes
+import resqpy.unstructured
+import resqpy.unstructured._unstructured_grid as rug
 
 
-class TetraGrid(UnstructuredGrid):
+class TetraGrid(rug.UnstructuredGrid):
     """Class for unstructured grids where every cell is a tetrahedron."""
 
     def __init__(self,
@@ -125,7 +124,7 @@ class TetraGrid(UnstructuredGrid):
         if not title:
             title = str(u_grid.title) + f'_cell_{cell}'
 
-        assert u_grid.cell_shape in valid_cell_shapes
+        assert u_grid.cell_shape in rug.valid_cell_shapes
         u_grid.cache_all_geometry_arrays()
         u_cell_faces = u_grid.face_indices_for_cell(cell)
         u_cell_nodes = u_grid.distinct_node_indices_for_cell(cell)

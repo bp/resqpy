@@ -2,9 +2,9 @@
 
 import logging
 
-import numpy as np
-
 log = logging.getLogger(__name__)
+
+import numpy as np
 
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.property as rprop

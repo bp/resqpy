@@ -1,9 +1,6 @@
 """xml_namespaces.py: Module defining constant resqml xml namespaces."""
 
-# resqml xml namespaces
 # major revamp to support bespoke serialisation code, needed to emulate gSOAP, hence FESAPI
-
-version = '15th February 2021'
 
 namespace = {}
 

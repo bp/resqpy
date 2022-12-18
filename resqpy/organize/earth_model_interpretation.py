@@ -5,9 +5,10 @@ from ._utils import (equivalent_extra_metadata, extract_has_occurred_during, equ
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize.organization_feature as oof
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .organization_feature import OrganizationFeature
 
 
 class EarthModelInterpretation(BaseResqpy):
@@ -41,9 +42,10 @@ class EarthModelInterpretation(BaseResqpy):
         assert interp_feature_ref_node is not None
         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
         if self.feature_root is not None:
-            self.organization_feature = OrganizationFeature(self.model,
-                                                            uuid = self.feature_root.attrib['uuid'],
-                                                            feature_name = self.model.title_for_root(self.feature_root))
+            self.organization_feature = oof.OrganizationFeature(self.model,
+                                                                uuid = self.feature_root.attrib['uuid'],
+                                                                feature_name = self.model.title_for_root(
+                                                                    self.feature_root))
         self.has_occurred_during = extract_has_occurred_during(root)
 
     def is_equivalent(self, other, check_extra_metadata = True):

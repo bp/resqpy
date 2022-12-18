@@ -3,28 +3,11 @@
 Ascii file must already have been opened for reading before calling any of these functions.
 """
 
-version = '4th September 2020'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
-
-# defs:
-# def substring(shorter, longer):
-# def end_of_file(ascii_file):
-# def find_keyword(ascii_file, keyword, max_lines = None):
-# def skip_blank_lines_and_comments(ascii_file, comment_intro = '!'):
-# def split_trailing_comment(line, comment_char = '!'):
-# def strip_trailing_comment(line, comment_char = '!'):
-# def find_keyword_without_passing(ascii_file, keyword, no_pass_keyword):
-# def find_keyword_with_copy(ascii_file_in, keyword, ascii_file_out):
-# def find_keyword_pair(ascii_file, primary_keyword, secondary_keyword):
-# def find_number(ascii_file):
-# def specific_keyword_next(ascii_file, keyword, skip_blank_lines = True, comment_char = '!'):
-# def number_next(ascii_file, skip_blank_lines = True, comment_char = '!'):
-# def guess_comment_char(ascii_file):
 
 
 def substring(shorter, longer):

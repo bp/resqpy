@@ -7,14 +7,15 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 
+import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model._common import _write_grid, _establish_model_and_source_grid
-from resqpy.derived_model._zone_layer_ranges_from_array import zone_layer_ranges_from_array
+import resqpy.derived_model._common as rqdm_c
+import resqpy.derived_model._zone_layer_ranges_from_array as rqdm_zlr
 
 
 def zonal_grid(epc_file,
@@ -64,7 +65,7 @@ def zonal_grid(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = rqdm_c._establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation in ['IjkGrid', 'IjkBlockGrid']
     if source_grid.grid_representation == 'IjkBlockGrid':
         source_grid.make_regular_points_cached()
@@ -77,10 +78,10 @@ def zonal_grid(epc_file,
     if not single_layer_mode:  # process zone array
         if zone_layer_range_list is None:
             zone_array = _fetch_zone_array(source_grid, zone_title, zone_uuid)
-            zone_layer_range_list = zone_layer_ranges_from_array(zone_array,
-                                                                 k0_min,
-                                                                 k0_max,
-                                                                 use_dominant_zone = use_dominant_zone)
+            zone_layer_range_list = rqdm_zlr.zone_layer_ranges_from_array(zone_array,
+                                                                          k0_min,
+                                                                          k0_max,
+                                                                          use_dominant_zone = use_dominant_zone)
         zone_count = len(zone_layer_range_list)
         # above is list of (zone_min_k0, zone_max_k0, zone) sorted by zone_min_k0
         log.info('following layer ranges are based on top layer being numbered 1 (simulator protocol)')
@@ -113,9 +114,9 @@ def zonal_grid(epc_file,
     # write the new grid
     model.h5_release()
     if new_epc_file:
-        _write_grid(new_epc_file, grid, grid_title = new_grid_title, mode = 'w')
+        rqdm_c._write_grid(new_epc_file, grid, grid_title = new_grid_title, mode = 'w')
     else:
-        _write_grid(epc_file, grid, ext_uuid = None, grid_title = new_grid_title, mode = 'a')
+        rqdm_c._write_grid(epc_file, grid, ext_uuid = None, grid_title = new_grid_title, mode = 'a')
 
     return grid
 

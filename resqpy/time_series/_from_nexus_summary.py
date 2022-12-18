@@ -8,7 +8,9 @@ log = logging.getLogger(__name__)
 
 import datetime as dt
 import os
-from ._time_series import TimeSeries
+
+import resqpy.time_series
+import resqpy.time_series._time_series as rqts
 import resqpy.weights_and_measures as wam
 
 
@@ -79,7 +81,7 @@ def _process_summary_entries(summary_entries, parent_model = None, start_date = 
     if summary_entries[0][0] == 0:  # first entry is for time step zero, handled as first timestamp
         summary_entries.pop(0)
     # intiialise the time series with just the start date
-    time_series = TimeSeries(parent_model = parent_model, first_timestamp = tz_date.isoformat() + 'T00:00:00Z')
+    time_series = rqts.TimeSeries(parent_model = parent_model, first_timestamp = tz_date.isoformat() + 'T00:00:00Z')
     last_timestep = 0
     last_cumulative_time = 0.0
     cumulative_time_error = False

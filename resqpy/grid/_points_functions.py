@@ -7,14 +7,14 @@ log = logging.getLogger(__name__)
 import numpy as np
 import numpy.ma as ma
 
+import resqpy.grid as grr
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
 import resqpy.weights_and_measures as wam
-from ._defined_geometry import pillar_geometry_is_defined, cell_geometry_is_defined, geometry_defined_for_all_cells, \
-    geometry_defined_for_all_pillars
+import resqpy.grid._defined_geometry as grr_dg
 
 
 def set_cached_points_from_property(grid,
@@ -154,12 +154,12 @@ def point_raw(grid, index = None, points_root = None, cache_array = True):
     """
 
     # NB: shape of index depends on whether grid has split pillars
-    if index is not None and not geometry_defined_for_all_pillars(grid, cache_array = cache_array):
+    if index is not None and not grr_dg.geometry_defined_for_all_pillars(grid, cache_array = cache_array):
         if len(index) == 3:
             ji = tuple(index[1:])
         else:
             ji = tuple(divmod(index[1], grid.ni))
-        if ji[0] < grid.nj and not pillar_geometry_is_defined(grid, ji, cache_array = cache_array):
+        if ji[0] < grid.nj and not grr_dg.pillar_geometry_is_defined(grid, ji, cache_array = cache_array):
             return None
     if grid.points_cached is not None:
         if index is None:
@@ -215,8 +215,8 @@ def point(grid, cell_kji0 = None, corner_index = np.zeros(3, dtype = 'int'), poi
         return None
     if grid.k_raw_index_array is None:
         grid.extract_k_gaps()
-    if not geometry_defined_for_all_cells(grid):
-        if not cell_geometry_is_defined(grid, cell_kji0 = cell_kji0, cache_array = cache_array):
+    if not grr_dg.geometry_defined_for_all_cells(grid):
+        if not grr_dg.cell_geometry_is_defined(grid, cell_kji0 = cell_kji0, cache_array = cache_array):
             return None
     p_root = grid.resolve_geometry_child('Points', child_node = points_root)
     #      if p_root is None: return None  # geometry not present
@@ -714,8 +714,8 @@ def corner_points(grid, cell_kji0 = None, points_root = None, cache_resqml_array
 
     def one_cell_cp(grid, cell_kji0, points_root, cache_array):
         cp = np.full((2, 2, 2, 3), np.NaN)
-        if not grid.geometry_defined_for_all_cells():
-            if not grid.cell_geometry_is_defined(cell_kji0, cache_array = cache_array):
+        if not grr_dg.geometry_defined_for_all_cells(grid):
+            if not grr_dg.cell_geometry_is_defined(grid, cell_kji0 = cell_kji0, cache_array = cache_array):
                 return cp
         corner_index = np.zeros(3, dtype = 'int')
         for kp in range(2):
@@ -809,8 +809,8 @@ def corner_points(grid, cell_kji0 = None, points_root = None, cache_resqml_array
                 grid.array_corner_points[:, :, :, 1, 1, 1, :] = points[1:, 1:, 1:, :]
     if cell_kji0 is None:
         return grid.array_corner_points
-    if not geometry_defined_for_all_cells(grid):
-        if not cell_geometry_is_defined(grid, cell_kji0, cache_array = cache_resqml_array):
+    if not grr_dg.geometry_defined_for_all_cells(grid):
+        if not grr_dg.cell_geometry_is_defined(grid, cell_kji0, cache_array = cache_resqml_array):
             return None
     if hasattr(grid, 'array_corner_points'):
         return grid.array_corner_points[tuple(cell_kji0)]

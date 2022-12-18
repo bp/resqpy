@@ -1,4 +1,4 @@
-"""_deviation_survey.py: resqpy well module providing deviation survey class"""
+"""DeviationSurvey class."""
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
@@ -16,11 +16,11 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.weights_and_measures as bwam
+import resqpy.well
+import resqpy.well._md_datum as rqmdd
+import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-
-from .well_utils import _as_optional_array, extract_xyz, load_hdf5_array
-from ._md_datum import MdDatum
 
 
 class DeviationSurvey(BaseResqpy):
@@ -99,9 +99,9 @@ class DeviationSurvey(BaseResqpy):
         """boolean: True for degrees, False for radians (nothing else supported). Should be 'dega' or 'rad'"""
 
         # Array data
-        self.measured_depths = _as_optional_array(measured_depths)
-        self.azimuths = _as_optional_array(azimuths)
-        self.inclinations = _as_optional_array(inclinations)
+        self.measured_depths = rqwu._as_optional_array(measured_depths)
+        self.azimuths = rqwu._as_optional_array(azimuths)
+        self.inclinations = rqwu._as_optional_array(inclinations)
 
         if station_count is None and measured_depths is not None:
             station_count = len(measured_depths)
@@ -257,16 +257,16 @@ class DeviationSurvey(BaseResqpy):
         self.md_uom = rqet.length_units_from_node(rqet.find_tag(node, 'MdUom', must_exist = True))
         self.angle_uom = rqet.find_tag_text(node, 'AngleUom', must_exist = True)
         self.station_count = rqet.find_tag_int(node, 'StationCount', must_exist = True)
-        self.first_station = extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist = True))
+        self.first_station = rqwu.extract_xyz(rqet.find_tag(node, 'FirstStationLocation', must_exist = True))
         self.is_final = rqet.find_tag_bool(node, 'IsFinal')
 
         # Load HDF5 data
         mds_node = rqet.find_tag(node, 'Mds', must_exist = True)
-        load_hdf5_array(self, mds_node, 'measured_depths')
+        rqwu.load_hdf5_array(self, mds_node, 'measured_depths')
         azimuths_node = rqet.find_tag(node, 'Azimuths', must_exist = True)
-        load_hdf5_array(self, azimuths_node, 'azimuths')
+        rqwu.load_hdf5_array(self, azimuths_node, 'azimuths')
         inclinations_node = rqet.find_tag(node, 'Inclinations', must_exist = True)
-        load_hdf5_array(self, inclinations_node, 'inclinations')
+        rqwu.load_hdf5_array(self, inclinations_node, 'inclinations')
 
         # Set related objects
         self.md_datum = self._load_related_datum()
@@ -344,7 +344,7 @@ class DeviationSurvey(BaseResqpy):
             if self.md_datum is None:
                 if md_datum_xyz is None:
                     raise ValueError("Must provide a MD Datum for the DeviationSurvey")
-                self.md_datum = MdDatum(self.model, location = md_datum_xyz)
+                self.md_datum = rqmdd.MdDatum(self.model, location = md_datum_xyz)
             if self.md_datum.root is None:
                 md_datum_root = self.md_datum.create_xml()
             else:
@@ -448,7 +448,8 @@ class DeviationSurvey(BaseResqpy):
         md_datum_uuid = bu.uuid_from_string(rqet.find_tag(rqet.find_tag(self.root, 'MdDatum'), 'UUID'))
         if md_datum_uuid is not None:
             md_datum_part = 'obj_MdDatum_' + str(md_datum_uuid) + '.xml'
-            md_datum = MdDatum(self.model, md_datum_root = self.model.root_for_part(md_datum_part, is_rels = False))
+            md_datum = rqmdd.MdDatum(self.model,
+                                     md_datum_root = self.model.root_for_part(md_datum_part, is_rels = False))
         else:
             md_datum = None
         return md_datum

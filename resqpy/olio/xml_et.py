@@ -1,7 +1,5 @@
 """xml_et.py: Resqml xml element tree utilities module."""
 
-version = '30th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)

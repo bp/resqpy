@@ -1,14 +1,11 @@
 """point_inclusion.py: functions to test whether a point is within a polygon; also line intersection with planes."""
 
-version = '29th April 2021'
-
 import logging
 
 log = logging.getLogger(__name__)
 
-import math as maths
 import os
-
+import math as maths
 import numpy as np
 
 import resqpy.olio.simple_lines as sl

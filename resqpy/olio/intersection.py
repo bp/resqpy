@@ -1,14 +1,12 @@
 """intersection.py: functions to test whether lines intersect with planes."""
 
-version = '5th November 2020'
-
 import logging
 
 log = logging.getLogger(__name__)
 
-from typing import Union
 import numpy as np
 from numba import njit  # type: ignore
+from typing import Union
 
 import resqpy.olio.vector_utilities as vec
 

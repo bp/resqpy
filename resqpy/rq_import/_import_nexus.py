@@ -1,7 +1,5 @@
 """_import_nexus.py: Module to import a nexus corp grid & properties, or vdb, or vdb ensemble into resqml format."""
 
-version = '15th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -10,7 +8,6 @@ log = logging.getLogger(__name__)
 
 import glob
 import os
-
 import numpy as np
 
 import resqpy.crs as rqc
@@ -22,10 +19,9 @@ import resqpy.olio.vdb as vdb
 import resqpy.olio.write_data as wd
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rp
+import resqpy.rq_import as rqi
 import resqpy.time_series as rts
 import resqpy.weights_and_measures as bwam
-
-from resqpy.rq_import import grid_from_cp
 
 
 def import_nexus(
@@ -299,17 +295,17 @@ def import_nexus(
     new_crs.create_xml(reuse = True)
     crs_uuid = new_crs.uuid
 
-    grid = grid_from_cp(model,
-                        cp_array,
-                        crs_uuid,
-                        active_mask = active_mask,
-                        geometry_defined_everywhere = geometry_defined_everywhere,
-                        treat_as_nan = treat_as_nan,
-                        max_z_void = max_z_void,
-                        split_pillars = split_pillars,
-                        split_tolerance = split_tolerance,
-                        ijk_handedness = ijk_handedness,
-                        known_to_be_straight = False)
+    grid = rqi.grid_from_cp(model,
+                            cp_array,
+                            crs_uuid,
+                            active_mask = active_mask,
+                            geometry_defined_everywhere = geometry_defined_everywhere,
+                            treat_as_nan = treat_as_nan,
+                            max_z_void = max_z_void,
+                            split_pillars = split_pillars,
+                            split_tolerance = split_tolerance,
+                            ijk_handedness = ijk_handedness,
+                            known_to_be_straight = False)
 
     # create hdf5 file using arrays cached in grid above
     log.info('writing grid geometry to hdf5 file ' + resqml_file_root + '.h5')

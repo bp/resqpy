@@ -1,12 +1,8 @@
 """Class for RESQML Geologic Unit Feature organizational objects."""
 
-from ._utils import (
-    equivalent_extra_metadata,
-    alias_for_attribute,
-)
-
 import resqpy.olio.uuid as bu
-
+import resqpy.organize
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 
 
@@ -14,7 +10,7 @@ class GeologicUnitFeature(BaseResqpy):
     """Class for RESQML Geologic Unit Feature organizational objects."""
 
     resqml_type = "GeologicUnitFeature"
-    feature_name = alias_for_attribute("title")
+    feature_name = ou.alias_for_attribute("title")
 
     def __init__(self, parent_model, uuid = None, feature_name = None, extra_metadata = None):
         """Initialises a geologic unit feature organisational object."""
@@ -28,7 +24,7 @@ class GeologicUnitFeature(BaseResqpy):
             return False
         if self is other or bu.matching_uuids(self.uuid, other.uuid):
             return True
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         return self.feature_name == other.feature_name
 

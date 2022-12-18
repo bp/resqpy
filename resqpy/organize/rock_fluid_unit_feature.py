@@ -1,20 +1,19 @@
 """Class for RESQML Rock Fluid Unit Feature organizational objects."""
 
-from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                     equivalent_chrono_pairs, create_xml_has_occurred_during)
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize.boundary_feature as obf
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .boundary_feature import BoundaryFeature
 
 
 class RockFluidUnitFeature(BaseResqpy):
     """Class for RESQML Rock Fluid Unit Feature organizational objects."""
 
     resqml_type = "RockFluidUnitFeature"
-    feature_name = alias_for_attribute("title")
+    feature_name = ou.alias_for_attribute("title")
     valid_phases = ('aquifer', 'gas cap', 'oil column', 'seal')
 
     def __init__(self,
@@ -52,7 +51,7 @@ class RockFluidUnitFeature(BaseResqpy):
                 return False
         elif other.base_boundary_feature is not None:
             return False
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         return True
 
@@ -65,14 +64,14 @@ class RockFluidUnitFeature(BaseResqpy):
         feature_root = self.model.referenced_node(feature_ref_node)
         feature_uuid = rqet.uuid_for_part_root(feature_root)
         assert feature_uuid is not None, 'rock fluid top boundary feature missing from model'
-        self.top_boundary_feature = BoundaryFeature(self.model, uuid = feature_uuid)
+        self.top_boundary_feature = obf.BoundaryFeature(self.model, uuid = feature_uuid)
 
         feature_ref_node = rqet.find_tag(self.root, 'FluidBoundaryBottom')
         assert feature_ref_node is not None
         feature_root = self.model.referenced_node(feature_ref_node)
         feature_uuid = rqet.uuid_for_part_root(feature_root)
         assert feature_uuid is not None, 'rock fluid bottom boundary feature missing from model'
-        self.base_boundary_feature = BoundaryFeature(self.model, uuid = feature_uuid)
+        self.base_boundary_feature = obf.BoundaryFeature(self.model, uuid = feature_uuid)
 
     def create_xml(self, add_as_part = True, add_relationships = True, originator = None, reuse = True):
         """Creates a rock fluid unit feature organisational xml node from this rock fluid unit feature object."""

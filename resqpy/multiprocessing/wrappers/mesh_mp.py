@@ -1,17 +1,18 @@
-"""Multiprocessing wrapper functions for the surface/Mesh class."""
+"""Multiprocessing wrapper functions for the Mesh class."""
 
 import logging
 
 log = logging.getLogger(__name__)
 
+import uuid
 from typing import Tuple, Union, List
-from resqpy.model import new_model, Model
-from resqpy.grid import RegularGrid
-from resqpy.surface import Mesh
-from resqpy.multiprocessing import function_multiprocessing
 from pathlib import Path
 from uuid import UUID
-import uuid
+
+import resqpy.model as rq
+import resqpy.grid as grr
+import resqpy.surface as rqs
+from resqpy.multiprocessing import function_multiprocessing
 
 
 def mesh_from_regular_grid_column_property_wrapper(
@@ -48,9 +49,9 @@ def mesh_from_regular_grid_column_property_wrapper(
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
     epc_file = str(tmp_dir / "wrapper.epc")
-    model = new_model(epc_file = epc_file, quiet = True)
+    model = rq.new_model(epc_file = epc_file, quiet = True)
 
-    g_model = Model(grid_epc, quiet = True)
+    g_model = rq.Model(grid_epc, quiet = True)
     g_crs_uuid = g_model.uuid(obj_type = "LocalDepth3dCrs",
                               related_uuid = grid_uuid)  # todo: check this relationship exists
 
@@ -62,11 +63,11 @@ def mesh_from_regular_grid_column_property_wrapper(
     for prop_uuid in prop_uuids:
         model.copy_uuid_from_other_model(g_model, uuid = prop_uuid)
 
-    grid = RegularGrid(parent_model = model, uuid = grid_uuid)
+    grid = grr.RegularGrid(parent_model = model, uuid = grid_uuid)
 
     success = True
     for prop_uuid in prop_uuids:
-        mesh = Mesh.from_regular_grid_column_property(model, grid.uuid, prop_uuid)
+        mesh = rqs.Mesh.from_regular_grid_column_property(model, grid.uuid, prop_uuid)
         if mesh is None:
             success = False
             continue

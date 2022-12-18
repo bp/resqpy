@@ -8,23 +8,24 @@ import math as maths
 import numpy as np
 
 import resqpy.crs as rqc
+import resqpy.grid
 import resqpy.olio.transmission as rqtr
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
-from resqpy.olio.xml_namespaces import curly_namespace as ns
 import resqpy.property as rprop
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-from ._grid import Grid
-from ._grid_types import is_regular_grid
-from ._create_grid_xml import _add_constant_pillar_geometry_is_defined, _add_constant_cell_geometry_is_defined
+import resqpy.grid._grid as grr_g
+import resqpy.grid._grid_types as grr_gt
+import resqpy.grid._create_grid_xml as grr_xml
 
 # for a regular grid, the ...is_defined xml is created as a constant bool array, if the following set True
 always_write_pillar_geometry_is_defined = True  # required True for Fesapi interoperability (xsd compliance)
 always_write_cell_geometry_is_defined = False
 
 
-class RegularGrid(Grid):
+class RegularGrid(grr_g.Grid):
     """Class for completely regular block grids, usually aligned with xyz axes."""
 
     # WIP: use RESQML lattice like geometry specification
@@ -176,7 +177,7 @@ class RegularGrid(Grid):
         else:
 
             assert bu.is_uuid(uuid)
-            assert is_regular_grid(parent_model.root_for_uuid(uuid))
+            assert grr_gt.is_regular_grid(parent_model.root_for_uuid(uuid))
             super().__init__(parent_model,
                              uuid = uuid,
                              find_properties = find_properties,
@@ -685,9 +686,9 @@ class RegularGrid(Grid):
             geom = rqet.find_tag(node, 'Geometry')
             assert geom is not None
             if always_write_pillar_geometry_is_defined and rqet.find_tag(geom, 'PillarGeometryIsDefined') is None:
-                _add_constant_pillar_geometry_is_defined(geom, self.extent_kji)
+                grr_xml._add_constant_pillar_geometry_is_defined(geom, self.extent_kji)
             if always_write_cell_geometry_is_defined and rqet.find_tag(geom, 'CellGeometryIsDefined') is None:
-                _add_constant_cell_geometry_is_defined(geom, self.extent_kji)
+                grr_xml._add_constant_cell_geometry_is_defined(geom, self.extent_kji)
 
         if add_cell_length_properties:
             axes_lengths_kji = self.axial_lengths_kji()

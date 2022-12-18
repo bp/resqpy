@@ -1,7 +1,5 @@
 """_grid_from_cp.py: Module to generate a RESQML grid object from an input corner point array."""
 
-version = '15th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)

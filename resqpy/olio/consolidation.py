@@ -1,6 +1,4 @@
-"""Support for consolidation of datasets based on equivalence between parts ."""
-
-version = '18th June 2021'
+"""Support for consolidation of datasets based on equivalence between parts."""
 
 import logging
 

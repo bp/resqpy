@@ -1,7 +1,5 @@
 """_base_surface.py: base_surface class based on resqml standard."""
 
-version = '4th November 2021'
-
 import logging
 
 log = logging.getLogger(__name__)

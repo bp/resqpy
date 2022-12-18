@@ -8,6 +8,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+
 import resqpy.olio.transmission as rqtr
 
 always_write_pillar_geometry_is_defined_array = False

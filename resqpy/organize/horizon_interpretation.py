@@ -1,13 +1,12 @@
 """Class for RESQML Horizon Interpretation organizational objects."""
 
-from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                     equivalent_chrono_pairs, create_xml_has_occurred_during)
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize.genetic_boundary_feature as gbf
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .genetic_boundary_feature import GeneticBoundaryFeature
 
 
 class HorizonInterpretation(BaseResqpy):
@@ -49,12 +48,12 @@ class HorizonInterpretation(BaseResqpy):
         assert interp_feature_ref_node is not None
         self.feature_root = self.model.referenced_node(interp_feature_ref_node)
         if self.feature_root is not None:
-            self.genetic_boundary_feature = GeneticBoundaryFeature(self.model,
-                                                                   kind = 'horizon',
-                                                                   uuid = self.feature_root.attrib['uuid'],
-                                                                   feature_name = self.model.title_for_root(
-                                                                       self.feature_root))
-        self.has_occurred_during = extract_has_occurred_during(root_node)
+            self.genetic_boundary_feature = gbf.GeneticBoundaryFeature(self.model,
+                                                                       kind = 'horizon',
+                                                                       uuid = self.feature_root.attrib['uuid'],
+                                                                       feature_name = self.model.title_for_root(
+                                                                           self.feature_root))
+        self.has_occurred_during = ou.extract_has_occurred_during(root_node)
         br_node_list = rqet.list_of_tag(root_node, 'BoundaryRelation')
         if br_node_list is not None and len(br_node_list) > 0:
             self.boundary_relation_list = []
@@ -80,11 +79,11 @@ class HorizonInterpretation(BaseResqpy):
                 return False
         elif self.root is not None or other.root is not None:
             return False
-        if (self.domain != other.domain or
-                not equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during) or
+        if ((self.domain != other.domain) or
+                not ou.equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during) or
                 self.sequence_stratigraphy_surface != other.sequence_stratigraphy_surface):
             return False
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         if not self.boundary_relation_list and not other.boundary_relation_list:
             return True
@@ -125,7 +124,7 @@ class HorizonInterpretation(BaseResqpy):
         dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
         dom_node.text = self.domain
 
-        create_xml_has_occurred_during(self.model, hi, self.has_occurred_during)
+        ou.create_xml_has_occurred_during(self.model, hi, self.has_occurred_during)
 
         if self.boundary_relation_list is not None:
             for boundary_relation in self.boundary_relation_list:

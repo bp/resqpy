@@ -6,11 +6,12 @@ log = logging.getLogger(__name__)
 
 import os
 
+import resqpy.derived_model
 import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 
-from resqpy.derived_model._common import _prepare_simple_inheritance, _write_grid, _establish_model_and_source_grid
-from resqpy.derived_model._copy_grid import copy_grid
+import resqpy.derived_model._common as rqdm_c
+import resqpy.derived_model._copy_grid as rqdm_cg
 
 
 def unsplit_grid(epc_file,
@@ -50,14 +51,14 @@ def unsplit_grid(epc_file,
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):
         new_epc_file = None
-    model, source_grid = _establish_model_and_source_grid(epc_file, source_grid)
+    model, source_grid = rqdm_c._establish_model_and_source_grid(epc_file, source_grid)
     assert source_grid.grid_representation == 'IjkGrid'
     assert model is not None
 
     assert source_grid.has_split_coordinate_lines, 'source grid is unfaulted'
 
     # take a copy of the grid
-    grid = copy_grid(source_grid, model)
+    grid = rqdm_cg.copy_grid(source_grid, model)
 
     if grid.inactive is not None:
         log.debug('copied grid inactive shape: ' + str(grid.inactive.shape))
@@ -75,8 +76,8 @@ def unsplit_grid(epc_file,
     if hasattr(grid, 'pillars_for_column'):
         delattr(grid, 'pillars_for_column')
 
-    collection = _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
-                                             inherit_all_realizations)
+    collection = rqdm_c._prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
+                                                    inherit_all_realizations)
     # todo: recompute depth properties (and volumes, cell lengths etc. if being strict)
 
     if new_grid_title is None or len(new_grid_title) == 0:
@@ -84,15 +85,19 @@ def unsplit_grid(epc_file,
 
     # write model
     if new_epc_file:
-        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        rqdm_c._write_grid(new_epc_file,
+                           grid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        _write_grid(epc_file,
-                    grid,
-                    ext_uuid = ext_uuid,
-                    property_collection = collection,
-                    grid_title = new_grid_title,
-                    mode = 'a')
+        rqdm_c._write_grid(epc_file,
+                           grid,
+                           ext_uuid = ext_uuid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'a')
 
     return grid

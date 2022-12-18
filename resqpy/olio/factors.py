@@ -1,7 +1,5 @@
 """Factorization and functions supporting grid extent determination from corner points."""
 
-version = '24th December 2019'
-
 
 def factorize(n):
     """Returns list of prime factors of positive integer n."""

@@ -1,7 +1,5 @@
 """Functions for reading zmap and roxar format files."""
 
-version = '13th May 2021'
-
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 
 import logging

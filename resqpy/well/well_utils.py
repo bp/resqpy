@@ -1,7 +1,5 @@
 """well_utils.py: functions used by the classes in resqpy.well"""
 
-version = '10th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
 

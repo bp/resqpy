@@ -1,6 +1,7 @@
 """RESQML grid module handling grid pixel maps."""
 
 import numpy as np
+
 import resqpy.olio.point_inclusion as pip
 
 

@@ -12,7 +12,6 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-import resqpy.property as rprop
 
 
 class PropertyKind(BaseResqpy):
@@ -135,8 +134,8 @@ def establish_zone_property_kind(model):
 
     zone_pk_uuid = model.uuid(obj_type = 'LocalPropertyKind', title = 'zone')
     if zone_pk_uuid is None:
-        zone_pk = rprop.PropertyKind(model, title = 'zone', parent_property_kind = 'discrete')
+        zone_pk = PropertyKind(model, title = 'zone', parent_property_kind = 'discrete')
         zone_pk.create_xml()
     else:
-        zone_pk = rprop.PropertyKind(model, uuid = zone_pk_uuid)
+        zone_pk = PropertyKind(model, uuid = zone_pk_uuid)
     return zone_pk

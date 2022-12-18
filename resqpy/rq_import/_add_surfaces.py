@@ -1,7 +1,5 @@
 """_add_surfaces.py: Module to import a list of surfaces into a RESQML model, as triangulatedsets or mesh objects."""
 
-version = '6th July 2022'
-
 # RMS and GOCAD are trademarks of Emerson
 
 import logging
@@ -11,7 +9,6 @@ log = logging.getLogger(__name__)
 import os
 
 import resqpy.model as rq
-# import resqpy.olio.grid_functions as gf
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.surface as rqs

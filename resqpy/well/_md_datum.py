@@ -1,4 +1,4 @@
-"""_md_datum.py: resqpy module providing md datum class"""
+"""MdDatum class."""
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -8,7 +8,6 @@ import logging
 log = logging.getLogger(__name__)
 
 import warnings
-
 import numpy as np
 
 import resqpy.olio.uuid as bu

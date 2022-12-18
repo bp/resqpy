@@ -1,6 +1,4 @@
-""" Small utility functions related to use of pure binary files """
-
-version = '4th September 2020'
+"""Small utility functions related to use of pure binary files."""
 
 # Nexus is a registered trademark of the Halliburton Company
 

@@ -1,13 +1,12 @@
 """Class for RESQML Wellbore Interpretation organizational objects."""
 
-from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                     equivalent_chrono_pairs, create_xml_has_occurred_during)
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize.wellbore_feature as wbf
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .wellbore_feature import WellboreFeature
 
 
 class WellboreInterpretation(BaseResqpy):
@@ -57,9 +56,9 @@ class WellboreInterpretation(BaseResqpy):
         if interp_feature_ref_node is not None:
             self.feature_root = self.model.referenced_node(interp_feature_ref_node)
             if self.feature_root is not None:
-                self.wellbore_feature = WellboreFeature(self.model,
-                                                        uuid = self.feature_root.attrib['uuid'],
-                                                        feature_name = self.model.title_for_root(self.feature_root))
+                self.wellbore_feature = wbf.WellboreFeature(self.model,
+                                                            uuid = self.feature_root.attrib['uuid'],
+                                                            feature_name = self.model.title_for_root(self.feature_root))
 
     def iter_trajectories(self):
         """Iterable of associated trajectories."""
@@ -90,7 +89,7 @@ class WellboreInterpretation(BaseResqpy):
                 return False
         elif self.root is not None or other.root is not None:
             return False
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         return (self.title == other.title and self.is_drilled == other.is_drilled)
 

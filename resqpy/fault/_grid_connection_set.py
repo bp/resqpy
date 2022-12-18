@@ -10,6 +10,7 @@ import math as maths
 import numpy as np
 import pandas as pd
 
+import resqpy.fault
 import resqpy.olio.read_nexus_fault as rnf
 import resqpy.olio.trademark as tm
 import resqpy.olio.uuid as bu
@@ -19,11 +20,9 @@ import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.surface as rqs
 import resqpy.crs as rqc
+import resqpy.fault._gcs_functions as rqf_gf
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.fault._gcs_functions import zero_base_cell_indices_in_faces_df,  \
-    standardize_face_indicator_in_faces_df, remove_external_faces_from_faces_df,  \
-    _triangulate_unsplit_grid_connection_set
 
 valid_interpretation_types = [
     'obj_FaultInterpretation', 'obj_HorizonInterpretation', 'obj_GeobodyBoundaryInterpretation'
@@ -473,10 +472,10 @@ class GridConnectionSet(BaseResqpy):
         if len(self.grid_list) > 1:
             log.warning('setting grid connection set pairs from dataframe for first grid in list only')
         grid = self.grid_list[0]
-        standardize_face_indicator_in_faces_df(faces)
+        rqf_gf.standardize_face_indicator_in_faces_df(faces)
         if one_based_indexing:
-            zero_base_cell_indices_in_faces_df(faces)
-        faces = remove_external_faces_from_faces_df(faces, self.grid_list[0].extent_kji)
+            rqf_gf.zero_base_cell_indices_in_faces_df(faces)
+        faces = rqf_gf.remove_external_faces_from_faces_df(faces, self.grid_list[0].extent_kji)
         self.feature_list = []
         cell_pair_list = []
         face_pair_list = []
@@ -1773,7 +1772,7 @@ class GridConnectionSet(BaseResqpy):
         note:
            this method does not write the hdf5 data nor create the xml for the surface
         """
-        t = _triangulate_unsplit_grid_connection_set(self, feature_index = feature_index)
+        t = rqf_gf._triangulate_unsplit_grid_connection_set(self, feature_index = feature_index)
         if t is None:
             return None
         p = self.grid_list[0].points_cached.reshape((-1, 3))

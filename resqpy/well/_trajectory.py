@@ -1,4 +1,4 @@
-"""_trajectory.py: resqpy well module providing trajectory class"""
+"""Trajectory class."""
 
 # todo: create a trajectory from a deviation survey, assuming minimum curvature
 
@@ -10,10 +10,9 @@ import logging
 log = logging.getLogger(__name__)
 
 import math as maths
-from functools import partial
-
 import numpy as np
 import pandas as pd
+from functools import partial
 
 import resqpy.lines as rql
 import resqpy.olio.uuid as bu
@@ -23,13 +22,13 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.weights_and_measures as bwam
+import resqpy.well
+import resqpy.well._md_datum as rqmdd
+import resqpy.well._wellbore_frame as rqwbf
+import resqpy.well._deviation_survey as rqds
+import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-
-from ._md_datum import MdDatum
-from ._wellbore_frame import WellboreFrame
-from .well_utils import load_hdf5_array
-from ._deviation_survey import DeviationSurvey
 
 
 class Trajectory(BaseResqpy):
@@ -209,7 +208,7 @@ class Trajectory(BaseResqpy):
             self.title = 'well trajectory'
 
         if self.md_datum is None and self.control_points is not None:
-            self.md_datum = MdDatum(self.model, crs_uuid = self.crs_uuid, location = self.control_points[0])
+            self.md_datum = rqmdd.MdDatum(self.model, crs_uuid = self.crs_uuid, location = self.control_points[0])
 
         if set_tangent_vectors and type(self.knot_count) is int and self.tangent_vectors is None:
             if self.knot_count > 1:
@@ -241,7 +240,7 @@ class Trajectory(BaseResqpy):
         """
         uuids = self.model.uuids(obj_type = "WellboreFrameRepresentation", related_uuid = self.uuid)
         for uuid in uuids:
-            yield WellboreFrame(self.model, uuid = uuid)
+            yield rqwbf.WellboreFrame(self.model, uuid = uuid)
 
     def _load_from_xml(self):
         """Loads the trajectory object from an xml node (and associated hdf5 data)."""
@@ -258,25 +257,25 @@ class Trajectory(BaseResqpy):
         self.line_kind_index = int(rqet.node_text(rqet.find_tag(geometry_node, 'LineKindIndex')).strip())
         mds_node = rqet.find_tag(geometry_node, 'ControlPointParameters')
         if mds_node is not None:  # not required for vertical or z linear cubic spline
-            load_hdf5_array(self, mds_node, 'measured_depths')
+            rqwu.load_hdf5_array(self, mds_node, 'measured_depths')
         control_points_node = rqet.find_tag(geometry_node, 'ControlPoints')
-        load_hdf5_array(self, control_points_node, 'control_points', tag = 'Coordinates')
+        rqwu.load_hdf5_array(self, control_points_node, 'control_points', tag = 'Coordinates')
         tangents_node = rqet.find_tag(geometry_node, 'TangentVectors')
         if tangents_node is not None:
-            load_hdf5_array(self, tangents_node, 'tangent_vectors', tag = 'Coordinates')
+            rqwu.load_hdf5_array(self, tangents_node, 'tangent_vectors', tag = 'Coordinates')
         relatives_model = self.model  # if hdf5_source_model is None else hdf5_source_model
         # md_datum - separate part, referred to in this tree
         md_datum_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['MdDatum', 'UUID']))
         assert md_datum_uuid is not None, 'failed to fetch uuid of md datum for trajectory'
         md_datum_part = relatives_model.part_for_uuid(md_datum_uuid)
         assert md_datum_part, 'md datum part not found in model'
-        self.md_datum = MdDatum(self.model, uuid = relatives_model.uuid_for_part(md_datum_part))
+        self.md_datum = rqmdd.MdDatum(self.model, uuid = relatives_model.uuid_for_part(md_datum_part))
         ds_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['DeviationSurvey', 'UUID']))
         if ds_uuid is not None:  # this will probably not work when relatives model is different from self.model
             ds_uuid = self.model.uuid(obj_type = 'DeviationSurveyRepresentation',
                                       uuid = ds_uuid)  # check part is present
             if ds_uuid is not None:
-                self.deviation_survey = DeviationSurvey(self.model, uuid = ds_uuid)
+                self.deviation_survey = rqds.DeviationSurvey(self.model, uuid = ds_uuid)
         interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
         if interp_uuid is None:
             self.wellbore_interpretation = None
@@ -821,7 +820,7 @@ class Trajectory(BaseResqpy):
 
         if self.md_datum is None:
             assert md_datum_xyz is not None
-            self.md_datum = MdDatum(self.model, location = md_datum_xyz)
+            self.md_datum = rqmdd.MdDatum(self.model, location = md_datum_xyz)
         if self.md_datum.root is None:
             md_datum_root = self.md_datum.create_xml()
         else:

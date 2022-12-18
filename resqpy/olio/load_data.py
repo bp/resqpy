@@ -1,25 +1,12 @@
 """Functions to load data from various ASCII simulator file formats."""
 
-version = '29th April 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
 
-# defs:
-#    def file_exists(file_name):
-#    def load_corp_array_from_file(file_name, extent_kji = None, comment_char = '!',
-#                                  data_free_of_comments = False, use_binary = False,
-#                                  eight_mode = False):
-#    def load_array_from_file(file_name, extent, data_type = 'real', comment_char = '!',
-#                             data_free_of_comments = False, use_binary = False):
-#    def load_array_from_ascii_file(file_name, extent, data_type='real', comment_char = '!', data_free_of_comments = False):
-#    def load_fault_mask(file_name, direction, fault_mask, use_binary = False):
-
 import os
-
 import numpy as np
 
 import resqpy.olio.ab_toolbox as abt

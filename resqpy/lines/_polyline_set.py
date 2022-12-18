@@ -8,16 +8,17 @@ import os
 import numpy as np
 
 import resqpy.crs as rcrs
-from resqpy.lines._common import _BasePolyline, load_hdf5_array
+import resqpy.lines
 import resqpy.olio.simple_lines as rsl
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.lines._common as rql_c
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
-class PolylineSet(_BasePolyline):
+class PolylineSet(rql_c._BasePolyline):
     """Class for RESQML polyline set representation."""
 
     resqml_type = 'PolylineSetRepresentation'
@@ -133,11 +134,11 @@ class PolylineSet(_BasePolyline):
             closed_array = self.get_bool_array(closed_node)
 
             count_node = rqet.find_tag(patch_node, 'NodeCountPerPolyline')
-            load_hdf5_array(self, count_node, 'count_perpol', tag = 'Values')
+            rql_c.load_hdf5_array(self, count_node, 'count_perpol', tag = 'Values')
 
             points_node = rqet.find_tag(geometry_node, 'Points')
             assert points_node is not None  # Required field
-            load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
+            rql_c.load_hdf5_array(self, points_node, 'coordinates', tag = 'Coordinates')
 
             # Check that the number of bools aligns with the number of count_perpoly
             # Check that the total of the count_perpoly aligns with the number of coordinates
@@ -394,7 +395,7 @@ class PolylineSet(_BasePolyline):
             return np.full((count), value)
         elif rqet.node_type(closed_node) == 'BooleanArrayFromIndexArray':
             count = rqet.find_tag_int(closed_node, 'Count')
-            indices_arr = load_hdf5_array(self, closed_node, 'indices_arr', tag = 'Indices')
+            indices_arr = rql_c.load_hdf5_array(self, closed_node, 'indices_arr', tag = 'Indices')
             istrue = rqet.bool_from_text(rqet.node_text(rqet.find_tag(closed_node, 'IndexIsTrue')))
             out = np.full((count), not istrue)
             out[indices_arr] = istrue

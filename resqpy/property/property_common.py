@@ -2,22 +2,17 @@
 
 # Nexus is a trademark of Halliburton
 
-import warnings
-import resqpy.property
-
 import logging
 
 log = logging.getLogger(__name__)
 
+import warnings
 import numpy as np
 
+import resqpy.property
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.weights_and_measures as bwam
-
-#from .propertykind import PropertyKind
-#from .propertycollection import PropertyCollection
-#from .property import Property
 
 # the following resqml property kinds and facet types are 'known about' by this module in relation to nexus
 # other property kinds should be handled okay but without any special treatment

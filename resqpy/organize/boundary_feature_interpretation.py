@@ -1,13 +1,12 @@
 """Class for RESQML Boundary Feature Interpretation organizational objects."""
 
-from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                     equivalent_chrono_pairs, create_xml_has_occurred_during)
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.organize
+import resqpy.organize.boundary_feature as obf
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from .boundary_feature import BoundaryFeature
 
 
 class BoundaryFeatureInterpretation(BaseResqpy):
@@ -43,10 +42,10 @@ class BoundaryFeatureInterpretation(BaseResqpy):
         feature_root = self.model.referenced_node(interp_feature_ref_node)
         if feature_root is not None:
             self.feature_uuid = feature_root.attrib['uuid']
-            self.boundary_feature = BoundaryFeature(self.model,
-                                                    uuid = self.feature_uuid,
-                                                    feature_name = self.model.title_for_root(feature_root))
-        self.has_occurred_during = extract_has_occurred_during(root_node)
+            self.boundary_feature = obf.BoundaryFeature(self.model,
+                                                        uuid = self.feature_uuid,
+                                                        feature_name = self.model.title_for_root(feature_root))
+        self.has_occurred_during = ou.extract_has_occurred_during(root_node)
 
     def is_equivalent(self, other, check_extra_metadata = True):
         """Returns True if this interpretation is essentially the same as the other; otherwise False."""
@@ -63,10 +62,10 @@ class BoundaryFeatureInterpretation(BaseResqpy):
             return False
         if self.title != other.title:
             return False
-        if (self.domain != other.domain or
-                not equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during)):
+        if ((self.domain != other.domain) or
+                not ou.equivalent_chrono_pairs(self.has_occurred_during, other.has_occurred_during)):
             return False
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         return True
 
@@ -91,7 +90,7 @@ class BoundaryFeatureInterpretation(BaseResqpy):
         dom_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Domain')
         dom_node.text = self.domain
 
-        create_xml_has_occurred_during(self.model, bfi, self.has_occurred_during)
+        ou.create_xml_has_occurred_during(self.model, bfi, self.has_occurred_during)
 
         self.model.create_ref_node('InterpretedFeature',
                                    self.model.title(uuid = self.feature_uuid),

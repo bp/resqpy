@@ -1,4 +1,4 @@
-"""_wellbore_marker_frame.py: resqpy well module providing marker frame class"""
+"""WellboreMarkerFrame class."""
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -13,13 +13,13 @@ import pandas as pd
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.organize as rqo
+import resqpy.well
+import resqpy.well._trajectory as rqt
+import resqpy.well._wellbore_marker as rqwbm
+import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-import resqpy.organize as rqo
-
-from ._trajectory import Trajectory
-from ._wellbore_marker import WellboreMarker
-from .well_utils import load_hdf5_array
 
 
 class WellboreMarkerFrame(BaseResqpy):
@@ -73,7 +73,7 @@ class WellboreMarkerFrame(BaseResqpy):
                          extra_metadata = extra_metadata)
 
         if self.trajectory_uuid is not None:
-            self.trajectory = Trajectory(parent_model = self.model, uuid = self.trajectory_uuid)
+            self.trajectory = rqt.Trajectory(parent_model = self.model, uuid = self.trajectory_uuid)
 
     @classmethod
     def from_dataframe(cls,
@@ -141,12 +141,12 @@ class WellboreMarkerFrame(BaseResqpy):
                 interp_citation_title_col = interp_citation_title_col,
                 create_organizing_objects_where_needed = create_organizing_objects_where_needed)
             row_marker_citation_title = row[marker_citation_title_col]
-            row_wellbore_marker_object = WellboreMarker(parent_model = parent_model,
-                                                        parent_frame = WellboreMarkerFrame,
-                                                        marker_index = row_index,
-                                                        marker_type = row_marker_type,
-                                                        interpretation_uuid = row_interp_uuid,
-                                                        title = row_marker_citation_title)
+            row_wellbore_marker_object = rqwbm.WellboreMarker(parent_model = parent_model,
+                                                              parent_frame = WellboreMarkerFrame,
+                                                              marker_index = row_index,
+                                                              marker_type = row_marker_type,
+                                                              interpretation_uuid = row_interp_uuid,
+                                                              title = row_marker_citation_title)
             marker_list.append(row_wellbore_marker_object)
 
         wellbore_marker_frame = cls(parent_model = parent_model,
@@ -223,19 +223,19 @@ class WellboreMarkerFrame(BaseResqpy):
 
         self.trajectory_uuid = bu.uuid_from_string(
             rqet.find_nested_tags_text(wellbore_marker_frame_root, ['Trajectory', 'UUID']))
-        self.trajectory = Trajectory(parent_model = self.model, uuid = self.trajectory_uuid)
+        self.trajectory = rqt.Trajectory(parent_model = self.model, uuid = self.trajectory_uuid)
 
         # list of Wellbore markers
         self.marker_list = []
         for i, tag in enumerate(rqet.list_of_tag(wellbore_marker_frame_root, 'WellboreMarker')):
-            marker_obj = WellboreMarker(parent_model = self.model,
-                                        parent_frame = self,
-                                        marker_index = i,
-                                        marker_node = tag)
+            marker_obj = rqwbm.WellboreMarker(parent_model = self.model,
+                                              parent_frame = self,
+                                              marker_index = i,
+                                              marker_node = tag)
             self.marker_list.append(marker_obj)
 
         self.node_count = rqet.find_tag_int(wellbore_marker_frame_root, 'NodeCount')
-        load_hdf5_array(self, rqet.find_tag(wellbore_marker_frame_root, 'NodeMd'), "node_mds", tag = 'Values')
+        rqwu.load_hdf5_array(self, rqet.find_tag(wellbore_marker_frame_root, 'NodeMd'), "node_mds", tag = 'Values')
 
         assert self.node_count == len(self.node_mds), 'node count does not match hdf5 array'
         assert len(self.marker_list) == self.node_count, 'wellbore marker list does not contain correct node count'

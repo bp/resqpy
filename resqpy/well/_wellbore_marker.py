@@ -1,4 +1,4 @@
-"""_wellbore_marker.py: resqpy well module providing wellbore marker class"""
+"""WellboreMarker class."""
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -8,8 +8,8 @@ import logging
 log = logging.getLogger(__name__)
 
 import resqpy.olio.xml_et as rqet
-from resqpy.olio.xml_namespaces import curly_namespace as ns
 import resqpy.olio.uuid as bu
+from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
 class WellboreMarker():

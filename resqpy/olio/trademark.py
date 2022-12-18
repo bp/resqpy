@@ -1,6 +1,4 @@
-""" trademark.py module for mentioning trademarks in diagnostic log """
-
-version = '9th April 2021'
+"""trademark.py module for mentioning trademarks in diagnostic log."""
 
 # Nexus is a registered trademark of the Halliburton Company
 

@@ -1,7 +1,4 @@
-"""_binary_contact_interpretation.py: RESQML low level BinaryContactInterpretation class."""
-from typing import Optional
-
-version = '24th November 2021'
+"""RESQML low level BinaryContactInterpretation class."""
 
 # NB: in this module, the term 'unit' refers to a geological stratigraphic unit, i.e. a layer of rock, not a unit of measure
 
@@ -9,10 +6,13 @@ import logging
 
 log = logging.getLogger(__name__)
 
+from typing import Optional
+
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
+import resqpy.strata
+import resqpy.strata._strata_common as rqstc
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.strata._strata_common import valid_contact_relationships, valid_contact_verbs, valid_contact_sides, valid_contact_modes
 
 
 class BinaryContactInterpretation:
@@ -52,17 +52,17 @@ class BinaryContactInterpretation:
 
         else:
             assert index >= 0
-            assert contact_relationship in valid_contact_relationships
-            assert verb in valid_contact_verbs
+            assert contact_relationship in rqstc.valid_contact_relationships
+            assert verb in rqstc.valid_contact_verbs
             assert subject_uuid is not None and direct_object_uuid is not None
             if subject_contact_side is not None:
-                assert subject_contact_side in valid_contact_sides
+                assert subject_contact_side in rqstc.valid_contact_sides
             if subject_contact_mode is not None:
-                assert subject_contact_mode in valid_contact_modes
+                assert subject_contact_mode in rqstc.valid_contact_modes
             if direct_object_contact_side is not None:
-                assert direct_object_contact_side in valid_contact_sides
+                assert direct_object_contact_side in rqstc.valid_contact_sides
             if direct_object_contact_mode is not None:
-                assert direct_object_contact_mode in valid_contact_modes
+                assert direct_object_contact_mode in rqstc.valid_contact_modes
             self.index = index
             self.contact_relationship = contact_relationship
             self.verb = verb
@@ -84,7 +84,7 @@ class BinaryContactInterpretation:
         assert bci_node is not None
 
         self.contact_relationship = rqet.find_tag_text(bci_node, 'ContactRelationship')
-        assert self.contact_relationship in valid_contact_relationships,  \
+        assert self.contact_relationship in rqstc.valid_contact_relationships,  \
            f'missing or invalid contact relationship {self.contact_relationship} in xml for binary contact interpretation'
 
         self.index = rqet.find_tag_int(bci_node, 'Index')
@@ -107,7 +107,7 @@ class BinaryContactInterpretation:
         self.direct_object_contact_mode = rqet.find_tag_text(dor_node, 'SecondaryQualifier')
 
         self.verb = rqet.find_tag_text(bci_node, 'Verb')
-        assert self.verb in valid_contact_verbs,  \
+        assert self.verb in rqstc.valid_contact_verbs,  \
            f'missing or invalid contact verb {self.verb} in xml for binary contact interpretation'
 
     def create_xml(self, parent_node = None):

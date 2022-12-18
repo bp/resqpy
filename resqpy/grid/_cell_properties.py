@@ -10,7 +10,8 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.volume as vol
 import resqpy.weights_and_measures as wam
 
-from ._defined_geometry import cell_geometry_is_defined
+import resqpy.grid
+import resqpy.grid._defined_geometry as grr_dg
 
 
 def thickness(grid,
@@ -327,8 +328,8 @@ def cell_inactive(grid, cell_kji0, pv_array = None, pv_tol = 0.01):
     if pv_array is not None:  # fabricate an inactive mask from pore volume data
         grid.inactive = not (pv_array > pv_tol)  # NaN in pv array will end up inactive
         return grid.inactive[tuple(cell_kji0)]
-    return (not cell_geometry_is_defined(grid, cell_kji0 = cell_kji0)) or grid.pinched_out(cell_kji0,
-                                                                                           cache_pinchout_array = True)
+    return ((not grr_dg.cell_geometry_is_defined(grid, cell_kji0 = cell_kji0)) or
+            grid.pinched_out(cell_kji0, cache_pinchout_array = True))
 
 
 def interface_vector(grid, cell_kji0, axis, points_root = None, cache_resqml_array = True, cache_cp_array = False):

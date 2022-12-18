@@ -7,6 +7,7 @@ import uuid
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
 from joblib import Parallel, delayed, parallel_backend  # type: ignore
+
 import resqpy.model as rq
 
 log = logging.getLogger(__name__)

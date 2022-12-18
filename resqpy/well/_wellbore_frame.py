@@ -1,6 +1,4 @@
-"""_wellbore_frame.py: resqpy well module providing wellbore frame class"""
-
-import resqpy.well
+"""WellboreFrame class."""
 
 # Nexus is a registered trademark of the Halliburton Company
 # RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
@@ -16,10 +14,10 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
+import resqpy.well
+import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-
-from .well_utils import load_hdf5_array
 
 
 class WellboreFrame(BaseResqpy):
@@ -127,7 +125,7 @@ class WellboreFrame(BaseResqpy):
 
         mds_node = rqet.find_tag(node, 'NodeMd')
         assert mds_node is not None, 'wellbore frame measured depths hdf5 reference not found in xml'
-        load_hdf5_array(self, mds_node, 'node_mds')
+        rqwu.load_hdf5_array(self, mds_node, 'node_mds')
 
         assert self.node_mds is not None and self.node_mds.ndim == 1 and self.node_mds.size == self.node_count
 

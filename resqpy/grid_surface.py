@@ -20,11 +20,10 @@ import resqpy.olio.intersection as meet
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
+import resqpy.property as rqp
 import resqpy.surface as rqs
 import resqpy.well as rqw
 import resqpy.weights_and_measures as wam
-
-from resqpy.property import Property
 
 
 class GridSkin:
@@ -2240,7 +2239,7 @@ def find_faces_to_represent_surface_regular_optimised(
                                               obj_type = 'DiscreteProperty',
                                               related_uuid = surface.uuid)
         assert flange_bool_uuid is not None, f"No flange bool property found for surface: {surface.title}"
-        flange_bool = Property(surface.model, uuid = flange_bool_uuid)
+        flange_bool = rqp.Property(surface.model, uuid = flange_bool_uuid)
         flange_array = flange_bool.array_ref()
         all_flange = np.take(flange_array, all_tris)
         assert all_flange.shape == (gcs.count,)

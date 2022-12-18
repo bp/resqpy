@@ -1,14 +1,13 @@
 """Class for wellintervalproperty, for resqml wellbore frame of blocked wellbore supports."""
 
-version = '24th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
 
 log = logging.getLogger(__name__)
 
-from .property_collection import PropertyCollection
+import resqpy.property
+import resqpy.property.property_collection as rqp_pc
 
 
 class WellIntervalProperty:
@@ -20,7 +19,7 @@ class WellIntervalProperty:
     def __init__(self, collection, part):
         """Create an interval log or blocked well log from a part name."""
 
-        self.collection: PropertyCollection = collection
+        self.collection: rqp_pc.PropertyCollection = collection
         self.model = collection.model
         self.part = part
 

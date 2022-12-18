@@ -1,8 +1,9 @@
 """High level add edges per column property array function."""
 
+import resqpy.derived_model
 import resqpy.property as rqp
 
-from resqpy.derived_model._add_one_grid_property_array import add_one_grid_property_array
+import resqpy.derived_model._add_one_grid_property_array as rqdm_aogp
 
 
 def add_edges_per_column_property_array(epc_file,
@@ -72,24 +73,24 @@ def add_edges_per_column_property_array(epc_file,
         assert a.shape[2] == 4, 'Wrong shape! Expected shape (nj, ni, 4)'
         array_rq = a
 
-    property_uuid = add_one_grid_property_array(epc_file,
-                                                array_rq,
-                                                property_kind,
-                                                grid_uuid = grid_uuid,
-                                                source_info = source_info,
-                                                title = title,
-                                                discrete = discrete,
-                                                uom = uom,
-                                                time_index = time_index,
-                                                time_series_uuid = time_series_uuid,
-                                                string_lookup_uuid = string_lookup_uuid,
-                                                null_value = null_value,
-                                                indexable_element = 'edges per column',
-                                                facet_type = facet_type,
-                                                facet = facet,
-                                                realization = realization,
-                                                local_property_kind_uuid = local_property_kind_uuid,
-                                                count_per_element = 1,
-                                                extra_metadata = extra_metadata,
-                                                new_epc_file = new_epc_file)
+    property_uuid = rqdm_aogp.add_one_grid_property_array(epc_file,
+                                                          array_rq,
+                                                          property_kind,
+                                                          grid_uuid = grid_uuid,
+                                                          source_info = source_info,
+                                                          title = title,
+                                                          discrete = discrete,
+                                                          uom = uom,
+                                                          time_index = time_index,
+                                                          time_series_uuid = time_series_uuid,
+                                                          string_lookup_uuid = string_lookup_uuid,
+                                                          null_value = null_value,
+                                                          indexable_element = 'edges per column',
+                                                          facet_type = facet_type,
+                                                          facet = facet,
+                                                          realization = realization,
+                                                          local_property_kind_uuid = local_property_kind_uuid,
+                                                          count_per_element = 1,
+                                                          extra_metadata = extra_metadata,
+                                                          new_epc_file = new_epc_file)
     return property_uuid

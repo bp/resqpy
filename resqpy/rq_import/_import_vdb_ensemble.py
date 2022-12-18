@@ -1,7 +1,5 @@
 """_import_vdb_ensemble.py: Module to import a vdb ensemble into resqml format."""
 
-version = '5th August 2022'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
@@ -12,9 +10,8 @@ import resqpy.model as rq
 import resqpy.olio.vdb as vdb
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rp
+import resqpy.rq_import as rqi
 import resqpy.time_series as rts
-
-from resqpy.rq_import import import_nexus
 
 
 def import_vdb_ensemble(
@@ -130,7 +127,7 @@ def import_vdb_ensemble(
         return None
 
     if not existing_epc:
-        model = import_nexus(
+        model = rqi.import_nexus(
             epc_file[:-4],  # output path and file name without .epc or .h5 extension
             extent_ijk = extent_ijk,  # 3 element numpy vector, in case extent is not automatically determined
             vdb_file = ensemble_list[0],  # vdb input file

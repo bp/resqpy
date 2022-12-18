@@ -8,6 +8,7 @@ import os
 import numpy as np
 
 import resqpy.crs as rqc
+import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.fine_coarse as fc
@@ -15,7 +16,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 
-from resqpy.derived_model._common import _write_grid
+import resqpy.derived_model._common as rqdm_c
 
 
 def coarsened_grid(epc_file,
@@ -158,16 +159,20 @@ def coarsened_grid(epc_file,
 
     model.h5_release()
     if new_epc_file:
-        _write_grid(new_epc_file, grid, property_collection = collection, grid_title = new_grid_title, mode = 'w')
+        rqdm_c._write_grid(new_epc_file,
+                           grid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'w')
     else:
         ext_uuid, _ = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(source_grid.root, ['Geometry', 'Points']),
                                                       'Coordinates')
-        _write_grid(epc_file,
-                    grid,
-                    ext_uuid = ext_uuid,
-                    property_collection = collection,
-                    grid_title = new_grid_title,
-                    mode = 'a')
+        rqdm_c._write_grid(epc_file,
+                           grid,
+                           ext_uuid = ext_uuid,
+                           property_collection = collection,
+                           grid_title = new_grid_title,
+                           mode = 'a')
 
     return grid
 

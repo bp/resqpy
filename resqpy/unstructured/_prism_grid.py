@@ -1,6 +1,4 @@
-"""prism_grid.py: resqpy PrismGrid and VerticalPrismGrid class module."""
-
-version = '24th November 2021'
+"""PrismGrid and VerticalPrismGrid class module."""
 
 import logging
 
@@ -18,11 +16,11 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
 import resqpy.surface as rqs
 import resqpy.weights_and_measures as wam
+import resqpy.unstructured
+import resqpy.unstructured._unstructured_grid as rug
 
-from resqpy.unstructured._unstructured_grid import UnstructuredGrid
 
-
-class PrismGrid(UnstructuredGrid):
+class PrismGrid(rug.UnstructuredGrid):
     """Class for unstructured grids where every cell is a triangular prism.
 
     note:
