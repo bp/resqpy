@@ -29,12 +29,13 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
 
         Args:
             parent_model(model.Model): Model to which the feature belongs
-            uuid(UUID, Optional): The UUID of an existing Geobody Boundary Interpretation object. If present, all the other optional arguments are ignored
+            uuid(UUID, Optional): The UUID of an existing Geobody Boundary Interpretation object; if present,
+                all the other optional arguments are ignored
             title(str, Optional): Citation title when creating a new object
             genetic_boundary_feature(GeneticBoundaryFeature,Optional): Interpreted feature when creating a new object
             domain(str,Optional): One of ('depth', 'time', 'mixed') when creating a new object
             boundary_relation_list(list,Optional): Set of ('conformable', 'unconformable below and above', 'unconformable above',
-                                'unconformable below') when creating a new object
+                'unconformable below') when creating a new object
             extra_metadata(dict,Optional): Extra metadata items added when creating a new object
         """
 

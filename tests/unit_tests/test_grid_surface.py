@@ -87,14 +87,12 @@ def test_bisector_from_faces_flat_surface_k():
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
     # Assert
-    np.testing.assert_array_almost_equal(
-        a,
-        np.array([
-            [[True, True, True], [True, True, True], [True, True, True]],
-            [[False, False, False], [False, False, False], [False, False, False]],
-            [[False, False, False], [False, False, False], [False, False, False]],
-        ]),
-    )
+    np.all(a == np.array([
+        [[True, True, True], [True, True, True], [True, True, True]],
+        [[False, False, False], [False, False, False], [False, False, False]],
+        [[False, False, False], [False, False, False], [False, False, False]],
+    ],
+                         dtype = bool))
     assert is_curtain is False
 
 
@@ -120,15 +118,29 @@ def test_bisector_from_faces_flat_surface_j():
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
     # Assert
-    np.testing.assert_array_almost_equal(
-        a,
-        np.array([
-            [[True, True, True], [False, False, False], [False, False, False]],
-            [[True, True, True], [False, False, False], [False, False, False]],
-            [[True, True, True], [False, False, False], [False, False, False]],
-        ]),
-    )
+    np.all(a == np.array([
+        [[True, True, True], [False, False, False], [False, False, False]],
+        [[True, True, True], [False, False, False], [False, False, False]],
+        [[True, True, True], [False, False, False], [False, False, False]],
+    ],
+                         dtype = bool))
     assert is_curtain is True
+
+
+def test_shadow_from_faces_curtain():
+    # Arrange
+    grid_extent_kji = (3, 3, 3)
+    k_faces = np.array([
+        [[False, False, False], [False, False, False], [False, False, False]],
+        [[False, False, False], [False, False, False], [False, False, False]],
+    ])
+
+    # Act
+    a = rqgs.shadow_from_faces(grid_extent_kji, k_faces)
+
+    # Assert
+    assert a.shape == grid_extent_kji
+    assert np.all(a == 0)
 
 
 def test_bisector_from_faces_flat_surface_i():
@@ -153,14 +165,12 @@ def test_bisector_from_faces_flat_surface_i():
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
     # Assert
-    np.testing.assert_array_almost_equal(
-        a,
-        np.array([
-            [[True, False, False], [True, False, False], [True, False, False]],
-            [[True, False, False], [True, False, False], [True, False, False]],
-            [[True, False, False], [True, False, False], [True, False, False]],
-        ]),
-    )
+    np.all(a == np.array([
+        [[True, False, False], [True, False, False], [True, False, False]],
+        [[True, False, False], [True, False, False], [True, False, False]],
+        [[True, False, False], [True, False, False], [True, False, False]],
+    ],
+                         dtype = bool))
     assert is_curtain is True
 
 
@@ -185,3 +195,20 @@ def test_bisector_from_faces_flat_surface_k_hole():
     # Act & Assert
     with pytest.raises(AssertionError):
         rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
+
+
+def test_shadow_from_faces_flat_surface_k_hole():
+    # Arrange
+    grid_extent_kji = (3, 3, 3)
+    k_faces = np.array([
+        [[True, True, True], [True, False, True], [True, True, True]],
+        [[False, False, False], [False, False, False], [True, False, False]],
+    ])
+
+    # Act
+    a = rqgs.shadow_from_faces(grid_extent_kji, k_faces)
+
+    # Assert
+    assert a.shape == grid_extent_kji
+    assert np.all(a == np.array([[[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[2, 2, 2], [2, 0, 2], [3, 2, 2]],
+                                 [[2, 2, 2], [2, 0, 2], [2, 2, 2]]]))

@@ -75,13 +75,14 @@ def find_faces_to_represent_surface_regular_wrapper(
         extra_metadata (dict, optional): extra metadata items to be added to the grid connection set
         return_properties (List[str]): if present, a list of property arrays to calculate and
            return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset', 'normal vector',
-           and 'grid bisector';
+           'flange bool', 'grid bisector' and 'grid shadow';
            triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
            the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
            offset is a measure of the distance between the centre of the cell face and the intersection point;
            normal vector is a unit vector normal to the surface triangle; each array has an entry for each face
            in the gcs; grid bisector is a grid cell boolean property holding True for the set of cells on one
-           side of the surface, deemed to be shallower;
+           side of the surface, deemed to be shallower; grid shadow is a grid cell int8 property holding 1 for
+           cells neither above nor below a K face, 1 for above, 2 for beneath, 3 for between;
            the returned dictionary has the passed strings as keys and numpy arrays as values
         raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
            form without assessing which side is shallower (True values indicate same side as origin cell)
@@ -333,6 +334,19 @@ def find_faces_to_represent_surface_regular_wrapper(
                     facet = 'raw' if raw_bisector else ('vertical' if is_curtain else 'sloping'),
                     realization = realisation,
                     indexable_element = "columns" if is_curtain else "cells",
+                )
+            elif p_name == 'grid shadow':
+                if grid_pc is None:
+                    grid_pc = rqp.PropertyCollection()
+                    grid_pc.set_support(support = grid)
+                grid_pc.add_cached_array_to_imported_list(
+                    array,
+                    f"from find_faces function for {surface.title}",
+                    f'{surface.title} {p_name}',
+                    discrete = True,
+                    property_kind = "grid shadow",
+                    realization = realisation,
+                    indexable_element = "cells",
                 )
             elif p_name == 'flange bool':
                 property_collection.add_cached_array_to_imported_list(

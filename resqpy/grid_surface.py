@@ -1669,6 +1669,42 @@ def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarr
     return a, is_curtain
 
 
+def shadow_from_faces(extent_kji, k_faces):
+    """Returns a numpy int8 array indicating whether cells are above, below or between K faces.
+
+    arguments:
+        extent_kji (triple int): the shape of the grid
+        k_faces (bool array): True where a K face is present; shaped (nk - 1, nj, ni)
+
+    returns:
+        numpy int8 array of shape extent_kji; values are: 0 neither above nor below a K face;
+            1: above any K faces in the column; 2 below any K faces in the column;
+            3: between K faces (one or more above and one or more below)
+    """
+    assert len(extent_kji) == 3
+    limit = extent_kji[0] - 1  # maximum number of iterations needed to spead shadow
+    shadow = np.zeros(extent_kji, dtype = np.int8)
+    shadow[:-1] = np.where(k_faces, 1, 0)
+    shadow[1:] += np.where(k_faces, 2, 0)
+    for _ in range(limit):
+        c = np.logical_and(shadow[:-1] == 0, shadow[1:] == 1)
+        if np.count_nonzero(c) == 0:
+            break
+        shadow[:-1] = np.where(c, 1, shadow[:-1])
+    for _ in range(limit):
+        c = np.logical_and(shadow[1:] == 0, shadow[:-1] == 2)
+        if np.count_nonzero(c) == 0:
+            break
+        shadow[1:] = np.where(c, 2, shadow[1:])
+    for _ in range(limit):
+        c = np.logical_and(shadow[:-1] >= 2, shadow[1:] == 1)
+        if np.count_nonzero(c) == 0:
+            break
+        shadow[:-1] = np.where(c, 3, shadow[:-1])
+        shadow[1:] = np.where(c, 3, shadow[1:])
+    return shadow
+
+
 @njit
 def first_true(array: np.ndarray) -> Optional[int]:  # type: ignore
     """Returns the index + 1 of the first True value in the array."""
@@ -1999,12 +2035,14 @@ def find_faces_to_represent_surface_regular_optimised(
         consistent_side (bool, default False): DEPRECATED; True will result in an assertion exception
         return_properties (List[str]): if present, a list of property arrays to calculate and
            return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset',
-           or 'grid bisector';
+           'flange bool', 'grid bisector', or 'grid shadow';
            triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
            the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
            offset is a measure of the distance between the centre of the cell face and the intersection point;
            grid bisector is a grid cell boolean property holding True for the set of cells on one
            side of the surface, deemed to be shallower;
+           grid shadow is a grid cell int8 property holding 0: cell neither above nor below a K face of the
+           gridded surface, 1 cell is above K face(s), 2 cell is below K face(s), 3 cell is between K faces;
            the returned dictionary has the passed strings as keys and numpy arrays as values
         raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
            form without assessing which side is shallower (True values indicate same side as origin cell)
@@ -2035,13 +2073,18 @@ def find_faces_to_represent_surface_regular_optimised(
     return_depths = False
     return_offsets = False
     return_bisector = False
+    return_shadow = False
     return_flange_bool = False
     if return_properties:
-        assert all([p in ['triangle', 'depth', 'offset', 'grid bisector', 'flange bool'] for p in return_properties])
+        assert all([
+            p in ['triangle', 'depth', 'offset', 'grid bisector', 'grid shadow', 'flange bool']
+            for p in return_properties
+        ])
         return_triangles = ('triangle' in return_properties)
         return_depths = ('depth' in return_properties)
         return_offsets = ('offset' in return_properties)
         return_bisector = ('grid bisector' in return_properties)
+        return_shadow = ('grid shadow' in return_properties)
         return_flange_bool = ('flange bool' in return_properties)
         if return_flange_bool:
             return_triangles = True
@@ -2256,6 +2299,11 @@ def find_faces_to_represent_surface_regular_optimised(
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
+    # note: following is a grid cells property, not a gcs property
+    if return_shadow:
+        log.debug('preparing cells shadow')
+        shadow = shadow_from_faces(tuple(grid.extent_kji), k_faces)
+
     if progress_fn is not None:
         progress_fn(1.0)
 
@@ -2272,6 +2320,8 @@ def find_faces_to_represent_surface_regular_optimised(
             props_dict['offset'] = all_offsets
         if return_bisector:
             props_dict['grid bisector'] = (bisector, is_curtain)
+        if return_shadow:
+            props_dict['grid shadow'] = shadow
         if return_flange_bool:
             props_dict['flange bool'] = all_flange
         return (gcs, props_dict)
