@@ -92,7 +92,7 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     grid_epc = surface_epc = grid.model.epc_file
     grid_uuid = grid.uuid
     surface_uuid = surface.uuid
-    return_properties = ["triangle", "offset", "grid bisector"]
+    return_properties = ["triangle", "offset", "grid bisector", "grid shadow"]
 
     name = "test"
     input_index = 0
@@ -121,10 +121,10 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     assert len(model.uuids(obj_type = 'GridConnectionSetRepresentation')) == 1
     assert len(model.uuids(obj_type = 'FaultInterpretation')) == 1
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
-    assert len(model.uuids(obj_type = 'DiscreteProperty')) == 2
+    assert len(model.uuids(obj_type = 'DiscreteProperty')) == 3
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
-    assert len(model.uuids()) == 16
-    assert len(uuid_list) == 10
+    assert len(model.uuids()) == 18
+    assert len(uuid_list) == 11
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small_grid_and_surface: Tuple[RegularGrid,

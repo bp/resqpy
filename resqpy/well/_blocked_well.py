@@ -1008,7 +1008,7 @@ class BlockedWell(BaseResqpy):
         return trajectory_points, trajectory_mds
 
     def __add_as_properties_if_specified(self, add_as_properties, df, length_uom):
-        """If add_as_properties is True or present as a list of wellspec column names, both the blocked well and
+        """If add_as_properties is True and present as a list of wellspec column names, both the blocked well and
 
         the properties will have their hdf5 data written, xml created and be added as parts to the model.
         """
@@ -1355,7 +1355,7 @@ class BlockedWell(BaseResqpy):
            the k0_list, perforation_list and region_list arguments should be set to None to disable the corresponding functionality,
            if set to an empty list, no rows will be included in the dataframe;
            if add_as_properties is True, the blocked well must already have been added as a part to the model;
-           at add_as_properties and use_properties cannot both be True;
+           add_as_properties and use_properties cannot both be True;
            add_as_properties and use_properties are only currently functional for single grid blocked wells;
            at present, unit conversion is not handled when using properties
         :meta common:
