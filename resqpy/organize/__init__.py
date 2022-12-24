@@ -8,6 +8,7 @@ __all__ = [
     "FaultInterpretation",
     "FluidBoundaryFeature",
     "FrontierFeature",
+    "GenericInterpretation",
     "GeneticBoundaryFeature",
     "GeobodyBoundaryInterpretation",
     "GeobodyFeature",
@@ -35,6 +36,7 @@ from .earth_model_interpretation import EarthModelInterpretation
 from .fault_interpretation import FaultInterpretation
 from .fluid_boundary_feature import FluidBoundaryFeature
 from .frontier_feature import FrontierFeature
+from .generic_interpretation import GenericInterpretation
 from .genetic_boundary_feature import GeneticBoundaryFeature
 from .geobody_boundary_interpretation import GeobodyBoundaryInterpretation
 from .geobody_feature import GeobodyFeature
