@@ -6,13 +6,12 @@ import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
-valid_domains = ('depth', 'time', 'mixed')
-
 
 class GenericInterpretation(BaseResqpy):
     """Class for RESQML Generic Feature Interpretation objects."""
 
     resqml_type = 'GenericFeatureInterpretation'
+    valid_domains = ('depth', 'time', 'mixed')
 
     def __init__(self,
                  parent_model,
@@ -26,17 +25,18 @@ class GenericInterpretation(BaseResqpy):
                  extra_metadata = None):
         """Initialise a new geobody interpretation object, either from xml or explicitly."""
 
-        assert domain in valid_domains
+        assert domain in self.valid_domains
 
         self.uuid = None
         self.title = None
         self.feature_uuid = feature_uuid
         self.domain = domain
         self.has_occurred_during = (None, None)
-        if (not title) and self.feature is not None:
-            title = self.feature.title
 
         super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+
+        if not self.title and feature_uuid is not None:
+            title = parent_model.title_for_root(parent_model.root_for_uuid(feature_uuid))
 
     def _load_from_xml(self):
         root_node = self.root
