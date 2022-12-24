@@ -132,6 +132,19 @@ def test_EarthModel(tmp_model):
     assert em2.title == title
 
 
+def test_Generic(tmp_model):
+
+    title = 'anything goes'
+    org_feat = rqo.OrganizationFeature(tmp_model, feature_name = 'mystery', organization_kind = "earth model")
+    gi = rqo.GenericInterpretation(tmp_model, title = title, feature_uuid = org_feat.uuid)
+
+    org_feat.create_xml()
+    gi.create_xml()
+
+    gi_reincarnated = rqo.GenericInterpretation(tmp_model, uuid = gi.uuid)
+    assert gi_reincarnated.title == title
+
+
 def test_Horizon(tmp_model):
 
     gen = rqo.GeneticBoundaryFeature(tmp_model, kind = 'horizon')

@@ -2,13 +2,11 @@
 
 import math as maths
 
-from ._utils import (equivalent_extra_metadata, alias_for_attribute, extract_has_occurred_during,
-                     equivalent_chrono_pairs, create_xml_has_occurred_during)
-
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize
 import resqpy.organize.tectonic_boundary_feature as tbf
+import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
@@ -82,7 +80,7 @@ class FaultInterpretation(BaseResqpy):
                                                                          uuid = self.feature_root.attrib['uuid'],
                                                                          feature_name = self.model.title_for_root(
                                                                              self.feature_root))
-            self.main_has_occurred_during = extract_has_occurred_during(root_node)
+            self.main_has_occurred_during = ou.extract_has_occurred_during(root_node)
             self.is_listric = rqet.find_tag_bool(root_node, 'IsListric')
             self.is_normal = (self.is_listric is None)
             self.maximum_throw = rqet.find_tag_float(root_node, 'MaximumThrow')
@@ -93,7 +91,7 @@ class FaultInterpretation(BaseResqpy):
             if throw_interpretation_nodes is not None and len(throw_interpretation_nodes):
                 self.throw_interpretation_list = []
                 for ti_node in throw_interpretation_nodes:
-                    hod_pair = extract_has_occurred_during(ti_node)
+                    hod_pair = ou.extract_has_occurred_during(ti_node)
                     throw_kind_list = rqet.list_of_tag(ti_node, 'Throw')
                     for tk_node in throw_kind_list:
                         self.throw_interpretation_list.append((tk_node.text, hod_pair))
@@ -130,12 +128,12 @@ class FaultInterpretation(BaseResqpy):
         if (self.mean_dip is not None and not maths.isclose(self.mean_dip, other.mean_dip, abs_tol = 0.5)):
             return False
 
-        if (not equivalent_chrono_pairs(self.main_has_occurred_during, other.main_has_occurred_during) or
+        if (not ou.equivalent_chrono_pairs(self.main_has_occurred_during, other.main_has_occurred_during) or
                 self.is_normal != other.is_normal or self.domain != other.domain or
                 self.is_listric != other.is_listric):
             return False
 
-        if check_extra_metadata and not equivalent_extra_metadata(self, other):
+        if check_extra_metadata and not ou.equivalent_extra_metadata(self, other):
             return False
         if not self.throw_interpretation_list and not other.throw_interpretation_list:
             return True
@@ -146,7 +144,7 @@ class FaultInterpretation(BaseResqpy):
         for this_ti, other_ti in zip(self.throw_interpretation_list, other.throw_interpretation_list):
             if this_ti[0] != other_ti[0]:
                 return False  # throw kind
-            if not equivalent_chrono_pairs(this_ti[1], other_ti[1]):
+            if not ou.equivalent_chrono_pairs(this_ti[1], other_ti[1]):
                 return False
         return True
 
@@ -195,7 +193,7 @@ class FaultInterpretation(BaseResqpy):
                                    content_type = 'obj_TectonicBoundaryFeature',
                                    root = fi)
 
-        create_xml_has_occurred_during(self.model, fi, self.main_has_occurred_during)
+        ou.create_xml_has_occurred_during(self.model, fi, self.main_has_occurred_during)
 
         if self.is_listric is not None:
             listric = rqet.SubElement(fi, ns['resqml2'] + 'IsListric')
@@ -227,7 +225,7 @@ class FaultInterpretation(BaseResqpy):
                     ti_node = rqet.SubElement(fi, 'ThrowInterpretation')
                     ti_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'FaultThrow')
                     ti_node.text = rqet.null_xml_text
-                    create_xml_has_occurred_during(self.model, ti_node, (base_chrono_uuid, top_chrono_uuid))
+                    ou.create_xml_has_occurred_during(self.model, ti_node, (base_chrono_uuid, top_chrono_uuid))
                 tk_node = rqet.SubElement(ti_node, 'Throw')
                 tk_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'ThrowKind')
                 tk_node.text = throw_kind
