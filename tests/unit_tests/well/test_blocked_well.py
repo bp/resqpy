@@ -48,6 +48,8 @@ def test_wellspec_properties(example_model_and_crs):
             for col in source_df.columns:
                 if col in ['IW', 'JW', 'L']:
                     fp.write(f' {int(row[col]):6d}')
+                elif col == 'STAT':
+                    fp.write(f' {row[col]:4}')
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
@@ -517,6 +519,8 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
             for col in source_df.columns:
                 if col in ['IW', 'JW', 'L']:
                     fp.write(f' {int(row[col]):6d}')
+                elif col == 'STAT':
+                    fp.write(f' {row[col]:4}')
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
@@ -642,9 +646,9 @@ def test_write_wellspec(example_model_and_crs):
     perm_uuid = perm_prop.uuid
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
-    source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25], [2, 2, 2, 45, -90.0, 2.5, 0.25],
-                              [2, 3, 2, 45, -90.0, 1.0, 0.20], [2, 3, 3, 0.0, 0.0, -0.5, 0.20]],
-                             columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW'])
+    source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 'ON'], [2, 2, 2, 45, -90.0, 2.5, 0.25, 'OFF'],
+                              [2, 3, 2, 45, -90.0, 1.0, 0.20, 'OFF'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 'ON']],
+                             columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'STAT'])
     with open(wellspec_file, 'w') as fp:
         fp.write(F'WELLSPEC {well_name}\n')
         for col in source_df.columns:
@@ -655,6 +659,8 @@ def test_write_wellspec(example_model_and_crs):
             for col in source_df.columns:
                 if col in ['IW', 'JW', 'L']:
                     fp.write(f' {int(row[col]):6d}')
+                elif col == 'STAT':
+                    fp.write(f' {row[col]:4}')
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
@@ -665,19 +671,21 @@ def test_write_wellspec(example_model_and_crs):
                                  add_wellspec_properties = True)
 
     # --------- Act ----------
-    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH'],
+    df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'STAT', 'RADW', 'KH'],
                       add_as_properties = True,
                       perm_i_uuid = perm_uuid)
 
     wellspec_file2 = os.path.join(model.epc_directory, 'wellspec2.dat')
     df2 = bw.write_wellspec(wellspec_file = wellspec_file2,
                             well_name = well_name,
-                            extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'RADW'],
+                            extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'STAT', 'RADW'],
                             length_uom = 'm',
                             length_uom_comment = '?')
 
     # --------- Assert ----------
-    pd.testing.assert_frame_equal(df[['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW']], df2, check_dtype = False)
+    pd.testing.assert_frame_equal(df[['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'STAT', 'RADW']],
+                                  df2,
+                                  check_dtype = False)
     # TODO find out why initially when ANGLV was 0.45, the Blocked Well dataframe method changed the values to 45
     # TODO find out why AngleA values of 0 transformed to nan values?
 
@@ -709,6 +717,8 @@ def test_convenience_methods_xyz_and_kji0_marker(example_model_and_crs):
             for col in source_df.columns:
                 if col in ['IW', 'JW', 'L']:
                     fp.write(f' {int(row[col]):6d}')
+                elif col == 'STAT':
+                    fp.write(f' {row[col]:4}')
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
