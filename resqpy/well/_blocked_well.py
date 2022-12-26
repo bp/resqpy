@@ -1733,14 +1733,14 @@ class BlockedWell(BaseResqpy):
         """ Determine which extra columns, if any, should be added as properties to the dataframe.
 
         note:
-         if skin, stat or radw are None, default values are specified.
+            if skin, stat or radw are None, default values are specified.
         """
 
         if extra_columns_list:
             for extra in extra_columns_list:
                 assert extra.upper() in [
                     'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF', 'RADB',
-                    'WI', 'WBC'
+                    'WI', 'WBC', 'STAT'
                 ]
                 column_list.append(extra.upper())
         else:
@@ -2490,7 +2490,12 @@ class BlockedWell(BaseResqpy):
                 na_value = np.NaN
                 dtype = float
             # 'SKIN': use defaults for now; todo: create local property kind for skin
-            expanded = df[column].to_numpy(dtype = dtype, copy = True, na_value = na_value)
+            if column == 'STAT':
+                col_as_list = list(df[column])
+                expanded = np.array([(0 if (str(st).upper() in ['OFF', '0']) else 1) for st in col_as_list],
+                                    dtype = int)
+            else:
+                expanded = df[column].to_numpy(dtype = dtype, copy = True, na_value = na_value)
             extra_pc.add_cached_array_to_imported_list(
                 expanded,
                 'blocked well dataframe',
@@ -2866,6 +2871,8 @@ class BlockedWell(BaseResqpy):
                         form = '{0:>' + str(width) + '}'
                         if BlockedWell.__is_int_column(col_name):
                             fp.write(sep + form.format(int(row[col_name])))
+                        elif col_name == 'STAT':
+                            fp.write(sep + form.format('OFF' if int(row['STAT']) == 0 else 'ON'))
                         else:
                             fp.write(sep + form.format(str(row[col_name])))
                 except Exception:

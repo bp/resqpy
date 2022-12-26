@@ -12,6 +12,7 @@ class OrganizationFeature(BaseResqpy):
     """Class for generic RESQML Organization Feature objects."""
 
     resqml_type = "OrganizationFeature"
+    valid_kinds = ['earth model', 'fluid', 'stratigraphic', 'structural']
     feature_name = ou.alias_for_attribute("title")
 
     def __init__(self,
@@ -52,7 +53,7 @@ class OrganizationFeature(BaseResqpy):
         ofn = super().create_xml(add_as_part = False, originator = originator)
 
         # Extra element for organization_kind
-        if self.organization_kind not in ['earth model', 'fluid', 'stratigraphic', 'structural']:
+        if self.organization_kind not in self.valid_kinds:
             raise ValueError(self.organization_kind)
         kind_node = rqet.SubElement(ofn, ns['resqml2'] + 'OrganizationKind')
         kind_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'OrganizationKind')
