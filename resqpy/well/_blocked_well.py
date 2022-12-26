@@ -1338,11 +1338,11 @@ class BlockedWell(BaseResqpy):
               to account for any residual non-pay perforated interval; ignored if perforation_list is None or kh values are not
               being computed
            add_as_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
-              GRID and STAT) is added as a property with the blocked well as supporting representation and 'cells' as the
+              GRID) is added as a property with the blocked well as supporting representation and 'cells' as the
               indexable element; any cell that is excluded from the dataframe will have corresponding entries of NaN in all the
               properties; if a list is provided it must be a subset of extra_columns_list
            use_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
-              GRID and STAT) is populated from a property with citation title matching the column name, if it exists
+              GRID) is populated from a property with citation title matching the column name, if it exists
         notes:
            units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
            the length_uom argument is used;
@@ -2872,7 +2872,7 @@ class BlockedWell(BaseResqpy):
                         if BlockedWell.__is_int_column(col_name):
                             fp.write(sep + form.format(int(row[col_name])))
                         elif col_name == 'STAT':
-                            fp.write(sep + form.format('OFF' if int(row['STAT']) == 0 else 'ON'))
+                            fp.write(sep + form.format('OFF' if str(row['STAT']).upper() in ['0', 'OFF'] else 'ON'))
                         else:
                             fp.write(sep + form.format(str(row[col_name])))
                 except Exception:
