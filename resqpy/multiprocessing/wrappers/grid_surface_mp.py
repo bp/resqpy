@@ -67,7 +67,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         extend_fault_representation (bool, default False): if True, the representation is extended with a flange
         retriangulate (bool, default False): if True, a retriangulation is performed even if not needed otherwise
         related_uuid (uuid, optional): if present, the uuid of an object to be softly related to the gcs (and to
-           grid bisector property if requested)
+           grid bisector and/or shadow property if requested)
         progress_fn (Callable): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
         consistent_side (bool): if True, the cell pairs will be ordered so that all the first
