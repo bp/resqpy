@@ -17,6 +17,7 @@ def _parts(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
+           metadata = {},
            extra = {},
            related_uuid = None,
            epc_subdir = None,
@@ -44,6 +45,8 @@ def _parts(model,
         parts_list = filtered_list
     if title:
         parts_list = _filtered_by_title(model, parts_list, title, title_mode, title_case_sensitive)
+    if metadata:
+        parts_list = _filtered_by_metadata(model, parts_list, metadata)
     if extra:
         parts_list = _filtered_by_extra(model, parts_list, extra)
     if related_uuid is not None:
@@ -60,6 +63,7 @@ def _part(model,
           title = None,
           title_mode = 'is',
           title_case_sensitive = False,
+          metadata = {},
           extra = {},
           related_uuid = None,
           epc_subdir = None,
@@ -73,6 +77,7 @@ def _part(model,
                 title = title,
                 title_mode = title_mode,
                 title_case_sensitive = title_case_sensitive,
+                metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
                 epc_subdir = epc_subdir)
@@ -98,6 +103,7 @@ def _uuids(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
+           metadata = {},
            extra = {},
            related_uuid = None,
            epc_subdir = None,
@@ -114,6 +120,7 @@ def _uuids(model,
                 title = title,
                 title_mode = title_mode,
                 title_case_sensitive = title_case_sensitive,
+                metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
                 epc_subdir = epc_subdir,
@@ -135,6 +142,7 @@ def _uuid(model,
           title = None,
           title_mode = 'is',
           title_case_sensitive = False,
+          metadata = {},
           extra = {},
           related_uuid = None,
           epc_subdir = None,
@@ -148,6 +156,7 @@ def _uuid(model,
                  title = title,
                  title_mode = title_mode,
                  title_case_sensitive = title_case_sensitive,
+                 metadata = metadata,
                  extra = extra,
                  related_uuid = related_uuid,
                  epc_subdir = epc_subdir,
@@ -164,6 +173,7 @@ def _roots(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
+           metadata = {},
            extra = {},
            related_uuid = None,
            epc_subdir = None,
@@ -177,6 +187,7 @@ def _roots(model,
                 title = title,
                 title_mode = title_mode,
                 title_case_sensitive = title_case_sensitive,
+                metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
                 epc_subdir = epc_subdir,
@@ -194,6 +205,7 @@ def _root(model,
           title = None,
           title_mode = 'is',
           title_case_sensitive = False,
+          metadata = {},
           extra = {},
           related_uuid = None,
           epc_subdir = None,
@@ -207,6 +219,7 @@ def _root(model,
                  title = title,
                  title_mode = title_mode,
                  title_case_sensitive = title_case_sensitive,
+                 metadata = metadata,
                  extra = extra,
                  related_uuid = related_uuid,
                  epc_subdir = epc_subdir,
@@ -223,6 +236,7 @@ def _titles(model,
             title = None,
             title_mode = 'is',
             title_case_sensitive = False,
+            metadata = {},
             extra = {},
             related_uuid = None,
             epc_subdir = None,
@@ -236,6 +250,7 @@ def _titles(model,
                 title = title,
                 title_mode = title_mode,
                 title_case_sensitive = title_case_sensitive,
+                metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
                 epc_subdir = epc_subdir,
@@ -253,6 +268,7 @@ def _title(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
+           metadata = {},
            extra = {},
            related_uuid = None,
            epc_subdir = None,
@@ -266,6 +282,7 @@ def _title(model,
                  title = title,
                  title_mode = title_mode,
                  title_case_sensitive = title_case_sensitive,
+                 metadata = metadata,
                  extra = extra,
                  related_uuid = related_uuid,
                  epc_subdir = epc_subdir,
@@ -740,6 +757,21 @@ def _filtered_by_title(model, parts_list, title, title_mode, title_case_sensitiv
         elif title_mode == 'does not contain':
             if title not in part_title:
                 filtered_list.append(part)
+    return filtered_list
+
+
+def _filtered_by_metadata(model, parts_list, metadata):
+    filtered_list = []
+    for part in parts_list:
+        root = _root_for_part(model, part)
+        match = True
+        for key, value in metadata.items():
+            node = rqet.find_tag(root, str(key))
+            if node is None or node.text != str(value):
+                match = False
+                break
+        if match:
+            filtered_list.append(part)
     return filtered_list
 
 

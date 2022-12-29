@@ -595,6 +595,11 @@ def test_catalogue_functions(example_model_and_crs):
     assert len(all_parts) > len(obj_parts)
     assert all([p in all_parts for p in obj_parts])
     assert not all([p in obj_parts for p in all_parts])
+    # check simple metadata filtering
+    part = model.part(obj_type = 'IjkGridRepresentation', metadata = {'Nk': 3})
+    assert part is not None
+    title = model.title(obj_type = 'IjkGridRepresentation', metadata = {'Nj': 4, 'Ni': '4'})
+    assert title == 'GRID C'
     # check exception is raised when multiple parts match criteria
     with pytest.raises(ValueError) as excinfo:
         part = model.part(obj_type = 'IjkGridRepresentation')

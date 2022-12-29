@@ -746,3 +746,37 @@ def check_and_warn_property_kind(pk, activity):
         warnings.warn(
             f"abstract property kind '{pk}', whilst {activity}, will be or have been replaced by local property kind")
         # raise ValueError
+
+
+def property_parts(model, obj_type, parts_list = None, property_kind = None, related_uuid = None):
+    """Returns list of property parts from model matching filters."""
+    if not obj_type.endswith('Property'):
+        obj_type += 'Property'
+    assert obj_type in ['ContinuousProperty', 'DiscreteProperty', 'CategoricalProperty', 'PointsProperty']
+    parts = model.parts(parts_list = parts_list, obj_type = obj_type, related_uuid = related_uuid)
+    if property_kind:
+        pk_parts = []
+        for part in parts:
+            root = model.root_for_part(part)
+            node = rqet.find_nested_tags(root, ['PropertyKind', 'Kind'])
+            if node is None:
+                # following relies on title in reference xml matching that of the local proparty kind
+                node = rqet.find_nested_tags(root, ['PropertyKind', 'LocalPropertyKind', 'Title'])
+                assert node is not None
+            if node.text == property_kind:
+                pk_parts.append(part)
+        parts = pk_parts
+    return parts
+
+
+def property_part(model, obj_type, parts_list = None, property_kind = None, related_uuid = None):
+    """Returns individual property part from model matching filters."""
+    parts = property_parts(model,
+                           obj_type,
+                           parts_list = parts_list,
+                           property_kind = property_kind,
+                           related_uuid = related_uuid)
+    if parts is None or len(parts) == 0:
+        return None
+    assert len(parts) == 1, 'more than one property part matches criteria'
+    return parts[0]
