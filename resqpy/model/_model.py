@@ -32,6 +32,10 @@ class Model():
 
              Model(epc_file = 'new_file.epc', new_epc = True, create_basics = True, create_hdf5_ext = True)
 
+          Alternatively, use the module level convenience function::
+
+             new_model(epc_file = 'new_file.epc')
+
           To copy an existing dataset then open the new copy::
 
              Model(epc_file = 'new_file.epc', copy_from = 'existing.epc')
@@ -176,6 +180,7 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
+              metadata = {},
               extra = {},
               related_uuid = None,
               epc_subdir = None,
@@ -194,6 +199,8 @@ class Model():
               part's citation title with the title argument; ignored if title is None
            title_case_sensitive (boolean, default False): if True, title comparisons are made on a
               case sensitive basis; otherwise comparisons are insensitive to case
+           metadata (dictionary of key:value pairs, optional): if present, only parts which have within
+              their top level metadata all the items in this argument, are included in the filtered list
            extra (dictionary of key:value pairs, optional): if present, only parts which have within
               their extra metadata all the items in this argument, are included in the filtered list
            related_uuid (uuid.UUID, optional): if present, only parts which are related to this uuid
@@ -220,7 +227,7 @@ class Model():
 
            a list of IjkGrid parts with titles beginning LGR, sorted by title::
 
-              model.parts(obj_type='IjkGridRepresentation', title='LGR', title_mode='starts', sort_by='title')
+              model.parts(obj_type = 'IjkGridRepresentation', title = 'LGR', title_mode = 'starts', sort_by = 'title')
 
         :meta common:
         """
@@ -232,6 +239,7 @@ class Model():
                           title = title,
                           title_mode = title_mode,
                           title_case_sensitive = title_case_sensitive,
+                          metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
                           epc_subdir = epc_subdir,
@@ -249,6 +257,7 @@ class Model():
              title = None,
              title_mode = 'is',
              title_case_sensitive = False,
+             metadata = {},
              extra = {},
              related_uuid = None,
              epc_subdir = None,
@@ -279,6 +288,7 @@ class Model():
                          title = title,
                          title_mode = title_mode,
                          title_case_sensitive = title_case_sensitive,
+                         metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
                          epc_subdir = epc_subdir,
@@ -291,6 +301,7 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
+              metadata = {},
               extra = {},
               related_uuid = None,
               epc_subdir = None,
@@ -313,6 +324,7 @@ class Model():
                           title = title,
                           title_mode = title_mode,
                           title_case_sensitive = title_case_sensitive,
+                          metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
                           epc_subdir = epc_subdir,
@@ -325,6 +337,7 @@ class Model():
              title = None,
              title_mode = 'is',
              title_case_sensitive = False,
+             metadata = {},
              extra = {},
              related_uuid = None,
              epc_subdir = None,
@@ -347,6 +360,7 @@ class Model():
                          title = title,
                          title_mode = title_mode,
                          title_case_sensitive = title_case_sensitive,
+                         metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
                          epc_subdir = epc_subdir,
@@ -359,6 +373,7 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
+              metadata = {},
               extra = {},
               related_uuid = None,
               epc_subdir = None,
@@ -381,6 +396,7 @@ class Model():
                           title = title,
                           title_mode = title_mode,
                           title_case_sensitive = title_case_sensitive,
+                          metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
                           epc_subdir = epc_subdir,
@@ -393,6 +409,7 @@ class Model():
              title = None,
              title_mode = 'is',
              title_case_sensitive = False,
+             metadata = {},
              extra = {},
              related_uuid = None,
              epc_subdir = None,
@@ -415,6 +432,7 @@ class Model():
                          title = title,
                          title_mode = title_mode,
                          title_case_sensitive = title_case_sensitive,
+                         metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
                          epc_subdir = epc_subdir,
@@ -427,6 +445,7 @@ class Model():
                title = None,
                title_mode = 'is',
                title_case_sensitive = False,
+               metadata = {},
                extra = {},
                related_uuid = None,
                epc_subdir = None,
@@ -449,6 +468,7 @@ class Model():
                            title = title,
                            title_mode = title_mode,
                            title_case_sensitive = title_case_sensitive,
+                           metadata = metadata,
                            extra = extra,
                            related_uuid = related_uuid,
                            epc_subdir = epc_subdir,
@@ -461,6 +481,7 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
+              metadata = {},
               extra = {},
               related_uuid = None,
               epc_subdir = None,
@@ -483,6 +504,7 @@ class Model():
                           title = title,
                           title_mode = title_mode,
                           title_case_sensitive = title_case_sensitive,
+                          metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
                           epc_subdir = epc_subdir,

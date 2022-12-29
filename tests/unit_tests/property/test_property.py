@@ -78,6 +78,9 @@ def test_property(tmp_path):
                                  string_lookup_uuid = sl.uuid)
     model.store_epc()
     model = rq.Model(epc)
+    assert len(rqp.property_parts(model, obj_type = 'ContinuousProperty', property_kind = 'length')) == 2
+    facies_uuid = model.uuid_for_part(rqp.property_part(model, obj_type = 'Categorical', property_kind = 'facies'))
+    assert bu.matching_uuids(facies_uuid, p2.uuid)
     ntg_uuid = model.uuid(obj_type = p1.resqml_type, title = 'NETGRS')
     assert ntg_uuid is not None
     p1p = rqp.Property(model, uuid = ntg_uuid)
