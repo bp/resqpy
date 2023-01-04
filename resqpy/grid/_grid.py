@@ -2150,6 +2150,7 @@ class Grid(BaseResqpy):
                                                    sided = None,
                                                    fill_value = 1.0,
                                                    active_only = True,
+                                                   apply_baffles = False,
                                                    baffle_triplet = None):
         """Add triplet of transmissibility multiplier properties by combining gcs properties.
 
@@ -2166,6 +2167,9 @@ class Grid(BaseResqpy):
                 the gcs'es; if None, NaN will be used
             active_only (bool, default True): if True and an active property exists for a grid connection set,
                 then only active faces are used when combining to make the grid face properties
+            apply_baffles (bool, default False): if True, where a baffle property exists for a grid connection
+                set, a transmissibility multiplier of zero will be used for faces marked as True, overriding the
+                multiplier property values at such faces
             baffle_triplet (triplet of numpy bool arrays, optional): if present, boolean masks over the grid
                 internal faces; where True, a value of zero will be enforced for the multipliers regardless
                 of the grid connection set properties
@@ -2212,7 +2216,8 @@ class Grid(BaseResqpy):
                                                                   merge_mode = merge_mode,
                                                                   sided = sided,
                                                                   fill_value = fill_value,
-                                                                  active_only = active_only)
+                                                                  active_only = active_only,
+                                                                  apply_baffles = apply_baffles)
         assert trm_k is not None and trm_j is not None and trm_i is not None
         pc = self.extract_property_collection()
 

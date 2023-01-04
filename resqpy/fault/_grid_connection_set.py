@@ -1913,7 +1913,8 @@ class GridConnectionSet(BaseResqpy):
                          default_value = None,
                          feature_index = None,
                          active_only = True,
-                         lazy = False):
+                         lazy = False,
+                         baffle_uuid = None):
         """Creates a triplet of grid face numpy arrays populated from a property for this gcs.
 
         arguments:
@@ -1928,6 +1929,9 @@ class GridConnectionSet(BaseResqpy):
             lazy (bool, default False): if True, only the first cell & face of a pair is
                 used when setting values in the arrays; if False, both left and right are
                 used
+            baffle_uuid (uuid, optional): if present, the uuid of a discrete (bool) property
+                of the gcs holding baffle flags; where True the output face value is set
+                to zero regardless of the main property value
 
         returns:
             triple numpy arrays: identifying the K, J & I direction grid face property values;
@@ -1959,6 +1963,11 @@ class GridConnectionSet(BaseResqpy):
         gcs_prop_array = gcs_prop.array_ref()
         log.debug(f'preparing grid face arrays from gcs property: {gcs_prop.title}; from gcs:{self.title}')
 
+        baffle_mask = None
+        if baffle_uuid is not None:
+            baffle_mask = rqp.Property(self.model, uuid = baffle_uuid).array_ref()
+            assert baffle_mask is not None
+
         # note that following arrays include external faces, in line with grid properties for 'faces'
         ak = np.full((nk + 1, nj, ni), default_value, dtype = dtype)
         aj = np.full((nk, nj + 1, ni), default_value, dtype = dtype)
@@ -1982,6 +1991,9 @@ class GridConnectionSet(BaseResqpy):
             # fi = int(i)
             if active_mask is not None and not active_mask[fi]:
                 continue
+            value = gcs_prop_array[fi]
+            if baffle_mask is not None and baffle_mask[fi]:
+                value = 0  # will be cast to float (or bool) if needed when assigned below
             for side in side_list:
                 cell_kji0 = cip[fi, side].copy()
                 # opposing = cell_kji0.copy()
@@ -1990,17 +2002,17 @@ class GridConnectionSet(BaseResqpy):
                 cell_kji0[axis] += polarity
                 # opposing[axis] += (1 - polarity)
                 if axis == 0:
-                    ak[tuple(cell_kji0)] = gcs_prop_array[fi]
+                    ak[tuple(cell_kji0)] = value
                     # mk[tuple(cell_kji0)] = True
                     # if mk[tuple(opposing)]:
                     #     opposing_count += 1
                 elif axis == 1:
-                    aj[tuple(cell_kji0)] = gcs_prop_array[fi]
+                    aj[tuple(cell_kji0)] = value
                     # mj[tuple(cell_kji0)] = True
                     # if mj[tuple(opposing)]:
                     #     opposing_count += 1
                 else:
-                    ai[tuple(cell_kji0)] = gcs_prop_array[fi]
+                    ai[tuple(cell_kji0)] = value
                     # mi[tuple(cell_kji0)] = True
                     # if mi[tuple(opposing)]:
                     #     opposing_count += 1
