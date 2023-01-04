@@ -2149,7 +2149,8 @@ class Grid(BaseResqpy):
                                                    merge_mode = 'minimum',
                                                    sided = None,
                                                    fill_value = 1.0,
-                                                   active_only = True):
+                                                   active_only = True,
+                                                   baffle_triplet = None):
         """Add triplet of transmissibility multiplier properties by combining gcs properties.
 
         arguments:
@@ -2165,6 +2166,9 @@ class Grid(BaseResqpy):
                 the gcs'es; if None, NaN will be used
             active_only (bool, default True): if True and an active property exists for a grid connection set,
                 then only active faces are used when combining to make the grid face properties
+            baffle_triplet (triplet of numpy bool arrays, optional): if present, boolean masks over the grid
+                internal faces; where True, a value of zero will be enforced for the multipliers regardless
+                of the grid connection set properties
 
         returns:
             list of 3 uuids, one for each of the newly created transmissibility multiplier properties
@@ -2172,12 +2176,21 @@ class Grid(BaseResqpy):
         notes:
             each grid connection set must refer to this grid only;
             the generated properties have indexable element 'faces', not 'faces per cell', so may not be
-            suitable for faulted grids
+            suitable for faulted grids;
+            the baffle_triplet arrays, if provided, must be for internal faces only, so have extents of
+            (nk - 1, nj, ni), (nk, nj - 1, ni), (nk, nj, ni -1); note that this is a different protocol
+            than the indexable element of faces, which includes external faces
         """
 
         if not gcs_uuid_list:
             gcs_uuid_list = self.model.uuids(obj_type = 'GridConnectionSet', related_uuid = self.uuid)
         assert gcs_uuid_list, 'no grid connections sets identified for transmissibility multiplier combining'
+
+        if baffle_triplet is not None:
+            assert len(baffle_triplet) == 3
+            assert (baffle_triplet[0].shape == (self.nk - 1, self.nj, self.ni) and
+                    baffle_triplet[1].shape == (self.nk, self.nj - 1, self.ni) and
+                    baffle_triplet[2].shape == (self.nk, self.nj, self.ni - 1))
 
         tr_mult_uuid_list = []
         for gcs_uuid in gcs_uuid_list:
@@ -2202,6 +2215,11 @@ class Grid(BaseResqpy):
                                                                   active_only = active_only)
         assert trm_k is not None and trm_j is not None and trm_i is not None
         pc = self.extract_property_collection()
+
+        if baffle_triplet is not None:
+            trm_k[1:-1] = np.where(baffle_triplet[0], 0.0, trm_k[1:-1])
+            trm_j[:, 1:-1] = np.where(baffle_triplet[1], 0.0, trm_j[:, 1:-1])
+            trm_i[:, :, 1:-1] = np.where(baffle_triplet[2], 0.0, trm_i[:, :, 1:-1])
 
         for axis, trm in enumerate((trm_k, trm_j, trm_i)):
             axis_ch = 'KJI'[axis]
