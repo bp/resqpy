@@ -361,7 +361,8 @@ def combined_tr_mult_from_gcs_mults(model,
                                     merge_mode = 'minimum',
                                     sided = None,
                                     fill_value = 1.0,
-                                    active_only = True):
+                                    active_only = True,
+                                    apply_baffles = False):
     """Returns a triplet of transmissibility multiplier arrays over grid faces by combining those from gcs'es.
 
     arguments:
@@ -376,6 +377,9 @@ def combined_tr_mult_from_gcs_mults(model,
             if None, NaN will be used
         active_only (bool, default True): if True and an active property exists for a grid connection set,
             then only active faces are used when combining to make the grid face arrays
+        apply_baffles (bool, default False): if True, where a baffle property exists for a grid connection
+            set, a transmissibility multiplier of zero will be used for faces marked as True, overriding the
+            multiplier property values at such faces
 
     returns:
         triple numpy float arrays being transmissibility multipliers for K, J, and I grid faces; arrays have
@@ -406,6 +410,15 @@ def combined_tr_mult_from_gcs_mults(model,
         assert gcs is not None
         assert gcs.number_of_grids() == 1
 
+        baffle_uuid = None
+        if apply_baffles:
+            baffle_part = rqp.property_part(model,
+                                            obj_type = 'Discrete',
+                                            property_kind = 'baffle',
+                                            related_uuid = gcs.uuid)
+            if baffle_part is not None:
+                baffle_uuid = model.uuid_for_part(baffle_part)
+
         if grid is None:  # first gcs: grab grid and initialise combined tr mult arrays
             grid = gcs.grid_list[0]
             combo_trm_k = np.full((grid.nk + 1, grid.nj, grid.ni), np.NaN, dtype = float)
@@ -418,7 +431,8 @@ def combined_tr_mult_from_gcs_mults(model,
         gcs_trm_k, gcs_trm_j, gcs_trm_i = gcs.grid_face_arrays(tr_mult_uuid,
                                                                default_value = np.NaN,
                                                                active_only = active_only,
-                                                               lazy = not sided)
+                                                               lazy = not sided,
+                                                               baffle_uuid = baffle_uuid)
         assert all([trm is not None for trm in (gcs_trm_k, gcs_trm_j, gcs_trm_i)])
 
         # merge in each of the three directional face arrays for this gcs with combined arrays
