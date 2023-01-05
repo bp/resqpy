@@ -2187,7 +2187,7 @@ class Grid(BaseResqpy):
         """
 
         if not gcs_uuid_list:
-            gcs_uuid_list = self.model.uuids(obj_type = 'GridConnectionSet', related_uuid = self.uuid)
+            gcs_uuid_list = self.model.uuids(obj_type = 'GridConnectionSetRepresentation', related_uuid = self.uuid)
         assert gcs_uuid_list, 'no grid connections sets identified for transmissibility multiplier combining'
 
         if baffle_triplet is not None:
