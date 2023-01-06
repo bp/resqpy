@@ -6,48 +6,44 @@ from resqpy.organize._utils import equivalent_extra_metadata, equivalent_chrono_
 
 
 # Test saving and loading from disk
-@pytest.mark.parametrize(
-    "cls, data",
-    [
-        (
-            rqo.OrganizationFeature,
-            dict(feature_name = 'hello', organization_kind = 'stratigraphic'),
-        ),
-        (
-            rqo.GeobodyFeature,
-            dict(feature_name = 'hi'),
-        ),
-        (
-            rqo.BoundaryFeature,
-            dict(feature_name = 'foobar'),
-        ),
-        (
-            rqo.FrontierFeature,
-            dict(feature_name = 'foobar'),
-        ),
-        (
-            rqo.GeologicUnitFeature,
-            dict(feature_name = 'foobar'),
-        ),
-        (
-            rqo.FluidBoundaryFeature,
-            dict(feature_name = 'foobar', kind = 'gas oil contact'),
-        ),
-        (
-            rqo.TectonicBoundaryFeature,
-            dict(feature_name = 'foobar', kind = 'fracture'),
-        ),
-        (
-            rqo.GeneticBoundaryFeature,
-            dict(feature_name = 'foobar',
-                 kind = 'geobody boundary',
-                 absolute_age = ('1997-3-3', -123566)),
-        ),
-        (
-            rqo.WellboreFeature,
-            dict(feature_name = 'foobar'),
-        ),
-    ])
+@pytest.mark.parametrize("cls, data", [
+    (
+        rqo.OrganizationFeature,
+        dict(feature_name = 'hello', organization_kind = 'stratigraphic'),
+    ),
+    (
+        rqo.GeobodyFeature,
+        dict(feature_name = 'hi'),
+    ),
+    (
+        rqo.BoundaryFeature,
+        dict(feature_name = 'foobar'),
+    ),
+    (
+        rqo.FrontierFeature,
+        dict(feature_name = 'foobar'),
+    ),
+    (
+        rqo.GeologicUnitFeature,
+        dict(feature_name = 'foobar'),
+    ),
+    (
+        rqo.FluidBoundaryFeature,
+        dict(feature_name = 'foobar', kind = 'gas oil contact'),
+    ),
+    (
+        rqo.TectonicBoundaryFeature,
+        dict(feature_name = 'foobar', kind = 'fracture'),
+    ),
+    (
+        rqo.GeneticBoundaryFeature,
+        dict(feature_name = 'foobar', kind = 'geobody boundary', absolute_age = ('1997-3-3', -123566)),
+    ),
+    (
+        rqo.WellboreFeature,
+        dict(feature_name = 'foobar'),
+    ),
+])
 def test_organize_classes(tmp_model, cls, data):
     # Load example model from a fixture
     model = tmp_model
@@ -538,7 +534,7 @@ def test_GeobodyBoundaryInterpretation_is_equivalent_true(tmp_model):
     (None),
     (12),
 ])
-def test_GeobodyBoundaryInterpretation_is_equivalent_false(tmp_model, gbi_2):
+def test_GeobodyBoundaryInterpretation_is_equivalent_false_1(tmp_model, gbi_2):
     # Arrange
     gbf = rqo.GeneticBoundaryFeature(tmp_model)
     gbi_1 = rqo.GeobodyBoundaryInterpretation(tmp_model, genetic_boundary_feature = gbf)
@@ -565,67 +561,43 @@ def test_GeobodyBoundaryInterpretation_is_equivalent_false_2(tmp_model):
     assert result_2 is False
 
 
-def test_GeobodyBoundaryInterpretation_is_equivalent_false_3(tmp_model):
+@pytest.mark.parametrize("data_1, data_2, expected_result", [
+    (
+        dict(domain = 'depth'),
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}),
+        False,
+    ),
+    (
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}),
+        dict(domain = 'test', extra_metadata = {'metadata': 'metadata'}),
+        False,
+    ),
+    (
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = None),
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = None),
+        True,
+    ),
+    (
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = None),
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = [1, 2, 3, 4]),
+        False,
+    ),
+    (
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = [1, 2, 3]),
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = [1, 2, 3]),
+        True,
+    ),
+    (
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = [1, 2, 3, 4]),
+        dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'}, boundary_relation_list = [1, 2, 3]),
+        False,
+    ),
+])
+def test_GeobodyBoundaryInterpretation_is_equivalent_false_3(tmp_model, data_1, data_2, expected_result):
     # Arrange
     gbf = rqo.GeneticBoundaryFeature(tmp_model)
-    gbi_1 = rqo.GeobodyBoundaryInterpretation(tmp_model, genetic_boundary_feature = gbf, domain = 'depth')
-    gbi_2 = rqo.GeobodyBoundaryInterpretation(tmp_model,
-                                              genetic_boundary_feature = gbf,
-                                              domain = 'depth',
-                                              extra_metadata = {'metadata': 'metadata'})
-
-    # Act
-    result = gbi_1.is_equivalent(gbi_2, check_extra_metadata = True)
-    result_2 = gbi_2.is_equivalent(gbi_1, check_extra_metadata = True)
-
-    # Assert
-    assert result is False
-    assert result_2 is False
-
-
-def test_GeobodyBoundaryInterpretation_is_equivalent_false_4(tmp_model):
-    # Arrange
-    gbf = rqo.GeneticBoundaryFeature(tmp_model)
-    gbi_1 = rqo.GeobodyBoundaryInterpretation(tmp_model,
-                                              genetic_boundary_feature = gbf,
-                                              domain = 'depth',
-                                              extra_metadata = {'metadata': 'metadata'})
-    gbi_2 = rqo.GeobodyBoundaryInterpretation(tmp_model,
-                                              genetic_boundary_feature = gbf,
-                                              domain = 'test',
-                                              extra_metadata = {'metadata': 'metadata'})
-
-    # Act
-    result = gbi_1.is_equivalent(gbi_2, check_extra_metadata = True)
-    result_2 = gbi_2.is_equivalent(gbi_1, check_extra_metadata = True)
-
-    # Assert
-    assert result is False
-    assert result_2 is False
-
-
-@pytest.mark.parametrize("relation_list_1, relation_list_2, expected_result", [(
-    None,
-    None,
-    True,
-), (
-    None,
-    [1, 2, 3, 4],
-    False,
-), ([1, 2, 3], [1, 2, 3], True), ([1, 2, 3, 4], [1, 2, 3], False)])
-def test_GeobodyBoundaryInterpretation_is_equivalent_5(tmp_model, relation_list_1, relation_list_2, expected_result):
-    # Arrange
-    gbf = rqo.GeneticBoundaryFeature(tmp_model)
-    gbi_1 = rqo.GeobodyBoundaryInterpretation(tmp_model,
-                                              genetic_boundary_feature = gbf,
-                                              domain = 'depth',
-                                              extra_metadata = {'metadata': 'metadata'},
-                                              boundary_relation_list = relation_list_1)
-    gbi_2 = rqo.GeobodyBoundaryInterpretation(tmp_model,
-                                              genetic_boundary_feature = gbf,
-                                              domain = 'depth',
-                                              extra_metadata = {'metadata': 'metadata'},
-                                              boundary_relation_list = relation_list_2)
+    gbi_1 = rqo.GeobodyBoundaryInterpretation(tmp_model, genetic_boundary_feature = gbf, **data_1)
+    gbi_2 = rqo.GeobodyBoundaryInterpretation(tmp_model, genetic_boundary_feature = gbf, **data_2)
 
     # Act
     result = gbi_1.is_equivalent(gbi_2, check_extra_metadata = True)
@@ -677,7 +649,7 @@ def test_GeobodyInterpretation_is_equivalent_true(tmp_model):
 
 
 @pytest.mark.parametrize("gi_2", [(None), (12)])
-def test_GeobodyInterpretation_is_equivalent_false(tmp_model, gi_2):
+def test_GeobodyInterpretation_is_equivalent_false_1(tmp_model, gi_2):
     # Arrange
     gi_1 = rqo.GeobodyInterpretation(tmp_model)
 
@@ -688,33 +660,33 @@ def test_GeobodyInterpretation_is_equivalent_false(tmp_model, gi_2):
     assert result is False
 
 
-@pytest.mark.parametrize("extra_metadata_1, extra_metadata_2, domain_1, domain_2, expected_result", [({
-    'metadata': 'metadata'
-}, {
-    'metadata': 'test'
-}, None, None, False), ({
-    'metadata': 'metadata'
-}, {
-    'metadata': 'metadata'
-}, 'depth', 'depth', True), ({
-    'metadata': 'metadata'
-}, {
-    'metadata': 'metadata'
-}, 'depth', 'false', False)])
-def test_GeobodyInterpretation_is_equivalent_false_2(tmp_model, extra_metadata_1, extra_metadata_2, domain_1, domain_2,
-                                                     expected_result):
+@pytest.mark.parametrize("data_1, data_2, expected_result", [
+    (
+        (dict(domain = None, extra_metadata = {'metadata': 'metadata'})),
+        (dict(domain = None, extra_metadata = {'metadata': 'test'})),
+        False,
+    ),
+    (
+        (dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'})),
+        (dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'})),
+        True,
+    ),
+    (
+        (dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'})),
+        (dict(domain = 'false', extra_metadata = {'metadata': 'test'})),
+        False,
+    ),
+    (
+        (dict(domain = 'depth', extra_metadata = {'metadata': 'metadata'})),
+        (dict(domain = 'false', extra_metadata = {'metadata': 'metadata'})),
+        False,
+    ),
+])
+def test_GeobodyInterpretation_is_equivalent_false_2(tmp_model, data_1, data_2, expected_result):
     # Arrange
     gf = rqo.GeobodyFeature(tmp_model)
-    gi_1 = rqo.GeobodyInterpretation(
-        tmp_model,
-        geobody_feature = gf,
-        extra_metadata = extra_metadata_1,
-        domain = domain_1,
-    )
-    gi_2 = rqo.GeobodyInterpretation(tmp_model,
-                                     geobody_feature = gf,
-                                     extra_metadata = extra_metadata_2,
-                                     domain = domain_2)
+    gi_1 = rqo.GeobodyInterpretation(tmp_model, geobody_feature = gf, **data_1)
+    gi_2 = rqo.GeobodyInterpretation(tmp_model, geobody_feature = gf, **data_2)
 
     # Act
     result = gi_1.is_equivalent(gi_2, check_extra_metadata = True)
@@ -731,9 +703,11 @@ def test_GeobodyInterpretation_is_equivalent_false_3(tmp_model):
 
     # Act
     result = gi_1.is_equivalent(gi_2, check_extra_metadata = True)
+    result_2 = gi_2.is_equivalent(gi_1, check_extra_metadata = True)
 
     # Assert
     assert result is False
+    assert result_2 is False
 
 
 def test_GeobodyInterpretation_is_equivalent_false_4(tmp_model):
@@ -742,19 +716,6 @@ def test_GeobodyInterpretation_is_equivalent_false_4(tmp_model):
     gf_2 = rqo.GeobodyFeature(tmp_model, feature_name = 'title')
     gi_1 = rqo.GeobodyInterpretation(tmp_model, geobody_feature = gf_1)
     gi_2 = rqo.GeobodyInterpretation(tmp_model, geobody_feature = gf_2)
-
-    # Act
-    result = gi_1.is_equivalent(gi_2, check_extra_metadata = True)
-
-    # Assert
-    assert result is False
-
-
-def test_GeobodyInterpretation_is_equivalent_false_5(tmp_model):
-    # Arrange
-    gf = rqo.GeobodyFeature(tmp_model)
-    gi_1 = rqo.GeobodyInterpretation(tmp_model, geobody_feature = None)
-    gi_2 = rqo.GeobodyInterpretation(tmp_model, geobody_feature = gf)
 
     # Act
     result = gi_1.is_equivalent(gi_2, check_extra_metadata = True)
@@ -815,7 +776,7 @@ def test_HorizonInterpretation_is_equivalent_true(tmp_model):
     (None),
     (12),
 ])
-def test_HorizonInterpretation_is_equivalent_false(tmp_model, hi_2):
+def test_HorizonInterpretation_is_equivalent_false_1(tmp_model, hi_2):
     # Arrange
     hi_1 = rqo.HorizonInterpretation(
         tmp_model,
