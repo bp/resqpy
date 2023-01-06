@@ -7,7 +7,7 @@ from pathlib import Path
 
 from resqpy.olio.exceptions import IncompatibleUnitsError, InvalidUnitError
 
-# physical constants
+# physical constants – deprecated
 feet_to_metres = 0.3048
 metres_to_feet = 1.0 / feet_to_metres
 ft3_to_m3 = 0.028316846592
@@ -363,7 +363,7 @@ def _properties_data():
     Returns:
        dict: resqml unit system
     """
-    json_path = Path(__file__).parent / 'olio/data/properties.json'
+    json_path = Path(__file__).parent.parent / 'olio/data/properties.json'
     with open(json_path) as f:
         data = json.load(f)
     return data
