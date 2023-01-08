@@ -17,7 +17,7 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
-import resqpy.surface
+import resqpy.surface as rqs
 import resqpy.surface._base_surface as rqsb
 import resqpy.surface._triangulated_patch as rqstp
 import resqpy.weights_and_measures as wam
@@ -121,6 +121,20 @@ class Surface(rqsb.BaseSurface):
             self.set_from_mesh_file(mesh_file, mesh_format, quad_triangles = quad_triangles)
         elif tsurf_file is not None:
             self.set_from_tsurf_file(tsurf_file)
+
+    @classmethod
+    def from_tri_mesh(cls, tri_mesh):
+        """Create a Surface from a TriMesh."""
+        assert isinstance(tri_mesh, rqs.TriMesh)
+        surf = cls(tri_mesh.model,
+                   crs_uuid = tri_mesh.crs_uuid,
+                   title = tri_mesh.title,
+                   surface_role = tri_mesh.surface_role,
+                   extra_metadata = tri_mesh.extra_metadata if hasattr(tri_mesh, 'extra_metadata') else None)
+        t, p = tri_mesh.triangles_and_points()
+        surf.set_from_triangles_and_points(t, p)
+        surf.represented_interpretation_root = tri_mesh.represented_interpretation_root
+        return surf
 
     def _load_from_xml(self):
         root_node = self.root
