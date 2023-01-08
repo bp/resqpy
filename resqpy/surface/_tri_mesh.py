@@ -70,7 +70,7 @@ class TriMesh(rqs.Mesh):
             xyz[:, :, 1] = root_3_by_2 * np.expand_dims(np.arange(nj).astype(float), axis = 1)
             xyz *= t_side
             if z_values is not None:
-                xyz[2] = z_values
+                xyz[:, :, 2] = z_values
             if origin is not None:
                 xyz += np.expand_dims(np.expand_dims(origin, axis = -1), axis = -1)
             super().__init__(parent_model,
@@ -176,12 +176,11 @@ class TriMesh(rqs.Mesh):
         ji, tc = self.ji_and_weights_for_xy(xy)
         if ji is None:
             return None
-        jiz = np.zeros((3, 3), dtype = int)
-        jiz[:, :2] = ji
-        jiz[:, 2] = 2
         p = self.full_array_ref()
-        p3z = p[jiz]
-        return np.sum(tc * p3z)
+        z = np.empty(3, dtype = float)
+        for vertex in range(3):
+            z[vertex] = p[ji[vertex, 0], ji[vertex, 1], 2]
+        return np.sum(tc * z)
 
     def tri_nodes_for_tji(self, tji):
         """Return mesh node indices, shape (3, 2), for triangle tji (tj, ti)."""

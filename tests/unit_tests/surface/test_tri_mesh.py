@@ -41,6 +41,30 @@ def test_tri_mesh_create_save_reload(example_model_and_crs):
     assert_array_almost_equal(trim_reloaded.full_array_ref(), xyz)
 
 
+def test_tri_mesh_create_save_reload_with_z(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(200.0, 250.0, -123.4, 300.0), (400.0, 450.0, 0.0, 500.0), (300.0, 350.0, 1234.5, 400.0)],
+                        dtype = float)
+    trim = rqs.TriMesh(model,
+                       t_side = 10.0,
+                       nj = 3,
+                       ni = 4,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh')
+    trim.write_hdf5()
+    trim.create_xml()
+    model.store_epc()
+    epc = model.epc_file
+    trim_uuid = trim.uuid
+    del model, trim
+    model = rq.Model(epc)
+    trim_reloaded = rqs.TriMesh(model, uuid = trim_uuid)
+    assert trim_reloaded is not None
+    p = trim_reloaded.full_array_ref()
+    assert_array_almost_equal(p[..., 2], z_values)
+
+
 def test_tri_mesh_tji_for_xy(example_model_and_crs):
     model, crs = example_model_and_crs
     trim = rqs.TriMesh(model, t_side = 10.0, nj = 4, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')
@@ -157,3 +181,29 @@ def test_tri_mesh_ji_and_weights(example_model_and_crs):
     ji, tc = trim.ji_and_weights_for_xy((150.0, 100.0 * maths.sqrt(3.0) / 2.0 + 1.0e-10))
     assert np.all(ji == [(2, 1), (2, 2), (1, 1)])
     assert_array_almost_equal(tc, (0.0, 0.0, 1.0))
+
+
+def test_tri_mesh_z_interpolation(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(200.0, 250.0, 300.0), (400.0, 450.0, 500.0), (300.0, 350.0, 400.0)], dtype = float)
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 3,
+                       ni = 3,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh')
+    z = trim.interpolated_z((50.0, 100.0 * maths.sqrt(3.0) / 6.0))
+    assert maths.isclose(z, 850.0 / 3.0)
+    z = trim.interpolated_z((100.0, 100.0 * maths.sqrt(3.0) * 2.0 / 3.0))
+    assert maths.isclose(z, 400.0)
+    z = trim.interpolated_z((150.0, 100.0 * maths.sqrt(3.0) - 1.0e-10))
+    assert maths.isclose(z, 375.0)
+    z = trim.interpolated_z((175.0, 100.0 * maths.sqrt(3.0) / 4.0))
+    assert maths.isclose(z, 375.0)
+    z = trim.interpolated_z((50.0, 100.0 * maths.sqrt(3.0) / 2.0 - 1.0e-10))
+    assert maths.isclose(z, 400.0)
+    z = trim.interpolated_z((150.0, 100.0 * maths.sqrt(3.0) / 2.0 + 1.0e-10))
+    assert maths.isclose(z, 450.0)
+    z = trim.interpolated_z((25.0, 50.0))
+    assert z is None
