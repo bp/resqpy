@@ -44,20 +44,20 @@ def test_tri_mesh_create_save_reload(example_model_and_crs):
 def test_tri_mesh_tji_for_xy(example_model_and_crs):
     model, crs = example_model_and_crs
     trim = rqs.TriMesh(model, t_side = 10.0, nj = 4, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')
-    assert trim.tji_for_xy((0.0, 5.0)) == (None, None)
+    assert trim.tji_for_xy((0.0, 5.0)) is None
     assert trim.tji_for_xy((5.0, 5.0)) == (0, 0)
     assert trim.tji_for_xy((10.0, 5.0)) == (0, 1)
     assert trim.tji_for_xy((15.0, 5.0)) == (0, 2)
     assert trim.tji_for_xy((25.0, 5.0)) == (0, 4)
     assert trim.tji_for_xy((30.0, 5.0)) == (0, 5)
-    assert trim.tji_for_xy((35.0, 5.0)) == (None, None)
+    assert trim.tji_for_xy((35.0, 5.0)) is None
     assert trim.tji_for_xy((5.0, 9.0)) == (1, 0)
     assert trim.tji_for_xy((6.0, 9.0)) == (1, 1)
     assert trim.tji_for_xy((30.0, 17.0)) == (1, 5)
     assert trim.tji_for_xy((29.0, 17.0)) == (1, 4)
     assert trim.tji_for_xy((5.0, 25.5)) == (2, 0)
     assert trim.tji_for_xy((30.0, 25.5)) == (2, 5)
-    assert trim.tji_for_xy((30.0, 26.0)) == (None, None)
+    assert trim.tji_for_xy((30.0, 26.0)) is None
 
 
 def test_tri_mesh_tri_nodes_for_tji(example_model_and_crs):
@@ -107,3 +107,53 @@ def test_surface_from_tri_mesh(example_model_and_crs):
     tt, tp = trim.triangles_and_points()
     assert np.all(st == tt)
     assert_array_almost_equal(sp, tp)
+
+
+def test_tri_mesh_trilinear_coordinates(example_model_and_crs):
+    model, crs = example_model_and_crs
+    trim = rqs.TriMesh(model, t_side = 100.0, nj = 3, ni = 3, crs_uuid = crs.uuid, title = 'test tri mesh')
+    third = 1.0 / 3.0
+    tji, tc = trim.tji_tc_for_xy((50.0, 100.0 * maths.sqrt(3.0) / 6.0))
+    assert tji == (0, 0)
+    assert_array_almost_equal(tc, (third, third, third))
+    tji, tc = trim.tji_tc_for_xy((100.0, 100.0 * maths.sqrt(3.0) * 2.0 / 3.0))
+    assert tji == (1, 1)
+    assert_array_almost_equal(tc, (third, third, third))
+    tji, tc = trim.tji_tc_for_xy((150.0, 100.0 * maths.sqrt(3.0) - 1.0e-10))
+    assert tji == (1, 2)
+    assert_array_almost_equal(tc, (0.5, 0.5, 0.0))
+    tji, tc = trim.tji_tc_for_xy((175.0 - 1.0e-10, 100.0 * maths.sqrt(3.0) / 4.0 - 1.0e-10))
+    assert tji == (0, 2)
+    assert_array_almost_equal(tc, (0.0, 0.5, 0.5))
+    tji, tc = trim.tji_tc_for_xy((50.0, 100.0 * maths.sqrt(3.0) / 2.0 - 1.0e-10))
+    assert tji == (0, 0)
+    assert_array_almost_equal(tc, (0.0, 0.0, 1.0))
+    tji, tc = trim.tji_tc_for_xy((150.0, 100.0 * maths.sqrt(3.0) / 2.0 + 1.0e-10))
+    assert tji == (1, 2)
+    assert_array_almost_equal(tc, (0.0, 0.0, 1.0))
+    tji, tc = trim.tji_tc_for_xy((25.0, 50.0))
+    assert tji is None and tc is None
+
+
+def test_tri_mesh_ji_and_weights(example_model_and_crs):
+    model, crs = example_model_and_crs
+    trim = rqs.TriMesh(model, t_side = 100.0, nj = 3, ni = 3, crs_uuid = crs.uuid, title = 'test tri mesh')
+    third = 1.0 / 3.0
+    ji, tc = trim.ji_and_weights_for_xy((50.0, 100.0 * maths.sqrt(3.0) / 6.0))
+    assert np.all(ji == [(0, 0), (0, 1), (1, 0)])
+    assert_array_almost_equal(tc, (third, third, third))
+    ji, tc = trim.ji_and_weights_for_xy((100.0, 100.0 * maths.sqrt(3.0) * 2.0 / 3.0))
+    assert np.all(ji == [(1, 0), (1, 1), (2, 1)])
+    assert_array_almost_equal(tc, (third, third, third))
+    ji, tc = trim.ji_and_weights_for_xy((150.0, 100.0 * maths.sqrt(3.0) - 1.0e-10))
+    assert np.all(ji == [(2, 1), (2, 2), (1, 1)])
+    assert_array_almost_equal(tc, (0.5, 0.5, 0.0))
+    ji, tc = trim.ji_and_weights_for_xy((175.0 - 1.0e-10, 100.0 * maths.sqrt(3.0) / 4.0 - 1.0e-10))
+    assert np.all(ji == [(0, 1), (0, 2), (1, 1)])
+    assert_array_almost_equal(tc, (0.0, 0.5, 0.5))
+    ji, tc = trim.ji_and_weights_for_xy((50.0, 100.0 * maths.sqrt(3.0) / 2.0 - 1.0e-10))
+    assert np.all(ji == [(0, 0), (0, 1), (1, 0)])
+    assert_array_almost_equal(tc, (0.0, 0.0, 1.0))
+    ji, tc = trim.ji_and_weights_for_xy((150.0, 100.0 * maths.sqrt(3.0) / 2.0 + 1.0e-10))
+    assert np.all(ji == [(2, 1), (2, 2), (1, 1)])
+    assert_array_almost_equal(tc, (0.0, 0.0, 1.0))

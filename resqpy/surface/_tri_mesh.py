@@ -115,11 +115,21 @@ class TriMesh(rqs.Mesh):
             tj triangle indices are in the range 0..nj - 2 inclusive
             ti triangle indices are in the range 0..(ni - 2) * 2 + 1 inclusive
         """
-        tj, ti, _, _ = self._tji_fyx_for_xy(xy)
-        return (tj, ti)
+        tji, _ = self.tji_tc_for_xy(xy)
+        return tji
 
-    def _tji_fyx_for_xy(self, xy):
-        """Return (tj, ti) indices and internal fractions of triangle containing point xy (x, y)."""
+    def tji_tc_for_xy(self, xy):
+        """Return indices of triangle containing point xy (x, y), and trilinear coordinates within triangle.
+
+        arguments:
+            xy (pair of floats): coordinates x, y of a point of interest
+
+        returns:
+            ((tj, ti), (f0, f1, f2)): the indices of the triangle containing the point xy, and the trilinear
+            coordinates of the point within the triangle; f2 is component from base edge towards point 2;
+            f1 is component towards point 1; f0 is component towards point 0; the trilinear coordinates
+            sum to one and can be used as weights to interpolate z values at point xy
+        """
         x, y = xy
         if self.origin is not None:
             x -= self.origin[0]
@@ -127,7 +137,7 @@ class TriMesh(rqs.Mesh):
         jp = y / (self.t_side * root_3_by_2)
         j = maths.floor(jp)
         if not 0 <= j < self.nj - 1:
-            return (None, None, None, None)
+            return (None, None)
         if j % 2:
             fy = float(j + 1) - jp
         else:
@@ -135,14 +145,43 @@ class TriMesh(rqs.Mesh):
         ip = x / self.t_side - 0.5 * fy
         i = maths.floor(ip)
         if not 0 <= i < self.ni - 1:
-            return (None, None, None, None)
+            return (None, None)
         fx = ip - float(i)
         i *= 2
         if fx > 1.0 - fy:
             i += 1
-            # fx -= 1.0 - fy
-        # todo: set and return fz for full trilinear coordinates of point within triangle
-        return (j, i, fy, fx)
+            fx -= 1.0 - fy
+            fy = 1.0 - fy
+        return ((j, i), (1.0 - (fx + fy), fx, fy))
+
+    def ji_and_weights_for_xy(self, xy):
+        """Returns triplet of point ji indices and triplet of weights for interpolation at point xy.
+
+        arguments:
+            xy (pair of floats): coordinates x, y of a point of interest
+
+        returns:
+            numpy int array of shape (3, 2) and numpy triple float; int array holds mesh ji indices of three
+            vertices of triangle containing xy; float triplet contains corresponding weights (summing to
+            one) which can be used to interpolate z values at point xy
+        """
+        tji, tc = self.tji_tc_for_xy(xy)
+        if tji is None:
+            return (None, None)
+        ji = self.tri_nodes_for_tji(tji)
+        return (ji, tc)
+
+    def interpolated_z(self, xy):
+        """Returns z value interpolated trilinearly at point xy."""
+        ji, tc = self.ji_and_weights_for_xy(xy)
+        if ji is None:
+            return None
+        jiz = np.zeros((3, 3), dtype = int)
+        jiz[:, :2] = ji
+        jiz[:, 2] = 2
+        p = self.full_array_ref()
+        p3z = p[jiz]
+        return np.sum(tc * p3z)
 
     def tri_nodes_for_tji(self, tji):
         """Return mesh node indices, shape (3, 2), for triangle tji (tj, ti)."""
