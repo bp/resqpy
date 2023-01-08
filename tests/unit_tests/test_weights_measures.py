@@ -236,3 +236,22 @@ def test_flow_rate_conversion():
                 assert maths.isclose(
                     rate,
                     wam.convert_flow_rates(wam.convert_flow_rates(rate, from_units, to_units), to_units, from_units))
+
+
+def test_nexus_units():
+    assert wam.nexus_uom_for_quantity('METRIC', 'length') == 'm'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'length') == 'ft'
+    assert wam.nexus_uom_for_quantity('LAB', 'length') == 'cm'
+    assert wam.nexus_uom_for_quantity('METRIC', 'volume') == 'm3'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume') == 'ft3'
+    assert wam.nexus_uom_for_quantity('METRIC', 'pressure') == 'kPa'
+    assert wam.nexus_uom_for_quantity('METBAR', 'pressure') == 'bar'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'pressure') == 'psi'
+    assert wam.nexus_uom_for_quantity('METRIC', 'volume per volume') == 'm3/m3'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per volume') == 'ft3/ft3'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per volume', english_volume_ratio_flavour = 'FVF') == 'bbl/bbl'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per volume', english_volume_ratio_flavour = 'FVF') == 'bbl/bbl'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per volume',
+                                      english_volume_ratio_flavour = 'GOR') == '1000 ft3/bbl'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per volume',
+                                      english_volume_ratio_flavour = 'saturation') == 'ft3/ft3'
