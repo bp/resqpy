@@ -19,7 +19,6 @@ from numba.cuda.cudadrv.devicearray import DeviceNDArray
 import cupy
 from typing import Tuple, Optional, Dict
 import warnings
-import math
 
 import resqpy.crs as rqc
 import resqpy.fault as rqf
@@ -1633,7 +1632,7 @@ def norm_d(v : DeviceNDArray, n : DeviceNDArray):
     n[0] = 0.
     for dim in range(3):
         n[0] += v[dim]**2.
-    n[0] = math.sqrt(n[0])
+    n[0] = maths.sqrt(n[0])
     return
 
 @cuda.jit
