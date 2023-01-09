@@ -10,6 +10,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import resqpy.time_series as rqts
 import resqpy.olio.xml_et as rqet
 
 
@@ -49,6 +50,7 @@ def cleaned_timestamp(timestamp):
     if isinstance(timestamp, int):
         return geologic_time_str(int)
     timestamp = str(timestamp)
+    rqts.check_timestamp(timestamp)
     if len(timestamp) < 19 or timestamp[11:19] == '00:00:00':
         return timestamp[:10]
     return timestamp[:10] + 'T' + timestamp[11:19] + 'Z'

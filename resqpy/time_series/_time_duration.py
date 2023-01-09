@@ -5,6 +5,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import datetime as dt
+import resqpy.time_series as rqts
 
 
 class TimeDuration:
@@ -25,6 +26,8 @@ class TimeDuration:
         # whilst days = -1, hours = 12 will be a negative half day duration
         self.duration = None
         if earlier_timestamp is not None and later_timestamp is not None:
+            rqts.check_timestamp(earlier_timestamp)
+            rqts.check_timestamp(later_timestamp)
             if earlier_timestamp.endswith('Z'):
                 earlier_timestamp = earlier_timestamp[:-1]  # Trailing Z is not part of iso format
             if later_timestamp.endswith('Z'):
@@ -48,6 +51,7 @@ class TimeDuration:
 
         if earlier_timestamp.endswith('Z'):
             earlier_timestamp = earlier_timestamp[:-1]
+        rqts.check_timestamp(earlier_timestamp)
         dt_earlier = dt.datetime.fromisoformat(earlier_timestamp)
         dt_result = dt_earlier + self.duration
         return dt_result.isoformat() + 'Z'
@@ -57,6 +61,7 @@ class TimeDuration:
 
         if later_timestamp.endswith('Z'):
             later_timestamp = later_timestamp[:-1]
+        rqts.check_timestamp(later_timestamp)
         dt_later = dt.datetime.fromisoformat(later_timestamp)
         dt_result = dt_later - self.duration
         return dt_result.isoformat() + 'Z'
