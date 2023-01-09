@@ -15,10 +15,16 @@ class GeneticBoundaryFeature(BaseResqpy):
     feature_name = ou.alias_for_attribute("title")
     valid_kinds = ('horizon', 'geobody boundary')
 
-    def __init__(self, parent_model, uuid = None, kind = None, feature_name = None, extra_metadata = None):
+    def __init__(self,
+                 parent_model,
+                 uuid = None,
+                 kind = None,
+                 feature_name = None,
+                 extra_metadata = None,
+                 absolute_age = None):
         """Initialises a genetic boundary feature (horizon or geobody boundary) organisational object."""
         self.kind = kind
-        self.absolute_age = None  # (timestamp, year offset) pair, or None; todo: support setting from args
+        self.absolute_age = absolute_age  # (timestamp, year offset) pair, or None;
         super().__init__(model = parent_model, uuid = uuid, title = feature_name, extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
