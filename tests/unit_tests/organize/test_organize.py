@@ -37,7 +37,7 @@ from resqpy.organize._utils import equivalent_extra_metadata, equivalent_chrono_
     ),
     (
         rqo.GeneticBoundaryFeature,
-        dict(feature_name = 'foobar', kind = 'geobody boundary', absolute_age = ('1997-3-3', -123566)),
+        dict(feature_name = 'foobar', kind = 'geobody boundary', absolute_age = ('1997-03-03', -123566)),
     ),
     (
         rqo.WellboreFeature,
