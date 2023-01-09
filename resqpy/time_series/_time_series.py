@@ -16,8 +16,9 @@ class TimeSeries(ats.AnyTimeSeries):
     """Class for RESQML Time Series without year offsets.
 
     notes:
-       use this class for time series on a human timeframe; use the resqpy GeologicTimeSeries class
-       instead if the time series is on a geological timeframe
+       individual RESQML timestamps are strings formatted in accordance with ISO 8601;
+       use this class for time series on a human timeframe;
+       use the resqpy GeologicTimeSeries class instead if the time series is on a geological timeframe
     """
 
     def __init__(self,
@@ -37,7 +38,8 @@ class TimeSeries(ats.AnyTimeSeries):
            parent_model (model.Model): the resqpy model to which the time series will belong
            uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
            first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
-              this and the remaining arguments are ignored if loading from xml
+              this and the remaining arguments are ignored if loading from xml; if present, timestamp must
+              be in ISO 8601 format, eg '2023-01-31' or '2023-01-31T13:30:00Z' or '2023-01-31T13:30:00.912'
            daily (non-negative int, optional): the number of one day interval timesteps to start the series
            monthly (non-negative int, optional): the number of 30 day interval timesteps to follow the daily
               timesteps
@@ -65,6 +67,7 @@ class TimeSeries(ats.AnyTimeSeries):
         self.timeframe = 'human'
         self.timestamps = []  # ordered list of timestamp strings in resqml/iso format
         if first_timestamp is not None:
+            check_timestamp(first_timestamp)
             self.timestamps.append(first_timestamp)  # todo: check format of first_timestamp
             if daily is not None:
                 for _ in range(daily):
@@ -105,6 +108,7 @@ class TimeSeries(ats.AnyTimeSeries):
 
         :meta common:
         """
+        check_timestamp(timestamp)
         index = len(self.timestamps) - 1
         while (index >= 0) and (self.timestamps[index] > timestamp):
             index -= 1
@@ -117,6 +121,7 @@ class TimeSeries(ats.AnyTimeSeries):
 
         :meta common:
         """
+        check_timestamp(timestamp)
         index = 0
         while (index < len(self.timestamps)) and (self.timestamps[index] < timestamp):
             index += 1
@@ -129,6 +134,7 @@ class TimeSeries(ats.AnyTimeSeries):
 
         :meta common:
         """
+        check_timestamp(timestamp)
         if not self.timestamps:
             return None
         before = self.index_for_timestamp_not_later_than(timestamp)
@@ -191,7 +197,7 @@ class TimeSeries(ats.AnyTimeSeries):
     # Could check for relationships involving the time series and disallow changes if any found?
     def add_timestamp(self, new_timestamp, allow_insertion = False):
         """Inserts a new timestamp into the time series."""
-        # todo: check that new_timestamp is in valid format (iso format + 'Z')
+        check_timestamp(new_timestamp)
         if allow_insertion:
             # NB: This can insert a timestamp anywhere in the series, will invalidate indices, possibly corrupting model
             index = self.index_for_timestamp_not_later_than(new_timestamp)
@@ -220,3 +226,10 @@ class TimeSeries(ats.AnyTimeSeries):
     def datetimes(self):
         """Returns the timestamps as a list of python-datetime objects."""
         return [dt.datetime.fromisoformat(t.rstrip('Z')) for t in self.timestamps]
+
+
+def check_timestamp(timestamp):
+    """Check format of timestamp and raise ValueError if badly formed."""
+    if timestamp.endswith('Z'):
+        timestamp = timestamp[:-1]
+    _ = dt.datetime.fromisoformat(timestamp)
