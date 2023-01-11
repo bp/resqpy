@@ -751,39 +751,41 @@ class BlockedWell(BaseResqpy):
             cp = grid.corner_points(cell_kji0 = cell_kji0, cache_resqml_array = False)
             assert not np.any(np.isnan(cp)), 'missing geometry for perforation cell for well ' + str(well_name)
 
-            entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz = BlockedWell.__calculate_entry_and_exit_axes_polarities_and_points(
-                angles_present = angles_present,
-                row = row,
-                cp = cp,
-                well_name = well_name,
-                df = df,
-                i = i,
-                cell_kji0 = cell_kji0,
-                blocked_cells_kji0 = blocked_cells_kji0,
-                use_face_centres = use_face_centres,
-                xy_units = grid.crs.xy_units,
-                z_units = grid.crs.z_units)
+            entry_axis, entry_polarity, entry_xyz, exit_axis, exit_polarity, exit_xyz =  \
+                BlockedWell.__calculate_entry_and_exit_axes_polarities_and_points(
+                    angles_present = angles_present,
+                    row = row,
+                    cp = cp,
+                    well_name = well_name,
+                    df = df,
+                    i = i,
+                    cell_kji0 = cell_kji0,
+                    blocked_cells_kji0 = blocked_cells_kji0,
+                    use_face_centres = use_face_centres,
+                    xy_units = grid.crs.xy_units,
+                    z_units = grid.crs.z_units)
             log.debug(
                 f'cell: {cell_kji0}; entry axis: {entry_axis}; polarity {entry_polarity}; exit axis: {exit_axis}; polarity {exit_polarity}'
             )
 
-            previous_xyz, trajectory_mds, trajectory_points, blocked_intervals, blocked_cells_kji0, blocked_face_pairs = BlockedWell.__add_interval(
-                previous_xyz = previous_xyz,
-                entry_axis = entry_axis,
-                entry_polarity = entry_polarity,
-                entry_xyz = entry_xyz,
-                exit_axis = exit_axis,
-                exit_polarity = exit_polarity,
-                exit_xyz = exit_xyz,
-                cell_kji0 = cell_kji0,
-                trajectory_mds = trajectory_mds,
-                trajectory_points = trajectory_points,
-                blocked_intervals = blocked_intervals,
-                blocked_cells_kji0 = blocked_cells_kji0,
-                blocked_face_pairs = blocked_face_pairs,
-                xy_units = grid.crs.xy_units,
-                z_units = grid.crs.z_units,
-                length_uom = length_uom)
+            previous_xyz, trajectory_mds, trajectory_points, blocked_intervals, blocked_cells_kji0, blocked_face_pairs =  \
+                BlockedWell.__add_interval(
+                    previous_xyz = previous_xyz,
+                    entry_axis = entry_axis,
+                    entry_polarity = entry_polarity,
+                    entry_xyz = entry_xyz,
+                    exit_axis = exit_axis,
+                    exit_polarity = exit_polarity,
+                    exit_xyz = exit_xyz,
+                    cell_kji0 = cell_kji0,
+                    trajectory_mds = trajectory_mds,
+                    trajectory_points = trajectory_points,
+                    blocked_intervals = blocked_intervals,
+                    blocked_cells_kji0 = blocked_cells_kji0,
+                    blocked_face_pairs = blocked_face_pairs,
+                    xy_units = grid.crs.xy_units,
+                    z_units = grid.crs.z_units,
+                    length_uom = length_uom)
 
         blocked_count = len(blocked_cells_kji0)
         BlockedWell.__check_number_of_blocked_well_intervals(blocked_cells_kji0 = blocked_cells_kji0,
@@ -2712,6 +2714,7 @@ class BlockedWell(BaseResqpy):
             'Y': 12,
             'SKIN': 7,
             'RADW': 5,
+            'RADB': 8,
             'PPERF': 5
         }
 
@@ -2792,7 +2795,9 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __is_float_column(col_name):
-        if col_name.upper() in ['ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF']:
+        if col_name.upper() in [
+                'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'RADB', 'PPERF'
+        ]:
             return True
         return False
 
