@@ -2449,28 +2449,36 @@ class BlockedWell(BaseResqpy):
                 property_columns = extra_columns_list
             self.add_df_properties(df, property_columns, length_uom = length_uom)
 
-    def add_df_properties(self, df, columns, length_uom = None, time_index = None, time_series_uuid = None):
+    def add_df_properties(self,
+                          df,
+                          columns,
+                          length_uom = None,
+                          time_index = None,
+                          time_series_uuid = None,
+                          realization = None):
         """Creates a property part for each column in the dataframe, based on the dataframe values.
         
-        The column name is used as the citation title. Self must already exist as a part in the
-        model and this method currently only handles single grid situations.
-
-        Args:
-            df (pd.DataFrame): dataframe containing the columns that will be converted to properties.
-            columns (List[str]): list of the column names that will be converted to properties.
-            length_uom (str, optional): the length unit of measure.
+        arguments:
+            df (pd.DataFrame): dataframe containing the columns that will be converted to properties
+            columns (List[str]): list of the column names that will be converted to properties
+            length_uom (str, optional): the length unit of measure
             time_index (int, optional): if adding a timestamp to the property, this is the timestamp
-                index of the TimeSeries timestamps attribute.
+                index of the TimeSeries timestamps attribute
             time_series_uuid (uuid.UUID, optional): if adding a timestamp to the property, this is
-                the uuid of the TimeSeries object.
+                the uuid of the TimeSeries object
+            realization (int, optional): if present, is used as the realization number for all the
+                properties
 
-        Returns:
+        returns:
             None
 
-        note:
+        notes:
+            the column name is used as the property citation title;
+            the blocked well must already exist as a part in the model;
+            this method currently only handles single grid situations;
             dataframe rows must be in the same order as the cells in the blocked well
         """
-        # todo: rewrite to add separate property objects for each grid references by the blocked well
+        # todo: enhance to handle multiple grids; also realisations
         assert len(self.grid_list) == 1
         if columns is None or len(columns) == 0 or len(df) == 0:
             return
@@ -2508,7 +2516,7 @@ class BlockedWell(BaseResqpy):
                 local_property_kind_uuid = None,
                 facet_type = None,
                 facet = None,
-                realization = None,
+                realization = realization,
                 indexable_element = 'cells',
                 count = 1,
                 time_index = time_index,
