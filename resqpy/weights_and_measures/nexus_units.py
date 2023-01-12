@@ -3,7 +3,7 @@
 # Nexus is a trademark of Halliburton
 
 
-def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_ratio_flavour = None):
+def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour = None):
     """Returns RESQML uom string expected by Nexus for given quantity class and unit system.
 
     arguments:
@@ -11,8 +11,9 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_ratio_fla
         quantity (str): the RESQML quantity class of interest; currently suppported:
             'length', 'area', 'volume', 'volume per volume', 'permeability rock',
             'time', 'thermodynamic temperature', 'mass per volume', 'pressure'
-        english_volume_ratio_flavour (str, optional): only needed for ENGLISH unit system and
-            volume per volume quantity; one of 'FVF', 'GOR', or 'saturation'; see notes re FVF
+        english_volume_flavour (str, optional): only needed for ENGLISH unit system and volume
+            or volume per volume quantity; one of 'PV', 'OVER PV', 'FVF', 'GOR', or 'saturation';
+            see notes regarding FVF
 
     returns:
         str: the RESQML uom string for the units required by Nexus
@@ -24,7 +25,9 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_ratio_fla
         where in the Nexus input dataset the data is being entered;
         resqpy.weights_and_measures.valid_quantities() and valid_uoms() may also be of interest;
         in the ENHLISH unit system, Nexus expacts gas formation volume factors in bbl / 1000 ft3
-        but that is not a valid RESQML uom – this function will return bbl/bbl for ENGLISH FVF
+        but that is not a valid RESQML uom – this function will return bbl/bbl for ENGLISH FVF;
+        also be wary of pore volume units when using the medieval ENGLISH unit system: the OVER
+        keyword expects different units than GRID or recurrent override input
     """
 
     nexus_unit_system = nexus_unit_system.upper()
@@ -37,15 +40,21 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_ratio_fla
     if quantity == 'rock permeability':
         quantity = 'permeability rock'
 
-    if (quantity == 'volume per volume' and nexus_unit_system == 'ENGLISH' and
-            english_volume_ratio_flavour is not None):
-        english_volume_ratio_flavour = english_volume_ratio_flavour.lower()
-        if english_volume_ratio_flavour == 'fvf':
+    if (nexus_unit_system == 'ENGLISH' and english_volume_flavour is not None):
+        english_volume_flavour = english_volume_flavour.lower()
+        if english_volume_flavour == 'pv':
+            assert quantity == 'volume'
+            return 'ft3'  # correct for main GRID array input or recurrent override
+        elif english_volume_flavour == 'over pv':
+            assert quantity == 'volume'
+            return 'bbl'  # for static override of pv (Nexus OVER)
+        assert quantity == 'volume per volume'
+        if english_volume_flavour == 'fvf':
             return 'bbl/bbl'
-        elif english_volume_ratio_flavour == 'gor':
+        elif english_volume_flavour == 'gor':
             return '1000 ft3/bbl'
         else:
-            assert english_volume_ratio_flavour == 'saturation'  # handled by default in dictionary
+            assert english_volume_flavour == 'saturation'  # handled by default in dictionary
 
     d = {
         'METRIC': {
