@@ -228,16 +228,14 @@ def length_unit_conversion_applicable(keyword):  # pragma: no cover
     return wellspec_dict[keyword][4]
 
 
-def load_wellspecs(
-    wellspec_file: str,
-    well: Optional[str] = None,
-    column_list: Union[List[str], None] = [],
-    keep_duplicate_cells: bool = False,
-    keep_null_columns: bool = True,
-    last_data_only: bool = True,
-    usa_date_format: bool = False,
-    return_dates_list: bool = False
-):
+def load_wellspecs(wellspec_file: str,
+                   well: Optional[str] = None,
+                   column_list: Union[List[str], None] = [],
+                   keep_duplicate_cells: bool = False,
+                   keep_null_columns: bool = True,
+                   last_data_only: bool = True,
+                   usa_date_format: bool = False,
+                   return_dates_list: bool = False):
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
     arguments:
