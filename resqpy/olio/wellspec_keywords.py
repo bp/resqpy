@@ -237,7 +237,7 @@ def load_wellspecs(
     last_data_only: bool = True,
     usa_date_format: bool = False,
     return_dates_list: bool = False
-) -> Union[Dict[str, Union[pd.DataFrame, None]], Tuple[Dict[str, Union[pd.DataFrame, None]], List[str]]]:
+):
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
     arguments:
