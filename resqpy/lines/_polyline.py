@@ -820,7 +820,7 @@ class Polyline(rql_c._BasePolyline):
             elif "HorizonInterpretation" in str(rqet.content_type(rep_int)):
                 content_type = 'obj_HorizonInterpretation'
             else:
-                content_type = 'obj_GeobodyBoundaryInterpretation'
+                content_type = 'obj_BoundaryFeatureInterpretation'
             self.model.create_ref_node('RepresentedInterpretation',
                                        rqet.citation_title_for_node(rep_int),
                                        rep_int.attrib['uuid'],
