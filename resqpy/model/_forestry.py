@@ -145,14 +145,13 @@ def _tidy_up_forests(model, tidy_main_tree = True, tidy_others = False, remove_e
 def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = None, quiet = False):
     """Load xml parts of model from epc file (HDF5 arrays are not loaded)."""
 
-    info_fn = log.debug if quiet else log.info
-
     if not epc_file.endswith('.epc'):
         epc_file += '.epc'
 
-    _copy_dataset_if_requested(copy_from, epc_file)
+    _copy_dataset_if_requested(copy_from, epc_file, quiet)
 
-    info_fn(f'loading resqml model from epc file: {epc_file}')
+    if not quiet:
+        log.info(f'loading resqml model from epc file: {epc_file}')
 
     if model.modified:
         log.warning('loading model from epc, discarding previous in-memory modifications')
@@ -178,11 +177,12 @@ def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = 
             _tidy_up_forests(model)
 
 
-def _copy_dataset_if_requested(copy_from, epc_file):
+def _copy_dataset_if_requested(copy_from, epc_file, quiet):
     if copy_from:
         if not copy_from.endswith('.epc'):
             copy_from += '.epc'
-        log.info('copying ' + copy_from + ' to ' + epc_file + ' along with paired .h5 files')
+        if not quiet:
+            log.info('copying ' + copy_from + ' to ' + epc_file + ' along with paired .h5 files')
         shutil.copy(copy_from, epc_file)
         shutil.copy(copy_from[:-4] + '.h5', epc_file[:-4] + '.h5')
 
@@ -270,8 +270,6 @@ def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', on
     # for prefix, uri in ns.items():
     #     et.register_namespace(prefix, uri)
 
-    info_fn = log.debug if quiet else log.info
-
     if not epc_file:
         epc_file = model.epc_file
     assert epc_file, 'no file name given or known when attempting to store epc'
@@ -279,7 +277,8 @@ def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', on
     if only_if_modified and not model.modified:
         return
 
-    info_fn(f'storing resqml model to epc file: {epc_file}')
+    if not quiet:
+        log.info(f'storing resqml model to epc file: {epc_file}')
 
     assert model.main_tree is not None
     if model.main_root is None:
@@ -287,7 +286,7 @@ def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', on
 
     with zf.ZipFile(epc_file, mode = 'w') as epc:
         with epc.open(main_xml_name, mode = 'w') as main_xml:
-            log.debug('Writing main xml: ' + main_xml_name)
+            # log.debug('Writing main xml: ' + main_xml_name)
             rqet.write_xml(main_xml, model.main_tree, standalone = 'yes')
         for part_name, (_, _, part_tree) in model.parts_forest.items():
             if part_tree is None:
@@ -322,7 +321,7 @@ def _copy_part(model, existing_uuid, new_uuid, change_hdf5_refs = False):
 
     old_uuid_str = str(existing_uuid)
     new_uuid_str = str(new_uuid)
-    log.debug('copying xml part from uuid: ' + old_uuid_str + ' to uuid: ' + new_uuid_str)
+    # log.debug('copying xml part from uuid: ' + old_uuid_str + ' to uuid: ' + new_uuid_str)
     existing_parts_list = model.parts_list_of_type(uuid = existing_uuid)
     if len(existing_parts_list) == 0:
         log.warning('failed to find existing part for copying with uuid: ' + old_uuid_str)

@@ -228,18 +228,17 @@ def length_unit_conversion_applicable(keyword):  # pragma: no cover
     return wellspec_dict[keyword][4]
 
 
-def load_wellspecs(
-    wellspec_file: str,
-    well: Optional[str] = None,
-    column_list: Union[List[str], None] = [],
-    keep_duplicate_cells: bool = False,
-    keep_null_columns: bool = True,
-    last_data_only: bool = True,
-    usa_date_format: bool = False,
-) -> Dict[str, Union[pd.DataFrame, None]]:
+def load_wellspecs(wellspec_file: str,
+                   well: Optional[str] = None,
+                   column_list: Union[List[str], None] = [],
+                   keep_duplicate_cells: bool = False,
+                   keep_null_columns: bool = True,
+                   last_data_only: bool = True,
+                   usa_date_format: bool = False,
+                   return_dates_list: bool = False):
     """Reads the Nexus wellspec file returning a dictionary of well name to pandas dataframe.
 
-    Args:
+    arguments:
         wellspec_file (str): file path of ascii input file containing wellspec keywords.
         well (str, optional): if present, only the data for the named well are loaded. If None, data
             for all wells are loaded.
@@ -256,10 +255,19 @@ def load_wellspecs(
             dataframe, otherwise all of the well data are used at different times.
         usa_date_format (bool): If True, wellspec file is expected to contain date formats in MM/DD/YYYY.
             if False, DD/MM/YYYY.
+        return_dates_list (bool, default False): if True, a sorted list of unique dates present in the
+            wellspec file is also returned, with dates in iso format
 
-    Returns:
-       well_dict (Dict[str, Union[pd.DataFrame, None]]): mapping each well name found in the
-          wellspec file to a dataframe containing the wellspec data.
+    returns:
+        well_dict (Dict[str, Union[pd.DataFrame, None]]): mapping each well name found in the
+            wellspec file to a dataframe containing the wellspec data
+        or (well_dict, dates_list): where dates list is a sorted list of all dates present in the
+            wellspec file (including those not relevant to a specific well), in iso format
+
+    note:
+        if return_dates_list is True, the returned list always contains all dates from the wellspec file
+        that applied to any entry, regardless of the well and last_data_only arguments; the dates list
+        will not include a null entry, even if there are wellspec data before the first timestamp
     """
     assert wellspec_file, "No wellspec file specified."
 
@@ -270,10 +278,16 @@ def load_wellspecs(
 
     well_dict = {}
     well_pointers = get_well_pointers(wellspec_file, usa_date_format = usa_date_format)
+    dates_list = None
+    if return_dates_list:
+        dates_list = _prepare_dates_list(well_pointers)
 
     if column_list is None:
         well_dict = dict.fromkeys(well_pointers, None)
-        return well_dict
+        if return_dates_list:
+            return (well_dict, dates_list)
+        else:
+            return well_dict
 
     with open(wellspec_file, "r") as file:
         if well:
@@ -304,7 +318,20 @@ def load_wellspecs(
                 if well_data is not None:
                     well_dict[well_name] = well_data
 
-    return well_dict
+    if return_dates_list:
+        return (well_dict, dates_list)
+    else:
+        return well_dict
+
+
+def _prepare_dates_list(well_pointers):
+    dates = []
+    for entries in well_pointers.values():
+        for _, date in entries:
+            if date and date not in dates:
+                dates.append(date)
+    dates.sort()
+    return dates
 
 
 def get_well_pointers(

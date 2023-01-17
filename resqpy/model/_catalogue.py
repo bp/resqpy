@@ -555,7 +555,10 @@ def _root_for_part(model, part_name, is_rels = None):
 def _citation_title_for_part(model, part):  # duplicate functionality to title_for_part()
     """Returns the citation title for the specified part."""
 
-    return rqet.citation_title_for_node(_root_for_part(model, part))
+    title = rqet.citation_title_for_node(_root_for_part(model, part))
+    if title is None:
+        title = ''
+    return title
 
 
 def _root_for_time_series(model, uuid = None):

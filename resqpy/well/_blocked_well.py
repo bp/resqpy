@@ -22,6 +22,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
+import resqpy.time_series as rqts
 import resqpy.weights_and_measures as wam
 import resqpy.well as rqw
 import resqpy.well.well_utils as rqwu
@@ -197,6 +198,8 @@ class BlockedWell(BaseResqpy):
             self.gridind_null = -1
             self.facepair_null = -1
             self.cellind_null = -1
+            if not self.title:
+                self.title = well_name
         # else an empty object is returned
 
     def __set_grid(self, grid, wellspec_file, cellio_file, column_ji0):
@@ -609,6 +612,7 @@ class BlockedWell(BaseResqpy):
                              use_face_centres = False,
                              add_properties = True,
                              usa_date_format = False,
+                             last_data_only = False,
                              length_uom = None):
         """Populates empty blocked well from Nexus WELLSPEC data; creates simulation trajectory and md datum.
 
@@ -628,6 +632,8 @@ class BlockedWell(BaseResqpy):
               columns in the WELLSPEC data
            usa_date_format (bool, default False): if True, dates in the WELLSPEC file are interpreted as being in USA
               format (MM/DD/YYYY); otherwise European format (DD/MM/YYYY)
+           last_data_only (bool, default False): If True, only the last entry of well data in the file is used and
+              no time series or time index is used if properties are being added
            length_uom (str, optional): if present, the target length units for MD data in generated objects; if None,
               will default to z units of grid crs
 
@@ -639,6 +645,9 @@ class BlockedWell(BaseResqpy):
            parts to the model for this blocked well and the properties
         """
 
+        if not add_properties:
+            last_data_only = True
+
         well_name = self.__derive_from_wellspec_check_well_name(well_name = well_name)
 
         col_list = rqwu._derive_from_wellspec_verify_col_list(add_properties = add_properties)
@@ -647,24 +656,72 @@ class BlockedWell(BaseResqpy):
                                                                               grid = grid,
                                                                               col_list = col_list)
 
-        wellspec_dict = wsk.load_wellspecs(wellspec_file,
-                                           well = well_name,
-                                           column_list = col_list,
-                                           usa_date_format = usa_date_format)
+        wellspec_dict, dates_list = wsk.load_wellspecs(wellspec_file,
+                                                       well = well_name,
+                                                       column_list = col_list,
+                                                       usa_date_format = usa_date_format,
+                                                       last_data_only = last_data_only,
+                                                       return_dates_list = True)
 
         assert len(wellspec_dict) == 1, 'no wellspec data found in file ' + wellspec_file + ' for well ' + well_name
 
         df = wellspec_dict[well_name]
         assert len(df) > 0, 'no rows of perforation data found in wellspec for well ' + well_name
 
-        # name_for_check = grid_name if check_grid_name else None
-        return self.derive_from_dataframe(df,
-                                          well_name,
-                                          grid,
-                                          grid_name_to_check = name_for_check,
-                                          use_face_centres = use_face_centres,
-                                          add_as_properties = add_properties,
-                                          length_uom = length_uom)
+        if 'DATE' not in df.columns or not dates_list:
+            last_data_only = True
+
+        if last_data_only:
+            # name_for_check = grid_name if check_grid_name else None
+            return self.derive_from_dataframe(df,
+                                              well_name,
+                                              grid,
+                                              grid_name_to_check = name_for_check,
+                                              use_face_centres = use_face_centres,
+                                              add_as_properties = add_properties,
+                                              length_uom = length_uom)
+
+        # handle multiple times; note: dates already converted to iso format and sorted into chronological order
+        # create time series from dates_list
+        time_series = rqts.time_series_from_list(dates_list, parent_model = self.model, title = 'wellspec time series')
+        time_series.create_xml(reuse = True)
+
+        # select subset df for first timestamp (or None/NA if first entry for well is before first timestamp)
+        if any(pd.isna(df['DATE'])):
+            initial_df = df[pd.isna(df['DATE'])]  # todo: not sure this is valid pandas syntax
+            next_date_index = 0
+        else:
+            initial_df = df[df['DATE'] == dates_list[0]]  # both should be in iso format
+            next_date_index = 1
+
+        success = self.derive_from_dataframe(initial_df,
+                                             well_name,
+                                             grid,
+                                             grid_name_to_check = name_for_check,
+                                             use_face_centres = use_face_centres,
+                                             add_as_properties = add_properties,
+                                             length_uom = length_uom,
+                                             time_index = 0 if next_date_index else None,
+                                             time_series_uuid = time_series.uuid if next_date_index else None)
+        if not success:
+            return None
+
+        # for each (remaining) date in dates_list, if present in well df, creete subset df, compare row count with init, add props
+        length_uom = grid.z_units()
+        for date_index in range(next_date_index, len(dates_list)):
+            date_df = df[df['DATE'] == dates_list[date_index]]
+            if len(date_df) == 0:
+                continue
+            assert len(date_df) == len(initial_df),  \
+                f'mismatch in number of rows (cells) at time {dates_list[date_index]} for well {well_name}'
+            # note: dataframe rows assumed to be in unchanging order and refer to same cells!
+            self.__add_as_properties_if_specified(add_properties,
+                                                  date_df,
+                                                  length_uom,
+                                                  time_index = date_index,
+                                                  time_series_uuid = time_series.uuid)
+
+        return self
 
     def __derive_from_wellspec_check_well_name(self, well_name):
         """ Set the well name to be used in the wellspec file."""
@@ -1009,7 +1066,12 @@ class BlockedWell(BaseResqpy):
 
         return trajectory_points, trajectory_mds
 
-    def __add_as_properties_if_specified(self, add_as_properties, df, length_uom):
+    def __add_as_properties_if_specified(self,
+                                         add_as_properties,
+                                         df,
+                                         length_uom,
+                                         time_index = None,
+                                         time_series_uuid = None):
         """If add_as_properties is True and present as a list of wellspec column names, both the blocked well and
 
         the properties will have their hdf5 data written, xml created and be added as parts to the model.
@@ -1025,7 +1087,11 @@ class BlockedWell(BaseResqpy):
                 property_columns = add_as_properties
             else:
                 property_columns = df.columns[3:]
-            self.add_df_properties(df, property_columns, length_uom = length_uom)
+            self.add_df_properties(df,
+                                   property_columns,
+                                   length_uom = length_uom,
+                                   time_index = time_index,
+                                   time_series_uuid = time_series_uuid)
 
     def import_from_rms_cellio(self,
                                cellio_file,
@@ -1253,7 +1319,9 @@ class BlockedWell(BaseResqpy):
                   use_face_centres = False,
                   preferential_perforation = True,
                   add_as_properties = False,
-                  use_properties = False):
+                  use_properties = False,
+                  property_time_index = None,
+                  time_series_uuid = None):
         """Returns a pandas data frame containing Nexus WELLSPEC style data.
 
         arguments:
@@ -1345,6 +1413,9 @@ class BlockedWell(BaseResqpy):
               properties; if a list is provided it must be a subset of extra_columns_list
            use_properties (boolean or list of str, default False): if True, each column in the extra_columns_list (excluding
               GRID) is populated from a property with citation title matching the column name, if it exists
+           property_time_index (int, optional): if present and use_properties is True, the time index to select properties for;
+              if add_as_properties is True, the time index to tag this set of properties with
+           time_series_uuid (UUID, optional): the uuid of the time series for time dependent properties being added
         notes:
            units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
            the length_uom argument is used;
@@ -1378,7 +1449,15 @@ class BlockedWell(BaseResqpy):
             stat = stat,
             radw = radw)
 
-        pc = rqp.PropertyCollection(support = self) if use_properties else None
+        pc = None
+        if use_properties:
+            pc = rqp.PropertyCollection(support = self)
+            if property_time_index is not None:
+                pc = rqp.selective_version_of_collection(pc, time_index = property_time_index)
+            if pc is None or pc.number_of_parts() == 0:
+                log.error(
+                    f'no blocked well properties found for time index {property_time_index} for well {self.title}')
+                pc = None
         pc_titles = [] if pc is None else pc.titles()
 
         max_satw, min_sato, max_satg = BlockedWell.__verify_saturation_ranges_and_property_uuids(
@@ -1627,7 +1706,9 @@ class BlockedWell(BaseResqpy):
         self.__add_as_properties(df = df,
                                  add_as_properties = add_as_properties,
                                  extra_columns_list = extra_columns_list,
-                                 length_uom = length_uom)
+                                 length_uom = length_uom,
+                                 time_index = property_time_index,
+                                 time_series_uuid = time_series_uuid)
 
         return df
 
@@ -2437,8 +2518,14 @@ class BlockedWell(BaseResqpy):
 
         return df
 
-    def __add_as_properties(self, df, add_as_properties, extra_columns_list, length_uom):
-        """Checks that the column can be added as a property part then creates said part."""
+    def __add_as_properties(self,
+                            df,
+                            add_as_properties,
+                            extra_columns_list,
+                            length_uom,
+                            time_index = None,
+                            time_series_uuid = None):
+        """Adds property parts from df with columns listed in add_as_properties or extra_columns_list."""
 
         if add_as_properties:
             if isinstance(add_as_properties, list):
@@ -2447,7 +2534,11 @@ class BlockedWell(BaseResqpy):
                 property_columns = add_as_properties
             else:
                 property_columns = extra_columns_list
-            self.add_df_properties(df, property_columns, length_uom = length_uom)
+            self.add_df_properties(df,
+                                   property_columns,
+                                   length_uom = length_uom,
+                                   time_index = time_index,
+                                   time_series_uuid = time_series_uuid)
 
     def add_df_properties(self,
                           df,
@@ -2478,7 +2569,7 @@ class BlockedWell(BaseResqpy):
             this method currently only handles single grid situations;
             dataframe rows must be in the same order as the cells in the blocked well
         """
-        # todo: enhance to handle multiple grids; also realisations
+        # todo: enhance to handle multiple grids
         assert len(self.grid_list) == 1
         if columns is None or len(columns) == 0 or len(df) == 0:
             return
@@ -2695,7 +2786,9 @@ class BlockedWell(BaseResqpy):
                        trailing_blank_lines = 0,
                        length_uom_comment = False,
                        write_nexus_units = True,
-                       float_format = '5.3'):
+                       float_format = '5.3',
+                       use_properties = False,
+                       property_time_index = None):
         """Writes Nexus WELLSPEC keyword to an ascii file.
 
         returns:
@@ -2759,7 +2852,9 @@ class BlockedWell(BaseResqpy):
                             angla_plane_ref = angla_plane_ref,
                             length_mode = length_mode,
                             length_uom = length_uom,
-                            preferential_perforation = preferential_perforation)
+                            preferential_perforation = preferential_perforation,
+                            use_properties = use_properties,
+                            property_time_index = property_time_index)
 
         sep = ' ' if space_instead_of_tab_separator else '\t'
 
@@ -2864,7 +2959,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __write_wellspec_file_rows_from_dataframe(df, fp, col_width_dict, sep):
-        """ Writes the non-blank lines of a Nexus WELLSPEC file from a BlockedWell.dataframe """
+        """Writes the non-blank lines of a Nexus WELLSPEC file from a BlockedWell dataframe."""
 
         for row_info in df.iterrows():
             row = row_info[1]

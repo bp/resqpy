@@ -85,7 +85,7 @@ class Model():
               named in copy_from, together with its paired h5 file, are copied to epc_file (overwriting
               any previous instances) before epc_file is opened; this argument is primarily to facilitate
               repeated testing of code that modifies the resqml dataset, eg. by appending new parts
-           quiet (boolean, default False): if True, info logging message is emitted as debug
+           quiet (boolean, default False): if True, reading and saving info logging messages are suppressed
 
         Returns:
            The newly created Model object

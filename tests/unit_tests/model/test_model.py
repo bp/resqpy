@@ -115,7 +115,7 @@ def test_model_as_graph(example_model_with_well):
     # Check nodes
     for obj in [well_interp, datum, traj, crs]:
         assert str(obj.uuid) in nodes.keys()
-        if hasattr(obj, 'title'):  # TODO: remove this when all objects have this attribute
+        if hasattr(obj, 'title') and obj.title is not None:  # TODO: remove this when all objects have this attribute
             assert obj.title == nodes[str(obj.uuid)]['title']
 
     # Check edges

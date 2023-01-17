@@ -49,7 +49,7 @@ def test_wellspec_properties(example_model_and_crs):
                 if col in ['IW', 'JW', 'L']:
                     fp.write(f' {int(row[col]):6d}')
                 elif col == 'STAT':
-                    fp.write(f' {row[col]:4}')
+                    fp.write(f' {"ON" if row[col] else "OFF":4}')
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
