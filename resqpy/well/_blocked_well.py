@@ -198,6 +198,8 @@ class BlockedWell(BaseResqpy):
             self.gridind_null = -1
             self.facepair_null = -1
             self.cellind_null = -1
+            if not self.title:
+                self.title = well_name
         # else an empty object is returned
 
     def __set_grid(self, grid, wellspec_file, cellio_file, column_ji0):

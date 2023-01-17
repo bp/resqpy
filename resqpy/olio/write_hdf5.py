@@ -99,7 +99,7 @@ class H5Register():
                     dtype = 'int32'
             if write_bool_as_int8 and str(dtype).lower().startswith('bool'):
                 dtype = 'int8'
-            log.debug('Writing hdf5 dataset ' + hdf5_path + ' of size ' + str(a.size) + ' type ' + str(dtype))
+            # log.debug('Writing hdf5 dataset ' + hdf5_path + ' of size ' + str(a.size) + ' type ' + str(dtype))
             fp.create_dataset(hdf5_path, data = a, dtype = dtype)
 
     def write(self, file = None, mode = 'w', release_after = True):
@@ -124,7 +124,7 @@ class H5Register():
         if file is None:
             file = self.model.h5_access(mode = mode)
         elif isinstance(file, str):
-            log.debug(f'writing to hdf5 file: {file}')
+            # log.debug(f'writing to hdf5 file: {file}')
             file = self.model.h5_access(mode = mode, file_path = file)
         if mode == 'a' and isinstance(file, str) and not os.path.exists(file):
             mode = 'w'
@@ -233,7 +233,7 @@ def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w'):
                     log.warning(f'not copying hdf5 data due to pre-existence for: {path}')
                     continue
                 assert path in fp_in, f'internal path {path} not found in hdf5 file {file_in}'
-                log.debug(f'copying hdf5 data for: {path}')
+                # log.debug(f'copying hdf5 data for: {path}')
                 build = ''
                 group_list = list(path.split(sep = '/'))
                 assert len(group_list) > 1, f'no hdf5 group(s) in internal path {path}'

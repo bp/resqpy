@@ -182,8 +182,8 @@ def _create_rels_part(model):
 def _create_citation(root = None, title = '', originator = None):
     """Creates a citation xml node and optionally appends as a child of root."""
 
-    if not title:
-        title = '(no title)'
+    if title is None:
+        title = ''
 
     citation = rqet.Element(ns['eml'] + 'Citation')
     citation.set(ns['xsi'] + 'type', ns['eml'] + 'Citation')

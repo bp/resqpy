@@ -90,11 +90,11 @@ def function_multiprocessing(function: Callable,
     if cluster is None:
         results = []
         for i, kwargs in enumerate(kwargs_list):
-            log.debug(f'calling function for entry {i}; name: {kwargs.get("name")}')
+            # log.debug(f'calling function for entry {i}; name: {kwargs.get("name")}')
             one_r = function(**kwargs)
             results.append(one_r)
-            log.debug(f'completed entry: {one_r[0]}; success: {one_r[1]}; epc: {one_r[2]}')
-            log.debug(f'uuid list: {one_r[3]}')
+            # log.debug(f'completed entry: {one_r[0]}; success: {one_r[1]}; epc: {one_r[2]}')
+            # log.debug(f'uuid list: {one_r[3]}')
     else:
         with parallel_backend(backend):
             results = Parallel()(delayed(function)(**kwargs) for kwargs in kwargs_list)
@@ -120,7 +120,7 @@ def function_multiprocessing(function: Callable,
 
     model = None
     for i, epc in enumerate(epc_list):
-        log.debug(f'recombining from mp instance {i} epc: {epc}')
+        # log.debug(f'recombining from mp instance {i} epc: {epc}')
         if epc is None:
             continue
         attempt = 0
@@ -157,7 +157,7 @@ def function_multiprocessing(function: Callable,
                 time.sleep(1)
 
     # Deleting temporary directory.
-    log.debug(f"deleting the temporary directory {tmp_dir}")
+    # log.debug(f"deleting the temporary directory {tmp_dir}")
     rm_tree(tmp_dir)
 
     model_recombined.store_epc(quiet = True)
