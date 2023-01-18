@@ -57,7 +57,7 @@ def _load_part(model, epc, part_name, is_rels = None):
                 elif uuid_from_tree is not None:
                     assert bu.matching_uuids(part_uuid, uuid_from_tree)
                 model.parts_forest[part_name] = (part_type, part_uuid, part_tree)
-                _set_uuid_to_part(model, part_name)
+                _set_uuid_to_part(model, part_name, part_uuid)
                 if model.crs_uuid is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
                     model.crs_uuid = part_uuid
 
@@ -176,6 +176,61 @@ def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = 
         if full_load:
             _tidy_up_forests(model)
 
+    if full_load:
+        for uuid_int, part in model.uuid_part_dict.items():
+            _add_uuid_relations(model, uuid_int, part)
+
+        for uuid_int, part in model.uuid_part_dict.items():
+            _add_uuid_soft_relations(model, uuid_int, part)
+
+
+def _add_uuid_soft_relations(model, uuid_int, part):
+    if "EpcExternalPart" in part:
+        return
+    value = model.rels_forest.get(part)
+    if value is not None:
+        rels_root = model.root_for_part(part, is_rels = True)
+        if rels_root is not None:
+            for relation_node in rels_root:
+                if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
+                    return
+                if 'Target' not in relation_node.attrib.keys():
+                    return
+                relation_part_name = relation_node.attrib['Target']
+                relation_uuid_str = str(rqet.uuid_in_part_name(relation_part_name))
+                if len(relation_uuid_str) != 36:
+                    return  # probably HDF5 external resource
+                relation_uuid_int = bu.uuid_from_string(relation_uuid_str).int
+                value = model.uuid_rels_dict.get(uuid_int)
+                if value is None:
+                    return
+                elif relation_uuid_int not in value[0] and relation_uuid_int not in value[1]:
+                    value[2].add(relation_uuid_int)
+
+
+def _add_uuid_relations(model, uuid_int, part):
+    if "EpcExternalPart" in part:
+        return
+    root = model.parts_forest[part][2].getroot()
+    for ref_node in rqet.list_obj_references(root):
+        if "EpcExternalPart" in rqet.find_tag_text(ref_node, "ContentType"):
+            continue
+        ref_uuid_int = bu.uuid_from_string(rqet.find_tag_text(ref_node, "UUID")).int
+
+        # Adding reference uuid to the uuid key.
+        value = model.uuid_rels_dict.get(uuid_int)
+        if value is None:
+            model.uuid_rels_dict[uuid_int] = ({ref_uuid_int}, set(), set())
+        else:
+            value[0].add(ref_uuid_int)
+
+        # Adding uuid to the reference uuid key.
+        ref_value = model.uuid_rels_dict.get(ref_uuid_int)
+        if ref_value is None:
+            model.uuid_rels_dict[ref_uuid_int] = (set(), {uuid_int}, set())
+        else:
+            ref_value[1].add(uuid_int)
+
 
 def _copy_dataset_if_requested(copy_from, epc_file, quiet):
     if copy_from:
@@ -219,7 +274,7 @@ def _set_part_names_in_forests(model, epc_subdir, names):
                     model.rels_forest[name] = (part_uuid, None)
                 else:
                     model.parts_forest[name] = (None, part_uuid, None)
-                    _set_uuid_to_part(model, name)
+                    _set_uuid_to_part(model, name, part_uuid)
 
 
 def _complete_forest_entry_for_part(epc, model, epc_subdir, full_load, child):
@@ -366,7 +421,8 @@ def _add_part(model, content_type, uuid, root, add_relationship_part = True, epc
         model.other_forest[part_name] = (content_type, part_tree)
     else:
         model.parts_forest[part_name] = (content_type, uuid, part_tree)
-        _set_uuid_to_part(model, part_name)
+        _set_uuid_to_part(model, part_name, uuid)
+        _add_uuid_relations(model, uuid.int, part_name)
     main_ref = rqet.SubElement(model.main_root, ns['content_types'] + 'Override')
     main_ref.set('PartName', part_name)
     main_ref.set('ContentType', ct)
@@ -665,11 +721,12 @@ def _uuid_is_present(model, uuid):
     return bu.uuid_as_int(uuid) in model.uuid_part_dict.keys()
 
 
-def _set_uuid_to_part(model, part_name):
+def _set_uuid_to_part(model, part_name, uuid = None):
     """Adds an entry to the dictionary mapping from uuid to part name."""
 
     assert part_name and isinstance(part_name, str)
-    uuid = rqet.uuid_in_part_name(part_name)
+    if uuid is None:
+        uuid = rqet.uuid_in_part_name(part_name)
     model.uuid_part_dict[bu.uuid_as_int(uuid)] = part_name
 
 

@@ -754,3 +754,17 @@ def uuid_in_list(uuid, uuid_list):
         if bu.matching_uuids(u, uuid):
             return True
     return False
+
+
+def test_model_uuid_rels_dict(example_model_with_properties):
+    # Arrange
+    epc = example_model_with_properties.epc_file
+
+    # Act
+    model = rq.Model(epc)
+
+    # Assert
+    assert len(model.uuid_rels_dict) == 15
+    assert sum([len(values[0]) for values in model.uuid_rels_dict.values()]) == 14
+    assert sum([len(values[1]) for values in model.uuid_rels_dict.values()]) == 14
+    assert sum([len(values[2]) for values in model.uuid_rels_dict.values()]) == 0

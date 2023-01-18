@@ -162,6 +162,7 @@ class Model():
         self.time_series = None  # extracted as speed optimization (single time series only for now)
         self.parts_forest = {}  # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
         self.uuid_part_dict = {}  # dictionary keyed on uuid.int; mapping to part_name
+        self.uuid_rels_dict = {}  # dictionary keyed on uuid.int; mapping to (uuid.int that are depended on, uuid.int that depend on, uuid.int soft relationships)
         self.rels_present = False
         self.rels_forest = {}  # dictionary keyed on part_name; mapping to (uuid, xml_tree)
         self.other_forest = {}  # dictionary keyed on part_name; mapping to (content_type, xml_tree); used for docProps
