@@ -2032,7 +2032,7 @@ class BlockedWell(BaseResqpy):
 
         return skip_interval
 
-    def __get_part_perf_fraction_for_interval(self, pc, pc_titles, ci, perforation_list, interval):
+    def __get_part_perf_fraction_for_interval(self, pc, pc_titles, ci, perforation_list, interval, length_tol = 0.01):
         """ Get the partial perforation fraction for the interval."""
 
         skip_interval = False
@@ -2044,7 +2044,7 @@ class BlockedWell(BaseResqpy):
                 perf_length = 0.0
                 for perf_start, perf_end in perforation_list:
                     if perf_end <= self.node_mds[interval] or perf_start >= self.node_mds[interval + 1]:
-                        skip_interval = True
+                        continue
                     if perf_start <= self.node_mds[interval]:
                         if perf_end >= self.node_mds[interval + 1]:
                             perf_length += self.node_mds[interval + 1] - self.node_mds[interval]
@@ -2056,8 +2056,9 @@ class BlockedWell(BaseResqpy):
                             perf_length += self.node_mds[interval + 1] - perf_start
                         else:
                             perf_length += perf_end - perf_start
-                if perf_length == 0.0:
+                if perf_length < length_tol:
                     skip_interval = True
+                    perf_length = 0.0
                 part_perf_fraction = min(1.0, perf_length / (self.node_mds[interval + 1] - self.node_mds[interval]))
 
         return skip_interval, part_perf_fraction
