@@ -324,16 +324,27 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
         assert sub_hdf5_path, 'hdf5 path not established for sub model'
         assert os.path.samefile(hdf5_path, sub_hdf5_path)
 
+        print(model.number_of_parts())
+        print(model.parts())
+
+        print(full_model.parts())
+
+        print("UUIDs: ", [grid_uuid, ts_uuid] + discrete_prop_uuid_list)
         # copy some common parts into the sub model (will include referenced crs)
         for uuid in [grid_uuid, ts_uuid] + discrete_prop_uuid_list:
+            print()
+            print("part: ", full_model.part(uuid = uuid))
+            print("relations: ", [full_model.uuid_part_dict[uuid] for uuid in full_model.uuid_rels_dict[uuid.int][0]])
             model.copy_part_from_other_model(full_model,
                                              full_model.part(uuid = uuid),
                                              self_h5_file_name = hdf5_path,
                                              other_h5_file_name = hdf5_path)
+            print(model.parts())
 
         # copy some realisation specific properties
         for pk in ('net to gross ratio', 'porosity'):
             property_part = pc.singleton(property_kind = pk, realization = i)
+            print(property_part)
             assert property_part is not None
             model.copy_part_from_other_model(full_model,
                                              property_part,
@@ -342,6 +353,8 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
 
         # save the epc for the sub model
         model.store_epc()
+
+        print(model.parts())
 
         # check the number of parts in the sub model is as expected (includes crs and ext)
         assert model.number_of_parts() == 6 + 2 * len(discrete_prop_uuid_list)
@@ -767,4 +780,16 @@ def test_model_uuid_rels_dict(example_model_with_properties):
     assert len(model.uuid_rels_dict) == 15
     assert sum([len(values[0]) for values in model.uuid_rels_dict.values()]) == 14
     assert sum([len(values[1]) for values in model.uuid_rels_dict.values()]) == 14
-    assert sum([len(values[2]) for values in model.uuid_rels_dict.values()]) == 0
+    assert sum([len(values[2]) for values in model.uuid_rels_dict.values()]) == 10
+
+
+def test_parts_list_filtered_by_related_uuid(example_model_with_properties):
+    # Arrange
+    grid_uuid = example_model_with_properties.grid().uuid
+    parts_list = example_model_with_properties.parts()
+
+    # Act
+    filtered_list = example_model_with_properties.parts_list_filtered_by_related_uuid(parts_list, grid_uuid)
+
+    # Assert
+    assert len(filtered_list) == 10

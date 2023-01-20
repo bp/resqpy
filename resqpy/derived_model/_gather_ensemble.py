@@ -49,7 +49,7 @@ def gather_ensemble(case_epc_list,
 
     for r, case_epc in enumerate(case_epc_list):
         t_r_start = time()  # debug
-        log.info(f'gathering realszation {r}: {case_epc}')
+        log.info(f'gathering realisation {r}: {case_epc}')
         epc_lookup_dict[r] = case_epc
         case_model = rq.Model(case_epc)
         if r == 0:  # first case
@@ -86,6 +86,7 @@ def gather_ensemble(case_epc_list,
             if shared_grids:
                 log.info('shared grids')  # debug
                 for grid_uuid in case_model.uuids(obj_type = 'IjkGridRepresentation'):
+                    log.warning(grid_uuid)
                     grid_root = case_model.root(uuid = grid_uuid)
                     grid_extent = grr.extent_kji_from_root(grid_root)
                     host_index = None
@@ -108,6 +109,7 @@ def gather_ensemble(case_epc_list,
                     case_h5_file_name = case_model.h5_file_name()
                     for part in grid_relatives:
                         if 'Property' in part:
+                            log.info(f"prop part: {part}")
                             t_p_start = time()
                             composite_model.copy_part_from_other_model(case_model,
                                                                        part,
